@@ -22,3 +22,4 @@ rootProject.name = "compose-preview-server"
 include(":server")
 include(":usage-source-psi")
 include(":wasm-ui")
+include(":native-catalog-m3")
