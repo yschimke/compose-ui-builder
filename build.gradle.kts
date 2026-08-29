@@ -11,15 +11,15 @@ plugins {
 
 tasks.named("check") {
   group = "verification"
-  dependsOn(":server:check", ":usage-source-psi:check", ":wasm-ui:check")
+  dependsOn(":server:check", ":slot-preview-runtime:check", ":usage-source-psi:check", ":wasm-ui:check")
 }
 
 tasks.register("ktfmtCheckAll") {
   group = "verification"
-  dependsOn(":server:ktfmtCheck", ":usage-source-psi:ktfmtCheck", ":wasm-ui:ktfmtCheck")
+  dependsOn(":server:ktfmtCheck", ":slot-preview-runtime:ktfmtCheck", ":usage-source-psi:ktfmtCheck", ":wasm-ui:ktfmtCheck")
 }
 
 tasks.register("ktfmtFormat") {
   group = "formatting"
-  dependsOn(":server:ktfmtFormat", ":usage-source-psi:ktfmtFormat", ":wasm-ui:ktfmtFormat")
+  dependsOn(":server:ktfmtFormat", ":slot-preview-runtime:ktfmtFormat", ":usage-source-psi:ktfmtFormat", ":wasm-ui:ktfmtFormat")
 }
