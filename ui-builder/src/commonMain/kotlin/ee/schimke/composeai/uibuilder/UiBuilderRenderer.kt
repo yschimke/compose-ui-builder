@@ -3,6 +3,7 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +74,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,12 +83,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.vector.VectorPath
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -108,6 +120,15 @@ enum class UiBuilderLayer {
   Design,
   EditorOverlay,
 }
+
+/**
+ * Export-only pinned raster assets; normal Wasm rendering retains its deterministic placeholder.
+ */
+internal val LocalUiBuilderExportRasterAssets =
+  staticCompositionLocalOf<Map<String, ImageBitmap>> { emptyMap() }
+
+/** Export-only path drawing avoids Skia SVG color-filter layers becoming anonymous PNG images. */
+internal val LocalUiBuilderExportStructuredIcons = staticCompositionLocalOf { false }
 
 fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
@@ -392,6 +413,7 @@ private fun RenderNode(
       Card(
         measured,
         shape = node.shape(),
+        elevation = CardDefaults.cardElevation(defaultElevation = node.float("elevationDp").dp),
         colors =
           CardDefaults.cardColors(
             node.color("containerColor", MaterialTheme.colorScheme.surfaceContainer)
@@ -435,13 +457,7 @@ private fun RenderNode(
         measured,
         color = node.color("color", MaterialTheme.colorScheme.outlineVariant),
       )
-    "m3/icon" ->
-      Icon(
-        node.icon(),
-        node.string("contentDescription").ifEmpty { null },
-        measured.size(node.float("sizeDp", 24f).dp),
-        tint = node.color("color", MaterialTheme.colorScheme.onSurface),
-      )
+    "m3/icon" -> BuilderIcon(node, measured)
     "m3/text" ->
       Text(
         node.string("text"),
@@ -642,6 +658,22 @@ private fun LegacyListItem(
 
 @Composable
 private fun AssetPlaceholder(node: UiBuilderNode, modifier: Modifier) {
+  val exportRaster = LocalUiBuilderExportRasterAssets.current[node.id]
+  if (exportRaster != null) {
+    Image(
+      bitmap = exportRaster,
+      contentDescription = node.string("contentDescription").ifEmpty { null },
+      modifier = modifier,
+      contentScale =
+        when (node.string("contentScale")) {
+          "fit" -> ContentScale.Fit
+          "fillBounds" -> ContentScale.FillBounds
+          "inside" -> ContentScale.Inside
+          else -> ContentScale.Crop
+        },
+    )
+    return
+  }
   val key = node.string("assetKey")
   val palette =
     when (key) {
@@ -649,6 +681,7 @@ private fun AssetPlaceholder(node: UiBuilderNode, modifier: Modifier) {
         listOf(Color(0xFF0B57D0), Color(0xFF00A896), Color(0xFF101828))
       "jetcaster.cover.google-developers-podcast" ->
         listOf(Color(0xFFEA4335), Color(0xFFFBBC04), Color(0xFF174EA6))
+      "ui-builder.gate0.cover" -> listOf(Color(0xFF6750A4), Color(0xFFB69DF8), Color(0xFF21005D))
       else -> error("unsupported asset '$key' on ${node.id}")
     }
   Canvas(modifier) {
@@ -890,6 +923,77 @@ private fun UiBuilderNode.icon(): ImageVector =
     "videoLibrary" -> Icons.Filled.VideoLibrary
     else -> error("unsupported icon '$key' on $id")
   }
+
+@Composable
+private fun BuilderIcon(node: UiBuilderNode, modifier: Modifier) {
+  val vector = node.icon()
+  val description = node.string("contentDescription")
+  val tint = node.color("color", MaterialTheme.colorScheme.onSurface)
+  val sized = modifier.size(node.float("sizeDp", 24f).dp)
+  if (!LocalUiBuilderExportStructuredIcons.current) {
+    Icon(vector, description.ifEmpty { null }, sized, tint = tint)
+    return
+  }
+  val paths = remember(vector) { vector.requireSimpleStructuredPaths() }
+  val layoutDirection = LocalLayoutDirection.current
+  val accessible =
+    if (description.isEmpty()) Modifier
+    else
+      Modifier.semantics {
+        contentDescription = description
+        role = Role.Image
+      }
+  Canvas(sized.then(accessible)) {
+    val scaleX = size.width / vector.viewportWidth
+    val scaleY = size.height / vector.viewportHeight
+    withTransform({
+      if (vector.autoMirror && layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) {
+        translate(size.width, 0f)
+        scale(-scaleX, scaleY)
+      } else {
+        scale(scaleX, scaleY)
+      }
+    }) {
+      paths.forEach { item -> drawPath(item.path, tint.copy(alpha = tint.alpha * item.fillAlpha)) }
+    }
+  }
+}
+
+private data class StructuredIconPath(val path: Path, val fillAlpha: Float)
+
+private fun ImageVector.requireSimpleStructuredPaths(): List<StructuredIconPath> {
+  require(
+    root.rotation == 0f &&
+      root.pivotX == 0f &&
+      root.pivotY == 0f &&
+      root.scaleX == 1f &&
+      root.scaleY == 1f &&
+      root.translationX == 0f &&
+      root.translationY == 0f &&
+      root.clipPathData.isEmpty()
+  ) {
+    "catalog icon $name has unsupported root transforms for structured SVG export"
+  }
+  return root.map { node ->
+    require(node is VectorPath) {
+      "catalog icon $name has a non-path child that cannot be proven for structured SVG export"
+    }
+    require(
+      node.fill != null &&
+        node.stroke == null &&
+        node.trimPathStart == 0f &&
+        node.trimPathEnd == 1f &&
+        node.trimPathOffset == 0f
+    ) {
+      "catalog icon $name has unsupported paint or trim for structured SVG export"
+    }
+    StructuredIconPath(
+      path =
+        PathParser().addPathNodes(node.pathData).toPath().apply { fillType = node.pathFillType },
+      fillAlpha = node.fillAlpha,
+    )
+  }
+}
 
 private fun JsonObject.paddingValues() =
   PaddingValues(

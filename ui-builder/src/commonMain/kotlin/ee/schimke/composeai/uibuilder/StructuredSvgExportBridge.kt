@@ -43,8 +43,22 @@ data class StructuredSvgRecording(
 
 data class StructuredSvgRasterRecord(
   val nodeId: String,
-  val imageOrdinal: Int,
+  /**
+   * Stable source identity; generated placeholders must say so rather than impersonating assets.
+   */
+  val sourceIdentity: String,
+  /** SHA-256 of the canonical source recipe/identity used to produce the bitmap. */
+  val sourceIdentitySha256: String,
+  val renderedWidthPx: Int,
+  val renderedHeightPx: Int,
+  /** SHA-256 of the exact embedded data URI emitted for this node by the recorder. */
+  val embeddedPayloadSha256: String,
   val reason: String,
+)
+
+data class StructuredSvgRecordingRequest(
+  val document: UiBuilderDocument,
+  val declaredRasterFallbackNodeIds: List<String>,
 )
 
 const val SAME_RUNTIME_DETERMINISM_SCOPE = "same-compose-skiko-font-os-architecture-runtime"
@@ -52,7 +66,7 @@ const val SAME_RUNTIME_DETERMINISM_SCOPE = "same-compose-skiko-font-os-architect
 interface StructuredSvgSceneRecorder {
   val kind: StructuredSvgRecorderKind
 
-  fun record(document: UiBuilderDocument): StructuredSvgRecording
+  fun record(request: StructuredSvgRecordingRequest): StructuredSvgRecording
 }
 
 sealed interface SavedDocumentSvgExportResult {
@@ -127,7 +141,12 @@ fun executeSavedDocumentSvgExport(
   }
   val recording =
     try {
-      recorder.record(document)
+      recorder.record(
+        StructuredSvgRecordingRequest(
+          document = document,
+          declaredRasterFallbackNodeIds = readiness.declaredRasterFallbackNodeIds.sorted(),
+        )
+      )
     } catch (failure: Throwable) {
       return SavedDocumentSvgExportResult.Failed(
         code = "SVG_RECORDER_FAILED",
@@ -154,6 +173,7 @@ fun executeSavedDocumentSvgExport(
       catalogPinCanonicalJson = job.pin.catalogPinCanonicalJson,
       environmentCanonicalJson = job.pin.environmentCanonicalJson,
       rasterFallbackNodeIds = readiness.declaredRasterFallbackNodeIds.sorted(),
+      rasterRecords = recording.rasterRecords.sortedBy(StructuredSvgRasterRecord::nodeId),
       producer = recording.producer,
       determinismScope = recording.determinismScope,
     )
@@ -175,6 +195,7 @@ private data class SvgExportMetadata(
   val catalogPinCanonicalJson: String,
   val environmentCanonicalJson: String,
   val rasterFallbackNodeIds: List<String>,
+  val rasterRecords: List<StructuredSvgRasterRecord>,
   val producer: String,
   val determinismScope: String,
 ) {
@@ -185,6 +206,13 @@ private data class SvgExportMetadata(
     append("catalogPin=").append(catalogPinCanonicalJson).append(';')
     append("environment=").append(environmentCanonicalJson).append(';')
     append("rasterFallbackNodeIds=").append(rasterFallbackNodeIds.joinToString(",")).append(';')
+    append("rasterSources=")
+      .append(
+        rasterRecords.joinToString(",") {
+          "${it.nodeId}@${it.sourceIdentity}#${it.sourceIdentitySha256}:${it.renderedWidthPx}x${it.renderedHeightPx}"
+        }
+      )
+      .append(';')
     append("producer=").append(producer).append(';')
     append("determinismScope=").append(determinismScope)
   }
@@ -225,7 +253,18 @@ private fun validateStructuredSvg(
         "SVG contains ${images.size} image elements but metadata declares ${metadata.rasterFallbackNodeIds.size} raster fallback nodes",
       )
   }
-  images.forEachIndexed { index, image ->
+  val recordsByNode = metadata.rasterRecords.associateBy(StructuredSvgRasterRecord::nodeId)
+  if (
+    images.mapNotNull { it.attributes["data-compose-node-id"] }.sorted() !=
+      metadata.rasterFallbackNodeIds
+  ) {
+    blockers +=
+      svgOutputBlocker(
+        "RASTER_FALLBACK_NODE_METADATA_MISSING",
+        "annotated image nodes do not equal the declared raster fallback nodes",
+      )
+  }
+  images.forEach { image ->
     val href = image.attributes["href"] ?: image.attributes["xlink:href"]
     if (href?.startsWith("data:image/", ignoreCase = true) != true) {
       blockers +=
@@ -234,12 +273,24 @@ private fun validateStructuredSvg(
           "every declared image fallback must be a self-contained data URI",
         )
     }
-    val expectedNode = metadata.rasterFallbackNodeIds.getOrNull(index)
-    if (expectedNode != null && image.attributes["data-compose-node-id"] != expectedNode) {
+    val nodeId = image.attributes["data-compose-node-id"]
+    val record = nodeId?.let(recordsByNode::get)
+    if (record == null) {
       blockers +=
         svgOutputBlocker(
           "RASTER_FALLBACK_NODE_METADATA_MISSING",
-          "image fallback $index is not bound to declared node $expectedNode",
+          "image fallback is not bound to exactly one declared node",
+        )
+    } else if (
+      image.attributes["data-compose-raster-source"] != record.sourceIdentity ||
+        image.attributes["data-compose-raster-source-sha256"] != record.sourceIdentitySha256 ||
+        image.attributes["data-compose-raster-size-px"] !=
+          "${record.renderedWidthPx}x${record.renderedHeightPx}"
+    ) {
+      blockers +=
+        svgOutputBlocker(
+          "RASTER_FALLBACK_SOURCE_METADATA_MISMATCH",
+          "image fallback for ${record.nodeId} does not preserve its recorder-supplied source identity",
         )
     }
   }

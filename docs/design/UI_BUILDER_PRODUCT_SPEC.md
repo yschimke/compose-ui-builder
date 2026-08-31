@@ -554,7 +554,9 @@ accepted-event sequence while a browser remains connected.
 
 ### SVG
 
-- Root `viewBox` is `411 x 914`; no editor chrome or external asset URL is present.
+- The primary Jetcaster export root `viewBox` is `1280 x 800`; no editor chrome or external asset URL
+  is present.
+- The compact Confetti regression export retains its `411 x 914` root `viewBox`.
 - SVG is valid UTF-8, self-contained, and imports into Figma at 1:1 root bounds without warnings.
 - Supported layers/text remain named or structurally identifiable; fallbacks are enumerated, and the
   file is not one full-screen bitmap.

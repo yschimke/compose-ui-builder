@@ -208,11 +208,17 @@ internal fun validateRasterRecords(
         "recorder raster nodes $recordNodeIds do not equal declared fallback nodes $declaredNodeIds",
       )
   }
-  if (records.map(StructuredSvgRasterRecord::imageOrdinal).sorted() != images.indices.toList()) {
+  val imagePayloadDigests = images.mapNotNull(ParsedSvgElement::embeddedImagePayloadDigest)
+  val recordPayloadDigests = records.map(StructuredSvgRasterRecord::embeddedPayloadSha256)
+  if (
+    imagePayloadDigests.size != images.size ||
+      recordPayloadDigests.toSet().size != recordPayloadDigests.size ||
+      imagePayloadDigests.sorted() != recordPayloadDigests.sorted()
+  ) {
     blockers +=
       DocumentSvgExportBlocker(
-        "RASTER_RECORD_ORDINAL_MISMATCH",
-        "recorder must correlate every image ordinal exactly once",
+        "RASTER_RECORD_PAYLOAD_MISMATCH",
+        "recorder must correlate every image by its unique embedded payload digest",
       )
   }
   records.forEach { record ->
@@ -221,6 +227,19 @@ internal fun validateRasterRecords(
         DocumentSvgExportBlocker(
           "RASTER_RECORD_REASON_MISSING",
           "raster record for ${record.nodeId} must explain its fallback",
+          nodeId = record.nodeId,
+        )
+    }
+    if (
+      !record.sourceIdentity.matches(Regex("[A-Za-z0-9._/-]+")) ||
+        !record.sourceIdentitySha256.matches(Regex("[0-9a-f]{64}")) ||
+        record.renderedWidthPx <= 0 ||
+        record.renderedHeightPx <= 0
+    ) {
+      blockers +=
+        DocumentSvgExportBlocker(
+          "RASTER_RECORD_SOURCE_IDENTITY_INVALID",
+          "raster record for ${record.nodeId} needs a pinned source identity and positive pixel size",
           nodeId = record.nodeId,
         )
     }
@@ -256,16 +275,29 @@ internal fun annotateRasterFallbacks(
   records: List<StructuredSvgRasterRecord>,
 ): String {
   var annotated = svg
-  records
-    .sortedByDescending { parsed.images[it.imageOrdinal].nameEnd }
-    .forEach { record ->
-      val insertion = parsed.images[record.imageOrdinal].nameEnd
+  val recordsByDigest = records.associateBy(StructuredSvgRasterRecord::embeddedPayloadSha256)
+  parsed.images
+    .mapNotNull { image ->
+      image.embeddedImagePayloadDigest()?.let(recordsByDigest::get)?.let { image to it }
+    }
+    .sortedByDescending { (image) -> image.nameEnd }
+    .forEach { (image, record) ->
+      val insertion = image.nameEnd
       val attributes =
         " data-compose-node-id=\"${record.nodeId.escapeXmlAttribute()}\"" +
+          " data-compose-raster-source=\"${record.sourceIdentity.escapeXmlAttribute()}\"" +
+          " data-compose-raster-source-sha256=\"${record.sourceIdentitySha256}\"" +
+          " data-compose-raster-size-px=\"${record.renderedWidthPx}x${record.renderedHeightPx}\"" +
           " data-compose-raster-reason=\"${record.reason.escapeXmlAttribute()}\""
       annotated = annotated.substring(0, insertion) + attributes + annotated.substring(insertion)
     }
   return annotated
+}
+
+internal fun ParsedSvgElement.embeddedImagePayloadDigest(): String? {
+  val href = attributes["href"] ?: attributes["xlink:href"] ?: return null
+  if (!href.isEmbeddedRasterDataUri()) return null
+  return sha256Hex(href)
 }
 
 private data class StartTag(
@@ -367,7 +399,7 @@ private fun validateSafeSvgElement(
   }
 }
 
-private fun String.isEmbeddedRasterDataUri(): Boolean {
+internal fun String.isEmbeddedRasterDataUri(): Boolean {
   val lowercase = lowercase()
   return lowercase.startsWith("data:image/png;base64,") ||
     lowercase.startsWith("data:image/jpeg;base64,") ||
