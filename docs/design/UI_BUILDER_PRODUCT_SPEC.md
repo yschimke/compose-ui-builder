@@ -343,10 +343,13 @@ history.
 
 - HTTP creates/lists/reads designs, submits command batches, reads history, and requests immutable
   renders/exports.
-- A design WebSocket sends an initial snapshot or a delta from the client's last revision, committed
-  operations, validation/conflict notices, presence, and export status.
-- Reconnect from a retained revision must converge without a full-page reload. If the operation log
-  has compacted past that revision, the server sends a new snapshot.
+- A design WebSocket sends an initial snapshot or a delta from the client's last accepted-event
+  sequence, committed operations, validation/conflict notices, presence, and export status. Every
+  committed operation carries both its transport sequence and resulting document revision; these
+  values are deliberately independent.
+- Reconnect from a retained sequence must converge without a full-page reload. If the operation log
+  has compacted past that sequence, the server sends a new snapshot. Rejections, idempotent retries,
+  presence, and failed durable writes never advance the sequence.
 - Existing `/ws/{previewId}` frame streaming remains a render-session protocol. It must not be
   overloaded with editable-document messages.
 
@@ -488,7 +491,7 @@ Initial tools:
 Prefer a small batch-oriented semantic surface over many tools shaped like editor buttons. Tool
 responses return the committed revision/document hash and validation failures that name the exact
 node, slot, property, or modifier path. A long-running agent can subscribe or poll from its last
-revision while a browser remains connected.
+accepted-event sequence while a browser remains connected.
 
 ## 13. Functional requirements
 
@@ -543,8 +546,8 @@ revision while a browser remains connected.
   document hash.
 - Retried operation ids do not duplicate changes; cycles and cardinality violations are rejected
   atomically; concurrent move/delete conflicts follow the documented rule.
-- A reconnect from the last revision catches up without reload; a compacted client receives a valid
-  replacement snapshot.
+- A reconnect from the last accepted-event sequence catches up without reload; a compacted client
+  receives a valid replacement snapshot.
 - An acknowledged design survives process restart and reproduces the same clean render and exports.
 - Authorization tests prove one user cannot read, mutate, export, or subscribe to another private
   design without permission.
@@ -737,6 +740,13 @@ of these are true:
 
 Until then, co-location is useful because the render and catalog seams are still being discovered.
 Directory isolation and contract tests prevent that convenience from becoming an implicit API.
+
+Two concrete co-location seams remain before extraction is honest. The server distribution build
+currently packages the `:ui-builder` Wasm task output directly, even though the server runtime
+classpath is clean; that must become an immutable released frontend artifact or an independent
+deployment input. The first durable `DesignService` also incubates in `:ui-builder`; production
+server routes must consume a separately published pure service port/implementation rather than add
+a `:server -> :ui-builder` project dependency.
 
 Do not add a reverse `:render-host -> :server` edge, a web server to `:render-host`, `mavenLocal()`, a
 composite include, or implementation code to the contracts repository. `checkServeModuleBoundary`

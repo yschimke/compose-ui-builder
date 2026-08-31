@@ -5,6 +5,8 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
+import ee.schimke.composeai.uibuilder.capability.SlotCapability
+import ee.schimke.composeai.uibuilder.capability.SlotCardinality
 import ee.schimke.composeai.uibuilder.capability.WasmAdapterStatus
 import ee.schimke.composeai.uibuilder.capability.WasmCapability
 import kotlin.test.Test
@@ -18,7 +20,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 class CollaborationConvergenceTest {
-  private val propertyValidator = capabilityPropertyValidator()
+  private val capabilityValidator = capabilityValidator()
+  private val propertyValidator = CapabilityPropertyWriteValidator(capabilityValidator)
+  private val documentValidator = CapabilityDocumentWriteValidator(capabilityValidator)
 
   @Test
   fun `two browsers and MCP converge across insert permutations retries and full replay`() {
@@ -155,6 +159,69 @@ class CollaborationConvergenceTest {
   }
 
   @Test
+  fun `arbitrary anchor inserts and independent moves converge across permutations`() {
+    val initial = documentWithSiblings()
+    val inserts =
+      listOf(
+        command(
+          "insert-before-root",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(UiBuilderNode("root-first", "button")),
+        ),
+        command(
+          "insert-after-anchor",
+          "actor-b",
+          "browser-b",
+          4,
+          DesignOperation.InsertNode(
+            UiBuilderNode("after-anchor", "button"),
+            ParentSlot("container", "items"),
+            "anchor",
+          ),
+        ),
+        command(
+          "insert-after-a",
+          "actor-c",
+          "mcp-c",
+          4,
+          DesignOperation.InsertNode(
+            UiBuilderNode("after-a", "button"),
+            ParentSlot("container", "items"),
+            "a",
+          ),
+        ),
+      )
+    val insertStates = inserts.permutations().map { applyAll(initial, it) }
+    insertStates.forEach { state ->
+      assertEquals(insertStates.first().document, state.document)
+      assertEquals(insertStates.first().positions, state.positions)
+    }
+
+    val moves =
+      listOf(
+        command(
+          "move-a",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+        ),
+        command(
+          "move-anchor",
+          "actor-b",
+          "mcp-b",
+          4,
+          DesignOperation.MoveNode("anchor", parent = null, afterNodeId = "b"),
+        ),
+      )
+    val moveStates = moves.permutations().map { applyAll(initial, it) }
+    assertEquals(moveStates.first().document, moveStates.last().document)
+    assertEquals(moveStates.first().positions, moveStates.last().positions)
+  }
+
+  @Test
   fun `stale moves resolve in server order and report displacement`() {
     val first =
       CollaborationReducer.apply(
@@ -185,6 +252,53 @@ class CollaborationConvergenceTest {
       listOf("anchor", "tail", "a"),
       stale.state.document.nodes.getValue("container").slots["items"],
     )
+  }
+
+  @Test
+  fun `move delete races never resurrect and stale delete remains strict`() {
+    val deleted =
+      CollaborationReducer.apply(
+        CollaborationState(documentWithSiblings()),
+        command("delete-first", "actor-a", "browser-a", 4, DesignOperation.DeleteNode("a")),
+      )
+    val moveAfterDelete =
+      CollaborationReducer.apply(
+        deleted.state,
+        command(
+          "move-late",
+          "actor-b",
+          "mcp-b",
+          4,
+          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+        ),
+      )
+    assertEquals(
+      RejectionCode.DELETED_NODE,
+      assertIs<CommandOutcome.Rejected>(moveAfterDelete.outcome).code,
+    )
+    assertEquals(null, moveAfterDelete.state.document.nodes["a"])
+
+    val moved =
+      CollaborationReducer.apply(
+        CollaborationState(documentWithSiblings()),
+        command(
+          "move-first",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+        ),
+      )
+    val deleteAfterMove =
+      CollaborationReducer.apply(
+        moved.state,
+        command("delete-late", "actor-b", "mcp-b", 4, DesignOperation.DeleteNode("a")),
+      )
+    assertEquals(
+      RejectionCode.REVISION_MISMATCH,
+      assertIs<CommandOutcome.Rejected>(deleteAfterMove.outcome).code,
+    )
+    assertTrue("a" in deleteAfterMove.state.document.nodes)
   }
 
   @Test
@@ -238,6 +352,28 @@ class CollaborationConvergenceTest {
     assertEquals(RejectionCode.INVALID_LOCATION, rejected.code)
     assertEquals(0, rejected.operationIndex)
     assertEquals("second-parent", rejected.nodeId)
+    assertNoDesignMutation(initial, application.state)
+  }
+
+  @Test
+  fun `commands reject a loaded document with duplicate parent topology`() {
+    val malformedDocument = document().copy(roots = listOf("container", "b", "a"))
+    val initial = CollaborationState(malformedDocument)
+    val application =
+      CollaborationReducer.apply(
+        initial,
+        command(
+          "touch-malformed",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.MoveNode("b", parent = null, afterNodeId = "container"),
+        ),
+      )
+
+    val rejected = assertIs<CommandOutcome.Rejected>(application.outcome)
+    assertEquals(RejectionCode.INVALID_LOCATION, rejected.code)
+    assertEquals("a", rejected.nodeId)
     assertNoDesignMutation(initial, application.state)
   }
 
@@ -367,6 +503,387 @@ class CollaborationConvergenceTest {
     val redoRetry = CollaborationReducer.redo(redone.state, redoCommand)
     assertTrue(assertIs<CommandOutcome.Accepted>(redoRetry.outcome).idempotentReplay)
     assertSame(redone.state, redoRetry.state)
+  }
+
+  @Test
+  fun `insert compensation supports redo and a repeated undo redo cycle`() {
+    val inserted =
+      CollaborationReducer.apply(
+        CollaborationState(document()),
+        command(
+          "insert-cycle",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(
+            UiBuilderNode("cycle-node", "button"),
+            ParentSlot("container", "items"),
+            "a",
+          ),
+        ),
+      )
+    val undoOne =
+      CollaborationReducer.undo(
+        inserted.state,
+        undo("undo-one", "actor-a", "browser-a", 5, "insert-cycle"),
+      )
+    assertIs<CommandOutcome.Accepted>(undoOne.outcome)
+    assertEquals(null, undoOne.state.document.nodes["cycle-node"])
+
+    val redoOne =
+      CollaborationReducer.redo(
+        undoOne.state,
+        redo("redo-one", "actor-a", "browser-a", 6, "undo-one"),
+      )
+    assertIs<CommandOutcome.Accepted>(redoOne.outcome)
+    assertTrue("cycle-node" in redoOne.state.document.nodes)
+
+    val undoTwo =
+      CollaborationReducer.undo(
+        redoOne.state,
+        undo("undo-two", "actor-a", "browser-a", 7, "insert-cycle"),
+      )
+    assertIs<CommandOutcome.Accepted>(undoTwo.outcome)
+    val redoTwo =
+      CollaborationReducer.redo(
+        undoTwo.state,
+        redo("redo-two", "actor-a", "browser-a", 8, "undo-two"),
+      )
+    assertIs<CommandOutcome.Accepted>(redoTwo.outcome)
+    assertEquals(
+      listOf("a", "cycle-node"),
+      redoTwo.state.document.nodes.getValue("container").slots["items"],
+    )
+  }
+
+  @Test
+  fun `move delete and restore each compensate with retained stable positions`() {
+    val moved =
+      CollaborationReducer.apply(
+        CollaborationState(documentWithSiblings()),
+        command(
+          "move",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+        ),
+      )
+    val moveUndone =
+      CollaborationReducer.undo(
+        moved.state,
+        undo("undo-move", "actor-a", "browser-a", 5, "move"),
+      )
+    assertEquals(
+      listOf("anchor", "a", "tail"),
+      moveUndone.state.document.nodes.getValue("container").slots["items"],
+    )
+    val moveRedone =
+      CollaborationReducer.redo(
+        moveUndone.state,
+        redo("redo-move", "actor-a", "browser-a", 6, "undo-move"),
+      )
+    assertEquals(listOf("container", "b", "a"), moveRedone.state.document.roots)
+
+    val deleted =
+      CollaborationReducer.apply(
+        CollaborationState(document()),
+        command("delete", "actor-a", "browser-a", 4, DesignOperation.DeleteNode("a")),
+      )
+    val deleteUndone =
+      CollaborationReducer.undo(
+        deleted.state,
+        undo("undo-delete", "actor-a", "browser-a", 5, "delete"),
+      )
+    assertTrue("a" in deleteUndone.state.document.nodes)
+    assertTrue("child" in deleteUndone.state.document.nodes)
+    val deleteRedone =
+      CollaborationReducer.redo(
+        deleteUndone.state,
+        redo("redo-delete", "actor-a", "browser-a", 6, "undo-delete"),
+      )
+    assertEquals(null, deleteRedone.state.document.nodes["a"])
+
+    val restored =
+      CollaborationReducer.apply(
+        deleted.state,
+        command("restore", "actor-a", "browser-a", 5, DesignOperation.RestoreNode("a")),
+      )
+    val restoreUndone =
+      CollaborationReducer.undo(
+        restored.state,
+        undo("undo-restore", "actor-a", "browser-a", 6, "restore"),
+      )
+    assertEquals(null, restoreUndone.state.document.nodes["a"])
+    val restoreRedone =
+      CollaborationReducer.redo(
+        restoreUndone.state,
+        redo("redo-restore", "actor-a", "browser-a", 7, "undo-restore"),
+      )
+    assertTrue("a" in restoreRedone.state.document.nodes)
+  }
+
+  @Test
+  fun `undo insert rejects deleting another actors later property edit`() {
+    val inserted =
+      CollaborationReducer.apply(
+        CollaborationState(document()),
+        command(
+          "insert-owned",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(
+            UiBuilderNode("owned", "button"),
+            ParentSlot("container", "items"),
+            "a",
+          ),
+        ),
+      )
+    val edited =
+      CollaborationReducer.apply(
+        inserted.state,
+        command(
+          "later-edit",
+          "actor-b",
+          "browser-b",
+          5,
+          DesignOperation.SetProperty(
+            "owned",
+            "enabled",
+            buildJsonObject {
+              put("type", "bool")
+              put("value", true)
+            },
+          ),
+        ),
+        propertyValidator,
+      )
+    val undo =
+      CollaborationReducer.undo(
+        edited.state,
+        undo("unsafe-undo-insert", "actor-a", "browser-a", 6, "insert-owned"),
+      )
+
+    assertEquals(
+      RejectionCode.UNSAFE_COMPENSATION,
+      assertIs<CommandOutcome.Rejected>(undo.outcome).code,
+    )
+    assertTrue("owned" in undo.state.document.nodes)
+  }
+
+  @Test
+  fun `canonical events replay accepted compensation and rejected outcomes from retained state`() {
+    val initial = CollaborationState(document())
+    val insertCommand =
+      command(
+        "event-insert",
+        "actor-a",
+        "browser-a",
+        4,
+        DesignOperation.InsertNode(
+          UiBuilderNode("event-node", "button"),
+          ParentSlot("container", "items"),
+          "a",
+        ),
+      )
+    val inserted = CollaborationReducer.apply(initial, insertCommand)
+    val rejectedCommand =
+      command(
+        "event-rejected",
+        "actor-b",
+        "browser-b",
+        4,
+        DesignOperation.DeleteNode("a"),
+      )
+    val rejected = CollaborationReducer.apply(inserted.state, rejectedCommand)
+    assertIs<CommandOutcome.Rejected>(rejected.outcome)
+    val undoCommand = undo("event-undo", "actor-a", "browser-a", 5, "event-insert")
+    val undone = CollaborationReducer.undo(rejected.state, undoCommand)
+    val redoCommand = redo("event-redo", "actor-a", "browser-a", 6, "event-undo")
+    val redone = CollaborationReducer.redo(undone.state, redoCommand)
+
+    val events =
+      listOf(
+        CollaborationEvent(RejectedMutation.Design(insertCommand), inserted.outcome),
+        CollaborationEvent(RejectedMutation.Design(rejectedCommand), rejected.outcome),
+        CollaborationEvent(RejectedMutation.Undo(undoCommand), undone.outcome),
+        CollaborationEvent(RejectedMutation.Redo(redoCommand), redone.outcome),
+      )
+    val fullReplay = CollaborationReducer.replayEvents(initial, events)
+    assertEquals(redone.state, fullReplay.state)
+
+    val retainedReplay = CollaborationReducer.replayEvents(rejected.state, events.drop(2))
+    assertEquals(redone.state, retainedReplay.state)
+    assertEquals(
+      canonicalDocument(redone.state.document),
+      canonicalDocument(retainedReplay.state.document),
+    )
+  }
+
+  @Test
+  fun `mixed structural and scalar batches undo and redo in exact operation order`() {
+    val batch =
+      CollaborationReducer.apply(
+        CollaborationState(document()),
+        command(
+          "mixed-batch",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(
+            UiBuilderNode("mixed", "button"),
+            ParentSlot("container", "items"),
+            "a",
+          ),
+          DesignOperation.SetProperty(
+            "mixed",
+            "enabled",
+            buildJsonObject {
+              put("type", "bool")
+              put("value", true)
+            },
+          ),
+          DesignOperation.MoveNode("mixed", parent = null, afterNodeId = "b"),
+        ),
+        propertyValidator,
+      )
+    assertIs<CommandOutcome.Accepted>(batch.outcome)
+
+    val undone =
+      CollaborationReducer.undo(
+        batch.state,
+        undo("undo-mixed", "actor-a", "browser-a", 5, "mixed-batch"),
+      )
+    assertIs<CommandOutcome.Accepted>(undone.outcome)
+    assertEquals(null, undone.state.document.nodes["mixed"])
+
+    val redone =
+      CollaborationReducer.redo(
+        undone.state,
+        redo("redo-mixed", "actor-a", "browser-a", 6, "undo-mixed"),
+      )
+    assertIs<CommandOutcome.Accepted>(redone.outcome)
+    assertEquals(listOf("container", "b", "mixed"), redone.state.document.roots)
+    assertEquals(
+      buildJsonObject {
+        put("type", "bool")
+        put("value", true)
+      },
+      redone.state.nodeProperty("mixed", "enabled"),
+    )
+  }
+
+  @Test
+  fun `catalog validation rejects unknown components and slot overflow atomically`() {
+    val initial = CollaborationState(document())
+    val unknown =
+      CollaborationReducer.apply(
+        initial,
+        command(
+          "unknown-component",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(UiBuilderNode("unknown", "not-in-catalog")),
+        ),
+        documentValidator = documentValidator,
+      )
+    assertEquals(
+      RejectionCode.INVALID_DOCUMENT,
+      assertIs<CommandOutcome.Rejected>(unknown.outcome).code,
+    )
+    assertNoDesignMutation(initial, unknown.state)
+
+    val overflow =
+      CollaborationReducer.apply(
+        initial,
+        command(
+          "slot-overflow",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(
+            UiBuilderNode("overflow", "button"),
+            ParentSlot("container", "items"),
+            "a",
+          ),
+        ),
+        documentValidator = documentValidator,
+      )
+    val overflowOutcome = assertIs<CommandOutcome.Rejected>(overflow.outcome)
+    assertEquals(RejectionCode.INVALID_DOCUMENT, overflowOutcome.code)
+    assertEquals("container", overflowOutcome.nodeId)
+    assertEquals("items", overflowOutcome.field)
+    assertNoDesignMutation(initial, overflow.state)
+  }
+
+  @Test
+  fun `catalog validation rejects undo that would overflow a slot`() {
+    val deleted =
+      CollaborationReducer.apply(
+        CollaborationState(document()),
+        command("delete-for-slot", "actor-a", "browser-a", 4, DesignOperation.DeleteNode("a")),
+        documentValidator = documentValidator,
+      )
+    assertIs<CommandOutcome.Accepted>(deleted.outcome)
+    val replacement =
+      CollaborationReducer.apply(
+        deleted.state,
+        command(
+          "insert-replacement",
+          "actor-b",
+          "browser-b",
+          5,
+          DesignOperation.InsertNode(
+            UiBuilderNode("replacement", "button"),
+            ParentSlot("container", "items"),
+          ),
+        ),
+        documentValidator = documentValidator,
+      )
+    assertIs<CommandOutcome.Accepted>(replacement.outcome)
+
+    val undo =
+      CollaborationReducer.undo(
+        replacement.state,
+        undo("undo-overflow", "actor-a", "browser-a", 6, "delete-for-slot"),
+        documentValidator,
+      )
+
+    val rejected = assertIs<CommandOutcome.Rejected>(undo.outcome)
+    assertEquals(RejectionCode.INVALID_DOCUMENT, rejected.code)
+    assertEquals("container", rejected.nodeId)
+    assertEquals("items", rejected.field)
+    assertNoDesignMutation(replacement.state, undo.state)
+  }
+
+  @Test
+  fun `event replay divergence preserves the last verified state`() {
+    val initial = CollaborationState(document())
+    val command =
+      command(
+        "replay-insert",
+        "actor-a",
+        "browser-a",
+        4,
+        DesignOperation.InsertNode(UiBuilderNode("replay-node", "button")),
+      )
+    val accepted = CollaborationReducer.apply(initial, command)
+    val tampered =
+      CollaborationEvent(
+        RejectedMutation.Design(command),
+        CommandOutcome.Rejected(RejectionCode.INVALID_COMMAND, "tampered"),
+      )
+
+    val replay = CollaborationReducer.replayEvents(initial, listOf(tampered))
+
+    assertEquals(
+      RejectionCode.REPLAY_DIVERGENCE,
+      assertIs<CommandOutcome.Rejected>(replay.outcome).code,
+    )
+    assertSame(initial, replay.state)
+    assertTrue("replay-node" in accepted.state.document.nodes)
   }
 
   @Test
@@ -549,7 +1066,7 @@ class CollaborationConvergenceTest {
     var state = CollaborationState(initial)
     commands.forEach { command ->
       val applied = CollaborationReducer.apply(state, command, propertyValidator)
-      assertIs<CommandOutcome.Accepted>(applied.outcome)
+      assertIs<CommandOutcome.Accepted>(applied.outcome, applied.outcome.toString())
       state = applied.state
     }
     return state
@@ -637,30 +1154,35 @@ class CollaborationConvergenceTest {
     )
   }
 
-  private fun capabilityPropertyValidator(): CapabilityPropertyWriteValidator {
+  private fun capabilityValidator(): CapabilityValidator {
     fun component(id: String, vararg properties: Pair<String, String>) =
       ComponentCapability(
         componentId = id,
         displayName = id,
         role = "Container",
+        slots =
+          if (id == "column")
+            listOf(
+              SlotCapability("content", SlotCardinality(0, 1), ordered = true),
+              SlotCapability("items", SlotCardinality(0, 1), ordered = true),
+            )
+          else emptyList(),
         properties =
           properties.map { (name, type) ->
             PropertyCapability(name = name, jsonType = JsonPrimitive(type))
           },
         wasm = WasmCapability(JsonPrimitive(true), WasmAdapterStatus.SUPPORTED),
       )
-    return CapabilityPropertyWriteValidator(
-      CapabilityValidator(
-        CapabilityCatalog(
-          schema = "compose-ui-builder-capabilities/v1",
-          benchmark = CapabilityBenchmark("test", "test", "test", "1", "runtime"),
-          components =
-            listOf(
-              component("column", "text" to "string"),
-              component("button"),
-              component("text"),
-            ),
-        )
+    return CapabilityValidator(
+      CapabilityCatalog(
+        schema = "compose-ui-builder-capabilities/v1",
+        benchmark = CapabilityBenchmark("test", "test", "test", "1", "runtime"),
+        components =
+          listOf(
+            component("column", "text" to "string"),
+            component("button", "enabled" to "boolean"),
+            component("text"),
+          ),
       )
     )
   }
