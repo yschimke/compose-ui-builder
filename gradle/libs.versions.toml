@@ -34,6 +34,7 @@ composeai-common-io = { module = "ee.schimke.composeai:common-io", version.ref =
 composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core", version.ref = "composeai-contracts" }
 composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core", version.ref = "composeai-contracts" }
 composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-preview-overrides-core", version.ref = "composeai-contracts" }
+composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime", version.ref = "composeai-tools" }
 composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core", version.ref = "composeai-contracts" }
 composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol", version.ref = "composeai-contracts" }
 
@@ -51,6 +52,7 @@ okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", versio
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
+compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 ktfmt-cli = { module = "com.facebook:ktfmt", version.ref = "ktfmt-cli" }
 
 [plugins]
@@ -61,3 +63,4 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
+compose-preview = { id = "ee.schimke.composeai.preview", version.ref = "composeai-tools" }

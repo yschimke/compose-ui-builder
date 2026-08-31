@@ -4,6 +4,7 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.compose.multiplatform)
   alias(libs.plugins.compose.compiler)
+  alias(libs.plugins.compose.preview)
 }
 
 ktfmt { googleStyle() }
@@ -56,6 +57,8 @@ kotlin {
       // adapter moves behind :render-host. currentOs supplies the matching local Skiko runtime.
       implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutines.core)
+      implementation(libs.compose.ui.tooling.preview)
+      implementation(libs.composeai.data.preview.overrides.runtime)
     }
     getByName("jvmMain")
       .resources
