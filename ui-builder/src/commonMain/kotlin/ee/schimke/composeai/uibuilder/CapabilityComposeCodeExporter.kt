@@ -285,7 +285,7 @@ private class ComposeEmitter(
       bodyLevel,
       "// node:${node.id.escapeComment()} component:${node.componentId.escapeComment()} symbol:${capability.code?.symbol?.escapeComment()}",
     )
-    line(bodyLevel, "// typed-properties:${node.properties.toString().escapeComment()}")
+    line(bodyLevel, "// typed-properties:${canonicalJson(node.properties).escapeComment()}")
     when (node.componentId) {
       "layout/supporting-pane-scaffold" -> emitSupportingPane(node, bodyLevel)
       "layout/scaffold" -> emitScaffold(node, bodyLevel)

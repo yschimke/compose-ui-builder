@@ -1,4 +1,4 @@
-// Generator content SHA-256: 7da9a2d9b7009d0a565a5830c96da3f9d29f039a80d8c7b64880912030e5646e
+// Generator content SHA-256: 378695fc522f7c2d831a4d697191085eb15a87f7b077047796c720cbff97f7cd
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -48,7 +48,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
   // typed-properties:{"containerColor":{"type":"colorToken","value":"background"}}
   Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
     // node:pane-scaffold component:layout/supporting-pane-scaffold symbol:SupportingPaneScaffold
-    // typed-properties:{"layoutMode":{"type":"enum","value":"expandedTwoPane"},"mainPanePreferredWidthDp":{"type":"float","value":744.0},"supportingPanePreferredWidthDp":{"type":"float","value":512.0},"paneSpacingDp":{"type":"float","value":24.0},"mainPaneVisible":{"type":"bool","value":true},"supportingPaneVisible":{"type":"bool","value":true}}
+    // typed-properties:{"layoutMode":{"type":"enum","value":"expandedTwoPane"},"mainPanePreferredWidthDp":{"type":"float","value":744},"mainPaneVisible":{"type":"bool","value":true},"paneSpacingDp":{"type":"float","value":24},"supportingPanePreferredWidthDp":{"type":"float","value":512},"supportingPaneVisible":{"type":"bool","value":true}}
     BuilderSupportingPaneScaffold(
       modifier = Modifier.fillMaxSize(),
       mainPaneWidth = 744.dp,
@@ -63,7 +63,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
         Box(modifier = Modifier.fillMaxSize()) {
           // node:main-scrim component:shape/radial-gradient
           // symbol:Modifier.background(Brush.radialGradient)
-          // typed-properties:{"center":{"type":"enum","value":"topStart"},"innerColor":{"type":"colorToken","value":"primary"},"innerAlpha":{"type":"float","value":0.15},"outerColor":{"type":"colorToken","value":"transparent"}}
+          // typed-properties:{"center":{"type":"enum","value":"topStart"},"innerAlpha":{"type":"float","value":0.15},"innerColor":{"type":"colorToken","value":"primary"},"outerColor":{"type":"colorToken","value":"transparent"}}
           BuilderRadialGradient(
             Modifier.matchParentSize(),
             MaterialTheme.colorScheme.primary,
@@ -78,7 +78,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
             containerColor = Color.Transparent,
             topBar = {
               // node:search-bar component:m3/search-bar symbol:SearchBar
-              // typed-properties:{"expanded":{"type":"bool","value":false},"tonalElevationDp":{"type":"float","value":0.0}}
+              // typed-properties:{"expanded":{"type":"bool","value":false},"tonalElevationDp":{"type":"float","value":0}}
               BuilderSearchBar(
                 expanded = false,
                 tonalElevation = 0.dp,
@@ -88,14 +88,14 @@ fun JetcasterDiscoverExpandedSupportingPane() {
               ) {
                 // node:search-input component:m3/search-input-field
                 // symbol:SearchBarDefaults.InputField
-                // typed-properties:{"value":{"type":"state","variable":"searchQuery"},"enabled":{"type":"bool","value":true}}
+                // typed-properties:{"enabled":{"type":"bool","value":true},"value":{"type":"state","variable":"searchQuery"}}
                 BuilderSearchInputField(
                   value = searchQuery,
                   onValueChange = { searchQuery = it },
                   enabled = true,
                   leadingIcon = {
                     // node:search-leading-icon component:m3/icon symbol:Icon
-                    // typed-properties:{"iconKey":{"type":"enum","value":"search"},"contentDescription":{"type":"string","value":"Search"}}
+                    // typed-properties:{"contentDescription":{"type":"string","value":"Search"},"iconKey":{"type":"enum","value":"search"}}
                     Icon(
                       imageVector = builderIcon("search"),
                       contentDescription = "Search",
@@ -105,8 +105,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   },
                   placeholder = {
                     // node:search-placeholder component:m3/text symbol:Text
-                    // typed-properties:{"text":{"type":"string","value":"Search for a
-                    // podcast"},"style":{"type":"typographyToken","value":"bodyLarge"},"color":{"type":"colorToken","value":"onSurfaceVariant"}}
+                    // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"bodyLarge"},"text":{"type":"string","value":"Search for a podcast"}}
                     Text(
                       text = "Search for a podcast",
                       style = MaterialTheme.typography.bodyLarge,
@@ -118,7 +117,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   },
                   trailingIcon = {
                     // node:search-account-icon component:m3/icon symbol:Icon
-                    // typed-properties:{"iconKey":{"type":"enum","value":"accountCircle"},"contentDescription":{"type":"string","value":"Account"}}
+                    // typed-properties:{"contentDescription":{"type":"string","value":"Account"},"iconKey":{"type":"enum","value":"accountCircle"}}
                     Icon(
                       imageVector = builderIcon("accountCircle"),
                       contentDescription = "Account",
@@ -141,7 +140,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
               Box(modifier = Modifier.fillMaxSize()) {
                 key("discover-main-scroll") {
                   // node:discover-grid component:layout/lazy-grid symbol:LazyVerticalGrid
-                  // typed-properties:{"columns":{"type":"adaptiveGrid","minimumCellWidthDp":362.0},"contentPadding":{"type":"padding","startDp":0,"topDp":0,"endDp":0,"bottomDp":88},"scrollStateKey":{"type":"string","value":"discover-main-scroll"}}
+                  // typed-properties:{"columns":{"minimumCellWidthDp":362,"type":"adaptiveGrid"},"contentPadding":{"bottomDp":88,"endDp":0,"startDp":0,"topDp":0,"type":"padding"},"scrollStateKey":{"type":"string","value":"discover-main-scroll"}}
                   LazyVerticalGrid(
                     columns = GridCells.Adaptive(362.dp),
                     contentPadding =
@@ -151,7 +150,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                     item(key = "categories", span = { GridItemSpan(maxLineSpan) }) {
                       key("categories") {
                         // node:category-row component:layout/lazy-row symbol:LazyRow
-                        // typed-properties:{"span":{"type":"enum","value":"full"},"stableKey":{"type":"string","value":"categories"},"contentPadding":{"type":"padding","startDp":16,"topDp":16,"endDp":16,"bottomDp":16},"horizontalSpacingDp":{"type":"float","value":8.0}}
+                        // typed-properties:{"contentPadding":{"bottomDp":16,"endDp":16,"startDp":16,"topDp":16,"type":"padding"},"horizontalSpacingDp":{"type":"float","value":8},"span":{"type":"enum","value":"full"},"stableKey":{"type":"string","value":"categories"}}
                         LazyRow(
                           contentPadding =
                             PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
@@ -160,7 +159,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         ) {
                           item(key = "chip-crime") {
                             // node:chip-crime component:m3/filter-chip symbol:FilterChip
-                            // typed-properties:{"selected":{"type":"stateEquals","variable":"selectedCategory","value":"Crime"},"shape":{"type":"shapeToken","value":"large"}}
+                            // typed-properties:{"selected":{"type":"stateEquals","value":"Crime","variable":"selectedCategory"},"shape":{"type":"shapeToken","value":"large"}}
                             FilterChip(
                               selected = selectedCategory == "Crime",
                               onClick = { selectedCategory = "Crime" },
@@ -168,7 +167,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               shape = RoundedCornerShape(16.dp),
                               label = {
                                 // node:chip-crime-label component:m3/text symbol:Text
-                                // typed-properties:{"text":{"type":"string","value":"Crime"},"style":{"type":"typographyToken","value":"bodyMedium"}}
+                                // typed-properties:{"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Crime"}}
                                 Text(
                                   text = "Crime",
                                   style = MaterialTheme.typography.bodyMedium,
@@ -180,7 +179,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               },
                               leadingIcon = {
                                 // node:chip-crime-check component:m3/icon symbol:Icon
-                                // typed-properties:{"iconKey":{"type":"enum","value":"check"},"sizeDp":{"type":"float","value":18.0}}
+                                // typed-properties:{"iconKey":{"type":"enum","value":"check"},"sizeDp":{"type":"float","value":18}}
                                 Icon(
                                   imageVector = builderIcon("check"),
                                   contentDescription = null,
@@ -192,7 +191,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                           }
                           item(key = "chip-news") {
                             // node:chip-news component:m3/filter-chip symbol:FilterChip
-                            // typed-properties:{"selected":{"type":"stateEquals","variable":"selectedCategory","value":"News"},"shape":{"type":"shapeToken","value":"large"}}
+                            // typed-properties:{"selected":{"type":"stateEquals","value":"News","variable":"selectedCategory"},"shape":{"type":"shapeToken","value":"large"}}
                             FilterChip(
                               selected = selectedCategory == "News",
                               onClick = { selectedCategory = "News" },
@@ -200,7 +199,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               shape = RoundedCornerShape(16.dp),
                               label = {
                                 // node:chip-news-label component:m3/text symbol:Text
-                                // typed-properties:{"text":{"type":"string","value":"News"},"style":{"type":"typographyToken","value":"bodyMedium"}}
+                                // typed-properties:{"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"News"}}
                                 Text(
                                   text = "News",
                                   style = MaterialTheme.typography.bodyMedium,
@@ -214,7 +213,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                           }
                           item(key = "chip-comedy") {
                             // node:chip-comedy component:m3/filter-chip symbol:FilterChip
-                            // typed-properties:{"selected":{"type":"stateEquals","variable":"selectedCategory","value":"Comedy"},"shape":{"type":"shapeToken","value":"large"}}
+                            // typed-properties:{"selected":{"type":"stateEquals","value":"Comedy","variable":"selectedCategory"},"shape":{"type":"shapeToken","value":"large"}}
                             FilterChip(
                               selected = selectedCategory == "Comedy",
                               onClick = { selectedCategory = "Comedy" },
@@ -222,7 +221,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               shape = RoundedCornerShape(16.dp),
                               label = {
                                 // node:chip-comedy-label component:m3/text symbol:Text
-                                // typed-properties:{"text":{"type":"string","value":"Comedy"},"style":{"type":"typographyToken","value":"bodyMedium"}}
+                                // typed-properties:{"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Comedy"}}
                                 Text(
                                   text = "Comedy",
                                   style = MaterialTheme.typography.bodyMedium,
@@ -241,7 +240,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       key("discover-podcast-carousel") {
                         // node:podcast-carousel component:layout/horizontal-carousel
                         // symbol:HorizontalUncontainedCarousel
-                        // typed-properties:{"kind":{"type":"enum","value":"uncontained"},"span":{"type":"enum","value":"full"},"itemWidthDp":{"type":"float","value":128.0},"itemSpacingDp":{"type":"float","value":4.0},"contentPaddingStartDp":{"type":"float","value":8.0},"scrollStateKey":{"type":"string","value":"discover-podcast-carousel"}}
+                        // typed-properties:{"contentPaddingStartDp":{"type":"float","value":8},"itemSpacingDp":{"type":"float","value":4},"itemWidthDp":{"type":"float","value":128},"kind":{"type":"enum","value":"uncontained"},"scrollStateKey":{"type":"string","value":"discover-podcast-carousel"},"span":{"type":"enum","value":"full"}}
                         BuilderHorizontalCarousel(
                           kind = "uncontained",
                           itemWidth = 128.dp,
@@ -251,7 +250,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                           Box(Modifier.width(itemWidth)) {
                             key("android-developers-backstage") {
                               // node:podcast-card-android component:m3/card symbol:Card
-                              // typed-properties:{"stableKey":{"type":"string","value":"android-developers-backstage"},"shape":{"type":"shapeToken","value":"large"}}
+                              // typed-properties:{"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"android-developers-backstage"}}
                               Card(
                                 modifier =
                                   Modifier.size(width = 128.dp, height = 128.dp)
@@ -275,7 +274,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   // node:podcast-card-android-gradient
                                   // component:shape/linear-gradient
                                   // symbol:Modifier.background(Brush.linearGradient)
-                                  // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"startColor":{"type":"color","value":"#00000000"},"endColor":{"type":"color","value":"#FF000000"}}
+                                  // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"endColor":{"type":"color","value":"#FF000000"},"startColor":{"type":"color","value":"#00000000"}}
                                   Box(
                                     Modifier.matchParentSize()
                                       .background(
@@ -286,7 +285,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   )
                                   // node:podcast-card-android-follow component:m3/icon-button
                                   // symbol:IconButton
-                                  // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"selected":{"type":"bool","value":true},"contentDescription":{"type":"string","value":"Unfollow Android Developers Backstage"}}
+                                  // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"contentDescription":{"type":"string","value":"Unfollow Android Developers Backstage"},"selected":{"type":"bool","value":true}}
                                   IconButton(
                                     onClick = {},
                                     modifier =
@@ -299,7 +298,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   ) {
                                     // node:podcast-card-android-follow-icon component:m3/icon
                                     // symbol:Icon
-                                    // typed-properties:{"iconKey":{"type":"enum","value":"checkCircle"},"color":{"type":"colorToken","value":"primary"}}
+                                    // typed-properties:{"color":{"type":"colorToken","value":"primary"},"iconKey":{"type":"enum","value":"checkCircle"}}
                                     Icon(
                                       imageVector = builderIcon("checkCircle"),
                                       contentDescription = null,
@@ -308,9 +307,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     )
                                   }
                                   // node:podcast-card-android-title component:m3/text symbol:Text
-                                  // typed-properties:{"text":{"type":"string","value":"Android
-                                  // Developers
-                                  // Backstage"},"style":{"type":"typographyToken","value":"bodyMedium"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"alignment":{"type":"enum","value":"bottomStart"}}
+                                  // typed-properties:{"alignment":{"type":"enum","value":"bottomStart"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Android Developers Backstage"}}
                                   Text(
                                     text = "Android Developers Backstage",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -333,7 +330,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                           Box(Modifier.width(itemWidth)) {
                             key("google-developers-podcast") {
                               // node:podcast-card-google component:m3/card symbol:Card
-                              // typed-properties:{"stableKey":{"type":"string","value":"google-developers-podcast"},"shape":{"type":"shapeToken","value":"large"}}
+                              // typed-properties:{"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"google-developers-podcast"}}
                               Card(
                                 modifier =
                                   Modifier.size(width = 128.dp, height = 128.dp)
@@ -357,7 +354,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   // node:podcast-card-google-gradient
                                   // component:shape/linear-gradient
                                   // symbol:Modifier.background(Brush.linearGradient)
-                                  // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"startColor":{"type":"color","value":"#00000000"},"endColor":{"type":"color","value":"#FF000000"}}
+                                  // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"endColor":{"type":"color","value":"#FF000000"},"startColor":{"type":"color","value":"#00000000"}}
                                   Box(
                                     Modifier.matchParentSize()
                                       .background(
@@ -368,7 +365,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   )
                                   // node:podcast-card-google-follow component:m3/icon-button
                                   // symbol:IconButton
-                                  // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"selected":{"type":"bool","value":false},"contentDescription":{"type":"string","value":"Follow Google Developers podcast"}}
+                                  // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"contentDescription":{"type":"string","value":"Follow Google Developers podcast"},"selected":{"type":"bool","value":false}}
                                   IconButton(
                                     onClick = {},
                                     modifier =
@@ -380,7 +377,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   ) {
                                     // node:podcast-card-google-follow-icon component:m3/icon
                                     // symbol:Icon
-                                    // typed-properties:{"iconKey":{"type":"enum","value":"addCircle"},"color":{"type":"colorToken","value":"onSurface"}}
+                                    // typed-properties:{"color":{"type":"colorToken","value":"onSurface"},"iconKey":{"type":"enum","value":"addCircle"}}
                                     Icon(
                                       imageVector = builderIcon("addCircle"),
                                       contentDescription = null,
@@ -389,9 +386,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     )
                                   }
                                   // node:podcast-card-google-title component:m3/text symbol:Text
-                                  // typed-properties:{"text":{"type":"string","value":"Google
-                                  // Developers
-                                  // podcast"},"style":{"type":"typographyToken","value":"bodyMedium"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"alignment":{"type":"enum","value":"bottomStart"}}
+                                  // typed-properties:{"alignment":{"type":"enum","value":"bottomStart"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Google Developers podcast"}}
                                   Text(
                                     text = "Google Developers podcast",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -417,7 +412,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                     item(key = "episode-140") {
                       key("episode-140") {
                         // node:main-episode-card component:m3/card symbol:Card
-                        // typed-properties:{"stableKey":{"type":"string","value":"episode-140"},"containerColor":{"type":"colorToken","value":"surfaceContainer"},"shape":{"type":"shapeToken","value":"large"}}
+                        // typed-properties:{"containerColor":{"type":"colorToken","value":"surfaceContainer"},"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"episode-140"}}
                         Card(
                           modifier =
                             Modifier.fillMaxWidth()
@@ -427,7 +422,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         ) {
                           Box(Modifier.fillMaxSize()) {
                             // node:main-episode-column component:layout/column symbol:Column
-                            // typed-properties:{"verticalSpacingDp":{"type":"float","value":8.0}}
+                            // typed-properties:{"verticalSpacingDp":{"type":"float","value":8}}
                             Column(
                               modifier =
                                 Modifier.padding(
@@ -439,22 +434,20 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                               // node:main-episode-header component:layout/row symbol:Row
-                              // typed-properties:{"verticalAlignment":{"type":"enum","value":"top"},"horizontalSpacingDp":{"type":"float","value":16.0}}
+                              // typed-properties:{"horizontalSpacingDp":{"type":"float","value":16},"verticalAlignment":{"type":"enum","value":"top"}}
                               Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 verticalAlignment = Alignment.Top,
                               ) {
                                 // node:main-episode-copy component:layout/column symbol:Column
-                                // typed-properties:{"weight":{"type":"float","value":1.0},"verticalSpacingDp":{"type":"float","value":4.0}}
+                                // typed-properties:{"verticalSpacingDp":{"type":"float","value":4},"weight":{"type":"float","value":1}}
                                 Column(
                                   modifier = Modifier.weight(1f),
                                   verticalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
                                   // node:main-episode-title component:m3/text symbol:Text
-                                  // typed-properties:{"text":{"type":"string","value":"Episode 140:
-                                  // Lorem ipsum
-                                  // dolor"},"style":{"type":"typographyToken","value":"titleMedium"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"}}
+                                  // typed-properties:{"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"titleMedium"},"text":{"type":"string","value":"Episode 140: Lorem ipsum dolor"}}
                                   Text(
                                     text = "Episode 140: Lorem ipsum dolor",
                                     style = MaterialTheme.typography.titleMedium,
@@ -464,9 +457,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     modifier = Modifier,
                                   )
                                   // node:main-episode-podcast component:m3/text symbol:Text
-                                  // typed-properties:{"text":{"type":"string","value":"Android
-                                  // Developers
-                                  // Backstage"},"style":{"type":"typographyToken","value":"titleSmall"},"color":{"type":"colorToken","value":"onSurfaceVariant"}}
+                                  // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"Android Developers Backstage"}}
                                   Text(
                                     text = "Android Developers Backstage",
                                     style = MaterialTheme.typography.titleSmall,
@@ -476,10 +467,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     modifier = Modifier,
                                   )
                                   // node:main-episode-summary component:m3/text symbol:Text
-                                  // typed-properties:{"text":{"type":"string","value":"In this
-                                  // episode, Romain, Chet and Tor talked with Mady Melor and Artur
-                                  // Tsurkan from the System UI team about...
-                                  // Bubbles!"},"style":{"type":"typographyToken","value":"titleSmall"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"}}
+                                  // typed-properties:{"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!"}}
                                   Text(
                                     text =
                                       "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!",
@@ -509,7 +497,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 verticalAlignment = Alignment.CenterVertically,
                               ) {
                                 // node:main-episode-play component:m3/icon-button symbol:IconButton
-                                // typed-properties:{"contentDescription":{"type":"string","value":"Play episode"},"sizeDp":{"type":"float","value":48.0}}
+                                // typed-properties:{"contentDescription":{"type":"string","value":"Play episode"},"sizeDp":{"type":"float","value":48}}
                                 IconButton(
                                   onClick = {},
                                   modifier =
@@ -518,7 +506,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     },
                                 ) {
                                   // node:main-episode-play-icon component:m3/icon symbol:Icon
-                                  // typed-properties:{"iconKey":{"type":"enum","value":"playCircle"},"color":{"type":"colorToken","value":"primary"},"sizeDp":{"type":"float","value":36.0}}
+                                  // typed-properties:{"color":{"type":"colorToken","value":"primary"},"iconKey":{"type":"enum","value":"playCircle"},"sizeDp":{"type":"float","value":36}}
                                   Icon(
                                     imageVector = builderIcon("playCircle"),
                                     contentDescription = null,
@@ -527,9 +515,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   )
                                 }
                                 // node:main-episode-meta component:m3/text symbol:Text
-                                // typed-properties:{"text":{"type":"string","value":"May 16, 2024 ·
-                                // 42
-                                // min"},"style":{"type":"typographyToken","value":"bodySmall"},"weight":{"type":"float","value":1.0},"maxLines":{"type":"int","value":1}}
+                                // typed-properties:{"maxLines":{"type":"int","value":1},"style":{"type":"typographyToken","value":"bodySmall"},"text":{"type":"string","value":"May 16, 2024 · 42 min"},"weight":{"type":"float","value":1}}
                                 Text(
                                   text = "May 16, 2024 · 42 min",
                                   style = MaterialTheme.typography.bodySmall,
@@ -547,7 +533,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     Modifier.semantics { contentDescription = "Add to queue" },
                                 ) {
                                   // node:main-episode-queue-icon component:m3/icon symbol:Icon
-                                  // typed-properties:{"iconKey":{"type":"enum","value":"playlistAdd"},"color":{"type":"colorToken","value":"onSurfaceVariant"}}
+                                  // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"iconKey":{"type":"enum","value":"playlistAdd"}}
                                   Icon(
                                     imageVector = builderIcon("playlistAdd"),
                                     contentDescription = null,
@@ -563,7 +549,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     Modifier.semantics { contentDescription = "More options" },
                                 ) {
                                   // node:main-episode-more-icon component:m3/icon symbol:Icon
-                                  // typed-properties:{"iconKey":{"type":"enum","value":"moreVert"},"color":{"type":"colorToken","value":"onSurfaceVariant"}}
+                                  // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"iconKey":{"type":"enum","value":"moreVert"}}
                                   Icon(
                                     imageVector = builderIcon("moreVert"),
                                     contentDescription = null,
@@ -581,7 +567,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                 }
                 // node:floating-toolbar component:m3/horizontal-floating-toolbar
                 // symbol:HorizontalFloatingToolbar
-                // typed-properties:{"expanded":{"type":"bool","value":true},"alignment":{"type":"enum","value":"bottomCenter"},"containerColor":{"type":"colorToken","value":"surfaceContainerHighest"}}
+                // typed-properties:{"alignment":{"type":"enum","value":"bottomCenter"},"containerColor":{"type":"colorToken","value":"surfaceContainerHighest"},"expanded":{"type":"bool","value":true}}
                 BuilderHorizontalFloatingToolbar(
                   expanded = true,
                   containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -590,13 +576,13 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       .align(Alignment.BottomCenter),
                 ) {
                   // node:toolbar-library component:m3/button symbol:Button
-                  // typed-properties:{"style":{"type":"enum","value":"filled"},"selected":{"type":"stateEquals","variable":"selectedDestination","value":"Library"}}
+                  // typed-properties:{"selected":{"type":"stateEquals","value":"Library","variable":"selectedDestination"},"style":{"type":"enum","value":"filled"}}
                   Button(
                     onClick = { selectedDestination = "Library" },
                     modifier = Modifier.semantics { selected = selectedDestination == "Library" },
                   ) {
                     // node:toolbar-library-row component:layout/row symbol:Row
-                    // typed-properties:{"verticalAlignment":{"type":"enum","value":"center"},"horizontalSpacingDp":{"type":"float","value":8.0}}
+                    // typed-properties:{"horizontalSpacingDp":{"type":"float","value":8},"verticalAlignment":{"type":"enum","value":"center"}}
                     Row(
                       modifier = Modifier,
                       horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -611,7 +597,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         modifier = Modifier,
                       )
                       // node:toolbar-library-label component:m3/text symbol:Text
-                      // typed-properties:{"text":{"type":"string","value":"Library"},"style":{"type":"typographyToken","value":"labelLarge"}}
+                      // typed-properties:{"style":{"type":"typographyToken","value":"labelLarge"},"text":{"type":"string","value":"Library"}}
                       Text(
                         text = "Library",
                         style = MaterialTheme.typography.labelLarge,
@@ -623,7 +609,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                     }
                   }
                   // node:toolbar-discover component:m3/button symbol:Button
-                  // typed-properties:{"style":{"type":"enum","value":"fab"},"selected":{"type":"stateEquals","variable":"selectedDestination","value":"Discover"},"containerColor":{"type":"colorToken","value":"tertiary"}}
+                  // typed-properties:{"containerColor":{"type":"colorToken","value":"tertiary"},"selected":{"type":"stateEquals","value":"Discover","variable":"selectedDestination"},"style":{"type":"enum","value":"fab"}}
                   FloatingActionButton(
                     onClick = { selectedDestination = "Discover" },
                     containerColor = MaterialTheme.colorScheme.tertiary,
@@ -631,14 +617,14 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                     modifier = Modifier.semantics { selected = selectedDestination == "Discover" },
                   ) {
                     // node:toolbar-discover-row component:layout/row symbol:Row
-                    // typed-properties:{"verticalAlignment":{"type":"enum","value":"center"},"horizontalSpacingDp":{"type":"float","value":8.0}}
+                    // typed-properties:{"horizontalSpacingDp":{"type":"float","value":8},"verticalAlignment":{"type":"enum","value":"center"}}
                     Row(
                       modifier = Modifier,
                       horizontalArrangement = Arrangement.spacedBy(8.dp),
                       verticalAlignment = Alignment.CenterVertically,
                     ) {
                       // node:toolbar-discover-icon component:m3/icon symbol:Icon
-                      // typed-properties:{"iconKey":{"type":"enum","value":"genres"},"color":{"type":"colorToken","value":"onTertiary"}}
+                      // typed-properties:{"color":{"type":"colorToken","value":"onTertiary"},"iconKey":{"type":"enum","value":"genres"}}
                       Icon(
                         imageVector = builderIcon("genres"),
                         contentDescription = null,
@@ -646,7 +632,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         modifier = Modifier,
                       )
                       // node:toolbar-discover-label component:m3/text symbol:Text
-                      // typed-properties:{"text":{"type":"string","value":"Discover"},"style":{"type":"typographyToken","value":"labelLarge"},"color":{"type":"colorToken","value":"onTertiary"}}
+                      // typed-properties:{"color":{"type":"colorToken","value":"onTertiary"},"style":{"type":"typographyToken","value":"labelLarge"},"text":{"type":"string","value":"Discover"}}
                       Text(
                         text = "Discover",
                         style = MaterialTheme.typography.labelLarge,
@@ -682,8 +668,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                 verticalAlignment = Alignment.CenterVertically,
               ) {
                 // node:detail-top-title component:m3/text symbol:Text
-                // typed-properties:{"text":{"type":"string","value":"Podcast
-                // details"},"style":{"type":"typographyToken","value":"titleLarge"},"weight":{"type":"float","value":1.0}}
+                // typed-properties:{"style":{"type":"typographyToken","value":"titleLarge"},"text":{"type":"string","value":"Podcast details"},"weight":{"type":"float","value":1}}
                 Text(
                   text = "Podcast details",
                   style = MaterialTheme.typography.titleLarge,
@@ -715,7 +700,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
             Box(Modifier.padding(contentPadding)) {
               key("podcast-detail-scroll") {
                 // node:detail-list component:layout/lazy-column symbol:LazyColumn
-                // typed-properties:{"scrollStateKey":{"type":"string","value":"podcast-detail-scroll"},"contentPadding":{"type":"padding","startDp":24,"topDp":8,"endDp":24,"bottomDp":24},"verticalSpacingDp":{"type":"float","value":16.0}}
+                // typed-properties:{"contentPadding":{"bottomDp":24,"endDp":24,"startDp":24,"topDp":8,"type":"padding"},"scrollStateKey":{"type":"string","value":"podcast-detail-scroll"},"verticalSpacingDp":{"type":"float","value":16}}
                 LazyColumn(
                   contentPadding =
                     PaddingValues(start = 24.dp, top = 8.dp, end = 24.dp, bottom = 24.dp),
@@ -725,7 +710,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   item(key = "android-developers-backstage-header") {
                     key("android-developers-backstage-header") {
                       // node:detail-hero component:m3/card symbol:Card
-                      // typed-properties:{"stableKey":{"type":"string","value":"android-developers-backstage-header"},"containerColor":{"type":"colorToken","value":"surfaceContainerLow"},"shape":{"type":"shapeToken","value":"large"}}
+                      // typed-properties:{"containerColor":{"type":"colorToken","value":"surfaceContainerLow"},"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"android-developers-backstage-header"}}
                       Card(
                         modifier = Modifier,
                         shape = RoundedCornerShape(16.dp),
@@ -733,7 +718,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       ) {
                         Box(Modifier.fillMaxSize()) {
                           // node:detail-hero-row component:layout/row symbol:Row
-                          // typed-properties:{"verticalAlignment":{"type":"enum","value":"center"},"horizontalSpacingDp":{"type":"float","value":20.0}}
+                          // typed-properties:{"horizontalSpacingDp":{"type":"float","value":20},"verticalAlignment":{"type":"enum","value":"center"}}
                           Row(
                             modifier =
                               Modifier.padding(
@@ -759,15 +744,13 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   },
                             )
                             // node:detail-hero-copy component:layout/column symbol:Column
-                            // typed-properties:{"weight":{"type":"float","value":1.0},"verticalSpacingDp":{"type":"float","value":8.0}}
+                            // typed-properties:{"verticalSpacingDp":{"type":"float","value":8},"weight":{"type":"float","value":1}}
                             Column(
                               modifier = Modifier.weight(1f),
                               verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                               // node:detail-podcast-title component:m3/text symbol:Text
-                              // typed-properties:{"text":{"type":"string","value":"Android
-                              // Developers
-                              // Backstage"},"style":{"type":"typographyToken","value":"headlineSmall"},"maxLines":{"type":"int","value":3}}
+                              // typed-properties:{"maxLines":{"type":"int","value":3},"style":{"type":"typographyToken","value":"headlineSmall"},"text":{"type":"string","value":"Android Developers Backstage"}}
                               Text(
                                 text = "Android Developers Backstage",
                                 style = MaterialTheme.typography.headlineSmall,
@@ -777,8 +760,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 modifier = Modifier,
                               )
                               // node:detail-author component:m3/text symbol:Text
-                              // typed-properties:{"text":{"type":"string","value":"Android
-                              // Developers"},"style":{"type":"typographyToken","value":"bodyLarge"},"color":{"type":"colorToken","value":"onSurfaceVariant"}}
+                              // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"bodyLarge"},"text":{"type":"string","value":"Android Developers"}}
                               Text(
                                 text = "Android Developers",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -788,13 +770,13 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 modifier = Modifier,
                               )
                               // node:detail-follow component:m3/button symbol:Button
-                              // typed-properties:{"style":{"type":"enum","value":"filledTonal"},"selected":{"type":"bool","value":true}}
+                              // typed-properties:{"selected":{"type":"bool","value":true},"style":{"type":"enum","value":"filledTonal"}}
                               FilledTonalButton(
                                 onClick = { Unit },
                                 modifier = Modifier.semantics { selected = true },
                               ) {
                                 // node:detail-follow-label component:m3/text symbol:Text
-                                // typed-properties:{"text":{"type":"string","value":"Following"},"style":{"type":"typographyToken","value":"labelLarge"}}
+                                // typed-properties:{"style":{"type":"typographyToken","value":"labelLarge"},"text":{"type":"string","value":"Following"}}
                                 Text(
                                   text = "Following",
                                   style = MaterialTheme.typography.labelLarge,
@@ -812,10 +794,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   }
                   item(key = "detail-description") {
                     // node:detail-description component:m3/text symbol:Text
-                    // typed-properties:{"text":{"type":"string","value":"An official podcast from
-                    // the Android team, featuring conversations about the latest platform, tools,
-                    // libraries, and people behind Android
-                    // development."},"style":{"type":"typographyToken","value":"bodyLarge"},"color":{"type":"colorToken","value":"onSurfaceVariant"}}
+                    // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"bodyLarge"},"text":{"type":"string","value":"An official podcast from the Android team, featuring conversations about the latest platform, tools, libraries, and people behind Android development."}}
                     Text(
                       text =
                         "An official podcast from the Android team, featuring conversations about the latest platform, tools, libraries, and people behind Android development.",
@@ -828,14 +807,14 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   }
                   item(key = "detail-metadata") {
                     // node:detail-metadata component:layout/row symbol:Row
-                    // typed-properties:{"horizontalSpacingDp":{"type":"float","value":8.0}}
+                    // typed-properties:{"horizontalSpacingDp":{"type":"float","value":8}}
                     Row(
                       modifier = Modifier,
                       horizontalArrangement = Arrangement.spacedBy(8.dp),
                       verticalAlignment = Alignment.CenterVertically,
                     ) {
                       // node:detail-category-chip component:m3/filter-chip symbol:FilterChip
-                      // typed-properties:{"selected":{"type":"bool","value":false},"enabled":{"type":"bool","value":false}}
+                      // typed-properties:{"enabled":{"type":"bool","value":false},"selected":{"type":"bool","value":false}}
                       FilterChip(
                         selected = false,
                         onClick = { Unit },
@@ -843,7 +822,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         shape = RoundedCornerShape(16.dp),
                         label = {
                           // node:detail-category-label component:m3/text symbol:Text
-                          // typed-properties:{"text":{"type":"string","value":"Technology"},"style":{"type":"typographyToken","value":"labelLarge"}}
+                          // typed-properties:{"style":{"type":"typographyToken","value":"labelLarge"},"text":{"type":"string","value":"Technology"}}
                           Text(
                             text = "Technology",
                             style = MaterialTheme.typography.labelLarge,
@@ -866,8 +845,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   }
                   item(key = "detail-episodes-title") {
                     // node:detail-episodes-title component:m3/text symbol:Text
-                    // typed-properties:{"text":{"type":"string","value":"Latest
-                    // episodes"},"style":{"type":"typographyToken","value":"titleLarge"}}
+                    // typed-properties:{"style":{"type":"typographyToken","value":"titleLarge"},"text":{"type":"string","value":"Latest episodes"}}
                     Text(
                       text = "Latest episodes",
                       style = MaterialTheme.typography.titleLarge,
@@ -880,7 +858,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   item(key = "episode-140-detail") {
                     key("episode-140-detail") {
                       // node:detail-episode-140 component:m3/card symbol:Card
-                      // typed-properties:{"stableKey":{"type":"string","value":"episode-140-detail"},"containerColor":{"type":"colorToken","value":"surfaceContainer"},"shape":{"type":"shapeToken","value":"large"}}
+                      // typed-properties:{"containerColor":{"type":"colorToken","value":"surfaceContainer"},"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"episode-140-detail"}}
                       Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -888,7 +866,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       ) {
                         Box(Modifier.fillMaxSize()) {
                           // node:detail-episode-140-column component:layout/column symbol:Column
-                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":8.0}}
+                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":8}}
                           Column(
                             modifier =
                               Modifier.padding(
@@ -900,9 +878,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                           ) {
                             // node:detail-episode-140-title component:m3/text symbol:Text
-                            // typed-properties:{"text":{"type":"string","value":"Episode 140: Lorem
-                            // ipsum
-                            // dolor"},"style":{"type":"typographyToken","value":"titleMedium"},"maxLines":{"type":"int","value":2}}
+                            // typed-properties:{"maxLines":{"type":"int","value":2},"style":{"type":"typographyToken","value":"titleMedium"},"text":{"type":"string","value":"Episode 140: Lorem ipsum dolor"}}
                             Text(
                               text = "Episode 140: Lorem ipsum dolor",
                               style = MaterialTheme.typography.titleMedium,
@@ -912,9 +888,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               modifier = Modifier,
                             )
                             // node:detail-episode-140-summary component:m3/text symbol:Text
-                            // typed-properties:{"text":{"type":"string","value":"Romain, Chet and
-                            // Tor talk with the System UI team about
-                            // Bubbles."},"style":{"type":"typographyToken","value":"bodyMedium"},"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"}}
+                            // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Romain, Chet and Tor talk with the System UI team about Bubbles."}}
                             Text(
                               text =
                                 "Romain, Chet and Tor talk with the System UI team about Bubbles.",
@@ -940,7 +914,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   Modifier.semantics { contentDescription = "Play Episode 140" },
                               ) {
                                 // node:detail-episode-140-play-icon component:m3/icon symbol:Icon
-                                // typed-properties:{"iconKey":{"type":"enum","value":"playCircle"},"color":{"type":"colorToken","value":"primary"}}
+                                // typed-properties:{"color":{"type":"colorToken","value":"primary"},"iconKey":{"type":"enum","value":"playCircle"}}
                                 Icon(
                                   imageVector = builderIcon("playCircle"),
                                   contentDescription = null,
@@ -949,9 +923,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 )
                               }
                               // node:detail-episode-140-meta component:m3/text symbol:Text
-                              // typed-properties:{"text":{"type":"string","value":"May 16, 2024 ·
-                              // 42
-                              // min"},"style":{"type":"typographyToken","value":"bodySmall"},"weight":{"type":"float","value":1.0}}
+                              // typed-properties:{"style":{"type":"typographyToken","value":"bodySmall"},"text":{"type":"string","value":"May 16, 2024 · 42 min"},"weight":{"type":"float","value":1}}
                               Text(
                                 text = "May 16, 2024 · 42 min",
                                 style = MaterialTheme.typography.bodySmall,
@@ -988,7 +960,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   item(key = "episode-139-detail") {
                     key("episode-139-detail") {
                       // node:detail-episode-139 component:m3/card symbol:Card
-                      // typed-properties:{"stableKey":{"type":"string","value":"episode-139-detail"},"containerColor":{"type":"colorToken","value":"surfaceContainer"},"shape":{"type":"shapeToken","value":"large"}}
+                      // typed-properties:{"containerColor":{"type":"colorToken","value":"surfaceContainer"},"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"episode-139-detail"}}
                       Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -996,7 +968,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       ) {
                         Box(Modifier.fillMaxSize()) {
                           // node:detail-episode-139-column component:layout/column symbol:Column
-                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":8.0}}
+                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":8}}
                           Column(
                             modifier =
                               Modifier.padding(
@@ -1008,9 +980,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                           ) {
                             // node:detail-episode-139-title component:m3/text symbol:Text
-                            // typed-properties:{"text":{"type":"string","value":"Episode 139:
-                            // Compose across
-                            // screens"},"style":{"type":"typographyToken","value":"titleMedium"},"maxLines":{"type":"int","value":2}}
+                            // typed-properties:{"maxLines":{"type":"int","value":2},"style":{"type":"typographyToken","value":"titleMedium"},"text":{"type":"string","value":"Episode 139: Compose across screens"}}
                             Text(
                               text = "Episode 139: Compose across screens",
                               style = MaterialTheme.typography.titleMedium,
@@ -1020,9 +990,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               modifier = Modifier,
                             )
                             // node:detail-episode-139-summary component:m3/text symbol:Text
-                            // typed-properties:{"text":{"type":"string","value":"A conversation
-                            // about adaptive layouts, large screens, and practical Compose
-                            // architecture."},"style":{"type":"typographyToken","value":"bodyMedium"},"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"}}
+                            // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"A conversation about adaptive layouts, large screens, and practical Compose architecture."}}
                             Text(
                               text =
                                 "A conversation about adaptive layouts, large screens, and practical Compose architecture.",
@@ -1048,7 +1016,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   Modifier.semantics { contentDescription = "Play Episode 139" },
                               ) {
                                 // node:detail-episode-139-play-icon component:m3/icon symbol:Icon
-                                // typed-properties:{"iconKey":{"type":"enum","value":"playCircle"},"color":{"type":"colorToken","value":"primary"}}
+                                // typed-properties:{"color":{"type":"colorToken","value":"primary"},"iconKey":{"type":"enum","value":"playCircle"}}
                                 Icon(
                                   imageVector = builderIcon("playCircle"),
                                   contentDescription = null,
@@ -1057,8 +1025,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 )
                               }
                               // node:detail-episode-139-meta component:m3/text symbol:Text
-                              // typed-properties:{"text":{"type":"string","value":"May 9, 2024 · 38
-                              // min"},"style":{"type":"typographyToken","value":"bodySmall"},"weight":{"type":"float","value":1.0}}
+                              // typed-properties:{"style":{"type":"typographyToken","value":"bodySmall"},"text":{"type":"string","value":"May 9, 2024 · 38 min"},"weight":{"type":"float","value":1}}
                               Text(
                                 text = "May 9, 2024 · 38 min",
                                 style = MaterialTheme.typography.bodySmall,
