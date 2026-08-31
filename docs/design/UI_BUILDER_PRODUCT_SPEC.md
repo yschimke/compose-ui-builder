@@ -666,7 +666,10 @@ Decisions intentionally left for Wave 0 evidence:
 
 ## 17. Repository placement
 
-- `wasm-ui`: the distinct builder client, native renderer, editor overlay, and Design API client.
+- `ui-builder` (preferred new isolated frontend directory/module): the distinct builder client,
+  native renderer protocol client, editor overlay, and Design API client. It may initially reuse
+  code proven in `wasm-ui`, but should not turn the preview browser prototype into the permanent
+  product boundary.
 - `server`: design routes/WebSocket, reducer orchestration, access control, persistence, export jobs,
   and catalog capability delivery.
 - `render-host`: pure JVM dynamic design rendering/inspection and SVG/code conversion helpers that
@@ -676,9 +679,40 @@ Decisions intentionally left for Wave 0 evidence:
 - external MCP executable/plugin: a thin authenticated client of the server's Design API unless a
   separately reviewed server transport proves compatible with the module/classpath boundary.
 
-If recorded Wasm scene capture is selected, capture remains in `wasm-ui`; only its versioned
-portable shape crosses the boundary and its pure conversion may live in `render-host`. The Wave 0
-execution-bridge decision is authoritative over these conditional placements.
+If recorded Wasm scene capture is selected, capture remains in the isolated builder frontend
+boundary; only its versioned portable shape crosses the boundary and its pure conversion may live
+in `render-host`. The Wave 0 execution-bridge decision is authoritative over these conditional
+placements.
+
+### Extraction posture
+
+The builder is expected to become large enough for its own repository and release cadence. Keep it
+extractable from its first implementation:
+
+- frontend code lives under one top-level boundary and consumes only versioned HTTP/WebSocket and
+  published contract shapes, never server source classes;
+- the MCP adapter is a client of the same Design API, not an in-process shortcut to the store;
+- builder persistence has its own `DesignStore` interface and configuration rather than hiding
+  inside `ServeSessionRegistry`, catalog caches, or preview history;
+- native catalog runtimes are version-addressed artifacts with a declared protocol, not project
+  classes the editor assumes are present;
+- render/export is requested through a versioned job boundary with immutable inputs and products;
+  and
+- builder visual/integration tests can run against a released server distribution or container.
+
+Extraction becomes appropriate when the builder has an independent release/deployment need and all
+of these are true:
+
+1. it builds and tests without reading this repository's source tree;
+2. it runs against released preview-server/contracts versions with no `mavenLocal()`, composite
+   include, or project substitution;
+3. catalog/capability, design, collaboration, render, and export APIs cover every cross-boundary
+   call with compatibility tests;
+4. its data can be migrated/operated independently of preview render-session lifecycle; and
+5. an end-to-end operation-replay visual test passes against the released boundary.
+
+Until then, co-location is useful because the render and catalog seams are still being discovered.
+Directory isolation and contract tests prevent that convenience from becoming an implicit API.
 
 Do not add a reverse `:render-host -> :server` edge, a web server to `:render-host`, `mavenLocal()`, a
 composite include, or implementation code to the contracts repository. `checkServeModuleBoundary`

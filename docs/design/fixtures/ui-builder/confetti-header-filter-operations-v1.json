@@ -1,0 +1,193 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "fixture-confetti-header-filter",
+  "expectedDocumentHash": "2ba08b10188dc96777a3a794ad90b68da6ca23506c73555a831d36857bb977fa",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Confetti Schedule — header and filters",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 411,
+        "heightDp": 914,
+        "density": 1.0,
+        "theme": "light",
+        "locale": "en-US",
+        "fontScale": 1.0,
+        "layoutDirection": "ltr"
+      },
+      "stateVariables": {
+        "selectedTrack": {
+          "type": "selection",
+          "valueType": "string",
+          "nullable": true,
+          "initialValue": null,
+          "persistence": "preview"
+        }
+      }
+    },
+    {
+      "operationId": "insert-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "screen",
+        "componentId": "layout/scaffold",
+        "properties": {
+          "contentWindowInsets": { "type": "insets", "value": [0, 0, 0, 0] }
+        },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-top-bar",
+      "type": "insertNode",
+      "parent": { "nodeId": "screen", "slot": "topBar" },
+      "node": {
+        "id": "top-bar",
+        "componentId": "m3/center-aligned-top-app-bar",
+        "properties": {
+          "containerColor": { "type": "colorToken", "value": "transparent" },
+          "scrolledContainerColor": { "type": "colorToken", "value": "transparent" },
+          "scrollBehavior": { "type": "enum", "value": "enterAlways" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "top-bar", "slot": "title" },
+      "node": {
+        "id": "title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": { "type": "string", "value": "KotlinConf 2023" },
+          "style": { "type": "typographyToken", "value": "titleLarge" },
+          "maxLines": { "type": "int", "value": 2 },
+          "textAlign": { "type": "enum", "value": "center" }
+        },
+        "modifiers": [
+          { "type": "padding", "startDp": 8, "topDp": 0, "endDp": 8, "bottomDp": 0 }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-content",
+      "type": "insertNode",
+      "parent": { "nodeId": "screen", "slot": "content" },
+      "node": {
+        "id": "content",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalArrangement": { "type": "enum", "value": "top" },
+          "horizontalAlignment": { "type": "enum", "value": "start" }
+        },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-track-filters",
+      "type": "insertNode",
+      "parent": { "nodeId": "content", "slot": "children" },
+      "node": {
+        "id": "track-filters",
+        "componentId": "layout/lazy-row",
+        "properties": {
+          "horizontalSpacingDp": { "type": "float", "value": 8.0 },
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 8,
+            "endDp": 16,
+            "bottomDp": 8
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-all",
+      "type": "insertNode",
+      "parent": { "nodeId": "track-filters", "slot": "items" },
+      "node": {
+        "id": "chip-all",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": { "type": "stateEquals", "variable": "selectedTrack", "value": null }
+        },
+        "eventBindings": {
+          "click": [{ "type": "select", "variable": "selectedTrack", "value": null }]
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-all-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-all", "slot": "label" },
+      "node": {
+        "id": "chip-all-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": { "type": "string", "value": "All" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-droidcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "track-filters", "slot": "items" },
+      "afterNodeId": "chip-all",
+      "node": {
+        "id": "chip-droidcon",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "stateEquals",
+            "variable": "selectedTrack",
+            "value": "droidCon"
+          }
+        },
+        "eventBindings": {
+          "click": [
+            {
+              "type": "selectOrClear",
+              "variable": "selectedTrack",
+              "value": "droidCon"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "operationId": "insert-dot-droidcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-droidcon", "slot": "leadingIcon" },
+      "node": {
+        "id": "dot-droidcon",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "diameterDp": { "type": "float", "value": 8.0 },
+          "color": { "type": "color", "value": "#FF00FF4F" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-label-droidcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-droidcon", "slot": "label" },
+      "node": {
+        "id": "label-droidcon",
+        "componentId": "m3/text",
+        "properties": {
+          "text": { "type": "string", "value": "droidCon" }
+        }
+      }
+    }
+  ]
+}
