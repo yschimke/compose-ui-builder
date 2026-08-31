@@ -3,7 +3,9 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -151,6 +153,126 @@ class UiBuilderEditorStateTest {
     val discover = rows.first { it.nodeId == "discover-grid" }
     assertEquals(5, discover.depth)
     assertEquals(ParentSlot("main-content", "children"), discover.parent)
+  }
+
+  @Test
+  fun `duplicate copies a complete subtree in one validated batch`() {
+    val initial = reducer.initial(document, selectedNodeId = "main-episode-card")
+    val sourceIds = subtreeIds(document, "main-episode-card")
+    val duplicated = reducer.reduce(initial, UiBuilderEditorEvent.DuplicateSelected)
+    val copyId = "main-episode-card-copy-001"
+
+    assertIs<CommandOutcome.Accepted>(duplicated.lastOutcome)
+    assertEquals(document.revision + 1, duplicated.document.revision)
+    assertEquals(document.nodes.size + sourceIds.size, duplicated.document.nodes.size)
+    assertEquals(copyId, duplicated.selectedNodeId)
+    assertEquals(
+      listOf("main-episode-card", copyId),
+      duplicated.document.nodes.getValue("discover-grid").slots.getValue("items").takeLast(2),
+    )
+    assertEquals(
+      document.nodes.getValue("main-episode-card").properties,
+      duplicated.document.nodes.getValue(copyId).properties,
+    )
+    assertTrue(
+      duplicated.document.nodes
+        .getValue(copyId)
+        .slots
+        .getValue("content")
+        .single()
+        .startsWith("$copyId-")
+    )
+  }
+
+  @Test
+  fun `delete and duplicate reject before violating roots or slot cardinality`() {
+    val requiredChild = reducer.initial(document, selectedNodeId = "main-content")
+
+    assertFalse(reducer.canDeleteSelected(requiredChild))
+    assertFalse(reducer.canDuplicateSelected(requiredChild))
+    val deleted = reducer.reduce(requiredChild, UiBuilderEditorEvent.DeleteSelected)
+    val duplicated = reducer.reduce(requiredChild, UiBuilderEditorEvent.DuplicateSelected)
+
+    assertIs<CommandOutcome.Rejected>(deleted.lastOutcome)
+    assertIs<CommandOutcome.Rejected>(duplicated.lastOutcome)
+    assertEquals(document, deleted.document)
+    assertEquals(document, duplicated.document)
+
+    val soleRoot = reducer.initial(document, selectedNodeId = "root-surface")
+    assertFalse(reducer.canDeleteSelected(soleRoot))
+    assertEquals(document, reducer.reduce(soleRoot, UiBuilderEditorEvent.DeleteSelected).document)
+  }
+
+  @Test
+  fun `delete removes the selected subtree atomically and undo redo restore actor history`() {
+    val initial = reducer.initial(document, selectedNodeId = "discover-grid")
+    val target = requireNotNull(reducer.dropTarget(initial, "m3/text"))
+    val inserted = reducer.reduce(initial, UiBuilderEditorEvent.InsertComponent("m3/text", target))
+    val insertedId = requireNotNull(inserted.selectedNodeId)
+    val deleted = reducer.reduce(inserted, UiBuilderEditorEvent.DeleteSelected)
+
+    assertIs<CommandOutcome.Accepted>(deleted.lastOutcome)
+    assertEquals(document.revision + 2, deleted.document.revision)
+    assertNull(deleted.document.nodes[insertedId])
+    assertEquals("discover-grid", deleted.selectedNodeId)
+    assertTrue(deleted.canUndo)
+
+    val undone = reducer.reduce(deleted, UiBuilderEditorEvent.Undo)
+    assertIs<CommandOutcome.Accepted>(undone.lastOutcome)
+    assertTrue(insertedId in undone.document.nodes)
+    assertEquals(insertedId, undone.selectedNodeId)
+    assertTrue(undone.canRedo)
+
+    val redone = reducer.reduce(undone, UiBuilderEditorEvent.Redo)
+    assertIs<CommandOutcome.Accepted>(redone.lastOutcome)
+    assertNull(redone.document.nodes[insertedId])
+    assertEquals("discover-grid", redone.selectedNodeId)
+    assertFalse(redone.canRedo)
+  }
+
+  @Test
+  fun `undo targets the latest active editor operation not another actor command`() {
+    val initial = reducer.initial(document, selectedNodeId = "discover-grid")
+    val target = requireNotNull(reducer.dropTarget(initial, "m3/text"))
+    val inserted = reducer.reduce(initial, UiBuilderEditorEvent.InsertComponent("m3/text", target))
+    val otherActor =
+      CollaborationReducer.apply(
+        inserted.collaboration,
+        DesignCommand(
+          designId = document.id,
+          operationId = "other-actor-move",
+          actorId = "other-actor",
+          clientId = "other-client",
+          baseRevision = inserted.document.revision,
+          operations =
+            listOf(
+              DesignOperation.MoveNode(
+                nodeId = "main-scrim",
+                parent = ParentSlot("main-background", "children"),
+                afterNodeId = "main-scaffold",
+              )
+            ),
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(otherActor.outcome)
+
+    val concurrent = inserted.copy(collaboration = otherActor.state)
+    val undone = reducer.reduce(concurrent, UiBuilderEditorEvent.Undo)
+
+    assertIs<CommandOutcome.Accepted>(undone.lastOutcome)
+    assertNull(undone.document.nodes["editor-m3-text-001"])
+    assertEquals(
+      listOf("main-scaffold", "main-scrim"),
+      undone.document.nodes.getValue("main-background").slots.getValue("children"),
+    )
+  }
+
+  private fun subtreeIds(document: UiBuilderDocument, rootId: String): Set<String> = buildSet {
+    fun visit(nodeId: String) {
+      add(nodeId)
+      document.nodes.getValue(nodeId).slots.values.flatten().forEach(::visit)
+    }
+    visit(rootId)
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()

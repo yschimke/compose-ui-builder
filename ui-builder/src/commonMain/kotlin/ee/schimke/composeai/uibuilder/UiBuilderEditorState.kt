@@ -45,9 +45,17 @@ data class UiBuilderEditorState(
   val catalogQuery: String = "",
   val operationSequence: Int = 0,
   val lastOutcome: CommandOutcome? = null,
+  val selectionBeforeOperations: Map<String, String?> = emptyMap(),
+  val selectionAfterOperations: Map<String, String?> = emptyMap(),
 ) {
   val document: UiBuilderDocument
     get() = collaboration.document
+
+  val canUndo: Boolean
+    get() = undoTargetOperationId() != null
+
+  val canRedo: Boolean
+    get() = redoTargetUndoId() != null
 }
 
 sealed interface UiBuilderEditorEvent {
@@ -64,12 +72,21 @@ sealed interface UiBuilderEditorEvent {
   ) : UiBuilderEditorEvent
 
   data class SetText(val nodeId: String, val text: String) : UiBuilderEditorEvent
+
+  data object DeleteSelected : UiBuilderEditorEvent
+
+  data object DuplicateSelected : UiBuilderEditorEvent
+
+  data object Undo : UiBuilderEditorEvent
+
+  data object Redo : UiBuilderEditorEvent
 }
 
 /** Pure editor interaction reducer. Every document mutation delegates to CollaborationReducer. */
 class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
   private val capabilityValidator = CapabilityValidator(catalog)
   private val validator = CapabilityPropertyWriteValidator(capabilityValidator)
+  private val documentValidator = CapabilityDocumentWriteValidator(capabilityValidator)
 
   fun initial(document: UiBuilderDocument, selectedNodeId: String? = null): UiBuilderEditorState =
     UiBuilderEditorState(
@@ -86,7 +103,34 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
       is UiBuilderEditorEvent.InsertComponent -> insert(state, event.componentId, event.target)
       is UiBuilderEditorEvent.MoveNode -> move(state, event)
       is UiBuilderEditorEvent.SetText -> setText(state, event.nodeId, event.text)
+      UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
+      UiBuilderEditorEvent.DuplicateSelected -> duplicateSelected(state)
+      UiBuilderEditorEvent.Undo -> undo(state)
+      UiBuilderEditorEvent.Redo -> redo(state)
     }
+
+  fun canDeleteSelected(state: UiBuilderEditorState): Boolean {
+    val nodeId = state.selectedNodeId?.takeIf(state.document.nodes::containsKey) ?: return false
+    val parent = state.document.location(nodeId)
+    if (parent == null) return state.document.roots.size > 1
+    val parentNode = state.document.nodes.getValue(parent.nodeId)
+    val minimum =
+      catalog.componentsById[parentNode.componentId]
+        ?.slotsByName
+        ?.get(parent.slot)
+        ?.cardinality
+        ?.min ?: return false
+    return parentNode.slots[parent.slot].orEmpty().size > minimum
+  }
+
+  fun canDuplicateSelected(state: UiBuilderEditorState): Boolean {
+    val nodeId = state.selectedNodeId?.takeIf(state.document.nodes::containsKey) ?: return false
+    val parent = state.document.location(nodeId) ?: return true
+    val parentNode = state.document.nodes.getValue(parent.nodeId)
+    val slot =
+      catalog.componentsById[parentNode.componentId]?.slotsByName?.get(parent.slot) ?: return false
+    return slot.cardinality.max?.let { parentNode.slots[parent.slot].orEmpty().size < it } ?: true
+  }
 
   fun catalogItems(query: String): List<EditorCatalogItem> {
     val needle = query.trim().lowercase()
@@ -188,7 +232,7 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
     if (defaultError != null) {
       return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, defaultError)
     }
-    return state.apply(sequence, operations, selectionAfter = nodeId, validateDocument = true)
+    return state.apply(sequence, operations, selectionAfter = nodeId)
   }
 
   private fun move(
@@ -223,37 +267,140 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
     )
   }
 
+  private fun deleteSelected(state: UiBuilderEditorState): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val nodeId = state.selectedNodeId ?: return state
+    if (!canDeleteSelected(state)) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_DOCUMENT,
+        "Deleting $nodeId would violate root or slot cardinality",
+      )
+    }
+    val parent = state.document.location(nodeId)
+    val selectionAfter = parent?.nodeId ?: state.document.roots.firstOrNull { it != nodeId }
+    return state.apply(
+      sequence = sequence,
+      operations = listOf(DesignOperation.DeleteNode(nodeId)),
+      selectionAfter = selectionAfter,
+    )
+  }
+
+  private fun duplicateSelected(state: UiBuilderEditorState): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val nodeId = state.selectedNodeId ?: return state
+    if (!canDuplicateSelected(state)) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_DOCUMENT,
+        "Duplicating $nodeId would exceed slot cardinality",
+      )
+    }
+    val operations = mutableListOf<DesignOperation>()
+    val copyId = "$nodeId-copy-${sequence.toString().padStart(3, '0')}"
+    state.document.appendDuplicateSubtree(
+      sourceNodeId = nodeId,
+      copyNodeId = copyId,
+      parent = state.document.location(nodeId),
+      afterNodeId = nodeId,
+      operations = operations,
+    )
+    return state.apply(sequence, operations, selectionAfter = copyId)
+  }
+
+  private fun undo(state: UiBuilderEditorState): UiBuilderEditorState {
+    val targetOperationId = state.undoTargetOperationId() ?: return state
+    val sequence = state.operationSequence + 1
+    val application =
+      CollaborationReducer.undo(
+        state.collaboration,
+        UndoCommand(
+          designId = state.document.id,
+          operationId = "editor-undo-${sequence.toString().padStart(4, '0')}",
+          actorId = EDITOR_ACTOR_ID,
+          clientId = EDITOR_CLIENT_ID,
+          baseRevision = state.document.revision,
+          targetOperationId = targetOperationId,
+        ),
+        documentValidator,
+      )
+    val selectedAfter =
+      state.selectionBeforeOperations[targetOperationId]?.takeIf(
+        application.state.document.nodes::containsKey
+      ) ?: application.state.document.roots.firstOrNull()
+    return state.withApplication(application, sequence, selectedAfter)
+  }
+
+  private fun redo(state: UiBuilderEditorState): UiBuilderEditorState {
+    val targetUndoId = state.redoTargetUndoId() ?: return state
+    val targetOperationId =
+      state.collaboration.undoRecords.getValue(targetUndoId).target.command.operationId
+    val sequence = state.operationSequence + 1
+    val application =
+      CollaborationReducer.redo(
+        state.collaboration,
+        RedoCommand(
+          designId = state.document.id,
+          operationId = "editor-redo-${sequence.toString().padStart(4, '0')}",
+          actorId = EDITOR_ACTOR_ID,
+          clientId = EDITOR_CLIENT_ID,
+          baseRevision = state.document.revision,
+          targetUndoOperationId = targetUndoId,
+        ),
+        documentValidator,
+      )
+    val selectedAfter =
+      state.selectionAfterOperations[targetOperationId]?.takeIf(
+        application.state.document.nodes::containsKey
+      ) ?: application.state.document.roots.firstOrNull()
+    return state.withApplication(application, sequence, selectedAfter)
+  }
+
   private fun UiBuilderEditorState.apply(
     sequence: Int,
     operations: List<DesignOperation>,
-    selectionAfter: String,
-    validateDocument: Boolean = false,
+    selectionAfter: String?,
   ): UiBuilderEditorState {
+    val operationId = "editor-operation-${sequence.toString().padStart(4, '0')}"
     val command =
       DesignCommand(
         designId = document.id,
-        operationId = "editor-operation-${sequence.toString().padStart(4, '0')}",
-        actorId = "wasm-editor",
-        clientId = "interactive-canvas",
+        operationId = operationId,
+        actorId = EDITOR_ACTOR_ID,
+        clientId = EDITOR_CLIENT_ID,
         baseRevision = document.revision,
         operations = operations,
       )
-    val application = CollaborationReducer.apply(collaboration, command, validator)
-    if (validateDocument && application.outcome is CommandOutcome.Accepted) {
-      capabilityValidator.validate(application.state.document).issues.firstOrNull()?.let { issue ->
-        return rejected(
-          sequence,
-          RejectionCode.INVALID_PROPERTY,
-          "${issue.nodeId}.${issue.field ?: "node"}: ${issue.message}",
-        )
-      }
-    }
+    val application =
+      CollaborationReducer.apply(collaboration, command, validator, documentValidator)
+    return withApplication(
+      application = application,
+      sequence = sequence,
+      selectionAfter = selectionAfter,
+      acceptedOperationId = operationId,
+    )
+  }
+
+  private fun UiBuilderEditorState.withApplication(
+    application: CommandApplication,
+    sequence: Int,
+    selectionAfter: String?,
+    acceptedOperationId: String? = null,
+  ): UiBuilderEditorState {
+    val accepted = application.outcome is CommandOutcome.Accepted
     return copy(
       collaboration = application.state,
-      selectedNodeId =
-        if (application.outcome is CommandOutcome.Accepted) selectionAfter else selectedNodeId,
+      selectedNodeId = if (accepted) selectionAfter else selectedNodeId,
       operationSequence = sequence,
       lastOutcome = application.outcome,
+      selectionBeforeOperations =
+        if (accepted && acceptedOperationId != null)
+          selectionBeforeOperations + (acceptedOperationId to selectedNodeId)
+        else selectionBeforeOperations,
+      selectionAfterOperations =
+        if (accepted && acceptedOperationId != null)
+          selectionAfterOperations + (acceptedOperationId to selectionAfter)
+        else selectionAfterOperations,
     )
   }
 
@@ -296,6 +443,26 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
     return null
   }
 }
+
+private const val EDITOR_ACTOR_ID = "wasm-editor"
+private const val EDITOR_CLIENT_ID = "interactive-canvas"
+
+private fun UiBuilderEditorState.undoTargetOperationId(): String? =
+  collaboration.acceptedCommands.values
+    .asSequence()
+    .filter { it.command.actorId == EDITOR_ACTOR_ID }
+    .filter { it.command.operationId !in collaboration.compensatedOperationIds }
+    .maxByOrNull(AcceptedCommand::committedRevision)
+    ?.command
+    ?.operationId
+
+private fun UiBuilderEditorState.redoTargetUndoId(): String? =
+  collaboration.undoRecords.values
+    .asSequence()
+    .filter { it.command.actorId == EDITOR_ACTOR_ID && it.redoneBy == null }
+    .maxByOrNull(AcceptedUndo::committedRevision)
+    ?.command
+    ?.operationId
 
 private fun ComponentCapability.editorKind(): EditorComponentKind =
   when (role) {
@@ -420,6 +587,36 @@ private fun defaultChildFor(
       else -> "layout/box"
     }
   return catalog.componentsById[preferredId]?.takeIf(slot::accepts)
+}
+
+private fun UiBuilderDocument.appendDuplicateSubtree(
+  sourceNodeId: String,
+  copyNodeId: String,
+  parent: ParentSlot?,
+  afterNodeId: String?,
+  operations: MutableList<DesignOperation>,
+) {
+  val source = nodes.getValue(sourceNodeId)
+  operations +=
+    DesignOperation.InsertNode(
+      node = source.copy(id = copyNodeId, slots = source.slots.mapValues { emptyList() }),
+      parent = parent,
+      afterNodeId = afterNodeId,
+    )
+  source.slots.forEach { (slot, children) ->
+    var previousCopyId: String? = null
+    children.forEach { childId ->
+      val childCopyId = "$copyNodeId-${childId.replace('/', '-')}"
+      appendDuplicateSubtree(
+        sourceNodeId = childId,
+        copyNodeId = childCopyId,
+        parent = ParentSlot(copyNodeId, slot),
+        afterNodeId = previousCopyId,
+        operations = operations,
+      )
+      previousCopyId = childCopyId
+    }
+  }
 }
 
 private fun JsonElement.asLiteral(propertyName: String): JsonObject {

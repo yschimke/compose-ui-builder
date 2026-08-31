@@ -5,6 +5,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,12 +47,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -97,6 +110,8 @@ fun UiBuilderEditor(
   var catalogDragPosition by remember { mutableStateOf<Offset?>(null) }
   var draggedComponentId by remember { mutableStateOf<String?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
+  var textInputFocused by remember { mutableStateOf(false) }
+  val editorFocusRequester = remember { FocusRequester() }
   val draggedTarget = draggedComponentId?.let { reducer.dropTarget(state, it) }
   val canvasDropHovered =
     catalogDragPosition?.let(canvasBounds::contains) == true && draggedTarget != null
@@ -104,6 +119,7 @@ fun UiBuilderEditor(
     state = reducer.reduce(state, event)
   }
   LaunchedEffect(state) { onStateChanged(state) }
+  LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
   LaunchedEffect(canvasDropHovered, draggedTarget) {
     onDropTargetChanged(
       canvasDropHovered,
@@ -112,8 +128,21 @@ fun UiBuilderEditor(
   }
 
   MaterialTheme(colorScheme = EditorColors) {
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-      EditorToolbar(state)
+    Column(
+      Modifier.fillMaxSize()
+        .background(MaterialTheme.colorScheme.background)
+        .focusRequester(editorFocusRequester)
+        .focusable()
+        .onPreviewKeyEvent { event ->
+          editorShortcut(event, enabled = !textInputFocused, dispatch = ::dispatch)
+        }
+    ) {
+      EditorToolbar(
+        state = state,
+        canDelete = reducer.canDeleteSelected(state),
+        canDuplicate = reducer.canDuplicateSelected(state),
+        dispatch = ::dispatch,
+      )
       Row(Modifier.fillMaxSize()) {
         EditorNavigator(
           state = state,
@@ -133,6 +162,7 @@ fun UiBuilderEditor(
             catalogDragPosition = null
           },
           moveTarget = { nodeId, direction -> reducer.moveTarget(state, nodeId, direction) },
+          onTextInputFocusChanged = { textInputFocused = it },
           dispatch = ::dispatch,
         )
         PinnedDesignCanvas(
@@ -150,14 +180,23 @@ fun UiBuilderEditor(
           modifier =
             Modifier.weight(1f).fillMaxHeight().background(Color(0xff0d0e11)).padding(20.dp),
         )
-        PropertyInspector(state, dispatch = ::dispatch)
+        PropertyInspector(
+          state,
+          onTextInputFocusChanged = { textInputFocused = it },
+          dispatch = ::dispatch,
+        )
       }
     }
   }
 }
 
 @Composable
-private fun EditorToolbar(state: UiBuilderEditorState) {
+private fun EditorToolbar(
+  state: UiBuilderEditorState,
+  canDelete: Boolean,
+  canDuplicate: Boolean,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
   Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
     Row(
       Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 18.dp),
@@ -171,8 +210,33 @@ private fun EditorToolbar(state: UiBuilderEditorState) {
         style = MaterialTheme.typography.labelLarge,
       )
       Spacer(Modifier.weight(1f))
+      EditorAction(
+        label = "Undo",
+        shortcut = "Ctrl/⌘+Z",
+        enabled = state.canUndo,
+        onClick = { dispatch(UiBuilderEditorEvent.Undo) },
+      )
+      EditorAction(
+        label = "Redo",
+        shortcut = "Ctrl/⌘+Shift+Z",
+        enabled = state.canRedo,
+        onClick = { dispatch(UiBuilderEditorEvent.Redo) },
+      )
+      EditorAction(
+        label = "Duplicate",
+        shortcut = "Ctrl/⌘+D",
+        enabled = canDuplicate,
+        onClick = { dispatch(UiBuilderEditorEvent.DuplicateSelected) },
+      )
+      EditorAction(
+        label = "Delete",
+        shortcut = "Delete/Backspace",
+        enabled = canDelete,
+        onClick = { dispatch(UiBuilderEditorEvent.DeleteSelected) },
+      )
       Text(
         "Revision ${state.document.revision}  ·  ${state.document.nodes.size} nodes",
+        Modifier.padding(start = 8.dp),
         style = MaterialTheme.typography.labelLarge,
       )
       Surface(
@@ -192,6 +256,43 @@ private fun EditorToolbar(state: UiBuilderEditorState) {
 }
 
 @Composable
+private fun EditorAction(
+  label: String,
+  shortcut: String,
+  enabled: Boolean,
+  onClick: () -> Unit,
+) {
+  TextButton(
+    onClick = onClick,
+    enabled = enabled,
+    modifier = Modifier.semantics { contentDescription = "$label ($shortcut)" },
+  ) {
+    Text(label)
+  }
+}
+
+private fun editorShortcut(
+  event: KeyEvent,
+  enabled: Boolean,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+): Boolean {
+  if (!enabled || event.type != KeyEventType.KeyDown) return false
+  val command = event.isCtrlPressed || event.isMetaPressed
+  val editorEvent =
+    when {
+      command && event.key == Key.Z && event.isShiftPressed -> UiBuilderEditorEvent.Redo
+      command && event.key == Key.Y -> UiBuilderEditorEvent.Redo
+      command && event.key == Key.Z -> UiBuilderEditorEvent.Undo
+      command && event.key == Key.D -> UiBuilderEditorEvent.DuplicateSelected
+      !command && event.key in setOf(Key.Delete, Key.Backspace) ->
+        UiBuilderEditorEvent.DeleteSelected
+      else -> null
+    } ?: return false
+  dispatch(editorEvent)
+  return true
+}
+
+@Composable
 private fun EditorNavigator(
   state: UiBuilderEditorState,
   catalogItems: List<EditorCatalogItem>,
@@ -200,12 +301,18 @@ private fun EditorNavigator(
   onCatalogDrag: (String, Offset?) -> Unit,
   onCatalogDrop: (String, Offset) -> Unit,
   moveTarget: (String, EditorMoveDirection) -> UiBuilderEditorEvent.MoveNode?,
+  onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   Surface(Modifier.width(300.dp).fillMaxHeight(), color = MaterialTheme.colorScheme.surface) {
     Column {
       PanelHeading("M3 component catalog", "Drop target: $dropTargetLabel")
-      SearchField(state.catalogQuery) { dispatch(UiBuilderEditorEvent.SearchCatalog(it)) }
+      SearchField(
+        state.catalogQuery,
+        onFocusChanged = onTextInputFocusChanged,
+      ) {
+        dispatch(UiBuilderEditorEvent.SearchCatalog(it))
+      }
       LazyColumn(Modifier.fillMaxWidth().height(240.dp)) {
         itemsIndexed(catalogItems, key = { _, item -> item.componentId }) { index, item ->
           if (index == 0 || catalogItems[index - 1].kind != item.kind) KindHeading(item.kind)
@@ -302,7 +409,11 @@ private fun PanelHeading(title: String, supporting: String) {
 }
 
 @Composable
-private fun SearchField(value: String, onValueChange: (String) -> Unit) {
+private fun SearchField(
+  value: String,
+  onFocusChanged: (Boolean) -> Unit,
+  onValueChange: (String) -> Unit,
+) {
   Surface(
     Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 12.dp, vertical = 5.dp),
     shape = RoundedCornerShape(10.dp),
@@ -326,7 +437,9 @@ private fun SearchField(value: String, onValueChange: (String) -> Unit) {
           value = value,
           onValueChange = onValueChange,
           modifier =
-            Modifier.fillMaxWidth().semantics { contentDescription = "Component catalog search" },
+            Modifier.fillMaxWidth()
+              .onFocusChanged { onFocusChanged(it.isFocused) }
+              .semantics { contentDescription = "Component catalog search" },
           textStyle =
             MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
           singleLine = true,
@@ -467,6 +580,7 @@ private fun LayerRow(
 @Composable
 private fun PropertyInspector(
   state: UiBuilderEditorState,
+  onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
@@ -505,6 +619,7 @@ private fun PropertyInspector(
           onValueChange = { draft = it },
           modifier =
             Modifier.fillMaxWidth()
+              .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
               .semantics { contentDescription = "Text property" }
               .padding(top = 7.dp)
               .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
