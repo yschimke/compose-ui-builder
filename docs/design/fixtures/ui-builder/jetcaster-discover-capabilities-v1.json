@@ -27,12 +27,12 @@
       "traits": ["ImageContent"],
       "slots": [],
       "properties": [
-        { "name": "assetId", "jsonType": "string", "required": true },
+        { "name": "assetKey", "jsonType": "string", "required": true },
         { "name": "contentDescription", "jsonType": ["string", "null"], "required": false },
         { "name": "contentScale", "jsonType": "string", "required": false, "allowedValues": ["crop", "fit", "fillBounds", "inside"] },
         { "name": "alignment", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "aspectRatio", "clip", "align", "matchParentSize", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Requires the pinned, hash-checked builder asset registry and deterministic loading state." },
       "code": { "symbol": "Image", "imports": ["androidx.compose.foundation.Image", "androidx.compose.ui.layout.ContentScale"] },
       "svg": { "status": "raster-fallback-required", "fallback": "embedded-raster", "blocksExport": false, "notes": "Embed the exact pinned asset bytes; external URLs are forbidden." }
@@ -49,7 +49,7 @@
         { "name": "contentAlignment", "jsonType": "string", "required": false },
         { "name": "propagateMinConstraints", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "aspectRatio", "clip", "align", "matchParentSize", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "Box", "imports": ["androidx.compose.foundation.layout.Box"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -65,9 +65,10 @@
       "properties": [
         { "name": "verticalArrangement", "jsonType": "string", "required": false },
         { "name": "verticalSpacingDp", "jsonType": "number", "required": false },
-        { "name": "horizontalAlignment", "jsonType": "string", "required": false }
+        { "name": "horizontalAlignment", "jsonType": "string", "required": false },
+        { "name": "weight", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Column", "imports": ["androidx.compose.foundation.layout.Column"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -83,10 +84,12 @@
       "properties": [
         { "name": "itemWidthDp", "jsonType": "number", "required": true },
         { "name": "itemSpacingDp", "jsonType": "number", "required": false },
-        { "name": "contentPadding", "jsonType": "object", "required": false },
-        { "name": "scrollStateKey", "jsonType": "string", "required": true }
+        { "name": "contentPaddingStartDp", "jsonType": "number", "required": false },
+        { "name": "scrollStateKey", "jsonType": "string", "required": true },
+        { "name": "kind", "jsonType": "string", "required": false },
+        { "name": "span", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 carousel API; masking and stable item keys require conformance tests." },
       "code": { "symbol": "HorizontalUncontainedCarousel", "imports": ["androidx.compose.material3.carousel.HorizontalUncontainedCarousel", "androidx.compose.material3.carousel.rememberCarouselState"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Only the pinned settled viewport is exported; off-screen items are not flattened into view." }
@@ -105,7 +108,7 @@
         { "name": "scrollStateKey", "jsonType": "string", "required": true },
         { "name": "reverseLayout", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Independent pane scroll requires distinct stable scrollStateKey values." },
       "code": { "symbol": "LazyColumn", "imports": ["androidx.compose.foundation.lazy.LazyColumn"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -119,14 +122,14 @@
         { "name": "items", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["GridItem"] }
       ],
       "properties": [
-        { "name": "adaptiveMinCellDp", "jsonType": "number", "required": true },
+        { "name": "columns", "jsonType": "object", "required": true },
         { "name": "horizontalSpacingDp", "jsonType": "number", "required": false },
         { "name": "verticalSpacingDp", "jsonType": "number", "required": false },
         { "name": "contentPadding", "jsonType": "object", "required": false },
         { "name": "scrollStateKey", "jsonType": "string", "required": true },
         { "name": "itemSpans", "jsonType": "object", "required": false, "notes": "Map stable child id to 'single' or 'full'." }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must prove adaptive 362dp cells and full-span rows at the pinned viewport." },
       "code": { "symbol": "LazyVerticalGrid", "imports": ["androidx.compose.foundation.lazy.grid.GridCells", "androidx.compose.foundation.lazy.grid.GridItemSpan", "androidx.compose.foundation.lazy.grid.LazyVerticalGrid"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -142,9 +145,11 @@
       "properties": [
         { "name": "contentPadding", "jsonType": "object", "required": false },
         { "name": "horizontalSpacingDp", "jsonType": "number", "required": false },
-        { "name": "scrollStateKey", "jsonType": "string", "required": false }
+        { "name": "scrollStateKey", "jsonType": "string", "required": false },
+        { "name": "span", "jsonType": "string", "required": false },
+        { "name": "stableKey", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "LazyRow", "imports": ["androidx.compose.foundation.lazy.LazyRow"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -162,7 +167,7 @@
         { "name": "horizontalSpacingDp", "jsonType": "number", "required": false },
         { "name": "verticalAlignment", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Row", "imports": ["androidx.compose.foundation.layout.Row"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -179,9 +184,11 @@
       ],
       "properties": [
         { "name": "containerColor", "jsonType": "string", "required": false },
-        { "name": "contentWindowInsets", "jsonType": "array", "required": false }
+        { "name": "contentWindowInsets", "jsonType": "array", "required": false },
+        { "name": "loading", "jsonType": "boolean", "required": false },
+        { "name": "scrollStateKey", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Scaffold", "imports": ["androidx.compose.material3.Scaffold"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -196,11 +203,12 @@
         { "name": "supportingPane", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["PaneContent"] }
       ],
       "properties": [
-        { "name": "layoutMode", "jsonType": "string", "required": true, "allowedValues": ["adaptive", "singlePane", "twoPane"] },
+        { "name": "layoutMode", "jsonType": "string", "required": true, "allowedValues": ["adaptive", "expandedTwoPane", "singlePane", "twoPane"] },
         { "name": "mainPanePreferredWidthDp", "jsonType": "number", "required": false },
         { "name": "supportingPanePreferredWidthDp", "jsonType": "number", "required": false },
         { "name": "paneSpacingDp", "jsonType": "number", "required": false },
-        { "name": "showSupportingPane", "jsonType": "boolean", "required": true }
+        { "name": "mainPaneVisible", "jsonType": "boolean", "required": true },
+        { "name": "supportingPaneVisible", "jsonType": "boolean", "required": true }
       ],
       "modifierCapabilities": ["size", "fillMaxSize", "padding"],
       "wasm": { "platformSupported": "unverified", "adapterStatus": "unsupported", "notes": "The repository has no Material 3 adaptive dependency or verified Wasm adapter yet; this blocks the expanded benchmark." },
@@ -217,12 +225,13 @@
         { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
       ],
       "properties": [
-        { "name": "variant", "jsonType": "string", "required": true, "allowedValues": ["filled", "tonal", "outlined", "text"] },
+        { "name": "style", "jsonType": "string", "required": true, "allowedValues": ["filled", "filledTonal", "text", "fab"] },
         { "name": "enabled", "jsonType": "boolean", "required": false },
-        { "name": "selected", "jsonType": "boolean", "required": false },
+        { "name": "selected", "jsonType": ["boolean", "string"], "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "Button", "imports": ["androidx.compose.material3.Button", "androidx.compose.material3.OutlinedButton", "androidx.compose.material3.TextButton"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -238,11 +247,12 @@
       "properties": [
         { "name": "variant", "jsonType": "string", "required": false, "allowedValues": ["filled", "elevated", "outlined"] },
         { "name": "containerColor", "jsonType": "string", "required": false },
-        { "name": "shapeDp", "jsonType": "number", "required": false },
+        { "name": "shape", "jsonType": "string", "required": false },
+        { "name": "stableKey", "jsonType": "string", "required": false },
         { "name": "elevationDp", "jsonType": "number", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "aspectRatio", "clip", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "clip"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Material card previews exist, but the builder adapter must expose arbitrary semantic content." },
       "code": { "symbol": "Card", "imports": ["androidx.compose.material3.Card", "androidx.compose.material3.ElevatedCard", "androidx.compose.material3.OutlinedCard"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -257,11 +267,12 @@
         { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
       ],
       "properties": [
-        { "name": "selected", "jsonType": "boolean", "required": true },
+        { "name": "selected", "jsonType": ["boolean", "string"], "required": true },
         { "name": "enabled", "jsonType": "boolean", "required": false },
+        { "name": "shape", "jsonType": "string", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "FilterChip", "imports": ["androidx.compose.material3.FilterChip"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -276,7 +287,7 @@
         { "name": "thicknessDp", "jsonType": "number", "required": false },
         { "name": "color", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "HorizontalDivider", "imports": ["androidx.compose.material3.HorizontalDivider"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -292,9 +303,10 @@
       "properties": [
         { "name": "expanded", "jsonType": "boolean", "required": false },
         { "name": "containerColor", "jsonType": "string", "required": false },
-        { "name": "contentPadding", "jsonType": "object", "required": false }
+        { "name": "contentPadding", "jsonType": "object", "required": false },
+        { "name": "alignment", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 API and selected-button appearance require pinned-version tests." },
       "code": { "symbol": "HorizontalFloatingToolbar", "imports": ["androidx.compose.material3.HorizontalFloatingToolbar"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -311,7 +323,7 @@
         { "name": "sizeDp", "jsonType": "number", "required": false },
         { "name": "color", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Only explicitly registered, license-compatible vector keys are valid." },
       "code": { "symbol": "Icon", "imports": ["androidx.compose.material3.Icon"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -322,15 +334,18 @@
       "role": "Container",
       "traits": ["Action", "OverlayControl", "ToolbarItem"],
       "slots": [
-        { "name": "icon", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
+        { "name": "content", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
       ],
       "properties": [
         { "name": "variant", "jsonType": "string", "required": false, "allowedValues": ["standard", "filled", "tonal", "outlined"] },
         { "name": "enabled", "jsonType": "boolean", "required": false },
         { "name": "selected", "jsonType": "boolean", "required": false },
+        { "name": "alignment", "jsonType": "string", "required": false },
+        { "name": "contentDescription", "jsonType": ["string", "null"], "required": false },
+        { "name": "sizeDp", "jsonType": "number", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "IconButton", "imports": ["androidx.compose.material3.FilledIconButton", "androidx.compose.material3.IconButton"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -349,7 +364,7 @@
         { "name": "shapeDp", "jsonType": "number", "required": false },
         { "name": "tonalElevationDp", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 API; the fixed benchmark keeps expanded false." },
       "code": { "symbol": "SearchBar", "imports": ["androidx.compose.material3.SearchBar"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -365,13 +380,13 @@
         { "name": "trailingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["IconContent", "Action"] }
       ],
       "properties": [
-        { "name": "query", "jsonType": "string", "required": true },
+        { "name": "value", "jsonType": "object", "required": true },
         { "name": "enabled", "jsonType": "boolean", "required": false },
         { "name": "readOnly", "jsonType": "boolean", "required": false },
         { "name": "onQueryChangeAction", "jsonType": ["object", "null"], "required": false },
         { "name": "onSearchAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Maps to the experimental SearchBarDefaults.InputField API." },
       "code": { "symbol": "SearchBarDefaults.InputField", "imports": ["androidx.compose.material3.SearchBarDefaults"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -389,7 +404,7 @@
         { "name": "message", "jsonType": "string", "required": false },
         { "name": "actionLabel", "jsonType": ["string", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "The fixed benchmark keeps the host hidden but retains the scaffold slot identity." },
       "code": { "symbol": "SnackbarHost", "imports": ["androidx.compose.material3.SnackbarHost", "androidx.compose.material3.rememberSnackbarHostState"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -408,7 +423,7 @@
         { "name": "shapeDp", "jsonType": "number", "required": false },
         { "name": "tonalElevationDp", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "aspectRatio", "clip", "weight", "align", "matchParentSize", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Surface", "imports": ["androidx.compose.material3.Surface"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
@@ -426,9 +441,11 @@
         { "name": "color", "jsonType": "string", "required": false },
         { "name": "maxLines", "jsonType": "integer", "required": false },
         { "name": "overflow", "jsonType": "string", "required": false },
-        { "name": "textAlign", "jsonType": "string", "required": false }
+        { "name": "textAlign", "jsonType": "string", "required": false },
+        { "name": "alignment", "jsonType": "string", "required": false },
+        { "name": "weight", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "weight", "align", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Fidelity requires the pinned Jetcaster font assets and typography tokens." },
       "code": { "symbol": "Text", "imports": ["androidx.compose.material3.Text"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Font embedding and Figma text metrics remain a release gate." }
@@ -440,13 +457,11 @@
       "traits": ["DrawLayer", "OverlayContent"],
       "slots": [],
       "properties": [
-        { "name": "colors", "jsonType": "array", "required": true },
-        { "name": "stops", "jsonType": "array", "required": false },
-        { "name": "start", "jsonType": "object", "required": false },
-        { "name": "end", "jsonType": "object", "required": false },
-        { "name": "tileMode", "jsonType": "string", "required": false }
+        { "name": "startColor", "jsonType": "string", "required": true },
+        { "name": "endColor", "jsonType": "string", "required": true },
+        { "name": "direction", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "aspectRatio", "clip", "align", "matchParentSize", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must remain a semantic brush layer, not persisted pixel geometry." },
       "code": { "symbol": "Modifier.background(Brush.linearGradient)", "imports": ["androidx.compose.foundation.background", "androidx.compose.ui.Modifier", "androidx.compose.ui.graphics.Brush"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Expected vector output, pending the composite SVG spike." }
@@ -458,13 +473,12 @@
       "traits": ["DrawLayer", "BackgroundContent"],
       "slots": [],
       "properties": [
-        { "name": "colors", "jsonType": "array", "required": true },
-        { "name": "stops", "jsonType": "array", "required": false },
-        { "name": "center", "jsonType": "object", "required": false },
-        { "name": "radiusDp", "jsonType": "number", "required": false },
-        { "name": "tileMode", "jsonType": "string", "required": false }
+        { "name": "innerColor", "jsonType": "string", "required": true },
+        { "name": "outerColor", "jsonType": "string", "required": true },
+        { "name": "innerAlpha", "jsonType": "number", "required": false },
+        { "name": "center", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "aspectRatio", "clip", "align", "matchParentSize", "zIndex"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must remain a semantic brush layer, not persisted pixel geometry." },
       "code": { "symbol": "Modifier.background(Brush.radialGradient)", "imports": ["androidx.compose.foundation.background", "androidx.compose.ui.Modifier", "androidx.compose.ui.graphics.Brush"] },
       "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Expected vector output, pending the composite SVG spike." }

@@ -406,13 +406,15 @@ supported text/groups, declares every raster fallback, and rasterizes within the
 
 ## 10. Remaining Wave 0 outputs
 
-- [ ] Build and freeze the separately compiled Jetcaster Wasm reference, plus
-      bounds/baselines/semantics and source/data/asset provenance.
+- [x] Build and freeze the separately compiled Jetcaster Wasm reference with source/data/asset
+      provenance and committed reference pixels.
+- [ ] Add Jetcaster bounds/baselines/semantics capture and enforce clean/editor invariance.
 - [ ] Correct the Confetti baseline fixture to the pinned source data before retaining it as the
       compact regression.
 - [ ] Implement the pure reducer prototype and model tests for concurrency and compensation.
-- [ ] Implement capability fixtures for the first vertical slice and prove static/native/codegen
-      conformance.
+- [x] Implement the Jetcaster capability fixture, strict static validator, and native dispatch for
+      every referenced component id.
+- [ ] Prove capability-driven codegen and SVG conformance for the Jetcaster fixture.
 - [ ] Prove version-addressed renderer loading and overlay/input coordinate mapping.
 - [ ] Complete the export execution bridge and Figma import test.
 - [ ] Move accepted wire shapes and compatibility fixtures to `compose-preview-contracts`.
@@ -434,6 +436,14 @@ live in the same module and reproduce nearby values by hand. It must not be desc
 the builder matches pinned Confetti. Jetcaster closes that hole with the independently built,
 provenance-locked reference required by
 [UI_BUILDER_JETCASTER_BENCHMARK.md](UI_BUILDER_JETCASTER_BENCHMARK.md).
+
+The Jetcaster leg is a separate artifact and process boundary:
+`ui-builder-reference-jetcaster` directly composes the pinned scene and does not depend on
+`:ui-builder`; `:ui-builder` replays the 100 public operations and renders all 99 nodes. The
+Playwright harness captures both at `1280 x 800`, verifies the upstream provenance, commits both
+reviewable PNGs, and attaches a diagnostic diff. The first integrated render differs by `4.989%`
+at pixelmatch threshold `0.1`; CI currently enforces an `8%` convergence ceiling while the release
+gate remains exact parity.
 The fixture contains a real Scaffold and
 app bar, five track filters, two day tabs, a bounded lazy schedule, sticky-style time headers, talk
 and lightning rows, dividers, bookmark/icon states, and a shaped break surface. It does not yet

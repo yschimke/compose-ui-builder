@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
+import ee.schimke.composeai.uibuilder.capability.validateCapabilities
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.Promise
@@ -74,12 +75,35 @@ private fun VisualFixtureApp(mode: String) {
 
   var document by remember { mutableStateOf<UiBuilderDocument?>(null) }
   LaunchedEffect(Unit) {
-    val fixture =
-      Json.parseToJsonElement(fetchText("confetti-schedule-operations-v1.json")).jsonObject
-    document = UiBuilderReducer.replay(fixture).document
+    val isJetcaster = mode.startsWith("jetcaster-")
+    val fixtureName =
+      if (isJetcaster) "jetcaster-discover-operations-v1.json"
+      else "confetti-schedule-operations-v1.json"
+    val fixture = Json.parseToJsonElement(fetchText(fixtureName)).jsonObject
+    val replayed = UiBuilderReducer.replay(fixture).document
+    if (isJetcaster) {
+      val validation =
+        validateCapabilities(
+          replayed,
+          fetchText("jetcaster-discover-capabilities-v1.json"),
+        )
+      require(validation.structurallyValid) {
+        validation.issues.joinToString(prefix = "invalid Jetcaster design: ") { it.message }
+      }
+      publishCapabilityDiagnostics(
+        validation.structurallyValid,
+        validation.wasmRenderable,
+        validation.plannedOrUnsupported
+          .map { it.componentId }
+          .distinct()
+          .sorted()
+          .joinToString(","),
+      )
+    }
+    document = replayed
   }
   document?.let {
-    UiBuilderSurface(it, editorOverlay = mode == "editor")
+    UiBuilderSurface(it, editorOverlay = mode == "editor" || mode == "jetcaster-editor")
     LaunchedEffect(it.revision) { markReady() }
   }
 }
@@ -322,3 +346,18 @@ private external fun captureMode(): String
 
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
 private external fun markReady()
+
+@JsFun(
+  """(structurallyValid, wasmRenderable, pendingIds) => {
+    globalThis.__uiBuilderCapabilityValidation = {
+      structurallyValid,
+      wasmRenderable,
+      plannedOrUnsupportedComponentIds: pendingIds ? pendingIds.split(',') : []
+    };
+  }"""
+)
+private external fun publishCapabilityDiagnostics(
+  structurallyValid: Boolean,
+  wasmRenderable: Boolean,
+  pendingIds: String,
+)

@@ -1,0 +1,25 @@
+{
+  "schema": "compose-ui-builder-reference-provenance/v1",
+  "referenceId": "jetcaster-discover-expanded-v1",
+  "viewport": { "widthDp": 1280, "heightDp": 800, "density": 1.0 },
+  "source": {
+    "repository": "android/compose-samples",
+    "project": "Jetcaster",
+    "commit": "018c5207fb63c4f78e5841bd8ddd4faabdf19d3a",
+    "license": "Apache-2.0"
+  },
+  "artwork": [
+    {
+      "assetKey": "jetcaster.cover.android-developers-backstage",
+      "kind": "deterministic-compose-placeholder",
+      "copiedFromUpstream": false
+    },
+    {
+      "assetKey": "jetcaster.cover.google-developers-podcast",
+      "kind": "deterministic-compose-placeholder",
+      "copiedFromUpstream": false
+    }
+  ],
+  "networkRequired": false,
+  "animations": "settled"
+}

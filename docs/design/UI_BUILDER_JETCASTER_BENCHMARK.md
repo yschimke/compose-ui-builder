@@ -166,3 +166,16 @@ and that the exported SVG is not a single full-screen bitmap.
 4. **Exports:** code compilation/render parity and editable SVG/Figma import parity.
 
 Confetti stays in CI as the fast, no-network compact regression. Jetcaster is the release gate.
+
+### Current implementation status
+
+- The independent direct-Compose Wasm oracle, provenance record, and reviewable PNG are checked in
+  under `ui-builder-reference-jetcaster` and `preview-harness/snapshots`.
+- The builder replays all 100 public operations and has explicit native dispatch for all 24
+  capability ids used by the resulting 99-node document.
+- Strict capability validation reports unknown ids/properties/modifiers/slots and keeps planned or
+  unsupported Wasm status visible rather than substituting silently.
+- The first independent-oracle comparison reports `4.989%` differing pixels at threshold `0.1`.
+  CI enforces an interim ceiling of `8%`; this is a convergence guard, not the exact release gate.
+- Bounds/baselines/semantics, responsive compact state, exact pixel parity, SVG/Figma parity, and
+  generated-Compose parity remain open.

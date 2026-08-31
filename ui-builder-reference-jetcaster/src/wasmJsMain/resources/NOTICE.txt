@@ -1,0 +1,11 @@
+Jetcaster Discover reference fixture
+
+The scene hierarchy and fixed labels are independently derived from Jetcaster in the official
+Android Compose samples at commit 018c5207fb63c4f78e5841bd8ddd4faabdf19d3a.
+
+Copyright 2020-2025 The Android Open Source Project
+Licensed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0
+
+No upstream cover artwork is included. Cover placeholders are original deterministic Compose
+geometry identified by stable benchmark asset keys.
