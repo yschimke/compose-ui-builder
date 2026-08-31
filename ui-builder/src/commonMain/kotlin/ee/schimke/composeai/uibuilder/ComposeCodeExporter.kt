@@ -1,9 +1,18 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+
 /**
  * Deterministic, deliberately conservative exporter for the first supported native screen slice.
  */
 object ComposeCodeExporter {
+  /** Preferred capability-gated whole-document export path. */
+  fun export(
+    document: UiBuilderDocument,
+    catalog: CapabilityCatalog,
+  ): ComposeExportResult = CapabilityComposeCodeExporter.export(document, catalog)
+
+  /** Legacy compact Confetti spike retained as a baseline while callers migrate to capabilities. */
   fun export(document: UiBuilderDocument): String {
     require(document.roots.size == 1) { "code export currently requires one root" }
     val root = document.nodes.getValue(document.roots.single())

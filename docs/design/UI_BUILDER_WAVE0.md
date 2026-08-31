@@ -408,13 +408,20 @@ supported text/groups, declares every raster fallback, and rasterizes within the
 
 - [x] Build and freeze the separately compiled Jetcaster Wasm reference with source/data/asset
       provenance and committed reference pixels.
-- [ ] Add Jetcaster bounds/baselines/semantics capture and enforce clean/editor invariance.
+- [x] Add Jetcaster bounds/baselines/authored-semantics capture and enforce clean/editor
+      invariance. Merged Compose accessibility semantics and off-screen lazy content remain open.
 - [ ] Correct the Confetti baseline fixture to the pinned source data before retaining it as the
       compact regression.
 - [ ] Implement the pure reducer prototype and model tests for concurrency and compensation.
+      The first executable slice now covers atomic typed batches, exact revision checks,
+      move/delete/restore/set-property, idempotency, and deterministic replay; concurrent stale
+      resolution, position keys, and compensating undo/redo remain open.
 - [x] Implement the Jetcaster capability fixture, strict static validator, and native dispatch for
       every referenced component id.
 - [ ] Prove capability-driven codegen and SVG conformance for the Jetcaster fixture.
+      Capability-gated codegen now emits the full 99-node fixture with located TODO diagnostics and
+      revision/catalog/environment provenance. It remains intentionally “almost compiling”; SVG
+      remains stopped by the fail-closed execution-bridge readiness check.
 - [ ] Prove version-addressed renderer loading and overlay/input coordinate mapping.
 - [ ] Complete the export execution bridge and Figma import test.
 - [ ] Move accepted wire shapes and compatibility fixtures to `compose-preview-contracts`.
@@ -443,11 +450,15 @@ The Jetcaster leg is a separate artifact and process boundary:
 Playwright harness captures both at `1280 x 800`, verifies the upstream provenance, commits both
 reviewable PNGs, and attaches a diagnostic diff. The first integrated render differs by `4.989%`
 at pixelmatch threshold `0.1`; CI currently enforces an `8%` convergence ceiling while the release
-gate remains exact parity.
+gate remains exact parity. The same-browser comparison remains authoritative; committed review
+PNGs separately allow at most `4%` macOS/Linux Chromium/Skia drift.
 The fixture contains a real Scaffold and
 app bar, five track filters, two day tabs, a bounded lazy schedule, sticky-style time headers, talk
-and lightning rows, dividers, bookmark/icon states, and a shaped break surface. It does not yet
-claim pager interaction, bounds/baseline capture, or the SVG leg is complete.
+and lightning rows, dividers, bookmark/icon states, and a shaped break surface. It now publishes a
+revision-keyed inspection manifest for composed node and slot bounds, native text baselines, and
+authored semantics, and proves the editor overlay leaves clean geometry and pixels unchanged. It
+does not yet claim pager interaction, off-screen lazy-node inspection, merged accessibility
+semantics, or that the SVG leg is complete.
 
 The module deliberately has no dependency on `:server`, `:render-host`, or `:wasm-ui`. Server HTTP
 and MCP adapters can depend on its reducer API while it is incubating here; extraction later moves
@@ -471,9 +482,9 @@ Three layers fail independently:
    document/hash with the expected semantic fixture. This runs without a browser and catches
    ordering, idempotency, state binding, slot, and undo errors.
 2. **Wasm PNG golden:** open the resulting committed revision in clean mode at the pinned runtime,
-   wait for fonts and the explicit ready signal, capture `411 x 914`, and compare it to the
-   separately compiled Jetcaster Wasm golden. Editor chrome is enabled in a sibling capture to assert
-   that all design-node bounds and clean pixels remain unchanged when it is toggled off.
+   wait for fonts and the explicit ready signal, capture `1280 x 800`, and compare it to the
+   separately compiled Jetcaster Wasm golden. Editor chrome is enabled in a sibling capture to
+   assert that all design-node bounds and clean pixels remain unchanged when it is toggled off.
 3. **SVG golden:** request SVG for that same immutable revision, verify provenance/viewBox/no
    external URLs/no editor nodes, rasterize with the pinned tool, and compare to the clean Wasm PNG.
    A separate structure assertion requires identifiable text/groups and rejects a single

@@ -58,6 +58,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.Promise
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -103,7 +104,13 @@ private fun VisualFixtureApp(mode: String) {
     document = replayed
   }
   document?.let {
-    UiBuilderSurface(it, editorOverlay = mode == "editor" || mode == "jetcaster-editor")
+    UiBuilderSurface(
+      it,
+      editorOverlay = mode == "editor" || mode == "jetcaster-editor",
+      onInspectionSnapshot = { snapshot ->
+        publishInspection(inspectionJson.encodeToString(snapshot))
+      },
+    )
     LaunchedEffect(it.revision) { markReady() }
   }
 }
@@ -361,3 +368,27 @@ private external fun publishCapabilityDiagnostics(
   wasmRenderable: Boolean,
   pendingIds: String,
 )
+
+@JsFun(
+  """(json) => {
+    const manifest = JSON.parse(json);
+    const token = (globalThis.__uiBuilderInspectionToken || 0) + 1;
+    globalThis.__uiBuilderInspectionToken = token;
+    manifest.generation.completed = false;
+    globalThis.__uiBuilderInspection = manifest;
+    const settle = (frames) => requestAnimationFrame(() => {
+      if (globalThis.__uiBuilderInspectionToken !== token) return;
+      if (frames > 1) {
+        settle(frames - 1);
+        return;
+      }
+      manifest.generation.completed = true;
+      globalThis.__uiBuilderInspection = manifest;
+      document.documentElement.dataset.uiBuilderInspectionGeneration = manifest.generation.key;
+    });
+    settle(manifest.generation.stabilityFrames);
+  }"""
+)
+private external fun publishInspection(json: String)
+
+private val inspectionJson = Json { encodeDefaults = true }

@@ -69,8 +69,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,6 +86,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,8 +115,19 @@ fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
 
 /** Native Compose design pixels plus an optional sibling-only editor overlay. */
 @Composable
-fun UiBuilderSurface(document: UiBuilderDocument, editorOverlay: Boolean = false) {
+fun UiBuilderSurface(
+  document: UiBuilderDocument,
+  editorOverlay: Boolean = false,
+  onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
+) {
   val bounds = remember { mutableStateMapOf<String, Rect>() }
+  val currentInspectionCallback = rememberUpdatedState(onInspectionSnapshot)
+  val inspection =
+    remember(document.id, document.revision) {
+      UiBuilderInspectionCollector(document) { snapshot ->
+        currentInspectionCallback.value?.invoke(snapshot)
+      }
+    }
   val state =
     remember(document.id) {
       mutableStateMapOf<String, String?>().also { target ->
@@ -127,6 +142,8 @@ fun UiBuilderSurface(document: UiBuilderDocument, editorOverlay: Boolean = false
       }
     }
   val dark = document.environment["theme"]?.jsonPrimitive?.contentOrNull == "dark"
+  val density = LocalDensity.current
+  SideEffect { inspection.updateState(state) }
   MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
     Box(Modifier.fillMaxSize()) {
       document.roots.forEach { root ->
@@ -135,7 +152,19 @@ fun UiBuilderSurface(document: UiBuilderDocument, editorOverlay: Boolean = false
           nodeId = root,
           state = state,
           onState = { key, value -> state[key] = value },
-          onBounds = { id, rect -> bounds[id] = rect },
+          onBounds = { id, rect ->
+            bounds[id] = rect
+            inspection.recordNodeBounds(id, rect.left, rect.top, rect.right, rect.bottom)
+          },
+          onTextLayout = { id, result ->
+            inspection.recordTextLayout(
+              id,
+              result.lineCount,
+              result.firstBaseline,
+              result.lastBaseline,
+              with(density) { document.nodes.getValue(id).textContentTopPaddingDp().dp.toPx() },
+            )
+          },
         )
       }
       if (editorOverlay) {
@@ -161,17 +190,20 @@ private fun RenderNode(
   state: Map<String, String?>,
   onState: (String, String?) -> Unit,
   onBounds: (String, Rect) -> Unit,
+  onTextLayout: (String, TextLayoutResult) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val node = requireNotNull(document.nodes[nodeId]) { "unknown node: $nodeId" }
   val measured =
     node.modifiers
-      .fold(modifier) { result, value -> result.applyModifier(value.jsonObject, node.id) }
+      .fold(modifier.onGloballyPositioned { onBounds(node.id, it.boundsInRoot()) }) { result, value
+        ->
+        result.applyModifier(value.jsonObject, node.id)
+      }
       .then(node.actionModifier(state, onState))
-      .onGloballyPositioned { onBounds(node.id, it.boundsInRoot()) }
   fun slot(name: String) = node.slots[name].orEmpty()
   val child: @Composable (String, Modifier) -> Unit = { id, next ->
-    RenderNode(document, id, state, onState, onBounds, next)
+    RenderNode(document, id, state, onState, onBounds, onTextLayout, next)
   }
 
   when (node.componentId) {
@@ -412,6 +444,7 @@ private fun RenderNode(
         overflow =
           if (node.string("overflow") == "ellipsis") TextOverflow.Ellipsis else TextOverflow.Clip,
         textAlign = if (node.string("textAlign") == "center") TextAlign.Center else TextAlign.Start,
+        onTextLayout = { onTextLayout(node.id, it) },
       )
     "asset/image" -> AssetPlaceholder(node, measured)
     "shape/linear-gradient" ->
@@ -732,6 +765,14 @@ private fun UiBuilderNode.obj(name: String): JsonObject =
 private fun UiBuilderNode.hasModifier(type: String): Boolean = modifiers.any {
   it.objectOrEmpty().optionalString("type") == type
 }
+
+private fun UiBuilderNode.textContentTopPaddingDp(): Float =
+  modifiers
+    .sumOf { modifier ->
+      val value = modifier.objectOrEmpty()
+      if (value.optionalString("type") == "padding") value.number("topDp").toDouble() else 0.0
+    }
+    .toFloat()
 
 private fun UiBuilderNode.string(name: String): String =
   obj(name)["value"]?.jsonPrimitive?.contentOrNull.orEmpty()
