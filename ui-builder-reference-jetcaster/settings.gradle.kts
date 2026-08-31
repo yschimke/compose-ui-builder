@@ -16,3 +16,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ui-builder-reference-jetcaster"
+
+include(":ui-builder-artwork")
+
+project(":ui-builder-artwork").projectDir = file("../ui-builder-artwork")

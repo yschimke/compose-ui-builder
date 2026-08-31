@@ -111,6 +111,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
+import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
+import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -706,12 +709,25 @@ private fun AssetPlaceholder(node: UiBuilderNode, modifier: Modifier) {
     return
   }
   val key = node.string("assetKey")
+  if (
+    key == ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY || key == GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
+  ) {
+    ProjectOwnedJetcasterArtwork(
+      assetKey = key,
+      contentDescription = node.string("contentDescription").ifEmpty { null },
+      modifier = modifier,
+      contentScale =
+        when (node.string("contentScale")) {
+          "fit" -> ContentScale.Fit
+          "fillBounds" -> ContentScale.FillBounds
+          "inside" -> ContentScale.Inside
+          else -> ContentScale.Crop
+        },
+    )
+    return
+  }
   val palette =
     when (key) {
-      "jetcaster.cover.android-developers-backstage" ->
-        listOf(Color(0xFF0B57D0), Color(0xFF00A896), Color(0xFF101828))
-      "jetcaster.cover.google-developers-podcast" ->
-        listOf(Color(0xFFEA4335), Color(0xFFFBBC04), Color(0xFF174EA6))
       "ui-builder.gate0.cover" -> listOf(Color(0xFF6750A4), Color(0xFFB69DF8), Color(0xFF21005D))
       else -> error("unsupported asset '$key' on ${node.id}")
     }

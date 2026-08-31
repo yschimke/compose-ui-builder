@@ -9,13 +9,15 @@ import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import ee.schimke.composeai.uibuilder.artwork.readProjectOwnedJetcasterArtwork
+import java.security.MessageDigest
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.roundToInt
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.skia.DynamicMemoryWStream
 import org.jetbrains.skia.Image
-import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
 import org.jetbrains.skia.Surface
 import org.jetbrains.skia.svg.SVGCanvas
@@ -270,13 +272,13 @@ private constructor(
           }
           val assetKey = node.stringProperty("assetKey")
           val (widthPx, heightPx) = node.rasterPixelSize(document, layoutBounds[nodeId])
-          val sourceIdentity = "generated-placeholder/v1/$assetKey/${widthPx}x$heightPx"
-          val sourceRecipe =
-            "$sourceIdentity|argb=${pinnedAssetColors(assetKey).joinToString(",") { it.toUInt().toString(16) }}"
+          val encoded = runBlocking { readProjectOwnedJetcasterArtwork(assetKey) }
+          val sourceIdentity =
+            "project-owned-artwork/v1/$assetKey/square-512/rendered-${widthPx}x$heightPx"
           JvmStructuredSvgRasterIdentity(
-              image = createPinnedAssetImage(assetKey, widthPx, heightPx),
+              image = createScaledProjectOwnedImage(encoded, widthPx, heightPx),
               sourceIdentity = sourceIdentity,
-              sourceIdentitySha256 = sha256Hex(sourceRecipe),
+              sourceIdentitySha256 = encoded.sha256(),
               widthPx = widthPx,
               heightPx = heightPx,
             )
@@ -303,34 +305,26 @@ internal data class JvmStructuredSvgRasterIdentity(
   val heightPx: Int,
 )
 
-private fun createPinnedAssetImage(assetKey: String, widthPx: Int, heightPx: Int): Image {
-  val colors = pinnedAssetColors(assetKey)
+private fun ByteArray.sha256(): String =
+  MessageDigest.getInstance("SHA-256").digest(this).joinToString("") {
+    it.toUByte().toString(16).padStart(2, '0')
+  }
+
+private fun createScaledProjectOwnedImage(
+  encoded: ByteArray,
+  widthPx: Int,
+  heightPx: Int,
+): Image {
+  val source = Image.makeFromEncoded(encoded)
   val surface = Surface.makeRasterN32Premul(widthPx, heightPx)
   return try {
-    surface.canvas.clear(colors[0])
-    Paint().use { paint ->
-      paint.color = colors[1]
-      surface.canvas.drawRect(Rect.makeXYWH(0f, 0f, widthPx / 2f, heightPx.toFloat()), paint)
-      paint.color = colors[2]
-      val shortest = minOf(widthPx, heightPx).toFloat()
-      surface.canvas.drawCircle(widthPx * 0.72f, heightPx * 0.31f, shortest * 0.22f, paint)
-    }
+    surface.canvas.drawImageRect(source, Rect.makeWH(widthPx.toFloat(), heightPx.toFloat()))
     surface.makeImageSnapshot()
   } finally {
     surface.close()
+    source.close()
   }
 }
-
-private fun pinnedAssetColors(assetKey: String): IntArray =
-  when (assetKey) {
-    "jetcaster.cover.android-developers-backstage" ->
-      intArrayOf(0xFF0B57D0.toInt(), 0xFF00A896.toInt(), 0xFF101828.toInt())
-    "jetcaster.cover.google-developers-podcast" ->
-      intArrayOf(0xFFEA4335.toInt(), 0xFFFBBC04.toInt(), 0xFF174EA6.toInt())
-    "ui-builder.gate0.cover" ->
-      intArrayOf(0xFF6750A4.toInt(), 0xFFB69DF8.toInt(), 0xFF21005D.toInt())
-    else -> error("no pinned JVM raster asset for '$assetKey'")
-  }
 
 private fun UiBuilderNode.rasterPixelSize(
   document: UiBuilderDocument,

@@ -1,9 +1,8 @@
-// Generator content SHA-256: 73e173495502bfd77211a89a4409313c86a6f0700b4e443d3a456ec60c13ba1f
+// Generator content SHA-256: 7da9a2d9b7009d0a565a5830c96da3f9d29f039a80d8c7b64880912030e5646e
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -20,11 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -33,6 +29,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 
 // Generated from design fixture-jetcaster-discover-expanded revision 99.
 // Catalog m3-catalog@candidate; capability candidate.
@@ -1252,7 +1249,7 @@ private fun BuilderRadialGradient(
   )
 }
 
-// Asset adapter: jetcaster-benchmark-artwork/v1.
+// Asset adapter: compose-preview-project-owned-jetcaster-artwork/v1.
 @Composable
 private fun BuilderAssetImage(
   assetKey: String,
@@ -1260,62 +1257,14 @@ private fun BuilderAssetImage(
   contentScale: String,
   modifier: Modifier = Modifier,
 ) {
-  val semanticModifier =
-    if (contentDescription == null) modifier
-    else modifier.semantics { this.contentDescription = contentDescription }
-  Canvas(semanticModifier) {
-    val palette =
-      when (assetKey) {
-        "jetcaster.cover.android-developers-backstage" ->
-          listOf(Color(0xFF0B57D0), Color(0xFF00A896), Color(0xFF101828))
-        "jetcaster.cover.google-developers-podcast" ->
-          listOf(Color(0xFFEA4335), Color(0xFFFBBC04), Color(0xFF174EA6))
-        else -> listOf(Color(0xFFFF00FF), Color(0xFF202020), Color(0xFFFF00FF))
-      }
-    check(contentScale == "crop" || contentScale.isEmpty()) {
-      "Unsupported content scale: $contentScale"
-    }
-    drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height)))
-    drawCircle(
-      Color.White.copy(alpha = .18f),
-      size.minDimension * .34f,
-      Offset(size.width * .76f, size.height * .24f),
-    )
-    drawCircle(
-      Color.Black.copy(alpha = .18f),
-      size.minDimension * .22f,
-      Offset(size.width * .22f, size.height * .72f),
-    )
-    val path =
-      Path().apply {
-        moveTo(size.width * .19f, size.height * .32f)
-        lineTo(size.width * .48f, size.height * .18f)
-        lineTo(size.width * .82f, size.height * .58f)
-        lineTo(size.width * .48f, size.height * .78f)
-        close()
-      }
-    drawPath(path, Color.White.copy(alpha = .27f))
-    drawRect(
-      Color.White.copy(alpha = .72f),
-      Offset(size.width * .30f, size.height * .39f),
-      Size(size.width * .10f, size.height * .28f),
-    )
-    drawRect(
-      Color.White.copy(alpha = .72f),
-      Offset(size.width * .47f, size.height * .30f),
-      Size(size.width * .10f, size.height * .38f),
-    )
-    drawRect(
-      Color.White.copy(alpha = .72f),
-      Offset(size.width * .64f, size.height * .43f),
-      Size(size.width * .10f, size.height * .24f),
-    )
-    drawCircle(
-      Color.White.copy(alpha = .72f),
-      size.minDimension * .28f,
-      style = Stroke(size.minDimension * .035f),
-    )
+  check(contentScale == "crop" || contentScale.isEmpty()) {
+    "Unsupported content scale: $contentScale"
   }
+  ProjectOwnedJetcasterArtwork(
+    assetKey = assetKey,
+    contentDescription = contentDescription,
+    modifier = modifier,
+  )
 }
 
 private fun builderIcon(key: String): ImageVector =

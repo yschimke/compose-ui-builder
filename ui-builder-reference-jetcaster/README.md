@@ -11,19 +11,21 @@ Android's official Jetcaster sample, pinned at
 That upstream work is Copyright 2020–2025 The Android Open Source Project and licensed under the
 [Apache License 2.0](https://github.com/android/compose-samples/blob/018c5207fb63c4f78e5841bd8ddd4faabdf19d3a/LICENSE).
 
-No upstream artwork is copied. The two documented asset keys are rendered as original,
-deterministic Compose geometry:
+No upstream artwork is copied. The two documented asset keys resolve through the shared
+`:ui-builder-artwork` module to original, project-owned offline raster assets:
 
 - `jetcaster.cover.android-developers-backstage`
 - `jetcaster.cover.google-developers-podcast`
 
+The artwork manifest records its source variants, license scope, and encoded/decoded pixel hashes.
 The same attribution and capture metadata are shipped as `provenance.json` and `NOTICE.txt` in the
 Wasm distribution. At runtime the page sets
 `document.documentElement.dataset.uiBuilderReferenceJetcasterReady` and publishes
 `globalThis.__uiBuilderReferenceJetcaster` for capture tooling.
 
 The distribution copies the repository's pinned `js-joda.esm.js` runtime compatibility asset. It
-does not depend on the `ui-builder` project or any of its implementation classes.
+does not depend on the `ui-builder` project or any of its implementation classes; its only project
+dependency is the artwork resource module shared by all benchmark lanes.
 
 ## Standalone build
 

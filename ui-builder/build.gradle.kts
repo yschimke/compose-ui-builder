@@ -46,6 +46,7 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
       @Suppress("DEPRECATION") implementation(compose.ui)
       implementation(libs.kotlinx.serialization.json)
+      implementation(project(":ui-builder-artwork"))
     }
     commonTest.dependencies { implementation(kotlin("test")) }
     getByName("jvmMain").dependencies {
@@ -53,6 +54,7 @@ kotlin {
       // It remains NO-GO for production/Figma until a representative nested scene succeeds and the
       // adapter moves behind :render-host. currentOs supplies the matching local Skiko runtime.
       implementation(compose.desktop.currentOs)
+      implementation(libs.kotlinx.coroutines.core)
     }
     getByName("jvmMain")
       .resources
@@ -134,6 +136,7 @@ tasks.register<Sync>("wasmFrontendDist") {
   from(layout.buildDirectory.dir("compose/skiko-runtime-processed-wasmjs")) {
     include("skiko.mjs", "skiko.wasm")
   }
+  from(layout.buildDirectory.dir("kotlin-multiplatform-resources/aggregated-resources/wasmJs"))
   from(layout.projectDirectory.dir("src/wasmJsMain/resources")) { include("index.html") }
   from(rootProject.layout.projectDirectory.dir("wasm-ui/src/wasmJsMain/resources")) {
     include("js-joda.esm.js")

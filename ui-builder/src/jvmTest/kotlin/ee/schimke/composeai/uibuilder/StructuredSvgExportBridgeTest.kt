@@ -4,8 +4,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
+import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
+import ee.schimke.composeai.uibuilder.artwork.readProjectOwnedJetcasterArtwork
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import java.security.MessageDigest
 import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,6 +16,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -38,12 +42,12 @@ class StructuredSvgExportBridgeTest {
     assertEquals(firstRaw, secondRaw)
     assertEquals(SAME_RUNTIME_DETERMINISM_SCOPE, firstRaw.determinismScope)
     assertTrue(Regex("<(?:g|path|rect|text)\\b").containsMatchIn(firstRaw.svg))
-    assertFalse(firstRaw.svg.contains("<image"))
+    assertEquals(4, Regex("<image\\b").findAll(firstRaw.svg).count())
     assertTrue(firstRaw.rasterRecords.isEmpty())
     assertFalse(Regex("(?:href|src)=\"https?://").containsMatchIn(firstRaw.svg))
 
     val result = executeSavedDocumentSvgExport(job, catalog, JvmSkiaStructuredSvgRecorder)
-    val exported = assertIs<SavedDocumentSvgExportResult.Ok>(result)
+    val exported = assertIs<SavedDocumentSvgExportResult.Ok>(result, result.toString())
     val declaredAssets =
       document.nodes.values.filter { it.componentId == "asset/image" }.map { it.id }.sorted()
     assertEquals(declaredAssets.size, Regex("<image\\b").findAll(exported.svg).count())
@@ -170,7 +174,7 @@ class StructuredSvgExportBridgeTest {
     assertTrue(result.svg.contains("data-compose-raster-size-px=\"128x128\""))
     assertTrue(
       result.svg.contains(
-        "generated-placeholder/v1/jetcaster.cover.android-developers-backstage/128x128"
+        "project-owned-artwork/v1/jetcaster.cover.android-developers-backstage/square-512/rendered-128x128"
       )
     )
   }
@@ -311,17 +315,16 @@ class StructuredSvgExportBridgeTest {
     assertTrue(result.svg.contains("data-compose-node-id=\"detail-artwork\""))
     assertTrue(
       result.svg.contains(
-        "data-compose-raster-source=\"generated-placeholder/v1/jetcaster.cover.android-developers-backstage/152x152\""
+        "data-compose-raster-source=\"project-owned-artwork/v1/jetcaster.cover.android-developers-backstage/square-512/rendered-152x152\""
       )
     )
     assertTrue(result.svg.contains("data-compose-raster-size-px=\"152x152\""))
-    val expectedSourceDigest =
-      sha256Hex(
-        "generated-placeholder/v1/jetcaster.cover.android-developers-backstage/152x152|" +
-          "argb=ff0b57d0,ff00a896,ff101828"
-      )
+    val expectedSourceDigest = runBlocking {
+      readProjectOwnedJetcasterArtwork(ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY)
+    }
+      .sha256Bytes()
     assertTrue(result.svg.contains("data-compose-raster-source-sha256=\"$expectedSourceDigest\""))
-    assertTrue(result.svg.contains("rasterSources=detail-artwork@generated-placeholder/v1/"))
+    assertTrue(result.svg.contains("rasterSources=detail-artwork@project-owned-artwork/v1/"))
     assertTrue(result.svg.contains("data-compose-raster-reason="))
     assertTrue(
       result.svg.contains("documentContentSha256=${sha256Hex(canonicalDocument(representative))}")
@@ -737,6 +740,11 @@ class StructuredSvgExportBridgeTest {
   private fun colorsDifferBeyondTolerance(first: Int, second: Int, tolerance: Int): Boolean =
     listOf(24, 16, 8, 0).any { shift ->
       kotlin.math.abs(((first ushr shift) and 0xff) - ((second ushr shift) and 0xff)) > tolerance
+    }
+
+  private fun ByteArray.sha256Bytes(): String =
+    MessageDigest.getInstance("SHA-256").digest(this).joinToString("") {
+      it.toUByte().toString(16).padStart(2, '0')
     }
 
   private fun CapabilityCatalog.withComponentSvg(

@@ -7,7 +7,6 @@
 
 package ee.schimke.composeai.uibuilderreference.jetcaster
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,15 +68,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
+import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 
 private const val AndroidCoverKey = "jetcaster.cover.android-developers-backstage"
 private const val GoogleCoverKey = "jetcaster.cover.google-developers-podcast"
@@ -352,55 +349,11 @@ private fun PodcastArtworkCard(podcast: Podcast) {
 
 @Composable
 private fun Artwork(podcast: Podcast, modifier: Modifier = Modifier) {
-  Canvas(modifier) {
-    drawRect(
-      brush =
-        Brush.linearGradient(
-          podcast.palette,
-          start = Offset.Zero,
-          end = Offset(size.width, size.height),
-        )
-    )
-    drawCircle(
-      color = Color.White.copy(alpha = 0.18f),
-      radius = size.minDimension * 0.34f,
-      center = Offset(size.width * 0.76f, size.height * 0.24f),
-    )
-    drawCircle(
-      color = Color.Black.copy(alpha = 0.18f),
-      radius = size.minDimension * 0.22f,
-      center = Offset(size.width * 0.22f, size.height * 0.72f),
-    )
-    val path =
-      Path().apply {
-        moveTo(size.width * 0.19f, size.height * 0.32f)
-        lineTo(size.width * 0.48f, size.height * 0.18f)
-        lineTo(size.width * 0.82f, size.height * 0.58f)
-        lineTo(size.width * 0.48f, size.height * 0.78f)
-        close()
-      }
-    drawPath(path, Color.White.copy(alpha = 0.27f))
-    drawRect(
-      color = Color.White.copy(alpha = 0.72f),
-      topLeft = Offset(size.width * 0.30f, size.height * 0.39f),
-      size = Size(size.width * 0.10f, size.height * 0.28f),
-    )
-    drawRect(
-      color = Color.White.copy(alpha = 0.72f),
-      topLeft = Offset(size.width * 0.47f, size.height * 0.30f),
-      size = Size(size.width * 0.10f, size.height * 0.38f),
-    )
-    drawRect(
-      color = Color.White.copy(alpha = 0.72f),
-      topLeft = Offset(size.width * 0.64f, size.height * 0.43f),
-      size = Size(size.width * 0.10f, size.height * 0.24f),
-    )
-    drawCircle(
-      color = Color.White.copy(alpha = 0.72f),
-      radius = size.minDimension * 0.28f,
-      style = Stroke(width = size.minDimension * 0.035f),
-    )
-  }
+  ProjectOwnedJetcasterArtwork(
+    assetKey = if (podcast.key == AndroidPodcast.key) AndroidCoverKey else GoogleCoverKey,
+    contentDescription = null,
+    modifier = modifier,
+  )
 }
 
 @Composable

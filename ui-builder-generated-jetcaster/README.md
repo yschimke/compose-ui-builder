@@ -22,8 +22,9 @@ Remaining located export gaps are retained as `TODO[...]` comments in the genera
 material gaps are adaptive posture/motion beyond the two tested widths, Material carousel masking
 and gestures, saved scroll state/stable item keys, parent-authored accessibility descriptions,
 selected toolbar/follow visual states, and a few document events. The generator supplies the
-explicit `jetcaster-benchmark-artwork/v1` provenance adapter, mapping the two exact catalog asset
-keys to editable Compose Canvas geometry. The generic exporter contains no Jetcaster key matching.
+explicit `compose-preview-project-owned-jetcaster-artwork/v1` provenance adapter, mapping the two
+exact catalog asset keys to the checked-in `:ui-builder-artwork` raster resources. The generic
+exporter contains no Jetcaster key matching or benchmark-specific painted fallback.
 Missing bindings produce a located `ASSET_BINDING_REQUIRED` diagnostic, a declared
 `asset-placeholder:<key>` fallback, and a visible magenta placeholder. No opaque screen component
 or full-screen bitmap is used.

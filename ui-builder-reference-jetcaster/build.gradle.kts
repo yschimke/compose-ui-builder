@@ -22,6 +22,7 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.material3)
       @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
       @Suppress("DEPRECATION") implementation(compose.ui)
+      implementation(project(":ui-builder-artwork"))
     }
   }
 }
@@ -35,9 +36,18 @@ tasks.register<Sync>("wasmFrontendDist") {
   from(layout.buildDirectory.dir("compose/skiko-runtime-processed-wasmjs")) {
     include("skiko.mjs", "skiko.wasm")
   }
+  from(layout.buildDirectory.dir("kotlin-multiplatform-resources/aggregated-resources/wasmJs"))
   from(layout.projectDirectory.dir("../wasm-ui/src/wasmJsMain/resources")) {
     include("js-joda.esm.js")
   }
   from(layout.projectDirectory.dir("src/wasmJsMain/resources"))
+  from(
+    rootProject.layout.projectDirectory.dir(
+      "ui-builder-artwork/src/commonMain/composeResources/files/artwork"
+    )
+  ) {
+    include("manifest-v1.json")
+    into("ui-builder-artwork/files/artwork")
+  }
   into(layout.buildDirectory.dir("wasmDist"))
 }

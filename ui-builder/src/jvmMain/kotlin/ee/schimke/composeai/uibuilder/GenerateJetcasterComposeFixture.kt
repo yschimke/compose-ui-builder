@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
+import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
+import ee.schimke.composeai.uibuilder.artwork.PROJECT_OWNED_ARTWORK_ADAPTER_ID
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import java.io.File
 import java.security.MessageDigest
@@ -41,13 +44,24 @@ object GenerateJetcasterComposeFixture {
 
   private val JETCASTER_ARTWORK_ADAPTER =
     ComposeAssetAdapter(
-      id = "jetcaster-benchmark-artwork/v1",
+      id = PROJECT_OWNED_ARTWORK_ADAPTER_ID,
+      renderer =
+        ComposeAssetRenderer(
+          symbol = "ProjectOwnedJetcasterArtwork",
+          importName = "ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork",
+        ),
       bindings =
         mapOf(
-          "jetcaster.cover.android-developers-backstage" to
-            ComposeAssetBinding(listOf("FF0B57D0", "FF00A896", "FF101828")),
-          "jetcaster.cover.google-developers-podcast" to
-            ComposeAssetBinding(listOf("FFEA4335", "FFFBBC04", "FF174EA6")),
+          ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY to
+            ComposeAssetBinding(
+              sourceIdentity =
+                "project-owned-artwork/v1/$ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY/square-512"
+            ),
+          GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY to
+            ComposeAssetBinding(
+              sourceIdentity =
+                "project-owned-artwork/v1/$GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY/square-512"
+            ),
         ),
     )
 }

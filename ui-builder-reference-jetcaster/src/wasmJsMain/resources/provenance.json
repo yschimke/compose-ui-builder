@@ -20,13 +20,19 @@
   "artwork": [
     {
       "assetKey": "jetcaster.cover.android-developers-backstage",
-      "kind": "deterministic-compose-placeholder",
-      "copiedFromUpstream": false
+      "kind": "project-owned-offline-raster",
+      "sourceVariant": "project-owned-android-audio-512-v1",
+      "manifest": "ui-builder-artwork/files/artwork/manifest-v1.json",
+      "copiedFromUpstream": false,
+      "license": "Apache-2.0"
     },
     {
       "assetKey": "jetcaster.cover.google-developers-podcast",
-      "kind": "deterministic-compose-placeholder",
-      "copiedFromUpstream": false
+      "kind": "project-owned-offline-raster",
+      "sourceVariant": "project-owned-google-audio-512-v1",
+      "manifest": "ui-builder-artwork/files/artwork/manifest-v1.json",
+      "copiedFromUpstream": false,
+      "license": "Apache-2.0"
     }
   ],
   "networkRequired": false,

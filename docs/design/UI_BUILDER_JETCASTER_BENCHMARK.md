@@ -190,7 +190,7 @@ Confetti stays in CI as the fast, no-network compact regression. Jetcaster is th
   reference comparison differs by `2.003%` expanded and `2.817%` compact at pixelmatch threshold
   `0.1`, with `2.1%` and `3.0%` interim spike ceilings respectively and a committed expanded-render
   golden. These guards are not the exact release gate. Cover art is supplied by the explicit
-  `jetcaster-benchmark-artwork/v1` exact-key provenance adapter; the generic exporter emits a
+  `compose-preview-project-owned-jetcaster-artwork/v1` exact-key provenance adapter; the generic exporter emits a
   located diagnostic, declared fallback, and visible placeholder for any unbound asset. The
   checked-in source has a stale-generation verification task. Remaining source gaps are adaptive
   motion, carousel masking/gestures, saved scroll/stable keys, parent semantics, and selected-state
@@ -201,6 +201,9 @@ Confetti stays in CI as the fast, no-network compact regression. Jetcaster is th
   provenance. A real Figma import retains exact 1280x800 root bounds, 37 editable text nodes, 83
   vector nodes, and all four image paints. Its raster differs from the clean Wasm snapshot by
   `5.597%` at threshold `0.1`, so the result is evidence of structural import—not visual parity.
-  The current generated fallback pixels do not match the Compose canvas artwork; font pinning and
-  Figma text metrics also remain open. See
+  All lanes now consume the same project-owned 512×512 offline PNG bytes, removing the known
+  generated/SVG-versus-Compose artwork source drift. No new real Figma import has measured the
+  effect, so this is not a Figma parity claim. The existing import maps all 37 text nodes to Inter
+  Regular and preserves no authored medium/bold weights; deterministic font family/weight export
+  and Figma text metrics remain open. See
   `docs/design/fixtures/ui-builder/jetcaster-discover-figma-import-v1.json`.

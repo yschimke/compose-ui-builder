@@ -47,9 +47,15 @@ data class DocumentExportProvenance(
 data class ComposeAssetAdapter(
   val id: String,
   val bindings: Map<String, ComposeAssetBinding>,
+  val renderer: ComposeAssetRenderer? = null,
 )
 
-data class ComposeAssetBinding(val paletteArgb: List<String>)
+data class ComposeAssetRenderer(val symbol: String, val importName: String)
+
+data class ComposeAssetBinding(
+  val paletteArgb: List<String> = emptyList(),
+  val sourceIdentity: String? = null,
+)
 
 data class ComposeExportResult(
   val source: String?,
@@ -103,6 +109,14 @@ object CapabilityComposeCodeExporter {
           message = "asset adapter id must be non-blank for provenance",
         )
     }
+    if (assetAdapter?.renderer?.let { it.symbol.isBlank() || it.importName.isBlank() } == true) {
+      diagnostics +=
+        ComposeExportDiagnostic(
+          code = "INVALID_ASSET_RENDERER",
+          severity = ComposeExportSeverity.ERROR,
+          message = "asset renderer symbol and import must be non-blank",
+        )
+    }
     val unboundAssetKeys =
       document.nodes.values
         .filter { it.componentId == "asset/image" }
@@ -139,6 +153,7 @@ object CapabilityComposeCodeExporter {
         val binding = assetAdapter?.bindings?.get(node.string("assetKey"))
         if (
           binding != null &&
+            assetAdapter.renderer == null &&
             (binding.paletteArgb.isEmpty() ||
               binding.paletteArgb.any { !it.matches(Regex("[0-9a-fA-F]{8}")) })
         ) {
@@ -222,7 +237,10 @@ private class ComposeEmitter(
     appendLine()
     appendLine("package generated.uibuilder")
     appendLine()
-    GENERATED_IMPORTS.forEach { importName -> appendLine("import $importName") }
+    (GENERATED_IMPORTS + listOfNotNull(assetAdapter?.renderer?.importName))
+      .distinct()
+      .sorted()
+      .forEach { importName -> appendLine("import $importName") }
     appendLine()
     appendLine(
       "// Generated from design ${document.id.escapeComment()} revision ${document.revision}."
@@ -628,6 +646,16 @@ private class ComposeEmitter(
     appendLine(
       "// Asset adapter: ${assetAdapter?.id?.escapeComment() ?: "none (visible placeholder)"}."
     )
+    val renderer = assetAdapter?.renderer
+    if (renderer != null) {
+      appendLine(
+        "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, contentScale: String, modifier: Modifier = Modifier) { check(contentScale == \"crop\" || contentScale.isEmpty()) { \"Unsupported content scale: ${'$'}contentScale\" }; ${renderer.symbol}(assetKey = assetKey, contentDescription = contentDescription, modifier = modifier) }"
+      )
+      appendLine(
+        "private fun builderIcon(key: String): ImageVector = when (key) { \"search\" -> Icons.Default.Search; \"accountCircle\" -> Icons.Default.AccountCircle; \"check\" -> Icons.Default.Check; \"checkCircle\" -> Icons.Default.CheckCircle; \"addCircle\" -> Icons.Default.AddCircle; \"playCircle\" -> Icons.Default.PlayCircle; \"playlistAdd\" -> Icons.Default.PlaylistAdd; \"moreVert\" -> Icons.Default.MoreVert; \"videoLibrary\" -> Icons.Default.VideoLibrary; else -> Icons.Default.Category }"
+      )
+      return
+    }
     appendLine(
       "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, contentScale: String, modifier: Modifier = Modifier) { val semanticModifier = if (contentDescription == null) modifier else modifier.semantics { this.contentDescription = contentDescription }; Canvas(semanticModifier) { val palette = when (assetKey) {"
     )

@@ -171,6 +171,31 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
+  fun `asset renderer adapter emits the shared project function instead of painted fallback pixels`() {
+    val rendererAdapter =
+      ComposeAssetAdapter(
+        id = "project-owned-artwork-test/v1",
+        bindings =
+          artworkAdapter.bindings.mapValues { ComposeAssetBinding(sourceIdentity = it.key) },
+        renderer =
+          ComposeAssetRenderer(
+            symbol = "ProjectOwnedJetcasterArtwork",
+            importName = "ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork",
+          ),
+      )
+
+    val source =
+      CapabilityComposeCodeExporter.export(document, catalog, rendererAdapter).requireSource()
+
+    assertTrue(
+      source.contains("import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork")
+    )
+    assertTrue(source.contains("ProjectOwnedJetcasterArtwork(assetKey = assetKey"))
+    assertFalse(source.contains("Color(0xFF0B57D0)"))
+    assertFalse(source.contains("drawCircle(Color.White.copy(alpha = .18f)"))
+  }
+
+  @Test
   fun `unknown component blocks source instead of emitting an opaque fallback`() {
     val badNode = document.nodes.getValue("search-placeholder").copy(componentId = "m3/unknown")
     val bad = document.copy(nodes = document.nodes + (badNode.id to badNode))
