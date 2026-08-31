@@ -101,10 +101,20 @@ fun UiBuilderEditor(
   onDropTargetChanged: (Boolean, String) -> Unit = { _, _ -> },
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
   showSelectionOverlay: Boolean = true,
+  actorId: String = EDITOR_ACTOR_ID,
+  clientId: String = EDITOR_CLIENT_ID,
+  operationIdPrefix: String = clientId,
+  sessionLabel: String = "Local session",
+  onReconnect: (() -> Unit)? = null,
+  onSubmission: ((EditorSubmission) -> Unit)? = null,
+  authoritativeGeneration: Int = 0,
 ) {
-  val reducer = remember(catalog) { UiBuilderEditorReducer(catalog) }
+  val reducer =
+    remember(catalog, actorId, clientId, operationIdPrefix) {
+      UiBuilderEditorReducer(catalog, actorId, clientId, operationIdPrefix)
+    }
   var state by
-    remember(document.id) {
+    remember(document.id, document.revision, authoritativeGeneration) {
       mutableStateOf(reducer.initial(document, selectedNodeId = document.roots.firstOrNull()))
     }
   var catalogDragPosition by remember { mutableStateOf<Offset?>(null) }
@@ -116,7 +126,10 @@ fun UiBuilderEditor(
   val canvasDropHovered =
     catalogDragPosition?.let(canvasBounds::contains) == true && draggedTarget != null
   fun dispatch(event: UiBuilderEditorEvent) {
-    state = reducer.reduce(state, event)
+    val previous = state
+    val current = reducer.reduce(previous, event)
+    state = current
+    reducer.acceptedSubmission(previous, current)?.let { onSubmission?.invoke(it) }
   }
   LaunchedEffect(state) { onStateChanged(state) }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
@@ -141,6 +154,10 @@ fun UiBuilderEditor(
         state = state,
         canDelete = reducer.canDeleteSelected(state),
         canDuplicate = reducer.canDuplicateSelected(state),
+        canUndo = reducer.canUndo(state),
+        canRedo = reducer.canRedo(state),
+        sessionLabel = sessionLabel,
+        onReconnect = onReconnect,
         dispatch = ::dispatch,
       )
       Row(Modifier.fillMaxSize()) {
@@ -195,6 +212,10 @@ private fun EditorToolbar(
   state: UiBuilderEditorState,
   canDelete: Boolean,
   canDuplicate: Boolean,
+  canUndo: Boolean,
+  canRedo: Boolean,
+  sessionLabel: String,
+  onReconnect: (() -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
@@ -213,13 +234,13 @@ private fun EditorToolbar(
       EditorAction(
         label = "Undo",
         shortcut = "Ctrl/⌘+Z",
-        enabled = state.canUndo,
+        enabled = canUndo,
         onClick = { dispatch(UiBuilderEditorEvent.Undo) },
       )
       EditorAction(
         label = "Redo",
         shortcut = "Ctrl/⌘+Shift+Z",
-        enabled = state.canRedo,
+        enabled = canRedo,
         onClick = { dispatch(UiBuilderEditorEvent.Redo) },
       )
       EditorAction(
@@ -234,6 +255,9 @@ private fun EditorToolbar(
         enabled = canDelete,
         onClick = { dispatch(UiBuilderEditorEvent.DeleteSelected) },
       )
+      if (onReconnect != null) {
+        EditorAction(label = "Reconnect", shortcut = "", enabled = true, onClick = onReconnect)
+      }
       Text(
         "Revision ${state.document.revision}  ·  ${state.document.nodes.size} nodes",
         Modifier.padding(start = 8.dp),
@@ -245,7 +269,7 @@ private fun EditorToolbar(
         color = Color(0xff214c37),
       ) {
         Text(
-          "Local session",
+          sessionLabel,
           Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
           color = Color(0xffa8f2c6),
           style = MaterialTheme.typography.labelMedium,

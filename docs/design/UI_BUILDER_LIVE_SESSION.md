@@ -1,0 +1,34 @@
+# UI builder live browser session
+
+The `/ui-builder/` Wasm application keeps its fixture-backed editor as the default. A shared,
+persistent session is explicit:
+
+```text
+/ui-builder/?session=live&designId=jetcaster-discover&actor=operator&clientId=browser-a
+```
+
+On a fresh server, add `create=1`. The browser first attempts `OpenDesign`; only a `notFound`
+response enables the explicit create path, which seeds the requested ID from the current Jetcaster
+fixture at revision zero. An existing design is never overwritten.
+
+The browser opens the design through the released v1 HTTP envelope, renders the authoritative
+snapshot, and subscribes to `/api/ui-builder/v1/designs/{designId}/updates`. Editor batches, undo,
+and redo retain the actor/client identity from the URL and use the currently rendered authoritative
+revision as `baseRevision`. Every accepted outcome or remote delta refreshes the authoritative
+snapshot. A rejected stale write therefore rolls back the optimistic local reducer state rather
+than leaving a browser-only document behind.
+
+Operation IDs combine the configured logical `clientId` with a per-page nonce. Snapshot resets and
+browser reloads therefore cannot accidentally replay an earlier operation ID.
+
+Optional `endpoint` and `updatesEndpoint` query values override the same-origin defaults. They may
+carry the existing server `token` query parameter where operator or agent-grant authentication is
+required. The transport still authenticates the actor independently: the URL `actor` must match the
+identity derived by the server.
+
+The toolbar reports connecting, saving, rejected, snapshot-recovery, and live sequence states. Its
+Reconnect action reopens the WebSocket from the client's last exclusive durable cursor and then
+refreshes a snapshot. Presence rendering and automatic reconnect/backoff remain later work.
+
+Fixture modes such as `?mode=interactive-editor`, `interactive-editor-clean`, and the visual
+benchmark modes do not contact the design service and remain deterministic offline surfaces.

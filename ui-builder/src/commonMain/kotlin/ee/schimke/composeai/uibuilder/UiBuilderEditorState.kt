@@ -83,7 +83,20 @@ sealed interface UiBuilderEditorEvent {
 }
 
 /** Pure editor interaction reducer. Every document mutation delegates to CollaborationReducer. */
-class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
+sealed interface EditorSubmission {
+  data class Batch(val command: DesignCommand) : EditorSubmission
+
+  data class Undo(val command: UndoCommand) : EditorSubmission
+
+  data class Redo(val command: RedoCommand) : EditorSubmission
+}
+
+class UiBuilderEditorReducer(
+  private val catalog: CapabilityCatalog,
+  private val actorId: String = EDITOR_ACTOR_ID,
+  private val clientId: String = EDITOR_CLIENT_ID,
+  private val operationIdPrefix: String = clientId,
+) {
   private val capabilityValidator = CapabilityValidator(catalog)
   private val validator = CapabilityPropertyWriteValidator(capabilityValidator)
   private val documentValidator = CapabilityDocumentWriteValidator(capabilityValidator)
@@ -109,6 +122,30 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
       UiBuilderEditorEvent.Redo -> redo(state)
     }
 
+  fun acceptedSubmission(
+    previous: UiBuilderEditorState,
+    current: UiBuilderEditorState,
+  ): EditorSubmission? {
+    if (current.operationSequence == previous.operationSequence) return null
+    if (current.lastOutcome !is CommandOutcome.Accepted) return null
+    current.collaboration.acceptedCommands.keys
+      .firstOrNull { it !in previous.collaboration.acceptedCommands }
+      ?.let {
+        return EditorSubmission.Batch(current.collaboration.acceptedCommands.getValue(it).command)
+      }
+    current.collaboration.undoRecords.keys
+      .firstOrNull { it !in previous.collaboration.undoRecords }
+      ?.let {
+        return EditorSubmission.Undo(current.collaboration.undoRecords.getValue(it).command)
+      }
+    current.collaboration.redoRecords.keys
+      .firstOrNull { it !in previous.collaboration.redoRecords }
+      ?.let {
+        return EditorSubmission.Redo(current.collaboration.redoRecords.getValue(it).command)
+      }
+    return null
+  }
+
   fun canDeleteSelected(state: UiBuilderEditorState): Boolean {
     val nodeId = state.selectedNodeId?.takeIf(state.document.nodes::containsKey) ?: return false
     val parent = state.document.location(nodeId)
@@ -122,6 +159,10 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
         ?.min ?: return false
     return parentNode.slots[parent.slot].orEmpty().size > minimum
   }
+
+  fun canUndo(state: UiBuilderEditorState): Boolean = state.undoTargetOperationId(actorId) != null
+
+  fun canRedo(state: UiBuilderEditorState): Boolean = state.redoTargetUndoId(actorId) != null
 
   fun canDuplicateSelected(state: UiBuilderEditorState): Boolean {
     val nodeId = state.selectedNodeId?.takeIf(state.document.nodes::containsKey) ?: return false
@@ -309,16 +350,16 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
   }
 
   private fun undo(state: UiBuilderEditorState): UiBuilderEditorState {
-    val targetOperationId = state.undoTargetOperationId() ?: return state
+    val targetOperationId = state.undoTargetOperationId(actorId) ?: return state
     val sequence = state.operationSequence + 1
     val application =
       CollaborationReducer.undo(
         state.collaboration,
         UndoCommand(
           designId = state.document.id,
-          operationId = "editor-undo-${sequence.toString().padStart(4, '0')}",
-          actorId = EDITOR_ACTOR_ID,
-          clientId = EDITOR_CLIENT_ID,
+          operationId = "$operationIdPrefix-editor-undo-${sequence.toString().padStart(4, '0')}",
+          actorId = actorId,
+          clientId = clientId,
           baseRevision = state.document.revision,
           targetOperationId = targetOperationId,
         ),
@@ -332,7 +373,7 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
   }
 
   private fun redo(state: UiBuilderEditorState): UiBuilderEditorState {
-    val targetUndoId = state.redoTargetUndoId() ?: return state
+    val targetUndoId = state.redoTargetUndoId(actorId) ?: return state
     val targetOperationId =
       state.collaboration.undoRecords.getValue(targetUndoId).target.command.operationId
     val sequence = state.operationSequence + 1
@@ -341,9 +382,9 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
         state.collaboration,
         RedoCommand(
           designId = state.document.id,
-          operationId = "editor-redo-${sequence.toString().padStart(4, '0')}",
-          actorId = EDITOR_ACTOR_ID,
-          clientId = EDITOR_CLIENT_ID,
+          operationId = "$operationIdPrefix-editor-redo-${sequence.toString().padStart(4, '0')}",
+          actorId = actorId,
+          clientId = clientId,
           baseRevision = state.document.revision,
           targetUndoOperationId = targetUndoId,
         ),
@@ -361,13 +402,13 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
     operations: List<DesignOperation>,
     selectionAfter: String?,
   ): UiBuilderEditorState {
-    val operationId = "editor-operation-${sequence.toString().padStart(4, '0')}"
+    val operationId = "$operationIdPrefix-editor-operation-${sequence.toString().padStart(4, '0')}"
     val command =
       DesignCommand(
         designId = document.id,
         operationId = operationId,
-        actorId = EDITOR_ACTOR_ID,
-        clientId = EDITOR_CLIENT_ID,
+        actorId = actorId,
+        clientId = clientId,
         baseRevision = document.revision,
         operations = operations,
       )
@@ -444,22 +485,22 @@ class UiBuilderEditorReducer(private val catalog: CapabilityCatalog) {
   }
 }
 
-private const val EDITOR_ACTOR_ID = "wasm-editor"
-private const val EDITOR_CLIENT_ID = "interactive-canvas"
+const val EDITOR_ACTOR_ID = "wasm-editor"
+const val EDITOR_CLIENT_ID = "interactive-canvas"
 
-private fun UiBuilderEditorState.undoTargetOperationId(): String? =
+private fun UiBuilderEditorState.undoTargetOperationId(actorId: String = EDITOR_ACTOR_ID): String? =
   collaboration.acceptedCommands.values
     .asSequence()
-    .filter { it.command.actorId == EDITOR_ACTOR_ID }
+    .filter { it.command.actorId == actorId }
     .filter { it.command.operationId !in collaboration.compensatedOperationIds }
     .maxByOrNull(AcceptedCommand::committedRevision)
     ?.command
     ?.operationId
 
-private fun UiBuilderEditorState.redoTargetUndoId(): String? =
+private fun UiBuilderEditorState.redoTargetUndoId(actorId: String = EDITOR_ACTOR_ID): String? =
   collaboration.undoRecords.values
     .asSequence()
-    .filter { it.command.actorId == EDITOR_ACTOR_ID && it.redoneBy == null }
+    .filter { it.command.actorId == actorId && it.redoneBy == null }
     .maxByOrNull(AcceptedUndo::committedRevision)
     ?.command
     ?.operationId

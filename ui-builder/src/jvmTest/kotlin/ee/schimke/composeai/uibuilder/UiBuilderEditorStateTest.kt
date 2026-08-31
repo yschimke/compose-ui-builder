@@ -78,6 +78,24 @@ class UiBuilderEditorStateTest {
   }
 
   @Test
+  fun `configured live actor emits one uniquely scoped accepted submission`() {
+    val liveReducer = UiBuilderEditorReducer(catalog, actorId = "github:alice", clientId = "tab-a")
+    val initial = liveReducer.initial(document, selectedNodeId = "main-episode-title")
+    val edited =
+      liveReducer.reduce(
+        initial,
+        UiBuilderEditorEvent.SetText("main-episode-title", "Shared title"),
+      )
+
+    val submission =
+      assertIs<EditorSubmission.Batch>(liveReducer.acceptedSubmission(initial, edited))
+    assertEquals("github:alice", submission.command.actorId)
+    assertEquals("tab-a", submission.command.clientId)
+    assertEquals("tab-a-editor-operation-0001", submission.command.operationId)
+    assertNull(liveReducer.acceptedSubmission(edited, edited))
+  }
+
+  @Test
   fun `insert rejects a stale or incompatible destination without changing the document`() {
     val initial = reducer.initial(document, selectedNodeId = "discover-grid")
     val attempted =
