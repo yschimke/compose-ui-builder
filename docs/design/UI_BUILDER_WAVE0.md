@@ -371,14 +371,16 @@ capable of drawing them.
 The recommended spike is a version-addressed renderer runtime:
 
 ```text
-/wasm/builder/                         current editor shell
-/wasm/builder/runtime/<runtimeId>/     immutable native renderer assets
+/ui-builder/                         current builder preview shell
+/ui-builder/runtime/<runtimeId>/     target immutable native renderer assets
 ```
 
 The design pins `nativeRuntimeId`; the capability manifest declares its asset URL, protocol
-version, and integrity digest. The current Wasm editor loads the matching renderer in a sandboxed
+version, and integrity digest. The target Wasm editor loads the matching renderer in a sandboxed
 surface and communicates through a narrow versioned render/measure/input protocol. Old runtime
-assets are retained for the published support window.
+assets are retained for the published support window. The current spike only proves exact pin
+resolution (with no latest fallback) and reversible editor/runtime coordinate mapping; immutable
+runtime hosting and the sandboxed protocol loader are not implemented yet.
 
 This separates editor fixes from catalog pixel compatibility and gives SVG capture an explicit
 Wasm boundary if recorded-scene export wins. The spike must prove that the overlay can map measured
@@ -423,11 +425,15 @@ supported text/groups, declares every raster fallback, and rasterizes within the
       every referenced component id.
 - [ ] Prove capability-driven codegen and SVG conformance for the Jetcaster fixture.
       Capability-gated codegen now emits the full 99-node fixture with located TODO diagnostics and
-      revision/catalog/environment provenance. It remains intentionally “almost compiling”. A
+      revision/catalog/environment provenance. The generated source compiles and renders as a
+      standalone CMP/Wasm fixture, differing from the independent reference by `2.003%` with a
+      `2.1%` convergence ceiling. A
       saved-revision JVM execution bridge exports deterministic structured text for vector-only
       subsets and rejects the full fixture because filtered icons become undeclared Skia raster
       images; the Jetcaster SVG/Figma conformance gate therefore remains open.
-- [ ] Prove version-addressed renderer loading and overlay/input coordinate mapping.
+- [ ] Prove version-addressed renderer loading and overlay/input coordinate mapping. Exact runtime
+      pin resolution and reversible coordinate mapping are executable; immutable runtime asset
+      hosting, protocol loading, and old-bundle retention remain open.
 - [ ] Complete the export execution bridge and Figma import test.
 - [ ] Move accepted wire shapes and compatibility fixtures to `compose-preview-contracts`.
 - [ ] Replace candidate examples in this document with links to executable tests before Gate 0.

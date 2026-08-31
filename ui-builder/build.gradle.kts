@@ -8,6 +8,27 @@ plugins {
 
 ktfmt { googleStyle() }
 
+abstract class VerifyGeneratedSource : org.gradle.api.DefaultTask() {
+  @get:org.gradle.api.tasks.InputFile
+  @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  abstract val checkedIn: org.gradle.api.file.RegularFileProperty
+
+  @get:org.gradle.api.tasks.InputFile
+  @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  abstract val expected: org.gradle.api.file.RegularFileProperty
+
+  @org.gradle.api.tasks.TaskAction
+  fun verify() {
+    check(checkedIn.get().asFile.readBytes().contentEquals(expected.get().asFile.readBytes())) {
+      "Generated Jetcaster Compose is stale. Run ./gradlew :ui-builder:generateJetcasterComposeFixture"
+    }
+  }
+}
+
+val ktfmtCli = configurations.create("ktfmtCli")
+
+dependencies { ktfmtCli(variantOf(libs.ktfmt.cli) { classifier("with-dependencies") }) }
+
 kotlin {
   jvm()
   @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
@@ -33,10 +54,75 @@ kotlin {
       // adapter moves behind :render-host. currentOs supplies the matching local Skiko runtime.
       implementation(compose.desktop.currentOs)
     }
+    getByName("jvmMain")
+      .resources
+      .srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
     getByName("jvmTest") {
       resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
     }
   }
+}
+
+tasks.register<JavaExec>("generateJetcasterComposeFixture") {
+  description = "Generate the standalone Jetcaster Compose source from the frozen public document."
+  group = "code generation"
+  dependsOn("jvmMainClasses")
+  classpath(
+    layout.buildDirectory.dir("classes/kotlin/jvm/main"),
+    layout.buildDirectory.dir("processedResources/jvm/main"),
+    configurations.getByName("jvmRuntimeClasspath"),
+  )
+  mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterComposeFixture")
+  args(
+    rootProject.layout.projectDirectory
+      .file(
+        "ui-builder-generated-jetcaster/src/wasmJsMain/kotlin/generated/uibuilder/JetcasterDiscoverExpanded.kt"
+      )
+      .asFile
+      .absolutePath
+  )
+}
+
+val generatedJetcasterCheckFile =
+  layout.buildDirectory.file("generated/ui-builder-check/JetcasterDiscoverExpanded.kt")
+
+val generateJetcasterComposeFixtureForCheck =
+  tasks.register<JavaExec>("generateJetcasterComposeFixtureForCheck") {
+    description = "Generate Jetcaster Compose into build output for non-mutating verification."
+    group = "verification"
+    dependsOn("jvmMainClasses")
+    classpath(
+      layout.buildDirectory.dir("classes/kotlin/jvm/main"),
+      layout.buildDirectory.dir("processedResources/jvm/main"),
+      configurations.getByName("jvmRuntimeClasspath"),
+    )
+    mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterComposeFixture")
+    args(generatedJetcasterCheckFile.get().asFile.absolutePath)
+    outputs.file(generatedJetcasterCheckFile)
+  }
+
+val formatJetcasterComposeFixtureForCheck =
+  tasks.register<JavaExec>("formatJetcasterComposeFixtureForCheck") {
+    description = "Format the isolated generated fixture exactly like checked-in Kotlin."
+    group = "verification"
+    dependsOn(generateJetcasterComposeFixtureForCheck)
+    classpath(ktfmtCli)
+    mainClass.set("com.facebook.ktfmt.cli.Main")
+    args("--google-style", generatedJetcasterCheckFile.get().asFile.absolutePath)
+    inputs.file(generatedJetcasterCheckFile)
+    outputs.file(generatedJetcasterCheckFile)
+  }
+
+tasks.register<VerifyGeneratedSource>("checkJetcasterComposeFixture") {
+  description = "Fail when the checked-in Jetcaster Compose fixture is stale."
+  group = "verification"
+  dependsOn(formatJetcasterComposeFixtureForCheck)
+  checkedIn.set(
+    rootProject.layout.projectDirectory.file(
+      "ui-builder-generated-jetcaster/src/wasmJsMain/kotlin/generated/uibuilder/JetcasterDiscoverExpanded.kt"
+    )
+  )
+  expected.set(generatedJetcasterCheckFile)
 }
 
 tasks.register<Sync>("wasmFrontendDist") {

@@ -184,8 +184,15 @@ Confetti stays in CI as the fast, no-network compact regression. Jetcaster is th
 - Revision-keyed bounds, text baselines, authored semantics, clean/editor invariance, and compact
   supporting-pane exclusion are executable. Merged accessibility semantics and off-screen lazy
   content remain open.
-- Capability-driven code generation covers the 99-node fixture with located diagnostics, but is
-  not yet compiled/rendered as a standalone CMP/Wasm application.
+- Capability-driven code generation covers the 99-node fixture with located diagnostics and now
+  compiles as the standalone `ui-builder-generated-jetcaster` CMP/Wasm application. Its independent
+  reference comparison differs by `2.003%` at pixelmatch threshold `0.1`, with a `2.1%` interim
+  ceiling and a committed generated-render golden. Cover art is supplied by the explicit
+  `jetcaster-benchmark-artwork/v1` exact-key provenance adapter; the generic exporter emits a
+  located diagnostic, declared fallback, and visible placeholder for any unbound asset. The
+  checked-in source has a stale-generation verification task. Remaining source gaps are adaptive
+  motion, carousel masking/gestures, saved scroll/stable keys, parent semantics, and selected-state
+  styling.
 - A saved-revision JVM `ComposeScene -> Skia SVGCanvas` bridge now proves deterministic structured
   text export and same-engine raster parity for vector-only subsets. Full Jetcaster export fails
   closed because filtered Compose icons currently become undeclared embedded PNG images. Font

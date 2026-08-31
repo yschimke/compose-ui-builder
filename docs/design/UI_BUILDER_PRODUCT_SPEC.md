@@ -151,7 +151,7 @@ The benchmark fixtures must retain their Apache-2.0 attribution and must not imp
 
 ### Product surface
 
-The builder gets its own route and product identity, for example `/wasm/builder/`. It is not a
+The builder gets its own route and product identity at `/ui-builder/`. It is not a
 `compose=1` mode inside the preview browser. During migration, the old URL may redirect to a new
 design seeded with the prototype's examples.
 

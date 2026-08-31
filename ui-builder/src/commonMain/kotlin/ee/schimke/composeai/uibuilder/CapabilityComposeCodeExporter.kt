@@ -40,7 +40,16 @@ data class DocumentExportProvenance(
   val environmentCanonicalJson: String,
   val declaredFallbacks: List<String>,
   val exporterVersion: String,
+  val assetAdapterId: String? = null,
 )
+
+/** Explicit, caller-owned mapping from catalog asset keys to editable Compose artwork. */
+data class ComposeAssetAdapter(
+  val id: String,
+  val bindings: Map<String, ComposeAssetBinding>,
+)
+
+data class ComposeAssetBinding(val paletteArgb: List<String>)
 
 data class ComposeExportResult(
   val source: String?,
@@ -71,7 +80,11 @@ data class ComposeExportResult(
 object CapabilityComposeCodeExporter {
   const val EXPORTER_VERSION = "compose-ui-builder-code/v1-spike"
 
-  fun export(document: UiBuilderDocument, catalog: CapabilityCatalog): ComposeExportResult {
+  fun export(
+    document: UiBuilderDocument,
+    catalog: CapabilityCatalog,
+    assetAdapter: ComposeAssetAdapter? = null,
+  ): ComposeExportResult {
     val diagnostics =
       validateDocumentForExport(document, catalog).mapTo(mutableListOf()) { issue ->
         ComposeExportDiagnostic(
@@ -82,7 +95,27 @@ object CapabilityComposeCodeExporter {
           componentId = issue.componentId,
         )
       }
-    val provenance = document.exportProvenance(EXPORTER_VERSION)
+    if (assetAdapter != null && assetAdapter.id.isBlank()) {
+      diagnostics +=
+        ComposeExportDiagnostic(
+          code = "INVALID_ASSET_ADAPTER",
+          severity = ComposeExportSeverity.ERROR,
+          message = "asset adapter id must be non-blank for provenance",
+        )
+    }
+    val unboundAssetKeys =
+      document.nodes.values
+        .filter { it.componentId == "asset/image" }
+        .map { it.string("assetKey") }
+        .filter { it !in assetAdapter?.bindings.orEmpty() }
+        .distinct()
+        .sorted()
+    val provenance =
+      document.exportProvenance(
+        EXPORTER_VERSION,
+        declaredFallbacks = unboundAssetKeys.map { "asset-placeholder:$it" },
+        assetAdapterId = assetAdapter?.id,
+      )
     if (diagnostics.isNotEmpty()) {
       return ComposeExportResult(null, provenance, diagnostics)
     }
@@ -101,6 +134,20 @@ object CapabilityComposeCodeExporter {
               "UNSUPPORTED_CODE_COMPONENT",
               "No typed call emitter exists for ${capability.code.symbol}",
             )
+      }
+      if (node.componentId == "asset/image") {
+        val binding = assetAdapter?.bindings?.get(node.string("assetKey"))
+        if (
+          binding != null &&
+            (binding.paletteArgb.isEmpty() ||
+              binding.paletteArgb.any { !it.matches(Regex("[0-9a-fA-F]{8}")) })
+        ) {
+          diagnostics +=
+            node.error(
+              "INVALID_ASSET_BINDING",
+              "adapter '${assetAdapter.id}' must provide one or more eight-digit ARGB colors",
+            )
+        }
       }
       node.modifiers.forEachIndexed { index, element ->
         val modifier = element as? JsonObject
@@ -125,13 +172,6 @@ object CapabilityComposeCodeExporter {
                 "Catalog does not allow modifier $type on ${node.componentId}",
               )
         }
-        if (type == "matchParentSize") {
-          diagnostics +=
-            node.warning(
-              "MODIFIER_APPROXIMATION",
-              "matchParentSize is emitted as fillMaxSize because generated scope typing is not proved",
-            )
-        }
       }
       diagnostics += node.fieldCoverageDiagnostics()
       when (node.componentId) {
@@ -148,11 +188,13 @@ object CapabilityComposeCodeExporter {
               "row helper preserves order and sizing but not Material carousel masking",
             )
         "asset/image" ->
-          diagnostics +=
-            node.warning(
-              "ASSET_BINDING_REQUIRED",
-              "pinned asset key requires a host Painter binding",
-            )
+          if (node.string("assetKey") in unboundAssetKeys) {
+            diagnostics +=
+              node.warning(
+                "ASSET_BINDING_REQUIRED",
+                "asset '${node.string("assetKey")}' has no binding in adapter '${assetAdapter?.id ?: "none"}'; generated code uses the visible placeholder declared in provenance",
+              )
+          }
       }
     }
 
@@ -160,7 +202,7 @@ object CapabilityComposeCodeExporter {
       return ComposeExportResult(null, provenance, diagnostics)
     }
 
-    val emitter = ComposeEmitter(document, catalog, diagnostics)
+    val emitter = ComposeEmitter(document, catalog, diagnostics, assetAdapter)
     val source = emitter.emit()
     return ComposeExportResult(source, provenance, diagnostics)
   }
@@ -170,6 +212,7 @@ private class ComposeEmitter(
   private val document: UiBuilderDocument,
   private val catalog: CapabilityCatalog,
   private val diagnostics: MutableList<ComposeExportDiagnostic>,
+  private val assetAdapter: ComposeAssetAdapter?,
 ) {
   private val out = StringBuilder()
 
@@ -236,15 +279,18 @@ private class ComposeEmitter(
       "m3/search-input-field" -> emitSearchInput(node, level)
       "m3/snackbar-host" ->
         line(level, "BuilderSnackbarHost(visible = ${node.boolExpression("visible")})")
-      "m3/surface" -> emitSimpleContainer(node, level, "Surface", "content")
-      "m3/card" -> emitSimpleContainer(node, level, "Card", "content")
+      "m3/surface" -> emitSurface(node, level)
+      "m3/card" -> emitCard(node, level)
       "m3/filter-chip" -> emitFilterChip(node, level)
       "m3/icon-button" -> emitSimpleContainer(node, level, "IconButton", "content", "onClick = {}")
-      "m3/button" ->
-        emitSimpleContainer(node, level, node.buttonSymbol(), "content", "onClick = {}")
+      "m3/button" -> emitButton(node, level)
       "m3/horizontal-floating-toolbar" ->
         emitSimpleContainer(node, level, "BuilderHorizontalFloatingToolbar", "content")
-      "m3/horizontal-divider" -> line(level, "HorizontalDivider(${node.modifierArgument()})")
+      "m3/horizontal-divider" ->
+        line(
+          level,
+          "HorizontalDivider(color = ${node.colorExpression("color")}, ${node.modifierArgument()})",
+        )
       "m3/text" -> emitText(node, level)
       "m3/icon" -> emitIcon(node, level)
       "asset/image" -> emitImage(node, level)
@@ -325,16 +371,32 @@ private class ComposeEmitter(
   }
 
   private fun emitRow(node: UiBuilderNode, level: Int) {
+    val verticalAlignment =
+      when (node.string("verticalAlignment")) {
+        "top" -> "Alignment.Top"
+        "bottom" -> "Alignment.Bottom"
+        else -> "Alignment.CenterVertically"
+      }
     line(
       level,
-      "Row(${node.modifierArgument()}, horizontalArrangement = Arrangement.spacedBy(${node.number("horizontalSpacingDp").dpLiteral()})) {",
+      "Row(${node.modifierArgument()}, horizontalArrangement = Arrangement.spacedBy(${node.number("horizontalSpacingDp").dpLiteral()}), verticalAlignment = $verticalAlignment) {",
     )
     node.slot("children").forEach { emitNode(it, level + 1) }
     line(level, "}")
   }
 
   private fun emitLazy(node: UiBuilderNode, level: Int, symbol: String, slot: String) {
-    line(level, "$symbol(${node.modifierArgument()}) {")
+    val contentPadding = node.obj("contentPadding").paddingValuesExpression()
+    val arrangement =
+      if (symbol == "LazyRow") {
+        "horizontalArrangement = Arrangement.spacedBy(${node.number("horizontalSpacingDp").dpLiteral()}), "
+      } else {
+        "verticalArrangement = Arrangement.spacedBy(${node.number("verticalSpacingDp").dpLiteral()}), "
+      }
+    line(
+      level,
+      "$symbol(contentPadding = $contentPadding, $arrangement${node.modifierArgument()}) {",
+    )
     node.slot(slot).forEach { id ->
       line(level + 1, "item(key = \"${id.escape()}\") {")
       emitNode(id, level + 2)
@@ -347,7 +409,7 @@ private class ComposeEmitter(
     val minimum = node.obj("columns").number("minimumCellWidthDp", 362f)
     line(
       level,
-      "LazyVerticalGrid(columns = GridCells.Adaptive(${minimum.dpLiteral()}), ${node.modifierArgument()}) {",
+      "LazyVerticalGrid(columns = GridCells.Adaptive(${minimum.dpLiteral()}), contentPadding = ${node.obj("contentPadding").paddingValuesExpression()}, ${node.modifierArgument()}) {",
     )
     node.slot("items").forEach { id ->
       val full = document.nodes.getValue(id).string("span") == "full"
@@ -362,7 +424,7 @@ private class ComposeEmitter(
   private fun emitCarousel(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "BuilderHorizontalCarousel(itemWidth = ${node.number("itemWidthDp", 128f).dpLiteral()}, spacing = ${node.number("itemSpacingDp").dpLiteral()}) {",
+      "BuilderHorizontalCarousel(itemWidth = ${node.number("itemWidthDp", 128f).dpLiteral()}, spacing = ${node.number("itemSpacingDp").dpLiteral()}, contentPaddingStart = ${node.number("contentPaddingStartDp").dpLiteral()}) {",
     )
     node.slot("items").forEach { emitNode(it, level + 1) }
     line(level, "}")
@@ -385,6 +447,8 @@ private class ComposeEmitter(
     line(level, "FilterChip(")
     line(level + 1, "selected = ${node.boolExpression("selected")},")
     line(level + 1, "onClick = { ${node.actionExpression("click")} },")
+    line(level + 1, "enabled = ${node.boolValue("enabled", true)},")
+    line(level + 1, "shape = RoundedCornerShape(16.dp),")
     line(level + 1, "label = {")
     node.slot("label").forEach { emitNode(it, level + 2) }
     line(level + 1, "},")
@@ -399,7 +463,7 @@ private class ComposeEmitter(
   private fun emitText(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "Text(text = \"${node.string("text").escape()}\", style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.colorExpression("color")}, maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, ${node.modifierArgument()})",
+      "Text(text = \"${node.string("text").escape()}\", style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.colorExpression("color")}, maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = TextOverflow.Ellipsis, ${node.modifierArgument()})",
     )
   }
 
@@ -418,13 +482,17 @@ private class ComposeEmitter(
   }
 
   private fun emitGradient(node: UiBuilderNode, level: Int, radial: Boolean) {
-    val brush =
-      if (radial) {
-        "Brush.radialGradient(listOf(${node.colorExpression("innerColor")}.copy(alpha = ${node.number("innerAlpha", 1f).floatLiteral()}), ${node.colorExpression("outerColor")}))"
-      } else {
-        "Brush.verticalGradient(listOf(${node.colorExpression("startColor")}, ${node.colorExpression("endColor")}))"
-      }
-    line(level, "Box(${node.modifierExpression()}.background($brush))")
+    if (radial) {
+      line(
+        level,
+        "BuilderRadialGradient(${node.modifierExpression()}, ${node.colorExpression("innerColor")}, ${node.number("innerAlpha", 1f).floatLiteral()}, ${node.colorExpression("outerColor")})",
+      )
+    } else {
+      line(
+        level,
+        "Box(${node.modifierExpression()}.background(Brush.verticalGradient(listOf(${node.colorExpression("startColor")}, ${node.colorExpression("endColor")}))))",
+      )
+    }
   }
 
   private fun emitTopAppBar(node: UiBuilderNode, level: Int) {
@@ -444,34 +512,87 @@ private class ComposeEmitter(
     line(level, ")")
   }
 
+  private fun emitSurface(node: UiBuilderNode, level: Int) {
+    line(
+      level,
+      "Surface(${node.modifierArgument()}, color = ${node.colorExpression("containerColor")}) {",
+    )
+    node.slot("content").forEach { emitNode(it, level + 1) }
+    line(level, "}")
+  }
+
+  private fun emitCard(node: UiBuilderNode, level: Int) {
+    line(
+      level,
+      "Card(${node.modifierArgument()}, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = ${node.colorExpression("containerColor")})) {",
+    )
+    line(level + 1, "Box(Modifier.fillMaxSize()) {")
+    node.slot("content").forEach { emitNode(it, level + 2) }
+    line(level + 1, "}")
+    line(level, "}")
+  }
+
+  private fun emitButton(node: UiBuilderNode, level: Int) {
+    val symbol = node.buttonSymbol()
+    val colors =
+      if (node.string("style") == "fab") {
+        "containerColor = ${node.colorExpression("containerColor")}, contentColor = ${node.colorExpression("contentColor")}, "
+      } else {
+        ""
+      }
+    line(
+      level,
+      "$symbol(onClick = { ${node.actionExpression("click")} }, $colors${node.modifierArgument()}) {",
+    )
+    node.slot("content").forEach { emitNode(it, level + 1) }
+    line(level, "}")
+  }
+
   private fun emitCompatibilityHelpers() {
     appendLine(
       "// Compatibility helpers are explicit export diagnostics, not claims of API parity."
     )
     appendLine(
-      "@Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, mainPaneWidth: Dp, paneSpacing: Dp, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) {"
+      "@Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, mainPaneWidth: Dp, paneSpacing: Dp, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) { BoxWithConstraints(modifier) { if (maxWidth >= 1280.dp) {"
     )
     appendLine(
-      "  Row(modifier) { Box(Modifier.width(mainPaneWidth)) { mainPane() }; Spacer(Modifier.width(paneSpacing)); Box(Modifier.weight(1f)) { supportingPane() } }"
+      "  Row(Modifier.fillMaxSize()) { Box(Modifier.width(mainPaneWidth).fillMaxHeight()) { mainPane() }; Spacer(Modifier.width(paneSpacing)); Box(Modifier.weight(1f).fillMaxHeight()) { supportingPane() } } } else { mainPane() } }"
     )
     appendLine("}")
     appendLine(
-      "@Composable private fun BuilderHorizontalCarousel(itemWidth: Dp, spacing: Dp, content: @Composable RowScope.() -> Unit) { Row(horizontalArrangement = Arrangement.spacedBy(spacing), content = content) }"
+      "@Composable private fun BuilderHorizontalCarousel(itemWidth: Dp, spacing: Dp, contentPaddingStart: Dp, content: @Composable RowScope.() -> Unit) { Row(Modifier.padding(start = contentPaddingStart), horizontalArrangement = Arrangement.spacedBy(spacing), content = content) }"
     )
     appendLine(
-      "@Composable private fun BuilderSearchBar(modifier: Modifier = Modifier, content: @Composable () -> Unit) { Surface(modifier, shape = CircleShape) { content() } }"
+      "@Composable private fun BuilderSearchBar(modifier: Modifier = Modifier, content: @Composable () -> Unit) { Surface(modifier.height(56.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) { Box(Modifier.fillMaxSize()) { content() } } }"
     )
     appendLine(
-      "@Composable private fun BuilderSearchInputField(value: String, onValueChange: (String) -> Unit, leadingIcon: @Composable () -> Unit, placeholder: @Composable () -> Unit, trailingIcon: @Composable () -> Unit) { Row(verticalAlignment = Alignment.CenterVertically) { leadingIcon(); BasicTextField(value, onValueChange, Modifier.weight(1f), decorationBox = { inner -> if (value.isEmpty()) placeholder(); inner() }); trailingIcon() } }"
+      "@Composable private fun BuilderSearchInputField(value: String, onValueChange: (String) -> Unit, leadingIcon: @Composable () -> Unit, placeholder: @Composable () -> Unit, trailingIcon: @Composable () -> Unit) { Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) { leadingIcon(); BasicTextField(value, onValueChange, Modifier.weight(1f), decorationBox = { inner -> if (value.isEmpty()) placeholder(); inner() }); trailingIcon() } }"
     )
     appendLine(
       "@Composable private fun BuilderSnackbarHost(visible: Boolean) { if (visible) Snackbar { Text(\"Snackbar\") } }"
     )
     appendLine(
-      "@Composable private fun BuilderHorizontalFloatingToolbar(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier, shape = CircleShape) { Row(Modifier.padding(4.dp), content = content) } }"
+      "@Composable private fun BuilderHorizontalFloatingToolbar(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest, shadowElevation = 8.dp) { Row(Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
     )
     appendLine(
-      "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, modifier: Modifier = Modifier) { Box(modifier.background(MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) { Text(assetKey, maxLines = 1) } }"
+      "@Composable private fun BuilderRadialGradient(modifier: Modifier, innerColor: Color, innerAlpha: Float, outerColor: Color) { Box(modifier.drawBehind { drawRect(Brush.radialGradient(listOf(innerColor.copy(alpha = innerAlpha), outerColor), center = Offset.Zero, radius = size.maxDimension * .82f)) }) }"
+    )
+    appendLine(
+      "// Asset adapter: ${assetAdapter?.id?.escapeComment() ?: "none (visible placeholder)"}."
+    )
+    appendLine(
+      "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, modifier: Modifier = Modifier) { val semanticModifier = if (contentDescription == null) modifier else modifier.semantics { this.contentDescription = contentDescription }; Canvas(semanticModifier) { val palette = when (assetKey) {"
+    )
+    assetAdapter
+      ?.bindings
+      ?.entries
+      ?.sortedBy { it.key }
+      ?.forEach { (assetKey, binding) ->
+        val colors = binding.paletteArgb.joinToString { "Color(0x${it.removePrefix("0x")})" }
+        appendLine("  \"${assetKey.escape()}\" -> listOf($colors)")
+      }
+    appendLine(
+      "  else -> listOf(Color(0xFFFF00FF), Color(0xFF202020), Color(0xFFFF00FF)) } ; drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height))); drawCircle(Color.White.copy(alpha = .18f), size.minDimension * .34f, Offset(size.width * .76f, size.height * .24f)); drawCircle(Color.Black.copy(alpha = .18f), size.minDimension * .22f, Offset(size.width * .22f, size.height * .72f)); val path = Path().apply { moveTo(size.width * .19f, size.height * .32f); lineTo(size.width * .48f, size.height * .18f); lineTo(size.width * .82f, size.height * .58f); lineTo(size.width * .48f, size.height * .78f); close() }; drawPath(path, Color.White.copy(alpha = .27f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .30f, size.height * .39f), Size(size.width * .10f, size.height * .28f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .47f, size.height * .30f), Size(size.width * .10f, size.height * .38f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .64f, size.height * .43f), Size(size.width * .10f, size.height * .24f)); drawCircle(Color.White.copy(alpha = .72f), size.minDimension * .28f, style = Stroke(size.minDimension * .035f)) } }"
     )
     appendLine(
       "private fun builderIcon(key: String): ImageVector = when (key) { \"search\" -> Icons.Default.Search; \"accountCircle\" -> Icons.Default.AccountCircle; \"check\" -> Icons.Default.Check; \"checkCircle\" -> Icons.Default.CheckCircle; \"addCircle\" -> Icons.Default.AddCircle; \"playCircle\" -> Icons.Default.PlayCircle; \"playlistAdd\" -> Icons.Default.PlaylistAdd; \"moreVert\" -> Icons.Default.MoreVert; \"videoLibrary\" -> Icons.Default.VideoLibrary; else -> Icons.Default.Category }"
@@ -502,6 +623,9 @@ private fun JsonObject.number(name: String, fallback: Float = 0f): Float =
 private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
   obj(name)["value"]?.jsonPrimitive?.intOrNull ?: fallback
 
+private fun UiBuilderNode.boolValue(name: String, fallback: Boolean = false): Boolean =
+  obj(name)["value"]?.jsonPrimitive?.booleanOrNull ?: fallback
+
 private fun UiBuilderNode.boolExpression(name: String): String {
   val value = obj(name)
   return if (value.optionalString("type") == "stateEquals") {
@@ -528,6 +652,7 @@ private fun UiBuilderNode.buttonSymbol(): String =
   when (string("style")) {
     "text" -> "TextButton"
     "filledTonal" -> "FilledTonalButton"
+    "fab" -> "FloatingActionButton"
     else -> "Button"
   }
 
@@ -541,7 +666,7 @@ private fun UiBuilderNode.modifierExpression(): String {
       when (val type = modifier.optionalString("type")) {
         "fillMaxSize" -> ".fillMaxSize()"
         "fillMaxWidth" -> ".fillMaxWidth()"
-        "matchParentSize" -> ".fillMaxSize() /* matchParentSize in BoxScope */"
+        "matchParentSize" -> ".matchParentSize()"
         "padding" ->
           ".padding(start = ${modifier.number("startDp").dpLiteral()}, top = ${modifier.number("topDp").dpLiteral()}, end = ${modifier.number("endDp").dpLiteral()}, bottom = ${modifier.number("bottomDp").dpLiteral()})"
         "size" ->
@@ -551,8 +676,24 @@ private fun UiBuilderNode.modifierExpression(): String {
         else -> error("unsupported modifier $type on $id")
       }
   }
+  if ("weight" in properties) expression += ".weight(${number("weight", 1f).floatLiteral()})"
+  expression +=
+    when (string("alignment")) {
+      "topStart" -> ".align(Alignment.TopStart)"
+      "topEnd" -> ".align(Alignment.TopEnd)"
+      "bottomStart" -> ".align(Alignment.BottomStart)"
+      "bottomCenter" -> ".align(Alignment.BottomCenter)"
+      "bottomEnd" -> ".align(Alignment.BottomEnd)"
+      "center" -> ".align(Alignment.Center)"
+      "centerEnd" -> ".align(Alignment.CenterEnd)"
+      else -> ""
+    }
+  if ("sizeDp" in properties) expression += ".size(${number("sizeDp").dpLiteral()})"
   return expression
 }
+
+private fun JsonObject.paddingValuesExpression(): String =
+  "PaddingValues(start = ${number("startDp").dpLiteral()}, top = ${number("topDp").dpLiteral()}, end = ${number("endDp").dpLiteral()}, bottom = ${number("bottomDp").dpLiteral()})"
 
 private fun UiBuilderNode.colorExpression(name: String): String {
   val value = string(name)
@@ -575,15 +716,12 @@ private fun UiBuilderNode.colorExpression(name: String): String {
 }
 
 private fun UiBuilderDocument.exportFunctionName(): String =
-  when {
-    id.contains("jetcaster", ignoreCase = true) -> "JetcasterDiscoverExpanded"
-    id.contains("confetti", ignoreCase = true) -> "ConfettiScheduleScreen"
-    else -> title.identifier().replaceFirstChar { it.uppercase() }.ifEmpty { "GeneratedScreen" }
-  }
+  title.identifier().replaceFirstChar { it.uppercase() }.ifEmpty { "GeneratedScreen" }
 
 internal fun UiBuilderDocument.exportProvenance(
   exporterVersion: String,
-  declaredFallbacks: List<String> = listOf("asset/image:embedded-raster-host-binding"),
+  declaredFallbacks: List<String> = emptyList(),
+  assetAdapterId: String? = null,
 ) =
   DocumentExportProvenance(
     designId = id,
@@ -604,6 +742,7 @@ internal fun UiBuilderDocument.exportProvenance(
     environmentCanonicalJson = canonicalJson(environment),
     declaredFallbacks = declaredFallbacks,
     exporterVersion = exporterVersion,
+    assetAdapterId = assetAdapterId,
   )
 
 private fun UiBuilderDocument.catalogString(name: String): String =
@@ -744,13 +883,19 @@ private val HANDLED_FIELDS =
   mapOf(
     "asset/image" to HandledFields(setOf("assetKey", "contentDescription")),
     "layout/box" to HandledFields(slots = setOf("children")),
-    "layout/column" to HandledFields(setOf("verticalSpacingDp"), setOf("children")),
+    "layout/column" to HandledFields(setOf("verticalSpacingDp", "weight"), setOf("children")),
     "layout/horizontal-carousel" to
-      HandledFields(setOf("itemWidthDp", "itemSpacingDp"), setOf("items")),
-    "layout/lazy-column" to HandledFields(slots = setOf("items")),
-    "layout/lazy-grid" to HandledFields(setOf("columns"), setOf("items")),
-    "layout/lazy-row" to HandledFields(slots = setOf("items")),
-    "layout/row" to HandledFields(setOf("horizontalSpacingDp"), setOf("children")),
+      HandledFields(
+        setOf("itemWidthDp", "itemSpacingDp", "contentPaddingStartDp", "span"),
+        setOf("items"),
+      ),
+    "layout/lazy-column" to
+      HandledFields(setOf("contentPadding", "verticalSpacingDp"), setOf("items")),
+    "layout/lazy-grid" to HandledFields(setOf("columns", "contentPadding"), setOf("items")),
+    "layout/lazy-row" to
+      HandledFields(setOf("contentPadding", "horizontalSpacingDp", "span"), setOf("items")),
+    "layout/row" to
+      HandledFields(setOf("horizontalSpacingDp", "verticalAlignment"), setOf("children")),
     "layout/scaffold" to
       HandledFields(setOf("containerColor"), setOf("topBar", "snackbarHost", "content")),
     "layout/supporting-pane-scaffold" to
@@ -758,32 +903,49 @@ private val HANDLED_FIELDS =
         setOf("mainPanePreferredWidthDp", "paneSpacingDp"),
         setOf("mainPane", "supportingPane"),
       ),
-    "m3/button" to HandledFields(setOf("style"), setOf("content")),
-    "m3/card" to HandledFields(slots = setOf("content")),
+    "m3/button" to
+      HandledFields(
+        setOf("style", "containerColor", "contentColor"),
+        setOf("content"),
+        setOf("click"),
+      ),
+    "m3/card" to HandledFields(setOf("containerColor", "shape"), setOf("content")),
     "m3/center-aligned-top-app-bar" to HandledFields(slots = setOf("title")),
     "m3/filter-chip" to
-      HandledFields(setOf("selected"), setOf("label", "leadingIcon"), setOf("click")),
-    "m3/horizontal-divider" to HandledFields(),
-    "m3/horizontal-floating-toolbar" to HandledFields(slots = setOf("content")),
-    "m3/icon" to HandledFields(setOf("iconKey", "contentDescription", "color")),
-    "m3/icon-button" to HandledFields(slots = setOf("content")),
+      HandledFields(
+        setOf("selected", "enabled", "shape"),
+        setOf("label", "leadingIcon"),
+        setOf("click"),
+      ),
+    "m3/horizontal-divider" to HandledFields(setOf("color")),
+    "m3/horizontal-floating-toolbar" to
+      HandledFields(setOf("alignment", "containerColor", "expanded"), setOf("content")),
+    "m3/icon" to HandledFields(setOf("iconKey", "contentDescription", "color", "sizeDp")),
+    "m3/icon-button" to HandledFields(setOf("alignment", "sizeDp"), slots = setOf("content")),
     "m3/list-item" to HandledFields(slots = setOf("headline", "supporting", "trailing")),
     "m3/primary-tab-row" to HandledFields(slots = setOf("tabs")),
     "m3/search-bar" to HandledFields(slots = setOf("inputField")),
     "m3/search-input-field" to
-      HandledFields(setOf("value"), setOf("placeholder", "leadingIcon", "trailingIcon")),
+      HandledFields(
+        setOf("value"),
+        setOf("placeholder", "leadingIcon", "trailingIcon"),
+        setOf("valueChange"),
+      ),
     "m3/snackbar-host" to HandledFields(setOf("visible")),
-    "m3/surface" to HandledFields(slots = setOf("content")),
+    "m3/surface" to HandledFields(setOf("containerColor"), setOf("content")),
     "m3/tab" to HandledFields(setOf("selected"), setOf("text")),
-    "m3/text" to HandledFields(setOf("text", "style", "color", "maxLines")),
+    "m3/text" to
+      HandledFields(setOf("text", "style", "color", "maxLines", "overflow", "alignment", "weight")),
     "shape/colour-dot" to HandledFields(setOf("color", "diameterDp")),
-    "shape/linear-gradient" to HandledFields(setOf("startColor", "endColor")),
-    "shape/radial-gradient" to HandledFields(setOf("innerColor", "outerColor", "innerAlpha")),
+    "shape/linear-gradient" to HandledFields(setOf("startColor", "endColor", "direction")),
+    "shape/radial-gradient" to
+      HandledFields(setOf("innerColor", "outerColor", "innerAlpha", "center")),
   )
 
 private val GENERATED_IMPORTS =
   listOf(
       "androidx.compose.foundation.background",
+      "androidx.compose.foundation.Canvas",
       "androidx.compose.foundation.layout.*",
       "androidx.compose.foundation.lazy.*",
       "androidx.compose.foundation.lazy.grid.*",
@@ -797,9 +959,17 @@ private val GENERATED_IMPORTS =
       "androidx.compose.ui.Alignment",
       "androidx.compose.ui.Modifier",
       "androidx.compose.ui.draw.clip",
+      "androidx.compose.ui.draw.drawBehind",
+      "androidx.compose.ui.geometry.Offset",
+      "androidx.compose.ui.geometry.Size",
       "androidx.compose.ui.graphics.Brush",
       "androidx.compose.ui.graphics.Color",
+      "androidx.compose.ui.graphics.Path",
+      "androidx.compose.ui.graphics.drawscope.Stroke",
       "androidx.compose.ui.graphics.vector.ImageVector",
+      "androidx.compose.ui.semantics.contentDescription",
+      "androidx.compose.ui.semantics.semantics",
+      "androidx.compose.ui.text.style.TextOverflow",
       "androidx.compose.ui.unit.Dp",
       "androidx.compose.ui.unit.dp",
     )

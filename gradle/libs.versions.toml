@@ -1,6 +1,7 @@
 [versions]
 kotlin = "2.4.10"
 ktfmt = "0.27.0"
+ktfmt-cli = "0.64"
 compose-multiplatform = "1.11.1"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
@@ -49,6 +50,7 @@ okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", versio
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
+ktfmt-cli = { module = "com.facebook:ktfmt", version.ref = "ktfmt-cli" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

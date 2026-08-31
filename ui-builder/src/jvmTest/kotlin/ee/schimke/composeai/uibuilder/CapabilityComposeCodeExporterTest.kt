@@ -20,17 +20,28 @@ class CapabilityComposeCodeExporterTest {
   private val catalog by lazy {
     CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
   }
+  private val artworkAdapter =
+    ComposeAssetAdapter(
+      id = "test-jetcaster-artwork/v1",
+      bindings =
+        mapOf(
+          "jetcaster.cover.android-developers-backstage" to
+            ComposeAssetBinding(listOf("FF0B57D0", "FF00A896", "FF101828")),
+          "jetcaster.cover.google-developers-podcast" to
+            ComposeAssetBinding(listOf("FFEA4335", "FFFBBC04", "FF174EA6")),
+        ),
+    )
 
   @Test
   fun `full frozen Jetcaster document exports deterministically with every node located`() {
-    val first = ComposeCodeExporter.export(document, catalog)
-    val second = ComposeCodeExporter.export(document, catalog)
+    val first = CapabilityComposeCodeExporter.export(document, catalog, artworkAdapter)
+    val second = CapabilityComposeCodeExporter.export(document, catalog, artworkAdapter)
     val source = assertNotNull(first.source)
 
     assertTrue(first.successful, first.diagnostics.joinToString { it.message })
     assertEquals(first, second)
     assertEquals(99, Regex("// node:").findAll(source).count())
-    assertTrue(source.contains("fun JetcasterDiscoverExpanded()"))
+    assertTrue(source.contains("fun JetcasterDiscoverExpandedSupportingPane()"))
     assertTrue(source.contains("BuilderSupportingPaneScaffold("))
     assertTrue(source.contains("LazyVerticalGrid("))
     assertTrue(source.contains("BuilderHorizontalCarousel("))
@@ -43,12 +54,69 @@ class CapabilityComposeCodeExporterTest {
     assertEquals(document.revision, first.provenance.designRevision)
     assertEquals("candidate", first.provenance.capabilityDigest)
     assertTrue(first.diagnostics.any { it.code == "ADAPTIVE_COMPATIBILITY_HELPER" })
-    assertTrue(first.diagnostics.any { it.code == "ASSET_BINDING_REQUIRED" })
+    assertFalse(first.diagnostics.any { it.code == "ASSET_BINDING_REQUIRED" })
+    assertEquals(artworkAdapter.id, first.provenance.assetAdapterId)
+    assertTrue(first.provenance.declaredFallbacks.isEmpty())
+    assertTrue(source.contains("private fun BuilderAssetImage"))
+    assertTrue(
+      source.contains("modifier.semantics { this.contentDescription = contentDescription }")
+    )
+    assertEquals(
+      document.nodes.values.count { it.componentId == "asset/image" },
+      first.diagnostics.count {
+        it.code == "UNEMITTED_PROPERTY" && it.message.contains("'contentScale'")
+      },
+    )
+    assertFalse(source.contains("assetKey.contains"))
     assertTrue(first.diagnostics.any { it.code == "UNEMITTED_PROPERTY" })
     assertTrue(source.contains("// TODO[UNEMITTED_PROPERTY]"))
     assertEquals(1280f, first.provenance.viewportWidthDp)
     assertEquals("dark", first.provenance.theme)
     assertTrue(first.provenance.environmentCanonicalJson.contains("\"fontScale\":1"))
+  }
+
+  @Test
+  fun `unbound assets use a visible declared placeholder with located diagnostics`() {
+    val result = ComposeCodeExporter.export(document, catalog)
+    val source = assertNotNull(result.source)
+
+    assertTrue(result.successful)
+    assertEquals(null, result.provenance.assetAdapterId)
+    assertEquals(
+      listOf(
+        "asset-placeholder:jetcaster.cover.android-developers-backstage",
+        "asset-placeholder:jetcaster.cover.google-developers-podcast",
+      ),
+      result.provenance.declaredFallbacks,
+    )
+    assertEquals(
+      document.nodes.values.count { it.componentId == "asset/image" },
+      result.diagnostics.count { it.code == "ASSET_BINDING_REQUIRED" },
+    )
+    assertTrue(source.contains("none (visible placeholder)"))
+    assertTrue(source.contains("Color(0xFFFF00FF)"))
+    assertFalse(source.contains("assetKey.contains"))
+  }
+
+  @Test
+  fun `invalid asset adapter data blocks code generation with a located diagnostic`() {
+    val invalid =
+      artworkAdapter.copy(
+        bindings =
+          artworkAdapter.bindings +
+            ("jetcaster.cover.android-developers-backstage" to
+              ComposeAssetBinding(listOf("not-kotlin")))
+      )
+
+    val result = CapabilityComposeCodeExporter.export(document, catalog, invalid)
+
+    assertFalse(result.successful)
+    assertNull(result.source)
+    assertTrue(
+      result.diagnostics.any {
+        it.code == "INVALID_ASSET_BINDING" && it.nodeId == "podcast-card-android-image"
+      }
+    )
   }
 
   @Test
