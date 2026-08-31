@@ -348,7 +348,7 @@ private suspend fun fetchText(url: String): String = suspendCancellableCoroutine
 )
 private external fun fetchTextPromise(url: String): Promise<JsString>
 
-@JsFun("() => new URLSearchParams(globalThis.location.search).get('mode') || 'builder'")
+@JsFun("() => new URLSearchParams(globalThis.location.search).get('mode') || 'jetcaster-builder'")
 private external fun captureMode(): String
 
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
