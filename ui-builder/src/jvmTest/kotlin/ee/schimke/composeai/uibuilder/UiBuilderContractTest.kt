@@ -15,7 +15,7 @@ class UiBuilderContractTest {
 
   @Test
   fun `shared public operations reduce to the cross-language document hash`() {
-    val fixture = fixture()
+    val fixture = confettiFixture()
     val result = UiBuilderReducer.replay(fixture)
     val canonical = canonicalJson(json.parseToJsonElement(json.encodeToString(result.document)))
 
@@ -32,7 +32,7 @@ class UiBuilderContractTest {
 
   @Test
   fun `operation retries are idempotent`() {
-    val fixture = fixture()
+    val fixture = confettiFixture()
     val operations = fixture.getValue("operations") as kotlinx.serialization.json.JsonArray
     val retried =
       JsonObject(
@@ -47,7 +47,7 @@ class UiBuilderContractTest {
 
   @Test
   fun `stale insertion anchors fail instead of changing order`() {
-    val fixture = fixture()
+    val fixture = confettiFixture()
     val operations = fixture.getValue("operations") as kotlinx.serialization.json.JsonArray
     val last = operations.last().jsonObject
     val invalid =
@@ -73,7 +73,7 @@ class UiBuilderContractTest {
 
   @Test
   fun `same reduced document exports recognizable Compose`() {
-    val code = ComposeCodeExporter.export(UiBuilderReducer.replay(fixture()).document)
+    val code = ComposeCodeExporter.export(UiBuilderReducer.replay(confettiFixture()).document)
 
     assertTrue(code.contains("fun ConfettiScheduleHeader()"))
     assertTrue(code.contains("Scaffold("))
@@ -92,8 +92,33 @@ class UiBuilderContractTest {
     assertTrue(code.contains("ScheduleBreak(title = \"Coffee Break\""))
   }
 
-  private fun fixture(): JsonObject {
-    val resource = checkNotNull(javaClass.getResource("/confetti-schedule-operations-v1.json"))
+  @Test
+  fun `Jetcaster public operations reduce to the cross-language document hash`() {
+    val fixture = fixture("/jetcaster-discover-operations-v1.json")
+    val result = UiBuilderReducer.replay(fixture)
+    val canonical = canonicalJson(json.parseToJsonElement(json.encodeToString(result.document)))
+
+    assertEquals(99, result.document.revision)
+    assertEquals(99, result.document.nodes.size)
+    assertEquals(listOf("root-surface"), result.document.roots)
+    assertEquals(
+      listOf("main-background"),
+      result.document.nodes.getValue("pane-scaffold").slots.getValue("mainPane"),
+    )
+    assertEquals(
+      listOf("detail-scaffold"),
+      result.document.nodes.getValue("pane-scaffold").slots.getValue("supportingPane"),
+    )
+    assertEquals(
+      fixture.getValue("expectedDocumentHash").toString().trim('"'),
+      canonical.sha256(),
+    )
+  }
+
+  private fun confettiFixture(): JsonObject = fixture("/confetti-schedule-operations-v1.json")
+
+  private fun fixture(path: String): JsonObject {
+    val resource = checkNotNull(javaClass.getResource(path))
     return json.parseToJsonElement(resource.readText()).jsonObject
   }
 }

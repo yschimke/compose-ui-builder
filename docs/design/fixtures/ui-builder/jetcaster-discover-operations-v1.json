@@ -1,0 +1,769 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "fixture-jetcaster-discover-expanded",
+  "expectedDocumentHash": "daacae610673792b02b333dd725e39eadddf7901f2fe5b6fc3402721e542da5d",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Jetcaster Discover — expanded supporting pane",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 1280,
+        "heightDp": 800,
+        "density": 1.0,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1.0,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false
+      },
+      "stateVariables": {
+        "searchQuery": { "type": "text", "initialValue": "", "persistence": "preview" },
+        "selectedCategory": { "type": "selection", "valueType": "string", "nullable": false, "initialValue": "Crime", "persistence": "preview" },
+        "selectedDestination": { "type": "selection", "valueType": "string", "nullable": false, "initialValue": "Discover", "persistence": "preview" },
+        "selectedPodcast": { "type": "selection", "valueType": "string", "nullable": false, "initialValue": "android-developers-backstage", "persistence": "session" }
+      }
+    },
+    {
+      "operationId": "insert-root-surface",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "root-surface",
+        "componentId": "m3/surface",
+        "properties": { "containerColor": { "type": "colorToken", "value": "background" } },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-pane-scaffold",
+      "type": "insertNode",
+      "parent": { "nodeId": "root-surface", "slot": "content" },
+      "node": {
+        "id": "pane-scaffold",
+        "componentId": "layout/supporting-pane-scaffold",
+        "properties": {
+          "layoutMode": { "type": "enum", "value": "expandedTwoPane" },
+          "mainPanePreferredWidthDp": { "type": "float", "value": 744.0 },
+          "supportingPanePreferredWidthDp": { "type": "float", "value": 512.0 },
+          "paneSpacingDp": { "type": "float", "value": 24.0 },
+          "mainPaneVisible": { "type": "bool", "value": true },
+          "supportingPaneVisible": { "type": "bool", "value": true }
+        },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-main-background",
+      "type": "insertNode",
+      "parent": { "nodeId": "pane-scaffold", "slot": "mainPane" },
+      "node": { "id": "main-background", "componentId": "layout/box", "modifiers": [{ "type": "fillMaxSize" }] }
+    },
+    {
+      "operationId": "insert-main-scrim",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-background", "slot": "children" },
+      "node": {
+        "id": "main-scrim",
+        "componentId": "shape/radial-gradient",
+        "properties": {
+          "center": { "type": "enum", "value": "topStart" },
+          "innerColor": { "type": "colorToken", "value": "primary" },
+          "innerAlpha": { "type": "float", "value": 0.15 },
+          "outerColor": { "type": "colorToken", "value": "transparent" }
+        },
+        "modifiers": [{ "type": "matchParentSize" }]
+      }
+    },
+    {
+      "operationId": "insert-main-scaffold",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-background", "slot": "children" },
+      "afterNodeId": "main-scrim",
+      "node": {
+        "id": "main-scaffold",
+        "componentId": "layout/scaffold",
+        "properties": {
+          "containerColor": { "type": "colorToken", "value": "transparent" },
+          "loading": { "type": "bool", "value": false }
+        },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-search-bar",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-scaffold", "slot": "topBar" },
+      "node": {
+        "id": "search-bar",
+        "componentId": "m3/search-bar",
+        "properties": {
+          "expanded": { "type": "bool", "value": false },
+          "tonalElevationDp": { "type": "float", "value": 0.0 }
+        },
+        "modifiers": [{ "type": "fillMaxWidth" }, { "type": "padding", "startDp": 16, "topDp": 8, "endDp": 16, "bottomDp": 8 }]
+      }
+    },
+    {
+      "operationId": "insert-search-input",
+      "type": "insertNode",
+      "parent": { "nodeId": "search-bar", "slot": "inputField" },
+      "node": {
+        "id": "search-input",
+        "componentId": "m3/search-input-field",
+        "properties": { "value": { "type": "state", "variable": "searchQuery" }, "enabled": { "type": "bool", "value": true } },
+        "eventBindings": { "valueChange": [{ "type": "setText", "variable": "searchQuery" }] },
+        "modifiers": [{ "type": "fillMaxWidth" }]
+      }
+    },
+    {
+      "operationId": "insert-search-leading-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "search-input", "slot": "leadingIcon" },
+      "node": { "id": "search-leading-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "search" }, "contentDescription": { "type": "string", "value": "Search" } } }
+    },
+    {
+      "operationId": "insert-search-placeholder",
+      "type": "insertNode",
+      "parent": { "nodeId": "search-input", "slot": "placeholder" },
+      "node": { "id": "search-placeholder", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Search for a podcast" }, "style": { "type": "typographyToken", "value": "bodyLarge" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-search-account-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "search-input", "slot": "trailingIcon" },
+      "node": { "id": "search-account-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "accountCircle" }, "contentDescription": { "type": "string", "value": "Account" } } }
+    },
+    {
+      "operationId": "insert-snackbar-host",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-scaffold", "slot": "snackbarHost" },
+      "node": { "id": "snackbar-host", "componentId": "m3/snackbar-host", "properties": { "visible": { "type": "bool", "value": false } } }
+    },
+    {
+      "operationId": "insert-main-content",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-scaffold", "slot": "content" },
+      "node": { "id": "main-content", "componentId": "layout/box", "modifiers": [{ "type": "fillMaxSize" }] }
+    },
+    {
+      "operationId": "insert-discover-grid",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-content", "slot": "children" },
+      "node": {
+        "id": "discover-grid",
+        "componentId": "layout/lazy-grid",
+        "properties": {
+          "columns": { "type": "adaptiveGrid", "minimumCellWidthDp": 362.0 },
+          "contentPadding": { "type": "padding", "startDp": 0, "topDp": 0, "endDp": 0, "bottomDp": 88 },
+          "scrollStateKey": { "type": "string", "value": "discover-main-scroll" }
+        },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-category-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "discover-grid", "slot": "items" },
+      "node": {
+        "id": "category-row",
+        "componentId": "layout/lazy-row",
+        "properties": {
+          "span": { "type": "enum", "value": "full" },
+          "stableKey": { "type": "string", "value": "categories" },
+          "contentPadding": { "type": "padding", "startDp": 16, "topDp": 16, "endDp": 16, "bottomDp": 16 },
+          "horizontalSpacingDp": { "type": "float", "value": 8.0 }
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-crime",
+      "type": "insertNode",
+      "parent": { "nodeId": "category-row", "slot": "items" },
+      "node": {
+        "id": "chip-crime",
+        "componentId": "m3/filter-chip",
+        "properties": { "selected": { "type": "stateEquals", "variable": "selectedCategory", "value": "Crime" }, "shape": { "type": "shapeToken", "value": "large" } },
+        "eventBindings": { "click": [{ "type": "select", "variable": "selectedCategory", "value": "Crime" }] }
+      }
+    },
+    {
+      "operationId": "insert-chip-crime-check",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-crime", "slot": "leadingIcon" },
+      "node": { "id": "chip-crime-check", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "check" }, "sizeDp": { "type": "float", "value": 18.0 } } }
+    },
+    {
+      "operationId": "insert-chip-crime-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-crime", "slot": "label" },
+      "node": { "id": "chip-crime-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Crime" }, "style": { "type": "typographyToken", "value": "bodyMedium" } } }
+    },
+    {
+      "operationId": "insert-chip-news",
+      "type": "insertNode",
+      "parent": { "nodeId": "category-row", "slot": "items" },
+      "afterNodeId": "chip-crime",
+      "node": { "id": "chip-news", "componentId": "m3/filter-chip", "properties": { "selected": { "type": "stateEquals", "variable": "selectedCategory", "value": "News" }, "shape": { "type": "shapeToken", "value": "large" } }, "eventBindings": { "click": [{ "type": "select", "variable": "selectedCategory", "value": "News" }] } }
+    },
+    {
+      "operationId": "insert-chip-news-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-news", "slot": "label" },
+      "node": { "id": "chip-news-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "News" }, "style": { "type": "typographyToken", "value": "bodyMedium" } } }
+    },
+    {
+      "operationId": "insert-chip-comedy",
+      "type": "insertNode",
+      "parent": { "nodeId": "category-row", "slot": "items" },
+      "afterNodeId": "chip-news",
+      "node": { "id": "chip-comedy", "componentId": "m3/filter-chip", "properties": { "selected": { "type": "stateEquals", "variable": "selectedCategory", "value": "Comedy" }, "shape": { "type": "shapeToken", "value": "large" } }, "eventBindings": { "click": [{ "type": "select", "variable": "selectedCategory", "value": "Comedy" }] } }
+    },
+    {
+      "operationId": "insert-chip-comedy-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-comedy", "slot": "label" },
+      "node": { "id": "chip-comedy-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Comedy" }, "style": { "type": "typographyToken", "value": "bodyMedium" } } }
+    },
+    {
+      "operationId": "insert-podcast-carousel",
+      "type": "insertNode",
+      "parent": { "nodeId": "discover-grid", "slot": "items" },
+      "afterNodeId": "category-row",
+      "node": {
+        "id": "podcast-carousel",
+        "componentId": "layout/horizontal-carousel",
+        "properties": {
+          "kind": { "type": "enum", "value": "uncontained" },
+          "span": { "type": "enum", "value": "full" },
+          "itemWidthDp": { "type": "float", "value": 128.0 },
+          "itemSpacingDp": { "type": "float", "value": 4.0 },
+          "contentPaddingStartDp": { "type": "float", "value": 8.0 },
+          "scrollStateKey": { "type": "string", "value": "discover-podcast-carousel" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-podcast-card-android",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-carousel", "slot": "items" },
+      "node": {
+        "id": "podcast-card-android",
+        "componentId": "m3/card",
+        "properties": { "stableKey": { "type": "string", "value": "android-developers-backstage" }, "shape": { "type": "shapeToken", "value": "large" } },
+        "modifiers": [{ "type": "size", "widthDp": 128, "heightDp": 128 }, { "type": "clip", "shape": "large" }],
+        "eventBindings": { "click": [{ "type": "select", "variable": "selectedPodcast", "value": "android-developers-backstage" }] }
+      }
+    },
+    {
+      "operationId": "insert-podcast-card-android-image",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-android", "slot": "content" },
+      "node": { "id": "podcast-card-android-image", "componentId": "asset/image", "properties": { "assetKey": { "type": "assetKey", "value": "jetcaster.cover.android-developers-backstage" }, "contentDescription": { "type": "string", "value": "Android Developers Backstage cover" }, "contentScale": { "type": "enum", "value": "crop" } }, "modifiers": [{ "type": "matchParentSize" }] }
+    },
+    {
+      "operationId": "insert-podcast-card-android-gradient",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-android", "slot": "content" },
+      "afterNodeId": "podcast-card-android-image",
+      "node": { "id": "podcast-card-android-gradient", "componentId": "shape/linear-gradient", "properties": { "direction": { "type": "enum", "value": "topToBottom" }, "startColor": { "type": "color", "value": "#00000000" }, "endColor": { "type": "color", "value": "#CC000000" } }, "modifiers": [{ "type": "matchParentSize" }] }
+    },
+    {
+      "operationId": "insert-podcast-card-android-follow",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-android", "slot": "content" },
+      "afterNodeId": "podcast-card-android-gradient",
+      "node": { "id": "podcast-card-android-follow", "componentId": "m3/icon-button", "properties": { "alignment": { "type": "enum", "value": "topStart" }, "selected": { "type": "bool", "value": true }, "contentDescription": { "type": "string", "value": "Unfollow Android Developers Backstage" } } }
+    },
+    {
+      "operationId": "insert-podcast-card-android-follow-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-android-follow", "slot": "content" },
+      "node": { "id": "podcast-card-android-follow-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "checkCircle" }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-podcast-card-android-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-android", "slot": "content" },
+      "afterNodeId": "podcast-card-android-follow",
+      "node": { "id": "podcast-card-android-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Android Developers Backstage" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "color", "value": "#FFFFFFFF" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" }, "alignment": { "type": "enum", "value": "bottomStart" } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 12, "bottomDp": 16 }] }
+    },
+    {
+      "operationId": "insert-podcast-card-google",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-carousel", "slot": "items" },
+      "afterNodeId": "podcast-card-android",
+      "node": { "id": "podcast-card-google", "componentId": "m3/card", "properties": { "stableKey": { "type": "string", "value": "google-developers-podcast" }, "shape": { "type": "shapeToken", "value": "large" } }, "modifiers": [{ "type": "size", "widthDp": 128, "heightDp": 128 }, { "type": "clip", "shape": "large" }] }
+    },
+    {
+      "operationId": "insert-podcast-card-google-image",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-google", "slot": "content" },
+      "node": { "id": "podcast-card-google-image", "componentId": "asset/image", "properties": { "assetKey": { "type": "assetKey", "value": "jetcaster.cover.google-developers-podcast" }, "contentDescription": { "type": "string", "value": "Google Developers podcast cover" }, "contentScale": { "type": "enum", "value": "crop" } }, "modifiers": [{ "type": "matchParentSize" }] }
+    },
+    {
+      "operationId": "insert-podcast-card-google-gradient",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-google", "slot": "content" },
+      "afterNodeId": "podcast-card-google-image",
+      "node": { "id": "podcast-card-google-gradient", "componentId": "shape/linear-gradient", "properties": { "direction": { "type": "enum", "value": "topToBottom" }, "startColor": { "type": "color", "value": "#00000000" }, "endColor": { "type": "color", "value": "#CC000000" } }, "modifiers": [{ "type": "matchParentSize" }] }
+    },
+    {
+      "operationId": "insert-podcast-card-google-follow",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-google", "slot": "content" },
+      "afterNodeId": "podcast-card-google-gradient",
+      "node": { "id": "podcast-card-google-follow", "componentId": "m3/icon-button", "properties": { "alignment": { "type": "enum", "value": "topStart" }, "selected": { "type": "bool", "value": false }, "contentDescription": { "type": "string", "value": "Follow Google Developers podcast" } } }
+    },
+    {
+      "operationId": "insert-podcast-card-google-follow-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-google-follow", "slot": "content" },
+      "node": { "id": "podcast-card-google-follow-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "addCircle" }, "color": { "type": "colorToken", "value": "onSurface" } } }
+    },
+    {
+      "operationId": "insert-podcast-card-google-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "podcast-card-google", "slot": "content" },
+      "afterNodeId": "podcast-card-google-follow",
+      "node": { "id": "podcast-card-google-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Google Developers podcast" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "color", "value": "#FFFFFFFF" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" }, "alignment": { "type": "enum", "value": "bottomStart" } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 12, "bottomDp": 16 }] }
+    },
+    {
+      "operationId": "insert-main-episode-card",
+      "type": "insertNode",
+      "parent": { "nodeId": "discover-grid", "slot": "items" },
+      "afterNodeId": "podcast-carousel",
+      "node": { "id": "main-episode-card", "componentId": "m3/card", "properties": { "stableKey": { "type": "string", "value": "episode-140" }, "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "shape": { "type": "shapeToken", "value": "large" } }, "modifiers": [{ "type": "fillMaxWidth" }, { "type": "padding", "startDp": 16, "topDp": 8, "endDp": 16, "bottomDp": 8 }] }
+    },
+    {
+      "operationId": "insert-main-episode-column",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-card", "slot": "content" },
+      "node": { "id": "main-episode-column", "componentId": "layout/column", "properties": { "verticalSpacingDp": { "type": "float", "value": 8.0 } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 12, "endDp": 16, "bottomDp": 12 }] }
+    },
+    {
+      "operationId": "insert-main-episode-header",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-column", "slot": "children" },
+      "node": { "id": "main-episode-header", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "top" }, "horizontalSpacingDp": { "type": "float", "value": 16.0 } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-main-episode-copy",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-header", "slot": "children" },
+      "node": { "id": "main-episode-copy", "componentId": "layout/column", "properties": { "weight": { "type": "float", "value": 1.0 }, "verticalSpacingDp": { "type": "float", "value": 4.0 } } }
+    },
+    {
+      "operationId": "insert-main-episode-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-copy", "slot": "children" },
+      "node": { "id": "main-episode-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Episode 140: Lorem ipsum dolor" }, "style": { "type": "typographyToken", "value": "titleMedium" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
+    },
+    {
+      "operationId": "insert-main-episode-podcast",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-copy", "slot": "children" },
+      "afterNodeId": "main-episode-title",
+      "node": { "id": "main-episode-podcast", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Android Developers Backstage" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-main-episode-summary",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-copy", "slot": "children" },
+      "afterNodeId": "main-episode-podcast",
+      "node": { "id": "main-episode-summary", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
+    },
+    {
+      "operationId": "insert-main-episode-image",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-header", "slot": "children" },
+      "afterNodeId": "main-episode-copy",
+      "node": { "id": "main-episode-image", "componentId": "asset/image", "properties": { "assetKey": { "type": "assetKey", "value": "jetcaster.cover.android-developers-backstage" }, "contentDescription": { "type": "string", "value": "" }, "contentScale": { "type": "enum", "value": "crop" } }, "modifiers": [{ "type": "size", "widthDp": 56, "heightDp": 56 }, { "type": "clip", "shape": "medium" }] }
+    },
+    {
+      "operationId": "insert-main-episode-footer",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-column", "slot": "children" },
+      "afterNodeId": "main-episode-header",
+      "node": { "id": "main-episode-footer", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-main-episode-play",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-footer", "slot": "children" },
+      "node": { "id": "main-episode-play", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "Play episode" }, "sizeDp": { "type": "float", "value": 48.0 } } }
+    },
+    {
+      "operationId": "insert-main-episode-play-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-play", "slot": "content" },
+      "node": { "id": "main-episode-play-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "playCircle" }, "color": { "type": "colorToken", "value": "primary" }, "sizeDp": { "type": "float", "value": 36.0 } } }
+    },
+    {
+      "operationId": "insert-main-episode-meta",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-footer", "slot": "children" },
+      "afterNodeId": "main-episode-play",
+      "node": { "id": "main-episode-meta", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "May 16, 2024 · 42 min" }, "style": { "type": "typographyToken", "value": "bodySmall" }, "weight": { "type": "float", "value": 1.0 }, "maxLines": { "type": "int", "value": 1 } } }
+    },
+    {
+      "operationId": "insert-main-episode-queue",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-footer", "slot": "children" },
+      "afterNodeId": "main-episode-meta",
+      "node": { "id": "main-episode-queue", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "Add to queue" } } }
+    },
+    {
+      "operationId": "insert-main-episode-queue-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-queue", "slot": "content" },
+      "node": { "id": "main-episode-queue-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "playlistAdd" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-main-episode-more",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-footer", "slot": "children" },
+      "afterNodeId": "main-episode-queue",
+      "node": { "id": "main-episode-more", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "More options" } } }
+    },
+    {
+      "operationId": "insert-main-episode-more-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-episode-more", "slot": "content" },
+      "node": { "id": "main-episode-more-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "moreVert" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-floating-toolbar",
+      "type": "insertNode",
+      "parent": { "nodeId": "main-content", "slot": "children" },
+      "afterNodeId": "discover-grid",
+      "node": {
+        "id": "floating-toolbar",
+        "componentId": "m3/horizontal-floating-toolbar",
+        "properties": { "expanded": { "type": "bool", "value": true }, "alignment": { "type": "enum", "value": "bottomCenter" }, "containerColor": { "type": "colorToken", "value": "surfaceContainerHighest" } },
+        "modifiers": [{ "type": "padding", "startDp": 0, "topDp": 0, "endDp": 0, "bottomDp": 16 }]
+      }
+    },
+    {
+      "operationId": "insert-toolbar-library",
+      "type": "insertNode",
+      "parent": { "nodeId": "floating-toolbar", "slot": "content" },
+      "node": { "id": "toolbar-library", "componentId": "m3/button", "properties": { "style": { "type": "enum", "value": "text" }, "selected": { "type": "stateEquals", "variable": "selectedDestination", "value": "Library" } }, "eventBindings": { "click": [{ "type": "select", "variable": "selectedDestination", "value": "Library" }] } }
+    },
+    {
+      "operationId": "insert-toolbar-library-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "toolbar-library", "slot": "content" },
+      "node": { "id": "toolbar-library-row", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" }, "horizontalSpacingDp": { "type": "float", "value": 8.0 } } }
+    },
+    {
+      "operationId": "insert-toolbar-library-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "toolbar-library-row", "slot": "children" },
+      "node": { "id": "toolbar-library-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "videoLibrary" } } }
+    },
+    {
+      "operationId": "insert-toolbar-library-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "toolbar-library-row", "slot": "children" },
+      "afterNodeId": "toolbar-library-icon",
+      "node": { "id": "toolbar-library-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Library" }, "style": { "type": "typographyToken", "value": "labelLarge" } } }
+    },
+    {
+      "operationId": "insert-toolbar-discover",
+      "type": "insertNode",
+      "parent": { "nodeId": "floating-toolbar", "slot": "content" },
+      "afterNodeId": "toolbar-library",
+      "node": { "id": "toolbar-discover", "componentId": "m3/button", "properties": { "style": { "type": "enum", "value": "fab" }, "selected": { "type": "stateEquals", "variable": "selectedDestination", "value": "Discover" }, "containerColor": { "type": "colorToken", "value": "tertiary" } }, "eventBindings": { "click": [{ "type": "select", "variable": "selectedDestination", "value": "Discover" }] } }
+    },
+    {
+      "operationId": "insert-toolbar-discover-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "toolbar-discover", "slot": "content" },
+      "node": { "id": "toolbar-discover-row", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" }, "horizontalSpacingDp": { "type": "float", "value": 8.0 } } }
+    },
+    {
+      "operationId": "insert-toolbar-discover-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "toolbar-discover-row", "slot": "children" },
+      "node": { "id": "toolbar-discover-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "genres" }, "color": { "type": "colorToken", "value": "onTertiary" } } }
+    },
+    {
+      "operationId": "insert-toolbar-discover-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "toolbar-discover-row", "slot": "children" },
+      "afterNodeId": "toolbar-discover-icon",
+      "node": { "id": "toolbar-discover-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Discover" }, "style": { "type": "typographyToken", "value": "labelLarge" }, "color": { "type": "colorToken", "value": "onTertiary" } } }
+    },
+    {
+      "operationId": "insert-detail-scaffold",
+      "type": "insertNode",
+      "parent": { "nodeId": "pane-scaffold", "slot": "supportingPane" },
+      "node": { "id": "detail-scaffold", "componentId": "layout/scaffold", "properties": { "containerColor": { "type": "colorToken", "value": "surface" }, "scrollStateKey": { "type": "string", "value": "podcast-detail-scroll" } }, "modifiers": [{ "type": "fillMaxSize" }] }
+    },
+    {
+      "operationId": "insert-detail-top-bar",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-scaffold", "slot": "topBar" },
+      "node": { "id": "detail-top-bar", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" } }, "modifiers": [{ "type": "fillMaxWidth" }, { "type": "padding", "startDp": 24, "topDp": 16, "endDp": 16, "bottomDp": 8 }] }
+    },
+    {
+      "operationId": "insert-detail-top-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-top-bar", "slot": "children" },
+      "node": { "id": "detail-top-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Podcast details" }, "style": { "type": "typographyToken", "value": "titleLarge" }, "weight": { "type": "float", "value": 1.0 } } }
+    },
+    {
+      "operationId": "insert-detail-more",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-top-bar", "slot": "children" },
+      "afterNodeId": "detail-top-title",
+      "node": { "id": "detail-more", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "Podcast options" } } }
+    },
+    {
+      "operationId": "insert-detail-more-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-more", "slot": "content" },
+      "node": { "id": "detail-more-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "moreVert" } } }
+    },
+    {
+      "operationId": "insert-detail-list",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-scaffold", "slot": "content" },
+      "node": { "id": "detail-list", "componentId": "layout/lazy-column", "properties": { "scrollStateKey": { "type": "string", "value": "podcast-detail-scroll" }, "contentPadding": { "type": "padding", "startDp": 24, "topDp": 8, "endDp": 24, "bottomDp": 24 }, "verticalSpacingDp": { "type": "float", "value": 16.0 } }, "modifiers": [{ "type": "fillMaxSize" }] }
+    },
+    {
+      "operationId": "insert-detail-hero",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-list", "slot": "items" },
+      "node": { "id": "detail-hero", "componentId": "m3/card", "properties": { "stableKey": { "type": "string", "value": "android-developers-backstage-header" }, "containerColor": { "type": "colorToken", "value": "surfaceContainerLow" }, "shape": { "type": "shapeToken", "value": "large" } } }
+    },
+    {
+      "operationId": "insert-detail-hero-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-hero", "slot": "content" },
+      "node": { "id": "detail-hero-row", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" }, "horizontalSpacingDp": { "type": "float", "value": 20.0 } }, "modifiers": [{ "type": "padding", "startDp": 20, "topDp": 20, "endDp": 20, "bottomDp": 20 }] }
+    },
+    {
+      "operationId": "insert-detail-artwork",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-hero-row", "slot": "children" },
+      "node": { "id": "detail-artwork", "componentId": "asset/image", "properties": { "assetKey": { "type": "assetKey", "value": "jetcaster.cover.android-developers-backstage" }, "contentDescription": { "type": "string", "value": "Android Developers Backstage cover" }, "contentScale": { "type": "enum", "value": "crop" } }, "modifiers": [{ "type": "size", "widthDp": 152, "heightDp": 152 }, { "type": "clip", "shape": "large" }] }
+    },
+    {
+      "operationId": "insert-detail-hero-copy",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-hero-row", "slot": "children" },
+      "afterNodeId": "detail-artwork",
+      "node": { "id": "detail-hero-copy", "componentId": "layout/column", "properties": { "weight": { "type": "float", "value": 1.0 }, "verticalSpacingDp": { "type": "float", "value": 8.0 } } }
+    },
+    {
+      "operationId": "insert-detail-podcast-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-hero-copy", "slot": "children" },
+      "node": { "id": "detail-podcast-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Android Developers Backstage" }, "style": { "type": "typographyToken", "value": "headlineSmall" }, "maxLines": { "type": "int", "value": 3 } } }
+    },
+    {
+      "operationId": "insert-detail-author",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-hero-copy", "slot": "children" },
+      "afterNodeId": "detail-podcast-title",
+      "node": { "id": "detail-author", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Android Developers" }, "style": { "type": "typographyToken", "value": "bodyLarge" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-detail-follow",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-hero-copy", "slot": "children" },
+      "afterNodeId": "detail-author",
+      "node": { "id": "detail-follow", "componentId": "m3/button", "properties": { "style": { "type": "enum", "value": "filledTonal" }, "selected": { "type": "bool", "value": true } } }
+    },
+    {
+      "operationId": "insert-detail-follow-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-follow", "slot": "content" },
+      "node": { "id": "detail-follow-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Following" }, "style": { "type": "typographyToken", "value": "labelLarge" } } }
+    },
+    {
+      "operationId": "insert-detail-description",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-list", "slot": "items" },
+      "afterNodeId": "detail-hero",
+      "node": { "id": "detail-description", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "An official podcast from the Android team, featuring conversations about the latest platform, tools, libraries, and people behind Android development." }, "style": { "type": "typographyToken", "value": "bodyLarge" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-detail-metadata",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-list", "slot": "items" },
+      "afterNodeId": "detail-description",
+      "node": { "id": "detail-metadata", "componentId": "layout/row", "properties": { "horizontalSpacingDp": { "type": "float", "value": 8.0 } } }
+    },
+    {
+      "operationId": "insert-detail-category-chip",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-metadata", "slot": "children" },
+      "node": { "id": "detail-category-chip", "componentId": "m3/filter-chip", "properties": { "selected": { "type": "bool", "value": false }, "enabled": { "type": "bool", "value": false } } }
+    },
+    {
+      "operationId": "insert-detail-category-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-category-chip", "slot": "label" },
+      "node": { "id": "detail-category-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Technology" }, "style": { "type": "typographyToken", "value": "labelLarge" } } }
+    },
+    {
+      "operationId": "insert-detail-divider",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-list", "slot": "items" },
+      "afterNodeId": "detail-metadata",
+      "node": { "id": "detail-divider", "componentId": "m3/horizontal-divider", "properties": { "color": { "type": "colorToken", "value": "outlineVariant" } } }
+    },
+    {
+      "operationId": "insert-detail-episodes-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-list", "slot": "items" },
+      "afterNodeId": "detail-divider",
+      "node": { "id": "detail-episodes-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Latest episodes" }, "style": { "type": "typographyToken", "value": "titleLarge" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-140",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-list", "slot": "items" },
+      "afterNodeId": "detail-episodes-title",
+      "node": { "id": "detail-episode-140", "componentId": "m3/card", "properties": { "stableKey": { "type": "string", "value": "episode-140-detail" }, "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "shape": { "type": "shapeToken", "value": "large" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-detail-episode-140-column",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140", "slot": "content" },
+      "node": { "id": "detail-episode-140-column", "componentId": "layout/column", "properties": { "verticalSpacingDp": { "type": "float", "value": 8.0 } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 16, "endDp": 16, "bottomDp": 12 }] }
+    },
+    {
+      "operationId": "insert-detail-episode-140-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-column", "slot": "children" },
+      "node": { "id": "detail-episode-140-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Episode 140: Lorem ipsum dolor" }, "style": { "type": "typographyToken", "value": "titleMedium" }, "maxLines": { "type": "int", "value": 2 } } }
+    },
+    {
+      "operationId": "insert-detail-episode-140-summary",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-column", "slot": "children" },
+      "afterNodeId": "detail-episode-140-title",
+      "node": { "id": "detail-episode-140-summary", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Romain, Chet and Tor talk with the System UI team about Bubbles." }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-140-footer",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-column", "slot": "children" },
+      "afterNodeId": "detail-episode-140-summary",
+      "node": { "id": "detail-episode-140-footer", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-detail-episode-140-play",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-footer", "slot": "children" },
+      "node": { "id": "detail-episode-140-play", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "Play Episode 140" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-140-play-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-play", "slot": "content" },
+      "node": { "id": "detail-episode-140-play-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "playCircle" }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-140-meta",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-footer", "slot": "children" },
+      "afterNodeId": "detail-episode-140-play",
+      "node": { "id": "detail-episode-140-meta", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "May 16, 2024 · 42 min" }, "style": { "type": "typographyToken", "value": "bodySmall" }, "weight": { "type": "float", "value": 1.0 } } }
+    },
+    {
+      "operationId": "insert-detail-episode-140-queue",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-footer", "slot": "children" },
+      "afterNodeId": "detail-episode-140-meta",
+      "node": { "id": "detail-episode-140-queue", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "Add Episode 140 to queue" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-140-queue-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-140-queue", "slot": "content" },
+      "node": { "id": "detail-episode-140-queue-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "playlistAdd" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-139",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-list", "slot": "items" },
+      "afterNodeId": "detail-episode-140",
+      "node": { "id": "detail-episode-139", "componentId": "m3/card", "properties": { "stableKey": { "type": "string", "value": "episode-139-detail" }, "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "shape": { "type": "shapeToken", "value": "large" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-detail-episode-139-column",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139", "slot": "content" },
+      "node": { "id": "detail-episode-139-column", "componentId": "layout/column", "properties": { "verticalSpacingDp": { "type": "float", "value": 8.0 } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 16, "endDp": 16, "bottomDp": 12 }] }
+    },
+    {
+      "operationId": "insert-detail-episode-139-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-column", "slot": "children" },
+      "node": { "id": "detail-episode-139-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Episode 139: Compose across screens" }, "style": { "type": "typographyToken", "value": "titleMedium" }, "maxLines": { "type": "int", "value": 2 } } }
+    },
+    {
+      "operationId": "insert-detail-episode-139-summary",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-column", "slot": "children" },
+      "afterNodeId": "detail-episode-139-title",
+      "node": { "id": "detail-episode-139-summary", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "A conversation about adaptive layouts, large screens, and practical Compose architecture." }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-139-footer",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-column", "slot": "children" },
+      "afterNodeId": "detail-episode-139-summary",
+      "node": { "id": "detail-episode-139-footer", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-detail-episode-139-play",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-footer", "slot": "children" },
+      "node": { "id": "detail-episode-139-play", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "Play Episode 139" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-139-play-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-play", "slot": "content" },
+      "node": { "id": "detail-episode-139-play-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "playCircle" }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-139-meta",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-footer", "slot": "children" },
+      "afterNodeId": "detail-episode-139-play",
+      "node": { "id": "detail-episode-139-meta", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "May 9, 2024 · 38 min" }, "style": { "type": "typographyToken", "value": "bodySmall" }, "weight": { "type": "float", "value": 1.0 } } }
+    },
+    {
+      "operationId": "insert-detail-episode-139-queue",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-footer", "slot": "children" },
+      "afterNodeId": "detail-episode-139-meta",
+      "node": { "id": "detail-episode-139-queue", "componentId": "m3/icon-button", "properties": { "contentDescription": { "type": "string", "value": "Add Episode 139 to queue" } } }
+    },
+    {
+      "operationId": "insert-detail-episode-139-queue-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "detail-episode-139-queue", "slot": "content" },
+      "node": { "id": "detail-episode-139-queue-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "playlistAdd" } } }
+    }
+  ]
+}

@@ -6,7 +6,10 @@
 
 **Initial catalog:** `m3-catalog` / the native `compose-m3` catalog
 
-**First benchmark:** Confetti compact Schedule screen at `997afd9645ab614d3bfccec15a886820c9e2dd08`
+**Primary benchmark:** Jetcaster Discover with a selected supporting pane at
+`018c5207fb63c4f78e5841bd8ddd4faabdf19d3a`
+
+**Baseline regression:** Confetti compact Schedule at `997afd9645ab614d3bfccec15a886820c9e2dd08`
 
 ## 1. Summary
 
@@ -79,12 +82,30 @@ A successful first release lets a user:
   interaction state. The current native catalog already falls back instead of falsely rendering
   those variants.
 
-## 4. The first real-screen benchmark
+## 4. Real-screen benchmarks
 
-The release benchmark is the compact/mobile Schedule screen from
+### Primary release benchmark: Jetcaster Discover
+
+The release benchmark is Jetcaster's Discover home with a selected podcast visible in its
+supporting pane at expanded width. Jetcaster is an advanced, official Jetpack Compose sample. Its
+real hierarchy includes an outer adaptive `SupportingPaneScaffold`, an inner Material 3 `Scaffold`,
+search chrome, an adaptive grid, filter chips, image-backed carousel cards, episode content, a
+floating toolbar, and an independently scrolling detail pane.
+
+The exact pinned source, fixed `1280 x 800dp` scene, semantic hierarchy, deterministic asset rules,
+catalog gap, and operation-replay acceptance test are specified in
+[UI_BUILDER_JETCASTER_BENCHMARK.md](UI_BUILDER_JETCASTER_BENCHMARK.md).
+
+This target is intentionally difficult. It proves that the product represents scaffold slots,
+adaptive constraints, repeated content, overlays, clipping, images, and multiple scroll regions;
+matching it with a benchmark-only component or flattened bitmap does not pass.
+
+### Baseline regression: Confetti Schedule
+
+The compact/mobile Schedule screen from
 [Confetti](https://github.com/joreilly/Confetti/tree/997afd9645ab614d3bfccec15a886820c9e2dd08),
 an Apache-2.0 Compose Multiplatform conference application whose shared module declares a Wasm
-browser target and uses Material 3.
+browser target and uses Material 3, remains the fast baseline regression.
 
 Pin all benchmark inputs to commit `997afd9645ab614d3bfccec15a886820c9e2dd08`:
 
@@ -124,8 +145,7 @@ bar, filter row, tab row, pager/list, sticky time headers, list items, surfaces,
 text, badges, selected state, weight, padding, clipping, and scrolling. It therefore exercises
 scaffolds, containers, and leaves and exposes whether the builder encodes real Compose layout.
 
-The benchmark fixture must retain Confetti attribution and the Apache-2.0 notice. Its use must not
-imply endorsement.
+The benchmark fixtures must retain their Apache-2.0 attribution and must not imply endorsement.
 
 ## 5. User experience
 
@@ -204,14 +224,18 @@ component renders, and `/render/<id>.slots` already normalizes semantics-discove
 enough by itself. The published capability supplies the static constraints needed before a drop,
 for validation, for MCP discovery, and for source generation.
 
-The initial native adapter must expand beyond the prototype's small pipeline-test set. The Confetti
-benchmark determines the exact first inventory, expected to include:
+The initial native adapter must expand beyond the prototype's small pipeline-test set. Confetti
+determines the baseline inventory, expected to include:
 
 - `Scaffold` and `CenterAlignedTopAppBar` templates with named slots;
 - `Column`, `Row`, `Box`, lazy list/row, pager, and flow/ordered containers;
 - `FilterChip`, tab row/tab/indicator, `ListItem`, `Surface`, divider, icon, text, spacer, and badge;
 - schedule-specific semantic templates only where they remain compositions of reusable catalog
   primitives and export as recognizable Compose, not opaque painted widgets.
+
+Jetcaster then adds the release-gate inventory: adaptive supporting panes, search/input chrome,
+adaptive grids and full-span items, carousels, deterministic image assets, gradient/overlay
+composition, floating toolbars, and independent scroll regions.
 
 Unknown or non-Wasm catalog entries fail visibly as unsupported. They must never be silently
 substituted with an inaccurate native component.
@@ -476,13 +500,13 @@ revision while a browser remains connected.
 - Semantic tree with insert, move, duplicate, delete, undo, and redo.
 - Clean Compose/Wasm canvas plus non-layout-affecting overlay.
 - Named slot and ordered container drops with preflight validation.
-- Typed properties and the modifier subset required by the Confetti benchmark.
+- Typed properties and the modifier subset required by the Jetcaster benchmark.
 - Declarative state/event actions required by filters, tabs, paging, and bookmark selection.
 - Light/dark, locale, font scale, density, and viewport environment.
 - Multiple connected browsers and MCP concurrently editing one design.
 - Restart-safe persistence and revision history.
 - Revision-pinned PNG/inspection, SVG, and Compose exports.
-- Confetti benchmark assembled through supported builder operations, not injected as handwritten
+- Jetcaster benchmark assembled through supported builder operations, not injected as handwritten
   source or a special-case bitmap.
 
 ### P1: hardening and breadth
@@ -501,7 +525,7 @@ revision while a browser remains connected.
 
 - Clean preview contains zero selection, handle, insertion, slot, cursor, or drag chrome.
 - Toggling editor overlay does not change any measured design-node bound or semantic node.
-- At the fixed Confetti environment, the developer-authored Confetti Wasm golden, builder render,
+- At each fixed benchmark environment, the independently authored Wasm golden, builder render,
   and generated-Compose Wasm render
   have identical dimensions and zero differing pixels. If a platform forces nondeterministic text
   antialiasing, the documented fallback is at least `99.5%` of pixels within RGBA delta `2`, with no
@@ -538,7 +562,7 @@ revision while a browser remains connected.
 
 - Same revision produces byte-for-byte deterministic formatted source.
 - No unresolved catalog id is emitted; unsupported nodes yield diagnostics.
-- The Confetti benchmark compiles and renders in the pinned CMP/Wasm fixture.
+- The Jetcaster benchmark compiles and renders in the pinned CMP/Wasm fixture.
 - Other allowed incomplete cases contain explicit, located TODOs only for app callbacks/models and
   never hide a rasterized screen.
 
@@ -563,14 +587,14 @@ Run four time-boxed spikes in parallel:
 
 | Spike | Output | Stop/go gate |
 | --- | --- | --- |
-| Confetti decomposition and golden | Exact components, props, slots, modifiers, state/actions, gap list, and a pinned developer-authored Wasm raster plus bounds/baselines | Screen is expressible without opaque fake components and has a valid same-engine oracle |
+| Jetcaster decomposition and golden | Exact components, props, slots, modifiers, state/actions, asset manifest, responsive gap list, and a pinned developer-authored Wasm raster plus bounds/baselines | The expanded two-pane screen is expressible without opaque fake components and has a valid same-engine oracle |
 | Composite SVG and execution bridge | Nested text/image/clip/elevation export imported/rasterized by Figma, plus proof a saved revision exports without an open editor | Editable vector strategy, runtime bridge, placement, and fallback policy meet the SVG gate |
 | Collaboration reducer | Two browser-shaped clients plus an MCP-shaped caller edit, retry, undo/redo, disconnect, and converge | Operation, compensation, retention, idempotency, and recovery rules are deterministic |
 | Catalog capability and runtime pinning | Capability records and Wasm adapters for scaffold/container/leaf examples; version-retention/compatibility proof | Static validation, specific slot traits, props, state/actions, code metadata, and old-design reopening work end to end |
 
 **Gate 0:** accept the v1 design schema and command RFC, the catalog capability shape, the SVG
 strategy/execution bridge, executable catalog-retention policy, developer-authored Wasm golden, and
-complete Confetti gap list. Do not scale editor implementation before this gate.
+complete Jetcaster gap list. Do not scale editor implementation before this gate.
 
 ### Wave 1: foundations against shared fixtures
 
@@ -599,26 +623,26 @@ Continue in parallel, integrating through the Gate 1 API:
 | Persistence/collaboration | Durable append/snapshot store, recovery/compaction, fanout, reconnect, conflicts, presence, ACLs, design-write grant capability |
 | Editor | Catalog search, canvas/layers selection, drag/insertion overlay, slot targets, inspector, keyboard operations, undo/redo UI |
 | MCP adapter | Auth plus resources/tools over the Design API, batch operations, revision subscription/polling |
-| Catalog coverage | Every scaffold/container/leaf capability required by the Confetti gap list |
+| Catalog coverage | Every scaffold/container/leaf capability required by the Jetcaster gap list |
 | Exports | Download endpoints, provenance, compile harness, automated Figma import/raster check or documented reproducible import harness |
 | Visual harness | Fixed fonts/assets/time/environment and browser/server/generated-code comparison |
 
 **Gate 2:** browser A and MCP edit the same persisted design while browser B observes; restart and
-reconnect preserve it; the full Confetti screen is assembled only through public builder operations;
+reconnect preserve it; the full Jetcaster screen is assembled only through public builder operations;
 both exports are produced from the committed revision.
 
 ### Wave 3: fidelity and product hardening
 
 Parallel finishing work:
 
-- tune Confetti geometry, typography, tokens, data, interaction, and responsive behaviour;
+- tune Jetcaster geometry, typography, tokens, data, assets, interaction, and responsive behaviour;
 - complete SVG structure/fallback fixes and generated-code diagnostics;
 - add schema/catalog migrations, explicit catalog upgrade, export history, and audit trail;
 - add accessibility, keyboard editing, error recovery, quotas, rate limits, backpressure, metrics,
   backup/restore, and concurrency/security soak tests; and
 - update the visual harness and add viewable before/after evidence for every UI-affecting change.
 
-**Release gate:** every requirement in section 14 passes, including Figma import, compiled Confetti
+**Release gate:** every requirement in section 14 passes, including Figma import, compiled Jetcaster
 source, multi-client/MCP convergence, restart recovery, and authorization isolation.
 
 ### Dependency map
@@ -630,13 +654,13 @@ Wave 0 schema/capability/SVG decisions
   ├── catalog ────┼── Wasm renderer/editor ──────────────────────────┤
   │               ├── code generator ────────────────────────────────┤
   └── SVG choice ─┴── render-host exporter ──────────────────────────┤
-                                                                  Confetti gate
+                                                                 Jetcaster gate
   shared fixtures/quality harness ───────────────────────────────────┘
 ```
 
 Contracts, catalog, editor, exporters, and quality can advance concurrently against checked-in
 fixtures. Persistence and MCP begin against the reducer API without waiting for visual polish.
-Confetti-specific capability filling can proceed while the generic editor is built, but the final
+Jetcaster-specific capability filling can proceed while the generic editor is built, but the final
 benchmark cannot close until all lanes integrate.
 
 ## 16. Risks and explicit decision points
@@ -662,7 +686,7 @@ Decisions intentionally left for Wave 0 evidence:
 3. exact stable child-position key, stale-command resolution, and compensating undo rules;
 4. file-backed single-process store format versus a transactional database for the first public
    deployment; and
-5. which Confetti containers are generic primitives versus reusable semantic catalog templates.
+5. which Jetcaster containers are generic primitives versus reusable semantic catalog templates.
 
 ## 17. Repository placement
 
@@ -721,7 +745,8 @@ and `checkRenderHostIsServerFree` remain positive resolved-classpath gates.
 ## 18. Definition of done
 
 The product is not done when components can be dragged into a list. It is done when the pinned
-Confetti Schedule screen can be recreated through the public visual/MCP operations as a semantic
-Compose tree; a clean Compose/Wasm render matches the developer-authored fixture; two people and an
-agent can safely edit and recover that persisted design; Figma imports its revision-pinned SVG; and
+Jetcaster Discover supporting-pane state can be recreated through the public visual/MCP operations
+as a semantic Compose tree; a clean Compose/Wasm render matches the developer-authored fixture; two
+people and an agent can safely edit and recover that persisted design; Figma imports its
+revision-pinned SVG; and
 the exported Kotlin compiles for the golden screen while remaining recognizable, editable Compose.

@@ -4,12 +4,16 @@
 
 **Parent specification:** [UI_BUILDER_PRODUCT_SPEC.md](UI_BUILDER_PRODUCT_SPEC.md)
 
-**Benchmark:** Confetti compact Schedule screen, pinned to
+**Baseline benchmark:** Confetti compact Schedule screen, pinned to
 [`joreilly/Confetti@997afd9645ab614d3bfccec15a886820c9e2dd08`](https://github.com/joreilly/Confetti/tree/997afd9645ab614d3bfccec15a886820c9e2dd08)
+
+**Primary benchmark:** Jetcaster Discover supporting-pane state, specified in
+[UI_BUILDER_JETCASTER_BENCHMARK.md](UI_BUILDER_JETCASTER_BENCHMARK.md)
 
 ## 1. Purpose
 
-This record turns Wave 0's first research pass into implementation inputs. It answers four
+This record preserves the completed compact baseline research. The Jetcaster benchmark now owns
+the primary release gap and acceptance criteria. This record answers four
 questions against the code that exists now:
 
 1. What can the compiled native M3 catalog actually author?
@@ -18,8 +22,9 @@ questions against the code that exists now:
 4. What is the smallest document/operation/state contract that can express that screen for both a
    Wasm editor and an MCP client?
 
-It does not close Wave 0. The same-engine Confetti Wasm golden, composite SVG execution bridge,
-catalog-runtime retention proof, and reducer prototype remain empirical gates.
+It does not close Wave 0. Confetti now supplies the fast reducer/native-render regression; the
+same-engine Jetcaster Wasm golden, composite SVG execution bridge, catalog-runtime retention proof,
+and reducer prototype remain empirical gates.
 
 ## 2. Existing native catalog inventory
 
@@ -401,7 +406,10 @@ supported text/groups, declares every raster fallback, and rasterizes within the
 
 ## 10. Remaining Wave 0 outputs
 
-- [ ] Capture the pinned developer-authored Confetti Wasm golden, plus bounds/baselines/semantics.
+- [ ] Build and freeze the separately compiled Jetcaster Wasm reference, plus
+      bounds/baselines/semantics and source/data/asset provenance.
+- [ ] Correct the Confetti baseline fixture to the pinned source data before retaining it as the
+      compact regression.
 - [ ] Implement the pure reducer prototype and model tests for concurrency and compensation.
 - [ ] Implement capability fixtures for the first vertical slice and prove static/native/codegen
       conformance.
@@ -412,14 +420,20 @@ supported text/groups, declares every raster fallback, and rasterizes within the
 
 ## 11. Operation-replay visual test
 
-The first executable vertical slice now lives behind the isolated `:ui-builder` module. Its JVM
-test consumes `confetti-schedule-operations-v1.json` directly and proves that the Kotlin and
-JavaScript reducers produce the same canonical document hash. The module's standalone Wasm fixture
-then renders that reduced document and an independently authored compact Confetti Schedule.
-`preview-harness/ui-builder.spec.mjs` performs a zero-tolerance same-browser PNG pixel diff at
-411×914 and retains the developer-authored reference as a committed golden. The cross-platform
-golden comparison separately permits at most 2% raster drift because Chromium/Skia text and icon
-edges differ between macOS and Linux; it does not weaken the exact operations-vs-oracle assertion.
+The first executable pipeline slice lives behind the isolated `:ui-builder` module. Its JVM test
+consumes `confetti-schedule-operations-v1.json` directly and proves that the Kotlin and JavaScript
+reducers produce the same canonical document hash. The module's standalone Wasm fixture renders
+that reduced document and a separately handwritten compact schedule.
+`preview-harness/ui-builder.spec.mjs` performs a zero-tolerance same-browser PNG differential at
+411×914 and retains that second rendering as a committed golden. The cross-platform golden
+comparison separately permits at most 2% raster drift because Chromium/Skia text and icon edges
+differ between macOS and Linux.
+
+This is useful pipeline coverage, but it is not yet an upstream fidelity oracle: both renderings
+live in the same module and reproduce nearby values by hand. It must not be described as proof that
+the builder matches pinned Confetti. Jetcaster closes that hole with the independently built,
+provenance-locked reference required by
+[UI_BUILDER_JETCASTER_BENCHMARK.md](UI_BUILDER_JETCASTER_BENCHMARK.md).
 The fixture contains a real Scaffold and
 app bar, five track filters, two day tabs, a bounded lazy schedule, sticky-style time headers, talk
 and lightning rows, dividers, bookmark/icon states, and a shaped break surface. It does not yet
@@ -448,7 +462,7 @@ Three layers fail independently:
    ordering, idempotency, state binding, slot, and undo errors.
 2. **Wasm PNG golden:** open the resulting committed revision in clean mode at the pinned runtime,
    wait for fonts and the explicit ready signal, capture `411 x 914`, and compare it to the
-   developer-authored Confetti Wasm golden. Editor chrome is enabled in a sibling capture to assert
+   separately compiled Jetcaster Wasm golden. Editor chrome is enabled in a sibling capture to assert
    that all design-node bounds and clean pixels remain unchanged when it is toggled off.
 3. **SVG golden:** request SVG for that same immutable revision, verify provenance/viewBox/no
    external URLs/no editor nodes, rasterize with the pinned tool, and compare to the clean Wasm PNG.
@@ -461,7 +475,7 @@ HTTP replay. No MCP-only mutation or renderer path is allowed.
 
 Golden provenance records:
 
-- Confetti repo and commit;
+- benchmark repo and commit;
 - fixture source function and mock-data symbol;
 - viewport, density, locale, font scale, theme, scroll/page state, and browser/runtime versions;
 - fonts/assets with hashes;
@@ -505,7 +519,7 @@ Split only after:
 - the builder can build/test without this source tree and without project substitution;
 - its storage lifecycle and migrations are independently operable;
 - a version skew matrix is green for supported builder/server versions; and
-- the same Confetti operation sequence produces the accepted visual products across the released
+- the same Jetcaster operation sequence produces the accepted visual products across the released
   boundary.
 
 ## 13. Recommended first implementation sequence
