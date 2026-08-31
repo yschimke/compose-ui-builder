@@ -31,15 +31,7 @@ class StructuredSvgExportBridgeTest {
   }
 
   @Test
-  fun `JVM Skia bridge retains Jetcaster catalog icons as paths`() {
-    val verified =
-      catalog.asVectorVerified().withComponentSvg("asset/image") { svg ->
-        svg.copy(
-          status = "raster-fallback-required",
-          fallback = "embedded-raster",
-          blocksExport = false,
-        )
-      }
+  fun `checked in Jetcaster catalog exports the full document with catalog icons as paths`() {
     val job = document.job(StructuredSvgRecorderKind.JVM_SKIA_SVG_CANVAS)
     val firstRaw = JvmSkiaStructuredSvgRecorder.record(document)
     val secondRaw = JvmSkiaStructuredSvgRecorder.record(document)
@@ -50,7 +42,7 @@ class StructuredSvgExportBridgeTest {
     assertTrue(firstRaw.rasterRecords.isEmpty())
     assertFalse(Regex("(?:href|src)=\"https?://").containsMatchIn(firstRaw.svg))
 
-    val result = executeSavedDocumentSvgExport(job, verified, JvmSkiaStructuredSvgRecorder)
+    val result = executeSavedDocumentSvgExport(job, catalog, JvmSkiaStructuredSvgRecorder)
     val exported = assertIs<SavedDocumentSvgExportResult.Ok>(result)
     val declaredAssets =
       document.nodes.values.filter { it.componentId == "asset/image" }.map { it.id }.sorted()
@@ -79,10 +71,7 @@ class StructuredSvgExportBridgeTest {
         roots = listOf(icon.id),
         nodes = mapOf(icon.id to icon),
       )
-    val iconCatalog =
-      catalog
-        .copy(components = listOf(catalog.componentsById.getValue("m3/icon")))
-        .asVectorVerified()
+    val iconCatalog = catalog.copy(components = listOf(catalog.componentsById.getValue("m3/icon")))
 
     val result =
       assertIs<SavedDocumentSvgExportResult.Ok>(

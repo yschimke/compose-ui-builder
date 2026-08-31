@@ -14,6 +14,7 @@
       "unsupported": "No verified Wasm execution path exists; documents may retain the node but clean render and export must fail visibly."
     },
     "svgStatus": {
+      "verified": "Proved for this frozen benchmark's authored usage through the pinned same-runtime JVM Skia recorder; this does not verify unused variants or other environments.",
       "unverified": "The composite SVG spike has not proved this dynamic component; export remains gated.",
       "raster-fallback-required": "The component may export only as a named embedded raster fallback.",
       "unsupported": "No honest SVG or declared fallback exists; export must fail."
@@ -35,7 +36,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Requires the pinned, hash-checked builder asset registry and deterministic loading state." },
       "code": { "symbol": "Image", "imports": ["androidx.compose.foundation.Image", "androidx.compose.ui.layout.ContentScale"] },
-      "svg": { "status": "raster-fallback-required", "fallback": "embedded-raster", "blocksExport": false, "notes": "Embed the exact pinned asset bytes; external URLs are forbidden." }
+      "svg": { "status": "raster-fallback-required", "fallback": "embedded-raster", "blocksExport": false, "notes": "The current recorder embeds deterministic generated placeholder bytes with source and payload provenance; production asset bytes remain a release gate and external URLs are forbidden." }
     },
     {
       "componentId": "layout/box",
@@ -52,7 +53,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "Box", "imports": ["androidx.compose.foundation.layout.Box"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "layout/column",
@@ -71,7 +72,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Column", "imports": ["androidx.compose.foundation.layout.Column"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "layout/horizontal-carousel",
@@ -92,7 +93,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 carousel API; masking and stable item keys require conformance tests." },
       "code": { "symbol": "HorizontalUncontainedCarousel", "imports": ["androidx.compose.material3.carousel.HorizontalUncontainedCarousel", "androidx.compose.material3.carousel.rememberCarouselState"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Only the pinned settled viewport is exported; off-screen items are not flattened into view." }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "Verified only for the pinned settled viewport; off-screen items are not flattened into view." }
     },
     {
       "componentId": "layout/lazy-column",
@@ -111,7 +112,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Independent pane scroll requires distinct stable scrollStateKey values." },
       "code": { "symbol": "LazyColumn", "imports": ["androidx.compose.foundation.lazy.LazyColumn"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "layout/lazy-grid",
@@ -132,7 +133,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must prove adaptive 362dp cells and full-span rows at the pinned viewport." },
       "code": { "symbol": "LazyVerticalGrid", "imports": ["androidx.compose.foundation.lazy.grid.GridCells", "androidx.compose.foundation.lazy.grid.GridItemSpan", "androidx.compose.foundation.lazy.grid.LazyVerticalGrid"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "layout/lazy-row",
@@ -152,7 +153,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "LazyRow", "imports": ["androidx.compose.foundation.lazy.LazyRow"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "layout/row",
@@ -170,7 +171,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Row", "imports": ["androidx.compose.foundation.layout.Row"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "layout/scaffold",
@@ -191,7 +192,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Scaffold", "imports": ["androidx.compose.material3.Scaffold"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "layout/supporting-pane-scaffold",
@@ -213,7 +214,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "padding"],
       "wasm": { "platformSupported": "unverified", "adapterStatus": "unsupported", "notes": "The repository has no Material 3 adaptive dependency or verified Wasm adapter yet; this blocks the expanded benchmark." },
       "code": { "symbol": "SupportingPaneScaffold", "imports": ["androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"] },
-      "svg": { "status": "unsupported", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "Verified for the deterministic expanded two-pane adapter used by this frozen benchmark, not the unavailable general adaptive Material API." }
     },
     {
       "componentId": "m3/button",
@@ -234,7 +235,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "Button", "imports": ["androidx.compose.material3.Button", "androidx.compose.material3.OutlinedButton", "androidx.compose.material3.TextButton"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/card",
@@ -255,7 +256,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding", "clip"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Material card previews exist, but the builder adapter must expose arbitrary semantic content." },
       "code": { "symbol": "Card", "imports": ["androidx.compose.material3.Card", "androidx.compose.material3.ElevatedCard", "androidx.compose.material3.OutlinedCard"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/filter-chip",
@@ -275,7 +276,7 @@
       "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "FilterChip", "imports": ["androidx.compose.material3.FilterChip"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/horizontal-divider",
@@ -290,7 +291,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "HorizontalDivider", "imports": ["androidx.compose.material3.HorizontalDivider"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/horizontal-floating-toolbar",
@@ -309,7 +310,7 @@
       "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 API and selected-button appearance require pinned-version tests." },
       "code": { "symbol": "HorizontalFloatingToolbar", "imports": ["androidx.compose.material3.HorizontalFloatingToolbar"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/icon",
@@ -326,7 +327,7 @@
       "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Only explicitly registered, license-compatible vector keys are valid." },
       "code": { "symbol": "Icon", "imports": ["androidx.compose.material3.Icon"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "Icon paths are selected by the authored iconKey and emitted without Skia tint-filter rasterization." }
     },
     {
       "componentId": "m3/icon-button",
@@ -348,7 +349,7 @@
       "modifierCapabilities": ["size", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "IconButton", "imports": ["androidx.compose.material3.FilledIconButton", "androidx.compose.material3.IconButton"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/search-bar",
@@ -367,7 +368,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 API; the fixed benchmark keeps expanded false." },
       "code": { "symbol": "SearchBar", "imports": ["androidx.compose.material3.SearchBar"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/search-input-field",
@@ -389,7 +390,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Maps to the experimental SearchBarDefaults.InputField API." },
       "code": { "symbol": "SearchBarDefaults.InputField", "imports": ["androidx.compose.material3.SearchBarDefaults"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/snackbar-host",
@@ -407,7 +408,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "The fixed benchmark keeps the host hidden but retains the scaffold slot identity." },
       "code": { "symbol": "SnackbarHost", "imports": ["androidx.compose.material3.SnackbarHost", "androidx.compose.material3.rememberSnackbarHostState"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/surface",
@@ -426,7 +427,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Surface", "imports": ["androidx.compose.material3.Surface"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/text",
@@ -448,7 +449,7 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Fidelity requires the pinned Jetcaster font assets and typography tokens." },
       "code": { "symbol": "Text", "imports": ["androidx.compose.material3.Text"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Font embedding and Figma text metrics remain a release gate." }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate." }
     },
     {
       "componentId": "shape/linear-gradient",
@@ -464,7 +465,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must remain a semantic brush layer, not persisted pixel geometry." },
       "code": { "symbol": "Modifier.background(Brush.linearGradient)", "imports": ["androidx.compose.foundation.background", "androidx.compose.ui.Modifier", "androidx.compose.ui.graphics.Brush"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Expected vector output, pending the composite SVG spike." }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The frozen benchmark usage records as vector gradient output." }
     },
     {
       "componentId": "shape/radial-gradient",
@@ -481,7 +482,7 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must remain a semantic brush layer, not persisted pixel geometry." },
       "code": { "symbol": "Modifier.background(Brush.radialGradient)", "imports": ["androidx.compose.foundation.background", "androidx.compose.ui.Modifier", "androidx.compose.ui.graphics.Brush"] },
-      "svg": { "status": "unverified", "fallback": "none", "blocksExport": true, "notes": "Expected vector output, pending the composite SVG spike." }
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The frozen benchmark usage records as vector gradient output." }
     }
   ]
 }

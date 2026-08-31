@@ -15,12 +15,16 @@ each fallback also carries its pixel size and an explicit `generated-placeholder
 digest. These are deterministic test assets, not the real catalog artwork. Anonymous Skia images
 and ambiguous duplicate payloads still fail closed.
 
-The full Jetcaster fixture still fails closed: two asset nodes use `matchParentSize`, for which this
-spike has no renderer-supplied resolved pixel bounds, and Skia also emits anonymous rasterized
-filtered icons. This is a
-GO for the bounded structured-SVG execution technique, but remains NO-GO for product/Figma export:
-production JVM execution belongs behind `:render-host`, there is no server/MCP export integration,
-and no SVG has been imported and raster-compared in Figma.
+The full frozen Jetcaster fixture now exports under its checked-in capability catalog. Resolved
+`matchParentSize` bounds come from the same Compose layout pass, known catalog icons remain vector
+paths, and the four authored images are explicit embedded-raster fallbacks. This is a GO for the
+bounded structured-SVG execution technique, but remains NO-GO for product/Figma export. The exact
+139,673-byte SVG was imported into Figma at 1280x800: it retained 37 editable text nodes, 83 vector
+nodes, and all four image paints, but its raster differs from the clean Wasm render by `5.597%` at
+pixelmatch threshold `0.1`. The generated fallback artwork does not match the richer Compose canvas
+artwork, and Figma text rasterization also differs. The reproducible conformance record is
+`docs/design/fixtures/ui-builder/jetcaster-discover-figma-import-v1.json`. Production JVM execution
+still belongs behind `:render-host`, and there is no server/MCP export integration.
 
 The public operation fixture remains under `docs/design/fixtures/ui-builder`. JVM tests consume that
 same file directly; the Wasm application and eventual MCP adapter must call the same reducer API.

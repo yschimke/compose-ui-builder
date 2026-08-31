@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "status": "no-go",
+  "capturedAt": "2026-08-31T19:52:14Z",
+  "sourceExport": {
+    "designId": "fixture-jetcaster-discover-expanded",
+    "revision": 99,
+    "documentContentSha256": "09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643",
+    "svgSha256": "b1dc7b4bf632515156509c03d21188d7d290004dd345502786eb29838ce9b67b",
+    "svgBytes": 139673,
+    "width": 1280,
+    "height": 800
+  },
+  "figmaImport": {
+    "fileName": "Compose UI Builder - Jetcaster SVG Import Gate",
+    "nodeId": "1:2",
+    "rootWidth": 1280,
+    "rootHeight": 800,
+    "descendantCount": 253,
+    "typeCounts": {
+      "FRAME": 1,
+      "GROUP": 129,
+      "RECTANGLE": 4,
+      "TEXT": 37,
+      "VECTOR": 83
+    },
+    "imagePaintCount": 4,
+    "screenshotSha256": "944db0c3679cb726cacde993e523ed711de4b8d2d55065eb91c0ecdfd94af010",
+    "screenshotWidth": 1280,
+    "screenshotHeight": 800
+  },
+  "comparison": {
+    "cleanWasmSnapshot": "preview-harness/snapshots/jetcaster-discover-builder.png",
+    "cleanWasmSnapshotSha256": "7eedc0e7d35b895387f03157bc83ad6ec3d53f5e955dbfde9fde0ab28b731939",
+    "pixelmatchThreshold": 0.1,
+    "includeAntialiasing": false,
+    "mismatchPixels": 57311,
+    "totalPixels": 1024000,
+    "mismatchRatio": 0.0559677734375
+  },
+  "findings": [
+    "The SVG imports at exact 1280x800 root bounds.",
+    "Figma retains editable text and vector layers and all four declared raster fallbacks as image paints.",
+    "The generated raster fallback pixels do not match the richer Compose canvas artwork.",
+    "Figma text rasterization also differs from the clean Compose/Wasm render.",
+    "The 5.597% semantic pixel mismatch keeps Figma-compatible export at NO-GO."
+  ]
+}

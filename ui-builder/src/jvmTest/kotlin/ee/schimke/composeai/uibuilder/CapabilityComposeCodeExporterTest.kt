@@ -240,7 +240,20 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
-  fun `SVG bridge remains stopped while Jetcaster capabilities are unverified`() {
+  fun `checked in SVG capabilities exactly cover the frozen Jetcaster document`() {
+    val usedComponentIds = document.nodes.values.map { it.componentId }.toSortedSet()
+    assertEquals(usedComponentIds, catalog.componentsById.keys.toSortedSet())
+    val asset = catalog.componentsById.getValue("asset/image").svg
+    assertEquals("raster-fallback-required", asset?.status)
+    assertEquals("embedded-raster", asset?.fallback)
+    assertFalse(checkNotNull(asset).blocksExport)
+    usedComponentIds.minus("asset/image").forEach { componentId ->
+      val svg = checkNotNull(catalog.componentsById.getValue(componentId).svg)
+      assertEquals("verified", svg.status, componentId)
+      assertEquals("none", svg.fallback, componentId)
+      assertFalse(svg.blocksExport, componentId)
+    }
+
     val readiness =
       inspectDocumentSvgExport(
         document,
@@ -248,15 +261,18 @@ class CapabilityComposeCodeExporterTest {
         DocumentSvgExecutionBridge.GENERATED_COMPOSE_WRAPPER,
       )
 
-    assertFalse(readiness.ready)
-    assertTrue(readiness.blockers.isNotEmpty())
-    assertTrue(
-      readiness.blockers.any {
-        it.componentId == "layout/supporting-pane-scaffold" &&
-          it.code == "SVG_CAPABILITY_BLOCKS_EXPORT"
-      }
+    assertTrue(readiness.ready, readiness.blockers.joinToString())
+    assertTrue(readiness.blockers.isEmpty())
+    assertTrue(readiness.unverifiedNodeIds.isEmpty())
+    assertEquals(
+      setOf(
+        "detail-artwork",
+        "main-episode-image",
+        "podcast-card-android-image",
+        "podcast-card-google-image",
+      ),
+      readiness.declaredRasterFallbackNodeIds.toSet(),
     )
-    assertTrue(readiness.declaredRasterFallbackNodeIds.contains("detail-artwork"))
     assertEquals(document.revision, readiness.request.provenance.designRevision)
     assertEquals(
       DocumentSvgExecutionBridge.GENERATED_COMPOSE_WRAPPER,

@@ -429,13 +429,15 @@ supported text/groups, declares every raster fallback, and rasterizes within the
       standalone CMP/Wasm fixture, differing from the independent reference by `2.003%` expanded
       and `2.817%` compact, with interim spike ceilings of `2.1%` and `3.0%`. These are not the exact
       release gate. A
-      saved-revision JVM execution bridge exports deterministic structured text for vector-only
-      subsets and rejects the full fixture because filtered icons become undeclared Skia raster
-      images; the Jetcaster SVG/Figma conformance gate therefore remains open.
+      saved-revision JVM execution bridge exports the full frozen fixture with catalog icons as
+      paths and four declared embedded-raster fallbacks. A real Figma import preserves exact root
+      bounds and editable layers but differs from the clean Wasm render by `5.597%`; the Jetcaster
+      SVG/Figma conformance gate therefore remains open.
 - [ ] Prove version-addressed renderer loading and overlay/input coordinate mapping. Exact runtime
       pin resolution and reversible coordinate mapping are executable; immutable runtime asset
       hosting, protocol loading, and old-bundle retention remain open.
-- [ ] Complete the export execution bridge and Figma import test.
+- [ ] Complete the export execution bridge and Figma import test. The first real import is recorded
+      in `jetcaster-discover-figma-import-v1.json`: structure passes, raster parity fails.
 - [ ] Move accepted wire shapes and compatibility fixtures to `compose-preview-contracts`.
 - [ ] Replace candidate examples in this document with links to executable tests before Gate 0.
 
