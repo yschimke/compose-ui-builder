@@ -437,7 +437,10 @@ supported text/groups, declares every raster fallback, and rasterizes within the
       pin resolution and reversible coordinate mapping are executable; immutable runtime asset
       hosting, protocol loading, and old-bundle retention remain open.
 - [ ] Complete the export execution bridge and Figma import test. The first real import is recorded
-      in `jetcaster-discover-figma-import-v1.json`: structure passes, raster parity fails.
+      in `jetcaster-discover-figma-import-v1.json`: structure passes, raster parity fails. The latest
+      local export adds deterministic node/token/family/style/weight provenance, but its private
+      re-import remains pending explicit artifact-upload authorization; the evidence file keeps that
+      source separate from the last completed import.
 - [ ] Move accepted wire shapes and compatibility fixtures to `compose-preview-contracts`.
 - [ ] Replace candidate examples in this document with links to executable tests before Gate 0.
 

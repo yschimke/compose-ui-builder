@@ -44,15 +44,12 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
 
   override fun record(request: StructuredSvgRecordingRequest): StructuredSvgRecording {
     val document = request.document
-    val layoutProvenance =
-      request.declaredRasterFallbackNodeIds.takeIf(List<String>::isNotEmpty)?.let {
-        measureLayout(document)
-      }
+    val layoutProvenance = measureLayout(document)
     val rasterAssets =
       JvmStructuredSvgRasterAssets.create(
         document,
         request.declaredRasterFallbackNodeIds,
-        layoutProvenance?.nodeBounds.orEmpty(),
+        layoutProvenance.nodeBounds,
       )
     return try {
       val expectedPayloads =
@@ -80,12 +77,14 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
         "declared raster asset payloads are not unique enough for node correlation"
       }
       var recordedLayout: UiBuilderInspectionSnapshot? = null
-      val svg =
-        recordRaw(document, rasterAssets) { if (layoutProvenance != null) recordedLayout = it }
-      layoutProvenance?.requireStableRasterBounds(
-        checkNotNull(recordedLayout) { "SVG recording produced no layout inspection snapshot" },
+      val rawSvg = recordRaw(document, rasterAssets) { recordedLayout = it }
+      val stableLayout =
+        checkNotNull(recordedLayout) { "SVG recording produced no layout inspection snapshot" }
+      layoutProvenance.requireStableRasterBounds(
+        stableLayout,
         request.declaredRasterFallbackNodeIds,
       )
+      val svg = rawSvg.annotateTextTypography(document, stableLayout)
       val emittedDigests =
         parseStrictSvg(svg).document?.images.orEmpty().mapNotNull {
           it.embeddedImagePayloadDigest()
@@ -407,3 +406,192 @@ private fun String.canonicalizeSkiaResourceIds(): String {
       ?: match.value
   }
 }
+
+/**
+ * Skia retains text as independently positioned line fragments but loses the authored Compose
+ * identity and normalizes the platform family to a localized generic list. Correlate each fragment
+ * with the renderer's measured node bounds/baselines, then publish a Figma-supported deterministic
+ * family plus the effective Material weight/style and source node identity.
+ */
+private fun String.annotateTextTypography(
+  document: UiBuilderDocument,
+  inspection: UiBuilderInspectionSnapshot,
+): String {
+  val parsed =
+    requireNotNull(parseStrictSvg(this).document) { "Skia text output is not valid structured SVG" }
+  val textElements = parsed.elements.filter { it.name == "text" }
+  val inspectedText =
+    inspection.nodes
+      .filter { it.componentId == "m3/text" && it.bounds != null && it.text != null }
+      .associateBy(UiBuilderNodeInspection::nodeId)
+  if (textElements.isEmpty()) {
+    require(inspectedText.isEmpty()) { "SVG omitted ${inspectedText.size} measured text nodes" }
+    return this
+  }
+
+  val fragmentCounts = mutableMapOf<String, Int>()
+  val correlations = textElements.associateWith { element ->
+    val position = element.absoluteTextBaseline()
+    val candidates =
+      inspectedText.values
+        .mapNotNull { candidate ->
+          val bounds = checkNotNull(candidate.bounds)
+          val text = checkNotNull(candidate.text)
+          val baselineDistance = text.expectedBaselines().minOf { kotlin.math.abs(it - position.y) }
+          val outsideX =
+            when {
+              position.x < bounds.x -> bounds.x - position.x
+              position.x > bounds.right -> position.x - bounds.right
+              else -> 0f
+            }
+          if (baselineDistance <= TEXT_BASELINE_TOLERANCE_PX && outsideX <= TEXT_X_TOLERANCE_PX) {
+            candidate.nodeId to (baselineDistance + outsideX)
+          } else null
+        }
+        .sortedWith(compareBy<Pair<String, Float>> { it.second }.thenBy { it.first })
+    val selected =
+      candidates.firstOrNull()
+        ?: error(
+          "SVG text at ${position.x},${position.y} has no measured authored node; nearest=" +
+            inspectedText.values
+              .sortedBy { kotlin.math.abs(checkNotNull(it.text).firstBaselineY - position.y) }
+              .take(3)
+              .joinToString { candidate ->
+                "${candidate.nodeId}:${candidate.bounds}:${candidate.text}"
+              }
+        )
+    require(candidates.drop(1).none { kotlin.math.abs(it.second - selected.second) < 0.01f }) {
+      "SVG text at ${position.x},${position.y} has ambiguous authored nodes " +
+        candidates.take(3).joinToString()
+    }
+    val nodeId = selected.first
+    val fragmentIndex = fragmentCounts.getOrDefault(nodeId, 0)
+    fragmentCounts[nodeId] = fragmentIndex + 1
+    SvgTextCorrelation(nodeId, fragmentIndex)
+  }
+  val unmatched = inspectedText.keys - correlations.values.map(SvgTextCorrelation::nodeId).toSet()
+  require(unmatched.isEmpty()) { "SVG omitted measured text nodes: ${unmatched.sorted()}" }
+
+  var annotated = this
+  correlations.entries
+    .sortedByDescending { it.key.nameEnd }
+    .forEach { (element, correlation) ->
+      val nodeId = correlation.nodeId
+      val node = document.nodes.getValue(nodeId)
+      val typography = node.svgTypography()
+      val tagTail = annotated.substring(element.nameEnd, element.startTagEnd)
+      require("id" !in element.attributes) { "Skia output pre-asserted text id for $nodeId" }
+      require(!Regex("\\sdata-compose-(?:node-id|typography-[^=]+)=").containsMatchIn(tagTail)) {
+        "Skia output pre-asserted text provenance for $nodeId"
+      }
+      val cleanedTail =
+        tagTail.replace(Regex("\\s(?:font-family|font-weight|font-style)=([\"'])[^\"']*\\1"), "")
+      val attributes =
+        " id=\"compose-text-${nodeId.xmlIdSegment()}-${correlation.fragmentIndex}\"" +
+          " data-compose-node-id=\"${nodeId.xmlAttributeValue()}\"" +
+          " data-compose-typography-fragment=\"${correlation.fragmentIndex}\"" +
+          " data-compose-typography-source=\"material3-token-v1\"" +
+          " data-compose-typography-token=\"${typography.token.xmlAttributeValue()}\"" +
+          " data-compose-typography-family=\"${typography.family.xmlAttributeValue()}\"" +
+          " data-compose-typography-family-source=\"figma-inter-adapter-v1\"" +
+          " data-compose-typography-weight=\"${typography.weight}\"" +
+          " data-compose-typography-style=\"${typography.style.xmlAttributeValue()}\"" +
+          " font-family=\"${typography.family.xmlAttributeValue()}\"" +
+          " font-weight=\"${typography.weight}\"" +
+          " font-style=\"${typography.style.xmlAttributeValue()}\""
+      annotated =
+        annotated.substring(0, element.nameEnd) +
+          attributes +
+          cleanedTail +
+          annotated.substring(element.startTagEnd)
+    }
+  return annotated
+}
+
+private data class SvgTextCorrelation(val nodeId: String, val fragmentIndex: Int)
+
+private fun String.xmlIdSegment(): String = buildString {
+  this@xmlIdSegment.forEach { character ->
+    if (character.isLetterOrDigit() || character in setOf('-', '_', '.')) append(character)
+    else append('_').append(character.code.toString(16)).append('_')
+  }
+}
+
+private fun String.xmlAttributeValue(): String =
+  replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+
+private data class SvgTextPosition(val x: Float, val y: Float)
+
+private fun ParsedSvgElement.absoluteTextBaseline(): SvgTextPosition {
+  val transform = attributes["transform"]
+  val translation =
+    if (transform == null) {
+      0f to 0f
+    } else {
+      val translate =
+        Regex("translate\\(([-+0-9.eE]+)[ ,]+([-+0-9.eE]+)\\)").matchEntire(transform)
+          ?: error("SVG text has unsupported transform '$transform'")
+      translate.groupValues[1].toFloat() to translate.groupValues[2].toFloat()
+    }
+  val localX = attributes["x"].orEmpty().substringBefore(',').trim().toFloatOrNull() ?: 0f
+  val localY =
+    requireNotNull(attributes["y"].orEmpty().substringBefore(',').trim().toFloatOrNull()) {
+      "SVG text has no numeric baseline"
+    }
+  return SvgTextPosition(
+    x = translation.first + localX,
+    y = translation.second + localY,
+  )
+}
+
+private fun UiBuilderTextInspection.expectedBaselines(): List<Float> =
+  when (lineCount) {
+    1 -> listOf(firstBaselineY)
+    else ->
+      List(lineCount) { line ->
+        firstBaselineY + (lastBaselineY - firstBaselineY) * line / (lineCount - 1)
+      }
+  }
+
+private data class SvgTypography(
+  val family: String,
+  val weight: Int,
+  val style: String,
+  val token: String,
+)
+
+private fun UiBuilderNode.svgTypography(): SvgTypography {
+  val token = stringProperty("style").ifEmpty { "local" }
+  val weight =
+    when (stringProperty("fontWeight")) {
+      "bold" -> 700
+      "semiBold" -> 600
+      "medium" -> 500
+      "" ->
+        when (token) {
+          "titleMedium",
+          "titleSmall",
+          "labelLarge",
+          "labelSmall" -> 500
+          else -> 400
+        }
+      else -> error("text node $id has unsupported fontWeight")
+    }
+  val style =
+    when (val value = stringProperty("fontStyle")) {
+      "",
+      "normal" -> "normal"
+      "italic" -> "italic"
+      else -> error("text node $id has unsupported fontStyle '$value'")
+    }
+  return SvgTypography(
+    family = FIGMA_SVG_FONT_FAMILY,
+    weight = weight,
+    style = style,
+    token = token,
+  )
+}
+
+private const val FIGMA_SVG_FONT_FAMILY = "Inter"
+private const val TEXT_BASELINE_TOLERANCE_PX = 1.25f
+private const val TEXT_X_TOLERANCE_PX = 1f

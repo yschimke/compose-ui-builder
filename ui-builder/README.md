@@ -18,14 +18,20 @@ and ambiguous duplicate payloads still fail closed.
 
 The full frozen Jetcaster fixture now exports under its checked-in capability catalog. Resolved
 `matchParentSize` bounds come from the same Compose layout pass, known catalog icons remain vector
-paths, and the four authored images are explicit embedded-raster fallbacks. This is a GO for the
-bounded structured-SVG execution technique, but remains NO-GO for product/Figma export. The exact
-139,673-byte SVG was imported into Figma at 1280x800: it retained 37 editable text nodes, 83 vector
-nodes, and all four image paints, but its raster differs from the clean Wasm render by `5.597%` at
-pixelmatch threshold `0.1`. Shared project-owned artwork now removes the known export/Compose raster
-source drift, but no new real Figma import has measured the resulting end-to-end mismatch. The
-existing import maps all 37 text nodes to Inter Regular; authored medium/bold weights are not
-preserved, so deterministic font family/weight export remains a parity blocker. The reproducible conformance record is
+paths, and the four authored images are explicit embedded-raster fallbacks. The recorder correlates
+each text fragment to measured Compose bounds and baselines, then writes an escaped authored node
+identity, Material typography token, explicit Inter adapter provenance, style and numeric weight.
+The deterministic current SVG has 37 editable text fragments: 25 regular and 12 medium. A focused
+fixture additionally proves regular, medium and bold serialization and stable bytes.
+
+This is a GO for the bounded structured-SVG execution technique, but remains NO-GO for
+product/Figma export. The last completed Figma import used the preceding 139,673-byte SVG: it
+retained exact 1280x800 bounds, 37 editable text nodes, 83 vector nodes and all four image paints,
+but normalized all text to Inter Regular and differed from its then-current clean Wasm render by
+`5.597%` at pixelmatch threshold `0.1`. The current typography-provenance SVG has not been uploaded:
+the private draft exists but remains empty while artifact upload awaits explicit authorization.
+Figma weight preservation and current raster parity are therefore unmeasured. The versioned
+conformance record separates current local evidence from the last completed import in
 `docs/design/fixtures/ui-builder/jetcaster-discover-figma-import-v1.json`. Production JVM execution
 still belongs behind `:render-host`, and there is no server/MCP export integration.
 

@@ -45,6 +45,27 @@ class StructuredSvgExportBridgeTest {
     assertEquals(4, Regex("<image\\b").findAll(firstRaw.svg).count())
     assertTrue(firstRaw.rasterRecords.isEmpty())
     assertFalse(Regex("(?:href|src)=\"https?://").containsMatchIn(firstRaw.svg))
+    val textElements =
+      checkNotNull(parseStrictSvg(firstRaw.svg).document).elements.filter { it.name == "text" }
+    assertEquals(37, textElements.size)
+    assertTrue(textElements.all { it.attributes["font-family"] == "Inter" })
+    assertTrue(textElements.all { it.attributes["font-style"] == "normal" })
+    assertTrue(textElements.all { it.attributes["data-compose-node-id"] in document.nodes })
+    assertTrue(
+      textElements.all { it.attributes["data-compose-typography-source"] == "material3-token-v1" }
+    )
+    assertTrue(
+      textElements.all {
+        it.attributes["data-compose-typography-family-source"] == "figma-inter-adapter-v1"
+      }
+    )
+    assertTrue(textElements.all { it.attributes["data-compose-typography-token"] != null })
+    assertEquals(setOf("400", "500"), textElements.map { it.attributes["font-weight"] }.toSet())
+    assertEquals(
+      document.nodes.values.filter { it.componentId == "m3/text" }.map { it.id }.toSet(),
+      textElements.map { it.attributes.getValue("data-compose-node-id") }.toSet(),
+    )
+    assertEquals(textElements.size, textElements.map { it.attributes.getValue("id") }.toSet().size)
 
     val result = executeSavedDocumentSvgExport(job, catalog, JvmSkiaStructuredSvgRecorder)
     val exported = assertIs<SavedDocumentSvgExportResult.Ok>(result, result.toString())
@@ -55,6 +76,73 @@ class StructuredSvgExportBridgeTest {
       assertTrue(exported.svg.contains("data-compose-node-id=\"$nodeId\""))
     }
     assertTrue(exported.svg.contains("<path"))
+  }
+
+  @Test
+  fun `text provenance preserves regular medium and bold weights with stable bytes`() {
+    fun weighted(nodeId: String, value: String?) =
+      document.nodes.getValue(nodeId).let { node ->
+        node.copy(
+          properties =
+            JsonObject(
+              if (value == null) node.properties - "fontWeight"
+              else
+                node.properties +
+                  ("fontWeight" to Json.parseToJsonElement("""{"type":"enum","value":"$value"}"""))
+            )
+        )
+      }
+
+    val nodes =
+      document.nodes.toMutableMap().apply {
+        this["chip-crime-label"] = weighted("chip-crime-label", null)
+        this["chip-news-label"] = weighted("chip-news-label", "medium")
+        this["chip-comedy-label"] = weighted("chip-comedy-label", "bold")
+      }
+    val weightedDocument =
+      document.copy(id = "svg-typography-weights", revision = 100, nodes = nodes)
+
+    val first = JvmSkiaStructuredSvgRecorder.record(weightedDocument).svg
+    val second = JvmSkiaStructuredSvgRecorder.record(weightedDocument).svg
+    assertEquals(first, second)
+    val text = checkNotNull(parseStrictSvg(first).document).elements.filter { it.name == "text" }
+    val weights = text.associate { it.attributes.getValue("data-compose-node-id") to it.attributes }
+    assertEquals("400", weights.getValue("chip-crime-label").getValue("font-weight"))
+    assertEquals("500", weights.getValue("chip-news-label").getValue("font-weight"))
+    assertEquals("700", weights.getValue("chip-comedy-label").getValue("font-weight"))
+    assertEquals("Inter", weights.getValue("chip-comedy-label").getValue("font-family"))
+  }
+
+  @Test
+  fun `text provenance escapes authored identity without losing its exact value`() {
+    val previousId = "chip-crime-label"
+    val escapedId = "chip&\"crime<label"
+    val renamedNodes =
+      document.nodes
+        .mapValues { (_, node) ->
+          node.copy(
+            slots =
+              node.slots.mapValues { (_, children) ->
+                children.map { child -> if (child == previousId) escapedId else child }
+              }
+          )
+        }
+        .toMutableMap()
+        .apply {
+          val text = remove(previousId) ?: error("missing fixture text node")
+          this[escapedId] = text.copy(id = escapedId)
+        }
+    val renamed = document.copy(id = "svg-typography-escaped-id", nodes = renamedNodes)
+
+    val svg = JvmSkiaStructuredSvgRecorder.record(renamed).svg
+    val element =
+      checkNotNull(parseStrictSvg(svg).document).elements.singleOrNull {
+        it.name == "text" && it.attributes["data-compose-node-id"] == escapedId
+      }
+
+    assertTrue(element != null)
+    assertTrue(svg.contains("data-compose-node-id=\"chip&amp;&quot;crime&lt;label\""))
+    assertTrue(element.attributes.getValue("id").matches(Regex("[A-Za-z0-9_.-]+")))
   }
 
   @Test
@@ -213,14 +301,10 @@ class StructuredSvgExportBridgeTest {
         .asVectorVerified()
     val job = textDocument.job(StructuredSvgRecorderKind.JVM_SKIA_SVG_CANVAS)
 
-    val first =
-      assertIs<SavedDocumentSvgExportResult.Ok>(
-        executeSavedDocumentSvgExport(job, textCatalog, JvmSkiaStructuredSvgRecorder)
-      )
-    val second =
-      assertIs<SavedDocumentSvgExportResult.Ok>(
-        executeSavedDocumentSvgExport(job, textCatalog, JvmSkiaStructuredSvgRecorder)
-      )
+    val firstResult = executeSavedDocumentSvgExport(job, textCatalog, JvmSkiaStructuredSvgRecorder)
+    val first = assertIs<SavedDocumentSvgExportResult.Ok>(firstResult, firstResult.toString())
+    val secondResult = executeSavedDocumentSvgExport(job, textCatalog, JvmSkiaStructuredSvgRecorder)
+    val second = assertIs<SavedDocumentSvgExportResult.Ok>(secondResult, secondResult.toString())
 
     assertEquals(first.svg, second.svg)
     assertTrue(first.svg.contains("<text"))

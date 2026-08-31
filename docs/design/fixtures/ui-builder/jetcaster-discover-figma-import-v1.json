@@ -1,48 +1,80 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "status": "no-go",
-  "capturedAt": "2026-08-31T19:52:14Z",
-  "sourceExport": {
+  "capturedAt": "2026-08-31T20:57:19Z",
+  "latestLocalExport": {
     "designId": "fixture-jetcaster-discover-expanded",
     "revision": 99,
     "documentContentSha256": "09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643",
-    "svgSha256": "b1dc7b4bf632515156509c03d21188d7d290004dd345502786eb29838ce9b67b",
-    "svgBytes": 139673,
+    "svgSha256": "ba9ef57c2eece563c66ffe3c153255bcb17133c88b6629ec318c1aad82f47115",
+    "svgBytes": 147147,
     "width": 1280,
-    "height": 800
+    "height": 800,
+    "typography": {
+      "textFragmentCount": 37,
+      "authoredTextNodeCount": 25,
+      "family": "Inter",
+      "familySource": "figma-inter-adapter-v1",
+      "materialTokenSource": "material3-token-v1",
+      "styleCounts": { "normal": 37 },
+      "weightCounts": { "400": 25, "500": 12 },
+      "nodeProvenanceCount": 37
+    }
   },
-  "figmaImport": {
-    "fileName": "Compose UI Builder - Jetcaster SVG Import Gate",
-    "nodeId": "1:2",
-    "rootWidth": 1280,
-    "rootHeight": 800,
-    "descendantCount": 253,
-    "typeCounts": {
-      "FRAME": 1,
-      "GROUP": 129,
-      "RECTANGLE": 4,
-      "TEXT": 37,
-      "VECTOR": 83
+  "lastCompletedFigmaImport": {
+    "sourceExport": {
+      "svgSha256": "b1dc7b4bf632515156509c03d21188d7d290004dd345502786eb29838ce9b67b",
+      "svgBytes": 139673,
+      "width": 1280,
+      "height": 800
     },
-    "imagePaintCount": 4,
-    "screenshotSha256": "944db0c3679cb726cacde993e523ed711de4b8d2d55065eb91c0ecdfd94af010",
-    "screenshotWidth": 1280,
-    "screenshotHeight": 800
+    "figmaImport": {
+      "fileName": "Compose UI Builder - Jetcaster SVG Import Gate",
+      "nodeId": "1:2",
+      "rootWidth": 1280,
+      "rootHeight": 800,
+      "descendantCount": 253,
+      "typeCounts": {
+        "FRAME": 1,
+        "GROUP": 129,
+        "RECTANGLE": 4,
+        "TEXT": 37,
+        "VECTOR": 83
+      },
+      "imagePaintCount": 4,
+      "fontFamilyCounts": { "Inter": 37 },
+      "fontStyleCounts": { "Regular": 37 },
+      "missingFontCount": 0,
+      "screenshotSha256": "944db0c3679cb726cacde993e523ed711de4b8d2d55065eb91c0ecdfd94af010",
+      "screenshotWidth": 1280,
+      "screenshotHeight": 800
+    },
+    "comparison": {
+      "cleanWasmSnapshot": "preview-harness/snapshots/jetcaster-discover-builder.png",
+      "cleanWasmSnapshotSha256": "7eedc0e7d35b895387f03157bc83ad6ec3d53f5e955dbfde9fde0ab28b731939",
+      "pixelmatchThreshold": 0.1,
+      "includeAntialiasing": false,
+      "mismatchPixels": 57311,
+      "totalPixels": 1024000,
+      "mismatchRatio": 0.0559677734375
+    }
   },
-  "comparison": {
-    "cleanWasmSnapshot": "preview-harness/snapshots/jetcaster-discover-builder.png",
-    "cleanWasmSnapshotSha256": "7eedc0e7d35b895387f03157bc83ad6ec3d53f5e955dbfde9fde0ab28b731939",
-    "pixelmatchThreshold": 0.1,
-    "includeAntialiasing": false,
-    "mismatchPixels": 57311,
-    "totalPixels": 1024000,
-    "mismatchRatio": 0.0559677734375
+  "privateImportGate": {
+    "status": "pending-explicit-upload-authorization",
+    "sourceSvgSha256": "ba9ef57c2eece563c66ffe3c153255bcb17133c88b6629ec318c1aad82f47115",
+    "draftCreated": true,
+    "draftMutated": false,
+    "requiredEvidence": [
+      "fresh private Figma import of the exact latestLocalExport bytes",
+      "all imported text families, styles, weights and missing-font flags",
+      "1280x800 imported-root raster comparison against the current clean Wasm snapshot"
+    ]
   },
   "findings": [
-    "The SVG imports at exact 1280x800 root bounds.",
-    "Figma retains editable text and vector layers and all four declared raster fallbacks as image paints.",
-    "The generated raster fallback pixels do not match the richer Compose canvas artwork.",
-    "Figma text rasterization also differs from the clean Compose/Wasm render.",
-    "The 5.597% semantic pixel mismatch keeps Figma-compatible export at NO-GO."
+    "The latest local SVG is deterministic and carries exact authored node and Material typography-token provenance on all 37 text fragments.",
+    "The latest local SVG explicitly requests Inter with 25 regular and 12 medium fragments; a focused synthetic export also proves regular, medium and bold serialization.",
+    "The last completed Figma import used the preceding SVG, normalized every text fragment to Inter Regular and differed from its then-current clean Wasm snapshot by 5.597%.",
+    "The latest SVG has not been uploaded because repository artifact upload to the private draft is awaiting explicit authorization.",
+    "Figma weight preservation and current raster parity therefore remain unmeasured and the product/Figma gate remains NO-GO."
   ]
 }

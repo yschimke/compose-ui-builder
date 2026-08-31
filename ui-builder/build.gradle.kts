@@ -91,6 +91,20 @@ tasks.register<JavaExec>("generateJetcasterComposeFixture") {
   )
 }
 
+tasks.register<JavaExec>("generateJetcasterSvgFixture") {
+  description = "Generate the full structured Jetcaster SVG used by the real Figma import gate."
+  group = "code generation"
+  dependsOn("jvmMainClasses")
+  classpath(
+    layout.buildDirectory.dir("classes/kotlin/jvm/main"),
+    layout.buildDirectory.dir("processedResources/jvm/main"),
+    configurations.getByName("jvmRuntimeClasspath"),
+  )
+  mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterSvgFixture")
+  args(layout.buildDirectory.file("figma-gate/jetcaster-discover.svg").get().asFile.absolutePath)
+  outputs.file(layout.buildDirectory.file("figma-gate/jetcaster-discover.svg"))
+}
+
 val generatedJetcasterCheckFile =
   layout.buildDirectory.file("generated/ui-builder-check/JetcasterDiscoverExpanded.kt")
 

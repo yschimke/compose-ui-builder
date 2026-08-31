@@ -146,19 +146,39 @@ test("real Figma import evidence remains an explicit no-go until raster parity p
   const authoredImages = Object.values(document.nodes).filter(
     ({ componentId }) => componentId === "asset/image",
   );
+  const local = evidence.latestLocalExport;
+  const completed = evidence.lastCompletedFigmaImport;
 
+  assert.equal(evidence.schemaVersion, 2);
   assert.equal(evidence.status, "no-go");
-  assert.equal(evidence.sourceExport.documentContentSha256, hash);
-  assert.equal(evidence.sourceExport.width, document.environment.widthDp);
-  assert.equal(evidence.sourceExport.height, document.environment.heightDp);
-  assert.equal(evidence.figmaImport.rootWidth, evidence.sourceExport.width);
-  assert.equal(evidence.figmaImport.rootHeight, evidence.sourceExport.height);
-  assert.equal(evidence.figmaImport.imagePaintCount, authoredImages.length);
-  assert.ok(evidence.figmaImport.typeCounts.TEXT > 0);
-  assert.ok(evidence.figmaImport.typeCounts.VECTOR > 0);
+  assert.equal(local.documentContentSha256, hash);
+  assert.equal(local.width, document.environment.widthDp);
+  assert.equal(local.height, document.environment.heightDp);
+  assert.equal(local.typography.textFragmentCount, 37);
+  assert.equal(local.typography.authoredTextNodeCount, 25);
+  assert.equal(local.typography.family, "Inter");
+  assert.equal(local.typography.familySource, "figma-inter-adapter-v1");
+  assert.equal(local.typography.materialTokenSource, "material3-token-v1");
   assert.equal(
-    evidence.comparison.mismatchRatio,
-    evidence.comparison.mismatchPixels / evidence.comparison.totalPixels,
+    Object.values(local.typography.weightCounts).reduce((sum, count) => sum + count, 0),
+    local.typography.textFragmentCount,
   );
-  assert.ok(evidence.comparison.mismatchRatio > 0.03);
+  assert.equal(local.typography.nodeProvenanceCount, local.typography.textFragmentCount);
+  assert.notEqual(local.svgSha256, completed.sourceExport.svgSha256);
+  assert.equal(completed.figmaImport.rootWidth, completed.sourceExport.width);
+  assert.equal(completed.figmaImport.rootHeight, completed.sourceExport.height);
+  assert.equal(completed.figmaImport.imagePaintCount, authoredImages.length);
+  assert.equal(completed.figmaImport.typeCounts.TEXT, local.typography.textFragmentCount);
+  assert.ok(completed.figmaImport.typeCounts.VECTOR > 0);
+  assert.deepEqual(completed.figmaImport.fontFamilyCounts, { Inter: 37 });
+  assert.deepEqual(completed.figmaImport.fontStyleCounts, { Regular: 37 });
+  assert.equal(completed.figmaImport.missingFontCount, 0);
+  assert.equal(
+    completed.comparison.mismatchRatio,
+    completed.comparison.mismatchPixels / completed.comparison.totalPixels,
+  );
+  assert.ok(completed.comparison.mismatchRatio > 0.03);
+  assert.equal(evidence.privateImportGate.status, "pending-explicit-upload-authorization");
+  assert.equal(evidence.privateImportGate.sourceSvgSha256, local.svgSha256);
+  assert.equal(evidence.privateImportGate.draftMutated, false);
 });

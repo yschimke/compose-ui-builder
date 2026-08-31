@@ -202,8 +202,11 @@ Confetti stays in CI as the fast, no-network compact regression. Jetcaster is th
   vector nodes, and all four image paints. Its raster differs from the clean Wasm snapshot by
   `5.597%` at threshold `0.1`, so the result is evidence of structural import—not visual parity.
   All lanes now consume the same project-owned 512×512 offline PNG bytes, removing the known
-  generated/SVG-versus-Compose artwork source drift. No new real Figma import has measured the
-  effect, so this is not a Figma parity claim. The existing import maps all 37 text nodes to Inter
-  Regular and preserves no authored medium/bold weights; deterministic font family/weight export
-  and Figma text metrics remain open. See
+  generated/SVG-versus-Compose artwork source drift. The current deterministic SVG also correlates
+  all 37 emitted text fragments to 25 authored nodes and records exact node/token provenance,
+  explicit Inter adapter provenance, normal style, and 25 regular/12 medium weights. Focused source
+  tests cover regular, medium and bold plus stable bytes. No new real Figma import has measured
+  either fix: the fresh private draft is still empty because uploading the repository SVG awaits
+  explicit authorization. The previous import's all-Inter-Regular normalization, current Figma
+  weight handling, and current raster parity therefore remain open. See
   `docs/design/fixtures/ui-builder/jetcaster-discover-figma-import-v1.json`.
