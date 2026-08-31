@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -71,9 +72,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,7 +94,9 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.VectorPath
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -139,9 +145,14 @@ fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
 fun UiBuilderSurface(
   document: UiBuilderDocument,
   editorOverlay: Boolean = false,
+  selectedNodeId: String? = null,
+  onNodeSelected: ((String) -> Unit)? = null,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
 ) {
-  val bounds = remember { mutableStateMapOf<String, Rect>() }
+  val bounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
+  val overlayBounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
+  var surfaceCoordinates by
+    remember(document.id, document.revision) { mutableStateOf<LayoutCoordinates?>(null) }
   val currentInspectionCallback = rememberUpdatedState(onInspectionSnapshot)
   val inspection =
     remember(document.id, document.revision) {
@@ -172,7 +183,7 @@ fun UiBuilderSurface(
       else -> lightColorScheme()
     }
   MaterialTheme(colorScheme = colorScheme) {
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().onGloballyPositioned { surfaceCoordinates = it }) {
       document.roots.forEach { root ->
         RenderNode(
           document = document,
@@ -182,9 +193,19 @@ fun UiBuilderSurface(
             state[key] = value
             inspection.updateState(state)
           },
-          onBounds = { id, rect ->
-            bounds[id] = rect
-            inspection.recordNodeBounds(id, rect.left, rect.top, rect.right, rect.bottom)
+          onBounds = { id, coordinates ->
+            val rootBounds = coordinates.boundsInRoot()
+            bounds[id] = rootBounds
+            surfaceCoordinates?.let { surface ->
+              overlayBounds[id] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
+            }
+            inspection.recordNodeBounds(
+              id,
+              rootBounds.left,
+              rootBounds.top,
+              rootBounds.right,
+              rootBounds.bottom,
+            )
           },
           onTextLayout = { id, result ->
             inspection.recordTextLayout(
@@ -198,13 +219,24 @@ fun UiBuilderSurface(
         )
       }
       if (editorOverlay) {
-        Canvas(Modifier.fillMaxSize()) {
-          bounds.values.forEach { rect ->
+        val selected = selectedNodeId?.let(overlayBounds::get)
+        Canvas(
+          Modifier.fillMaxSize().pointerInput(overlayBounds.toMap(), onNodeSelected) {
+            detectTapGestures { position ->
+              overlayBounds
+                .filterValues { it.contains(position) }
+                .minByOrNull { (_, rect) -> rect.width * rect.height }
+                ?.key
+                ?.let { onNodeSelected?.invoke(it) }
+            }
+          }
+        ) {
+          selected?.let { rect ->
             drawRect(
               Color(0xff6750a4),
               rect.topLeft,
               rect.size,
-              style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()),
+              style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
             )
           }
         }
@@ -219,15 +251,14 @@ private fun RenderNode(
   nodeId: String,
   state: Map<String, String?>,
   onState: (String, String?) -> Unit,
-  onBounds: (String, Rect) -> Unit,
+  onBounds: (String, LayoutCoordinates) -> Unit,
   onTextLayout: (String, TextLayoutResult) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val node = requireNotNull(document.nodes[nodeId]) { "unknown node: $nodeId" }
   val measured =
     node.modifiers
-      .fold(modifier.onGloballyPositioned { onBounds(node.id, it.boundsInRoot()) }) { result, value
-        ->
+      .fold(modifier.onGloballyPositioned { onBounds(node.id, it) }) { result, value ->
         result.applyModifier(value.jsonObject, node.id)
       }
       .then(node.actionModifier(state, onState))

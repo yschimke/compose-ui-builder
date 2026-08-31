@@ -24,3 +24,11 @@ and no SVG has been imported and raster-compared in Figma.
 
 The public operation fixture remains under `docs/design/fixtures/ui-builder`. JVM tests consume that
 same file directly; the Wasm application and eventual MCP adapter must call the same reducer API.
+
+The standalone `/ui-builder/` application now opens a native Compose editor seeded from the frozen
+Jetcaster operations fixture. Its searchable M3 catalog, layers tree, canvas selection overlay and
+property inspector all mutate the document through `CollaborationReducer`; catalog drops resolve
+against the visibly named selected slot. The editor measures the design at its pinned 1280×800dp
+viewport and applies a sibling visual transform to fit the workspace, so the side panels cannot
+silently trigger a compact Jetcaster layout. `?mode=jetcaster-builder` remains the clean harness
+surface and does not compose editor controls or transforms.

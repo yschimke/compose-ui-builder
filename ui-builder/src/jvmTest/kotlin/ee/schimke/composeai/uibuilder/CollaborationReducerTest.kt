@@ -78,6 +78,39 @@ class CollaborationReducerTest {
   }
 
   @Test
+  fun `insert can add the first child without an anchor`() {
+    val base = document()
+    val emptyContainer =
+      base.nodes.getValue("container").copy(slots = mapOf("items" to emptyList()))
+    val initial =
+      CollaborationState(
+        base.copy(
+          roots = listOf("container", "b"),
+          nodes = mapOf("container" to emptyContainer, "b" to base.nodes.getValue("b")),
+        )
+      )
+    val application =
+      CollaborationReducer.apply(
+        initial,
+        command(
+          "first-child",
+          4,
+          DesignOperation.InsertNode(
+            UiBuilderNode("inserted", "text"),
+            ParentSlot("container", "items"),
+            afterNodeId = null,
+          ),
+        ),
+      )
+
+    assertIs<CommandOutcome.Accepted>(application.outcome)
+    assertEquals(
+      listOf("inserted"),
+      application.state.document.nodes.getValue("container").slots.getValue("items"),
+    )
+  }
+
+  @Test
   fun `property mutation without capability validator is rejected before the batch runs`() {
     val initial = CollaborationState(document())
     val application =

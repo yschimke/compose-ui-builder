@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.validateCapabilities
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -60,7 +62,9 @@ import kotlin.js.Promise
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 fun main() {
   ComposeViewport(viewportContainerId = "composeApp") { VisualFixtureApp(captureMode()) }
@@ -75,18 +79,20 @@ private fun VisualFixtureApp(mode: String) {
   }
 
   var document by remember { mutableStateOf<UiBuilderDocument?>(null) }
+  var catalog by remember { mutableStateOf<CapabilityCatalog?>(null) }
   LaunchedEffect(Unit) {
-    val isJetcaster = mode.startsWith("jetcaster-")
+    val isJetcaster = mode.startsWith("jetcaster-") || mode.startsWith("interactive-editor")
     val fixtureName =
       if (isJetcaster) "jetcaster-discover-operations-v1.json"
       else "confetti-schedule-operations-v1.json"
     val fixture = Json.parseToJsonElement(fetchText(fixtureName)).jsonObject
     val replayed = UiBuilderReducer.replay(fixture).document
     if (isJetcaster) {
+      val catalogSource = fetchText("jetcaster-discover-capabilities-v1.json")
       val validation =
         validateCapabilities(
           replayed,
-          fetchText("jetcaster-discover-capabilities-v1.json"),
+          catalogSource,
         )
       require(validation.structurallyValid) {
         validation.issues.joinToString(prefix = "invalid Jetcaster design: ") { it.message }
@@ -100,17 +106,36 @@ private fun VisualFixtureApp(mode: String) {
           .sorted()
           .joinToString(","),
       )
+      catalog = CapabilityCatalogParser.parse(catalogSource)
     }
     document = replayed
   }
   document?.let {
-    UiBuilderSurface(
-      it,
-      editorOverlay = mode == "editor" || mode == "jetcaster-editor",
-      onInspectionSnapshot = { snapshot ->
-        publishInspection(inspectionJson.encodeToString(snapshot))
-      },
-    )
+    if (mode.startsWith("interactive-editor")) {
+      catalog?.let { loadedCatalog ->
+        UiBuilderEditor(
+          document = it,
+          catalog = loadedCatalog,
+          onStateChanged = ::publishEditorState,
+          onCanvasMetrics = ::publishEditorCanvasMetrics,
+          onCanvasBoundsChanged = ::publishEditorCanvasBounds,
+          onDropTargetChanged = ::publishEditorDropTarget,
+          onInspectionSnapshot = { snapshot ->
+            publishInspection(inspectionJson.encodeToString(snapshot))
+          },
+          showSelectionOverlay = mode != "interactive-editor-clean",
+        )
+      }
+    } else {
+      UiBuilderSurface(
+        it,
+        editorOverlay = mode == "editor" || mode == "jetcaster-editor",
+        selectedNodeId = if (mode == "jetcaster-editor") "discover-grid" else null,
+        onInspectionSnapshot = { snapshot ->
+          publishInspection(inspectionJson.encodeToString(snapshot))
+        },
+      )
+    }
     LaunchedEffect(it.revision) { markReady() }
   }
 }
@@ -348,7 +373,7 @@ private suspend fun fetchText(url: String): String = suspendCancellableCoroutine
 )
 private external fun fetchTextPromise(url: String): Promise<JsString>
 
-@JsFun("() => new URLSearchParams(globalThis.location.search).get('mode') || 'jetcaster-builder'")
+@JsFun("() => new URLSearchParams(globalThis.location.search).get('mode') || 'interactive-editor'")
 private external fun captureMode(): String
 
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
@@ -392,3 +417,103 @@ private external fun publishCapabilityDiagnostics(
 private external fun publishInspection(json: String)
 
 private val inspectionJson = Json { encodeDefaults = true }
+
+private fun publishEditorState(state: UiBuilderEditorState) {
+  val selectedText =
+    state.selectedNodeId
+      ?.let(state.document.nodes::get)
+      ?.properties
+      ?.get("text")
+      ?.jsonObject
+      ?.get("value")
+      ?.jsonPrimitive
+      ?.contentOrNull
+      .orEmpty()
+  val mainBackgroundChildren =
+    state.document.nodes["main-background"]?.slots?.get("children").orEmpty().joinToString(",")
+  val outcome =
+    when (state.lastOutcome) {
+      null -> "idle"
+      is CommandOutcome.Accepted -> "accepted"
+      is CommandOutcome.Rejected -> "rejected:${state.lastOutcome.code}"
+    }
+  publishEditorManifest(
+    revision = state.document.revision,
+    nodeCount = state.document.nodes.size,
+    selectedNodeId = state.selectedNodeId.orEmpty(),
+    catalogQuery = state.catalogQuery,
+    operationSequence = state.operationSequence,
+    outcome = outcome,
+    selectedText = selectedText,
+    mainBackgroundChildren = mainBackgroundChildren,
+    documentHash = sha256Hex(canonicalDocument(state.document)),
+  )
+}
+
+@JsFun(
+  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, mainBackgroundChildren, documentHash) => {
+    globalThis.__uiBuilderEditor = {
+      revision,
+      nodeCount,
+      selectedNodeId,
+      catalogQuery,
+      operationSequence,
+      outcome,
+      selectedText,
+      mainBackgroundChildren: mainBackgroundChildren ? mainBackgroundChildren.split(',') : [],
+      documentHash
+    };
+    document.documentElement.dataset.uiBuilderEditorRevision = String(revision);
+  }"""
+)
+private external fun publishEditorManifest(
+  revision: Int,
+  nodeCount: Int,
+  selectedNodeId: String,
+  catalogQuery: String,
+  operationSequence: Int,
+  outcome: String,
+  selectedText: String,
+  mainBackgroundChildren: String,
+  documentHash: String,
+)
+
+@JsFun(
+  """(sourceWidthDp, sourceHeightDp, scale) => {
+    globalThis.__uiBuilderEditorCanvas = {
+      ...(globalThis.__uiBuilderEditorCanvas || {}), sourceWidthDp, sourceHeightDp, scale
+    };
+  }"""
+)
+private external fun publishEditorCanvasMetrics(
+  sourceWidthDp: Int,
+  sourceHeightDp: Int,
+  scale: Float,
+)
+
+private fun publishEditorCanvasBounds(bounds: androidx.compose.ui.geometry.Rect) {
+  publishEditorCanvasBoundsValues(bounds.left, bounds.top, bounds.right, bounds.bottom)
+}
+
+@JsFun(
+  """(left, top, right, bottom) => {
+    const current = globalThis.__uiBuilderEditorCanvas || {};
+    globalThis.__uiBuilderEditorCanvas = {
+      ...current,
+      bounds: { left, top, right, bottom, width: right - left, height: bottom - top }
+    };
+  }"""
+)
+private external fun publishEditorCanvasBoundsValues(
+  left: Float,
+  top: Float,
+  right: Float,
+  bottom: Float,
+)
+
+@JsFun(
+  """(hovered, label) => {
+    globalThis.__uiBuilderEditorDropTarget = { hovered, label };
+  }"""
+)
+private external fun publishEditorDropTarget(hovered: Boolean, label: String)
