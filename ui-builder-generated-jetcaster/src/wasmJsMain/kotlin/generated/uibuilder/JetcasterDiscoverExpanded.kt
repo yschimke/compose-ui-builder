@@ -1,4 +1,4 @@
-// Generator content SHA-256: 378695fc522f7c2d831a4d697191085eb15a87f7b077047796c720cbff97f7cd
+// Generator content SHA-256: 9b03d5a3e13c87145244526db38f4ac14801ab21bb8f56d480447321d68f191c
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -99,7 +99,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                     Icon(
                       imageVector = builderIcon("search"),
                       contentDescription = "Search",
-                      tint = Color.Unspecified,
+                      tint = LocalContentColor.current,
                       modifier = Modifier.semantics { contentDescription = "Search" },
                     )
                   },
@@ -121,7 +121,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                     Icon(
                       imageVector = builderIcon("accountCircle"),
                       contentDescription = "Account",
-                      tint = Color.Unspecified,
+                      tint = LocalContentColor.current,
                       modifier = Modifier.semantics { contentDescription = "Account" },
                     )
                   },
@@ -183,7 +183,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 Icon(
                                   imageVector = builderIcon("check"),
                                   contentDescription = null,
-                                  tint = Color.Unspecified,
+                                  tint = LocalContentColor.current,
                                   modifier = Modifier.size(18.dp),
                                 )
                               },
@@ -294,7 +294,8 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                           contentDescription =
                                             "Unfollow Android Developers Backstage"
                                         }
-                                        .semantics { selected = true },
+                                        .semantics { selected = true }
+                                        .background(Color.Black.copy(alpha = .46f), CircleShape),
                                   ) {
                                     // node:podcast-card-android-follow-icon component:m3/icon
                                     // symbol:Icon
@@ -373,7 +374,8 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                         .semantics {
                                           contentDescription = "Follow Google Developers podcast"
                                         }
-                                        .semantics { selected = false },
+                                        .semantics { selected = false }
+                                        .background(Color.Black.copy(alpha = .46f), CircleShape),
                                   ) {
                                     // node:podcast-card-google-follow-icon component:m3/icon
                                     // symbol:Icon
@@ -593,7 +595,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       Icon(
                         imageVector = builderIcon("videoLibrary"),
                         contentDescription = null,
-                        tint = Color.Unspecified,
+                        tint = LocalContentColor.current,
                         modifier = Modifier,
                       )
                       // node:toolbar-library-label component:m3/text symbol:Text
@@ -616,31 +618,33 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                     contentColor = Color.Unspecified,
                     modifier = Modifier.semantics { selected = selectedDestination == "Discover" },
                   ) {
-                    // node:toolbar-discover-row component:layout/row symbol:Row
-                    // typed-properties:{"horizontalSpacingDp":{"type":"float","value":8},"verticalAlignment":{"type":"enum","value":"center"}}
-                    Row(
-                      modifier = Modifier,
-                      horizontalArrangement = Arrangement.spacedBy(8.dp),
-                      verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                      // node:toolbar-discover-icon component:m3/icon symbol:Icon
-                      // typed-properties:{"color":{"type":"colorToken","value":"onTertiary"},"iconKey":{"type":"enum","value":"genres"}}
-                      Icon(
-                        imageVector = builderIcon("genres"),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onTertiary,
+                    Box(Modifier.padding(horizontal = 16.dp)) {
+                      // node:toolbar-discover-row component:layout/row symbol:Row
+                      // typed-properties:{"horizontalSpacingDp":{"type":"float","value":8},"verticalAlignment":{"type":"enum","value":"center"}}
+                      Row(
                         modifier = Modifier,
-                      )
-                      // node:toolbar-discover-label component:m3/text symbol:Text
-                      // typed-properties:{"color":{"type":"colorToken","value":"onTertiary"},"style":{"type":"typographyToken","value":"labelLarge"},"text":{"type":"string","value":"Discover"}}
-                      Text(
-                        text = "Discover",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onTertiary,
-                        maxLines = 2147483647,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier,
-                      )
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                      ) {
+                        // node:toolbar-discover-icon component:m3/icon symbol:Icon
+                        // typed-properties:{"color":{"type":"colorToken","value":"onTertiary"},"iconKey":{"type":"enum","value":"genres"}}
+                        Icon(
+                          imageVector = builderIcon("genres"),
+                          contentDescription = null,
+                          tint = MaterialTheme.colorScheme.onTertiary,
+                          modifier = Modifier,
+                        )
+                        // node:toolbar-discover-label component:m3/text symbol:Text
+                        // typed-properties:{"color":{"type":"colorToken","value":"onTertiary"},"style":{"type":"typographyToken","value":"labelLarge"},"text":{"type":"string","value":"Discover"}}
+                        Text(
+                          text = "Discover",
+                          style = MaterialTheme.typography.labelLarge,
+                          color = MaterialTheme.colorScheme.onTertiary,
+                          maxLines = 2147483647,
+                          overflow = TextOverflow.Ellipsis,
+                          modifier = Modifier,
+                        )
+                      }
                     }
                   }
                 }
@@ -689,7 +693,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   Icon(
                     imageVector = builderIcon("moreVert"),
                     contentDescription = null,
-                    tint = Color.Unspecified,
+                    tint = LocalContentColor.current,
                     modifier = Modifier,
                   )
                 }
@@ -947,7 +951,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 Icon(
                                   imageVector = builderIcon("playlistAdd"),
                                   contentDescription = null,
-                                  tint = Color.Unspecified,
+                                  tint = LocalContentColor.current,
                                   modifier = Modifier,
                                 )
                               }
@@ -1049,7 +1053,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 Icon(
                                   imageVector = builderIcon("playlistAdd"),
                                   contentDescription = null,
-                                  tint = Color.Unspecified,
+                                  tint = LocalContentColor.current,
                                   modifier = Modifier,
                                 )
                               }
@@ -1184,6 +1188,7 @@ private fun BuilderHorizontalFloatingToolbar(
     modifier.semantics { stateDescription = if (expanded) "expanded" else "collapsed" },
     shape = CircleShape,
     color = containerColor,
+    tonalElevation = 6.dp,
     shadowElevation = 8.dp,
   ) {
     Row(

@@ -303,8 +303,7 @@ private class ComposeEmitter(
       "m3/surface" -> emitSurface(node, bodyLevel)
       "m3/card" -> emitCard(node, bodyLevel)
       "m3/filter-chip" -> emitFilterChip(node, bodyLevel)
-      "m3/icon-button" ->
-        emitSimpleContainer(node, bodyLevel, "IconButton", "content", "onClick = {}")
+      "m3/icon-button" -> emitIconButton(node, bodyLevel)
       "m3/button" -> emitButton(node, bodyLevel)
       "m3/horizontal-floating-toolbar" -> emitToolbar(node, bodyLevel)
       "m3/horizontal-divider" ->
@@ -522,10 +521,28 @@ private class ComposeEmitter(
   }
 
   private fun emitIcon(node: UiBuilderNode, level: Int) {
+    val tint =
+      if (node.string("color").isEmpty()) "LocalContentColor.current"
+      else node.colorExpression("color")
     line(
       level,
-      "Icon(imageVector = builderIcon(\"${node.string("iconKey").escape()}\"), contentDescription = ${node.string("contentDescription").nullableStringLiteral()}, tint = ${node.colorExpression("color")}, ${node.modifierArgument()})",
+      "Icon(imageVector = builderIcon(\"${node.string("iconKey").escape()}\"), contentDescription = ${node.string("contentDescription").nullableStringLiteral()}, tint = $tint, ${node.modifierArgument()})",
     )
+  }
+
+  private fun emitIconButton(node: UiBuilderNode, level: Int) {
+    val selectedBackground =
+      if ("selected" in node.properties) {
+        ".background(Color.Black.copy(alpha = .46f), CircleShape)"
+      } else {
+        ""
+      }
+    line(
+      level,
+      "IconButton(onClick = {}, modifier = ${node.modifierExpression()}$selectedBackground) {",
+    )
+    node.slot("content").forEach { emitNode(it, level + 1) }
+    line(level, "}")
   }
 
   private fun emitImage(node: UiBuilderNode, level: Int) {
@@ -598,7 +615,13 @@ private class ComposeEmitter(
       level,
       "$symbol(onClick = { ${node.actionExpression("click")} }, $colors${node.modifierArgument()}) {",
     )
-    node.slot("content").forEach { emitNode(it, level + 1) }
+    if (node.string("style") == "fab") {
+      line(level + 1, "Box(Modifier.padding(horizontal = 16.dp)) {")
+      node.slot("content").forEach { emitNode(it, level + 2) }
+      line(level + 1, "}")
+    } else {
+      node.slot("content").forEach { emitNode(it, level + 1) }
+    }
     line(level, "}")
   }
 
@@ -638,7 +661,7 @@ private class ComposeEmitter(
       "@Composable private fun BuilderSnackbarHost(visible: Boolean) { if (visible) Snackbar { Text(\"Snackbar\") } }"
     )
     appendLine(
-      "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, shadowElevation = 8.dp) { Row(Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
+      "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, tonalElevation = 6.dp, shadowElevation = 8.dp) { Row(Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
     )
     appendLine(
       "@Composable private fun BuilderRadialGradient(modifier: Modifier, innerColor: Color, innerAlpha: Float, outerColor: Color, centerFraction: Offset) { Box(modifier.drawBehind { drawRect(Brush.radialGradient(listOf(innerColor.copy(alpha = innerAlpha), outerColor), center = Offset(size.width * centerFraction.x, size.height * centerFraction.y), radius = size.maxDimension * .82f)) }) }"

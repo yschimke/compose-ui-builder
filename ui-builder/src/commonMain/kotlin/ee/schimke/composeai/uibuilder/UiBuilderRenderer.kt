@@ -58,6 +58,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
@@ -612,6 +613,7 @@ private fun CompatibleFloatingToolbar(
     modifier,
     shape = RoundedCornerShape(32.dp),
     color = node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHighest),
+    tonalElevation = 6.dp,
     shadowElevation = 8.dp,
   ) {
     Row(
@@ -975,7 +977,7 @@ private fun UiBuilderNode.icon(): ImageVector =
 private fun BuilderIcon(node: UiBuilderNode, modifier: Modifier) {
   val vector = node.icon()
   val description = node.string("contentDescription")
-  val tint = node.color("color", MaterialTheme.colorScheme.onSurface)
+  val tint = node.color("color", LocalContentColor.current)
   val sized = modifier.size(node.float("sizeDp", 24f).dp)
   if (!LocalUiBuilderExportStructuredIcons.current) {
     Icon(vector, description.ifEmpty { null }, sized, tint = tint)
