@@ -426,8 +426,9 @@ supported text/groups, declares every raster fallback, and rasterizes within the
 - [ ] Prove capability-driven codegen and SVG conformance for the Jetcaster fixture.
       Capability-gated codegen now emits the full 99-node fixture with located TODO diagnostics and
       revision/catalog/environment provenance. The generated source compiles and renders as a
-      standalone CMP/Wasm fixture, differing from the independent reference by `2.003%` with a
-      `2.1%` convergence ceiling. A
+      standalone CMP/Wasm fixture, differing from the independent reference by `2.003%` expanded
+      and `2.817%` compact, with interim spike ceilings of `2.1%` and `3.0%`. These are not the exact
+      release gate. A
       saved-revision JVM execution bridge exports deterministic structured text for vector-only
       subsets and rejects the full fixture because filtered icons become undeclared Skia raster
       images; the Jetcaster SVG/Figma conformance gate therefore remains open.

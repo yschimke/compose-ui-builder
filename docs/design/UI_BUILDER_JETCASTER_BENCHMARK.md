@@ -186,8 +186,9 @@ Confetti stays in CI as the fast, no-network compact regression. Jetcaster is th
   content remain open.
 - Capability-driven code generation covers the 99-node fixture with located diagnostics and now
   compiles as the standalone `ui-builder-generated-jetcaster` CMP/Wasm application. Its independent
-  reference comparison differs by `2.003%` at pixelmatch threshold `0.1`, with a `2.1%` interim
-  ceiling and a committed generated-render golden. Cover art is supplied by the explicit
+  reference comparison differs by `2.003%` expanded and `2.817%` compact at pixelmatch threshold
+  `0.1`, with `2.1%` and `3.0%` interim spike ceilings respectively and a committed expanded-render
+  golden. These guards are not the exact release gate. Cover art is supplied by the explicit
   `jetcaster-benchmark-artwork/v1` exact-key provenance adapter; the generic exporter emits a
   located diagnostic, declared fallback, and visible placeholder for any unbound asset. The
   checked-in source has a stale-generation verification task. Remaining source gaps are adaptive

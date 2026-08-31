@@ -34,12 +34,27 @@ class CapabilityComposeCodeExporterTest {
 
   @Test
   fun `full frozen Jetcaster document exports deterministically with every node located`() {
+    val immutableInputSnapshot =
+      document.copy(
+        roots = document.roots.toList(),
+        nodes =
+          document.nodes.mapValues { (_, node) ->
+            node.copy(
+              properties = JsonObject(node.properties.toMap()),
+              slots = node.slots.mapValues { it.value.toList() },
+              modifiers = JsonArray(node.modifiers.toList()),
+              eventBindings = JsonObject(node.eventBindings.toMap()),
+            )
+          },
+        stateVariables = JsonObject(document.stateVariables.toMap()),
+      )
     val first = CapabilityComposeCodeExporter.export(document, catalog, artworkAdapter)
     val second = CapabilityComposeCodeExporter.export(document, catalog, artworkAdapter)
     val source = assertNotNull(first.source)
 
     assertTrue(first.successful, first.diagnostics.joinToString { it.message })
     assertEquals(first, second)
+    assertEquals(immutableInputSnapshot, document, "export must not mutate its input document")
     assertEquals(99, Regex("// node:").findAll(source).count())
     assertTrue(source.contains("fun JetcasterDiscoverExpandedSupportingPane()"))
     assertTrue(source.contains("BuilderSupportingPaneScaffold("))
@@ -61,18 +76,54 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(
       source.contains("modifier.semantics { this.contentDescription = contentDescription }")
     )
-    assertEquals(
-      document.nodes.values.count { it.componentId == "asset/image" },
-      first.diagnostics.count {
-        it.code == "UNEMITTED_PROPERTY" && it.message.contains("'contentScale'")
-      },
-    )
+    assertEquals(0, first.diagnostics.count { it.code == "UNEMITTED_PROPERTY" })
     assertFalse(source.contains("assetKey.contains"))
-    assertTrue(first.diagnostics.any { it.code == "UNEMITTED_PROPERTY" })
-    assertTrue(source.contains("// TODO[UNEMITTED_PROPERTY]"))
+    assertFalse(source.contains("// TODO[UNEMITTED_PROPERTY]"))
+    assertTrue(source.contains("shape = RoundedCornerShape(16.dp)"))
+    assertTrue(source.contains("stateDescription = if (expanded)"))
+    assertTrue(source.contains("semantics { selected = selectedDestination == \"Discover\" }"))
+    assertTrue(source.contains("centerFraction: Offset"))
+    assertTrue(source.contains("contentScale = \"crop\""))
+    assertTrue(source.contains("key(\"podcast-detail-scroll\")"))
     assertEquals(1280f, first.provenance.viewportWidthDp)
     assertEquals("dark", first.provenance.theme)
     assertTrue(first.provenance.environmentCanonicalJson.contains("\"fontScale\":1"))
+  }
+
+  @Test
+  fun `multiple roots are explicitly rejected instead of silently producing an empty screen`() {
+    val secondRoot =
+      document.nodes
+        .getValue("search-placeholder")
+        .copy(
+          id = "second-root-text",
+          properties =
+            JsonObject(
+              mapOf(
+                "text" to
+                  JsonObject(
+                    mapOf(
+                      "type" to JsonPrimitive("string"),
+                      "value" to JsonPrimitive("Second root"),
+                    )
+                  )
+              )
+            ),
+        )
+    val multiRoot =
+      document.copy(
+        roots = document.roots + secondRoot.id,
+        nodes = document.nodes + (secondRoot.id to secondRoot),
+      )
+
+    val result = CapabilityComposeCodeExporter.export(multiRoot, catalog, artworkAdapter)
+
+    assertNull(result.source)
+    assertTrue(
+      result.diagnostics.any {
+        it.severity == ComposeExportSeverity.ERROR && it.code == "ROOT_CARDINALITY"
+      }
+    )
   }
 
   @Test
