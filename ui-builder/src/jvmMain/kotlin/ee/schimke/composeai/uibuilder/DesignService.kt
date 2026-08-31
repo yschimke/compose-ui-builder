@@ -40,6 +40,20 @@ sealed interface DesignServiceUpdate {
     override val documentHash: String,
     val event: CollaborationEvent,
   ) : DesignServiceUpdate
+
+  /**
+   * Ephemeral collaborative state. Presence observes the current durable cursor but never advances
+   * it, enters retained history, or survives restart.
+   */
+  data class Presence(
+    override val designId: String,
+    override val revision: Int,
+    override val sequence: Long,
+    override val documentHash: String,
+    val actorId: String,
+    val clientId: String,
+    val selectedNodeIds: List<String> = emptyList(),
+  ) : DesignServiceUpdate
 }
 
 sealed interface CreateDesignResult {
@@ -69,11 +83,74 @@ class InMemoryDesignService(
   private val initialDocumentSink: (UiBuilderDocument) -> Unit = {},
   private val eventSink: (String, CollaborationEvent) -> Unit = { _, _ -> },
 ) {
+  /**
+   * One subscriber's serialized, process-local delivery queue.
+   *
+   * Enqueue is performed while the service lock defines total event order, but [drain] calls the
+   * listener without either the service lock or this mailbox's monitor held. Exactly one caller
+   * drains a mailbox at a time, so a live commit cannot overtake captured catch-up even when a
+   * different thread wins the race to [drain].
+   *
+   * This incubating service deliberately uses an unbounded in-memory queue. A slow listener does
+   * not block the reducer lock, but concurrent producers can accumulate updates until it catches
+   * up. A transport adapter must eventually add a bounded queue/disconnect policy. Closing drops
+   * updates that have not started delivery; a callback already removed from the queue may finish.
+   */
+  private class SubscriberMailbox(private val listener: (DesignServiceUpdate) -> Unit) {
+    private val monitor = Any()
+    private val pending = ArrayDeque<DesignServiceUpdate>()
+    private var draining = false
+    private var closed = false
+
+    fun enqueue(updates: Iterable<DesignServiceUpdate>) {
+      synchronized(monitor) { if (!closed) pending.addAll(updates) }
+    }
+
+    fun enqueue(update: DesignServiceUpdate) {
+      synchronized(monitor) { if (!closed) pending.addLast(update) }
+    }
+
+    fun drain() {
+      synchronized(monitor) {
+        if (closed || draining || pending.isEmpty()) return
+        draining = true
+      }
+      try {
+        while (true) {
+          val next =
+            synchronized(monitor) {
+              if (closed || pending.isEmpty()) {
+                draining = false
+                null
+              } else {
+                pending.removeFirst()
+              }
+            } ?: return
+          listener(next)
+        }
+      } catch (failure: Throwable) {
+        synchronized(monitor) {
+          closed = true
+          pending.clear()
+          draining = false
+        }
+        throw failure
+      }
+    }
+
+    fun close() {
+      synchronized(monitor) {
+        closed = true
+        pending.clear()
+      }
+    }
+  }
+
   private data class DesignEntry(
     var state: CollaborationState,
     var lastSequence: Long = 0,
     val history: ArrayDeque<DesignServiceUpdate.Committed> = ArrayDeque(),
-    val subscribers: MutableMap<Long, (DesignServiceUpdate) -> Unit> = linkedMapOf(),
+    val subscribers: MutableMap<Long, SubscriberMailbox> = linkedMapOf(),
   )
 
   private val lock = ReentrantLock()
@@ -184,6 +261,39 @@ class InMemoryDesignService(
     }
 
   /**
+   * Broadcasts non-durable presence at the design's current revision and accepted-event cursor.
+   * Invalid identities or selections fail without publishing anything.
+   */
+  fun publishPresence(
+    designId: String,
+    actorId: String,
+    clientId: String,
+    selectedNodeIds: List<String> = emptyList(),
+  ): Boolean {
+    val mailboxes: List<SubscriberMailbox>
+    lock.withLock {
+      val entry = designs[designId] ?: return false
+      if (actorId.isBlank() || clientId.isBlank()) return false
+      if (selectedNodeIds.any { it !in entry.state.document.nodes }) return false
+      val current = snapshot(entry)
+      val update =
+        DesignServiceUpdate.Presence(
+          designId = designId,
+          revision = current.revision,
+          sequence = current.sequence,
+          documentHash = current.documentHash,
+          actorId = actorId,
+          clientId = clientId,
+          selectedNodeIds = selectedNodeIds,
+        )
+      mailboxes = entry.subscribers.values.toList()
+      mailboxes.forEach { it.enqueue(update) }
+    }
+    drain(mailboxes)
+    return true
+  }
+
+  /**
    * Subscribes atomically with catch-up. A retained sequence receives only later commits; an old or
    * future sequence receives a replacement snapshot. The callback is never invoked under the
    * reducer lock.
@@ -193,16 +303,28 @@ class InMemoryDesignService(
     afterSequence: Long?,
     listener: (DesignServiceUpdate) -> Unit,
   ): Closeable? {
-    val initial: List<DesignServiceUpdate>
+    val mailbox: SubscriberMailbox
     val subscriberId: Long
     lock.withLock {
       val entry = designs[designId] ?: return null
       subscriberId = nextSubscriberId++
-      initial = catchUp(entry, afterSequence)
-      entry.subscribers[subscriberId] = listener
+      mailbox = SubscriberMailbox(listener)
+      mailbox.enqueue(catchUp(entry, afterSequence))
+      entry.subscribers[subscriberId] = mailbox
     }
-    initial.forEach(listener)
-    return Closeable { lock.withLock { designs[designId]?.subscribers?.remove(subscriberId) } }
+    try {
+      mailbox.drain()
+    } catch (failure: Throwable) {
+      lock.withLock { designs[designId]?.subscribers?.remove(subscriberId, mailbox) }
+      mailbox.close()
+      throw failure
+    }
+    return Closeable {
+      val removed = lock.withLock {
+        designs[designId]?.subscribers?.remove(subscriberId, mailbox) == true
+      }
+      if (removed) mailbox.close()
+    }
   }
 
   private fun submit(
@@ -210,7 +332,7 @@ class InMemoryDesignService(
     mutation: RejectedMutation,
     reduce: (CollaborationState, DesignValidators) -> CommandApplication,
   ): DesignSubmission {
-    val listeners: List<(DesignServiceUpdate) -> Unit>
+    val mailboxes: List<SubscriberMailbox>
     val submission: DesignSubmission
     lock.withLock {
       val entry = designs[designId]
@@ -253,11 +375,25 @@ class InMemoryDesignService(
       entry.lastSequence = sequence
       entry.history += update
       while (entry.history.size > retainedCommittedUpdates) entry.history.removeFirst()
-      listeners = entry.subscribers.values.toList()
+      mailboxes = entry.subscribers.values.toList()
+      mailboxes.forEach { it.enqueue(update) }
       submission = DesignSubmission(application, update)
     }
-    listeners.forEach { it(submission.update!!) }
+    drain(mailboxes)
     return submission
+  }
+
+  private fun drain(mailboxes: Iterable<SubscriberMailbox>) {
+    var firstFailure: Throwable? = null
+    mailboxes.forEach { mailbox ->
+      try {
+        mailbox.drain()
+      } catch (failure: Throwable) {
+        val prior = firstFailure
+        if (prior == null) firstFailure = failure else prior.addSuppressed(failure)
+      }
+    }
+    firstFailure?.let { throw it }
   }
 
   private fun catchUp(
@@ -340,6 +476,13 @@ class PersistentDesignService(
   fun undo(command: UndoCommand): DesignSubmission = delegate.undo(command)
 
   fun redo(command: RedoCommand): DesignSubmission = delegate.redo(command)
+
+  fun publishPresence(
+    designId: String,
+    actorId: String,
+    clientId: String,
+    selectedNodeIds: List<String> = emptyList(),
+  ): Boolean = delegate.publishPresence(designId, actorId, clientId, selectedNodeIds)
 
   fun subscribe(
     designId: String,
