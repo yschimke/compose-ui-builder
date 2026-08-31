@@ -144,14 +144,23 @@ fun UiBuilderSurface(
   val dark = document.environment["theme"]?.jsonPrimitive?.contentOrNull == "dark"
   val density = LocalDensity.current
   SideEffect { inspection.updateState(state) }
-  MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+  val colorScheme =
+    when {
+      dark && document.id.startsWith("fixture-jetcaster-") -> JetcasterDarkColorScheme
+      dark -> darkColorScheme()
+      else -> lightColorScheme()
+    }
+  MaterialTheme(colorScheme = colorScheme) {
     Box(Modifier.fillMaxSize()) {
       document.roots.forEach { root ->
         RenderNode(
           document = document,
           nodeId = root,
           state = state,
-          onState = { key, value -> state[key] = value },
+          onState = { key, value ->
+            state[key] = value
+            inspection.updateState(state)
+          },
           onBounds = { id, rect ->
             bounds[id] = rect
             inspection.recordNodeBounds(id, rect.left, rect.top, rect.right, rect.bottom)
@@ -313,12 +322,12 @@ private fun RenderNode(
       )
     "m3/search-bar" ->
       Surface(
-        measured,
+        measured.height(56.dp),
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = node.float("tonalElevationDp").dp,
       ) {
-        Column { slot("inputField").forEach { child(it, Modifier) } }
+        Column { slot("inputField").forEach { child(it, Modifier.fillMaxSize()) } }
       }
     "m3/search-input-field" -> {
       val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
@@ -326,7 +335,7 @@ private fun RenderNode(
       Row(
         measured.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
       ) {
         slot("leadingIcon").forEach { child(it, Modifier) }
         Box(Modifier.weight(1f)) {
@@ -458,19 +467,24 @@ private fun RenderNode(
           )
         )
       )
-    "shape/radial-gradient" ->
+    "shape/radial-gradient" -> {
+      val inner =
+        node
+          .color("innerColor", MaterialTheme.colorScheme.primary)
+          .copy(alpha = node.float("innerAlpha", 1f))
+      val outer = node.color("outerColor", Color.Transparent)
       Box(
-        measured.background(
-          Brush.radialGradient(
-            listOf(
-              node
-                .color("innerColor", MaterialTheme.colorScheme.primary)
-                .copy(alpha = node.float("innerAlpha", 1f)),
-              node.color("outerColor", Color.Transparent),
+        measured.drawBehind {
+          drawRect(
+            Brush.radialGradient(
+              listOf(inner, outer),
+              center = if (node.string("center") == "topStart") Offset.Zero else center,
+              radius = size.maxDimension * 0.82f,
             )
           )
-        )
+        }
       )
+    }
     "shape/colour-dot" ->
       Box(
         measured
@@ -548,11 +562,11 @@ private fun CompatibleFloatingToolbar(
     modifier,
     shape = RoundedCornerShape(32.dp),
     color = node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHighest),
-    shadowElevation = 6.dp,
+    shadowElevation = 8.dp,
   ) {
     Row(
-      Modifier.padding(4.dp),
-      horizontalArrangement = Arrangement.spacedBy(4.dp),
+      Modifier.padding(6.dp),
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
       content()
@@ -578,7 +592,7 @@ private fun BuilderButton(
         modifier,
         containerColor = node.color("containerColor", MaterialTheme.colorScheme.primary),
       ) {
-        content()
+        Box(Modifier.padding(horizontal = 16.dp)) { content() }
       }
     else ->
       Button(
@@ -898,3 +912,29 @@ private fun parseArgb(value: String): Long =
 
 private val INTERACTIVE_COMPONENTS =
   setOf("m3/button", "m3/filter-chip", "m3/icon-button", "m3/tab")
+
+private val JetcasterDarkColorScheme =
+  darkColorScheme(
+    primary = Color(0xFFD0BCFF),
+    onPrimary = Color(0xFF381E72),
+    primaryContainer = Color(0xFF4F378B),
+    onPrimaryContainer = Color(0xFFEADDFF),
+    secondary = Color(0xFFCCC2DC),
+    onSecondary = Color(0xFF332D41),
+    secondaryContainer = Color(0xFF4A4458),
+    onSecondaryContainer = Color(0xFFE8DEF8),
+    tertiary = Color(0xFFEFB8C8),
+    onTertiary = Color(0xFF492532),
+    background = Color(0xFF111318),
+    onBackground = Color(0xFFE3E2E9),
+    surface = Color(0xFF111318),
+    onSurface = Color(0xFFE3E2E9),
+    surfaceVariant = Color(0xFF46464F),
+    onSurfaceVariant = Color(0xFFC7C5D0),
+    outline = Color(0xFF918F99),
+    outlineVariant = Color(0xFF46464F),
+    surfaceContainer = Color(0xFF1D1F25),
+    surfaceContainerLow = Color(0xFF191B20),
+    surfaceContainerHigh = Color(0xFF282A30),
+    surfaceContainerHighest = Color(0xFF33353B),
+  )

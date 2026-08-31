@@ -2,6 +2,15 @@
   "schema": "compose-ui-builder-reference-provenance/v1",
   "referenceId": "jetcaster-discover-expanded-v1",
   "viewport": { "widthDp": 1280, "heightDp": 800, "density": 1.0 },
+  "responsiveVariants": [
+    { "id": "expanded-two-pane", "widthDp": 1280, "heightDp": 800, "density": 1.0 },
+    { "id": "compact-main-pane", "widthDp": 412, "heightDp": 800, "density": 1.0 }
+  ],
+  "comparisonFixture": {
+    "resource": "jetcaster-discover-operations-v1.json",
+    "revision": 99,
+    "documentHash": "09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643"
+  },
   "source": {
     "repository": "android/compose-samples",
     "project": "Jetcaster",

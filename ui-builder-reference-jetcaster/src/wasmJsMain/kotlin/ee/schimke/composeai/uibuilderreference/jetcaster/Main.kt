@@ -11,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -175,12 +176,18 @@ fun main() {
 private fun JetcasterReferenceApp() {
   MaterialTheme(colorScheme = ReferenceColors) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-      Row(Modifier.fillMaxSize()) {
-        MainDiscoverPane(Modifier.weight(744f).fillMaxHeight())
-        Spacer(
-          Modifier.width(24.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
-        )
-        PodcastDetailPane(Modifier.weight(512f).fillMaxHeight())
+      BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (maxWidth >= 1280.dp) {
+          Row(Modifier.fillMaxSize()) {
+            MainDiscoverPane(Modifier.width(744.dp).fillMaxHeight())
+            Spacer(
+              Modifier.width(24.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
+            )
+            PodcastDetailPane(Modifier.weight(1f).fillMaxHeight())
+          }
+        } else {
+          MainDiscoverPane(Modifier.fillMaxSize())
+        }
       }
     }
   }
@@ -212,8 +219,7 @@ private fun MainDiscoverPane(modifier: Modifier = Modifier) {
     ) { contentPadding ->
       Box(Modifier.padding(contentPadding).fillMaxSize()) {
         LazyVerticalGrid(
-          columns = GridCells.Adaptive(340.dp),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          columns = GridCells.Adaptive(362.dp),
           contentPadding = PaddingValues(bottom = 88.dp),
           modifier = Modifier.fillMaxSize(),
         ) {
@@ -317,11 +323,7 @@ private fun PodcastArtworkCard(podcast: Podcast) {
       Artwork(podcast, Modifier.fillMaxSize())
       Box(
         Modifier.fillMaxSize()
-          .background(
-            Brush.verticalGradient(
-              listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.88f))
-            )
-          )
+          .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black)))
       )
       IconButton(
         onClick = {},
@@ -340,8 +342,7 @@ private fun PodcastArtworkCard(podcast: Podcast) {
         podcast.title,
         Modifier.align(Alignment.BottomStart).padding(16.dp),
         color = Color.White,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.bodyMedium,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
       )
@@ -413,7 +414,10 @@ private fun EpisodeCard(
     shape = MaterialTheme.shapes.large,
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
   ) {
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(
+      Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+      verticalArrangement = if (showArtwork) Arrangement.spacedBy(8.dp) else Arrangement.Top,
+    ) {
       Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -423,7 +427,6 @@ private fun EpisodeCard(
           Text(
             episode.title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
@@ -434,7 +437,7 @@ private fun EpisodeCard(
           )
           Text(
             episode.summary,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

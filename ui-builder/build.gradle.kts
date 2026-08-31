@@ -27,6 +27,12 @@ kotlin {
       implementation(libs.kotlinx.serialization.json)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
+    getByName("jvmMain").dependencies {
+      // Feasibility spike only: the saved-document bridge executes ComposeScene against SVGCanvas.
+      // It remains NO-GO for production/Figma until a representative nested scene succeeds and the
+      // adapter moves behind :render-host. currentOs supplies the matching local Skiko runtime.
+      implementation(compose.desktop.currentOs)
+    }
     getByName("jvmTest") {
       resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
     }

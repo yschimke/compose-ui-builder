@@ -27,6 +27,14 @@ data class DesignCommand(
 @Serializable
 sealed interface DesignOperation {
   @Serializable
+  @SerialName("insertNode")
+  data class InsertNode(
+    val node: UiBuilderNode,
+    val parent: ParentSlot? = null,
+    val afterNodeId: String? = null,
+  ) : DesignOperation
+
+  @Serializable
   @SerialName("moveNode")
   data class MoveNode(
     val nodeId: String,
@@ -54,6 +62,14 @@ data class CollaborationState(
   val document: UiBuilderDocument,
   val tombstones: Map<String, NodeTombstone> = emptyMap(),
   val acceptedCommands: Map<String, AcceptedCommand> = emptyMap(),
+  val positions: Map<String, StableNodePosition> = emptyMap(),
+  val positionSnapshots: Map<Int, Map<String, StableNodePosition>> = emptyMap(),
+  val propertyVersions: Map<PropertyAddress, Int> = emptyMap(),
+  val moveVersions: Map<String, Int> = emptyMap(),
+  val undoRecords: Map<String, AcceptedUndo> = emptyMap(),
+  val redoRecords: Map<String, AcceptedRedo> = emptyMap(),
+  val rejectedOperations: Map<String, RejectedOperation> = emptyMap(),
+  val compensatedOperationIds: Set<String> = emptySet(),
 )
 
 data class NodeTombstone(
@@ -61,7 +77,25 @@ data class NodeTombstone(
   val nodes: Map<String, UiBuilderNode>,
   val location: NodeLocation,
   val deletedAtRevision: Int,
+  val positions: Map<String, StableNodePosition> = emptyMap(),
 )
+
+data class PropertyAddress(val nodeId: String, val property: String)
+
+data class StablePositionKey(val path: List<Int>, val tieBreaker: String) :
+  Comparable<StablePositionKey> {
+  override fun compareTo(other: StablePositionKey): Int {
+    val count = maxOf(path.size, other.path.size)
+    repeat(count) { index ->
+      val left = path.getOrElse(index) { 0 }
+      val right = other.path.getOrElse(index) { 0 }
+      if (left != right) return left.compareTo(right)
+    }
+    return tieBreaker.compareTo(other.tieBreaker)
+  }
+}
+
+data class StableNodePosition(val parent: ParentSlot?, val key: StablePositionKey)
 
 data class NodeLocation(
   val parent: ParentSlot? = null,
@@ -74,6 +108,82 @@ data class AcceptedCommand(
   val command: DesignCommand,
   val committedRevision: Int,
   val canonicalDocument: String,
+  val propertyChanges: List<PropertyChange> = emptyList(),
+  val conflicts: List<ConflictNotice> = emptyList(),
+)
+
+data class PropertyChange(
+  val address: PropertyAddress,
+  val before: JsonElement?,
+  val after: JsonElement,
+)
+
+@Serializable
+data class UndoCommand(
+  val designId: String,
+  val operationId: String,
+  val actorId: String,
+  val clientId: String,
+  val baseRevision: Int,
+  val targetOperationId: String,
+)
+
+@Serializable
+data class RedoCommand(
+  val designId: String,
+  val operationId: String,
+  val actorId: String,
+  val clientId: String,
+  val baseRevision: Int,
+  val targetUndoOperationId: String,
+)
+
+data class AcceptedUndo(
+  val command: UndoCommand,
+  val target: AcceptedCommand,
+  val committedRevision: Int,
+  val canonicalDocument: String,
+  val redoneBy: String? = null,
+)
+
+data class AcceptedRedo(
+  val command: RedoCommand,
+  val targetUndoOperationId: String,
+  val committedRevision: Int,
+  val canonicalDocument: String,
+)
+
+sealed interface RejectedMutation {
+  val operationId: String
+
+  data class Design(val command: DesignCommand) : RejectedMutation {
+    override val operationId: String = command.operationId
+  }
+
+  data class Undo(val command: UndoCommand) : RejectedMutation {
+    override val operationId: String = command.operationId
+  }
+
+  data class Redo(val command: RedoCommand) : RejectedMutation {
+    override val operationId: String = command.operationId
+  }
+}
+
+data class RejectedOperation(
+  val mutation: RejectedMutation,
+  val outcome: CommandOutcome.Rejected,
+)
+
+enum class ConflictCode {
+  STALE_PROPERTY_WRITE,
+  STALE_MOVE,
+}
+
+data class ConflictNotice(
+  val code: ConflictCode,
+  val nodeId: String,
+  val field: String? = null,
+  val overwrittenRevision: Int,
 )
 
 sealed interface CommandOutcome {
@@ -81,6 +191,7 @@ sealed interface CommandOutcome {
     val committedRevision: Int,
     val canonicalDocument: String,
     val idempotentReplay: Boolean,
+    val conflicts: List<ConflictNotice> = emptyList(),
   ) : CommandOutcome
 
   data class Rejected(
@@ -102,8 +213,14 @@ enum class RejectionCode {
   MISSING_PROPERTY_VALIDATOR,
   MALFORMED_PROPERTY,
   INVALID_PROPERTY,
+  REVISION_NOT_RETAINED,
   INVALID_LOCATION,
   CYCLE,
+  ACTOR_MISMATCH,
+  ALREADY_COMPENSATED,
+  UNSAFE_COMPENSATION,
+  UNSUPPORTED_COMPENSATION,
+  UNKNOWN_OPERATION,
 }
 
 data class CommandApplication(val state: CollaborationState, val outcome: CommandOutcome)
@@ -160,11 +277,11 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
 /**
  * Immutable, server-ordered collaboration reducer.
  *
- * This first slice deliberately requires an exact base revision. The idempotency lookup runs before
- * that check so a transport retry still returns its original result after later commits. A rejected
- * batch never exposes the working copy used while validating earlier operations in that batch. It
- * is an executable Wave 1 collaboration slice, not a claim that the full Gate 0 concurrency,
- * compensation, retention, or persistence semantics are implemented.
+ * The idempotency lookup runs before revision checks so a transport retry returns its original
+ * result after later commits. Stale scalar writes, inserts, and moves converge through the server's
+ * accepted log and stable position keys; delete/restore remain strict. A rejected batch never
+ * exposes its working copy. This advances the collaboration slice but does not claim full Gate 0
+ * retention, persistence, or structural compensation semantics.
  */
 object CollaborationReducer {
   fun apply(
@@ -172,6 +289,24 @@ object CollaborationReducer {
     command: DesignCommand,
     propertyValidator: CollaborationPropertyValidator? = null,
   ): CommandApplication {
+    val mutation = RejectedMutation.Design(command)
+    state.replayRejected(mutation)?.let {
+      return it
+    }
+    return applyUnrecorded(state, command, propertyValidator).retainRejection(mutation)
+  }
+
+  private fun applyUnrecorded(
+    state: CollaborationState,
+    command: DesignCommand,
+    propertyValidator: CollaborationPropertyValidator?,
+  ): CommandApplication {
+    if (command.operationId in state.undoRecords || command.operationId in state.redoRecords) {
+      return state.rejected(
+        RejectionCode.OPERATION_ID_REUSED,
+        "operation id ${command.operationId} is already committed as compensation",
+      )
+    }
     val prior = state.acceptedCommands[command.operationId]
     if (prior != null) {
       if (prior.command != command) {
@@ -186,6 +321,7 @@ object CollaborationReducer {
           committedRevision = prior.committedRevision,
           canonicalDocument = prior.canonicalDocument,
           idempotentReplay = true,
+          conflicts = prior.conflicts,
         ),
       )
     }
@@ -207,10 +343,22 @@ object CollaborationReducer {
         "operationId, actorId, clientId, and at least one operation are required",
       )
     }
-    if (command.baseRevision != state.document.revision) {
+    if (command.baseRevision > state.document.revision || command.baseRevision < 0) {
       return state.rejected(
         RejectionCode.REVISION_MISMATCH,
-        "base revision ${command.baseRevision} does not match ${state.document.revision}",
+        "base revision ${command.baseRevision} is not available at ${state.document.revision}",
+      )
+    }
+    val stale = command.baseRevision < state.document.revision
+    if (
+      stale &&
+        command.operations.any {
+          it is DesignOperation.DeleteNode || it is DesignOperation.RestoreNode
+        }
+    ) {
+      return state.rejected(
+        RejectionCode.REVISION_MISMATCH,
+        "stale delete/restore requires the current revision ${state.document.revision}",
       )
     }
     if (propertyValidator == null) {
@@ -229,10 +377,31 @@ object CollaborationReducer {
       }
     }
 
-    var working = state.copy(acceptedCommands = state.acceptedCommands)
+    val prepared = state.withStablePositions()
+    val basePositions = prepared.positionSnapshots[command.baseRevision]
+    if (basePositions == null) {
+      return state.rejected(
+        RejectionCode.REVISION_NOT_RETAINED,
+        "position snapshot for revision ${command.baseRevision} is not retained",
+      )
+    }
+    val trace = ReductionTrace(prepared)
     command.operations.forEachIndexed { index, operation ->
       try {
-        working = working.applyOperation(operation, propertyValidator)
+        val operationPositions =
+          basePositions +
+            trace.batchPositionTouches.mapNotNull { nodeId ->
+              trace.state.positions[nodeId]?.let { nodeId to it }
+            }
+        trace.state =
+          trace.state.applyOperation(
+            operation = operation,
+            propertyValidator = propertyValidator,
+            basePositions = operationPositions,
+            operationKey = "${command.operationId}:$index",
+            baseRevision = command.baseRevision,
+            trace = trace,
+          )
       } catch (failure: ReducerFailure) {
         return state.rejected(
           failure.code,
@@ -245,18 +414,32 @@ object CollaborationReducer {
     }
 
     val committedRevision = state.document.revision + 1
-    val document = working.document.copy(revision = committedRevision)
+    val document = trace.state.document.copy(revision = committedRevision)
     val canonicalDocument = canonicalDocument(document)
+    val propertyVersions =
+      trace.propertyTouches.fold(trace.state.propertyVersions) { versions, address ->
+        versions + (address to committedRevision)
+      }
+    val moveVersions =
+      trace.moveTouches.fold(trace.state.moveVersions) { versions, nodeId ->
+        versions + (nodeId to committedRevision)
+      }
     val accepted =
       AcceptedCommand(
         command = command,
         committedRevision = committedRevision,
         canonicalDocument = canonicalDocument,
+        propertyChanges = trace.propertyChanges,
+        conflicts = trace.conflicts,
       )
     val committed =
-      working.copy(
+      trace.state.copy(
         document = document,
         acceptedCommands = state.acceptedCommands + (command.operationId to accepted),
+        positionSnapshots =
+          trace.state.positionSnapshots + (committedRevision to trace.state.positions),
+        propertyVersions = propertyVersions,
+        moveVersions = moveVersions,
       )
     return CommandApplication(
       committed,
@@ -264,7 +447,245 @@ object CollaborationReducer {
         committedRevision = committedRevision,
         canonicalDocument = canonicalDocument,
         idempotentReplay = false,
+        conflicts = trace.conflicts,
       ),
+    )
+  }
+
+  fun undo(state: CollaborationState, command: UndoCommand): CommandApplication {
+    val mutation = RejectedMutation.Undo(command)
+    state.replayRejected(mutation)?.let {
+      return it
+    }
+    return undoUnrecorded(state, command).retainRejection(mutation)
+  }
+
+  private fun undoUnrecorded(
+    state: CollaborationState,
+    command: UndoCommand,
+  ): CommandApplication {
+    state.undoRecords[command.operationId]?.let { prior ->
+      if (prior.command != command) {
+        return state.rejected(
+          RejectionCode.OPERATION_ID_REUSED,
+          "operation id ${command.operationId} was already used by a different undo",
+        )
+      }
+      return CommandApplication(
+        state,
+        CommandOutcome.Accepted(
+          prior.committedRevision,
+          prior.canonicalDocument,
+          idempotentReplay = true,
+        ),
+      )
+    }
+    if (command.operationId in state.acceptedCommands || command.operationId in state.redoRecords) {
+      return state.rejected(
+        RejectionCode.OPERATION_ID_REUSED,
+        "operation id ${command.operationId} is already committed",
+      )
+    }
+    state
+      .validateCompensationEnvelope(
+        command.designId,
+        command.operationId,
+        command.actorId,
+        command.clientId,
+        command.baseRevision,
+      )
+      ?.let {
+        return it
+      }
+    val target =
+      state.acceptedCommands[command.targetOperationId]
+        ?: return state.rejected(
+          RejectionCode.UNKNOWN_OPERATION,
+          "unknown target operation ${command.targetOperationId}",
+        )
+    if (target.command.actorId != command.actorId) {
+      return state.rejected(
+        RejectionCode.ACTOR_MISMATCH,
+        "actor ${command.actorId} cannot undo ${target.command.actorId}'s operation",
+      )
+    }
+    if (target.command.operationId in state.compensatedOperationIds) {
+      return state.rejected(
+        RejectionCode.ALREADY_COMPENSATED,
+        "operation ${target.command.operationId} is already compensated",
+      )
+    }
+    if (
+      target.propertyChanges.isEmpty() ||
+        target.command.operations.any { it !is DesignOperation.SetProperty }
+    ) {
+      return state.rejected(
+        RejectionCode.UNSUPPORTED_COMPENSATION,
+        "this slice compensates scalar-only batches; structural compensation remains pending",
+      )
+    }
+    target.propertyChanges.asReversed().distinctBy(PropertyChange::address).forEach { change ->
+      val current =
+        state.document.nodes[change.address.nodeId]?.properties?.get(change.address.property)
+      val currentVersion = state.propertyVersions[change.address]
+      if (current != change.after || currentVersion != target.committedRevision) {
+        return state.rejected(
+          RejectionCode.UNSAFE_COMPENSATION,
+          "property changed after ${target.command.operationId} at revision $currentVersion",
+          nodeId = change.address.nodeId,
+          field = change.address.property,
+        )
+      }
+    }
+
+    val prepared = state.withStablePositions()
+    var document = prepared.document
+    target.propertyChanges.asReversed().forEach { change ->
+      val node = document.nodes.getValue(change.address.nodeId)
+      val properties =
+        if (change.before == null) node.properties - change.address.property
+        else node.properties + (change.address.property to change.before)
+      document =
+        document.copy(
+          nodes = document.nodes + (node.id to node.copy(properties = JsonObject(properties)))
+        )
+    }
+    val committedRevision = state.document.revision + 1
+    document = document.copy(revision = committedRevision)
+    val canonicalDocument = canonicalDocument(document)
+    val record = AcceptedUndo(command, target, committedRevision, canonicalDocument)
+    val propertyVersions =
+      target.propertyChanges.fold(prepared.propertyVersions) { versions, change ->
+        versions + (change.address to committedRevision)
+      }
+    val committed =
+      prepared.copy(
+        document = document,
+        propertyVersions = propertyVersions,
+        positionSnapshots = prepared.positionSnapshots + (committedRevision to prepared.positions),
+        undoRecords = prepared.undoRecords + (command.operationId to record),
+        compensatedOperationIds = prepared.compensatedOperationIds + target.command.operationId,
+      )
+    return CommandApplication(
+      committed,
+      CommandOutcome.Accepted(committedRevision, canonicalDocument, idempotentReplay = false),
+    )
+  }
+
+  fun redo(state: CollaborationState, command: RedoCommand): CommandApplication {
+    val mutation = RejectedMutation.Redo(command)
+    state.replayRejected(mutation)?.let {
+      return it
+    }
+    return redoUnrecorded(state, command).retainRejection(mutation)
+  }
+
+  private fun redoUnrecorded(
+    state: CollaborationState,
+    command: RedoCommand,
+  ): CommandApplication {
+    state.redoRecords[command.operationId]?.let { prior ->
+      if (prior.command != command) {
+        return state.rejected(
+          RejectionCode.OPERATION_ID_REUSED,
+          "operation id ${command.operationId} was already used by a different redo",
+        )
+      }
+      return CommandApplication(
+        state,
+        CommandOutcome.Accepted(
+          prior.committedRevision,
+          prior.canonicalDocument,
+          idempotentReplay = true,
+        ),
+      )
+    }
+    if (command.operationId in state.acceptedCommands || command.operationId in state.undoRecords) {
+      return state.rejected(
+        RejectionCode.OPERATION_ID_REUSED,
+        "operation id ${command.operationId} is already committed",
+      )
+    }
+    state
+      .validateCompensationEnvelope(
+        command.designId,
+        command.operationId,
+        command.actorId,
+        command.clientId,
+        command.baseRevision,
+      )
+      ?.let {
+        return it
+      }
+    val undo =
+      state.undoRecords[command.targetUndoOperationId]
+        ?: return state.rejected(
+          RejectionCode.UNKNOWN_OPERATION,
+          "unknown undo operation ${command.targetUndoOperationId}",
+        )
+    if (undo.command.actorId != command.actorId) {
+      return state.rejected(
+        RejectionCode.ACTOR_MISMATCH,
+        "actor ${command.actorId} cannot redo ${undo.command.actorId}'s undo",
+      )
+    }
+    if (undo.redoneBy != null) {
+      return state.rejected(
+        RejectionCode.ALREADY_COMPENSATED,
+        "undo ${undo.command.operationId} was already redone",
+      )
+    }
+    undo.target.propertyChanges.distinctBy(PropertyChange::address).forEach { change ->
+      val current =
+        state.document.nodes[change.address.nodeId]?.properties?.get(change.address.property)
+      val currentVersion = state.propertyVersions[change.address]
+      if (current != change.before || currentVersion != undo.committedRevision) {
+        return state.rejected(
+          RejectionCode.UNSAFE_COMPENSATION,
+          "property changed after ${undo.command.operationId} at revision $currentVersion",
+          nodeId = change.address.nodeId,
+          field = change.address.property,
+        )
+      }
+    }
+
+    val prepared = state.withStablePositions()
+    var document = prepared.document
+    undo.target.propertyChanges.forEach { change ->
+      val node = document.nodes.getValue(change.address.nodeId)
+      document =
+        document.copy(
+          nodes =
+            document.nodes +
+              (node.id to
+                node.copy(
+                  properties =
+                    JsonObject(node.properties + (change.address.property to change.after))
+                ))
+        )
+    }
+    val committedRevision = state.document.revision + 1
+    document = document.copy(revision = committedRevision)
+    val canonicalDocument = canonicalDocument(document)
+    val propertyVersions =
+      undo.target.propertyChanges.fold(prepared.propertyVersions) { versions, change ->
+        versions + (change.address to committedRevision)
+      }
+    val record =
+      AcceptedRedo(command, undo.command.operationId, committedRevision, canonicalDocument)
+    val committed =
+      prepared.copy(
+        document = document,
+        propertyVersions = propertyVersions,
+        positionSnapshots = prepared.positionSnapshots + (committedRevision to prepared.positions),
+        undoRecords =
+          prepared.undoRecords +
+            (undo.command.operationId to undo.copy(redoneBy = command.operationId)),
+        redoRecords = prepared.redoRecords + (command.operationId to record),
+      )
+    return CommandApplication(
+      committed,
+      CommandOutcome.Accepted(committedRevision, canonicalDocument, idempotentReplay = false),
     )
   }
 
@@ -293,18 +714,104 @@ fun canonicalDocument(document: UiBuilderDocument): String {
   return canonicalJson(json.encodeToJsonElement(UiBuilderDocument.serializer(), document))
 }
 
+private data class ReductionTrace(
+  var state: CollaborationState,
+  val conflicts: MutableList<ConflictNotice> = mutableListOf(),
+  val propertyChanges: MutableList<PropertyChange> = mutableListOf(),
+  val propertyTouches: MutableSet<PropertyAddress> = linkedSetOf(),
+  val moveTouches: MutableSet<String> = linkedSetOf(),
+  val batchPositionTouches: MutableSet<String> = linkedSetOf(),
+)
+
 private fun CollaborationState.applyOperation(
   operation: DesignOperation,
   propertyValidator: CollaborationPropertyValidator?,
+  basePositions: Map<String, StableNodePosition>,
+  operationKey: String,
+  baseRevision: Int,
+  trace: ReductionTrace,
 ): CollaborationState =
   when (operation) {
-    is DesignOperation.MoveNode -> moveNode(operation)
+    is DesignOperation.InsertNode -> {
+      val changed = insertNode(operation, basePositions, operationKey)
+      trace.batchPositionTouches += operation.node.id
+      changed
+    }
+    is DesignOperation.MoveNode -> {
+      moveVersions[operation.nodeId]
+        ?.takeIf { it > baseRevision }
+        ?.let { overwrittenRevision ->
+          trace.conflicts +=
+            ConflictNotice(ConflictCode.STALE_MOVE, operation.nodeId, null, overwrittenRevision)
+        }
+      trace.moveTouches += operation.nodeId
+      val changed = moveNode(operation, basePositions, operationKey)
+      trace.batchPositionTouches += operation.nodeId
+      changed
+    }
     is DesignOperation.DeleteNode -> deleteNode(operation.nodeId)
     is DesignOperation.RestoreNode -> restoreNode(operation.nodeId)
-    is DesignOperation.SetProperty -> setProperty(operation, propertyValidator)
+    is DesignOperation.SetProperty -> {
+      val address = PropertyAddress(operation.nodeId, operation.property)
+      propertyVersions[address]
+        ?.takeIf { it > baseRevision }
+        ?.let { overwrittenRevision ->
+          trace.conflicts +=
+            ConflictNotice(
+              ConflictCode.STALE_PROPERTY_WRITE,
+              operation.nodeId,
+              operation.property,
+              overwrittenRevision,
+            )
+        }
+      val before = document.nodes[operation.nodeId]?.properties?.get(operation.property)
+      val changed = setProperty(operation, propertyValidator)
+      trace.propertyTouches += address
+      trace.propertyChanges += PropertyChange(address, before, operation.value)
+      changed
+    }
   }
 
-private fun CollaborationState.moveNode(operation: DesignOperation.MoveNode): CollaborationState {
+private fun CollaborationState.insertNode(
+  operation: DesignOperation.InsertNode,
+  basePositions: Map<String, StableNodePosition>,
+  operationKey: String,
+): CollaborationState {
+  if (operation.node.slots.values.any { it.isNotEmpty() }) {
+    fail(
+      RejectionCode.INVALID_LOCATION,
+      "InsertNode accepts one detached node; insert children with later operations",
+      operation.node.id,
+    )
+  }
+  if (operation.node.id in document.nodes || isDeleted(operation.node.id)) {
+    fail(
+      RejectionCode.INVALID_LOCATION,
+      "node already exists or is tombstoned: ${operation.node.id}",
+    )
+  }
+  validateDestination(operation.parent, operation.afterNodeId, basePositions, movingNodeId = null)
+  val position =
+    allocatePosition(
+      operation.parent,
+      operation.afterNodeId,
+      basePositions,
+      operationKey,
+      operation.node.id,
+    )
+  val withNode =
+    copy(
+      document = document.copy(nodes = document.nodes + (operation.node.id to operation.node)),
+      positions = positions + (operation.node.id to position),
+    )
+  return withNode.rebuildLocation(operation.parent)
+}
+
+private fun CollaborationState.moveNode(
+  operation: DesignOperation.MoveNode,
+  basePositions: Map<String, StableNodePosition>,
+  operationKey: String,
+): CollaborationState {
   val node = liveNode(operation.nodeId)
   if (operation.afterNodeId == operation.nodeId) {
     fail(RejectionCode.INVALID_LOCATION, "a node cannot be positioned after itself")
@@ -314,11 +821,13 @@ private fun CollaborationState.moveNode(operation: DesignOperation.MoveNode): Co
   if (destinationParent != null && destinationParent in subtree) {
     fail(RejectionCode.CYCLE, "moving ${node.id} below $destinationParent would create a cycle")
   }
-
-  val oldLocation = document.locationOf(node.id)
-  var detached = document.detach(node.id, oldLocation)
-  detached = detached.attach(node.id, NodeLocation(operation.parent, operation.afterNodeId))
-  return copy(document = detached)
+  validateDestination(operation.parent, operation.afterNodeId, basePositions, node.id)
+  val oldParent = positions.getValue(node.id).parent
+  val position =
+    allocatePosition(operation.parent, operation.afterNodeId, basePositions, operationKey, node.id)
+  var changed = copy(positions = positions + (node.id to position)).rebuildLocation(oldParent)
+  changed = changed.rebuildLocation(operation.parent)
+  return changed
 }
 
 private fun CollaborationState.deleteNode(nodeId: String): CollaborationState {
@@ -326,10 +835,12 @@ private fun CollaborationState.deleteNode(nodeId: String): CollaborationState {
   val location = document.locationOf(nodeId)
   val subtreeIds = document.descendants(nodeId)
   val deletedNodes = document.nodes.filterKeys { it in subtreeIds }
+  val deletedPositions = positions.filterKeys { it in subtreeIds }
   val detached = document.detach(nodeId, location)
   val remaining = detached.copy(nodes = detached.nodes - subtreeIds)
   return copy(
     document = remaining,
+    positions = positions - subtreeIds,
     tombstones =
       tombstones +
         (nodeId to
@@ -338,6 +849,7 @@ private fun CollaborationState.deleteNode(nodeId: String): CollaborationState {
             nodes = deletedNodes,
             location = location,
             deletedAtRevision = document.revision + 1,
+            positions = deletedPositions,
           )),
   )
 }
@@ -352,9 +864,19 @@ private fun CollaborationState.restoreNode(nodeId: String): CollaborationState {
   if (collisions.isNotEmpty()) {
     fail(RejectionCode.INVALID_LOCATION, "restore would duplicate nodes: ${collisions.sorted()}")
   }
-  val withNodes = document.copy(nodes = document.nodes + tombstone.nodes)
-  val restored = withNodes.attachRestored(nodeId, tombstone.location)
-  return copy(document = restored, tombstones = tombstones - nodeId)
+  val rootPosition = tombstone.positions[nodeId]
+  if (rootPosition == null) {
+    val withNodes = document.copy(nodes = document.nodes + tombstone.nodes)
+    val restored = withNodes.attachRestored(nodeId, tombstone.location)
+    return copy(document = restored, tombstones = tombstones - nodeId).withStablePositions()
+  }
+  val restored =
+    copy(
+      document = document.copy(nodes = document.nodes + tombstone.nodes),
+      positions = positions + tombstone.positions,
+      tombstones = tombstones - nodeId,
+    )
+  return restored.rebuildLocation(rootPosition.parent)
 }
 
 private fun CollaborationState.setProperty(
@@ -481,6 +1003,135 @@ private fun CollaborationState.liveNode(nodeId: String): UiBuilderNode {
 private fun CollaborationState.isDeleted(nodeId: String): Boolean =
   tombstones.values.any { nodeId in it.nodes }
 
+private fun CollaborationState.withStablePositions(): CollaborationState {
+  if (positions.isNotEmpty() || document.nodes.isEmpty()) {
+    return if (document.revision in positionSnapshots) this
+    else copy(positionSnapshots = positionSnapshots + (document.revision to positions))
+  }
+  val derived = linkedMapOf<String, StableNodePosition>()
+  fun record(parent: ParentSlot?, children: List<String>) {
+    children.forEachIndexed { index, nodeId ->
+      derived[nodeId] =
+        StableNodePosition(
+          parent = parent,
+          key = StablePositionKey(listOf((index + 1) * POSITION_STEP), "initial:$nodeId"),
+        )
+    }
+  }
+  record(null, document.roots)
+  document.nodes.values.forEach { parent ->
+    parent.slots.forEach { (slot, children) -> record(ParentSlot(parent.id, slot), children) }
+  }
+  val initialPropertyVersions =
+    document.nodes.values
+      .flatMap { node -> node.properties.keys.map { PropertyAddress(node.id, it) } }
+      .associateWith { document.revision }
+  return copy(
+    positions = derived,
+    positionSnapshots = positionSnapshots + (document.revision to derived),
+    propertyVersions = initialPropertyVersions + propertyVersions,
+    moveVersions = document.nodes.keys.associateWith { document.revision } + moveVersions,
+  )
+}
+
+private fun CollaborationState.validateDestination(
+  parent: ParentSlot?,
+  afterNodeId: String?,
+  basePositions: Map<String, StableNodePosition>,
+  movingNodeId: String?,
+) {
+  if (parent != null) {
+    val parentNode = liveNode(parent.nodeId)
+    if (parent.slot !in parentNode.slots) {
+      fail(RejectionCode.INVALID_LOCATION, "unknown slot ${parent.slot} on ${parent.nodeId}")
+    }
+  }
+  if (afterNodeId == movingNodeId) {
+    fail(RejectionCode.INVALID_LOCATION, "a node cannot be positioned after itself")
+  }
+  if (afterNodeId != null) {
+    val currentAnchor = positions[afterNodeId]
+    val baseAnchor = basePositions[afterNodeId]
+    if (currentAnchor?.parent != parent || baseAnchor?.parent != parent) {
+      fail(
+        RejectionCode.INVALID_LOCATION,
+        "insertion anchor $afterNodeId is not retained in the destination",
+      )
+    }
+  }
+}
+
+private fun CollaborationState.allocatePosition(
+  parent: ParentSlot?,
+  afterNodeId: String?,
+  basePositions: Map<String, StableNodePosition>,
+  operationKey: String,
+  nodeId: String,
+): StableNodePosition {
+  val siblings =
+    basePositions.entries
+      .filter { (id, position) -> position.parent == parent && id != nodeId }
+      .sortedBy { it.value.key }
+  val left = afterNodeId?.let { basePositions.getValue(it).key }
+  val right =
+    if (left == null) siblings.firstOrNull()?.value?.key
+    else siblings.firstOrNull { it.value.key > left }?.value?.key
+  val positionIdentity = "${operationKey.length}:$operationKey:${nodeId.length}:$nodeId"
+  return StableNodePosition(
+    parent = parent,
+    key =
+      StablePositionKey(
+        between(left?.path, right?.path) + stableKeySuffix(operationKey) + stableKeySuffix(nodeId),
+        positionIdentity,
+      ),
+  )
+}
+
+private fun CollaborationState.rebuildLocation(parent: ParentSlot?): CollaborationState {
+  val children =
+    positions.entries
+      .filter { (nodeId, position) -> position.parent == parent && nodeId in document.nodes }
+      .sortedWith(compareBy({ it.value.key }, { it.key }))
+      .map { it.key }
+  if (parent == null) return copy(document = document.copy(roots = children))
+  val parentNode =
+    document.nodes[parent.nodeId]
+      ?: fail(RejectionCode.UNKNOWN_NODE, "unknown parent: ${parent.nodeId}")
+  if (parent.slot !in parentNode.slots) {
+    fail(RejectionCode.INVALID_LOCATION, "unknown slot ${parent.slot} on ${parent.nodeId}")
+  }
+  val changedParent = parentNode.copy(slots = parentNode.slots + (parent.slot to children))
+  return copy(document = document.copy(nodes = document.nodes + (parent.nodeId to changedParent)))
+}
+
+private fun between(left: List<Int>?, right: List<Int>?): List<Int> {
+  if (right == null) return left.orEmpty() + POSITION_STEP / 2
+  val result = mutableListOf<Int>()
+  var index = 0
+  while (true) {
+    val lower = left?.getOrNull(index) ?: 0
+    val upper = right.getOrNull(index) ?: POSITION_STEP
+    if (lower == upper) {
+      result += lower
+      index++
+      continue
+    }
+    if (upper - lower > 1) {
+      result += lower + (upper - lower) / 2
+      return result
+    }
+    result += lower
+    result += left?.drop(index + 1).orEmpty()
+    result += POSITION_STEP / 2
+    return result
+  }
+}
+
+private fun stableKeySuffix(value: String): List<Int> =
+  value.map { character -> character.code + 2 } + 1
+
+private const val POSITION_STEP = 1024
+
 private fun UiBuilderDocument.descendants(rootId: String): Set<String> {
   val found = linkedSetOf<String>()
   fun visit(nodeId: String) {
@@ -555,10 +1206,9 @@ private fun UiBuilderDocument.attachRestored(
 }
 
 /**
- * Tombstones retain both neighbours and the former index. Restore prefers the surviving previous
- * neighbour, then the surviving next neighbour, and finally the clamped former index. This is a
- * deterministic Wave 1 fallback, not the stable position-key algorithm required for full Gate 0
- * concurrent insertion semantics.
+ * Legacy Wave 1 tombstones without retained position metadata use both neighbours and the former
+ * index. Current tombstones restore their stable position key; this fallback keeps pre-key state
+ * deterministic during the incubating schema transition.
  */
 private fun MutableList<String>.insertAtRetainedLocation(value: String, location: NodeLocation) {
   location.afterNodeId?.let { anchor ->
@@ -624,6 +1274,38 @@ private fun MutableList<String>.insertAfterChecked(value: String, anchor: String
   add(anchorIndex + 1, value)
 }
 
+private fun CollaborationState.replayRejected(mutation: RejectedMutation): CommandApplication? {
+  if (mutation.operationId.isBlank()) return null
+  val prior = rejectedOperations[mutation.operationId] ?: return null
+  if (prior.mutation != mutation) {
+    return rejected(
+      RejectionCode.OPERATION_ID_REUSED,
+      "operation id ${mutation.operationId} was already used by a rejected command",
+    )
+  }
+  return CommandApplication(this, prior.outcome)
+}
+
+private fun CommandApplication.retainRejection(mutation: RejectedMutation): CommandApplication {
+  val rejection = outcome as? CommandOutcome.Rejected ?: return this
+  if (mutation.operationId.isBlank()) return this
+  if (
+    mutation.operationId in state.acceptedCommands ||
+      mutation.operationId in state.undoRecords ||
+      mutation.operationId in state.redoRecords
+  ) {
+    return this
+  }
+  return copy(
+    state =
+      state.copy(
+        rejectedOperations =
+          state.rejectedOperations +
+            (mutation.operationId to RejectedOperation(mutation, rejection))
+      )
+  )
+}
+
 private fun CollaborationState.rejected(
   code: RejectionCode,
   message: String,
@@ -632,6 +1314,34 @@ private fun CollaborationState.rejected(
   field: String? = null,
 ): CommandApplication =
   CommandApplication(this, CommandOutcome.Rejected(code, message, operationIndex, nodeId, field))
+
+private fun CollaborationState.validateCompensationEnvelope(
+  designId: String,
+  operationId: String,
+  actorId: String,
+  clientId: String,
+  baseRevision: Int,
+): CommandApplication? {
+  if (designId != document.id) {
+    return rejected(
+      RejectionCode.DESIGN_MISMATCH,
+      "command design $designId does not match ${document.id}",
+    )
+  }
+  if (operationId.isBlank() || actorId.isBlank() || clientId.isBlank()) {
+    return rejected(
+      RejectionCode.INVALID_COMMAND,
+      "operationId, actorId, and clientId are required",
+    )
+  }
+  if (baseRevision != document.revision) {
+    return rejected(
+      RejectionCode.REVISION_MISMATCH,
+      "compensation base revision $baseRevision does not match ${document.revision}",
+    )
+  }
+  return null
+}
 
 private class ReducerFailure(
   val code: RejectionCode,

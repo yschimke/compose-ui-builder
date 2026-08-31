@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 
 enum class DocumentSvgExecutionBridge {
   GENERATED_COMPOSE_WRAPPER,
+  JVM_SKIA_SCENE_RECORDING,
   WASM_SCENE_RECORDING,
 }
 

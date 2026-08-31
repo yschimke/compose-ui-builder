@@ -1,9 +1,9 @@
 # Jetcaster Discover Compose/Wasm reference
 
 This standalone module is the independent pixel oracle for the UI Builder Jetcaster Discover
-benchmark. It directly composes the fixed `1280 × 800dp`, density-1, dark, expanded two-pane scene.
-It neither depends on nor imports the `ui-builder` module, its reducer, renderer, operation fixture,
-or code exporter.
+benchmark. It directly composes the fixed density-1 dark scene at `1280 × 800dp` as an expanded
+two-pane layout and at `412 × 800dp` as the compact main-pane layout. It neither depends on nor
+imports the `ui-builder` module, its reducer, renderer, operation fixture, or code exporter.
 
 The reference is independently authored from the screen hierarchy and deterministic labels in
 Android's official Jetcaster sample, pinned at
@@ -34,7 +34,7 @@ From this directory:
 ```
 
 The static output is written to `build/wasmDist`. Serve that directory over HTTP and capture it at
-exactly `1280 × 800` CSS pixels with browser zoom 100% and device scale factor 1.
+exactly `1280 × 800` or `412 × 800` CSS pixels with browser zoom 100% and device scale factor 1.
 
 The repository root includes this module for formatting, checks, and visual-harness builds. It has
 no project dependency on `:ui-builder` and remains independently buildable with its standalone

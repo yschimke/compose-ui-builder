@@ -414,14 +414,19 @@ supported text/groups, declares every raster fallback, and rasterizes within the
       compact regression.
 - [ ] Implement the pure reducer prototype and model tests for concurrency and compensation.
       The first executable slice now covers atomic typed batches, exact revision checks,
-      move/delete/restore/set-property, idempotency, and deterministic replay; concurrent stale
-      resolution, position keys, and compensating undo/redo remain open.
+      move/delete/restore/set-property, idempotency, deterministic fractional position keys,
+      same-anchor convergence across browser/MCP permutations, stale scalar conflict notices,
+      reconnect replay, and actor-scoped scalar undo/redo. Structural compensation, durable
+      storage/compaction, transport fanout, authenticated actors, and randomized soak coverage
+      remain open.
 - [x] Implement the Jetcaster capability fixture, strict static validator, and native dispatch for
       every referenced component id.
 - [ ] Prove capability-driven codegen and SVG conformance for the Jetcaster fixture.
       Capability-gated codegen now emits the full 99-node fixture with located TODO diagnostics and
-      revision/catalog/environment provenance. It remains intentionally “almost compiling”; SVG
-      remains stopped by the fail-closed execution-bridge readiness check.
+      revision/catalog/environment provenance. It remains intentionally “almost compiling”. A
+      saved-revision JVM execution bridge exports deterministic structured text for vector-only
+      subsets and rejects the full fixture because filtered icons become undeclared Skia raster
+      images; the Jetcaster SVG/Figma conformance gate therefore remains open.
 - [ ] Prove version-addressed renderer loading and overlay/input coordinate mapping.
 - [ ] Complete the export execution bridge and Figma import test.
 - [ ] Move accepted wire shapes and compatibility fixtures to `compose-preview-contracts`.
@@ -448,17 +453,20 @@ The Jetcaster leg is a separate artifact and process boundary:
 `ui-builder-reference-jetcaster` directly composes the pinned scene and does not depend on
 `:ui-builder`; `:ui-builder` replays the 100 public operations and renders all 99 nodes. The
 Playwright harness captures both at `1280 x 800`, verifies the upstream provenance, commits both
-reviewable PNGs, and attaches a diagnostic diff. The first integrated render differs by `4.989%`
-at pixelmatch threshold `0.1`; CI currently enforces an `8%` convergence ceiling while the release
-gate remains exact parity. The same-browser comparison remains authoritative; committed review
-PNGs separately allow at most `4%` macOS/Linux Chromium/Skia drift.
-The fixture contains a real Scaffold and
+reviewable PNGs, and attaches a diagnostic diff. The expanded render differs by `1.498%` at
+pixelmatch threshold `0.1`; the same frozen revision rendered at compact `412 x 800` differs by
+`1.255%`. CI enforces a `2%` same-browser convergence ceiling for both while the release gate
+remains exact parity. The same-browser comparison remains authoritative; committed review PNGs
+separately allow at most `4%` macOS/Linux Chromium/Skia drift.
+The Confetti fixture contains a real Scaffold and
 app bar, five track filters, two day tabs, a bounded lazy schedule, sticky-style time headers, talk
 and lightning rows, dividers, bookmark/icon states, and a shaped break surface. It now publishes a
 revision-keyed inspection manifest for composed node and slot bounds, native text baselines, and
 authored semantics, and proves the editor overlay leaves clean geometry and pixels unchanged. It
 does not yet claim pager interaction, off-screen lazy-node inspection, merged accessibility
-semantics, or that the SVG leg is complete.
+semantics, or that the SVG/Figma leg is complete. A JVM saved-document bridge now records the
+native Compose scene to Skia SVG and passes a structured-text subset round trip; full Jetcaster is
+rejected until its filtered icons are vectorized or mapped to explicit node-correlated fallbacks.
 
 The module deliberately has no dependency on `:server`, `:render-host`, or `:wasm-ui`. Server HTTP
 and MCP adapters can depend on its reducer API while it is incubating here; extraction later moves

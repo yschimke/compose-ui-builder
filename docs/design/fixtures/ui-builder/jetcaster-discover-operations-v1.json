@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-operations/v1-candidate",
   "documentSchema": "compose-ui-builder-document/v1-candidate",
   "designId": "fixture-jetcaster-discover-expanded",
-  "expectedDocumentHash": "daacae610673792b02b333dd725e39eadddf7901f2fe5b6fc3402721e542da5d",
+  "expectedDocumentHash": "09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643",
   "operations": [
     {
       "operationId": "create",
@@ -278,7 +278,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "podcast-card-android", "slot": "content" },
       "afterNodeId": "podcast-card-android-image",
-      "node": { "id": "podcast-card-android-gradient", "componentId": "shape/linear-gradient", "properties": { "direction": { "type": "enum", "value": "topToBottom" }, "startColor": { "type": "color", "value": "#00000000" }, "endColor": { "type": "color", "value": "#CC000000" } }, "modifiers": [{ "type": "matchParentSize" }] }
+      "node": { "id": "podcast-card-android-gradient", "componentId": "shape/linear-gradient", "properties": { "direction": { "type": "enum", "value": "topToBottom" }, "startColor": { "type": "color", "value": "#00000000" }, "endColor": { "type": "color", "value": "#FF000000" } }, "modifiers": [{ "type": "matchParentSize" }] }
     },
     {
       "operationId": "insert-podcast-card-android-follow",
@@ -318,7 +318,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "podcast-card-google", "slot": "content" },
       "afterNodeId": "podcast-card-google-image",
-      "node": { "id": "podcast-card-google-gradient", "componentId": "shape/linear-gradient", "properties": { "direction": { "type": "enum", "value": "topToBottom" }, "startColor": { "type": "color", "value": "#00000000" }, "endColor": { "type": "color", "value": "#CC000000" } }, "modifiers": [{ "type": "matchParentSize" }] }
+      "node": { "id": "podcast-card-google-gradient", "componentId": "shape/linear-gradient", "properties": { "direction": { "type": "enum", "value": "topToBottom" }, "startColor": { "type": "color", "value": "#00000000" }, "endColor": { "type": "color", "value": "#FF000000" } }, "modifiers": [{ "type": "matchParentSize" }] }
     },
     {
       "operationId": "insert-podcast-card-google-follow",
@@ -383,7 +383,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "main-episode-copy", "slot": "children" },
       "afterNodeId": "main-episode-podcast",
-      "node": { "id": "main-episode-summary", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
+      "node": { "id": "main-episode-summary", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
     },
     {
       "operationId": "insert-main-episode-image",
@@ -460,7 +460,7 @@
       "operationId": "insert-toolbar-library",
       "type": "insertNode",
       "parent": { "nodeId": "floating-toolbar", "slot": "content" },
-      "node": { "id": "toolbar-library", "componentId": "m3/button", "properties": { "style": { "type": "enum", "value": "text" }, "selected": { "type": "stateEquals", "variable": "selectedDestination", "value": "Library" } }, "eventBindings": { "click": [{ "type": "select", "variable": "selectedDestination", "value": "Library" }] } }
+      "node": { "id": "toolbar-library", "componentId": "m3/button", "properties": { "style": { "type": "enum", "value": "filled" }, "selected": { "type": "stateEquals", "variable": "selectedDestination", "value": "Library" } }, "eventBindings": { "click": [{ "type": "select", "variable": "selectedDestination", "value": "Library" }] } }
     },
     {
       "operationId": "insert-toolbar-library-row",

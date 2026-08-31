@@ -29,6 +29,7 @@ class CollaborationReducerTest {
       command(
         "wire",
         4,
+        DesignOperation.InsertNode(UiBuilderNode("inserted", "button")),
         DesignOperation.MoveNode("b", ParentSlot("container", "items"), "a"),
         DesignOperation.DeleteNode("a"),
         DesignOperation.RestoreNode("a"),
@@ -36,11 +37,17 @@ class CollaborationReducerTest {
       )
     val encoded = Json.encodeToString(command)
 
+    assertTrue(encoded.contains("\"type\":\"insertNode\""))
     assertTrue(encoded.contains("\"type\":\"moveNode\""))
     assertTrue(encoded.contains("\"type\":\"deleteNode\""))
     assertTrue(encoded.contains("\"type\":\"restoreNode\""))
     assertTrue(encoded.contains("\"type\":\"setProperty\""))
     assertEquals(command, Json.decodeFromString<DesignCommand>(encoded))
+
+    val undo = UndoCommand("design", "undo", "actor-a", "browser-a", 5, "wire")
+    val redo = RedoCommand("design", "redo", "actor-a", "browser-a", 6, "undo")
+    assertEquals(undo, Json.decodeFromString<UndoCommand>(Json.encodeToString(undo)))
+    assertEquals(redo, Json.decodeFromString<RedoCommand>(Json.encodeToString(redo)))
   }
 
   @Test
@@ -89,7 +96,7 @@ class CollaborationReducerTest {
     assertEquals(1, rejected.operationIndex)
     assertEquals("a", rejected.nodeId)
     assertEquals("text", rejected.field)
-    assertSame(initial, application.state)
+    assertNoDesignMutation(initial, application.state)
   }
 
   @Test
@@ -113,7 +120,7 @@ class CollaborationReducerTest {
     assertEquals(1, rejected.operationIndex)
     assertEquals("b", rejected.nodeId)
     assertEquals("enabled", rejected.field)
-    assertSame(initial, application.state)
+    assertNoDesignMutation(initial, application.state)
   }
 
   @Test
@@ -136,7 +143,7 @@ class CollaborationReducerTest {
     assertEquals(0, rejected.operationIndex)
     assertEquals("a", rejected.nodeId)
     assertEquals("text", rejected.field)
-    assertSame(initial, application.state)
+    assertNoDesignMutation(initial, application.state)
   }
 
   @Test
@@ -158,7 +165,7 @@ class CollaborationReducerTest {
     assertEquals(RejectionCode.MALFORMED_PROPERTY, rejected.code)
     assertEquals("a", rejected.nodeId)
     assertEquals("text", rejected.field)
-    assertSame(initial, application.state)
+    assertNoDesignMutation(initial, application.state)
   }
 
   @Test
@@ -180,7 +187,7 @@ class CollaborationReducerTest {
     assertEquals(0, rejected.operationIndex)
     assertEquals("a", rejected.nodeId)
     assertEquals("madeUp", rejected.field)
-    assertSame(initial, application.state)
+    assertNoDesignMutation(initial, application.state)
   }
 
   @Test
@@ -201,7 +208,7 @@ class CollaborationReducerTest {
     assertEquals(RejectionCode.INVALID_PROPERTY, rejected.code)
     assertEquals("b", rejected.nodeId)
     assertEquals("enabled", rejected.field)
-    assertSame(initial, application.state)
+    assertNoDesignMutation(initial, application.state)
   }
 
   @Test
@@ -226,7 +233,7 @@ class CollaborationReducerTest {
     val rejected = assertIs<CommandOutcome.Rejected>(application.outcome)
     assertEquals(RejectionCode.UNKNOWN_NODE, rejected.code)
     assertEquals(1, rejected.operationIndex)
-    assertSame(initial, application.state)
+    assertNoDesignMutation(initial, application.state)
     assertEquals(
       typed("string", JsonPrimitive("original")),
       application.state.document.nodes.getValue("a").properties["text"],
@@ -234,7 +241,7 @@ class CollaborationReducerTest {
   }
 
   @Test
-  fun `base revision is exact but accepted retries bypass the stale check`() {
+  fun `stale scalar writes commit in server order and accepted retries remain idempotent`() {
     val initial = CollaborationState(document())
     val firstCommand =
       command(
@@ -265,19 +272,24 @@ class CollaborationReducerTest {
         ),
         propertyValidator,
       )
+    val staleOutcome = assertIs<CommandOutcome.Accepted>(stale.outcome)
+    assertEquals(7, staleOutcome.committedRevision)
     assertEquals(
-      RejectionCode.REVISION_MISMATCH,
-      assertIs<CommandOutcome.Rejected>(stale.outcome).code,
+      listOf(ConflictNotice(ConflictCode.STALE_PROPERTY_WRITE, "a", "text", 6)),
+      staleOutcome.conflicts,
     )
-    assertSame(second.state, stale.state)
+    assertEquals(
+      typed("string", JsonPrimitive("stale")),
+      stale.state.document.nodes.getValue("a").properties["text"],
+    )
 
-    val retry = CollaborationReducer.apply(second.state, firstCommand, propertyValidator)
+    val retry = CollaborationReducer.apply(stale.state, firstCommand, propertyValidator)
     val outcome = assertIs<CommandOutcome.Accepted>(retry.outcome)
     assertTrue(outcome.idempotentReplay)
     assertEquals(5, outcome.committedRevision)
-    assertSame(second.state, retry.state)
+    assertSame(stale.state, retry.state)
     assertEquals(
-      typed("string", JsonPrimitive("two")),
+      typed("string", JsonPrimitive("stale")),
       retry.state.document.nodes.getValue("a").properties["text"],
     )
   }
@@ -339,7 +351,7 @@ class CollaborationReducerTest {
         ),
       )
     assertEquals(RejectionCode.CYCLE, assertIs<CommandOutcome.Rejected>(cycle.outcome).code)
-    assertSame(moved.state, cycle.state)
+    assertNoDesignMutation(moved.state, cycle.state)
   }
 
   @Test
@@ -478,6 +490,10 @@ class CollaborationReducerTest {
       baseRevision = baseRevision,
       operations = operations.toList(),
     )
+
+  private fun assertNoDesignMutation(before: CollaborationState, after: CollaborationState) {
+    assertEquals(before, after.copy(rejectedOperations = before.rejectedOperations))
+  }
 
   private fun document(): UiBuilderDocument {
     val child = UiBuilderNode(id = "child", componentId = "text")

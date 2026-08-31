@@ -50,9 +50,11 @@ z-order, and two independent scroll regions.
 
 ## Fixed scene
 
-- Viewport: `1280 x 800dp`; density/DPR `1`; browser zoom `100%`.
+- Viewports: expanded `1280 x 800dp` and compact `412 x 800dp`; density/DPR `1`; browser zoom
+  `100%`. Both replay the same frozen document. Expanded composes the selected podcast supporting
+  pane; compact composes only the main pane and reports the supporting-pane subtree as uncomposed.
 - Theme: Jetcaster dark theme, non-dynamic; locale `en-US`; font scale `1.0`.
-- Window posture: flat, no hinge; expanded width and height.
+- Window posture: flat, no hinge.
 - Main category: `Crime` selected; categories are `Crime`, `News`, and `Comedy`.
 - Selected podcast: `Android Developers Backstage`, shown in the supporting pane.
 - Episode: `Episode 140: Lorem ipsum dolor`, using the pinned preview summary and publication time.
@@ -130,7 +132,7 @@ The checked-in candidate contracts are:
 
 - [`jetcaster-discover-operations-v1.json`](fixtures/ui-builder/jetcaster-discover-operations-v1.json):
   100 public operations reducing to 99 semantic nodes and canonical document hash
-  `daacae610673792b02b333dd725e39eadddf7901f2fe5b6fc3402721e542da5d`.
+  `09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643`.
 - [`jetcaster-discover-capabilities-v1.json`](fixtures/ui-builder/jetcaster-discover-capabilities-v1.json):
   24 generic component capabilities, including explicit planned/unsupported Wasm and SVG states.
 
@@ -175,7 +177,16 @@ Confetti stays in CI as the fast, no-network compact regression. Jetcaster is th
   capability ids used by the resulting 99-node document.
 - Strict capability validation reports unknown ids/properties/modifiers/slots and keeps planned or
   unsupported Wasm status visible rather than substituting silently.
-- The first independent-oracle comparison reports `4.989%` differing pixels at threshold `0.1`.
-  CI enforces an interim ceiling of `8%`; this is a convergence guard, not the exact release gate.
-- Bounds/baselines/semantics, responsive compact state, exact pixel parity, SVG/Figma parity, and
-  generated-Compose parity remain open.
+- The expanded independent-oracle comparison reports `1.498%` differing pixels at threshold
+  `0.1`; the compact `412 x 800` comparison reports `1.255%`. Both replay the same frozen
+  revision-99 document, and CI enforces an interim ceiling of `2%`. This is a convergence guard,
+  not the exact release gate.
+- Revision-keyed bounds, text baselines, authored semantics, clean/editor invariance, and compact
+  supporting-pane exclusion are executable. Merged accessibility semantics and off-screen lazy
+  content remain open.
+- Capability-driven code generation covers the 99-node fixture with located diagnostics, but is
+  not yet compiled/rendered as a standalone CMP/Wasm application.
+- A saved-revision JVM `ComposeScene -> Skia SVGCanvas` bridge now proves deterministic structured
+  text export and same-engine raster parity for vector-only subsets. Full Jetcaster export fails
+  closed because filtered Compose icons currently become undeclared embedded PNG images. Font
+  pinning, a declared icon fallback/vector path, and actual Figma import parity remain open.
