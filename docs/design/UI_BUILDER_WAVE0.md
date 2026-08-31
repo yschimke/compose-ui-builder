@@ -412,6 +412,23 @@ supported text/groups, declares every raster fallback, and rasterizes within the
 
 ## 11. Operation-replay visual test
 
+The first executable vertical slice now lives behind the isolated `:ui-builder` module. Its JVM
+test consumes `confetti-schedule-operations-v1.json` directly and proves that the Kotlin and
+JavaScript reducers produce the same canonical document hash. The module's standalone Wasm fixture
+then renders that reduced document and an independently authored compact Confetti Schedule.
+`preview-harness/ui-builder.spec.mjs` performs a zero-tolerance same-browser PNG pixel diff at
+411×914 and retains the developer-authored reference as a committed golden. The cross-platform
+golden comparison separately permits at most 2% raster drift because Chromium/Skia text and icon
+edges differ between macOS and Linux; it does not weaken the exact operations-vs-oracle assertion.
+The fixture contains a real Scaffold and
+app bar, five track filters, two day tabs, a bounded lazy schedule, sticky-style time headers, talk
+and lightning rows, dividers, bookmark/icon states, and a shaped break surface. It does not yet
+claim pager interaction, bounds/baseline capture, or the SVG leg is complete.
+
+The module deliberately has no dependency on `:server`, `:render-host`, or `:wasm-ui`. Server HTTP
+and MCP adapters can depend on its reducer API while it is incubating here; extraction later moves
+the whole module and visual fixture rather than separating state semantics from rendering.
+
 The golden test starts from an empty design. It must not load the expected final document as its
 input.
 
@@ -451,10 +468,9 @@ Golden provenance records:
 - builder document, catalog, native runtime, exporter, SVG rasterizer, and diff versions; and
 - the accepted tolerance plus an inspectable diff artifact on failure.
 
-The first checked-in candidate replay fixture covers the header/filter vertical slice. It becomes
-the full Schedule sequence as each gap in section 4 gains an executable capability. A candidate
-reducer script is scaffolding only; the authoritative test must move to the shared server reducer
-once its contract is accepted.
+The checked-in candidate replay fixture now covers the compact Schedule's scaffold, filters, tabs,
+and visible session content using 57 insert operations. A candidate reducer script is scaffolding
+only; the authoritative test must move to the shared server reducer once its contract is accepted.
 
 ## 12. Extraction posture
 
@@ -494,13 +510,14 @@ Split only after:
 
 ## 13. Recommended first implementation sequence
 
-Continue single-threaded in this order until the seams are executable:
+The first four steps now have executable coverage for the compact Schedule. Continue with the
+contract move, or use this boundary to parallelize the independent runtime/export/integration work:
 
 1. add local serializable candidate models and a pure reducer in tests or a non-wire prototype
    namespace;
 2. add capability fixtures for Scaffold, top app bar, Column, LazyRow, FilterChip, Text, and colour
    dot;
-3. replay the checked-in header/filter operations to create that document, then render it through a
+3. replay the checked-in Schedule operations to create that document, then render it through a
    clean native tree and a sibling overlay;
 4. generate recognizable Compose for that same document;
 5. replace local candidate DTOs with released contract shapes after their schema survives the

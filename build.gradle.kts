@@ -11,15 +11,15 @@ plugins {
 
 tasks.named("check") {
   group = "verification"
-  dependsOn(":render-host:check", ":server:check", ":slot-preview-runtime:check", ":usage-source-psi:check", ":wasm-ui:check")
+  dependsOn(":render-host:check", ":server:check", ":slot-preview-runtime:check", ":ui-builder:check", ":usage-source-psi:check", ":wasm-ui:check")
 }
 
 tasks.register("ktfmtCheckAll") {
   group = "verification"
-  dependsOn(":render-host:ktfmtCheck", ":server:ktfmtCheck", ":slot-preview-runtime:ktfmtCheck", ":usage-source-psi:ktfmtCheck", ":wasm-ui:ktfmtCheck")
+  dependsOn(":render-host:ktfmtCheck", ":server:ktfmtCheck", ":slot-preview-runtime:ktfmtCheck", ":ui-builder:ktfmtCheck", ":usage-source-psi:ktfmtCheck", ":wasm-ui:ktfmtCheck")
 }
 
 tasks.register("ktfmtFormat") {
   group = "formatting"
-  dependsOn(":render-host:ktfmtFormat", ":server:ktfmtFormat", ":slot-preview-runtime:ktfmtFormat", ":usage-source-psi:ktfmtFormat", ":wasm-ui:ktfmtFormat")
+  dependsOn(":render-host:ktfmtFormat", ":server:ktfmtFormat", ":slot-preview-runtime:ktfmtFormat", ":ui-builder:ktfmtFormat", ":usage-source-psi:ktfmtFormat", ":wasm-ui:ktfmtFormat")
 }

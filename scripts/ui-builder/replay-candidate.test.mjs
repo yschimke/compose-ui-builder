@@ -5,7 +5,7 @@ import test from "node:test";
 import { replayCandidateOperations } from "./replay-candidate.mjs";
 
 const fixtureUrl = new URL(
-  "../../docs/design/fixtures/ui-builder/confetti-header-filter-operations-v1.json",
+  "../../docs/design/fixtures/ui-builder/confetti-schedule-operations-v1.json",
   import.meta.url,
 );
 
@@ -13,17 +13,33 @@ function fixture() {
   return JSON.parse(readFileSync(fixtureUrl, "utf8"));
 }
 
-test("public operations build the Confetti header and filter semantic tree", () => {
+test("public operations build the compact Confetti Schedule semantic tree", () => {
   const input = fixture();
   const { document, hash } = replayCandidateOperations(input);
 
-  assert.equal(document.revision, 10);
+  assert.equal(document.revision, 57);
   assert.deepEqual(document.roots, ["screen"]);
   assert.deepEqual(document.nodes.screen.slots, {
     topBar: ["top-bar"],
     content: ["content"],
   });
-  assert.deepEqual(document.nodes["track-filters"].slots.items, ["chip-all", "chip-droidcon"]);
+  assert.deepEqual(document.nodes["track-filters"].slots.items, [
+    "chip-all",
+    "chip-droidcon",
+    "chip-swiftcon",
+    "chip-fluttercon",
+    "chip-reactcon",
+  ]);
+  assert.deepEqual(document.nodes["schedule-list"].slots.items, [
+    "time-1400",
+    "talk-confetti",
+    "divider-after-confetti",
+    "time-1450",
+    "talk-lightning",
+    "divider-after-lightning",
+    "time-1500",
+    "coffee-break",
+  ]);
   assert.equal(
     document.nodes["chip-droidcon"].properties.selected.variable,
     "selectedTrack",

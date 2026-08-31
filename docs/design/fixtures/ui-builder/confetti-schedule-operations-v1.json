@@ -1,0 +1,578 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "fixture-confetti-schedule",
+  "expectedDocumentHash": "7a19916f450c735be6ebecfad46498f994d33abcaebf196cac24b5d539eac517",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Confetti Schedule — compact screen",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 411,
+        "heightDp": 914,
+        "density": 1.0,
+        "theme": "light",
+        "locale": "en-US",
+        "fontScale": 1.0,
+        "layoutDirection": "ltr"
+      },
+      "stateVariables": {
+        "selectedTrack": {
+          "type": "selection",
+          "valueType": "string",
+          "nullable": true,
+          "initialValue": null,
+          "persistence": "preview"
+        },
+        "selectedDay": {
+          "type": "selection",
+          "valueType": "int",
+          "nullable": false,
+          "initialValue": 0,
+          "persistence": "preview"
+        }
+      }
+    },
+    {
+      "operationId": "insert-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "screen",
+        "componentId": "layout/scaffold",
+        "properties": {
+          "contentWindowInsets": { "type": "insets", "value": [0, 0, 0, 0] }
+        },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-top-bar",
+      "type": "insertNode",
+      "parent": { "nodeId": "screen", "slot": "topBar" },
+      "node": {
+        "id": "top-bar",
+        "componentId": "m3/center-aligned-top-app-bar",
+        "properties": {
+          "containerColor": { "type": "colorToken", "value": "transparent" },
+          "scrolledContainerColor": { "type": "colorToken", "value": "transparent" },
+          "scrollBehavior": { "type": "enum", "value": "enterAlways" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "top-bar", "slot": "title" },
+      "node": {
+        "id": "title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": { "type": "string", "value": "KotlinConf 2023" },
+          "style": { "type": "typographyToken", "value": "titleLarge" },
+          "maxLines": { "type": "int", "value": 2 },
+          "textAlign": { "type": "enum", "value": "center" }
+        },
+        "modifiers": [
+          { "type": "padding", "startDp": 8, "topDp": 0, "endDp": 8, "bottomDp": 0 }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-content",
+      "type": "insertNode",
+      "parent": { "nodeId": "screen", "slot": "content" },
+      "node": {
+        "id": "content",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalArrangement": { "type": "enum", "value": "top" },
+          "horizontalAlignment": { "type": "enum", "value": "start" }
+        },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-track-filters",
+      "type": "insertNode",
+      "parent": { "nodeId": "content", "slot": "children" },
+      "node": {
+        "id": "track-filters",
+        "componentId": "layout/lazy-row",
+        "properties": {
+          "horizontalSpacingDp": { "type": "float", "value": 8.0 },
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 8,
+            "endDp": 16,
+            "bottomDp": 8
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-all",
+      "type": "insertNode",
+      "parent": { "nodeId": "track-filters", "slot": "items" },
+      "node": {
+        "id": "chip-all",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": { "type": "stateEquals", "variable": "selectedTrack", "value": null }
+        },
+        "eventBindings": {
+          "click": [{ "type": "select", "variable": "selectedTrack", "value": null }]
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-all-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-all", "slot": "label" },
+      "node": {
+        "id": "chip-all-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": { "type": "string", "value": "All" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-droidcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "track-filters", "slot": "items" },
+      "afterNodeId": "chip-all",
+      "node": {
+        "id": "chip-droidcon",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "stateEquals",
+            "variable": "selectedTrack",
+            "value": "droidCon"
+          }
+        },
+        "eventBindings": {
+          "click": [
+            {
+              "type": "selectOrClear",
+              "variable": "selectedTrack",
+              "value": "droidCon"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "operationId": "insert-dot-droidcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-droidcon", "slot": "leadingIcon" },
+      "node": {
+        "id": "dot-droidcon",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "diameterDp": { "type": "float", "value": 8.0 },
+          "color": { "type": "color", "value": "#FF00FF4F" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-label-droidcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-droidcon", "slot": "label" },
+      "node": {
+        "id": "label-droidcon",
+        "componentId": "m3/text",
+        "properties": {
+          "text": { "type": "string", "value": "droidCon" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-chip-swiftcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "track-filters", "slot": "items" },
+      "afterNodeId": "chip-droidcon",
+      "node": {
+        "id": "chip-swiftcon",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": { "type": "stateEquals", "variable": "selectedTrack", "value": "swiftCon" }
+        },
+        "eventBindings": {
+          "click": [{ "type": "selectOrClear", "variable": "selectedTrack", "value": "swiftCon" }]
+        }
+      }
+    },
+    {
+      "operationId": "insert-dot-swiftcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-swiftcon", "slot": "leadingIcon" },
+      "node": {
+        "id": "dot-swiftcon",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "diameterDp": { "type": "float", "value": 8.0 },
+          "color": { "type": "color", "value": "#FFFF375F" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-label-swiftcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-swiftcon", "slot": "label" },
+      "node": { "id": "label-swiftcon", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "swiftCon" } } }
+    },
+    {
+      "operationId": "insert-chip-fluttercon",
+      "type": "insertNode",
+      "parent": { "nodeId": "track-filters", "slot": "items" },
+      "afterNodeId": "chip-swiftcon",
+      "node": {
+        "id": "chip-fluttercon",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": { "type": "stateEquals", "variable": "selectedTrack", "value": "flutterCon" }
+        },
+        "eventBindings": {
+          "click": [{ "type": "selectOrClear", "variable": "selectedTrack", "value": "flutterCon" }]
+        }
+      }
+    },
+    {
+      "operationId": "insert-dot-fluttercon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-fluttercon", "slot": "leadingIcon" },
+      "node": {
+        "id": "dot-fluttercon",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "diameterDp": { "type": "float", "value": 8.0 },
+          "color": { "type": "color", "value": "#FF42A5F5" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-label-fluttercon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-fluttercon", "slot": "label" },
+      "node": { "id": "label-fluttercon", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "flutterCon" } } }
+    },
+    {
+      "operationId": "insert-chip-reactcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "track-filters", "slot": "items" },
+      "afterNodeId": "chip-fluttercon",
+      "node": {
+        "id": "chip-reactcon",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": { "type": "stateEquals", "variable": "selectedTrack", "value": "reactCon" }
+        },
+        "eventBindings": {
+          "click": [{ "type": "selectOrClear", "variable": "selectedTrack", "value": "reactCon" }]
+        }
+      }
+    },
+    {
+      "operationId": "insert-dot-reactcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-reactcon", "slot": "leadingIcon" },
+      "node": {
+        "id": "dot-reactcon",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "diameterDp": { "type": "float", "value": 8.0 },
+          "color": { "type": "color", "value": "#FF61DAFB" }
+        }
+      }
+    },
+    {
+      "operationId": "insert-label-reactcon",
+      "type": "insertNode",
+      "parent": { "nodeId": "chip-reactcon", "slot": "label" },
+      "node": { "id": "label-reactcon", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "reactCon" } } }
+    },
+    {
+      "operationId": "insert-day-tabs",
+      "type": "insertNode",
+      "parent": { "nodeId": "content", "slot": "children" },
+      "afterNodeId": "track-filters",
+      "node": {
+        "id": "day-tabs",
+        "componentId": "m3/primary-tab-row",
+        "properties": { "selectedIndex": { "type": "int", "value": 0 } },
+        "modifiers": [{ "type": "fillMaxWidth" }]
+      }
+    },
+    {
+      "operationId": "insert-tab-thursday",
+      "type": "insertNode",
+      "parent": { "nodeId": "day-tabs", "slot": "tabs" },
+      "node": {
+        "id": "tab-thursday",
+        "componentId": "m3/tab",
+        "properties": { "selected": { "type": "bool", "value": true } }
+      }
+    },
+    {
+      "operationId": "insert-tab-thursday-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "tab-thursday", "slot": "text" },
+      "node": { "id": "tab-thursday-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Thu 13 Apr" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "fontWeight": { "type": "enum", "value": "bold" } } }
+    },
+    {
+      "operationId": "insert-tab-friday",
+      "type": "insertNode",
+      "parent": { "nodeId": "day-tabs", "slot": "tabs" },
+      "afterNodeId": "tab-thursday",
+      "node": {
+        "id": "tab-friday",
+        "componentId": "m3/tab",
+        "properties": { "selected": { "type": "bool", "value": false } }
+      }
+    },
+    {
+      "operationId": "insert-tab-friday-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "tab-friday", "slot": "text" },
+      "node": { "id": "tab-friday-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Fri 14 Apr" }, "style": { "type": "typographyToken", "value": "titleSmall" } } }
+    },
+    {
+      "operationId": "insert-schedule-list",
+      "type": "insertNode",
+      "parent": { "nodeId": "content", "slot": "children" },
+      "afterNodeId": "day-tabs",
+      "node": {
+        "id": "schedule-list",
+        "componentId": "layout/lazy-column",
+        "properties": { "initialIndex": { "type": "int", "value": 0 } },
+        "modifiers": [{ "type": "fillMaxSize" }]
+      }
+    },
+    {
+      "operationId": "insert-time-1400",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "node": {
+        "id": "time-1400",
+        "componentId": "m3/surface",
+        "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "sticky": { "type": "bool", "value": true } },
+        "modifiers": [{ "type": "fillMaxWidth" }]
+      }
+    },
+    {
+      "operationId": "insert-time-1400-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1400", "slot": "content" },
+      "node": { "id": "time-1400-row", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" }, "horizontalSpacingDp": { "type": "float", "value": 8.0 } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 8, "endDp": 16, "bottomDp": 8 }] }
+    },
+    {
+      "operationId": "insert-time-1400-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1400-row", "slot": "children" },
+      "node": { "id": "time-1400-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "accessTime" }, "sizeDp": { "type": "float", "value": 18.0 }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-time-1400-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1400-row", "slot": "children" },
+      "afterNodeId": "time-1400-icon",
+      "node": { "id": "time-1400-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "14:00" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "fontWeight": { "type": "enum", "value": "bold" }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-talk-confetti",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "afterNodeId": "time-1400",
+      "node": {
+        "id": "talk-confetti",
+        "componentId": "m3/list-item",
+        "properties": { "startAccentColor": { "type": "color", "value": "#FF00C853" } },
+        "modifiers": [{ "type": "fillMaxWidth" }]
+      }
+    },
+    {
+      "operationId": "insert-talk-confetti-headline",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-confetti", "slot": "headline" },
+      "node": { "id": "talk-confetti-headline", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Confetti: building a Kotlin Multiplatform conference app" }, "style": { "type": "typographyToken", "value": "titleMedium" }, "fontWeight": { "type": "enum", "value": "semiBold" }, "maxLines": { "type": "int", "value": 2 } } }
+    },
+    {
+      "operationId": "insert-talk-confetti-supporting",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-confetti", "slot": "supporting" },
+      "node": { "id": "talk-confetti-supporting", "componentId": "layout/column" }
+    },
+    {
+      "operationId": "insert-talk-confetti-speakers",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-confetti-supporting", "slot": "children" },
+      "node": { "id": "talk-confetti-speakers", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "John O'Reilly, Martin Bonnin" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-talk-confetti-meta",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-confetti-supporting", "slot": "children" },
+      "afterNodeId": "talk-confetti-speakers",
+      "node": { "id": "talk-confetti-meta", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Effectenbeurszaal  ·  Kotlin  ·  Multiplatform" }, "style": { "type": "typographyToken", "value": "labelSmall" } }, "modifiers": [{ "type": "padding", "startDp": 0, "topDp": 6, "endDp": 0, "bottomDp": 0 }] }
+    },
+    {
+      "operationId": "insert-talk-confetti-bookmark",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-confetti", "slot": "trailing" },
+      "node": { "id": "talk-confetti-bookmark", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "bookmark" }, "sizeDp": { "type": "float", "value": 24.0 }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-divider-after-confetti",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "afterNodeId": "talk-confetti",
+      "node": { "id": "divider-after-confetti", "componentId": "m3/horizontal-divider", "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 0, "bottomDp": 0 }] }
+    },
+    {
+      "operationId": "insert-time-1450",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "afterNodeId": "divider-after-confetti",
+      "node": { "id": "time-1450", "componentId": "m3/surface", "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "sticky": { "type": "bool", "value": true } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-time-1450-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1450", "slot": "content" },
+      "node": { "id": "time-1450-row", "componentId": "layout/row", "properties": { "horizontalSpacingDp": { "type": "float", "value": 8.0 } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 8, "endDp": 16, "bottomDp": 8 }] }
+    },
+    {
+      "operationId": "insert-time-1450-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1450-row", "slot": "children" },
+      "node": { "id": "time-1450-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "accessTime" }, "sizeDp": { "type": "float", "value": 18.0 }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-time-1450-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1450-row", "slot": "children" },
+      "afterNodeId": "time-1450-icon",
+      "node": { "id": "time-1450-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "14:50" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "fontWeight": { "type": "enum", "value": "bold" }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-talk-lightning",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "afterNodeId": "time-1450",
+      "node": { "id": "talk-lightning", "componentId": "m3/list-item", "properties": { "startAccentColor": { "type": "color", "value": "#FF42A5F5" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-talk-lightning-headline",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-lightning", "slot": "headline" },
+      "node": { "id": "talk-lightning-headline", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Compose tips in 5 minutes" }, "style": { "type": "typographyToken", "value": "titleMedium" }, "fontWeight": { "type": "enum", "value": "semiBold" } } }
+    },
+    {
+      "operationId": "insert-talk-lightning-supporting",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-lightning", "slot": "supporting" },
+      "node": { "id": "talk-lightning-supporting", "componentId": "layout/column" }
+    },
+    {
+      "operationId": "insert-talk-lightning-speaker",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-lightning-supporting", "slot": "children" },
+      "node": { "id": "talk-lightning-speaker", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Sebastian Aigner" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-talk-lightning-meta",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-lightning-supporting", "slot": "children" },
+      "afterNodeId": "talk-lightning-speaker",
+      "node": { "id": "talk-lightning-meta", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "14:50–14:55  ·  Effectenbeurszaal  ·  Lightning" }, "style": { "type": "typographyToken", "value": "labelSmall" } }, "modifiers": [{ "type": "padding", "startDp": 0, "topDp": 6, "endDp": 0, "bottomDp": 0 }] }
+    },
+    {
+      "operationId": "insert-talk-lightning-bookmark",
+      "type": "insertNode",
+      "parent": { "nodeId": "talk-lightning", "slot": "trailing" },
+      "node": { "id": "talk-lightning-bookmark", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "bookmarkBorder" }, "sizeDp": { "type": "float", "value": 24.0 }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    },
+    {
+      "operationId": "insert-divider-after-lightning",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "afterNodeId": "talk-lightning",
+      "node": { "id": "divider-after-lightning", "componentId": "m3/horizontal-divider", "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 0, "bottomDp": 0 }] }
+    },
+    {
+      "operationId": "insert-time-1500",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "afterNodeId": "divider-after-lightning",
+      "node": { "id": "time-1500", "componentId": "m3/surface", "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "sticky": { "type": "bool", "value": true } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+    },
+    {
+      "operationId": "insert-time-1500-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1500", "slot": "content" },
+      "node": { "id": "time-1500-row", "componentId": "layout/row", "properties": { "horizontalSpacingDp": { "type": "float", "value": 8.0 } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 8, "endDp": 16, "bottomDp": 8 }] }
+    },
+    {
+      "operationId": "insert-time-1500-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1500-row", "slot": "children" },
+      "node": { "id": "time-1500-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "accessTime" }, "sizeDp": { "type": "float", "value": 18.0 }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-time-1500-label",
+      "type": "insertNode",
+      "parent": { "nodeId": "time-1500-row", "slot": "children" },
+      "afterNodeId": "time-1500-icon",
+      "node": { "id": "time-1500-label", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "15:00" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "fontWeight": { "type": "enum", "value": "bold" }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-coffee-break",
+      "type": "insertNode",
+      "parent": { "nodeId": "schedule-list", "slot": "items" },
+      "afterNodeId": "time-1500",
+      "node": { "id": "coffee-break", "componentId": "m3/surface", "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainerLow" }, "shapeDp": { "type": "float", "value": 12.0 } }, "modifiers": [{ "type": "fillMaxWidth" }, { "type": "padding", "startDp": 16, "topDp": 6, "endDp": 16, "bottomDp": 6 }] }
+    },
+    {
+      "operationId": "insert-coffee-break-row",
+      "type": "insertNode",
+      "parent": { "nodeId": "coffee-break", "slot": "content" },
+      "node": { "id": "coffee-break-row", "componentId": "layout/row", "properties": { "verticalAlignment": { "type": "enum", "value": "center" }, "horizontalSpacingDp": { "type": "float", "value": 16.0 } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 12, "endDp": 16, "bottomDp": 12 }] }
+    },
+    {
+      "operationId": "insert-coffee-icon",
+      "type": "insertNode",
+      "parent": { "nodeId": "coffee-break-row", "slot": "children" },
+      "node": { "id": "coffee-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "coffee" }, "sizeDp": { "type": "float", "value": 24.0 }, "color": { "type": "colorToken", "value": "primary" } } }
+    },
+    {
+      "operationId": "insert-coffee-copy",
+      "type": "insertNode",
+      "parent": { "nodeId": "coffee-break-row", "slot": "children" },
+      "afterNodeId": "coffee-icon",
+      "node": { "id": "coffee-copy", "componentId": "layout/column" }
+    },
+    {
+      "operationId": "insert-coffee-title",
+      "type": "insertNode",
+      "parent": { "nodeId": "coffee-copy", "slot": "children" },
+      "node": { "id": "coffee-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Coffee Break" }, "style": { "type": "typographyToken", "value": "titleMedium" }, "fontWeight": { "type": "enum", "value": "semiBold" } } }
+    },
+    {
+      "operationId": "insert-coffee-location",
+      "type": "insertNode",
+      "parent": { "nodeId": "coffee-copy", "slot": "children" },
+      "afterNodeId": "coffee-title",
+      "node": { "id": "coffee-location", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Foyer · Level 1" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" } } }
+    }
+  ]
+}
