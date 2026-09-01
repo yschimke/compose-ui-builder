@@ -107,9 +107,19 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
+import ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry
+import ee.schimke.composeai.rcplayer.compose.RcCustomContent
+import ee.schimke.composeai.rcplayer.compose.RcPlayerTheme
+import ee.schimke.composeai.rcplayer.compose.composeSupportReport
+import ee.schimke.composeai.rcplayer.protocol.RcDocument
+import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
+import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
+import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
+import kotlin.io.encoding.Base64
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -469,6 +479,17 @@ private fun RenderNode(
         { next -> slot("mainPane").forEach { child(it, next) } },
         { next -> slot("supportingPane").forEach { child(it, next) } },
       )
+    "remote-compose/document" ->
+      RemoteComposeDocument(
+        document = document,
+        node = node,
+        modifier = measured,
+        state = state,
+        onEvent = { event -> event.bindingName()?.let { node.dispatch(it, state, onState) } },
+        slotContent = { name, next ->
+          Box(next) { slot(name).forEach { child(it, Modifier.fillMaxSize()) } }
+        },
+      )
     "layout/scaffold" ->
       Scaffold(
         modifier = measured,
@@ -765,6 +786,134 @@ private fun RenderNode(
           .background(Color(parseArgb(node.string("color"))))
       )
     else -> UnsupportedComponentDiagnostic(node.componentId, measured)
+  }
+}
+
+private const val MAX_REMOTE_COMPOSE_BASE64_CHARS = 8 * 1024 * 1024
+
+@Composable
+private fun RemoteComposeDocument(
+  document: UiBuilderDocument,
+  node: UiBuilderNode,
+  modifier: Modifier,
+  state: Map<String, String?>,
+  onEvent: (RcPlayerEvent) -> Unit,
+  slotContent: @Composable (String, Modifier) -> Unit,
+) {
+  val encoded = node.string("documentBase64")
+  val decoded = remember(encoded) { decodeRemoteComposeDocument(encoded) }
+  val rcDocument = decoded.getOrNull()
+  if (rcDocument == null) {
+    RemoteComposeDiagnostic(
+      message = decoded.exceptionOrNull()?.message ?: "Remote Compose document is invalid",
+      modifier = modifier,
+    )
+    return
+  }
+
+  val namedValues = remember(node.id) { mutableStateMapOf<String, RcNamedValue>() }
+  val desiredNamedValues = node.remoteComposeNamedValues(state)
+  SideEffect {
+    if (namedValues.toMap() != desiredNamedValues) {
+      namedValues.clear()
+      namedValues.putAll(desiredNamedValues)
+    }
+  }
+  val renderers =
+    node.slots.keys.associateWith { slotName ->
+      val content: RcCustomContent = { _, next -> slotContent(slotName, next) }
+      content
+    }
+  val customComponents = RcCustomComponentRegistry(renderers)
+  val missingCustomComponents =
+    remember(rcDocument, customComponents.names) {
+      rcDocument
+        .composeSupportReport(availableCustomComponents = customComponents.names)
+        .issues
+        .filter { it.operation == "Custom" }
+    }
+  if (missingCustomComponents.isNotEmpty()) {
+    RemoteComposeDiagnostic(
+      message = missingCustomComponents.joinToString("\n") { it.detail },
+      modifier = modifier,
+    )
+    return
+  }
+  val inheritedTheme =
+    when (document.environment["theme"]?.jsonPrimitive?.contentOrNull) {
+      "light" -> RcPlayerTheme.Light
+      "dark" -> RcPlayerTheme.Dark
+      else -> RcPlayerTheme.System
+    }
+  val theme =
+    when (node.string("theme")) {
+      "light" -> RcPlayerTheme.Light
+      "dark" -> RcPlayerTheme.Dark
+      "system" -> RcPlayerTheme.System
+      else -> inheritedTheme
+    }
+  RcComposePlayer(
+    document = rcDocument,
+    modifier = modifier,
+    theme = theme,
+    namedValues = namedValues,
+    onEvent = onEvent,
+    customComponents = customComponents,
+  )
+}
+
+internal fun decodeRemoteComposeDocument(encoded: String): Result<RcDocument> = runCatching {
+  require(encoded.isNotBlank()) { "Remote Compose documentBase64 is required" }
+  require(encoded.length <= MAX_REMOTE_COMPOSE_BASE64_CHARS) {
+    "Remote Compose documentBase64 exceeds the 8 MiB encoded limit"
+  }
+  RcDocumentCodec.decode(Base64.Default.decode(encoded))
+}
+
+private fun UiBuilderNode.remoteComposeNamedValues(
+  state: Map<String, String?>
+): Map<String, RcNamedValue> {
+  val declarations = obj("namedValues")["value"] as? JsonObject ?: return emptyMap()
+  return declarations
+    .mapNotNull { (name, element) ->
+      val declaration = element as? JsonObject ?: return@mapNotNull null
+      val type = declaration.optionalString("type") ?: return@mapNotNull null
+      val value = declaration["value"]?.jsonPrimitive
+      val resolved =
+        when (type) {
+          "stateText" ->
+            declaration.optionalString("variable")?.let(state::get)?.let(RcNamedValue::Text)
+          "text" -> value?.contentOrNull?.let(RcNamedValue::Text)
+          "float" -> value?.floatOrNull?.let(RcNamedValue::FloatValue)
+          "integer" -> value?.intOrNull?.let(RcNamedValue::Integer)
+          "long" -> value?.contentOrNull?.toLongOrNull()?.let(RcNamedValue::LongValue)
+          "color" ->
+            value?.contentOrNull?.let { color ->
+              runCatching { RcNamedValue.Color(parseArgb(color).toInt()) }.getOrNull()
+            }
+          else -> null
+        }
+      resolved?.let { name to it }
+    }
+    .toMap()
+}
+
+private fun RcPlayerEvent.bindingName(): String? =
+  when (this) {
+    is RcPlayerEvent.HostNamedAction -> name
+    is RcPlayerEvent.HostAction -> "hostAction:$actionId"
+    is RcPlayerEvent.HostActionMetadata -> "hostAction:$actionId"
+    is RcPlayerEvent.DebugMessage -> null
+  }
+
+@Composable
+private fun RemoteComposeDiagnostic(message: String, modifier: Modifier) {
+  Surface(modifier, color = MaterialTheme.colorScheme.errorContainer) {
+    Text(
+      message,
+      Modifier.padding(8.dp),
+      color = MaterialTheme.colorScheme.onErrorContainer,
+    )
   }
 }
 

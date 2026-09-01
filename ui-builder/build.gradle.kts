@@ -47,6 +47,7 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
       @Suppress("DEPRECATION") implementation(compose.ui)
       implementation(libs.composeai.ui.builder.protocol)
+      implementation(libs.composeai.rc.player.compose)
       implementation(libs.kotlinx.serialization.json)
       implementation(project(":ui-builder-artwork"))
     }

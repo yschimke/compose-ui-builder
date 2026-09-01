@@ -7,6 +7,7 @@ graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
 composeai-tools = "1.61.1"
 composeai-contracts = "2.3.0"
+rc-players = "1.56.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
@@ -37,6 +38,7 @@ composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-pr
 composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime", version.ref = "composeai-tools" }
 composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core", version.ref = "composeai-contracts" }
 composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol", version.ref = "composeai-contracts" }
+composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose", version.ref = "rc-players" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

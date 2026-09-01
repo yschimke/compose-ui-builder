@@ -314,9 +314,9 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
-  fun `checked in SVG capabilities exactly cover the frozen Jetcaster document`() {
+  fun `checked in SVG capabilities cover the frozen Jetcaster document`() {
     val usedComponentIds = document.nodes.values.map { it.componentId }.toSortedSet()
-    assertEquals(usedComponentIds, catalog.componentsById.keys.toSortedSet())
+    assertEquals(emptySet(), usedComponentIds - catalog.componentsById.keys)
     val asset = catalog.componentsById.getValue("asset/image").svg
     assertEquals("raster-fallback-required", asset?.status)
     assertEquals("embedded-raster", asset?.fallback)
@@ -327,6 +327,9 @@ class CapabilityComposeCodeExporterTest {
       assertEquals("none", svg.fallback, componentId)
       assertFalse(svg.blocksExport, componentId)
     }
+    val remoteCompose = catalog.componentsById.getValue("remote-compose/document").svg
+    assertEquals("unsupported", remoteCompose?.status)
+    assertTrue(checkNotNull(remoteCompose).blocksExport)
 
     val readiness =
       inspectDocumentSvgExport(

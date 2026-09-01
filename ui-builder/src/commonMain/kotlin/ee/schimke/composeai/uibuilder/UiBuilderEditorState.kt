@@ -263,11 +263,8 @@ class UiBuilderEditorReducer(
     if (parent == null) return state.document.roots.size > 1
     val parentNode = state.document.nodes.getValue(parent.nodeId)
     val minimum =
-      catalog.componentsById[parentNode.componentId]
-        ?.slotsByName
-        ?.get(parent.slot)
-        ?.cardinality
-        ?.min ?: return false
+      catalog.componentsById[parentNode.componentId]?.slot(parent.slot)?.cardinality?.min
+        ?: return false
     return parentNode.slots[parent.slot].orEmpty().size > minimum
   }
 
@@ -279,8 +276,7 @@ class UiBuilderEditorReducer(
     val nodeId = state.selectedNodeId?.takeIf(state.document.nodes::containsKey) ?: return false
     val parent = state.document.location(nodeId) ?: return true
     val parentNode = state.document.nodes.getValue(parent.nodeId)
-    val slot =
-      catalog.componentsById[parentNode.componentId]?.slotsByName?.get(parent.slot) ?: return false
+    val slot = catalog.componentsById[parentNode.componentId]?.slot(parent.slot) ?: return false
     return slot.cardinality.max?.let { parentNode.slots[parent.slot].orEmpty().size < it } ?: true
   }
 
@@ -778,7 +774,12 @@ class UiBuilderEditorReducer(
     val selected = selectedNodeId?.let(document.nodes::get)
     val selectedCapability = selected?.let { catalog.componentsById[it.componentId] }
     selectedCapability
-      ?.slots
+      ?.let { capability ->
+        capability.slots +
+          selected.slots.keys
+            .filterNot(capability.slotsByName::containsKey)
+            .mapNotNull(capability::slot)
+      }
       ?.firstOrNull { slot ->
         slot.accepts(inserted) && slot.hasRoom(selected.slots[slot.name].orEmpty().size)
       }
@@ -789,7 +790,7 @@ class UiBuilderEditorReducer(
     val selectedParent = selectedNodeId?.let(document::location)
     if (selectedParent != null) {
       val parent = document.nodes.getValue(selectedParent.nodeId)
-      val slot = catalog.componentsById[parent.componentId]?.slotsByName?.get(selectedParent.slot)
+      val slot = catalog.componentsById[parent.componentId]?.slot(selectedParent.slot)
       if (
         slot?.accepts(inserted) == true &&
           slot.hasRoom(parent.slots[selectedParent.slot].orEmpty().size)
@@ -864,6 +865,18 @@ private fun SlotCapability.accepts(component: ComponentCapability): Boolean =
 
 private fun SlotCapability.hasRoom(childCount: Int): Boolean =
   cardinality.max?.let { childCount < it } ?: true
+
+private fun ComponentCapability.slot(name: String): SlotCapability? =
+  slotsByName[name]
+    ?: dynamicSlots?.let {
+      SlotCapability(
+        name = name,
+        cardinality = it.cardinality,
+        ordered = it.ordered,
+        acceptedRoles = it.acceptedRoles,
+        acceptedTraits = it.acceptedTraits,
+      )
+    }
 
 private fun ComponentCapability.defaultNode(
   nodeId: String,

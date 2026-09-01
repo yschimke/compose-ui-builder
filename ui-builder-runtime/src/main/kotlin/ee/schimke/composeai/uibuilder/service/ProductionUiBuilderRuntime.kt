@@ -146,19 +146,25 @@ class CurrentM3UiBuilderCatalogExecutor(
       }
 
       val declaredSlots = component.slots.associateBy { it.name }
+      val acceptsDynamicSlots = "DynamicSlots" in component.traits
       val slots = node.objectOrEmpty("slots")
       for ((name, childrenElement) in slots) {
         val slot =
           declaredSlots[name]
-            ?: return issue(
-              "UNKNOWN_SLOT",
-              "slot $name is not declared by $componentId",
-              nodeId,
-              name,
-            )
+            ?: if (acceptsDynamicSlots) null
+            else
+              return issue(
+                "UNKNOWN_SLOT",
+                "slot $name is not declared by $componentId",
+                nodeId,
+                name,
+              )
         val children = childrenElement.jsonArray.map { it.jsonPrimitive.content }
-        val maximum = slot.cardinality.max
-        if (children.size < slot.cardinality.min || (maximum != null && children.size > maximum)) {
+        val maximum = slot?.cardinality?.max
+        if (
+          slot != null &&
+            (children.size < slot.cardinality.min || (maximum != null && children.size > maximum))
+        ) {
           return issue(
             "SLOT_CARDINALITY",
             "slot $name has ${children.size} children; expected ${slot.cardinality.min}..${maximum ?: "unbounded"}",
@@ -183,9 +189,12 @@ class CurrentM3UiBuilderCatalogExecutor(
                 childId,
               )
           val roleAccepted =
-            slot.acceptedRoles.isEmpty() || childCapability.role in slot.acceptedRoles
+            slot == null ||
+              slot.acceptedRoles.isEmpty() ||
+              childCapability.role in slot.acceptedRoles
           val traitAccepted =
-            slot.acceptedTraits.isEmpty() ||
+            slot == null ||
+              slot.acceptedTraits.isEmpty() ||
               "AnyContent" in slot.acceptedTraits ||
               childCapability.traits.any(slot.acceptedTraits::contains)
           if (!roleAccepted && !traitAccepted) {

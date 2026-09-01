@@ -111,6 +111,25 @@ class CapabilityValidatorTest {
     assertIssue(validator.validate(isolated(chip)), CapabilityIssueCode.SLOT_CARDINALITY)
   }
 
+  @Test
+  fun `Remote Compose document accepts document-authored named slots`() {
+    val child = validText().copy(id = "slot-child")
+    val remote =
+      UiBuilderNode(
+        id = "remote",
+        componentId = "remote-compose/document",
+        properties =
+          JsonObject(mapOf("documentBase64" to property("string", JsonPrimitive("AAAA")))),
+        slots = mapOf("hero.card" to listOf(child.id)),
+      )
+    val document = isolated(remote).copy(nodes = mapOf(remote.id to remote, child.id to child))
+
+    val result = validator.validate(document)
+
+    assertTrue(result.structurallyValid, result.issues.joinToString { it.message })
+    assertTrue(result.wasmRenderable)
+  }
+
   private fun validText() =
     UiBuilderNode(
       id = "text",

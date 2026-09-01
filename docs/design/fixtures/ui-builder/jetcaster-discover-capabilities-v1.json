@@ -465,6 +465,22 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate." }
     },
     {
+      "componentId": "remote-compose/document",
+      "displayName": "Remote Compose document",
+      "role": "Container",
+      "traits": ["RemoteContent", "OrderedContent", "DynamicSlots"],
+      "slots": [],
+      "properties": [
+        { "name": "documentBase64", "jsonType": "string", "required": true, "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded." },
+        { "name": "theme", "jsonType": "string", "required": false, "allowedValues": ["inherit", "light", "dark", "system"] },
+        { "name": "namedValues", "jsonType": "object", "required": false, "notes": "Typed host values keyed by the Remote Compose named-variable name." }
+      ],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config." },
+      "code": { "symbol": "RcComposePlayer", "imports": ["ee.schimke.composeai.rcplayer.compose.RcComposePlayer"] },
+      "svg": { "status": "unsupported", "fallback": "none", "blocksExport": true, "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation." }
+    },
+    {
       "componentId": "shape/linear-gradient",
       "displayName": "Linear gradient layer",
       "role": "Leaf",

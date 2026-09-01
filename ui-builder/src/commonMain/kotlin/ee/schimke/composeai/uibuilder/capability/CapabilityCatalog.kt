@@ -38,6 +38,7 @@ data class ComponentCapability(
   val role: String,
   val traits: List<String> = emptyList(),
   val slots: List<SlotCapability> = emptyList(),
+  @Transient val dynamicSlots: DynamicSlotCapability? = null,
   val properties: List<PropertyCapability> = emptyList(),
   val modifierCapabilities: List<String> = emptyList(),
   val wasm: WasmCapability,
@@ -55,6 +56,15 @@ data class SlotCapability(
   val name: String,
   val cardinality: SlotCardinality,
   val ordered: Boolean,
+  val acceptedRoles: List<String> = emptyList(),
+  val acceptedTraits: List<String> = emptyList(),
+)
+
+/** Rules for document-authored slot names, such as Remote Compose custom component configs. */
+@Serializable
+data class DynamicSlotCapability(
+  val cardinality: SlotCardinality = SlotCardinality(),
+  val ordered: Boolean = true,
   val acceptedRoles: List<String> = emptyList(),
   val acceptedTraits: List<String> = emptyList(),
 )
@@ -149,6 +159,12 @@ object CapabilityCatalogParser {
           "slot maximum must not be less than its minimum"
         }
       }
+      component.dynamicSlots?.cardinality?.let { cardinality ->
+        require(cardinality.min >= 0) { "dynamic slot minimum must be non-negative" }
+        require(cardinality.max == null || cardinality.max >= cardinality.min) {
+          "dynamic slot maximum must not be less than its minimum"
+        }
+      }
     }
   }
 
@@ -162,10 +178,15 @@ object CapabilityCatalogParser {
       components =
         components.map { component ->
           component.copy(
+            dynamicSlots =
+              component.dynamicSlots
+                ?: if ("DynamicSlots" in component.traits)
+                  DynamicSlotCapability(acceptedTraits = listOf("AnyContent"))
+                else null,
             properties =
               component.properties.map { property ->
                 property.copy(editor = editorMetadata(component.componentId, property))
-              }
+              },
           )
         }
     )

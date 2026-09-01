@@ -230,7 +230,7 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     issues: MutableList<CapabilityValidationIssue>,
   ) {
     node.slots.forEach { (name, children) ->
-      val slot = capability.slotsByName[name]
+      val slot = capability.slot(name)
       if (slot == null) {
         issues +=
           issue(
@@ -249,6 +249,18 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
       .filter { it.name !in node.slots }
       .forEach { slot -> validateCardinality(node, slot, 0, issues) }
   }
+
+  private fun ComponentCapability.slot(name: String): SlotCapability? =
+    slotsByName[name]
+      ?: dynamicSlots?.let {
+        SlotCapability(
+          name = name,
+          cardinality = it.cardinality,
+          ordered = it.ordered,
+          acceptedRoles = it.acceptedRoles,
+          acceptedTraits = it.acceptedTraits,
+        )
+      }
 
   private fun validateCardinality(
     node: UiBuilderNode,
