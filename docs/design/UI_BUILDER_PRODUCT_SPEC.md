@@ -760,12 +760,13 @@ of these are true:
 Until then, co-location is useful because the render and catalog seams are still being discovered.
 Directory isolation and contract tests prevent that convenience from becoming an implicit API.
 
-One concrete co-location seam remains before extraction is honest. The server distribution build
-currently packages the `:ui-builder` Wasm task output directly, even though the server runtime
-classpath is clean; that must become an immutable released frontend artifact or an independent
-deployment input. The durable service seam is explicit: production routes consume the published
+The co-located build now expresses both extraction seams as artifacts. The server distribution
+consumes the `compose-preview-ui-builder-web` archive variant instead of reaching into the
+`:ui-builder` task graph or output directory; replacing its project producer with a released
+coordinate does not change distribution assembly. Production routes consume the published
 transport-free `ui-builder-runtime` port/implementation and never add a `:server -> :ui-builder`
-project dependency.
+project dependency. Moving the frontend out remains a release/deployment decision, not a source API
+discovery exercise.
 
 Do not add a reverse `:render-host -> :server` edge, a web server to `:render-host`, `mavenLocal()`, a
 composite include, or implementation code to the contracts repository. `checkServeModuleBoundary`

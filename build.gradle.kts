@@ -14,6 +14,7 @@ tasks.named("check") {
   dependsOn(
     ":render-host:check",
     ":ui-builder-runtime:check",
+    ":ui-builder-web:check",
     ":server:check",
     ":slot-preview-runtime:check",
     ":ui-builder:check",
