@@ -33,7 +33,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The single production catalog admitted by the v1 service.
+ * The explicitly enabled production catalogs admitted by the v1 service.
  *
  * Resolution is exact across all four pin fields. The packaged catalog is parsed strictly and its
  * invariants are checked before it is exposed; there is no "closest" revision or permissive
@@ -43,15 +43,30 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class CurrentM3UiBuilderCatalogExecutor(
   source: String = packagedM3CatalogSource(),
+  catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID),
   exportCapabilities: ExportCapabilitiesV1 =
     ExportCapabilitiesV1(composeCode = true, svg = false, png = false),
 ) : UiBuilderCatalogExecutor {
-  private val catalog =
+  private val baseCatalog =
     json
       .decodeFromString<CatalogCapabilityV1>(source)
       .let(::validateCatalog)
       .copy(exportCapabilities = exportCapabilities)
-  private val reference =
+  private val availableCatalogs =
+    mapOf(
+      DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
+      REMOTE_M3_CATALOG_SYSTEM_ID to remoteM3Catalog(baseCatalog),
+    )
+  private val catalogs =
+    catalogSystemIds
+      .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }
+      .associateWith { systemId ->
+        require(SAFE_SYSTEM_ID.matches(systemId)) { "invalid UI-builder catalog id: $systemId" }
+        requireNotNull(availableCatalogs[systemId]) {
+          "UI-builder catalog $systemId has no packaged adapter"
+        }
+      }
+  private val references = catalogs.mapValues { (_, catalog) ->
     CatalogReferenceV1(
       systemId = catalog.benchmark.catalogSystemId,
       catalogRevision = catalog.benchmark.catalogRevision,
@@ -61,33 +76,37 @@ class CurrentM3UiBuilderCatalogExecutor(
       capabilityDigest = CURRENT_CAPABILITY_DIGEST,
       nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
     )
-  private val components = catalog.components.associateBy { it.componentId }
-
-  override fun listCatalogs(): List<CatalogCapabilityV1> = listOf(catalog)
-
-  override fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1? = catalog.takeIf {
-    reference == this.reference
   }
+  private val components = catalogs.mapValues { (_, catalog) ->
+    catalog.components.associateBy { it.componentId }
+  }
+
+  override fun listCatalogs(): List<CatalogCapabilityV1> = catalogs.values.toList()
+
+  override fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1? =
+    catalogs[reference.systemId]?.takeIf { reference == references[reference.systemId] }
 
   override fun validate(
     document: DesignDocumentV1,
     catalog: CatalogCapabilityV1,
   ): UiBuilderCatalogIssue? {
-    if (catalog != this.catalog)
-      return issue("CATALOG_MISMATCH", "catalog is not the current M3 catalog")
-    if (document.catalogPin != reference) {
+    val systemId = catalog.benchmark.catalogSystemId
+    if (catalog != catalogs[systemId])
+      return issue("CATALOG_MISMATCH", "catalog is not an enabled UI-builder catalog")
+    if (document.catalogPin != references[systemId]) {
       return issue("CATALOG_PIN_MISMATCH", "document catalog pin does not resolve exactly")
     }
+    val catalogComponents = components.getValue(systemId)
     val encodedDocument = json.encodeToJsonElement(document).jsonObject
     val encodedNodes = encodedDocument.getValue("nodes").jsonObject
     for ((nodeId, nodeElement) in encodedNodes.entries.sortedBy { it.key }) {
       val node = nodeElement.jsonObject
       val componentId = node.requiredString("componentId")
       val component =
-        components[componentId]
+        catalogComponents[componentId]
           ?: return issue(
             "UNKNOWN_COMPONENT",
-            "component $componentId is not in m3-catalog",
+            "component $componentId is not in $systemId",
             nodeId,
           )
       val properties = node.objectOrEmpty("properties")
@@ -182,7 +201,7 @@ class CurrentM3UiBuilderCatalogExecutor(
                 name,
               )
           val childCapability =
-            components[child.requiredString("componentId")]
+            catalogComponents[child.requiredString("componentId")]
               ?: return issue(
                 "UNKNOWN_COMPONENT",
                 "child $childId has an unknown component",
@@ -226,6 +245,9 @@ class CurrentM3UiBuilderCatalogExecutor(
   companion object {
     const val RESOURCE: String = "/ee/schimke/composeai/uibuilder/catalogs/m3-catalog-v1.json"
     const val CURRENT_CAPABILITY_DIGEST: String = "candidate"
+    const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
+    const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"
+    private val SAFE_SYSTEM_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
     private fun packagedM3CatalogSource(): String =
       checkNotNull(CurrentM3UiBuilderCatalogExecutor::class.java.getResourceAsStream(RESOURCE)) {
@@ -234,6 +256,69 @@ class CurrentM3UiBuilderCatalogExecutor(
         .bufferedReader(Charsets.UTF_8)
         .use { it.readText() }
   }
+}
+
+/**
+ * The first Remote M3 authoring surface is deliberately a reviewed subset, not an alias for the
+ * complete Material 3 catalog. The host dimensions copy the stable 240dp-screen squircle preview
+ * contract from wear-m3-catalog: 200x60dp or 200x108dp content, 8dp padding on every edge and a
+ * 26dp corner radius, producing 216x76dp and 216x124dp canvases.
+ */
+private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
+  val components = base.components.associateBy { it.componentId }
+  val box = components.getValue("layout/box")
+  val supportedWasm = components.getValue("m3/text").wasm
+  val blockedSvg = components.getValue("remote-compose/document").svg
+  val contentSlot =
+    box.slots
+      .single()
+      .copy(
+        name = "content",
+        cardinality = box.slots.single().cardinality.copy(min = 0, max = 1),
+      )
+  fun widget(componentId: String, displayName: String) =
+    box.copy(
+      componentId = componentId,
+      displayName = displayName,
+      role = "Scaffold",
+      traits = listOf("ScreenContent", "WearWidgetHost", "RemoteContentHost"),
+      slots = listOf(contentSlot),
+      properties = emptyList(),
+      modifierCapabilities = emptyList(),
+      wasm =
+        supportedWasm.copy(
+          notes =
+            "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content."
+        ),
+      code = null,
+      svg =
+        blockedSvg?.copy(
+          notes = "The copied Wear widget host geometry has not yet passed structured SVG parity."
+        ),
+    )
+  val authoringIds =
+    listOf(
+      "layout/box",
+      "layout/column",
+      "layout/row",
+      "m3/surface",
+      "m3/text",
+      "remote-compose/document",
+    )
+  return base.copy(
+    benchmark =
+      base.benchmark.copy(
+        id = "remote-m3-wear-widget-scaffolds",
+        sourceRevision = "wear-m3-catalog@d4e4e684e61d0657aad4ccb7752b8c0ab5d9dedf",
+        catalogSystemId = CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
+        catalogRevision = "wear-widget-scaffolds-v1",
+      ),
+    components =
+      listOf(
+        widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
+        widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
+      ) + authoringIds.map(components::getValue),
+  )
 }
 
 /** Deterministic, revision-pinned Compose source projection for the strict current catalog. */

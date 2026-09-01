@@ -371,6 +371,12 @@ fun UiBuilderSurface(
         }
       ) {
         document.roots.forEach { root ->
+          val rootModifier =
+            if (
+              document.nodes[root]?.componentId?.startsWith("remote-m3/widget-container-") == true
+            )
+              Modifier.align(Alignment.Center)
+            else Modifier
           RenderNode(
             document = document,
             nodeId = root,
@@ -403,6 +409,7 @@ fun UiBuilderSurface(
               )
             },
             semanticActions = semanticActions,
+            modifier = rootModifier,
           )
         }
         if (editorOverlay) {
@@ -472,6 +479,22 @@ private fun RenderNode(
   }
 
   when (node.componentId) {
+    "remote-m3/widget-container-small" ->
+      WearWidgetHostScaffold(
+        modifier = measured,
+        widthDp = 216,
+        heightDp = 76,
+      ) {
+        slot("content").forEach { child(it, Modifier.fillMaxSize()) }
+      }
+    "remote-m3/widget-container-large" ->
+      WearWidgetHostScaffold(
+        modifier = measured,
+        widthDp = 216,
+        heightDp = 124,
+      ) {
+        slot("content").forEach { child(it, Modifier.fillMaxSize()) }
+      }
     "layout/supporting-pane-scaffold" ->
       DeterministicSupportingPaneScaffold(
         node,
@@ -786,6 +809,31 @@ private fun RenderNode(
           .background(Color(parseArgb(node.string("color"))))
       )
     else -> UnsupportedComponentDiagnostic(node.componentId, measured)
+  }
+}
+
+/**
+ * Compose UI counterpart of the stable Glance Wear widget preview frame. The fixed outer canvas
+ * includes the host's 8dp padding around its 200dp-wide content area; the 26dp squircle and default
+ * surfaceContainerLow fill are host chrome rather than authored widget content.
+ */
+@Composable
+private fun WearWidgetHostScaffold(
+  modifier: Modifier,
+  widthDp: Int,
+  heightDp: Int,
+  content: @Composable () -> Unit,
+) {
+  Box(
+    modifier =
+      modifier
+        .size(widthDp.dp, heightDp.dp)
+        .clip(RoundedCornerShape(26.dp))
+        .background(MaterialTheme.colorScheme.surfaceContainerLow)
+        .padding(8.dp),
+    contentAlignment = Alignment.Center,
+  ) {
+    content()
   }
 }
 

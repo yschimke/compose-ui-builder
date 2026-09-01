@@ -72,7 +72,10 @@ import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceV1
@@ -333,6 +336,7 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
   )
 
 private data class LiveSessionConfig(
+  val catalogSystemId: String,
   val designId: String,
   val actorId: String,
   val clientId: String,
@@ -370,6 +374,9 @@ private fun LiveSessionApp() {
   var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
 
   fun acceptSnapshot(response: SnapshotResponseV1) {
+    require(response.snapshot.state.document.catalogPin.systemId == config.catalogSystemId) {
+      "design ${config.designId} belongs to ${response.snapshot.state.document.catalogPin.systemId}, not ${config.catalogSystemId}"
+    }
     recordAuthoritativeReceipt(
       response.snapshot.state.document.revision.toInt(),
       response.snapshot.state.lastSequence,
@@ -379,7 +386,7 @@ private fun LiveSessionApp() {
     presenceState = presenceState.replace(response.snapshot.presence, browserNowMillis())
     authoritativeGeneration += 1
     sessionStatus =
-      "Live · ${config.actorId}/${config.clientId} · seq ${response.snapshot.state.lastSequence}"
+      "${config.catalogSystemId} · Live · ${config.actorId}/${config.clientId} · seq ${response.snapshot.state.lastSequence}"
   }
 
   fun refreshSnapshot(reason: String) {
@@ -400,23 +407,47 @@ private fun LiveSessionApp() {
   }
 
   LaunchedEffect(config) {
-    val catalogSource = fetchText("jetcaster-discover-capabilities-v1.json")
-    catalog = CapabilityCatalogParser.parse(catalogSource)
+    val selectedCatalog = loadLiveCatalog(http, config.catalogSystemId)
+    catalog =
+      CapabilityCatalogParser.parse(
+        Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), selectedCatalog)
+      )
     val openResult =
       UiBuilderLiveSessionApi(config.designId, http).openOrCreate(config.createIfMissing) {
         sessionStatus = "Creating ${config.designId} from the ${config.template} template…"
         val fixture =
           Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
         val fixtureDocument = UiBuilderReducer.replay(fixture).document
+        val catalogPin =
+          fixtureDocument.catalogPin.toMutableMap().also { pin ->
+            pin["systemId"] = kotlinx.serialization.json.JsonPrimitive(config.catalogSystemId)
+            pin["catalogRevision"] =
+              kotlinx.serialization.json.JsonPrimitive(selectedCatalog.benchmark.catalogRevision)
+            pin["nativeRuntimeId"] =
+              kotlinx.serialization.json.JsonPrimitive(selectedCatalog.benchmark.nativeRuntimeId)
+          }
         val initialDocument =
-          if (config.template == "blank") {
+          if (config.catalogSystemId == "remote-m3") {
+            wearWidgetUiBuilderDocument(
+              designId = config.designId,
+              catalogPin = JsonObject(catalogPin),
+              environment = fixtureDocument.environment,
+              size =
+                if (config.template == "wear-widget-large") WearWidgetScaffoldSize.Large
+                else WearWidgetScaffoldSize.Small,
+            )
+          } else if (config.template == "blank") {
             blankUiBuilderDocument(
               designId = config.designId,
-              catalogPin = fixtureDocument.catalogPin,
+              catalogPin = JsonObject(catalogPin),
               environment = fixtureDocument.environment,
             )
           } else {
-            fixtureDocument.copy(id = config.designId, revision = 0)
+            fixtureDocument.copy(
+              id = config.designId,
+              revision = 0,
+              catalogPin = JsonObject(catalogPin),
+            )
           }
         initialDocument.toProtocolDocument()
       }
@@ -944,9 +975,14 @@ private external fun captureMode(): String
 @JsFun("() => new URLSearchParams(globalThis.location.search).get('session') === 'live'")
 private external fun liveSessionEnabled(): Boolean
 
-private fun liveSessionConfig(): LiveSessionConfig =
-  LiveSessionConfig(
-      designId = liveConfigValue("designId", "jetcaster-discover"),
+private fun liveSessionConfig(): LiveSessionConfig {
+  val catalogSystemId = liveConfigValue("catalog", uiBuilderCatalogFromPath())
+  val defaultDesignId =
+    if (catalogSystemId == "m3-catalog") "jetcaster-discover"
+    else "$catalogSystemId-jetcaster-discover"
+  return LiveSessionConfig(
+      catalogSystemId = catalogSystemId,
+      designId = liveConfigValue("designId", defaultDesignId),
       actorId = liveConfigValue("actor", "browser-user"),
       clientId = liveConfigValue("clientId", "browser-editor"),
       httpEndpoint = liveConfigValue("endpoint", "/api/ui-builder/v1/requests"),
@@ -962,14 +998,43 @@ private fun liveSessionConfig(): LiveSessionConfig =
       colorArgbHex = liveConfigValue("color", "#FF6574CD"),
     )
     .also {
+      require(Regex("[A-Za-z0-9][A-Za-z0-9._-]*").matches(it.catalogSystemId)) {
+        "live catalog must be a safe catalog id"
+      }
       require(it.designId.isNotBlank()) { "live designId must not be blank" }
       require(it.actorId.isNotBlank()) { "live actor must not be blank" }
       require(it.clientId.isNotBlank()) { "live clientId must not be blank" }
       require(Regex("#[0-9A-Fa-f]{8}").matches(it.colorArgbHex)) { "live color must be #AARRGGBB" }
-      require(it.template in setOf("jetcaster", "blank")) {
-        "live template must be jetcaster or blank"
+      require(
+        it.template in setOf("jetcaster", "blank", "wear-widget-small", "wear-widget-large")
+      ) {
+        "live template must be jetcaster, blank, wear-widget-small, or wear-widget-large"
       }
     }
+}
+
+private suspend fun loadLiveCatalog(
+  http: UiBuilderProtocolHttpClient,
+  systemId: String,
+): CatalogCapabilityV1 =
+  when (val result = http.execute(ListCatalogsRequestV1)) {
+    is UiBuilderHttpResult.Response -> {
+      val catalogs =
+        result.response as? CatalogsResponseV1 ?: error("unexpected list-catalogs response")
+      catalogs.catalogs.singleOrNull { it.benchmark.catalogSystemId == systemId }
+        ?: error("UI builder is not enabled for catalog $systemId")
+    }
+    is UiBuilderHttpResult.ServiceError -> error(result.error.message)
+    is UiBuilderHttpResult.SnapshotRequired -> error(result.error.message)
+  }
+
+@JsFun(
+  """() => {
+    const parts = globalThis.location.pathname.split('/').filter(Boolean);
+    return parts[0] === 'ui-builder' && parts.length > 1 ? parts[1] : 'm3-catalog';
+  }"""
+)
+private external fun uiBuilderCatalogFromPath(): String
 
 @JsFun(
   """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""

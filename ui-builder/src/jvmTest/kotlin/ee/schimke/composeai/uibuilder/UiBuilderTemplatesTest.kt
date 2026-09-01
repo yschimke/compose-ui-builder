@@ -32,5 +32,40 @@ class UiBuilderTemplatesTest {
     assertTrue(validation.structurallyValid, validation.issues.joinToString { it.message })
   }
 
+  @Test
+  fun `wear widget templates copy the two stable host preview canvases as slot ready scaffolds`() {
+    val fixture =
+      Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+    val reference = UiBuilderReducer.replay(fixture).document
+
+    val small =
+      wearWidgetUiBuilderDocument(
+        "small-widget",
+        reference.catalogPin,
+        reference.environment,
+        WearWidgetScaffoldSize.Small,
+      )
+    val large =
+      wearWidgetUiBuilderDocument(
+        "large-widget",
+        reference.catalogPin,
+        reference.environment,
+        WearWidgetScaffoldSize.Large,
+      )
+
+    assertEquals(
+      "remote-m3/widget-container-small",
+      small.nodes.getValue(small.roots.single()).componentId,
+    )
+    assertEquals(
+      "remote-m3/widget-container-large",
+      large.nodes.getValue(large.roots.single()).componentId,
+    )
+    assertEquals("Wear widget · Small (216×76dp)", small.title)
+    assertEquals("Wear widget · Large (216×124dp)", large.title)
+    assertTrue(small.nodes.getValue(small.roots.single()).slots.getValue("content").isEmpty())
+    assertTrue(large.nodes.getValue(large.roots.single()).slots.getValue("content").isEmpty())
+  }
+
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }

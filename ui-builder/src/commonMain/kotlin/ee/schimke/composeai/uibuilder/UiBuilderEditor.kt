@@ -156,6 +156,7 @@ fun UiBuilderEditor(
   val navigator: @Composable (Modifier, Boolean) -> Unit = { modifier, closeAfterDrop ->
     EditorNavigator(
       state = state,
+      catalogSystemId = catalog.benchmark.catalogSystemId,
       catalogItems = reducer.catalogItems(state.catalogQuery),
       treeRows = reducer.treeRows(state.document),
       collaborators = collaborators,
@@ -530,6 +531,7 @@ private fun editorShortcut(
 @Composable
 private fun EditorNavigator(
   state: UiBuilderEditorState,
+  catalogSystemId: String,
   catalogItems: List<EditorCatalogItem>,
   treeRows: List<EditorTreeRow>,
   collaborators: List<UiBuilderCollaborator>,
@@ -543,7 +545,10 @@ private fun EditorNavigator(
 ) {
   Surface(modifier, color = MaterialTheme.colorScheme.surface) {
     Column {
-      PanelHeading("M3 component catalog", "Drop target: $dropTargetLabel")
+      PanelHeading(
+        "$catalogSystemId component catalog",
+        "Drop target: $dropTargetLabel",
+      )
       SearchField(
         state.catalogQuery,
         onFocusChanged = onTextInputFocusChanged,
