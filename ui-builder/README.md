@@ -45,3 +45,7 @@ against the visibly named selected slot. The editor measures the design at its p
 viewport and applies a sibling visual transform to fit the workspace, so the side panels cannot
 silently trigger a compact Jetcaster layout. `?mode=jetcaster-builder` remains the clean harness
 surface and does not compose editor controls or transforms.
+
+On viewports narrower than 840dp, the interactive editor starts with only the scaled design and a
+compact toolbar visible. Persistent bottom tabs open collapsible component and property docks;
+desktop widths retain the three-column workspace.

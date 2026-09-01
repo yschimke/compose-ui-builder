@@ -95,6 +95,12 @@ private val EditorColors =
     outline = Color(0xff454750),
   )
 
+private enum class MobileEditorPanel {
+  None,
+  Components,
+  Properties,
+}
+
 @Composable
 fun UiBuilderEditor(
   document: UiBuilderDocument,
@@ -128,6 +134,7 @@ fun UiBuilderEditor(
   var draggedComponentId by remember { mutableStateOf<String?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
   var textInputFocused by remember { mutableStateOf(false) }
+  var mobilePanel by remember(document.id) { mutableStateOf(MobileEditorPanel.None) }
   val editorFocusRequester = remember { FocusRequester() }
   val draggedTarget = draggedComponentId?.let { reducer.dropTarget(state, it) }
   val canvasDropHovered =
@@ -146,77 +153,246 @@ fun UiBuilderEditor(
       draggedTarget?.let { "${it.nodeId}.${it.slot}" } ?: "No compatible slot",
     )
   }
+  val navigator: @Composable (Modifier, Boolean) -> Unit = { modifier, closeAfterDrop ->
+    EditorNavigator(
+      state = state,
+      catalogItems = reducer.catalogItems(state.catalogQuery),
+      treeRows = reducer.treeRows(state.document),
+      collaborators = collaborators,
+      dropTargetLabel = reducer.dropTargetLabel(state, draggedComponentId ?: "m3/text"),
+      onCatalogDrag = { componentId, position ->
+        draggedComponentId = componentId
+        catalogDragPosition = position
+      },
+      onCatalogDrop = { componentId, position ->
+        val target = reducer.dropTarget(state, componentId)
+        if (canvasBounds.contains(position) && target != null) {
+          dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target))
+          if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+        }
+        draggedComponentId = null
+        catalogDragPosition = null
+      },
+      moveTarget = { nodeId, direction -> reducer.moveTarget(state, nodeId, direction) },
+      onTextInputFocusChanged = { textInputFocused = it },
+      dispatch = ::dispatch,
+      modifier = modifier,
+    )
+  }
+  val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
+    PinnedDesignCanvas(
+      document = state.document,
+      selectedNodeId = state.selectedNodeId,
+      onNodeSelected = { dispatch(UiBuilderEditorEvent.SelectNode(it)) },
+      onCanvasMetrics = onCanvasMetrics,
+      onCanvasBounds = {
+        canvasBounds = it
+        onCanvasBoundsChanged(it)
+      },
+      dropHovered = canvasDropHovered,
+      showSelectionOverlay = showSelectionOverlay,
+      collaborators = collaborators,
+      onInspectionSnapshot = onInspectionSnapshot,
+      onInspectionInvalidated = onInspectionInvalidated,
+      contentAlignment = alignment,
+      modifier = modifier,
+    )
+  }
+  val inspector: @Composable (Modifier) -> Unit = { modifier ->
+    PropertyInspector(
+      state = state,
+      fields = reducer.propertyFields(state),
+      onTextInputFocusChanged = { textInputFocused = it },
+      dispatch = ::dispatch,
+      modifier = modifier,
+    )
+  }
 
   MaterialTheme(colorScheme = EditorColors) {
-    Column(
-      Modifier.fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)
-        .focusRequester(editorFocusRequester)
-        .focusable()
-        .onPreviewKeyEvent { event ->
-          editorShortcut(event, enabled = !textInputFocused, dispatch = ::dispatch)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+      val compact = maxWidth < 840.dp
+      Column(
+        Modifier.fillMaxSize()
+          .background(MaterialTheme.colorScheme.background)
+          .focusRequester(editorFocusRequester)
+          .focusable()
+          .onPreviewKeyEvent { event ->
+            editorShortcut(event, enabled = !textInputFocused, dispatch = ::dispatch)
+          }
+      ) {
+        if (compact) {
+          MobileEditorToolbar(
+            state = state,
+            canDelete = reducer.canDeleteSelected(state),
+            canDuplicate = reducer.canDuplicateSelected(state),
+            canUndo = reducer.canUndo(state),
+            canRedo = reducer.canRedo(state),
+            onReconnect = onReconnect,
+            onHelp = onHelp,
+            dispatch = ::dispatch,
+          )
+        } else {
+          EditorToolbar(
+            state = state,
+            canDelete = reducer.canDeleteSelected(state),
+            canDuplicate = reducer.canDuplicateSelected(state),
+            canUndo = reducer.canUndo(state),
+            canRedo = reducer.canRedo(state),
+            sessionLabel = sessionLabel,
+            collaborators = collaborators,
+            onReconnect = onReconnect,
+            onHelp = onHelp,
+            dispatch = ::dispatch,
+          )
         }
-    ) {
-      EditorToolbar(
-        state = state,
-        canDelete = reducer.canDeleteSelected(state),
-        canDuplicate = reducer.canDuplicateSelected(state),
-        canUndo = reducer.canUndo(state),
-        canRedo = reducer.canRedo(state),
-        sessionLabel = sessionLabel,
-        collaborators = collaborators,
-        onReconnect = onReconnect,
-        onHelp = onHelp,
-        dispatch = ::dispatch,
-      )
-      Row(Modifier.fillMaxSize()) {
-        EditorNavigator(
-          state = state,
-          catalogItems = reducer.catalogItems(state.catalogQuery),
-          treeRows = reducer.treeRows(state.document),
-          collaborators = collaborators,
-          dropTargetLabel = reducer.dropTargetLabel(state, draggedComponentId ?: "m3/text"),
-          onCatalogDrag = { componentId, position ->
-            draggedComponentId = componentId
-            catalogDragPosition = position
-          },
-          onCatalogDrop = { componentId, position ->
-            val target = reducer.dropTarget(state, componentId)
-            if (canvasBounds.contains(position) && target != null) {
-              dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target))
+        Box(Modifier.fillMaxSize()) {
+          if (!compact) {
+            Row(Modifier.fillMaxSize()) {
+              navigator(Modifier.width(300.dp).fillMaxHeight(), false)
+              canvas(
+                Modifier.weight(1f).fillMaxHeight().background(Color(0xff0d0e11)).padding(20.dp),
+                Alignment.TopStart,
+              )
+              inspector(Modifier.width(300.dp).fillMaxHeight())
             }
-            draggedComponentId = null
-            catalogDragPosition = null
-          },
-          moveTarget = { nodeId, direction -> reducer.moveTarget(state, nodeId, direction) },
-          onTextInputFocusChanged = { textInputFocused = it },
-          dispatch = ::dispatch,
-        )
-        PinnedDesignCanvas(
-          document = state.document,
-          selectedNodeId = state.selectedNodeId,
-          onNodeSelected = { dispatch(UiBuilderEditorEvent.SelectNode(it)) },
-          onCanvasMetrics = onCanvasMetrics,
-          onCanvasBounds = {
-            canvasBounds = it
-            onCanvasBoundsChanged(it)
-          },
-          dropHovered = canvasDropHovered,
-          showSelectionOverlay = showSelectionOverlay,
-          collaborators = collaborators,
-          onInspectionSnapshot = onInspectionSnapshot,
-          onInspectionInvalidated = onInspectionInvalidated,
-          modifier =
-            Modifier.weight(1f).fillMaxHeight().background(Color(0xff0d0e11)).padding(20.dp),
-        )
-        PropertyInspector(
-          state,
-          fields = reducer.propertyFields(state),
-          onTextInputFocusChanged = { textInputFocused = it },
-          dispatch = ::dispatch,
-        )
+          } else {
+            canvas(
+              Modifier.fillMaxSize()
+                .background(Color(0xff0d0e11))
+                .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 64.dp),
+              Alignment.Center,
+            )
+            if (mobilePanel == MobileEditorPanel.Components) {
+              navigator(
+                Modifier.align(Alignment.BottomCenter)
+                  .fillMaxWidth()
+                  .fillMaxHeight(0.72f)
+                  .padding(bottom = 56.dp),
+                true,
+              )
+            }
+            if (mobilePanel == MobileEditorPanel.Properties) {
+              inspector(
+                Modifier.align(Alignment.BottomCenter)
+                  .fillMaxWidth()
+                  .fillMaxHeight(0.72f)
+                  .padding(bottom = 56.dp)
+              )
+            }
+            MobilePanelDock(
+              panel = mobilePanel,
+              onPanelChanged = {
+                mobilePanel = if (mobilePanel == it) MobileEditorPanel.None else it
+              },
+              modifier = Modifier.align(Alignment.BottomCenter),
+            )
+          }
+        }
       }
     }
+  }
+}
+
+@Composable
+private fun MobileEditorToolbar(
+  state: UiBuilderEditorState,
+  canDelete: Boolean,
+  canDuplicate: Boolean,
+  canUndo: Boolean,
+  canRedo: Boolean,
+  onReconnect: (() -> Unit)?,
+  onHelp: (() -> Unit)?,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var expanded by remember { mutableStateOf(false) }
+  Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
+    Row(
+      Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 8.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text("UI Builder", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+      EditorAction("Undo", "Ctrl/⌘+Z", canUndo) { dispatch(UiBuilderEditorEvent.Undo) }
+      EditorAction("Redo", "Ctrl/⌘+Shift+Z", canRedo) { dispatch(UiBuilderEditorEvent.Redo) }
+      Box {
+        TextButton(
+          onClick = { expanded = true },
+          modifier = Modifier.semantics { contentDescription = "More editor actions" },
+        ) {
+          Text("More")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+          DropdownMenuItem(
+            text = { Text("Duplicate") },
+            enabled = canDuplicate,
+            onClick = {
+              expanded = false
+              dispatch(UiBuilderEditorEvent.DuplicateSelected)
+            },
+          )
+          DropdownMenuItem(
+            text = { Text("Delete") },
+            enabled = canDelete,
+            onClick = {
+              expanded = false
+              dispatch(UiBuilderEditorEvent.DeleteSelected)
+            },
+          )
+          if (onReconnect != null) {
+            DropdownMenuItem(
+              text = { Text("Reconnect") },
+              onClick = {
+                expanded = false
+                onReconnect()
+              },
+            )
+          }
+          if (onHelp != null) {
+            DropdownMenuItem(
+              text = { Text("Help") },
+              onClick = {
+                expanded = false
+                onHelp()
+              },
+            )
+          }
+        }
+      }
+      Text("r${state.document.revision}", style = MaterialTheme.typography.labelMedium)
+    }
+  }
+}
+
+@Composable
+private fun MobilePanelDock(
+  panel: MobileEditorPanel,
+  onPanelChanged: (MobileEditorPanel) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  Surface(modifier.fillMaxWidth().height(56.dp), tonalElevation = 6.dp) {
+    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+      MobilePanelButton("Components", MobileEditorPanel.Components, panel, onPanelChanged)
+      MobilePanelButton("Properties", MobileEditorPanel.Properties, panel, onPanelChanged)
+    }
+  }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.MobilePanelButton(
+  label: String,
+  target: MobileEditorPanel,
+  selected: MobileEditorPanel,
+  onPanelChanged: (MobileEditorPanel) -> Unit,
+) {
+  TextButton(
+    onClick = { onPanelChanged(target) },
+    modifier =
+      Modifier.weight(1f).fillMaxHeight().semantics {
+        contentDescription =
+          if (selected == target) "Close ${label.lowercase()} panel"
+          else "Open ${label.lowercase()} panel"
+      },
+  ) {
+    Text(label, fontWeight = if (selected == target) FontWeight.Bold else FontWeight.Normal)
   }
 }
 
@@ -362,8 +538,9 @@ private fun EditorNavigator(
   moveTarget: (String, EditorMoveDirection) -> UiBuilderEditorEvent.MoveNode?,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  modifier: Modifier = Modifier.width(300.dp).fillMaxHeight(),
 ) {
-  Surface(Modifier.width(300.dp).fillMaxHeight(), color = MaterialTheme.colorScheme.surface) {
+  Surface(modifier, color = MaterialTheme.colorScheme.surface) {
     Column {
       PanelHeading("M3 component catalog", "Drop target: $dropTargetLabel")
       SearchField(
@@ -411,6 +588,7 @@ private fun PinnedDesignCanvas(
   collaborators: List<UiBuilderCollaborator>,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)?,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
+  contentAlignment: Alignment = Alignment.TopStart,
   modifier: Modifier = Modifier,
 ) {
   val sourceWidth =
@@ -420,10 +598,10 @@ private fun PinnedDesignCanvas(
   val density = LocalDensity.current
   var inspection by
     remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
-  BoxWithConstraints(modifier.clipToBounds(), contentAlignment = Alignment.TopStart) {
+  BoxWithConstraints(modifier.clipToBounds(), contentAlignment = contentAlignment) {
     val scale = minOf(maxWidth.value / sourceWidth, maxHeight.value / sourceHeight).coerceAtMost(1f)
     Surface(
-      Modifier.align(Alignment.TopStart)
+      Modifier.align(contentAlignment)
         .wrapContentSize(Alignment.TopStart, unbounded = true)
         .requiredSize(sourceWidth.dp, sourceHeight.dp)
         .onSizeChanged { size ->
@@ -692,10 +870,11 @@ private fun PropertyInspector(
   fields: List<EditorPropertyField>,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  modifier: Modifier = Modifier.width(300.dp).fillMaxHeight(),
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
   var section by remember { mutableStateOf(InspectorSection.Component) }
-  Surface(Modifier.width(300.dp).fillMaxHeight(), color = MaterialTheme.colorScheme.surface) {
+  Surface(modifier, color = MaterialTheme.colorScheme.surface) {
     Column(Modifier.padding(16.dp)) {
       Row(
         Modifier.fillMaxWidth().height(28.dp),

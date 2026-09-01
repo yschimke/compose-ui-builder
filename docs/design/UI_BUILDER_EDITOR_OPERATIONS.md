@@ -43,3 +43,19 @@ recording, and generated Compose export.
 | Before | Catalog | After |
 | --- | --- | --- |
 | ![Search icon before editing](../../preview-harness/snapshots/ui-builder-google-icon-before.png) | ![Searchable Google Material Icons catalog](../../preview-harness/snapshots/ui-builder-google-icon-picker.png) | ![Home icon after editing](../../preview-harness/snapshots/ui-builder-google-icon-selected.png) |
+
+## Mobile workspace
+
+Below `840dp`, the editor defaults to a design-only workspace with a compact action bar. Components
+and properties are available from persistent bottom-docked tabs; selecting the active tab collapses
+its panel. The component panel retains catalog search, layers, selection, reordering, and drag/drop,
+while the property panel retains component and screen-environment editing. Duplicate, delete,
+reconnect, and help remain available from the compact **More** menu.
+
+The mobile harness runs at 390×844 CSS pixels and verifies that neither panel is composed initially,
+both panels can replace one another without navigation, and the pinned 1280×800 design remains
+scaled inside the available width.
+
+| Before | Design first | Components | Properties |
+| --- | --- | --- | --- |
+| ![Desktop workspace clipped at mobile width](../../preview-harness/snapshots/ui-builder-mobile-before.png) | ![Mobile design-first workspace](../../preview-harness/snapshots/ui-builder-mobile-design.png) | ![Mobile component dock](../../preview-harness/snapshots/ui-builder-mobile-components.png) | ![Mobile property dock](../../preview-harness/snapshots/ui-builder-mobile-properties.png) |
