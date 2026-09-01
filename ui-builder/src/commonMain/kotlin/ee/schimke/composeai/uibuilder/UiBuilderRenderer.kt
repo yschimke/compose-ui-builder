@@ -135,6 +135,9 @@ internal val LocalUiBuilderExportRasterAssets =
 /** Export-only path drawing avoids Skia SVG color-filter layers becoming anonymous PNG images. */
 internal val LocalUiBuilderExportStructuredIcons = staticCompositionLocalOf { false }
 
+private val LocalUiBuilderTypeScale = staticCompositionLocalOf { 1f }
+private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
+
 fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
   else listOf(UiBuilderLayer.Design)
@@ -307,15 +310,40 @@ fun UiBuilderSurface(
       size?.let { UiBuilderPixelBounds(0f, 0f, it.width.toFloat(), it.height.toFloat()) },
     )
   }
-  val colorScheme =
+  val baseColorScheme =
     when {
       dark && document.id.startsWith("fixture-jetcaster-") -> JetcasterDarkColorScheme
       dark -> darkColorScheme()
       else -> lightColorScheme()
     }
+  val themeHost =
+    document.roots.asSequence().mapNotNull(document.nodes::get).firstOrNull {
+      it.componentId == "m3/surface"
+    }
+  val primaryColor = themeHost?.themeColor(THEME_PRIMARY)
+  val backgroundColor = themeHost?.themeColor(THEME_BACKGROUND)
+  val surfaceColor = themeHost?.themeColor(THEME_SURFACE)
+  val contentColor = themeHost?.themeColor(THEME_CONTENT)
+  val colorScheme =
+    baseColorScheme.copy(
+      primary = primaryColor ?: baseColorScheme.primary,
+      background = backgroundColor ?: baseColorScheme.background,
+      onBackground = contentColor ?: baseColorScheme.onBackground,
+      surface = surfaceColor ?: baseColorScheme.surface,
+      surfaceContainer = surfaceColor ?: baseColorScheme.surfaceContainer,
+      surfaceContainerLow = surfaceColor ?: baseColorScheme.surfaceContainerLow,
+      surfaceContainerHigh = surfaceColor ?: baseColorScheme.surfaceContainerHigh,
+      surfaceContainerHighest = surfaceColor ?: baseColorScheme.surfaceContainerHighest,
+      onSurface = contentColor ?: baseColorScheme.onSurface,
+      onSurfaceVariant = contentColor ?: baseColorScheme.onSurfaceVariant,
+    )
+  val typeScale = themeHost?.float(THEME_TYPE_SCALE, 1f)?.coerceIn(0.75f, 1.5f) ?: 1f
+  val cornerRadius = themeHost?.float(THEME_CORNER_RADIUS, 16f)?.coerceIn(0f, 48f) ?: 16f
   CompositionLocalProvider(
     LocalDensity provides density,
     LocalLayoutDirection provides layoutDirection,
+    LocalUiBuilderTypeScale provides typeScale,
+    LocalUiBuilderCornerRadius provides cornerRadius,
   ) {
     MaterialTheme(colorScheme = colorScheme) {
       Box(
@@ -412,10 +440,11 @@ private fun RenderNode(
   if (node.eventBindings["click"] != null) {
     semanticActions[node.id] = UiBuilderSemanticActionEntry(enabled = enabled, activate = activate)
   }
+  val themeCornerRadius = LocalUiBuilderCornerRadius.current
   val measured =
     node.modifiers
       .fold(modifier.onGloballyPositioned { onBounds(node.id, it) }) { result, value ->
-        result.applyModifier(value.jsonObject, node.id)
+        result.applyModifier(value.jsonObject, node.id, themeCornerRadius)
       }
       .then(node.actionModifier(activate, enabled))
   fun slot(name: String) = node.slots[name].orEmpty()
@@ -617,7 +646,7 @@ private fun RenderNode(
     "m3/surface" ->
       Surface(
         measured,
-        shape = node.shape(),
+        shape = node.shape(themeCornerRadius),
         color = node.color("containerColor", Color.Transparent),
       ) {
         slot("content").forEach { child(it, Modifier) }
@@ -625,7 +654,7 @@ private fun RenderNode(
     "m3/card" ->
       Card(
         measured,
-        shape = node.shape(),
+        shape = node.shape(themeCornerRadius),
         elevation = CardDefaults.cardElevation(defaultElevation = node.float("elevationDp").dp),
         colors =
           CardDefaults.cardColors(
@@ -980,7 +1009,11 @@ private fun UnsupportedComponentDiagnostic(componentId: String, modifier: Modifi
   }
 }
 
-private fun Modifier.applyModifier(value: JsonObject, nodeId: String): Modifier =
+private fun Modifier.applyModifier(
+  value: JsonObject,
+  nodeId: String,
+  themeCornerRadius: Float,
+): Modifier =
   when (val type = value.optionalString("type")) {
     "fillMaxSize" -> fillMaxSize()
     "fillMaxWidth" -> fillMaxWidth()
@@ -996,7 +1029,7 @@ private fun Modifier.applyModifier(value: JsonObject, nodeId: String): Modifier 
           throw IllegalArgumentException("size modifier on $nodeId requires widthDp or heightDp")
       }
     }
-    "clip" -> clip(shapeFor(value.optionalString("shape")))
+    "clip" -> clip(shapeFor(value.optionalString("shape"), themeCornerRadius = themeCornerRadius))
     // Applied by the owning BoxScope so it does not contribute to the parent's measurement.
     "matchParentSize" -> this
     null -> throw IllegalArgumentException("modifier on $nodeId requires a type")
@@ -1079,26 +1112,31 @@ private fun UiBuilderNode.bool(name: String, fallback: Boolean = false): Boolean
   obj(name)["value"]?.jsonPrimitive?.booleanOrNull ?: fallback
 
 @Composable
-private fun UiBuilderNode.textStyle() =
-  when (string("style")) {
-    "displayLarge" -> MaterialTheme.typography.displayLarge
-    "displayMedium" -> MaterialTheme.typography.displayMedium
-    "displaySmall" -> MaterialTheme.typography.displaySmall
-    "headlineLarge" -> MaterialTheme.typography.headlineLarge
-    "headlineMedium" -> MaterialTheme.typography.headlineMedium
-    "headlineSmall" -> MaterialTheme.typography.headlineSmall
-    "titleLarge" -> MaterialTheme.typography.titleLarge
-    "titleMedium" -> MaterialTheme.typography.titleMedium
-    "titleSmall" -> MaterialTheme.typography.titleSmall
-    "bodyLarge" -> MaterialTheme.typography.bodyLarge
-    "bodyMedium" -> MaterialTheme.typography.bodyMedium
-    "bodySmall" -> MaterialTheme.typography.bodySmall
-    "labelLarge" -> MaterialTheme.typography.labelLarge
-    "labelMedium" -> MaterialTheme.typography.labelMedium
-    "labelSmall" -> MaterialTheme.typography.labelSmall
-    "" -> LocalTextStyle.current
-    else -> error("unsupported text style '${string("style")}' on $id")
-  }
+private fun UiBuilderNode.textStyle(): androidx.compose.ui.text.TextStyle {
+  val style =
+    when (string("style")) {
+      "displayLarge" -> MaterialTheme.typography.displayLarge
+      "displayMedium" -> MaterialTheme.typography.displayMedium
+      "displaySmall" -> MaterialTheme.typography.displaySmall
+      "headlineLarge" -> MaterialTheme.typography.headlineLarge
+      "headlineMedium" -> MaterialTheme.typography.headlineMedium
+      "headlineSmall" -> MaterialTheme.typography.headlineSmall
+      "titleLarge" -> MaterialTheme.typography.titleLarge
+      "titleMedium" -> MaterialTheme.typography.titleMedium
+      "titleSmall" -> MaterialTheme.typography.titleSmall
+      "bodyLarge" -> MaterialTheme.typography.bodyLarge
+      "bodyMedium" -> MaterialTheme.typography.bodyMedium
+      "bodySmall" -> MaterialTheme.typography.bodySmall
+      "labelLarge" -> MaterialTheme.typography.labelLarge
+      "labelMedium" -> MaterialTheme.typography.labelMedium
+      "labelSmall" -> MaterialTheme.typography.labelSmall
+      "" -> LocalTextStyle.current
+      else -> error("unsupported text style '${string("style")}' on $id")
+    }
+  val scale = LocalUiBuilderTypeScale.current
+  return if (scale == 1f) style
+  else style.copy(fontSize = style.fontSize * scale, lineHeight = style.lineHeight * scale)
+}
 
 private fun UiBuilderNode.fontWeight() =
   when (string("fontWeight")) {
@@ -1161,16 +1199,20 @@ private fun UiBuilderNode.color(name: String, fallback: Color): Color {
   }
 }
 
-private fun UiBuilderNode.shape() =
-  if (string("shape").isNotEmpty()) shapeFor(string("shape"), id)
+private fun UiBuilderNode.shape(themeCornerRadius: Float) =
+  if (string("shape").isNotEmpty()) shapeFor(string("shape"), id, themeCornerRadius)
   else RoundedCornerShape(float("shapeDp").dp)
 
-private fun shapeFor(value: String?, nodeId: String? = null) =
+private fun shapeFor(
+  value: String?,
+  nodeId: String? = null,
+  themeCornerRadius: Float = 16f,
+) =
   RoundedCornerShape(
     when (value) {
-      "large" -> 16.dp
-      "medium" -> 12.dp
-      "small" -> 8.dp
+      "large" -> themeCornerRadius.dp
+      "medium" -> (themeCornerRadius * 0.75f).dp
+      "small" -> (themeCornerRadius * 0.5f).dp
       "",
       null -> 0.dp
       else ->
@@ -1178,6 +1220,11 @@ private fun shapeFor(value: String?, nodeId: String? = null) =
           ?: error("unsupported shape '$value'${nodeId?.let { " on $it" }.orEmpty()}")
     }
   )
+
+private fun UiBuilderNode.themeColor(name: String): Color? =
+  string(name)
+    .takeIf { it.startsWith("#") }
+    ?.let { value -> runCatching { Color(parseArgb(value)) }.getOrNull() }
 
 private fun UiBuilderNode.verticalAlignment() =
   when (string("verticalAlignment")) {

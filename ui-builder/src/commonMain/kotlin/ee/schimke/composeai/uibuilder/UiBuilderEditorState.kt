@@ -14,6 +14,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 enum class EditorPropertyControl {
@@ -130,6 +131,7 @@ data class UiBuilderEditorState(
   val selectionBeforeOperations: Map<String, String?> = emptyMap(),
   val selectionAfterOperations: Map<String, String?> = emptyMap(),
   val propertyErrors: Map<EditorPropertyLocation, String> = emptyMap(),
+  val inspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
 ) {
   val document: UiBuilderDocument
     get() = collaboration.document
@@ -140,6 +142,21 @@ data class UiBuilderEditorState(
   val canRedo: Boolean
     get() = redoTargetUndoId() != null
 }
+
+enum class EditorInspectorMode {
+  Properties,
+  Theme,
+  Screen,
+}
+
+data class EditorThemeSettings(
+  val primaryColor: String = "#FFD0BCFF",
+  val backgroundColor: String = "#FF111318",
+  val surfaceColor: String = "#FF1D1F25",
+  val contentColor: String = "#FFE3E2E9",
+  val typeScale: Float = 1f,
+  val cornerRadiusDp: Float = 16f,
+)
 
 sealed interface UiBuilderEditorEvent {
   data class SearchCatalog(val query: String) : UiBuilderEditorEvent
@@ -158,6 +175,10 @@ sealed interface UiBuilderEditorEvent {
     UiBuilderEditorEvent
 
   data class UpdateEnvironment(val settings: ScreenEnvironmentSettings) : UiBuilderEditorEvent
+
+  data class ShowInspector(val mode: EditorInspectorMode) : UiBuilderEditorEvent
+
+  data class ApplyTheme(val settings: EditorThemeSettings) : UiBuilderEditorEvent
 
   data object DeleteSelected : UiBuilderEditorEvent
 
@@ -204,6 +225,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.CommitProperty ->
         commitProperty(state, event.nodeId, event.property, event.draft)
       is UiBuilderEditorEvent.UpdateEnvironment -> updateEnvironment(state, event.settings)
+      is UiBuilderEditorEvent.ShowInspector -> state.copy(inspectorMode = event.mode)
+      is UiBuilderEditorEvent.ApplyTheme -> applyTheme(state, event.settings)
       UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
       UiBuilderEditorEvent.DuplicateSelected -> duplicateSelected(state)
       UiBuilderEditorEvent.Undo -> undo(state)
@@ -341,6 +364,18 @@ class UiBuilderEditorReducer(
         notes = property.notes,
       )
     }
+  }
+
+  fun themeSettings(state: UiBuilderEditorState): EditorThemeSettings {
+    val host = state.document.themeHost() ?: return EditorThemeSettings()
+    return EditorThemeSettings(
+      primaryColor = host.stringValue(THEME_PRIMARY, "#FFD0BCFF"),
+      backgroundColor = host.stringValue(THEME_BACKGROUND, "#FF111318"),
+      surfaceColor = host.stringValue(THEME_SURFACE, "#FF1D1F25"),
+      contentColor = host.stringValue(THEME_CONTENT, "#FFE3E2E9"),
+      typeScale = host.floatValue(THEME_TYPE_SCALE, 1f),
+      cornerRadiusDp = host.floatValue(THEME_CORNER_RADIUS, 16f),
+    )
   }
 
   fun dropTarget(state: UiBuilderEditorState, componentId: String): ParentSlot? {
@@ -505,6 +540,65 @@ class UiBuilderEditorReducer(
       operations,
       selectionAfter = state.selectedNodeId,
     )
+  }
+
+  private fun applyTheme(
+    state: UiBuilderEditorState,
+    settings: EditorThemeSettings,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val host =
+      state.document.themeHost()
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "A root Material surface is required to host design theme settings",
+        )
+    val colors =
+      listOf(
+        THEME_PRIMARY to settings.primaryColor,
+        THEME_BACKGROUND to settings.backgroundColor,
+        THEME_SURFACE to settings.surfaceColor,
+        THEME_CONTENT to settings.contentColor,
+      )
+    colors
+      .firstOrNull { !it.second.isArgbColor() }
+      ?.let { invalid ->
+        return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "${invalid.first} must be #RRGGBB or #AARRGGBB; received '${invalid.second}'",
+        )
+      }
+    if (settings.typeScale !in 0.75f..1.5f) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "Type scale must be between 0.75 and 1.5",
+      )
+    }
+    if (settings.cornerRadiusDp !in 0f..48f) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "Corner radius must be between 0 and 48dp",
+      )
+    }
+    val operations =
+      colors.map { (property, value) ->
+        DesignOperation.SetProperty(host.id, property, literal("color", JsonPrimitive(value)))
+      } +
+        DesignOperation.SetProperty(
+          host.id,
+          THEME_TYPE_SCALE,
+          literal("float", JsonPrimitive(settings.typeScale)),
+        ) +
+        DesignOperation.SetProperty(
+          host.id,
+          THEME_CORNER_RADIUS,
+          literal("float", JsonPrimitive(settings.cornerRadiusDp)),
+        )
+    return state.apply(sequence, operations, selectionAfter = state.selectedNodeId)
   }
 
   private fun deleteSelected(state: UiBuilderEditorState): UiBuilderEditorState {
@@ -703,6 +797,27 @@ class UiBuilderEditorReducer(
     return null
   }
 }
+
+internal const val THEME_PRIMARY = "themePrimaryColor"
+internal const val THEME_BACKGROUND = "themeBackgroundColor"
+internal const val THEME_SURFACE = "themeSurfaceColor"
+internal const val THEME_CONTENT = "themeContentColor"
+internal const val THEME_TYPE_SCALE = "themeTypeScale"
+internal const val THEME_CORNER_RADIUS = "themeCornerRadiusDp"
+
+private fun UiBuilderDocument.themeHost(): UiBuilderNode? =
+  roots.asSequence().mapNotNull(nodes::get).firstOrNull { it.componentId == "m3/surface" }
+
+private fun UiBuilderNode.stringValue(name: String, fallback: String): String =
+  properties[name]?.jsonObject?.get("value")?.jsonPrimitive?.content ?: fallback
+
+private fun UiBuilderNode.floatValue(name: String, fallback: Float): Float =
+  properties[name]?.jsonObject?.get("value")?.jsonPrimitive?.doubleOrNull?.toFloat() ?: fallback
+
+private fun String.isArgbColor(): Boolean =
+  startsWith("#") &&
+    length in setOf(7, 9) &&
+    drop(1).all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
 
 const val EDITOR_ACTOR_ID = "wasm-editor"
 const val EDITOR_CLIENT_ID = "interactive-canvas"

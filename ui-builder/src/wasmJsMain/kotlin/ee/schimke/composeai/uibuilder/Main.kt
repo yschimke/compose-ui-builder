@@ -1221,6 +1221,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
     documentHash = sha256Hex(canonicalDocument(state.document)),
     outcomeNodeId = rejection?.nodeId.orEmpty(),
     outcomeField = rejection?.field.orEmpty(),
+    outcomeMessage = rejection?.message.orEmpty(),
     widthDp = environment.widthDp,
     heightDp = environment.heightDp,
     density = environment.density,
@@ -1232,7 +1233,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
 }
 
 @JsFun(
-  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, selectedIconKey, mainBackgroundChildren, documentHash, outcomeNodeId, outcomeField, widthDp, heightDp, density, fontScale, locale, theme, layoutDirection) => {
+  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, selectedIconKey, mainBackgroundChildren, documentHash, outcomeNodeId, outcomeField, outcomeMessage, widthDp, heightDp, density, fontScale, locale, theme, layoutDirection) => {
     globalThis.__uiBuilderEditor = {
       revision,
       nodeCount,
@@ -1246,6 +1247,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
       documentHash,
       outcomeNodeId,
       outcomeField,
+      outcomeMessage,
       environment: { widthDp, heightDp, density, fontScale, locale, theme, layoutDirection }
     };
     document.documentElement.dataset.uiBuilderEditorRevision = String(revision);
@@ -1264,6 +1266,7 @@ private external fun publishEditorManifest(
   documentHash: String,
   outcomeNodeId: String,
   outcomeField: String,
+  outcomeMessage: String,
   widthDp: Int,
   heightDp: Int,
   density: Double,

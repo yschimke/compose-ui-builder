@@ -422,7 +422,13 @@
         { "name": "containerColor", "jsonType": "string", "required": false },
         { "name": "contentColor", "jsonType": "string", "required": false },
         { "name": "shapeDp", "jsonType": "number", "required": false },
-        { "name": "tonalElevationDp", "jsonType": "number", "required": false }
+        { "name": "tonalElevationDp", "jsonType": "number", "required": false },
+        { "name": "themePrimaryColor", "jsonType": "string", "required": false },
+        { "name": "themeBackgroundColor", "jsonType": "string", "required": false },
+        { "name": "themeSurfaceColor", "jsonType": "string", "required": false },
+        { "name": "themeContentColor", "jsonType": "string", "required": false },
+        { "name": "themeTypeScale", "jsonType": "number", "required": false },
+        { "name": "themeCornerRadiusDp", "jsonType": "number", "required": false }
       ],
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },

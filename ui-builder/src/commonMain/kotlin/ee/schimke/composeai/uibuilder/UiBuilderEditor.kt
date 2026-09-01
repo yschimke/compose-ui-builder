@@ -202,6 +202,7 @@ fun UiBuilderEditor(
     PropertyInspector(
       state = state,
       fields = reducer.propertyFields(state),
+      themeSettings = reducer.themeSettings(state),
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,
@@ -868,40 +869,43 @@ private fun String.toPresenceColor(): Color {
 private fun PropertyInspector(
   state: UiBuilderEditorState,
   fields: List<EditorPropertyField>,
+  themeSettings: EditorThemeSettings,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(300.dp).fillMaxHeight(),
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
-  var section by remember { mutableStateOf(InspectorSection.Component) }
   Surface(modifier, color = MaterialTheme.colorScheme.surface) {
     Column(Modifier.padding(16.dp)) {
-      Row(
-        Modifier.fillMaxWidth().height(28.dp),
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Text(
-          if (section == InspectorSection.Component) "Properties" else "Environment",
+      Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        InspectorModeButton(
+          "Properties",
+          EditorInspectorMode.Properties,
+          state,
+          dispatch,
           Modifier.weight(1f),
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold,
         )
-        TextButton(
-          onClick = {
-            section =
-              if (section == InspectorSection.Component) InspectorSection.Screen
-              else InspectorSection.Component
-          },
-          modifier = Modifier.width(76.dp).height(28.dp),
-        ) {
-          Text(
-            if (section == InspectorSection.Component) "Screen" else "Back",
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelMedium,
-          )
-        }
+        InspectorModeButton(
+          "Theme",
+          EditorInspectorMode.Theme,
+          state,
+          dispatch,
+          Modifier.weight(1f),
+        )
+        InspectorModeButton(
+          "Screen",
+          EditorInspectorMode.Screen,
+          state,
+          dispatch,
+          Modifier.weight(1f),
+        )
       }
-      if (section == InspectorSection.Screen) {
+      HorizontalDivider(Modifier.padding(vertical = 6.dp))
+      if (state.inspectorMode == EditorInspectorMode.Theme) {
+        ThemeBuilder(themeSettings, onTextInputFocusChanged, dispatch)
+        return@Column
+      }
+      if (state.inspectorMode == EditorInspectorMode.Screen) {
         ScreenEnvironmentInspector(
           document = state.document,
           onTextInputFocusChanged = onTextInputFocusChanged,
@@ -1122,9 +1126,36 @@ private fun DraftPropertyControl(
   }
 }
 
-private enum class InspectorSection {
-  Component,
-  Screen,
+@Composable
+private fun InspectorModeButton(
+  label: String,
+  mode: EditorInspectorMode,
+  state: UiBuilderEditorState,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val selected = state.inspectorMode == mode
+  Surface(
+    modifier
+      .height(28.dp)
+      .semantics {
+        contentDescription = if (mode == EditorInspectorMode.Theme) "$label inspector" else label
+      }
+      .clickable { dispatch(UiBuilderEditorEvent.ShowInspector(mode)) },
+    shape = RoundedCornerShape(9.dp),
+    color =
+      if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+  ) {
+    Text(
+      label,
+      Modifier.padding(vertical = 5.dp),
+      color =
+        if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+      style = MaterialTheme.typography.labelLarge,
+      fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+      textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+    )
+  }
 }
 
 @Composable
@@ -1382,4 +1413,75 @@ private fun EnvironmentTextField(
       singleLine = true,
     )
   }
+}
+
+@Composable
+private fun ThemeBuilder(
+  settings: EditorThemeSettings,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var primary by remember(settings) { mutableStateOf(settings.primaryColor) }
+  var background by remember(settings) { mutableStateOf(settings.backgroundColor) }
+  var surface by remember(settings) { mutableStateOf(settings.surfaceColor) }
+  var content by remember(settings) { mutableStateOf(settings.contentColor) }
+  var typeScale by remember(settings) { mutableStateOf(settings.typeScale.toString()) }
+  var cornerRadius by remember(settings) { mutableStateOf(settings.cornerRadiusDp.toString()) }
+
+  Text("Theme builder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+  Text(
+    "Design-wide colours, typography and shapes",
+    Modifier.padding(top = 3.dp, bottom = 14.dp),
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.bodySmall,
+  )
+  ThemeField("Primary colour", primary, onTextInputFocusChanged) { primary = it }
+  ThemeField("Background colour", background, onTextInputFocusChanged) { background = it }
+  ThemeField("Surface colour", surface, onTextInputFocusChanged) { surface = it }
+  ThemeField("Content colour", content, onTextInputFocusChanged) { content = it }
+  ThemeField("Type scale (0.75–1.5)", typeScale, onTextInputFocusChanged) { typeScale = it }
+  ThemeField("Corner radius (0–48dp)", cornerRadius, onTextInputFocusChanged) { cornerRadius = it }
+  Button(
+    onClick = {
+      dispatch(
+        UiBuilderEditorEvent.ApplyTheme(
+          EditorThemeSettings(
+            primaryColor = primary,
+            backgroundColor = background,
+            surfaceColor = surface,
+            contentColor = content,
+            typeScale = typeScale.toFloatOrNull() ?: Float.NaN,
+            cornerRadiusDp = cornerRadius.toFloatOrNull() ?: Float.NaN,
+          )
+        )
+      )
+    },
+    modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+  ) {
+    Text("Apply theme")
+  }
+}
+
+@Composable
+private fun ThemeField(
+  label: String,
+  value: String,
+  onFocusChanged: (Boolean) -> Unit,
+  onValueChange: (String) -> Unit,
+) {
+  Text(label, style = MaterialTheme.typography.labelMedium)
+  BasicTextField(
+    value = value,
+    onValueChange = onValueChange,
+    modifier =
+      Modifier.fillMaxWidth()
+        .padding(top = 4.dp, bottom = 10.dp)
+        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+        .onFocusChanged { onFocusChanged(it.isFocused) }
+        .semantics { contentDescription = label }
+        .padding(horizontal = 10.dp, vertical = 8.dp),
+    singleLine = true,
+    textStyle =
+      MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+  )
 }

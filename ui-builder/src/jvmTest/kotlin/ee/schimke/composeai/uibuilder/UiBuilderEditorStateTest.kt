@@ -215,6 +215,58 @@ class UiBuilderEditorStateTest {
   }
 
   @Test
+  fun `top level theme is one validated collaborative batch`() {
+    val initial = reducer.initial(document)
+    val themed =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.ApplyTheme(
+          EditorThemeSettings(
+            primaryColor = "#FFFF6B8A",
+            backgroundColor = "#FF101525",
+            surfaceColor = "#FF202A44",
+            contentColor = "#FFF4F6FF",
+            typeScale = 1.15f,
+            cornerRadiusDp = 24f,
+          )
+        ),
+      )
+
+    assertIs<CommandOutcome.Accepted>(themed.lastOutcome)
+    assertEquals(document.revision + 1, themed.document.revision)
+    val root = themed.document.nodes.getValue("root-surface")
+    assertEquals(
+      "#FFFF6B8A",
+      root.properties.getValue(THEME_PRIMARY).jsonObject.getValue("value").jsonPrimitive.content,
+    )
+    assertEquals(
+      "1.15",
+      root.properties.getValue(THEME_TYPE_SCALE).jsonObject.getValue("value").jsonPrimitive.content,
+    )
+    val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, themed))
+    assertEquals(6, submission.command.operations.size)
+
+    val undone = reducer.reduce(themed, UiBuilderEditorEvent.Undo)
+    assertIs<CommandOutcome.Accepted>(undone.lastOutcome)
+    assertFalse(THEME_PRIMARY in undone.document.nodes.getValue("root-surface").properties)
+  }
+
+  @Test
+  fun `invalid theme input is rejected without a partial document change`() {
+    val initial = reducer.initial(document)
+    val attempted =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.ApplyTheme(
+          EditorThemeSettings(primaryColor = "purple", typeScale = 2f)
+        ),
+      )
+
+    assertIs<CommandOutcome.Rejected>(attempted.lastOutcome)
+    assertEquals(document, attempted.document)
+  }
+
+  @Test
   fun `insert rejects a stale or incompatible destination without changing the document`() {
     val initial = reducer.initial(document, selectedNodeId = "discover-grid")
     val attempted =

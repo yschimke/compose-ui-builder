@@ -49,3 +49,8 @@ surface and does not compose editor controls or transforms.
 On viewports narrower than 840dp, the interactive editor starts with only the scaled design and a
 compact toolbar visible. Persistent bottom tabs open collapsible component and property docks;
 desktop widths retain the three-column workspace.
+
+The inspector's top-level Theme mode edits the design-wide Material colour scheme, type scale, and
+shape radius. Theme metadata is stored as capability-declared properties on the root Material
+surface and submitted as one collaboration batch, so a theme application is persistent, shared,
+and one-step undoable without introducing a server-only mutation outside the released protocol.
