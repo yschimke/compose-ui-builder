@@ -7,6 +7,9 @@ import java.io.Closeable
 import java.security.MessageDigest
 import java.time.Clock
 import java.util.Base64
+import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlinx.serialization.SerialName
@@ -62,6 +65,11 @@ data class UiBuilderServiceLimits(
   val retainedRevisionSnapshots: Int = 1_025,
   val retainedAuditRecords: Int = 4_096,
   val subscriberQueueCapacity: Int = 512,
+  val maximumOperationsPerBatch: Int = 256,
+  val maximumSubscribers: Int = 1_024,
+  val maximumSubscribersPerDesign: Int = 128,
+  val maximumPresenceSelections: Int = 256,
+  val maximumConcurrentExports: Int = 4,
 ) {
   init {
     require(maximumDesigns > 0)
@@ -71,6 +79,11 @@ data class UiBuilderServiceLimits(
     require(retainedRevisionSnapshots > 0)
     require(retainedAuditRecords > 0)
     require(subscriberQueueCapacity > 0)
+    require(maximumOperationsPerBatch > 0)
+    require(maximumSubscribers > 0)
+    require(maximumSubscribersPerDesign > 0)
+    require(maximumPresenceSelections > 0)
+    require(maximumConcurrentExports > 0)
   }
 }
 
@@ -94,7 +107,7 @@ class PersistentUiBuilderService(
     UiBuilderSubscriberFailureHandler {},
   private val clock: Clock = Clock.systemUTC(),
   private val limits: UiBuilderServiceLimits = UiBuilderServiceLimits(),
-) : UiBuilderServicePort {
+) : UiBuilderServicePort, UiBuilderServiceDiagnosticsSource {
   private data class RuntimeDesign(
     val presence: MutableMap<String, PresenceV1> = linkedMapOf(),
     val subscribers: MutableMap<Long, Subscriber> = linkedMapOf(),
@@ -167,6 +180,29 @@ class PersistentUiBuilderService(
   private var persisted: PersistedServiceV1 = decode(storage.load())
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
+  private val exportPermits = Semaphore(limits.maximumConcurrentExports)
+  private val activeExports = AtomicInteger()
+  private val peakExports = AtomicLong()
+  private val peakSubscribers = AtomicLong()
+  private val rejectedBatchLimit = AtomicLong()
+  private val rejectedSubscriberLimit = AtomicLong()
+  private val slowSubscribersClosed = AtomicLong()
+  private val rejectedPresenceLimit = AtomicLong()
+  private val rejectedExportLimit = AtomicLong()
+
+  override fun diagnostics(): UiBuilderServiceDiagnostics = lock.withLock {
+    UiBuilderServiceDiagnostics(
+      activeSubscribers = runtime.values.sumOf { it.subscribers.size },
+      peakSubscribers = peakSubscribers.get(),
+      rejectedBatchLimit = rejectedBatchLimit.get(),
+      rejectedSubscriberLimit = rejectedSubscriberLimit.get(),
+      slowSubscribersClosed = slowSubscribersClosed.get(),
+      rejectedPresenceLimit = rejectedPresenceLimit.get(),
+      activeExports = activeExports.get(),
+      peakExports = peakExports.get(),
+      rejectedExportLimit = rejectedExportLimit.get(),
+    )
+  }
 
   init {
     require(persisted.designs.size <= limits.maximumDesigns) {
@@ -210,11 +246,21 @@ class PersistentUiBuilderService(
       if (!design.allows(call.actor.actorId, DesignAccessActionV1.READ)) {
         throw UiBuilderSubscriptionRejectedException(forbidden("read", call.designId))
       }
+      if (
+        runtime.values.sumOf { it.subscribers.size } >= limits.maximumSubscribers ||
+          runtime.getValue(call.designId).subscribers.size >= limits.maximumSubscribersPerDesign
+      ) {
+        rejectedSubscriberLimit.incrementAndGet()
+        throw UiBuilderSubscriptionRejectedException(
+          UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, "subscriber limit reached")
+        )
+      }
       mailbox = SubscriberMailbox(limits.subscriberQueueCapacity, listener)
       subscriberId = nextSubscriberId++
       val update = catchUp(design, call.actor, call.afterSequence)
       check(mailbox.enqueue(update)) { "new subscriber mailbox rejected its initial update" }
       runtime.getValue(call.designId).subscribers[subscriberId] = Subscriber(call.actor, mailbox)
+      updatePeak(peakSubscribers, runtime.values.sumOf { it.subscribers.size }.toLong())
     }
     try {
       mailbox.drain()
@@ -487,6 +533,22 @@ class PersistentUiBuilderService(
     if (!design.allows(actor.actorId, DesignAccessActionV1.WRITE)) {
       return serviceError(forbidden("write", submission.designId))
     }
+    if (
+      submission is UiBuilderSubmission.Batch &&
+        submission.operations.size > limits.maximumOperationsPerBatch
+    ) {
+      rejectedBatchLimit.incrementAndGet()
+      return LockedExecution(
+        UiBuilderServiceResponse.OperationOutcome(
+          rejected(
+            submission.operationId,
+            design.document.revision,
+            RejectionCodeV1.INVALID_COMMAND,
+            "atomic batch exceeds ${limits.maximumOperationsPerBatch} operations",
+          )
+        )
+      )
+    }
     val wire = submission.toProtocol(actor)
     val fingerprint = canonicalJson(json.encodeToJsonElement<DesignSubmissionV1>(wire))
     design.operationOutcomes[submission.operationId]?.let { prior ->
@@ -589,6 +651,10 @@ class PersistentUiBuilderService(
     ) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "invalid presence payload")
     }
+    if (request.presence.selectedNodeIds.size > limits.maximumPresenceSelections) {
+      rejectedPresenceLimit.incrementAndGet()
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "presence selection limit exceeded")
+    }
     val value = request.presence.toProtocol(actor)
     runtime.getValue(request.designId).presence[actor.actorId] = value
     val mailboxes =
@@ -604,6 +670,27 @@ class PersistentUiBuilderService(
   }
 
   private suspend fun export(call: UiBuilderServiceCall): UiBuilderServiceResponse {
+    if (!exportPermits.tryAcquire()) {
+      rejectedExportLimit.incrementAndGet()
+      return UiBuilderServiceResponse.Error(
+        UiBuilderServiceError(
+          ServiceErrorCodeV1.BAD_REQUEST,
+          "concurrent export limit reached",
+          retryable = true,
+        )
+      )
+    }
+    val currentExports = activeExports.incrementAndGet()
+    updatePeak(peakExports, currentExports.toLong())
+    try {
+      return exportAdmitted(call)
+    } finally {
+      activeExports.decrementAndGet()
+      exportPermits.release()
+    }
+  }
+
+  private suspend fun exportAdmitted(call: UiBuilderServiceCall): UiBuilderServiceResponse {
     val request = call.request as UiBuilderServiceRequest.ExportDesign
     val pinned: RevisionPinnedUiBuilderExport
     lock.withLock {
@@ -1382,6 +1469,7 @@ class PersistentUiBuilderService(
         subscriber.mailbox.close()
         true
       } else if (!subscriber.mailbox.enqueue(update)) {
+        slowSubscribersClosed.incrementAndGet()
         true
       } else {
         accepted += subscriber.mailbox
@@ -1450,6 +1538,11 @@ class PersistentUiBuilderService(
     private const val PERSISTENCE_FORMAT = "compose-preview-ui-builder-service/v1"
     private val json = Json { encodeDefaults = true }
   }
+}
+
+private fun updatePeak(peak: AtomicLong, candidate: Long) {
+  var observed = peak.get()
+  while (candidate > observed && !peak.compareAndSet(observed, candidate)) observed = peak.get()
 }
 
 private data class WorkingDesign(

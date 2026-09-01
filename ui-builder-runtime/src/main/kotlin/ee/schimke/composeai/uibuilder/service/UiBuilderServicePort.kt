@@ -179,3 +179,20 @@ interface UiBuilderServicePort {
     listener: (UiBuilderServiceUpdate) -> Unit,
   ): Closeable
 }
+
+/** Aggregate, owner-free production diagnostics; no actor, design, operation, or capability IDs. */
+data class UiBuilderServiceDiagnostics(
+  val activeSubscribers: Int,
+  val peakSubscribers: Long,
+  val rejectedBatchLimit: Long,
+  val rejectedSubscriberLimit: Long,
+  val slowSubscribersClosed: Long,
+  val rejectedPresenceLimit: Long,
+  val activeExports: Int,
+  val peakExports: Long,
+  val rejectedExportLimit: Long,
+)
+
+interface UiBuilderServiceDiagnosticsSource {
+  fun diagnostics(): UiBuilderServiceDiagnostics
+}

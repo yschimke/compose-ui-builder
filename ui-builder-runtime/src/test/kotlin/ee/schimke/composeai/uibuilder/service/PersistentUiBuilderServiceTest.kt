@@ -501,6 +501,193 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `oversized batches reject before reduction without advancing durable state`() {
+    val service = service(limits = UiBuilderServiceLimits(maximumOperationsPerBatch = 1))
+    create(service)
+    val outcome =
+      assertIs<RejectedOutcomeV1>(
+        assertIs<UiBuilderServiceResponse.OperationOutcome>(
+            execute(
+              service,
+              owner,
+              UiBuilderServiceRequest.ApplyOperation(
+                batch(
+                  "too-many",
+                  0,
+                  InsertNodeMutationV1(textNode("one"), NodeLocationV1()),
+                  InsertNodeMutationV1(textNode("two"), NodeLocationV1()),
+                )
+              ),
+            )
+          )
+          .outcome
+      )
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, outcome.code)
+    assertEquals(0, currentDocument(service).revision)
+    assertEquals(1, service.diagnostics().rejectedBatchLimit)
+  }
+
+  @Test
+  fun `subscriber and presence limits reject without durable sequence changes`() {
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            maximumSubscribers = 1,
+            maximumSubscribersPerDesign = 2,
+            maximumPresenceSelections = 1,
+          )
+      )
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+        ),
+      )
+    )
+    val first = service.subscribe(UiBuilderSubscriptionCall(owner, "design", null)) {}
+    val rejected =
+      assertFailsWith<UiBuilderSubscriptionRejectedException> {
+        service.subscribe(UiBuilderSubscriptionCall(owner, "design", null)) {}
+      }
+    assertEquals(ServiceErrorCodeV1.BAD_REQUEST, rejected.error.code)
+    assertEquals(
+      ServiceErrorCodeV1.BAD_REQUEST,
+      error(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.UpdatePresence(
+              "design",
+              UiBuilderPresence(
+                "browser",
+                "Owner",
+                "#FF000000",
+                listOf("one", "one"),
+                null,
+                null,
+                1,
+              ),
+            ),
+          )
+        )
+        .code,
+    )
+    val diagnostics = service.diagnostics()
+    assertEquals(1, diagnostics.activeSubscribers)
+    assertEquals(1, diagnostics.peakSubscribers)
+    assertEquals(1, diagnostics.rejectedSubscriberLimit)
+    assertEquals(1, diagnostics.rejectedPresenceLimit)
+    assertEquals(
+      1,
+      snapshot(execute(service, owner, UiBuilderServiceRequest.OpenDesign("design")))
+        .state
+        .lastSequence,
+    )
+    first.close()
+    assertEquals(0, service.diagnostics().activeSubscribers)
+  }
+
+  @Test
+  fun `slow subscriber is closed at its mailbox bound without affecting durable commits`() {
+    val service = service(limits = UiBuilderServiceLimits(subscriberQueueCapacity = 1))
+    create(service)
+    val entered = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    val subscriberThread = thread {
+      service.subscribe(UiBuilderSubscriptionCall(owner, "design", null)) {
+        entered.countDown()
+        assertTrue(release.await(5, TimeUnit.SECONDS))
+      }
+    }
+    assertTrue(entered.await(5, TimeUnit.SECONDS))
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "two",
+            1,
+            InsertNodeMutationV1(textNode("two"), NodeLocationV1(afterNodeId = "one")),
+          )
+        ),
+      )
+    )
+
+    assertEquals(2, currentDocument(service).revision)
+    assertEquals(
+      2,
+      snapshot(execute(service, owner, UiBuilderServiceRequest.OpenDesign("design")))
+        .state
+        .lastSequence,
+    )
+    assertEquals(0, service.diagnostics().activeSubscribers)
+    assertEquals(1, service.diagnostics().slowSubscribersClosed)
+    release.countDown()
+    subscriberThread.join(5_000)
+    assertFalse(subscriberThread.isAlive)
+  }
+
+  @Test
+  fun `concurrent exports reject before audit or exporter work and expose aggregate pressure`() {
+    val entered = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    val exporter = UiBuilderExportExecutor { request ->
+      entered.countDown()
+      assertTrue(release.await(5, TimeUnit.SECONDS))
+      validExporter().export(request)
+    }
+    val service =
+      service(
+        limits = UiBuilderServiceLimits(maximumConcurrentExports = 1),
+        exporter = exporter,
+      )
+    create(service)
+    val completed = CountDownLatch(1)
+    thread {
+      assertIs<UiBuilderServiceResponse.Export>(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        )
+      )
+      completed.countDown()
+    }
+    assertTrue(entered.await(5, TimeUnit.SECONDS))
+    val rejected =
+      error(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        )
+      )
+    assertEquals(ServiceErrorCodeV1.BAD_REQUEST, rejected.code)
+    assertTrue(rejected.retryable)
+    assertEquals(1, service.diagnostics().activeExports)
+    assertEquals(1, service.diagnostics().peakExports)
+    assertEquals(1, service.diagnostics().rejectedExportLimit)
+    release.countDown()
+    assertTrue(completed.await(5, TimeUnit.SECONDS))
+    assertEquals(0, service.diagnostics().activeExports)
+  }
+
+  @Test
   fun `file restart preserves document access outcomes and sequence while presence disappears`() {
     val storage = FileUiBuilderStateStorage(temporaryDirectory)
     var service = service(storage = storage)
@@ -735,17 +922,20 @@ class PersistentUiBuilderServiceTest {
     storage: UiBuilderStateStorage = MemoryStorage(),
     retained: Int = 16,
     exportRequests: MutableList<RevisionPinnedUiBuilderExport> = mutableListOf(),
+    limits: UiBuilderServiceLimits? = null,
+    exporter: UiBuilderExportExecutor = validExporter(exportRequests),
   ): PersistentUiBuilderService =
     PersistentUiBuilderService(
       storage = storage,
       catalogs = TestCatalogs,
-      exporter = validExporter(exportRequests),
+      exporter = exporter,
       clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
       limits =
-        UiBuilderServiceLimits(
-          retainedCommittedOperations = retained,
-          retainedRevisionSnapshots = retained + 1,
-        ),
+        limits
+          ?: UiBuilderServiceLimits(
+            retainedCommittedOperations = retained,
+            retainedRevisionSnapshots = retained + 1,
+          ),
     )
 
   private fun validExporter(
