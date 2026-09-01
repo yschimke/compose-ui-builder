@@ -13,6 +13,7 @@ tasks.named("check") {
   group = "verification"
   dependsOn(
     ":render-host:check",
+    ":ui-builder-runtime:check",
     ":server:check",
     ":slot-preview-runtime:check",
     ":ui-builder:check",
@@ -27,6 +28,7 @@ tasks.register("ktfmtCheckAll") {
   group = "verification"
   dependsOn(
     ":render-host:ktfmtCheck",
+    ":ui-builder-runtime:ktfmtCheck",
     ":server:ktfmtCheck",
     ":slot-preview-runtime:ktfmtCheck",
     ":ui-builder:ktfmtCheck",
@@ -41,6 +43,7 @@ tasks.register("ktfmtFormat") {
   group = "formatting"
   dependsOn(
     ":render-host:ktfmtFormat",
+    ":ui-builder-runtime:ktfmtFormat",
     ":server:ktfmtFormat",
     ":slot-preview-runtime:ktfmtFormat",
     ":ui-builder:ktfmtFormat",
