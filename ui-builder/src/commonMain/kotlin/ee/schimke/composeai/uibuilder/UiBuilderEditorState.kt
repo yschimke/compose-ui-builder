@@ -329,41 +329,43 @@ class UiBuilderEditorReducer(
   fun propertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
     val node = state.selectedNodeId?.let(state.document.nodes::get) ?: return emptyList()
     val component = catalog.componentsById[node.componentId] ?: return emptyList()
-    return component.properties.map { property ->
-      val encoded = node.properties[property.name] as? JsonObject
-      val value = encoded?.get("value")
-      val typeNames = property.typeNames() - "null"
-      val declaredControl = property.editor?.control
-      val numberBounds = property.numberBounds(typeNames)
-      val control =
-        when {
-          declaredControl == PropertyEditorControl.COLOR -> EditorPropertyControl.Color
-          property.allowedValues.isNotEmpty() || declaredControl == PropertyEditorControl.ENUM ->
-            EditorPropertyControl.Enum
-          declaredControl == PropertyEditorControl.TEXT -> EditorPropertyControl.Text
-          declaredControl == PropertyEditorControl.BOOLEAN || typeNames == setOf("boolean") ->
-            EditorPropertyControl.Boolean
-          (declaredControl == PropertyEditorControl.NUMBER ||
-            typeNames == setOf("number") ||
-            typeNames == setOf("integer")) && numberBounds != null -> EditorPropertyControl.Number
-          typeNames == setOf("string") -> EditorPropertyControl.Text
-          else -> EditorPropertyControl.Unsupported
-        }
-      EditorPropertyField(
-        nodeId = node.id,
-        name = property.name,
-        label = property.name.humanLabel(),
-        required = property.required,
-        control = control,
-        value = value?.jsonPrimitive?.content ?: "",
-        choices =
-          property.allowedValues.mapNotNull { it.jsonPrimitive.contentOrNull } +
-            property.editor?.suggestedValues.orEmpty(),
-        numberBounds = numberBounds,
-        error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
-        notes = property.notes,
-      )
-    }
+    return component.properties
+      .filterNot { it.name in THEME_PROPERTIES }
+      .map { property ->
+        val encoded = node.properties[property.name] as? JsonObject
+        val value = encoded?.get("value")
+        val typeNames = property.typeNames() - "null"
+        val declaredControl = property.editor?.control
+        val numberBounds = property.numberBounds(typeNames)
+        val control =
+          when {
+            declaredControl == PropertyEditorControl.COLOR -> EditorPropertyControl.Color
+            property.allowedValues.isNotEmpty() || declaredControl == PropertyEditorControl.ENUM ->
+              EditorPropertyControl.Enum
+            declaredControl == PropertyEditorControl.TEXT -> EditorPropertyControl.Text
+            declaredControl == PropertyEditorControl.BOOLEAN || typeNames == setOf("boolean") ->
+              EditorPropertyControl.Boolean
+            (declaredControl == PropertyEditorControl.NUMBER ||
+              typeNames == setOf("number") ||
+              typeNames == setOf("integer")) && numberBounds != null -> EditorPropertyControl.Number
+            typeNames == setOf("string") -> EditorPropertyControl.Text
+            else -> EditorPropertyControl.Unsupported
+          }
+        EditorPropertyField(
+          nodeId = node.id,
+          name = property.name,
+          label = property.name.humanLabel(),
+          required = property.required,
+          control = control,
+          value = value?.jsonPrimitive?.content ?: "",
+          choices =
+            property.allowedValues.mapNotNull { it.jsonPrimitive.contentOrNull } +
+              property.editor?.suggestedValues.orEmpty(),
+          numberBounds = numberBounds,
+          error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
+          notes = property.notes,
+        )
+      }
   }
 
   fun themeSettings(state: UiBuilderEditorState): EditorThemeSettings {
@@ -804,6 +806,15 @@ internal const val THEME_SURFACE = "themeSurfaceColor"
 internal const val THEME_CONTENT = "themeContentColor"
 internal const val THEME_TYPE_SCALE = "themeTypeScale"
 internal const val THEME_CORNER_RADIUS = "themeCornerRadiusDp"
+private val THEME_PROPERTIES =
+  setOf(
+    THEME_PRIMARY,
+    THEME_BACKGROUND,
+    THEME_SURFACE,
+    THEME_CONTENT,
+    THEME_TYPE_SCALE,
+    THEME_CORNER_RADIUS,
+  )
 
 private fun UiBuilderDocument.themeHost(): UiBuilderNode? =
   roots.asSequence().mapNotNull(nodes::get).firstOrNull { it.componentId == "m3/surface" }

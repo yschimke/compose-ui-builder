@@ -245,6 +245,11 @@ class UiBuilderEditorStateTest {
     )
     val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, themed))
     assertEquals(6, submission.command.operations.size)
+    assertTrue(
+      reducer.propertyFields(themed.copy(selectedNodeId = "root-surface")).none {
+        it.name.startsWith("theme")
+      }
+    )
 
     val undone = reducer.reduce(themed, UiBuilderEditorEvent.Undo)
     assertIs<CommandOutcome.Accepted>(undone.lastOutcome)
