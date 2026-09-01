@@ -59,6 +59,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.validateCapabilities
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderHttpTransport
+import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderSocketState
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderWebSocketTransport
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
 import ee.schimke.composeai.uibuilder.client.UiBuilderClientUpdate
@@ -74,13 +75,16 @@ import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
+import ee.schimke.composeai.uibuilder.protocol.PresenceV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
+import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.Promise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.yield
@@ -244,6 +248,8 @@ private data class LiveSessionConfig(
   val webSocketEndpoint: String,
   val createIfMissing: Boolean,
   val operationIdPrefix: String,
+  val displayName: String,
+  val colorArgbHex: String,
 )
 
 @Composable
@@ -266,6 +272,9 @@ private fun LiveSessionApp() {
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
   var authoritativeGeneration by remember { mutableStateOf(0) }
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
+  var selectedNodeId by remember { mutableStateOf<String?>(null) }
+  var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
+  var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
 
   fun acceptSnapshot(response: SnapshotResponseV1) {
     recordAuthoritativeReceipt(
@@ -274,8 +283,10 @@ private fun LiveSessionApp() {
     )
     authoritativeDocument = response.snapshot.state.document
     document = authoritativeDocument?.toRendererDocument()
+    presenceState = presenceState.replace(response.snapshot.presence, browserNowMillis())
     authoritativeGeneration += 1
-    sessionStatus = "Live · ${config.actorId} · seq ${response.snapshot.state.lastSequence}"
+    sessionStatus =
+      "Live · ${config.actorId}/${config.clientId} · seq ${response.snapshot.state.lastSequence}"
   }
 
   fun refreshSnapshot(reason: String) {
@@ -321,7 +332,7 @@ private fun LiveSessionApp() {
             designId = config.designId,
             endpoint = config.webSocketEndpoint,
             initialAfterSequence = response.snapshot.state.lastSequence,
-            transport = BrowserUiBuilderWebSocketTransport(),
+            transport = BrowserUiBuilderWebSocketTransport { socketState = it },
           ) { update ->
             when (update) {
               is UiBuilderClientUpdate.Snapshot -> {
@@ -336,9 +347,14 @@ private fun LiveSessionApp() {
                 )
                 authoritativeDocument = update.update.snapshot.state.document
                 document = authoritativeDocument?.toRendererDocument()
+                presenceState =
+                  presenceState.replace(
+                    update.update.snapshot.presence,
+                    browserNowMillis(),
+                  )
                 authoritativeGeneration += 1
                 sessionStatus =
-                  "Live · ${config.actorId} · seq ${update.update.snapshot.state.lastSequence}"
+                  "Live · ${config.actorId}/${config.clientId} · seq ${update.update.snapshot.state.lastSequence}"
               }
               is UiBuilderClientUpdate.Delta -> {
                 val revision =
@@ -395,7 +411,9 @@ private fun LiveSessionApp() {
               is UiBuilderClientUpdate.Outcome -> refreshSnapshot("Confirming operation…")
               is UiBuilderClientUpdate.SnapshotRequired ->
                 refreshSnapshot("Snapshot recovery · after ${update.afterSequence ?: 0}")
-              is UiBuilderClientUpdate.Presence -> Unit
+              is UiBuilderClientUpdate.Presence -> {
+                presenceState = presenceState.apply(update.update.update, browserNowMillis())
+              }
             }
           }
         updates = client
@@ -409,9 +427,54 @@ private fun LiveSessionApp() {
   val activeUpdates = updates
   DisposableEffect(activeUpdates) { onDispose { activeUpdates?.close() } }
 
+  LaunchedEffect(socketState) {
+    publishSocketState(socketState.name.lowercase())
+    if (socketState == BrowserUiBuilderSocketState.DISCONNECTED) {
+      sessionStatus = "Disconnected · reconnect to resume collaboration"
+    }
+  }
+
+  LaunchedEffect(config, socketState, selectedNodeId, document?.revision) {
+    if (socketState != BrowserUiBuilderSocketState.CONNECTED) return@LaunchedEffect
+    while (true) {
+      val currentDocument = document
+      if (currentDocument != null) {
+        http.execute(
+          UpdatePresenceRequestV1(
+            designId = config.designId,
+            presence =
+              PresenceV1(
+                actorId = config.actorId,
+                clientId = config.clientId,
+                displayName = config.displayName,
+                colorArgbHex = config.colorArgbHex,
+                selectedNodeIds = listOfNotNull(selectedNodeId),
+                observedRevision = currentDocument.revision.toLong(),
+              ),
+          )
+        )
+      }
+      delay(UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS)
+    }
+  }
+
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS)
+      presenceState = presenceState.expire(browserNowMillis())
+    }
+  }
+
   val loadedDocument = document
   val loadedCatalog = catalog
   if (loadedDocument != null && loadedCatalog != null) {
+    val collaborators = presenceState.collaborators(config.actorId)
+    LaunchedEffect(collaborators) {
+      publishPresenceManifest(
+        Json.encodeToString(collaborators.map(UiBuilderCollaborator::actorId)),
+        Json.encodeToString(collaborators.map(UiBuilderCollaborator::selectedNodeIds)),
+      )
+    }
     UiBuilderEditor(
       document = loadedDocument,
       catalog = loadedCatalog,
@@ -453,7 +516,11 @@ private fun LiveSessionApp() {
         }
       },
       authoritativeGeneration = authoritativeGeneration,
-      onStateChanged = ::publishEditorState,
+      collaborators = collaborators,
+      onStateChanged = {
+        selectedNodeId = it.selectedNodeId
+        publishEditorState(it)
+      },
       onCanvasMetrics = ::publishEditorCanvasMetrics,
       onCanvasBoundsChanged = ::publishEditorCanvasBounds,
       onDropTargetChanged = ::publishEditorDropTarget,
@@ -787,11 +854,14 @@ private fun liveSessionConfig(): LiveSessionConfig =
         ),
       createIfMissing = liveConfigFlag("create"),
       operationIdPrefix = "${liveConfigValue("clientId", "browser-editor")}-${livePageNonce()}",
+      displayName = liveConfigValue("displayName", "Browser user"),
+      colorArgbHex = liveConfigValue("color", "#FF6574CD"),
     )
     .also {
       require(it.designId.isNotBlank()) { "live designId must not be blank" }
       require(it.actorId.isNotBlank()) { "live actor must not be blank" }
       require(it.clientId.isNotBlank()) { "live clientId must not be blank" }
+      require(Regex("#[0-9A-Fa-f]{8}").matches(it.colorArgbHex)) { "live color must be #AARRGGBB" }
     }
 
 @JsFun(
@@ -811,6 +881,10 @@ private external fun liveConfigValue(name: String, fallback: String): String
 private external fun liveConfigFlag(name: String): Boolean
 
 @JsFun("() => globalThis.crypto.randomUUID()") private external fun livePageNonce(): String
+
+private fun browserNowMillis(): Long = browserNow().toLong()
+
+@JsFun("() => Date.now()") private external fun browserNow(): Double
 
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
 private external fun markReady()
@@ -877,6 +951,25 @@ private external fun publishCapabilityDiagnostics(
   wasmRenderable: Boolean,
   pendingIds: String,
 )
+
+@JsFun(
+  """(actorIdsJson, selectionsJson) => {
+    globalThis.__uiBuilderPresence = {
+      actorIds: JSON.parse(actorIdsJson),
+      selections: JSON.parse(selectionsJson)
+    };
+    document.documentElement.dataset.uiBuilderCollaborators = String(globalThis.__uiBuilderPresence.actorIds.length);
+  }"""
+)
+private external fun publishPresenceManifest(actorIds: String, selections: String)
+
+@JsFun(
+  """(state) => {
+    globalThis.__uiBuilderSocketState = state;
+    document.documentElement.dataset.uiBuilderSocketState = state;
+  }"""
+)
+private external fun publishSocketState(state: String)
 
 @JsFun(
   """(json) => {

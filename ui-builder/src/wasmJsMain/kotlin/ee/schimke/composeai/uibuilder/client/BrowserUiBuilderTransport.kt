@@ -38,11 +38,22 @@ class BrowserCatalogRuntimeManifestTransport : CatalogRuntimeManifestTransport {
 }
 
 /** Browser `WebSocket` transport using the server's design path and exclusive query cursor. */
-class BrowserUiBuilderWebSocketTransport : UiBuilderWebSocketTransport {
+enum class BrowserUiBuilderSocketState {
+  CONNECTING,
+  CONNECTED,
+  DISCONNECTED,
+}
+
+class BrowserUiBuilderWebSocketTransport(
+  private val onStateChanged: (BrowserUiBuilderSocketState) -> Unit = {}
+) : UiBuilderWebSocketTransport {
+  private var generation: Int = 0
+
   override fun open(
     request: UiBuilderWebSocketRequest,
     onTextMessage: (String) -> Unit,
   ): UiBuilderClientConnection {
+    val openedGeneration = ++generation
     val url =
       browserUiBuilderWebSocketUrl(
         endpoint = request.endpoint,
@@ -50,7 +61,22 @@ class BrowserUiBuilderWebSocketTransport : UiBuilderWebSocketTransport {
         afterSequence = request.afterSequence?.toString().orEmpty(),
         hasAfterSequence = request.afterSequence != null,
       )
-    val socket = openUiBuilderWebSocket(url, onTextMessage)
+    onStateChanged(BrowserUiBuilderSocketState.CONNECTING)
+    val socket =
+      openUiBuilderWebSocket(
+        url,
+        onTextMessage,
+        onConnected = {
+          if (openedGeneration == generation) {
+            onStateChanged(BrowserUiBuilderSocketState.CONNECTED)
+          }
+        },
+        onDisconnected = {
+          if (openedGeneration == generation) {
+            onStateChanged(BrowserUiBuilderSocketState.DISCONNECTED)
+          }
+        },
+      )
     return UiBuilderClientConnection { closeUiBuilderWebSocket(socket) }
   }
 }
@@ -148,10 +174,15 @@ internal fun browserUiBuilderWebSocketUrl(
 private fun openUiBuilderWebSocket(
   url: String,
   onTextMessage: (String) -> Unit,
+  onConnected: () -> Unit,
+  onDisconnected: () -> Unit,
 ): JsAny =
   js(
     """(function () {
       var socket = new WebSocket(url);
+      socket.onopen = function () { onConnected(); };
+      socket.onclose = function () { onDisconnected(); };
+      socket.onerror = function () { onDisconnected(); };
       socket.onmessage = function (event) { onTextMessage(String(event.data)); };
       return socket;
     })()"""

@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,6 +71,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -109,6 +111,7 @@ fun UiBuilderEditor(
   onReconnect: (() -> Unit)? = null,
   onSubmission: ((EditorSubmission) -> Unit)? = null,
   authoritativeGeneration: Int = 0,
+  collaborators: List<UiBuilderCollaborator> = emptyList(),
 ) {
   val reducer =
     remember(catalog, actorId, clientId, operationIdPrefix) {
@@ -158,6 +161,7 @@ fun UiBuilderEditor(
         canUndo = reducer.canUndo(state),
         canRedo = reducer.canRedo(state),
         sessionLabel = sessionLabel,
+        collaborators = collaborators,
         onReconnect = onReconnect,
         dispatch = ::dispatch,
       )
@@ -166,6 +170,7 @@ fun UiBuilderEditor(
           state = state,
           catalogItems = reducer.catalogItems(state.catalogQuery),
           treeRows = reducer.treeRows(state.document),
+          collaborators = collaborators,
           dropTargetLabel = reducer.dropTargetLabel(state, draggedComponentId ?: "m3/text"),
           onCatalogDrag = { componentId, position ->
             draggedComponentId = componentId
@@ -194,6 +199,7 @@ fun UiBuilderEditor(
           },
           dropHovered = canvasDropHovered,
           showSelectionOverlay = showSelectionOverlay,
+          collaborators = collaborators,
           onInspectionSnapshot = onInspectionSnapshot,
           onInspectionInvalidated = onInspectionInvalidated,
           modifier =
@@ -217,6 +223,7 @@ private fun EditorToolbar(
   canUndo: Boolean,
   canRedo: Boolean,
   sessionLabel: String,
+  collaborators: List<UiBuilderCollaborator>,
   onReconnect: (() -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
@@ -233,6 +240,22 @@ private fun EditorToolbar(
         style = MaterialTheme.typography.labelLarge,
       )
       Spacer(Modifier.weight(1f))
+      collaborators.take(4).forEach { collaborator ->
+        Surface(
+          Modifier.padding(start = 4.dp).size(28.dp).clearAndSetSemantics {},
+          shape = RoundedCornerShape(14.dp),
+          color = collaborator.colorArgbHex.toPresenceColor(),
+        ) {
+          Box(contentAlignment = Alignment.Center) {
+            Text(
+              collaborator.displayName.firstOrNull()?.uppercase().orEmpty(),
+              color = Color.White,
+              style = MaterialTheme.typography.labelMedium,
+              fontWeight = FontWeight.Bold,
+            )
+          }
+        }
+      }
       EditorAction(
         label = "Undo",
         shortcut = "Ctrl/⌘+Z",
@@ -323,6 +346,7 @@ private fun EditorNavigator(
   state: UiBuilderEditorState,
   catalogItems: List<EditorCatalogItem>,
   treeRows: List<EditorTreeRow>,
+  collaborators: List<UiBuilderCollaborator>,
   dropTargetLabel: String,
   onCatalogDrag: (String, Offset?) -> Unit,
   onCatalogDrop: (String, Offset) -> Unit,
@@ -356,6 +380,7 @@ private fun EditorNavigator(
           LayerRow(
             row = row,
             selected = row.nodeId == state.selectedNodeId,
+            collaborators = collaborators.filter { row.nodeId in it.selectedNodeIds },
             onSelect = { dispatch(UiBuilderEditorEvent.SelectNode(row.nodeId)) },
             onMove = { direction -> moveTarget(row.nodeId, direction)?.let(dispatch) },
           )
@@ -374,6 +399,7 @@ private fun PinnedDesignCanvas(
   onCanvasBounds: (Rect) -> Unit,
   dropHovered: Boolean,
   showSelectionOverlay: Boolean,
+  collaborators: List<UiBuilderCollaborator>,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)?,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
   modifier: Modifier = Modifier,
@@ -383,6 +409,8 @@ private fun PinnedDesignCanvas(
   val sourceHeight =
     document.environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 800f
   val density = LocalDensity.current
+  var inspection by
+    remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
   BoxWithConstraints(modifier.clipToBounds(), contentAlignment = Alignment.TopStart) {
     val scale = minOf(maxWidth.value / sourceWidth, maxHeight.value / sourceHeight).coerceAtMost(1f)
     Surface(
@@ -407,14 +435,43 @@ private fun PinnedDesignCanvas(
       shape = RoundedCornerShape(0.dp),
       shadowElevation = 0.dp,
     ) {
-      UiBuilderSurface(
-        document = document,
-        editorOverlay = showSelectionOverlay,
-        selectedNodeId = selectedNodeId,
-        onNodeSelected = onNodeSelected,
-        onInspectionSnapshot = onInspectionSnapshot,
-        onInspectionInvalidated = onInspectionInvalidated,
-      )
+      Box(Modifier.fillMaxSize()) {
+        UiBuilderSurface(
+          document = document,
+          editorOverlay = showSelectionOverlay,
+          selectedNodeId = selectedNodeId,
+          onNodeSelected = onNodeSelected,
+          onInspectionSnapshot = { snapshot ->
+            inspection = snapshot
+            onInspectionSnapshot?.invoke(snapshot)
+          },
+          onInspectionInvalidated = onInspectionInvalidated,
+        )
+        RemotePresenceOverlay(collaborators, inspection)
+      }
+    }
+  }
+}
+
+@Composable
+private fun RemotePresenceOverlay(
+  collaborators: List<UiBuilderCollaborator>,
+  inspection: UiBuilderInspectionSnapshot?,
+) {
+  if (collaborators.isEmpty()) return
+  val boundsByNode = inspection?.nodes?.associate { it.nodeId to it.bounds }.orEmpty()
+  Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
+    collaborators.forEach { collaborator ->
+      val color = collaborator.colorArgbHex.toPresenceColor()
+      collaborator.selectedNodeIds.forEach { nodeId ->
+        val bounds = boundsByNode[nodeId] ?: return@forEach
+        drawRect(
+          color = color,
+          topLeft = Offset(bounds.x, bounds.y),
+          size = androidx.compose.ui.geometry.Size(bounds.width, bounds.height),
+          style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f),
+        )
+      }
     }
   }
 }
@@ -551,6 +608,7 @@ private fun CatalogRow(
 private fun LayerRow(
   row: EditorTreeRow,
   selected: Boolean,
+  collaborators: List<UiBuilderCollaborator>,
   onSelect: () -> Unit,
   onMove: (EditorMoveDirection) -> Unit,
 ) {
@@ -594,6 +652,14 @@ private fun LayerRow(
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
     )
+    collaborators.take(3).forEach { collaborator ->
+      Box(
+        Modifier.padding(end = 3.dp)
+          .size(8.dp)
+          .background(collaborator.colorArgbHex.toPresenceColor(), RoundedCornerShape(4.dp))
+          .clearAndSetSemantics {}
+      )
+    }
     Text(
       row.nodeId,
       Modifier.width(92.dp),
@@ -603,6 +669,12 @@ private fun LayerRow(
       overflow = TextOverflow.Ellipsis,
     )
   }
+}
+
+private fun String.toPresenceColor(): Color {
+  val hex = removePrefix("#")
+  val argb = hex.takeIf { it.length == 8 }?.toULongOrNull(16) ?: return Color(0xff7788aa)
+  return Color(argb.toInt())
 }
 
 @Composable

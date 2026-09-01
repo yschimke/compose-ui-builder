@@ -31,7 +31,24 @@ server.
 
 The toolbar reports connecting, saving, rejected, snapshot-recovery, and live sequence states. Its
 Reconnect action reopens the WebSocket from the client's last exclusive durable cursor and then
-refreshes a snapshot. Presence rendering and automatic reconnect/backoff remain later work.
+refreshes a snapshot. While connected, the browser sends a bounded ten-second presence heartbeat
+containing its authenticated actor/client identity and current selection. Presence is rendered as
+collaborator avatars, layer dots, and a sibling canvas selection outline in editor chrome only. It
+is excluded from the clean composition, inspection semantics, SVG, PNG, generated Compose, durable
+history, revision, and sequence. Both browser and service expire a missing heartbeat after thirty
+seconds; reconnecting refreshes the roster from a snapshot before resuming heartbeats.
+
+The real two-browser evidence harness needs a token-gated server started with agent grants and the
+two independent UI-builder capabilities:
+
+```shell
+SERVE_URL=http://127.0.0.1:8727 SERVE_TOKEN=… npm --prefix preview-harness run harness:ui-builder-presence
+```
+
+The server must include `--agent-grants --agent-grant-scopes live
+--agent-grant-capabilities ui-builder-read,ui-builder-write`. The harness asks for and approves two
+distinct short-lived grants through the real device flow, grants both authenticated actors access
+to one fresh design, and captures each Chromium context observing the other's selection.
 
 Fixture modes such as `?mode=interactive-editor`, `interactive-editor-clean`, and the visual
 benchmark modes do not contact the design service and remain deterministic offline surfaces.

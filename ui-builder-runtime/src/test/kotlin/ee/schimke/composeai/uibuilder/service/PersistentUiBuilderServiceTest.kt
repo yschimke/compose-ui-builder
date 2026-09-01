@@ -302,6 +302,57 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `presence expires without persistence or durable sequence advancement`() {
+    val mutableClock = MutableClock(1_000)
+    val service =
+      PersistentUiBuilderService(
+        storage = MemoryStorage(),
+        catalogs = TestCatalogs,
+        exporter = validExporter(),
+        clock = mutableClock,
+        limits = UiBuilderServiceLimits(presenceTtlMillis = 30_000),
+      )
+    create(service)
+    grant(
+      service,
+      owner,
+      viewer,
+      baseRevision = 0,
+      actions = listOf(DesignAccessActionV1.READ),
+    )
+    val updates = mutableListOf<UiBuilderServiceUpdate>()
+    val subscription =
+      service.subscribe(UiBuilderSubscriptionCall(owner, "design", 0), updates::add)
+    execute(
+      service,
+      owner,
+      UiBuilderServiceRequest.UpdatePresence(
+        "design",
+        UiBuilderPresence("owner-browser", "Owner", "#FF000000", emptyList(), null, null, 0),
+      ),
+    )
+
+    mutableClock.epochMillis += 30_000
+    execute(
+      service,
+      viewer,
+      UiBuilderServiceRequest.UpdatePresence(
+        "design",
+        UiBuilderPresence("viewer-browser", "Viewer", "#FFFFFFFF", emptyList(), null, null, 0),
+      ),
+    )
+
+    val presence = updates.filterIsInstance<UiBuilderServiceUpdate.Presence>().map { it.update }
+    assertIs<PresenceUpsertV1>(presence[0])
+    assertEquals(owner.actorId, assertIs<PresenceLeaveV1>(presence[1]).actorId)
+    assertIs<PresenceUpsertV1>(presence[2])
+    val snapshot = snapshot(execute(service, owner, UiBuilderServiceRequest.OpenDesign("design")))
+    assertEquals(listOf(viewer.actorId), snapshot.presence.map { it.actorId })
+    assertEquals(0, snapshot.state.lastSequence)
+    subscription.close()
+  }
+
+  @Test
   fun `atomic mixed batches and compensating undo redo never overwrite later work`() {
     val service = service()
     create(service)
@@ -1317,6 +1368,16 @@ class PersistentUiBuilderServiceTest {
       bytes = value.copyOf()
       return true
     }
+  }
+
+  private class MutableClock(var epochMillis: Long) : Clock() {
+    override fun getZone(): ZoneId = ZoneOffset.UTC
+
+    override fun withZone(zone: ZoneId): Clock = this
+
+    override fun instant(): Instant = Instant.ofEpochMilli(epochMillis)
+
+    override fun millis(): Long = epochMillis
   }
 
   private class FailingStorage : UiBuilderStateStorage {

@@ -120,6 +120,7 @@ data class UiBuilderServiceLimits(
   val maximumMutationBuckets: Int = 16_384,
   val maximumSerializedDocumentBytes: Int = 8 * 1_024 * 1_024,
   val maximumEmbeddedAssetBytes: Int = 6 * 1_024 * 1_024,
+  val presenceTtlMillis: Long = 30_000,
 ) {
   init {
     require(maximumDesigns > 0)
@@ -141,6 +142,7 @@ data class UiBuilderServiceLimits(
     require(maximumMutationBuckets > 0)
     require(maximumSerializedDocumentBytes > 0)
     require(maximumEmbeddedAssetBytes > 0)
+    require(presenceTtlMillis > 0)
   }
 }
 
@@ -168,9 +170,11 @@ class PersistentUiBuilderService(
   private data class MutationBucket(var tokens: Int, var refilledAtMillis: Long)
 
   private data class RuntimeDesign(
-    val presence: MutableMap<String, PresenceV1> = linkedMapOf(),
+    val presence: MutableMap<String, RuntimePresence> = linkedMapOf(),
     val subscribers: MutableMap<Long, Subscriber> = linkedMapOf(),
   )
+
+  private data class RuntimePresence(val value: PresenceV1, val lastSeenAtMillis: Long)
 
   private data class Subscriber(
     val actor: AuthenticatedUiBuilderActor,
@@ -496,7 +500,7 @@ class PersistentUiBuilderService(
           ),
           actor,
           catalog,
-          runtime.getValue(designId).presence.values.toList(),
+          activePresence(designId),
         )
       )
     )
@@ -830,13 +834,23 @@ class PersistentUiBuilderService(
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "presence selection limit exceeded")
     }
     val value = request.presence.toProtocol(actor)
-    runtime.getValue(request.designId).presence[actor.actorId] = value
+    val expiredActors = expirePresence(request.designId)
+    runtime.getValue(request.designId).presence[actor.actorId] =
+      RuntimePresence(value, clock.millis())
     val mailboxes =
-      enqueue(
-        request.designId,
-        UiBuilderServiceUpdate.Presence(PresenceUpsertV1(value)),
-        design,
-      )
+      (expiredActors.flatMap { expiredActorId ->
+          enqueue(
+            request.designId,
+            UiBuilderServiceUpdate.Presence(PresenceLeaveV1(expiredActorId)),
+            design,
+          )
+        } +
+          enqueue(
+            request.designId,
+            UiBuilderServiceUpdate.Presence(PresenceUpsertV1(value)),
+            design,
+          ))
+        .distinct()
     return LockedExecution(
       UiBuilderServiceResponse.PresenceAccepted(request.designId, actor.actorId),
       mailboxes,
@@ -1652,7 +1666,7 @@ class PersistentUiBuilderService(
           design,
           actor,
           catalog,
-          runtime.getValue(design.document.id).presence.values.toList(),
+          activePresence(design.document.id),
         )
       )
     } else {
@@ -1681,6 +1695,19 @@ class PersistentUiBuilderService(
       }
     }
     return accepted
+  }
+
+  private fun activePresence(designId: String): List<PresenceV1> {
+    expirePresence(designId)
+    return runtime.getValue(designId).presence.values.map(RuntimePresence::value)
+  }
+
+  private fun expirePresence(designId: String): List<String> {
+    val cutoff = clock.millis() - limits.presenceTtlMillis
+    val presence = runtime.getValue(designId).presence
+    val expired = presence.filterValues { it.lastSeenAtMillis <= cutoff }.keys.toList()
+    expired.forEach(presence::remove)
+    return expired
   }
 
   private fun drain(mailboxes: List<SubscriberMailbox>) {
