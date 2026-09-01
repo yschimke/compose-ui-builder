@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +23,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -144,6 +148,20 @@ fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
   else listOf(UiBuilderLayer.Design)
 
+class UiBuilderSurfaceInputController {
+  private var dispatcher: ((CatalogRuntimeInput, () -> Unit) -> Unit)? = null
+
+  fun dispatch(input: CatalogRuntimeInput, onApplied: () -> Unit): Boolean {
+    val current = dispatcher ?: return false
+    current(input, onApplied)
+    return true
+  }
+
+  internal fun install(value: (CatalogRuntimeInput, () -> Unit) -> Unit) {
+    dispatcher = value
+  }
+}
+
 /** Native Compose design pixels plus an optional sibling-only editor overlay. */
 @Composable
 fun UiBuilderSurface(
@@ -151,11 +169,15 @@ fun UiBuilderSurface(
   editorOverlay: Boolean = false,
   selectedNodeId: String? = null,
   onNodeSelected: ((String) -> Unit)? = null,
+  runtimeInputController: UiBuilderSurfaceInputController? = null,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
 ) {
   val bounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
   val overlayBounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
+  val scrollStates =
+    remember(document.id, document.revision) { mutableMapOf<String, ScrollableState>() }
+  val pressedNodes = remember(document.id, document.revision) { mutableMapOf<Int, String>() }
   var surfaceCoordinates by
     remember(document.id, document.revision) { mutableStateOf<LayoutCoordinates?>(null) }
   val currentInspectionCallback = rememberUpdatedState(onInspectionSnapshot)
@@ -187,6 +209,46 @@ fun UiBuilderSurface(
   val dark = document.environment["theme"]?.jsonPrimitive?.contentOrNull == "dark"
   val density = LocalDensity.current
   SideEffect { inspection.updateState(state) }
+  SideEffect {
+    runtimeInputController?.install { input, onApplied ->
+      val point = Offset(input.x.toFloat(), input.y.toFloat())
+      if (input.kind == "pointer") {
+        val pointerId = requireNotNull(input.pointerId)
+        val hit =
+          bounds
+            .filter { (nodeId, rect) ->
+              rect.contains(point) && document.nodes[nodeId]?.eventBindings?.get("click") != null
+            }
+            .minByOrNull { (_, rect) -> rect.width * rect.height }
+            ?.key
+        when (input.phase) {
+          "down" -> hit?.let { pressedNodes[pointerId] = it }
+          "up" ->
+            pressedNodes
+              .remove(pointerId)
+              ?.takeIf { it == hit }
+              ?.let { nodeId ->
+                document.nodes
+                  .getValue(nodeId)
+                  .dispatch("click", state, onState = { key, value -> state[key] = value })
+              }
+          "cancel" -> pressedNodes.remove(pointerId)
+        }
+        inspection.updateState(state)
+        onApplied()
+      } else {
+        if (input.kind == "wheel") {
+          scrollStates
+            .filterKeys { nodeId -> bounds[nodeId]?.contains(point) == true }
+            .minByOrNull { (nodeId, _) -> bounds.getValue(nodeId).let { it.width * it.height } }
+            ?.value
+            ?.dispatchRawDelta(requireNotNull(input.deltaY).toFloat())
+        }
+        inspection.updateState(state)
+        onApplied()
+      }
+    }
+  }
   val colorScheme =
     when {
       dark && document.id.startsWith("fixture-jetcaster-") -> JetcasterDarkColorScheme
@@ -227,6 +289,7 @@ fun UiBuilderSurface(
               with(density) { document.nodes.getValue(id).textContentTopPaddingDp().dp.toPx() },
             )
           },
+          scrollStates = scrollStates,
         )
       }
       if (editorOverlay) {
@@ -264,6 +327,7 @@ private fun RenderNode(
   onState: (String, String?) -> Unit,
   onBounds: (String, LayoutCoordinates) -> Unit,
   onTextLayout: (String, TextLayoutResult) -> Unit,
+  scrollStates: MutableMap<String, ScrollableState>,
   modifier: Modifier = Modifier,
 ) {
   val node = requireNotNull(document.nodes[nodeId]) { "unknown node: $nodeId" }
@@ -275,7 +339,16 @@ private fun RenderNode(
       .then(node.actionModifier(state, onState))
   fun slot(name: String) = node.slots[name].orEmpty()
   val child: @Composable (String, Modifier) -> Unit = { id, next ->
-    RenderNode(document, id, state, onState, onBounds, onTextLayout, next)
+    RenderNode(
+      document,
+      id,
+      state,
+      onState,
+      onBounds,
+      onTextLayout,
+      scrollStates,
+      next,
+    )
   }
 
   when (node.componentId) {
@@ -336,27 +409,38 @@ private fun RenderNode(
           child(id, if (weight > 0f) Modifier.weight(weight) else Modifier)
         }
       }
-    "layout/lazy-row" ->
+    "layout/lazy-row" -> {
+      val lazyState = rememberLazyListState()
+      scrollStates[node.id] = lazyState
       LazyRow(
-        measured,
+        modifier = measured,
+        state = lazyState,
         contentPadding = node.obj("contentPadding").paddingValues(),
         horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
       ) {
         items(slot("items"), key = { it }) { child(it, Modifier) }
       }
-    "layout/lazy-column" ->
+    }
+    "layout/lazy-column" -> {
+      val lazyState = rememberLazyListState()
+      scrollStates[node.id] = lazyState
       LazyColumn(
-        measured,
+        modifier = measured,
+        state = lazyState,
         contentPadding = node.obj("contentPadding").paddingValues(),
         verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
       ) {
         items(slot("items"), key = { it }) { child(it, Modifier) }
       }
+    }
     "layout/lazy-grid" -> {
       val minimum = node.obj("columns").number("minimumCellWidthDp", 362f).coerceAtLeast(1f)
+      val lazyState = rememberLazyGridState()
+      scrollStates[node.id] = lazyState
       LazyVerticalGrid(
         columns = GridCells.Adaptive(minimum.dp),
         modifier = measured,
+        state = lazyState,
         contentPadding = node.obj("contentPadding").paddingValues(),
       ) {
         items(
@@ -371,8 +455,13 @@ private fun RenderNode(
         }
       }
     }
-    "layout/horizontal-carousel" ->
-      CompatibleHorizontalCarousel(node, measured, slot("items")) { id, next -> child(id, next) }
+    "layout/horizontal-carousel" -> {
+      val lazyState = rememberLazyListState()
+      scrollStates[node.id] = lazyState
+      CompatibleHorizontalCarousel(node, measured, lazyState, slot("items")) { id, next ->
+        child(id, next)
+      }
+    }
     "m3/center-aligned-top-app-bar" ->
       CenterAlignedTopAppBar(
         modifier = measured,
@@ -597,11 +686,13 @@ private fun DeterministicSupportingPaneScaffold(
 private fun CompatibleHorizontalCarousel(
   node: UiBuilderNode,
   modifier: Modifier,
+  state: LazyListState,
   ids: List<String>,
   child: @Composable (String, Modifier) -> Unit,
 ) {
   LazyRow(
-    modifier,
+    modifier = modifier,
+    state = state,
     contentPadding = PaddingValues(start = node.float("contentPaddingStartDp").dp),
     horizontalArrangement = Arrangement.spacedBy(node.float("itemSpacingDp").dp),
   ) {

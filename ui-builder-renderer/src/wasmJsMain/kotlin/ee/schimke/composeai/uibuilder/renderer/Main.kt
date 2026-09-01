@@ -13,11 +13,15 @@ import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.uibuilder.CatalogRuntimeCommand
 import ee.schimke.composeai.uibuilder.CatalogRuntimeProtocolEndpoint
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.UiBuilderSurfaceInputController
 
 private var document by mutableStateOf<UiBuilderDocument?>(null)
 private var renderRequestId by mutableStateOf<String?>(null)
+private var latestSnapshot: UiBuilderInspectionSnapshot? = null
 private lateinit var endpoint: CatalogRuntimeProtocolEndpoint
+private val inputController = UiBuilderSurfaceInputController()
 
 fun main() {
   val runtimeId = runtimeIdFromPath()
@@ -28,7 +32,35 @@ fun main() {
       is CatalogRuntimeCommand.Reply -> postRuntimeMessage(endpoint.encode(command.message))
       is CatalogRuntimeCommand.Render -> {
         renderRequestId = command.requestId
+        latestSnapshot = null
         document = command.document
+      }
+      is CatalogRuntimeCommand.DispatchInput -> {
+        if (!runtimeInputInsideViewport(command.input.x, command.input.y)) {
+          postRuntimeMessage(
+            endpoint.encode(
+              endpoint.inputRejected(
+                command.requestId,
+                "INPUT_OUT_OF_BOUNDS",
+                "input coordinates must fall inside the renderer viewport",
+              )
+            )
+          )
+        } else if (
+          !inputController.dispatch(command.input) {
+            scheduleInputCompletion { completeInput(command.requestId) }
+          }
+        ) {
+          postRuntimeMessage(
+            endpoint.encode(
+              endpoint.inputRejected(
+                command.requestId,
+                "RENDERER_NOT_READY",
+                "renderer input surface has not been installed",
+              )
+            )
+          )
+        }
       }
     }
   }
@@ -37,7 +69,9 @@ fun main() {
       UiBuilderSurface(
         document = current,
         editorOverlay = false,
+        runtimeInputController = inputController,
         onInspectionSnapshot = { snapshot ->
+          latestSnapshot = snapshot
           val requestId = renderRequestId ?: return@UiBuilderSurface
           scheduleMeasuredResponse(endpoint.encode(endpoint.rendered(requestId, snapshot)))
         },
@@ -45,6 +79,19 @@ fun main() {
       LaunchedEffect(current.id, current.revision) { markRendererReady() }
     }
   }
+}
+
+private fun completeInput(requestId: String) {
+  val snapshot = latestSnapshot
+  val response =
+    if (snapshot == null) {
+      endpoint.inputRejected(
+        requestId,
+        "NO_INSPECTION",
+        "renderer has no stable inspection for the active document",
+      )
+    } else endpoint.inputDispatched(requestId, snapshot)
+  postRuntimeMessage(endpoint.encode(response))
 }
 
 @JsFun(
@@ -88,6 +135,16 @@ private fun scheduleMeasuredResponse(encoded: String): Unit =
       });
     })()"""
   )
+
+private fun scheduleInputCompletion(callback: () -> Unit): Unit =
+  js(
+    """requestAnimationFrame(function () {
+      requestAnimationFrame(function () { requestAnimationFrame(callback); });
+    })"""
+  )
+
+@JsFun("(x, y) => x >= 0 && y >= 0 && x < globalThis.innerWidth && y < globalThis.innerHeight")
+private external fun runtimeInputInsideViewport(x: Double, y: Double): Boolean
 
 @JsFun("() => document.documentElement.dataset.uiBuilderRendererReady = 'true'")
 private external fun markRendererReady()

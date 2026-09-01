@@ -139,7 +139,8 @@ private external fun sandboxRendererRuntimeId(): String
 /**
  * Minimal editor-side vertical slice for the isolated runtime. The iframe owns design pixels; the
  * absolutely positioned sibling owns selection geometry and never participates in renderer layout.
- * This mode deliberately does not forward input until protocol semantics are specified.
+ * Input and inspection share reversible root-render coordinates; the sibling overlay remains
+ * pointer-inert and outside the renderer's Compose tree.
  */
 private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit =
   js(
@@ -179,6 +180,31 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
       let initialized = false;
       let initializeTimer = null;
       const pending = new Map();
+      const responses = new Map();
+      const rendererGeometry = () => {
+        const frameRect = frame.getBoundingClientRect();
+        const shellRect = shell.getBoundingClientRect();
+        return {
+          offsetX: frameRect.left - shellRect.left,
+          offsetY: frameRect.top - shellRect.top,
+          scaleX: frameRect.width / frame.clientWidth,
+          scaleY: frameRect.height / frame.clientHeight,
+        };
+      };
+      const rendererToShell = (x, y) => {
+        const geometry = rendererGeometry();
+        return {
+          x: geometry.offsetX + x * geometry.scaleX,
+          y: geometry.offsetY + y * geometry.scaleY,
+        };
+      };
+      const shellToRenderer = (x, y) => {
+        const geometry = rendererGeometry();
+        return {
+          x: (x - geometry.offsetX) / geometry.scaleX,
+          y: (y - geometry.offsetY) / geometry.scaleY,
+        };
+      };
       const request = (type, payload) => {
         const requestId = 'browser-' + (++sequence);
         pending.set(requestId, type);
@@ -189,19 +215,17 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
       };
       const drawOverlay = (inspection) => {
         overlay.replaceChildren();
-        const frameRect = frame.getBoundingClientRect();
-        const shellRect = shell.getBoundingClientRect();
-        const scaleX = frameRect.width / frame.clientWidth;
-        const scaleY = frameRect.height / frame.clientHeight;
+        const geometry = rendererGeometry();
         for (const node of inspection.nodes || []) {
           if (!node.bounds) continue;
           const marker = document.createElement('div');
           marker.dataset.nodeId = node.nodeId;
           marker.style.cssText = 'position:absolute;box-sizing:border-box;border:1px solid transparent';
-          marker.style.left = (frameRect.left - shellRect.left + node.bounds.x * scaleX) + 'px';
-          marker.style.top = (frameRect.top - shellRect.top + node.bounds.y * scaleY) + 'px';
-          marker.style.width = (node.bounds.width * scaleX) + 'px';
-          marker.style.height = (node.bounds.height * scaleY) + 'px';
+          const topLeft = rendererToShell(node.bounds.x, node.bounds.y);
+          marker.style.left = topLeft.x + 'px';
+          marker.style.top = topLeft.y + 'px';
+          marker.style.width = (node.bounds.width * geometry.scaleX) + 'px';
+          marker.style.height = (node.bounds.height * geometry.scaleY) + 'px';
           overlay.append(marker);
         }
         globalThis.__uiBuilderSandboxInspection = inspection;
@@ -215,9 +239,11 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
             message.runtimeId !== runtimeId || !pending.has(message.requestId)) return;
         const expected = pending.get(message.requestId);
         const expectedResponse = expected === 'initialize' ? 'initialized' :
-          expected === 'renderDocument' ? 'rendered' : null;
+          expected === 'renderDocument' ? 'rendered' :
+          expected === 'dispatchInput' ? 'inputDispatched' : null;
         if (message.type !== 'error' && message.type !== expectedResponse) return;
         pending.delete(message.requestId);
+        responses.set(message.requestId, message);
         if (message.type === 'initialized') {
           if (initialized) return;
           initialized = true;
@@ -226,8 +252,10 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
         } else if (message.type === 'rendered') {
           drawOverlay(message.payload.inspection);
           document.documentElement.dataset.uiBuilderSandboxReady = 'true';
+        } else if (message.type === 'inputDispatched') {
+          drawOverlay(message.payload.inspection);
         } else if (message.type === 'error') {
-          throw new Error(message.payload.code + ': ' + message.payload.message);
+          globalThis.__uiBuilderSandboxLastError = message.payload;
         }
       });
       frame.addEventListener('load', () => {
@@ -237,6 +265,44 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
         }, 250);
       });
       globalThis.__uiBuilderSandboxDispatchInput = (payload) => request('dispatchInput', payload);
+      globalThis.__uiBuilderSandboxResponse = (requestId) => responses.get(requestId) || null;
+      globalThis.__uiBuilderSandboxPointerAtNode = (nodeId, phase) => {
+        const node = globalThis.__uiBuilderSandboxInspection?.nodes?.find((it) => it.nodeId === nodeId);
+        if (!node?.bounds) throw new Error('node has no measured bounds: ' + nodeId);
+        const shellPoint = rendererToShell(
+          node.bounds.x + node.bounds.width / 2,
+          node.bounds.y + node.bounds.height / 2,
+        );
+        const { x, y } = shellToRenderer(shellPoint.x, shellPoint.y);
+        const revision = globalThis.__uiBuilderSandboxInspection.documentRevision;
+        if (phase !== 'down' && phase !== 'up') throw new Error('unsupported pointer phase: ' + phase);
+        return request('dispatchInput', {
+          documentRevision: revision, kind: 'pointer', phase, x, y,
+          pointerId: 1, button: 0, buttons: phase === 'down' ? 1 : 0,
+        });
+      };
+      globalThis.__uiBuilderSandboxWheelAtNode = (nodeId, deltaY) => {
+        const node = globalThis.__uiBuilderSandboxInspection?.nodes?.find((it) => it.nodeId === nodeId);
+        if (!node?.bounds) throw new Error('node has no measured bounds: ' + nodeId);
+        const shellPoint = rendererToShell(
+          node.bounds.x + node.bounds.width / 2,
+          node.bounds.y + Math.min(node.bounds.height / 2, 160),
+        );
+        const point = shellToRenderer(shellPoint.x, shellPoint.y);
+        return request('dispatchInput', {
+          documentRevision: globalThis.__uiBuilderSandboxInspection.documentRevision,
+          kind: 'wheel',
+          x: point.x,
+          y: point.y,
+          deltaMode: 0,
+          deltaX: 0,
+          deltaY,
+        });
+      };
+      globalThis.__uiBuilderSandboxCoordinateRoundTrip = (x, y) => {
+        const shellPoint = rendererToShell(x, y);
+        return shellToRenderer(shellPoint.x, shellPoint.y);
+      };
     })()"""
   )
 

@@ -415,11 +415,17 @@ sibling overlay maps those root-render coordinates without becoming part of the 
 changing its pixels. The protocol validates source, locks origin, checks exact runtime/protocol
 identity, and correlates every response to one pending request.
 
-Protocol v1 deliberately supports render and measure only. `dispatchInput` returns the explicit
-`UNSUPPORTED_INPUT` error; interaction semantics and authoritative state reconciliation remain a
-later protocol version, rather than an implied forwarding path that can silently diverge. The
-browser harness runs the actual editor artifact and renderer artifact across the iframe boundary,
-asserts node/slot measurements and overlay separation, and proves floating runtime ids are rejected.
+Protocol v1 supports revision-bound pointer phases and pixel-mode wheel input in the same
+root-render-pixel coordinate space returned by inspection. A correlated `inputDispatched` response
+contains the post-input inspection, including resolved preview-state semantics. The executable
+Jetcaster acceptance selects the News category chip and verifies Crime is deselected, then scrolls
+the independently scrollable supporting detail list while the main category row and both pane
+bounds remain invariant. Malformed, stale, duplicate, out-of-viewport, wrong-source/origin, and
+unsupported inputs are rejected or ignored; keyboard and focus input remain explicit future work.
+The browser harness runs the actual editor artifact and renderer artifact across the opaque iframe
+boundary, asserts node/slot measurements and overlay separation, proves that attaching/removing the
+pointer-inert sibling changes zero pixels and zero frame bounds, and proves floating runtime ids are
+rejected.
 
 This separates editor fixes from catalog pixel compatibility and gives SVG capture an explicit
 Wasm boundary. The executable
@@ -494,15 +500,16 @@ supported text/groups, and rasterizes within the product threshold.
       structured SVG with vector catalog icons and declared embedded-raster fallbacks. The last
       authorized Figma import preserved exact root bounds and editable layers but differed from the
       clean Wasm render by `5.597%`; it therefore does not pass the release threshold.
-- [x] Prove version-addressed renderer loading and overlay coordinate mapping. Exact immutable
-      hosting, strict manifest/protocol loading, a distinct renderer-only CMP/Wasm artifact, and a
-      real Jetcaster iframe measurement round trip are covered by
+- [x] Prove version-addressed renderer loading and overlay/input coordinate mapping. Exact immutable
+      hosting, strict manifest/protocol loading, a distinct renderer-only CMP/Wasm artifact, opaque
+      iframe loading, reversible inspection/input coordinates, real pointer state changes,
+      independent wheel scrolling, and zero-pixel/zero-layout sibling-overlay invariance are
+      covered by
       [`ServeUiBuilderRuntimeAssetsTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt),
       [`CatalogRuntimeProtocolTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/CatalogRuntimeProtocolTest.kt),
       and
       [`ui-builder-renderer.spec.mjs`](../../preview-harness/ui-builder-renderer.spec.mjs).
-      Protocol v1 rejects input explicitly; interactive forwarding is a future protocol feature,
-      not missing behavior claimed by v1.
+      Runtime routes have no floating alias, so retained exact bundles remain addressable by id.
 - [ ] Complete the Figma import test for the proven export execution bridge. The first real import
       is recorded in `jetcaster-discover-figma-import-v1.json`: structure passes, raster parity
       fails. The latest local export adds deterministic node/token/family/style/weight provenance,

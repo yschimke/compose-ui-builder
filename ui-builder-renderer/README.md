@@ -22,8 +22,13 @@ Protocol v1 supports:
 - `initialize` → `initialized`;
 - `renderDocument` → `rendered`, containing authored node bounds and immediate-slot union bounds in
   root-render pixels; and
-- `dispatchInput` → `UNSUPPORTED_INPUT`.
+- `dispatchInput` for validated pointer phases and pixel-mode wheel deltas → `inputDispatched`,
+  containing the post-input inspection and resolved preview state.
 
 The editor maps returned bounds onto a pointer-inert sibling overlay. The overlay is never an
-ancestor of the native renderer and therefore cannot alter Compose measurement or pixels. Input is
-intentionally rejected until event semantics and state reconciliation are specified.
+ancestor of the native renderer and therefore cannot alter Compose measurement or pixels. Input
+coordinates use the same root-render-pixel space as inspection bounds, so the editor mapping is
+reversible. Every input names the active document revision; stale revisions, malformed fields,
+coordinates outside the viewport, duplicate request ids, unsupported kinds, and mismatched
+source/origin/runtime/protocol/correlation are rejected or ignored before dispatch. Keyboard and
+focus input remain explicitly unsupported.

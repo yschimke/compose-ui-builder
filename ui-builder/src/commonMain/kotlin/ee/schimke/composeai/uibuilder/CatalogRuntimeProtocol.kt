@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import kotlin.math.absoluteValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -27,7 +28,25 @@ sealed interface CatalogRuntimeCommand {
   data class Reply(val message: CatalogRuntimeMessage) : CatalogRuntimeCommand
 
   data class Render(val requestId: String, val document: UiBuilderDocument) : CatalogRuntimeCommand
+
+  data class DispatchInput(val requestId: String, val input: CatalogRuntimeInput) :
+    CatalogRuntimeCommand
 }
+
+@Serializable
+data class CatalogRuntimeInput(
+  val documentRevision: Int,
+  val kind: String,
+  val phase: String? = null,
+  val x: Double,
+  val y: Double,
+  val pointerId: Int? = null,
+  val button: Int? = null,
+  val buttons: Int? = null,
+  val deltaMode: Int? = null,
+  val deltaX: Double? = null,
+  val deltaY: Double? = null,
+)
 
 /**
  * Security and compatibility gate for a renderer frame.
@@ -41,6 +60,8 @@ class CatalogRuntimeProtocolEndpoint(
   private val protocolVersion: Int = CATALOG_RUNTIME_PROTOCOL_VERSION,
 ) {
   private var parentOrigin: String? = null
+  private var documentRevision: Int? = null
+  private var pendingRender: Pair<String, Int>? = null
   private val acceptedRequestIds = mutableSetOf<String>()
 
   fun receive(origin: String, sourceIsParent: Boolean, encoded: String): CatalogRuntimeCommand? {
@@ -86,7 +107,7 @@ class CatalogRuntimeProtocolEndpoint(
       "initialize" -> {
         if (lockedOrigin == null) parentOrigin = origin
         CatalogRuntimeCommand.Reply(
-          message.reply("initialized", buildJsonObject { put("interaction", "unsupported") })
+          message.reply("initialized", buildJsonObject { put("interaction", "pointer-wheel") })
         )
       }
       "renderDocument" -> {
@@ -119,18 +140,11 @@ class CatalogRuntimeProtocolEndpoint(
             )
           )
         }
+        documentRevision = null
+        pendingRender = message.requestId to document.revision
         CatalogRuntimeCommand.Render(message.requestId, document)
       }
-      "dispatchInput" ->
-        CatalogRuntimeCommand.Reply(
-          message.reply(
-            "error",
-            buildJsonObject {
-              put("code", "UNSUPPORTED_INPUT")
-              put("message", "this renderer protocol version is render-and-measure only")
-            },
-          )
-        )
+      "dispatchInput" -> parseInput(message)
       else ->
         CatalogRuntimeCommand.Reply(
           message.reply(
@@ -144,12 +158,42 @@ class CatalogRuntimeProtocolEndpoint(
     }
   }
 
-  fun rendered(requestId: String, snapshot: UiBuilderInspectionSnapshot): CatalogRuntimeMessage =
+  fun rendered(requestId: String, snapshot: UiBuilderInspectionSnapshot): CatalogRuntimeMessage {
+    if (pendingRender == requestId to snapshot.documentRevision) {
+      documentRevision = snapshot.documentRevision
+      pendingRender = null
+    }
+    return inspectionReply(requestId, "rendered", snapshot)
+  }
+
+  fun inputDispatched(
+    requestId: String,
+    snapshot: UiBuilderInspectionSnapshot,
+  ): CatalogRuntimeMessage = inspectionReply(requestId, "inputDispatched", snapshot)
+
+  fun inputRejected(requestId: String, code: String, description: String): CatalogRuntimeMessage =
     CatalogRuntimeMessage(
       protocolVersion = protocolVersion,
       runtimeId = runtimeId,
       requestId = requestId,
-      type = "rendered",
+      type = "error",
+      payload =
+        buildJsonObject {
+          put("code", code)
+          put("message", description)
+        },
+    )
+
+  private fun inspectionReply(
+    requestId: String,
+    type: String,
+    snapshot: UiBuilderInspectionSnapshot,
+  ): CatalogRuntimeMessage =
+    CatalogRuntimeMessage(
+      protocolVersion = protocolVersion,
+      runtimeId = runtimeId,
+      requestId = requestId,
+      type = type,
       payload =
         buildJsonObject {
           put(
@@ -161,6 +205,63 @@ class CatalogRuntimeProtocolEndpoint(
           )
         },
     )
+
+  private fun parseInput(message: CatalogRuntimeMessage): CatalogRuntimeCommand {
+    val currentRevision =
+      documentRevision
+        ?: return message.error("NO_DOCUMENT", "renderDocument must complete before dispatchInput")
+    val input =
+      try {
+        RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
+          CatalogRuntimeInput.serializer(),
+          message.payload,
+        )
+      } catch (_: Exception) {
+        return message.error("INVALID_INPUT", "dispatchInput payload is malformed")
+      }
+    if (input.documentRevision != currentRevision) {
+      return message.error("STALE_DOCUMENT", "input does not target the active document revision")
+    }
+    if (!input.x.isFinite() || !input.y.isFinite() || input.x < 0 || input.y < 0) {
+      return message.error("INVALID_INPUT", "input coordinates must be finite and non-negative")
+    }
+    return when (input.kind) {
+      "pointer" -> {
+        if (
+          input.phase !in POINTER_PHASES ||
+            input.pointerId == null ||
+            input.pointerId !in 0..MAX_POINTER_ID ||
+            input.button == null ||
+            input.button !in -1..4 ||
+            input.buttons == null ||
+            input.buttons !in 0..31 ||
+            input.deltaMode != null ||
+            input.deltaX != null ||
+            input.deltaY != null
+        ) {
+          message.error("INVALID_INPUT", "pointer input fields are invalid")
+        } else CatalogRuntimeCommand.DispatchInput(message.requestId, input)
+      }
+      "wheel" -> {
+        if (
+          input.phase != null ||
+            input.pointerId != null ||
+            input.button != null ||
+            input.buttons != null ||
+            input.deltaMode != PIXEL_DELTA_MODE ||
+            input.deltaX == null ||
+            input.deltaY == null ||
+            !input.deltaX.isFinite() ||
+            !input.deltaY.isFinite() ||
+            input.deltaX.absoluteValue > MAX_WHEEL_DELTA ||
+            input.deltaY.absoluteValue > MAX_WHEEL_DELTA
+        ) {
+          message.error("INVALID_INPUT", "wheel input fields are invalid")
+        } else CatalogRuntimeCommand.DispatchInput(message.requestId, input)
+      }
+      else -> message.error("UNSUPPORTED_INPUT", "input kind is not supported")
+    }
+  }
 
   fun encode(message: CatalogRuntimeMessage): String =
     RUNTIME_PROTOCOL_JSON.encodeToString(CatalogRuntimeMessage.serializer(), message)
@@ -205,6 +306,7 @@ class CatalogRuntimeHostSession(
       when (expectedType) {
         "initialize" -> "initialized"
         "renderDocument" -> "rendered"
+        "dispatchInput" -> "inputDispatched"
         else -> null
       }
     if (
@@ -223,6 +325,22 @@ class CatalogRuntimeHostSession(
 
 private fun CatalogRuntimeMessage.reply(type: String, payload: JsonObject) =
   copy(type = type, payload = payload)
+
+private fun CatalogRuntimeMessage.error(code: String, description: String) =
+  CatalogRuntimeCommand.Reply(
+    reply(
+      "error",
+      buildJsonObject {
+        put("code", code)
+        put("message", description)
+      },
+    )
+  )
+
+private val POINTER_PHASES = setOf("down", "move", "up", "cancel")
+private const val MAX_POINTER_ID = 1024
+private const val PIXEL_DELTA_MODE = 0
+private const val MAX_WHEEL_DELTA = 100_000.0
 
 internal val RUNTIME_PROTOCOL_JSON = Json {
   encodeDefaults = true
