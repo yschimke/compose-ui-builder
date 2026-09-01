@@ -13,9 +13,13 @@ import ee.schimke.composeai.uibuilder.protocol.DesignEnvironmentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
+import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
+import ee.schimke.composeai.uibuilder.protocol.SetThemeEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.ThemeV1
+import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
 import ee.schimke.composeai.uibuilder.protocol.WindowPostureV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -110,6 +114,44 @@ class UiBuilderProtocolBridgeTest {
     assertEquals("browser-a", command.clientId)
     assertEquals(41, command.baseRevision)
     assertIs<SetPropertyMutationV1>(command.operations.single())
+  }
+
+  @Test
+  fun `screen environment operations map to typed document mutations`() {
+    val local =
+      DesignCommand(
+        designId = "shared-design",
+        operationId = "screen-settings",
+        actorId = "actor-a",
+        clientId = "browser-a",
+        baseRevision = 7,
+        operations =
+          listOf(
+            DesignOperation.SetEnvironment("fontScale", JsonPrimitive(1.4)),
+            DesignOperation.SetEnvironment("theme", JsonPrimitive("dark")),
+            DesignOperation.SetEnvironment("layoutDirection", JsonPrimitive("rtl")),
+          ),
+      )
+
+    val command =
+      assertIs<DesignCommandV1>(
+        EditorSubmission.Batch(local)
+          .toProtocolSubmission("actor-a", "browser-a", authoritativeRevision = 41)
+      )
+
+    assertEquals(41, command.baseRevision)
+    assertEquals(
+      SetFontScaleEnvironmentChangeV1(1.4),
+      assertIs<UpdateEnvironmentMutationV1>(command.operations[0]).changes.single(),
+    )
+    assertEquals(
+      SetThemeEnvironmentChangeV1(ThemeV1.DARK),
+      assertIs<UpdateEnvironmentMutationV1>(command.operations[1]).changes.single(),
+    )
+    assertEquals(
+      SetLayoutDirectionEnvironmentChangeV1(LayoutDirectionV1.RTL),
+      assertIs<UpdateEnvironmentMutationV1>(command.operations[2]).changes.single(),
+    )
   }
 
   @Test

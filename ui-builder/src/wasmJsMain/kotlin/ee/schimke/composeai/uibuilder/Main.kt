@@ -1197,6 +1197,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
       is CommandOutcome.Rejected -> "rejected:${state.lastOutcome.code}"
     }
   val rejection = state.lastOutcome as? CommandOutcome.Rejected
+  val environment = state.document.screenEnvironmentSettings()
   publishEditorManifest(
     revision = state.document.revision,
     nodeCount = state.document.nodes.size,
@@ -1209,11 +1210,18 @@ private fun publishEditorState(state: UiBuilderEditorState) {
     documentHash = sha256Hex(canonicalDocument(state.document)),
     outcomeNodeId = rejection?.nodeId.orEmpty(),
     outcomeField = rejection?.field.orEmpty(),
+    widthDp = environment.widthDp,
+    heightDp = environment.heightDp,
+    density = environment.density,
+    fontScale = environment.fontScale,
+    locale = environment.locale,
+    theme = environment.theme.wireValue,
+    layoutDirection = environment.layoutDirection.wireValue,
   )
 }
 
 @JsFun(
-  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, mainBackgroundChildren, documentHash, outcomeNodeId, outcomeField) => {
+  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, mainBackgroundChildren, documentHash, outcomeNodeId, outcomeField, widthDp, heightDp, density, fontScale, locale, theme, layoutDirection) => {
     globalThis.__uiBuilderEditor = {
       revision,
       nodeCount,
@@ -1225,7 +1233,8 @@ private fun publishEditorState(state: UiBuilderEditorState) {
       mainBackgroundChildren: mainBackgroundChildren ? mainBackgroundChildren.split(',') : [],
       documentHash,
       outcomeNodeId,
-      outcomeField
+      outcomeField,
+      environment: { widthDp, heightDp, density, fontScale, locale, theme, layoutDirection }
     };
     document.documentElement.dataset.uiBuilderEditorRevision = String(revision);
   }"""
@@ -1242,6 +1251,13 @@ private external fun publishEditorManifest(
   documentHash: String,
   outcomeNodeId: String,
   outcomeField: String,
+  widthDp: Int,
+  heightDp: Int,
+  density: Double,
+  fontScale: Double,
+  locale: String,
+  theme: String,
+  layoutDirection: String,
 )
 
 @JsFun(

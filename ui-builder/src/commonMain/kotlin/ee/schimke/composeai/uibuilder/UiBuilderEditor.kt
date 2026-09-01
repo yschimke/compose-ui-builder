@@ -694,9 +694,42 @@ private fun PropertyInspector(
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
+  var section by remember { mutableStateOf(InspectorSection.Component) }
   Surface(Modifier.width(300.dp).fillMaxHeight(), color = MaterialTheme.colorScheme.surface) {
     Column(Modifier.padding(16.dp)) {
-      Text("Properties", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      Row(
+        Modifier.fillMaxWidth().height(28.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Text(
+          if (section == InspectorSection.Component) "Properties" else "Environment",
+          Modifier.weight(1f),
+          style = MaterialTheme.typography.titleMedium,
+          fontWeight = FontWeight.Bold,
+        )
+        TextButton(
+          onClick = {
+            section =
+              if (section == InspectorSection.Component) InspectorSection.Screen
+              else InspectorSection.Component
+          },
+          modifier = Modifier.width(76.dp).height(28.dp),
+        ) {
+          Text(
+            if (section == InspectorSection.Component) "Screen" else "Back",
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelMedium,
+          )
+        }
+      }
+      if (section == InspectorSection.Screen) {
+        ScreenEnvironmentInspector(
+          document = state.document,
+          onTextInputFocusChanged = onTextInputFocusChanged,
+          dispatch = dispatch,
+        )
+        return@Column
+      }
       if (node == null) {
         Text(
           "Select a layer on the canvas or in the tree.",
@@ -908,6 +941,140 @@ private fun DraftPropertyControl(
   }
 }
 
+private enum class InspectorSection {
+  Component,
+  Screen,
+}
+
+@Composable
+private fun ScreenEnvironmentInspector(
+  document: UiBuilderDocument,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  val current = document.screenEnvironmentSettings()
+  var width by remember(document.id, current) { mutableStateOf(current.widthDp.toString()) }
+  var height by remember(document.id, current) { mutableStateOf(current.heightDp.toString()) }
+  var density by remember(document.id, current) { mutableStateOf(current.density.toString()) }
+  var fontScale by remember(document.id, current) { mutableStateOf(current.fontScale.toString()) }
+  var locale by remember(document.id, current) { mutableStateOf(current.locale) }
+  var theme by remember(document.id, current) { mutableStateOf(current.theme) }
+  var layoutDirection by remember(document.id, current) { mutableStateOf(current.layoutDirection) }
+  var validationError by remember(document.id, current) { mutableStateOf<String?>(null) }
+
+  Text(
+    "Screen environment",
+    style = MaterialTheme.typography.titleSmall,
+    fontWeight = FontWeight.Bold,
+  )
+  Text(
+    "Applies to the complete render, never an individual component.",
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.bodySmall,
+  )
+  HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
+  Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    EnvironmentTextField(
+      label = "Width (dp)",
+      value = width,
+      modifier = Modifier.weight(1f),
+      onFocusChanged = onTextInputFocusChanged,
+      onValueChange = { width = it },
+    )
+    EnvironmentTextField(
+      label = "Height (dp)",
+      value = height,
+      modifier = Modifier.weight(1f),
+      onFocusChanged = onTextInputFocusChanged,
+      onValueChange = { height = it },
+    )
+  }
+  Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    EnvironmentTextField(
+      label = "Density",
+      value = density,
+      modifier = Modifier.weight(1f),
+      onFocusChanged = onTextInputFocusChanged,
+      onValueChange = { density = it },
+    )
+    EnvironmentTextField(
+      label = "Font scale",
+      value = fontScale,
+      modifier = Modifier.weight(1f),
+      onFocusChanged = onTextInputFocusChanged,
+      onValueChange = { fontScale = it },
+    )
+  }
+  EnvironmentTextField(
+    label = "Locale",
+    value = locale,
+    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    onFocusChanged = onTextInputFocusChanged,
+    onValueChange = { locale = it },
+  )
+  EnvironmentChoiceHeading("Theme")
+  Row(Modifier.fillMaxWidth()) {
+    EditorScreenTheme.entries.forEach { option ->
+      TextButton(
+        onClick = { theme = option },
+        modifier = Modifier.weight(1f).semantics { contentDescription = "${option.label} theme" },
+      ) {
+        Text(
+          option.label,
+          fontWeight = if (theme == option) FontWeight.Bold else FontWeight.Normal,
+          color =
+            if (theme == option) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
+    }
+  }
+  EnvironmentChoiceHeading("Layout direction")
+  Row(Modifier.fillMaxWidth()) {
+    EditorLayoutDirection.entries.forEach { option ->
+      TextButton(
+        onClick = { layoutDirection = option },
+        modifier =
+          Modifier.weight(1f).semantics { contentDescription = "${option.label} layout direction" },
+      ) {
+        Text(
+          option.label,
+          fontWeight = if (layoutDirection == option) FontWeight.Bold else FontWeight.Normal,
+          color =
+            if (layoutDirection == option) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
+    }
+  }
+  validationError?.let {
+    Text(
+      it,
+      color = MaterialTheme.colorScheme.error,
+      style = MaterialTheme.typography.bodySmall,
+    )
+  }
+  Button(
+    onClick = {
+      val parsed =
+        ScreenEnvironmentSettings(
+          widthDp = width.toIntOrNull() ?: Int.MIN_VALUE,
+          heightDp = height.toIntOrNull() ?: Int.MIN_VALUE,
+          density = density.toDoubleOrNull() ?: Double.NaN,
+          fontScale = fontScale.toDoubleOrNull() ?: Double.NaN,
+          locale = locale.trim(),
+          theme = theme,
+          layoutDirection = layoutDirection,
+        )
+      validationError = parsed.validationError()
+      if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(parsed))
+    },
+    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+  ) {
+    Text("Apply screen settings")
+  }
+}
+
 @Composable
 private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> Unit) {
   var expanded by remember(field.nodeId, field.name) { mutableStateOf(false) }
@@ -935,3 +1102,44 @@ private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> 
 
 private fun Double.editorNumber(integer: Boolean): String =
   if (integer || this % 1.0 == 0.0) toLong().toString() else toString()
+
+@Composable
+private fun EnvironmentChoiceHeading(label: String) {
+  Text(
+    label,
+    Modifier.padding(top = 8.dp),
+    style = MaterialTheme.typography.labelLarge,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
+}
+
+@Composable
+private fun EnvironmentTextField(
+  label: String,
+  value: String,
+  modifier: Modifier,
+  onFocusChanged: (Boolean) -> Unit,
+  onValueChange: (String) -> Unit,
+) {
+  Column(modifier) {
+    Text(
+      label,
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    BasicTextField(
+      value = value,
+      onValueChange = onValueChange,
+      modifier =
+        Modifier.fillMaxWidth()
+          .onFocusChanged { onFocusChanged(it.isFocused) }
+          .semantics { contentDescription = label }
+          .padding(top = 3.dp)
+          .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+          .padding(horizontal = 8.dp, vertical = 7.dp),
+      textStyle =
+        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+      singleLine = true,
+    )
+  }
+}

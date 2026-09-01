@@ -54,6 +54,10 @@ sealed interface DesignOperation {
   @SerialName("setProperty")
   data class SetProperty(val nodeId: String, val property: String, val value: JsonElement) :
     DesignOperation
+
+  @Serializable
+  @SerialName("setEnvironment")
+  data class SetEnvironment(val field: String, val value: JsonElement) : DesignOperation
 }
 
 @Serializable data class ParentSlot(val nodeId: String, val slot: String)
@@ -67,6 +71,7 @@ data class CollaborationState(
   val propertyVersions: Map<PropertyAddress, Int> = emptyMap(),
   val moveVersions: Map<String, Int> = emptyMap(),
   val structuralVersions: Map<String, Int> = emptyMap(),
+  val environmentVersions: Map<String, Int> = emptyMap(),
   val activeOperationVersions: Map<String, Int> = emptyMap(),
   val undoRecords: Map<String, AcceptedUndo> = emptyMap(),
   val redoRecords: Map<String, AcceptedRedo> = emptyMap(),
@@ -111,6 +116,7 @@ data class AcceptedCommand(
   val committedRevision: Int,
   val canonicalDocument: String,
   val propertyChanges: List<PropertyChange> = emptyList(),
+  val environmentChanges: List<EnvironmentChange> = emptyList(),
   val structuralChanges: List<StructuralChange> = emptyList(),
   val compensationChanges: List<CompensationChange> = emptyList(),
   val conflicts: List<ConflictNotice> = emptyList(),
@@ -118,6 +124,12 @@ data class AcceptedCommand(
 
 data class PropertyChange(
   val address: PropertyAddress,
+  val before: JsonElement?,
+  val after: JsonElement,
+)
+
+data class EnvironmentChange(
+  val field: String,
   val before: JsonElement?,
   val after: JsonElement,
 )
@@ -139,6 +151,8 @@ data class StructuralChange(
 
 sealed interface CompensationChange {
   data class Property(val change: PropertyChange) : CompensationChange
+
+  data class Environment(val change: EnvironmentChange) : CompensationChange
 
   data class Structure(val change: StructuralChange) : CompensationChange
 }
@@ -496,12 +510,17 @@ object CollaborationReducer {
       trace.structuralTouches.fold(trace.state.structuralVersions) { versions, nodeId ->
         versions + (nodeId to committedRevision)
       }
+    val environmentVersions =
+      trace.environmentTouches.fold(trace.state.environmentVersions) { versions, field ->
+        versions + (field to committedRevision)
+      }
     val accepted =
       AcceptedCommand(
         command = command,
         committedRevision = committedRevision,
         canonicalDocument = canonicalDocument,
         propertyChanges = trace.propertyChanges,
+        environmentChanges = trace.environmentChanges,
         structuralChanges = trace.structuralChanges,
         compensationChanges = trace.compensationChanges,
         conflicts = trace.conflicts,
@@ -515,6 +534,7 @@ object CollaborationReducer {
         propertyVersions = propertyVersions,
         moveVersions = moveVersions,
         structuralVersions = structuralVersions,
+        environmentVersions = environmentVersions,
         activeOperationVersions =
           trace.state.activeOperationVersions + (command.operationId to committedRevision),
       )
@@ -600,11 +620,16 @@ object CollaborationReducer {
     val scalarOnly =
       target.propertyChanges.isNotEmpty() &&
         target.command.operations.all { it is DesignOperation.SetProperty }
+    val environmentOnly =
+      target.environmentChanges.isNotEmpty() &&
+        target.command.operations.all { it is DesignOperation.SetEnvironment }
     val structuralOnly =
       target.structuralChanges.isNotEmpty() &&
-        target.command.operations.all { it !is DesignOperation.SetProperty }
+        target.command.operations.all {
+          it !is DesignOperation.SetProperty && it !is DesignOperation.SetEnvironment
+        }
     val mixed = target.propertyChanges.isNotEmpty() && target.structuralChanges.isNotEmpty()
-    if (!scalarOnly && !structuralOnly && !mixed) {
+    if (!scalarOnly && !environmentOnly && !structuralOnly && !mixed) {
       return state.rejected(
         RejectionCode.UNSUPPORTED_COMPENSATION,
         "operation has no compensating changes",
@@ -623,6 +648,19 @@ object CollaborationReducer {
             "property changed after ${target.command.operationId} at revision $currentVersion",
             nodeId = change.address.nodeId,
             field = change.address.property,
+          )
+        }
+      }
+    } else if (environmentOnly) {
+      target.environmentChanges.asReversed().distinctBy(EnvironmentChange::field).forEach { change
+        ->
+        val current = state.document.environment[change.field]
+        val currentVersion = state.environmentVersions[change.field]
+        if (current != change.after || currentVersion != targetActiveRevision) {
+          return state.rejected(
+            RejectionCode.UNSAFE_COMPENSATION,
+            "environment changed after ${target.command.operationId} at revision $currentVersion",
+            field = change.field,
           )
         }
       }
@@ -669,6 +707,16 @@ object CollaborationReducer {
           )
       }
       changed = changed.copy(document = document)
+    } else if (environmentOnly) {
+      var environment = prepared.document.environment
+      target.environmentChanges.asReversed().forEach { change ->
+        environment =
+          JsonObject(
+            if (change.before == null) environment - change.field
+            else environment + (change.field to change.before)
+          )
+      }
+      changed = changed.copy(document = prepared.document.copy(environment = environment))
     } else if (structuralOnly) {
       try {
         target.structuralChanges.asReversed().forEach { change ->
@@ -720,6 +768,12 @@ object CollaborationReducer {
           versions + (change.address to committedRevision)
         }
       else changed.propertyVersions
+    val environmentVersions =
+      if (target.environmentChanges.isNotEmpty())
+        target.environmentChanges.fold(changed.environmentVersions) { versions, change ->
+          versions + (change.field to committedRevision)
+        }
+      else changed.environmentVersions
     val structuralVersions =
       if (target.structuralChanges.isNotEmpty())
         target.structuralChanges
@@ -740,6 +794,7 @@ object CollaborationReducer {
       changed.copy(
         document = document,
         propertyVersions = propertyVersions,
+        environmentVersions = environmentVersions,
         structuralVersions = structuralVersions,
         moveVersions = moveVersions,
         positionSnapshots = changed.positionSnapshots + (committedRevision to changed.positions),
@@ -822,9 +877,11 @@ object CollaborationReducer {
     }
     val hasProperties = undo.target.propertyChanges.isNotEmpty()
     val hasStructure = undo.target.structuralChanges.isNotEmpty()
+    val hasEnvironment = undo.target.environmentChanges.isNotEmpty()
     val scalarOnly = hasProperties && !hasStructure
+    val environmentOnly = hasEnvironment && !hasProperties && !hasStructure
     val structuralOnly = hasStructure && !hasProperties
-    val mixed = hasProperties && hasStructure
+    val mixed = hasProperties && hasStructure && !hasEnvironment
     if (scalarOnly) {
       undo.target.propertyChanges.distinctBy(PropertyChange::address).forEach { change ->
         val current =
@@ -836,6 +893,18 @@ object CollaborationReducer {
             "property changed after ${undo.command.operationId} at revision $currentVersion",
             nodeId = change.address.nodeId,
             field = change.address.property,
+          )
+        }
+      }
+    } else if (environmentOnly) {
+      undo.target.environmentChanges.distinctBy(EnvironmentChange::field).forEach { change ->
+        val current = state.document.environment[change.field]
+        val currentVersion = state.environmentVersions[change.field]
+        if (current != change.before || currentVersion != undo.committedRevision) {
+          return state.rejected(
+            RejectionCode.UNSAFE_COMPENSATION,
+            "environment changed after ${undo.command.operationId} at revision $currentVersion",
+            field = change.field,
           )
         }
       }
@@ -898,6 +967,12 @@ object CollaborationReducer {
           )
       }
       changed = changed.copy(document = document)
+    } else if (environmentOnly) {
+      var environment = prepared.document.environment
+      undo.target.environmentChanges.forEach { change ->
+        environment = JsonObject(environment + (change.field to change.after))
+      }
+      changed = changed.copy(document = prepared.document.copy(environment = environment))
     } else if (structuralOnly) {
       try {
         undo.target.structuralChanges.forEach { change ->
@@ -941,6 +1016,12 @@ object CollaborationReducer {
           versions + (change.address to committedRevision)
         }
       else changed.propertyVersions
+    val environmentVersions =
+      if (hasEnvironment)
+        undo.target.environmentChanges.fold(changed.environmentVersions) { versions, change ->
+          versions + (change.field to committedRevision)
+        }
+      else changed.environmentVersions
     val structuralVersions =
       if (hasStructure)
         undo.target.structuralChanges
@@ -963,6 +1044,7 @@ object CollaborationReducer {
       changed.copy(
         document = document,
         propertyVersions = propertyVersions,
+        environmentVersions = environmentVersions,
         structuralVersions = structuralVersions,
         moveVersions = moveVersions,
         activeOperationVersions =
@@ -1050,6 +1132,8 @@ private data class ReductionTrace(
   val conflicts: MutableList<ConflictNotice> = mutableListOf(),
   val propertyChanges: MutableList<PropertyChange> = mutableListOf(),
   val propertyTouches: MutableSet<PropertyAddress> = linkedSetOf(),
+  val environmentChanges: MutableList<EnvironmentChange> = mutableListOf(),
+  val environmentTouches: MutableSet<String> = linkedSetOf(),
   val moveTouches: MutableSet<String> = linkedSetOf(),
   val structuralTouches: MutableSet<String> = linkedSetOf(),
   val structuralChanges: MutableList<StructuralChange> = mutableListOf(),
@@ -1158,6 +1242,21 @@ private fun CollaborationState.applyOperation(
       val change = PropertyChange(address, before, operation.value)
       trace.propertyChanges += change
       trace.compensationChanges += CompensationChange.Property(change)
+      changed
+    }
+    is DesignOperation.SetEnvironment -> {
+      val before = document.environment[operation.field]
+      val changed =
+        copy(
+          document =
+            document.copy(
+              environment = JsonObject(document.environment + (operation.field to operation.value))
+            )
+        )
+      val change = EnvironmentChange(operation.field, before, operation.value)
+      trace.environmentTouches += operation.field
+      trace.environmentChanges += change
+      trace.compensationChanges += CompensationChange.Environment(change)
       changed
     }
   }
@@ -1372,8 +1471,20 @@ private fun CollaborationState.compensate(
 ): CollaborationState =
   when (change) {
     is CompensationChange.Property -> compensateProperty(change.change, undo)
+    is CompensationChange.Environment -> compensateEnvironment(change.change, undo)
     is CompensationChange.Structure -> compensateStructure(change.change, undo)
   }
+
+private fun CollaborationState.compensateEnvironment(
+  change: EnvironmentChange,
+  undo: Boolean,
+): CollaborationState {
+  val value = if (undo) change.before else change.after
+  val environment =
+    if (value == null) document.environment - change.field
+    else document.environment + (change.field to value)
+  return copy(document = document.copy(environment = JsonObject(environment)))
+}
 
 private fun CollaborationState.compensateProperty(
   change: PropertyChange,

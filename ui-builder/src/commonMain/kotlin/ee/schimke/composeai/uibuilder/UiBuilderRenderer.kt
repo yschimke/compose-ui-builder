@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -75,6 +76,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -115,6 +117,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -292,8 +296,24 @@ fun UiBuilderSurface(
         }
       }
     }
-  val dark = document.environment["theme"]?.jsonPrimitive?.contentOrNull == "dark"
-  val density = LocalDensity.current
+  val theme = document.environment["theme"]?.jsonPrimitive?.contentOrNull
+  val dark = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
+  val platformDensity = LocalDensity.current
+  val density =
+    Density(
+      density =
+        document.environment["density"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()?.takeIf {
+          it.isFinite() && it > 0f
+        } ?: platformDensity.density,
+      fontScale =
+        document.environment["fontScale"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()?.takeIf {
+          it.isFinite() && it > 0f
+        } ?: platformDensity.fontScale,
+    )
+  val layoutDirection =
+    if (document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl")
+      LayoutDirection.Rtl
+    else LayoutDirection.Ltr
   SideEffect { inspection.updateState(state) }
   SideEffect {
     val size = surfaceCoordinates?.size
@@ -308,76 +328,81 @@ fun UiBuilderSurface(
       dark -> darkColorScheme()
       else -> lightColorScheme()
     }
-  MaterialTheme(colorScheme = colorScheme) {
-    Box(
-      Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
-        surfaceCoordinates = coordinates
-        runtimeActionController?.install(
-          semanticActions.toMap(),
-          UiBuilderPixelBounds(
-            0f,
-            0f,
-            coordinates.size.width.toFloat(),
-            coordinates.size.height.toFloat(),
-          ),
-        )
-      }
-    ) {
-      document.roots.forEach { root ->
-        RenderNode(
-          document = document,
-          nodeId = root,
-          state = state,
-          onState = { key, value ->
-            state[key] = value
-            inspection.updateState(state)
-          },
-          onBounds = { id, coordinates ->
-            val rootBounds = coordinates.boundsInRoot()
-            bounds[id] = rootBounds
-            surfaceCoordinates?.let { surface ->
-              overlayBounds[id] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
+  CompositionLocalProvider(
+    LocalDensity provides density,
+    LocalLayoutDirection provides layoutDirection,
+  ) {
+    MaterialTheme(colorScheme = colorScheme) {
+      Box(
+        Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+          surfaceCoordinates = coordinates
+          runtimeActionController?.install(
+            semanticActions.toMap(),
+            UiBuilderPixelBounds(
+              0f,
+              0f,
+              coordinates.size.width.toFloat(),
+              coordinates.size.height.toFloat(),
+            ),
+          )
+        }
+      ) {
+        document.roots.forEach { root ->
+          RenderNode(
+            document = document,
+            nodeId = root,
+            state = state,
+            onState = { key, value ->
+              state[key] = value
+              inspection.updateState(state)
+            },
+            onBounds = { id, coordinates ->
+              val rootBounds = coordinates.boundsInRoot()
+              bounds[id] = rootBounds
+              surfaceCoordinates?.let { surface ->
+                overlayBounds[id] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
+              }
+              inspection.recordNodeBounds(
+                id,
+                rootBounds.left,
+                rootBounds.top,
+                rootBounds.right,
+                rootBounds.bottom,
+              )
+            },
+            onTextLayout = { id, result ->
+              inspection.recordTextLayout(
+                id,
+                result.lineCount,
+                result.firstBaseline,
+                result.lastBaseline,
+                with(density) { document.nodes.getValue(id).textContentTopPaddingDp().dp.toPx() },
+              )
+            },
+            semanticActions = semanticActions,
+          )
+        }
+        if (editorOverlay) {
+          val selected = selectedNodeId?.let(overlayBounds::get)
+          Canvas(
+            Modifier.fillMaxSize().pointerInput(overlayBounds.toMap(), onNodeSelected) {
+              detectTapGestures { position ->
+                overlayBounds
+                  .filterValues { it.contains(position) }
+                  .minByOrNull { (_, rect) -> rect.width * rect.height }
+                  ?.key
+                  ?.let { onNodeSelected?.invoke(it) }
+              }
             }
-            inspection.recordNodeBounds(
-              id,
-              rootBounds.left,
-              rootBounds.top,
-              rootBounds.right,
-              rootBounds.bottom,
-            )
-          },
-          onTextLayout = { id, result ->
-            inspection.recordTextLayout(
-              id,
-              result.lineCount,
-              result.firstBaseline,
-              result.lastBaseline,
-              with(density) { document.nodes.getValue(id).textContentTopPaddingDp().dp.toPx() },
-            )
-          },
-          semanticActions = semanticActions,
-        )
-      }
-      if (editorOverlay) {
-        val selected = selectedNodeId?.let(overlayBounds::get)
-        Canvas(
-          Modifier.fillMaxSize().pointerInput(overlayBounds.toMap(), onNodeSelected) {
-            detectTapGestures { position ->
-              overlayBounds
-                .filterValues { it.contains(position) }
-                .minByOrNull { (_, rect) -> rect.width * rect.height }
-                ?.key
-                ?.let { onNodeSelected?.invoke(it) }
+          ) {
+            selected?.let { rect ->
+              drawRect(
+                Color(0xff6750a4),
+                rect.topLeft,
+                rect.size,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
+              )
             }
-          }
-        ) {
-          selected?.let { rect ->
-            drawRect(
-              Color(0xff6750a4),
-              rect.topLeft,
-              rect.size,
-              style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
-            )
           }
         }
       }

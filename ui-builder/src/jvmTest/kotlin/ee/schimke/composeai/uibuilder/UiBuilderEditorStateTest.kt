@@ -100,6 +100,62 @@ class UiBuilderEditorStateTest {
   }
 
   @Test
+  fun `screen environment is document level validated and undoable without changing nodes`() {
+    val initial = reducer.initial(document, selectedNodeId = "main-episode-title")
+    val originalNodes = initial.document.nodes
+    val updated =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.UpdateEnvironment(
+          ScreenEnvironmentSettings(
+            widthDp = 412,
+            heightDp = 915,
+            density = 3.0,
+            fontScale = 1.4,
+            locale = "ar-EG",
+            theme = EditorScreenTheme.Dark,
+            layoutDirection = EditorLayoutDirection.Rtl,
+          )
+        ),
+      )
+
+    assertIs<CommandOutcome.Accepted>(updated.lastOutcome)
+    assertEquals(originalNodes, updated.document.nodes)
+    assertEquals(
+      412,
+      updated.document.environment.getValue("widthDp").jsonPrimitive.content.toInt(),
+    )
+    assertEquals(
+      1.4,
+      updated.document.environment.getValue("fontScale").jsonPrimitive.content.toDouble(),
+    )
+    assertEquals(
+      "rtl",
+      updated.document.environment.getValue("layoutDirection").jsonPrimitive.content,
+    )
+    val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, updated))
+    assertTrue(submission.command.operations.all { it is DesignOperation.SetEnvironment })
+
+    val undone = reducer.reduce(updated, UiBuilderEditorEvent.Undo)
+    assertIs<CommandOutcome.Accepted>(undone.lastOutcome)
+    assertEquals(document.environment, undone.document.environment)
+    assertEquals(originalNodes, undone.document.nodes)
+    val redone = reducer.reduce(undone, UiBuilderEditorEvent.Redo)
+    assertEquals(412, redone.document.environment.getValue("widthDp").jsonPrimitive.content.toInt())
+    assertEquals(originalNodes, redone.document.nodes)
+
+    val rejected =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.UpdateEnvironment(
+          initial.document.screenEnvironmentSettings().copy(fontScale = 0.1)
+        ),
+      )
+    assertIs<CommandOutcome.Rejected>(rejected.lastOutcome)
+    assertEquals(document, rejected.document)
+  }
+
+  @Test
   fun `insert rejects a stale or incompatible destination without changing the document`() {
     val initial = reducer.initial(document, selectedNodeId = "discover-grid")
     val attempted =

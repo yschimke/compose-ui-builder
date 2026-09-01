@@ -72,6 +72,55 @@ enum class EditorMoveDirection {
   After,
 }
 
+enum class EditorScreenTheme(val wireValue: String, val label: String) {
+  Light("light", "Light"),
+  Dark("dark", "Dark"),
+  System("system", "System"),
+}
+
+enum class EditorLayoutDirection(val wireValue: String, val label: String) {
+  Ltr("ltr", "Left to right"),
+  Rtl("rtl", "Right to left"),
+}
+
+data class ScreenEnvironmentSettings(
+  val widthDp: Int,
+  val heightDp: Int,
+  val density: Double,
+  val fontScale: Double,
+  val locale: String,
+  val theme: EditorScreenTheme,
+  val layoutDirection: EditorLayoutDirection,
+)
+
+fun UiBuilderDocument.screenEnvironmentSettings(): ScreenEnvironmentSettings =
+  ScreenEnvironmentSettings(
+    widthDp = environment["widthDp"]?.jsonPrimitive?.content?.toIntOrNull() ?: 1280,
+    heightDp = environment["heightDp"]?.jsonPrimitive?.content?.toIntOrNull() ?: 800,
+    density = environment["density"]?.jsonPrimitive?.doubleOrNull ?: 1.0,
+    fontScale = environment["fontScale"]?.jsonPrimitive?.doubleOrNull ?: 1.0,
+    locale = environment["locale"]?.jsonPrimitive?.content.orEmpty().ifBlank { "en-US" },
+    theme =
+      EditorScreenTheme.entries.firstOrNull {
+        it.wireValue == environment["theme"]?.jsonPrimitive?.content
+      } ?: EditorScreenTheme.System,
+    layoutDirection =
+      EditorLayoutDirection.entries.firstOrNull {
+        it.wireValue == environment["layoutDirection"]?.jsonPrimitive?.content
+      } ?: EditorLayoutDirection.Ltr,
+  )
+
+fun ScreenEnvironmentSettings.validationError(): String? =
+  when {
+    widthDp !in 240..3840 -> "Width must be between 240 and 3840 dp."
+    heightDp !in 240..3840 -> "Height must be between 240 and 3840 dp."
+    !density.isFinite() || density !in 0.5..4.0 -> "Density must be between 0.5 and 4.0."
+    !fontScale.isFinite() || fontScale !in 0.5..3.0 -> "Font scale must be between 0.5 and 3.0."
+    locale.length !in 2..64 || !Regex("[A-Za-z]{2,8}([_-][A-Za-z0-9]{1,8})*").matches(locale) ->
+      "Locale must be a BCP 47-style tag such as en-US."
+    else -> null
+  }
+
 data class UiBuilderEditorState(
   val collaboration: CollaborationState,
   val selectedNodeId: String? = null,
@@ -107,6 +156,8 @@ sealed interface UiBuilderEditorEvent {
 
   data class CommitProperty(val nodeId: String, val property: String, val draft: String) :
     UiBuilderEditorEvent
+
+  data class UpdateEnvironment(val settings: ScreenEnvironmentSettings) : UiBuilderEditorEvent
 
   data object DeleteSelected : UiBuilderEditorEvent
 
@@ -152,6 +203,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.MoveNode -> move(state, event)
       is UiBuilderEditorEvent.CommitProperty ->
         commitProperty(state, event.nodeId, event.property, event.draft)
+      is UiBuilderEditorEvent.UpdateEnvironment -> updateEnvironment(state, event.settings)
       UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
       UiBuilderEditorEvent.DuplicateSelected -> duplicateSelected(state)
       UiBuilderEditorEvent.Undo -> undo(state)
@@ -418,6 +470,40 @@ class UiBuilderEditorReducer(
       sequence,
       listOf(DesignOperation.SetProperty(nodeId, propertyName, encoded)),
       selectionAfter = nodeId,
+    )
+  }
+
+  private fun updateEnvironment(
+    state: UiBuilderEditorState,
+    settings: ScreenEnvironmentSettings,
+  ): UiBuilderEditorState {
+    settings.validationError()?.let { message ->
+      return state.rejected(
+        state.operationSequence + 1,
+        RejectionCode.INVALID_DOCUMENT,
+        message,
+      )
+    }
+    val values =
+      linkedMapOf(
+        "widthDp" to JsonPrimitive(settings.widthDp),
+        "heightDp" to JsonPrimitive(settings.heightDp),
+        "density" to JsonPrimitive(settings.density),
+        "fontScale" to JsonPrimitive(settings.fontScale),
+        "locale" to JsonPrimitive(settings.locale),
+        "theme" to JsonPrimitive(settings.theme.wireValue),
+        "layoutDirection" to JsonPrimitive(settings.layoutDirection.wireValue),
+      )
+    val operations = values.mapNotNull { (field, value) ->
+      DesignOperation.SetEnvironment(field, value).takeIf {
+        state.document.environment[field] != value
+      }
+    }
+    if (operations.isEmpty()) return state
+    return state.apply(
+      state.operationSequence + 1,
+      operations,
+      selectionAfter = state.selectedNodeId,
     )
   }
 

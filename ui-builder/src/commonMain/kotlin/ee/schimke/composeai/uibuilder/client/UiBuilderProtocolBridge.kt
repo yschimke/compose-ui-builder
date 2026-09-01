@@ -12,20 +12,33 @@ import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignSubmissionV1
 import ee.schimke.composeai.uibuilder.protocol.InsertNodeMutationV1
+import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.MoveNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
+import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetHeightDpEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetLocaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
+import ee.schimke.composeai.uibuilder.protocol.SetThemeEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetWidthDpEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.ThemeV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
+import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
 import ee.schimke.composeai.uibuilder.sha256Hex
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonPrimitive
 
 private val bridgeJson = Json {
   classDiscriminator = "type"
@@ -185,6 +198,25 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
         nodeId,
         property,
         bridgeJson.decodeFromString(UiValueV1.serializer(), value.toString()),
+      )
+    is DesignOperation.SetEnvironment ->
+      UpdateEnvironmentMutationV1(
+        listOf(
+          when (field) {
+            "widthDp" -> SetWidthDpEnvironmentChangeV1(value.jsonPrimitive.int)
+            "heightDp" -> SetHeightDpEnvironmentChangeV1(value.jsonPrimitive.int)
+            "density" -> SetDensityEnvironmentChangeV1(value.jsonPrimitive.double)
+            "fontScale" -> SetFontScaleEnvironmentChangeV1(value.jsonPrimitive.double)
+            "locale" -> SetLocaleEnvironmentChangeV1(value.jsonPrimitive.content)
+            "theme" ->
+              SetThemeEnvironmentChangeV1(ThemeV1.valueOf(value.jsonPrimitive.content.uppercase()))
+            "layoutDirection" ->
+              SetLayoutDirectionEnvironmentChangeV1(
+                LayoutDirectionV1.valueOf(value.jsonPrimitive.content.uppercase())
+              )
+            else -> error("unsupported editor environment field: $field")
+          }
+        )
       )
   }
 
