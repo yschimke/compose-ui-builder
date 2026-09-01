@@ -7,7 +7,14 @@ import java.io.Closeable
 import java.security.MessageDigest
 import java.time.Clock
 import java.util.Base64
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.Semaphore
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
@@ -53,6 +60,40 @@ fun interface UiBuilderExportExecutor {
   fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1
 }
 
+private class BoundedUiBuilderExportTaskRunner(maximumConcurrentExports: Int) {
+  private val threadIds = AtomicLong()
+  private val executor =
+    ThreadPoolExecutor(
+        0,
+        maximumConcurrentExports,
+        30,
+        TimeUnit.SECONDS,
+        SynchronousQueue(),
+        { task ->
+          Thread(task, "ui-builder-export-${threadIds.incrementAndGet()}").apply { isDaemon = true }
+        },
+        ThreadPoolExecutor.AbortPolicy(),
+      )
+      .apply { allowCoreThreadTimeOut(true) }
+
+  fun execute(timeoutMillis: Long, task: () -> ExportArtifactV1): ExportArtifactV1 {
+    val future = executor.submit(Callable(task))
+    try {
+      return future.get(timeoutMillis, TimeUnit.MILLISECONDS)
+    } catch (failure: TimeoutException) {
+      future.cancel(true)
+      throw UiBuilderExportTimeoutException(failure)
+    } catch (failure: ExecutionException) {
+      val cause = failure.cause
+      if (cause is Exception) throw cause
+      throw IllegalStateException("export task failed", cause)
+    }
+  }
+}
+
+private class UiBuilderExportTimeoutException(cause: Throwable) :
+  RuntimeException("export timed out", cause)
+
 fun interface UiBuilderSubscriberFailureHandler {
   fun failed(failure: Throwable)
 }
@@ -70,6 +111,13 @@ data class UiBuilderServiceLimits(
   val maximumSubscribersPerDesign: Int = 128,
   val maximumPresenceSelections: Int = 256,
   val maximumConcurrentExports: Int = 4,
+  val exportTimeoutMillis: Long = 30_000,
+  val mutationBurstCapacity: Int = 512,
+  val mutationRefillAmount: Int = 256,
+  val mutationRefillIntervalMillis: Long = 1_000,
+  val maximumMutationBuckets: Int = 16_384,
+  val maximumSerializedDocumentBytes: Int = 8 * 1_024 * 1_024,
+  val maximumEmbeddedAssetBytes: Int = 6 * 1_024 * 1_024,
 ) {
   init {
     require(maximumDesigns > 0)
@@ -84,6 +132,13 @@ data class UiBuilderServiceLimits(
     require(maximumSubscribersPerDesign > 0)
     require(maximumPresenceSelections > 0)
     require(maximumConcurrentExports > 0)
+    require(exportTimeoutMillis > 0)
+    require(mutationBurstCapacity > 0)
+    require(mutationRefillAmount > 0)
+    require(mutationRefillIntervalMillis > 0)
+    require(maximumMutationBuckets > 0)
+    require(maximumSerializedDocumentBytes > 0)
+    require(maximumEmbeddedAssetBytes > 0)
   }
 }
 
@@ -108,6 +163,8 @@ class PersistentUiBuilderService(
   private val clock: Clock = Clock.systemUTC(),
   private val limits: UiBuilderServiceLimits = UiBuilderServiceLimits(),
 ) : UiBuilderServicePort, UiBuilderServiceDiagnosticsSource {
+  private data class MutationBucket(var tokens: Int, var refilledAtMillis: Long)
+
   private data class RuntimeDesign(
     val presence: MutableMap<String, PresenceV1> = linkedMapOf(),
     val subscribers: MutableMap<Long, Subscriber> = linkedMapOf(),
@@ -181,6 +238,7 @@ class PersistentUiBuilderService(
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
+  private val exportTaskRunner = BoundedUiBuilderExportTaskRunner(limits.maximumConcurrentExports)
   private val activeExports = AtomicInteger()
   private val peakExports = AtomicLong()
   private val peakSubscribers = AtomicLong()
@@ -189,6 +247,11 @@ class PersistentUiBuilderService(
   private val slowSubscribersClosed = AtomicLong()
   private val rejectedPresenceLimit = AtomicLong()
   private val rejectedExportLimit = AtomicLong()
+  private val rejectedMutationRate = AtomicLong()
+  private val rejectedDocumentBytes = AtomicLong()
+  private val rejectedAssetBytes = AtomicLong()
+  private val timedOutExports = AtomicLong()
+  private val mutationBuckets = mutableMapOf<Pair<String, String>, MutationBucket>()
 
   override fun diagnostics(): UiBuilderServiceDiagnostics = lock.withLock {
     UiBuilderServiceDiagnostics(
@@ -201,6 +264,11 @@ class PersistentUiBuilderService(
       activeExports = activeExports.get(),
       peakExports = peakExports.get(),
       rejectedExportLimit = rejectedExportLimit.get(),
+      rejectedMutationRate = rejectedMutationRate.get(),
+      rejectedDocumentBytes = rejectedDocumentBytes.get(),
+      rejectedAssetBytes = rejectedAssetBytes.get(),
+      timedOutExports = timedOutExports.get(),
+      activeMutationBuckets = mutationBuckets.size,
     )
   }
 
@@ -212,6 +280,9 @@ class PersistentUiBuilderService(
       require(designId == design.document.id) { "stored design key/id mismatch for $designId" }
       require(design.document.nodes.size <= limits.maximumNodesPerDesign) {
         "stored node count exceeds configured limit for $designId"
+      }
+      documentQuotaIssue(design.document)?.let {
+        throw UiBuilderPersistenceException("stored design $designId exceeds configured limit: $it")
       }
       validateTopology(design.document)?.let {
         throw UiBuilderPersistenceException("invalid stored design $designId: ${it.message}")
@@ -310,18 +381,21 @@ class PersistentUiBuilderService(
     if (requested.nodes.size > limits.maximumNodesPerDesign) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design node limit exceeded")
     }
-    validateTopology(requested)?.let {
+    val now = clock.millis()
+    val document = requested.copy(createdAtEpochMillis = now, updatedAtEpochMillis = now)
+    documentQuotaIssue(document, countRejection = true)?.let {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it)
+    }
+    validateTopology(document)?.let {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it.message)
     }
     val catalog =
-      catalogs.resolve(requested.catalogPin)
+      catalogs.resolve(document.catalogPin)
         ?: return serviceError(ServiceErrorCodeV1.CATALOG_UNAVAILABLE, "catalog pin is unavailable")
-    catalogs.validate(requested, catalog)?.let {
+    catalogs.validate(document, catalog)?.let {
       return serviceError(it.toServiceError())
     }
 
-    val now = clock.millis()
-    val document = requested.copy(createdAtEpochMillis = now, updatedAtEpochMillis = now)
     val design =
       PersistedDesignV1(
         document = document,
@@ -571,7 +645,37 @@ class PersistentUiBuilderService(
         }
       return LockedExecution(UiBuilderServiceResponse.OperationOutcome(outcome))
     }
+    val mutationCost =
+      if (submission is UiBuilderSubmission.Batch) submission.operations.size.coerceAtLeast(1)
+      else 1
+    if (!admitMutation(actor.actorId, submission.designId, mutationCost)) {
+      rejectedMutationRate.incrementAndGet()
+      return LockedExecution(
+        UiBuilderServiceResponse.OperationOutcome(
+          rejected(
+            submission.operationId,
+            design.document.revision,
+            RejectionCodeV1.INVALID_COMMAND,
+            "mutation rate limit exceeded",
+          )
+        )
+      )
+    }
     val reduction = reduce(design, actor, wire)
+    if (reduction.outcome is AcceptedOutcomeV1) {
+      documentQuotaIssue(reduction.design.document, countRejection = true)?.let {
+        return LockedExecution(
+          UiBuilderServiceResponse.OperationOutcome(
+            rejected(
+              submission.operationId,
+              design.document.revision,
+              RejectionCodeV1.INVALID_COMMAND,
+              it,
+            )
+          )
+        )
+      }
+    }
     val outcomes =
       (reduction.design.operationOutcomes +
           (submission.operationId to OperationOutcomeRecordV1(fingerprint, reduction.outcome)))
@@ -604,6 +708,56 @@ class PersistentUiBuilderService(
       UiBuilderServiceResponse.OperationOutcome(reduction.outcome),
       mailboxes,
     )
+  }
+
+  private fun admitMutation(actorId: String, designId: String, cost: Int): Boolean {
+    val now = clock.millis()
+    val key = actorId to designId
+    if (key !in mutationBuckets && mutationBuckets.size >= limits.maximumMutationBuckets) {
+      return false
+    }
+    val bucket = mutationBuckets.getOrPut(key) { MutationBucket(limits.mutationBurstCapacity, now) }
+    val elapsed = (now - bucket.refilledAtMillis).coerceAtLeast(0)
+    val refillPeriods = elapsed / limits.mutationRefillIntervalMillis
+    if (refillPeriods > 0) {
+      val refill =
+        (refillPeriods * limits.mutationRefillAmount.toLong())
+          .coerceAtMost(limits.mutationBurstCapacity.toLong())
+          .toInt()
+      bucket.tokens = (bucket.tokens + refill).coerceAtMost(limits.mutationBurstCapacity)
+      bucket.refilledAtMillis += refillPeriods * limits.mutationRefillIntervalMillis
+    }
+    if (cost > bucket.tokens) return false
+    bucket.tokens -= cost
+    return true
+  }
+
+  private fun documentQuotaIssue(
+    document: DesignDocumentV1,
+    countRejection: Boolean = false,
+  ): String? {
+    val embeddedBytes =
+      document.assets.values.fold(0L) { total, asset ->
+        val source = asset.source
+        if (source is EmbeddedAssetSourceV1) {
+          (total + conservativeDecodedBase64Bytes(source.base64)).coerceAtMost(
+            Int.MAX_VALUE.toLong()
+          )
+        } else {
+          total
+        }
+      }
+    if (embeddedBytes > limits.maximumEmbeddedAssetBytes) {
+      if (countRejection) rejectedAssetBytes.incrementAndGet()
+      return "embedded asset byte limit exceeded"
+    }
+    val serializedBytes =
+      json.encodeToString(DesignDocumentV1.serializer(), document).encodeToByteArray().size
+    if (serializedBytes > limits.maximumSerializedDocumentBytes) {
+      if (countRejection) rejectedDocumentBytes.incrementAndGet()
+      return "serialized document byte limit exceeded"
+    }
+    return null
   }
 
   private fun delta(
@@ -693,6 +847,7 @@ class PersistentUiBuilderService(
   private suspend fun exportAdmitted(call: UiBuilderServiceCall): UiBuilderServiceResponse {
     val request = call.request as UiBuilderServiceRequest.ExportDesign
     val pinned: RevisionPinnedUiBuilderExport
+    val pinnedSequence: Long
     lock.withLock {
       val design =
         persisted.designs[request.designId]
@@ -727,20 +882,11 @@ class PersistentUiBuilderService(
           )
         )
       }
-      val audit =
-        AuditRecordV1(
-          kind = AuditKindV1.EXPORT,
-          actorId = call.actor.actorId,
-          designId = request.designId,
-          revision = revision,
-          sequence = state.sequence,
-          operationId = null,
-          exportFormat = request.format,
-          atEpochMillis = clock.millis(),
+      documentQuotaIssue(state.document, countRejection = true)?.let {
+        return UiBuilderServiceResponse.Error(
+          UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, it)
         )
-      val updated =
-        design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
-      commitPersisted(persisted.copy(designs = persisted.designs + (request.designId to updated)))
+      }
       pinned =
         RevisionPinnedUiBuilderExport(
           actor = call.actor,
@@ -751,10 +897,29 @@ class PersistentUiBuilderService(
           catalog = catalog,
           format = request.format,
         )
+      pinnedSequence = state.sequence
     }
     val artifact =
       try {
-        exporter.export(pinned)
+        exportTaskRunner.execute(limits.exportTimeoutMillis) { exporter.export(pinned) }
+      } catch (_: UiBuilderExportTimeoutException) {
+        timedOutExports.incrementAndGet()
+        return UiBuilderServiceResponse.Error(
+          UiBuilderServiceError(
+            ServiceErrorCodeV1.INTERNAL,
+            "export timed out",
+            retryable = true,
+          )
+        )
+      } catch (_: RejectedExecutionException) {
+        rejectedExportLimit.incrementAndGet()
+        return UiBuilderServiceResponse.Error(
+          UiBuilderServiceError(
+            ServiceErrorCodeV1.BAD_REQUEST,
+            "concurrent export worker limit reached",
+            retryable = true,
+          )
+        )
       } catch (failure: Exception) {
         return UiBuilderServiceResponse.Error(
           UiBuilderServiceError(ServiceErrorCodeV1.INTERNAL, "export failed: ${failure.message}")
@@ -773,6 +938,25 @@ class PersistentUiBuilderService(
           "export executor returned a mismatched format or content digest",
         )
       )
+    }
+    lock.withLock {
+      val design =
+        persisted.designs[request.designId]
+          ?: return UiBuilderServiceResponse.Error(notFound(request.designId))
+      val audit =
+        AuditRecordV1(
+          kind = AuditKindV1.EXPORT,
+          actorId = call.actor.actorId,
+          designId = request.designId,
+          revision = pinned.revision,
+          sequence = pinnedSequence,
+          operationId = null,
+          exportFormat = request.format,
+          atEpochMillis = clock.millis(),
+        )
+      val updated =
+        design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
+      commitPersisted(persisted.copy(designs = persisted.designs + (request.designId to updated)))
     }
     return UiBuilderServiceResponse.Export(artifact)
   }
@@ -1543,6 +1727,30 @@ class PersistentUiBuilderService(
 private fun updatePeak(peak: AtomicLong, candidate: Long) {
   var observed = peak.get()
   while (candidate > observed && !peak.compareAndSet(observed, candidate)) observed = peak.get()
+}
+
+private fun conservativeDecodedBase64Bytes(encoded: String): Long {
+  val encodedCharacters = encoded.length
+  if (encodedCharacters == 0) return 0
+  val completeGroups = encodedCharacters / 4
+  val remainderBytes =
+    when (encodedCharacters % 4) {
+      0 -> 0
+      2 -> 1
+      3 -> 2
+      else -> 3
+    }
+  val padding =
+    if (encodedCharacters % 4 == 0) {
+      when {
+        encoded.endsWith("==") -> 2
+        encoded.endsWith('=') -> 1
+        else -> 0
+      }
+    } else {
+      0
+    }
+  return completeGroups.toLong() * 3 + remainderBytes - padding
 }
 
 private data class WorkingDesign(

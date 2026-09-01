@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -688,6 +689,166 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `mutation token bucket is isolated by actor and design and refills from injected clock`() {
+    val clock = MutableClock(1_000)
+    val service =
+      service(
+        clock = clock,
+        limits =
+          UiBuilderServiceLimits(
+            mutationBurstCapacity = 1,
+            mutationRefillAmount = 1,
+            mutationRefillIntervalMillis = 1_000,
+          ),
+      )
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("one", 0, InsertNodeMutationV1(textNode("one"), NodeLocationV1()))
+        ),
+      )
+    )
+
+    val rejected =
+      assertIs<RejectedOutcomeV1>(
+        assertIs<UiBuilderServiceResponse.OperationOutcome>(
+            execute(
+              service,
+              owner,
+              UiBuilderServiceRequest.ApplyOperation(
+                batch("two", 1, InsertNodeMutationV1(textNode("two"), NodeLocationV1()))
+              ),
+            )
+          )
+          .outcome
+      )
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, rejected.code)
+    assertEquals(1, currentDocument(service).revision)
+    assertEquals(1, service.diagnostics().rejectedMutationRate)
+
+    clock.nowMillis += 1_000
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("three", 1, InsertNodeMutationV1(textNode("three"), NodeLocationV1()))
+        ),
+      )
+    )
+    assertEquals(2, currentDocument(service).revision)
+  }
+
+  @Test
+  fun `document and embedded asset byte limits reject before persistence`() {
+    val documentLimited =
+      service(limits = UiBuilderServiceLimits(maximumSerializedDocumentBytes = 1_000))
+    create(documentLimited)
+    accepted(
+      execute(
+        documentLimited,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+        ),
+      )
+    )
+    val oversized =
+      assertIs<RejectedOutcomeV1>(
+        assertIs<UiBuilderServiceResponse.OperationOutcome>(
+            execute(
+              documentLimited,
+              owner,
+              UiBuilderServiceRequest.ApplyOperation(
+                batch(
+                  "oversized",
+                  1,
+                  SetPropertyMutationV1("node", "text", StringValueV1("x".repeat(2_000))),
+                )
+              ),
+            )
+          )
+          .outcome
+      )
+    assertContains(oversized.message, "serialized document byte limit")
+    assertEquals(1, currentDocument(documentLimited).revision)
+    assertEquals(1, documentLimited.diagnostics().rejectedDocumentBytes)
+
+    val assetLimited = service(limits = UiBuilderServiceLimits(maximumEmbeddedAssetBytes = 3))
+    val response =
+      execute(
+        assetLimited,
+        owner,
+        UiBuilderServiceRequest.CreateDesign(
+          document()
+            .copy(
+              assets =
+                mapOf(
+                  "large" to
+                    AssetBindingV1(
+                      mediaType = "image/png",
+                      contentDigest = "sha256:unused",
+                      source = EmbeddedAssetSourceV1("AAAAAAAA"),
+                    )
+                )
+            )
+        ),
+      )
+    assertEquals(ServiceErrorCodeV1.BAD_REQUEST, error(response).code)
+    assertEquals(1, assetLimited.diagnostics().rejectedAssetBytes)
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(assetLimited, owner, UiBuilderServiceRequest.OpenDesign("design"))).code,
+    )
+  }
+
+  @Test
+  fun `timed out exporter is interrupted and cannot write a success audit`() {
+    val storage = MemoryStorage()
+    val entered = CountDownLatch(1)
+    val interrupted = CountDownLatch(1)
+    val service =
+      PersistentUiBuilderService(
+        storage = storage,
+        catalogs = TestCatalogs,
+        exporter =
+          UiBuilderExportExecutor {
+            entered.countDown()
+            try {
+              CountDownLatch(1).await()
+            } catch (failure: InterruptedException) {
+              interrupted.countDown()
+              throw failure
+            }
+            error("unreachable")
+          },
+        clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+        limits = UiBuilderServiceLimits(exportTimeoutMillis = 50),
+      )
+    create(service)
+
+    val failure =
+      error(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", 0, ExportFormatV1.SVG),
+        )
+      )
+
+    assertTrue(entered.await(1, TimeUnit.SECONDS))
+    assertTrue(interrupted.await(1, TimeUnit.SECONDS))
+    assertEquals(ServiceErrorCodeV1.INTERNAL, failure.code)
+    assertTrue(failure.retryable)
+    assertFalse(storage.bytes!!.decodeToString().contains("\"EXPORT\""))
+    assertEquals(1, service.diagnostics().timedOutExports)
+    assertEquals(0, service.diagnostics().activeExports)
+  }
+
+  @Test
   fun `file restart preserves document access outcomes and sequence while presence disappears`() {
     val storage = FileUiBuilderStateStorage(temporaryDirectory)
     var service = service(storage = storage)
@@ -924,12 +1085,13 @@ class PersistentUiBuilderServiceTest {
     exportRequests: MutableList<RevisionPinnedUiBuilderExport> = mutableListOf(),
     limits: UiBuilderServiceLimits? = null,
     exporter: UiBuilderExportExecutor = validExporter(exportRequests),
+    clock: Clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
   ): PersistentUiBuilderService =
     PersistentUiBuilderService(
       storage = storage,
       catalogs = TestCatalogs,
       exporter = exporter,
-      clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+      clock = clock,
       limits =
         limits
           ?: UiBuilderServiceLimits(
@@ -937,6 +1099,14 @@ class PersistentUiBuilderServiceTest {
             retainedRevisionSnapshots = retained + 1,
           ),
     )
+
+  private class MutableClock(var nowMillis: Long) : Clock() {
+    override fun getZone(): ZoneId = ZoneOffset.UTC
+
+    override fun withZone(zone: ZoneId): Clock = this
+
+    override fun instant(): Instant = Instant.ofEpochMilli(nowMillis)
+  }
 
   private fun validExporter(
     exportRequests: MutableList<RevisionPinnedUiBuilderExport> = mutableListOf()

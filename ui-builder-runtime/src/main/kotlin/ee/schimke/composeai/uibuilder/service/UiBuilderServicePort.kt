@@ -191,6 +191,11 @@ data class UiBuilderServiceDiagnostics(
   val activeExports: Int,
   val peakExports: Long,
   val rejectedExportLimit: Long,
+  val rejectedMutationRate: Long,
+  val rejectedDocumentBytes: Long,
+  val rejectedAssetBytes: Long,
+  val timedOutExports: Long,
+  val activeMutationBuckets: Int,
 )
 
 interface UiBuilderServiceDiagnosticsSource {
