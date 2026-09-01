@@ -28,6 +28,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 data class UiBuilderCatalogIssue(
   val code: String,
@@ -233,8 +235,20 @@ class PersistentUiBuilderService(
     val mailboxes: List<SubscriberMailbox> = emptyList(),
   )
 
+  private data class LoadedPersistence(
+    val value: PersistedServiceV1,
+    val format: PersistenceFormat,
+  )
+
+  private enum class PersistenceFormat(val wire: String) {
+    V1("compose-preview-ui-builder-service/v1"),
+    V2("compose-preview-ui-builder-service/v2"),
+  }
+
   private val lock = ReentrantLock()
-  private var persisted: PersistedServiceV1 = decode(storage.load())
+  private val loadedPersistence = loadPersistence()
+  private var persisted: PersistedServiceV1 = loadedPersistence.value
+  private var persistenceFormat: PersistenceFormat = loadedPersistence.format
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
@@ -251,6 +265,7 @@ class PersistentUiBuilderService(
   private val rejectedDocumentBytes = AtomicLong()
   private val rejectedAssetBytes = AtomicLong()
   private val timedOutExports = AtomicLong()
+  private val persistenceMigrations = AtomicLong()
   private val mutationBuckets = mutableMapOf<Pair<String, String>, MutationBucket>()
 
   override fun diagnostics(): UiBuilderServiceDiagnostics = lock.withLock {
@@ -269,14 +284,20 @@ class PersistentUiBuilderService(
       rejectedAssetBytes = rejectedAssetBytes.get(),
       timedOutExports = timedOutExports.get(),
       activeMutationBuckets = mutationBuckets.size,
+      persistenceMigrations = persistenceMigrations.get(),
     )
   }
 
   init {
-    require(persisted.designs.size <= limits.maximumDesigns) {
+    validatePersisted(persisted)
+    persisted.designs.forEach { (designId, _) -> runtime[designId] = RuntimeDesign() }
+  }
+
+  private fun validatePersisted(value: PersistedServiceV1) {
+    require(value.designs.size <= limits.maximumDesigns) {
       "stored design count exceeds configured limit"
     }
-    persisted.designs.forEach { (designId, design) ->
+    value.designs.forEach { (designId, design) ->
       require(designId == design.document.id) { "stored design key/id mismatch for $designId" }
       require(design.document.nodes.size <= limits.maximumNodesPerDesign) {
         "stored node count exceeds configured limit for $designId"
@@ -293,7 +314,6 @@ class PersistentUiBuilderService(
       catalogs.validate(design.document, catalog)?.let {
         throw UiBuilderPersistenceException("invalid stored design $designId: ${it.message}")
       }
-      runtime[designId] = RuntimeDesign()
     }
   }
 
@@ -1680,8 +1700,70 @@ class PersistentUiBuilderService(
   }
 
   private fun commitPersisted(candidate: PersistedServiceV1) {
-    storage.replace(encode(candidate))
+    storage.replace(encode(candidate, persistenceFormat))
     persisted = candidate
+  }
+
+  /**
+   * Explicitly upgrades a validated v1 envelope to v2 with an envelope-level catalog-pin manifest.
+   * No migration is attempted during startup. The storage must retain the exact v1 generation and
+   * support explicit restore; a failed durable readback is rolled back before this method fails.
+   */
+  fun migratePersistenceToLatest(): UiBuilderPersistenceMigrationResult = lock.withLock {
+    if (persistenceFormat == PersistenceFormat.V2) {
+      val bytes = encode(persisted, PersistenceFormat.V2)
+      return UiBuilderPersistenceMigrationResult(
+        migrated = false,
+        fromFormat = PersistenceFormat.V2.wire,
+        toFormat = PersistenceFormat.V2.wire,
+        persistedBytes = bytes.size,
+      )
+    }
+    val migrationStorage =
+      storage as? RecoverableUiBuilderMigrationStorage
+        ?: throw UiBuilderPersistenceException(
+          "persistence migration requires recoverable migration storage"
+        )
+    validatePersisted(persisted)
+    val migratedBytes = encode(persisted, PersistenceFormat.V2)
+    val preflight = decode(migratedBytes)
+    check(preflight.format == PersistenceFormat.V2 && preflight.value == persisted) {
+      "v2 persistence migration preflight did not round trip"
+    }
+    migrationStorage.replaceForMigration(migratedBytes)
+    try {
+      val durable = loadPersistence()
+      if (durable.format != PersistenceFormat.V2 || durable.value != persisted) {
+        throw UiBuilderPersistenceException("migrated persistence readback mismatch")
+      }
+    } catch (failure: Throwable) {
+      val restored =
+        try {
+          migrationStorage.restoreMigrationBackup() &&
+            loadPersistence().let { it.format == PersistenceFormat.V1 && it.value == persisted }
+        } catch (rollbackFailure: Throwable) {
+          failure.addSuppressed(rollbackFailure)
+          false
+        }
+      if (!restored) {
+        throw UiBuilderPersistenceException(
+          "persistence migration failed and rollback could not be confirmed",
+          failure,
+        )
+      }
+      throw UiBuilderPersistenceException(
+        "persistence migration failed; the v1 backup was restored",
+        failure,
+      )
+    }
+    persistenceFormat = PersistenceFormat.V2
+    persistenceMigrations.incrementAndGet()
+    UiBuilderPersistenceMigrationResult(
+      migrated = true,
+      fromFormat = PersistenceFormat.V1.wire,
+      toFormat = PersistenceFormat.V2.wire,
+      persistedBytes = migratedBytes.size,
+    )
   }
 
   private fun serviceError(code: ServiceErrorCodeV1, message: String): LockedExecution =
@@ -1690,36 +1772,82 @@ class PersistentUiBuilderService(
   private fun serviceError(error: UiBuilderServiceError): LockedExecution =
     LockedExecution(UiBuilderServiceResponse.Error(error))
 
-  private fun decode(bytes: ByteArray?): PersistedServiceV1 {
-    if (bytes == null) return PersistedServiceV1()
-    val envelope =
+  private fun loadPersistence(): LoadedPersistence {
+    val bytes = storage.load()
+    return if (bytes == null) LoadedPersistence(PersistedServiceV1(), PersistenceFormat.V2)
+    else decode(bytes)
+  }
+
+  private fun decode(bytes: ByteArray): LoadedPersistence {
+    val encoded =
       try {
-        json.decodeFromString<PersistenceEnvelopeV1>(bytes.decodeToString())
+        bytes.decodeToString()
+      } catch (failure: Exception) {
+        throw UiBuilderPersistenceException("invalid UI-builder persistence UTF-8", failure)
+      }
+    val format =
+      try {
+        json.parseToJsonElement(encoded).jsonObject["format"]?.jsonPrimitive?.content
       } catch (failure: Exception) {
         throw UiBuilderPersistenceException("invalid UI-builder persistence JSON", failure)
+      } ?: throw UiBuilderPersistenceException("UI-builder persistence format is missing")
+    return when (format) {
+      PersistenceFormat.V1.wire -> {
+        val envelope = decodeEnvelope<PersistenceEnvelopeV1>(encoded)
+        verifyChecksum(envelope.checksumSha256, json.encodeToJsonElement(envelope.payload))
+        LoadedPersistence(envelope.payload, PersistenceFormat.V1)
       }
-    if (envelope.format != PERSISTENCE_FORMAT) {
-      throw UiBuilderPersistenceException(
-        "unsupported UI-builder persistence format ${envelope.format}"
-      )
+      PersistenceFormat.V2.wire -> {
+        val envelope = decodeEnvelope<PersistenceEnvelopeV2>(encoded)
+        verifyChecksum(envelope.checksumSha256, json.encodeToJsonElement(envelope.payload))
+        val expectedPins = catalogPins(envelope.payload.service)
+        if (envelope.payload.catalogPins != expectedPins) {
+          throw UiBuilderPersistenceException(
+            "UI-builder persistence catalog pin manifest mismatch"
+          )
+        }
+        LoadedPersistence(envelope.payload.service, PersistenceFormat.V2)
+      }
+      else ->
+        throw UiBuilderPersistenceException("unsupported UI-builder persistence format $format")
     }
-    val actual =
-      sha256(canonicalJson(json.encodeToJsonElement(envelope.payload)).encodeToByteArray())
-    if (actual != envelope.checksumSha256) {
+  }
+
+  private inline fun <reified T> decodeEnvelope(encoded: String): T =
+    try {
+      json.decodeFromString<T>(encoded)
+    } catch (failure: Exception) {
+      throw UiBuilderPersistenceException("invalid UI-builder persistence JSON", failure)
+    }
+
+  private fun verifyChecksum(expected: String, payload: JsonElement) {
+    val actual = sha256(canonicalJson(payload).encodeToByteArray())
+    if (actual != expected) {
       throw UiBuilderPersistenceException("UI-builder persistence checksum mismatch")
     }
-    return envelope.payload
   }
 
-  private fun encode(value: PersistedServiceV1): ByteArray {
-    val checksum = sha256(canonicalJson(json.encodeToJsonElement(value)).encodeToByteArray())
-    return json
-      .encodeToString(PersistenceEnvelopeV1(PERSISTENCE_FORMAT, checksum, value))
-      .encodeToByteArray()
+  private fun encode(value: PersistedServiceV1, format: PersistenceFormat): ByteArray {
+    val encoded =
+      when (format) {
+        PersistenceFormat.V1 -> {
+          val checksum = sha256(canonicalJson(json.encodeToJsonElement(value)).encodeToByteArray())
+          json.encodeToString(PersistenceEnvelopeV1(format.wire, checksum, value))
+        }
+        PersistenceFormat.V2 -> {
+          val payload = PersistencePayloadV2(value, catalogPins(value))
+          val checksum =
+            sha256(canonicalJson(json.encodeToJsonElement(payload)).encodeToByteArray())
+          json.encodeToString(PersistenceEnvelopeV2(format.wire, checksum, payload))
+        }
+      }
+    return encoded.encodeToByteArray()
   }
+
+  private fun catalogPins(value: PersistedServiceV1): Map<String, CatalogReferenceV1> =
+    value.designs.mapValues { (_, design) -> design.document.catalogPin }
 
   companion object {
-    private const val PERSISTENCE_FORMAT = "compose-preview-ui-builder-service/v1"
     private val json = Json { encodeDefaults = true }
   }
 }
@@ -1781,6 +1909,20 @@ private data class PersistenceEnvelopeV1(
   val format: String,
   val checksumSha256: String,
   val payload: PersistedServiceV1,
+)
+
+@Serializable
+private data class PersistenceEnvelopeV2(
+  val format: String,
+  val checksumSha256: String,
+  val payload: PersistencePayloadV2,
+)
+
+@Serializable
+private data class PersistencePayloadV2(
+  val service: PersistedServiceV1,
+  /** Redundant by design: startup fails if a design pin and the envelope manifest ever diverge. */
+  val catalogPins: Map<String, CatalogReferenceV1>,
 )
 
 @Serializable

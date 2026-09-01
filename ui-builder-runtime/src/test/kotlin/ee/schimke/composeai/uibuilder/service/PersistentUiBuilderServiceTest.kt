@@ -18,6 +18,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.startCoroutine
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -25,7 +26,12 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.io.TempDir
 
 class PersistentUiBuilderServiceTest {
@@ -945,7 +951,7 @@ class PersistentUiBuilderServiceTest {
     Files.writeString(
       stateFile,
       Files.readString(stateFile)
-        .replace("compose-preview-ui-builder-service/v1", "compose-preview-ui-builder-service/v2"),
+        .replace("compose-preview-ui-builder-service/v2", "compose-preview-ui-builder-service/v99"),
     )
 
     val failure =
@@ -953,7 +959,101 @@ class PersistentUiBuilderServiceTest {
         service(storage = FileUiBuilderStateStorage(temporaryDirectory))
       }
     assertContains(failure.message.orEmpty(), "unsupported UI-builder persistence format")
-    assertContains(failure.message.orEmpty(), "compose-preview-ui-builder-service/v2")
+    assertContains(failure.message.orEmpty(), "compose-preview-ui-builder-service/v99")
+  }
+
+  @Test
+  fun `explicit v1 migration preflights and retains an exact rollback generation`() {
+    val storage = FileUiBuilderStateStorage(temporaryDirectory)
+    create(service(storage = storage))
+    val stateFile = temporaryDirectory.resolve(FileUiBuilderStateStorage.STATE_FILE)
+    val legacy = legacyV1(Files.readAllBytes(stateFile))
+    Files.write(stateFile, legacy)
+
+    val migrating = service(storage = FileUiBuilderStateStorage(temporaryDirectory))
+    assertContentEquals(legacy, Files.readAllBytes(stateFile), "startup must not rewrite v1")
+    accepted(
+      execute(
+        migrating,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("pre-migration", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+        ),
+      )
+    )
+    val preMigration = Files.readAllBytes(stateFile)
+    assertContains(preMigration.decodeToString(), "compose-preview-ui-builder-service/v1")
+    val result = migrating.migratePersistenceToLatest()
+
+    assertTrue(result.migrated)
+    assertEquals("compose-preview-ui-builder-service/v1", result.fromFormat)
+    assertEquals("compose-preview-ui-builder-service/v2", result.toFormat)
+    assertEquals(1, migrating.diagnostics().persistenceMigrations)
+    assertContains(Files.readString(stateFile), "compose-preview-ui-builder-service/v2")
+    assertContentEquals(
+      preMigration,
+      Files.readAllBytes(temporaryDirectory.resolve(FileUiBuilderStateStorage.BACKUP_FILE)),
+    )
+    assertEquals(1, currentDocument(migrating).revision)
+    assertFalse(migrating.migratePersistenceToLatest().migrated)
+    assertEquals(1, migrating.diagnostics().persistenceMigrations)
+
+    val fileStorage = FileUiBuilderStateStorage(temporaryDirectory)
+    assertTrue(fileStorage.restoreMigrationBackup())
+    assertContentEquals(preMigration, Files.readAllBytes(stateFile))
+    val rolledBack = service(storage = FileUiBuilderStateStorage(temporaryDirectory))
+    assertEquals(1, currentDocument(rolledBack).revision)
+    assertContentEquals(
+      preMigration,
+      Files.readAllBytes(stateFile),
+      "rollback stays v1 until explicit retry",
+    )
+  }
+
+  @Test
+  fun `failed migrated readback restores v1 and reports no successful migration`() {
+    val seed = MemoryStorage()
+    create(service(storage = seed))
+    val legacy = legacyV1(assertNotNull(seed.bytes))
+    val storage = CorruptingMigrationStorage(legacy)
+    val migrating = service(storage = storage)
+
+    val failure =
+      assertFailsWith<UiBuilderPersistenceException> { migrating.migratePersistenceToLatest() }
+
+    assertContains(failure.message.orEmpty(), "v1 backup was restored")
+    assertContentEquals(legacy, storage.bytes)
+    assertEquals(1, storage.restoreCalls)
+    assertEquals(0, migrating.diagnostics().persistenceMigrations)
+    assertEquals(0, currentDocument(migrating).revision)
+  }
+
+  @Test
+  fun `v2 catalog pin manifest mismatch fails closed even with a valid checksum`() {
+    val storage = FileUiBuilderStateStorage(temporaryDirectory)
+    create(service(storage = storage))
+    val stateFile = temporaryDirectory.resolve(FileUiBuilderStateStorage.STATE_FILE)
+    val root = persistenceJson.parseToJsonElement(Files.readString(stateFile)).jsonObject
+    val payload = root.getValue("payload").jsonObject
+    val mismatchedPayload = JsonObject(payload + ("catalogPins" to JsonObject(emptyMap())))
+    val rewritten =
+      JsonObject(
+        root +
+          mapOf(
+            "checksumSha256" to
+              JsonPrimitive(
+                sha256(canonicalPersistenceJson(mismatchedPayload).encodeToByteArray())
+              ),
+            "payload" to mismatchedPayload,
+          )
+      )
+    Files.writeString(stateFile, rewritten.toString())
+
+    val failure =
+      assertFailsWith<UiBuilderPersistenceException> {
+        service(storage = FileUiBuilderStateStorage(temporaryDirectory))
+      }
+    assertContains(failure.message.orEmpty(), "catalog pin manifest mismatch")
   }
 
   @Test
@@ -1194,6 +1294,31 @@ class PersistentUiBuilderServiceTest {
     }
   }
 
+  private class CorruptingMigrationStorage(initial: ByteArray) :
+    RecoverableUiBuilderMigrationStorage {
+    var bytes: ByteArray = initial.copyOf()
+    private var backup: ByteArray? = null
+    var restoreCalls: Int = 0
+
+    override fun load(): ByteArray = bytes.copyOf()
+
+    override fun replace(value: ByteArray) {
+      bytes = value.copyOf()
+    }
+
+    override fun replaceForMigration(value: ByteArray) {
+      backup = bytes.copyOf()
+      bytes = "corrupt migrated readback".encodeToByteArray()
+    }
+
+    override fun restoreMigrationBackup(): Boolean {
+      restoreCalls += 1
+      val value = backup ?: return false
+      bytes = value.copyOf()
+      return true
+    }
+  }
+
   private class FailingStorage : UiBuilderStateStorage {
     private var bytes: ByteArray? = null
     var failWrites: Boolean = false
@@ -1304,3 +1429,32 @@ private fun UiBuilderServiceUpdate.sequence(): Long =
 
 private fun sha256(bytes: ByteArray): String =
   MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+private val persistenceJson = Json { encodeDefaults = true }
+
+private fun legacyV1(v2: ByteArray): ByteArray {
+  val root = persistenceJson.parseToJsonElement(v2.decodeToString()).jsonObject
+  val service = root.getValue("payload").jsonObject.getValue("service")
+  val checksum = sha256(canonicalPersistenceJson(service).encodeToByteArray())
+  return JsonObject(
+      mapOf(
+        "format" to JsonPrimitive("compose-preview-ui-builder-service/v1"),
+        "checksumSha256" to JsonPrimitive(checksum),
+        "payload" to service,
+      )
+    )
+    .toString()
+    .encodeToByteArray()
+}
+
+private fun canonicalPersistenceJson(element: JsonElement): String =
+  when (element) {
+    is JsonObject ->
+      element.entries
+        .sortedBy { it.key }
+        .joinToString(",", "{", "}") { (key, value) ->
+          "${JsonPrimitive(key)}:${canonicalPersistenceJson(value)}"
+        }
+    is JsonArray -> element.joinToString(",", "[", "]", transform = ::canonicalPersistenceJson)
+    is JsonPrimitive -> element.toString()
+  }

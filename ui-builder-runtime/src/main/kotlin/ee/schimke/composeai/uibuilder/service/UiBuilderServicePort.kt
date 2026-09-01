@@ -196,6 +196,7 @@ data class UiBuilderServiceDiagnostics(
   val rejectedAssetBytes: Long,
   val timedOutExports: Long,
   val activeMutationBuckets: Int,
+  val persistenceMigrations: Long,
 )
 
 interface UiBuilderServiceDiagnosticsSource {

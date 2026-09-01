@@ -11,6 +11,13 @@ import java.nio.file.StandardOpenOption
 class UiBuilderPersistenceException(message: String, cause: Throwable? = null) :
   IllegalStateException(message, cause)
 
+data class UiBuilderPersistenceMigrationResult(
+  val migrated: Boolean,
+  val fromFormat: String,
+  val toFormat: String,
+  val persistedBytes: Int,
+)
+
 /**
  * Atomic opaque-state storage. Implementations must replace the complete value or write nothing.
  */
@@ -18,6 +25,17 @@ interface UiBuilderStateStorage {
   fun load(): ByteArray?
 
   fun replace(value: ByteArray)
+}
+
+/** Storage that can retain and explicitly restore the exact pre-migration generation. */
+interface RecoverableUiBuilderMigrationStorage : UiBuilderStateStorage {
+  /**
+   * Atomically installs [value] while retaining the exact prior primary as the migration backup.
+   */
+  fun replaceForMigration(value: ByteArray)
+
+  /** Atomically restores that exact backup; false means no rollback generation is available. */
+  fun restoreMigrationBackup(): Boolean
 }
 
 /**
@@ -34,7 +52,7 @@ interface UiBuilderStateStorage {
 class FileUiBuilderStateStorage(
   root: Path,
   private val maximumBytes: Long = 32L * 1024L * 1024L,
-) : UiBuilderStateStorage {
+) : RecoverableUiBuilderMigrationStorage {
   private val directory = root.toAbsolutePath().normalize()
   private val stateFile = directory.resolve(STATE_FILE)
   private val backupFile = directory.resolve(BACKUP_FILE)
@@ -125,6 +143,10 @@ class FileUiBuilderStateStorage(
     }
     true
   }
+
+  override fun replaceForMigration(value: ByteArray) = replace(value)
+
+  override fun restoreMigrationBackup(): Boolean = restoreBackup()
 
   private fun readBounded(path: Path, description: String): ByteArray {
     val size = Files.size(path)
