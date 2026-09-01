@@ -390,21 +390,22 @@ alone is not acceptable.
 
 ## 9. Export execution bridge gate
 
-No current JVM module can invoke `:native-catalog-m3`; it declares only `wasmJs`, and its only
-`actual` override implementation is in `wasmJsMain`. The existing per-preview `figma-svg` path does
-not make an arbitrary builder document renderable.
+The generated-source path is selected. Compose Preview's Playground compiler already stages Kotlin,
+runs the Compose compiler against a selected live catalog classpath, discovers `@Preview` entries,
+and opens bundle-less render sessions. The existing renderer/daemon lane then applies runtime
+overrides and produces PNG or `compose/figma-svg`. Override variants themselves reuse the authored
+preview function with a seeded override specification; they do not generate Kotlin wrappers.
 
-The SVG spike must produce one of these executable paths, not only a format choice:
-
-1. add a compatible non-Wasm catalog artifact and compile a generated wrapper into the existing
-   render-session/`figma-svg` pipeline;
-2. execute the version-pinned Wasm renderer headlessly and capture a versioned scene/layout record;
-   or
-3. prove another bounded bridge with the same revision/catalog/runtime provenance.
+The executable proof covers both outputs needed by this product. The full Jetcaster document
+generates standalone Compose that compiles and renders as CMP/Wasm, and the saved-revision JVM
+recorder exports structured SVG without an editor browser. The remaining adapter wraps the generated
+composable in a tiny deterministic `@Preview` entry and submits it to the existing Playground path.
+`:render-host` does not need to invoke the Wasm-only `:native-catalog-m3` implementation directly.
 
 The test document must contain nested text, clipping, elevation, and at least one embedded raster.
-It passes only when it exports without an open editor, imports into Figma at 1:1 bounds, retains
-supported text/groups, declares every raster fallback, and rasterizes within the product threshold.
+The execution bridge portion passes because it exports without an open editor and declares its
+raster fallbacks. The remaining Figma conformance portion passes only when the SVG imports at 1:1
+bounds, retains supported text/groups, and rasterizes within the product threshold.
 
 ## 10. Remaining Wave 0 outputs
 
@@ -436,11 +437,11 @@ supported text/groups, declares every raster fallback, and rasterizes within the
 - [ ] Prove version-addressed renderer loading and overlay/input coordinate mapping. Exact runtime
       pin resolution and reversible coordinate mapping are executable; immutable runtime asset
       hosting, protocol loading, and old-bundle retention remain open.
-- [ ] Complete the export execution bridge and Figma import test. The first real import is recorded
-      in `jetcaster-discover-figma-import-v1.json`: structure passes, raster parity fails. The latest
-      local export adds deterministic node/token/family/style/weight provenance, but its private
-      re-import remains pending explicit artifact-upload authorization; the evidence file keeps that
-      source separate from the last completed import.
+- [ ] Complete the Figma import test for the proven export execution bridge. The first real import
+      is recorded in `jetcaster-discover-figma-import-v1.json`: structure passes, raster parity
+      fails. The latest local export adds deterministic node/token/family/style/weight provenance,
+      but its private re-import remains pending explicit artifact-upload authorization; the evidence
+      file keeps that source separate from the last completed import.
 - [ ] Move accepted wire shapes and compatibility fixtures to `compose-preview-contracts`.
 - [ ] Replace candidate examples in this document with links to executable tests before Gate 0.
 

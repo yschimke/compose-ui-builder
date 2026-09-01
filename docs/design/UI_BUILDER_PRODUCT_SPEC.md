@@ -439,23 +439,36 @@ The repository already serves layered, self-contained `compose/figma-svg` for da
 catalog previews and inlines hybrid raster crops that Figma cannot fetch. A dynamically assembled
 design does not yet have that export path.
 
-Before committing the implementation, a time-boxed spike must compare two approaches and prove the
-execution bridge for exporting a saved revision when no editor browser is open:
+Wave 0 compared two approaches for the execution bridge that exports a saved revision when no
+editor browser is open:
 
 1. render a generated design wrapper through the existing Compose `figma-svg` pipeline; or
 2. record the Wasm scene/layout and assemble vector catalog fragments with declared raster
    fallbacks.
 
-Choose one only after importing a nested screen with text, clipping, elevation, and images into
-Figma and comparing its rasterization to the clean Wasm render. A single full-screen PNG wrapped in
-SVG is not success. Supported text and component groups must remain identifiable/editable, external
-URLs must be removed, fonts/assets must be embedded or resolved deterministically, and any raster
-fallback must be named in export metadata.
+The generated-source path is selected. Compose Preview's Playground compiler already stages Kotlin,
+runs the Compose compiler against a selected live catalog classpath, discovers `@Preview` entries,
+and opens bundle-less render sessions. The existing renderer/daemon lane then applies runtime
+overrides and produces PNG or `compose/figma-svg`. Override variants themselves do not generate
+Kotlin wrappers: they reuse the authored preview function with a seeded override specification.
 
-The chosen path must say how the native Wasm-only catalog becomes executable to the exporter: a
-compatible catalog target/artifact, generated wrapper compiled into an existing render session, or
-an explicitly bounded Wasm capture boundary. `:render-host` cannot directly call the current
-Wasm-only `:native-catalog-m3` implementation.
+The builder reuses the Playground execution path. It deterministically generates readable Compose
+for a pinned design/catalog revision plus a tiny `@Preview` entry, then submits that controlled
+source to the existing compiler and render lane. The full Jetcaster source already compiles and
+renders as CMP/Wasm, and saved revisions already export structured SVG without an editor browser;
+the remaining implementation seam is the preview-entry/Playground adapter, not a second compiler or
+renderer architecture.
+
+The choice of execution bridge does not waive the Figma gate. Import a nested screen with text,
+clipping, elevation, and images into Figma and compare its rasterization to the clean Wasm render.
+A single full-screen PNG wrapped in SVG is not success. Supported text and component groups must
+remain identifiable/editable, external URLs must be removed, fonts/assets must be embedded or
+resolved deterministically, and any raster fallback must be named in export metadata.
+
+The native Wasm catalog is therefore executable to the exporter through compatible generated
+source and a version-addressed preview artifact, not by having `:render-host` call the Wasm-only
+`:native-catalog-m3` implementation. The catalog capability digest, design revision, generated
+source hash, bundle identity, renderer identity, and output hash are export provenance.
 
 Placement follows that decision. Pure JVM render/conversion code that opens no sockets belongs in
 `:render-host`; HTTP routes, authorization, jobs, and persistence remain in `:server`. If Wasm scene
@@ -684,14 +697,13 @@ benchmark cannot close until all lanes integrate.
 | Product is coupled back into preview session lifecycle | Saved design disappears or render hosts stay resident | Separate design identity/store/protocol; borrow lifecycle patterns but not session state |
 | New dependencies violate repository boundaries | Render host gains a web/MCP server or module direction reverses | Wire shapes in contracts, pure export in render-host, routes/store in server, MCP as API adapter |
 
-Decisions intentionally left for Wave 0 evidence:
+Decisions still requiring implementation evidence:
 
-1. generated-wrapper versus recorded-scene implementation for composite SVG;
-2. retained versioned native bundles versus a catalog runtime compatibility/migration policy;
-3. exact stable child-position key, stale-command resolution, and compensating undo rules;
-4. file-backed single-process store format versus a transactional database for the first public
+1. retained versioned native bundles versus a catalog runtime compatibility/migration policy;
+2. exact stable child-position key, stale-command resolution, and compensating undo rules;
+3. file-backed single-process store format versus a transactional database for the first public
    deployment; and
-5. which Jetcaster containers are generic primitives versus reusable semantic catalog templates.
+4. which Jetcaster containers are generic primitives versus reusable semantic catalog templates.
 
 ## 17. Repository placement
 
@@ -699,19 +711,24 @@ Decisions intentionally left for Wave 0 evidence:
   native renderer protocol client, editor overlay, and Design API client. It may initially reuse
   code proven in `wasm-ui`, but should not turn the preview browser prototype into the permanent
   product boundary.
-- `server`: design routes/WebSocket, reducer orchestration, access control, persistence, export jobs,
-  and catalog capability delivery.
+- `ui-builder-runtime`: a published, transport-free JVM module containing the authoritative
+  reducer, catalog validation, persistence, revision/conflict semantics, the `DesignService` port,
+  and revision-pinned export orchestration. It depends on released UI-builder contracts but not on
+  Ktor, MCP, Compose UI, a renderer, or the frontend project.
+- `server`: Ktor design routes/WebSocket, access control, production configuration, quotas and
+  adapters from the transport-free runtime to render jobs and catalog capability delivery.
 - `render-host`: pure JVM dynamic design rendering/inspection and SVG/code conversion helpers that
-  do not open a web server, if the chosen execution bridge supplies a compatible input.
+  do not open a web server. The generated bundle is an immutable input to this lane.
 - `compose-preview-contracts`: only versioned wire shapes and compatibility fixtures needed by
   clients/adapters; no store, reducer, renderer, or MCP implementation.
-- external MCP executable/plugin: a thin authenticated client of the server's Design API unless a
-  separately reviewed server transport proves compatible with the module/classpath boundary.
+- `compose-ai-tools:mcp`: the existing agent-facing MCP executable remains a thin authenticated
+  client of the server's Design API. It owns stdio/SDK lifecycle, agent configuration and the
+  combined daemon/project tool catalog; it does not access the builder store or renderer. If the
+  builder adapter becomes substantial, split it into a transport-only module inside
+  `compose-ai-tools` rather than adding MCP dependencies to `server` or `ui-builder-runtime`.
 
-If recorded Wasm scene capture is selected, capture remains in the isolated builder frontend
-boundary; only its versioned portable shape crosses the boundary and its pure conversion may live
-in `render-host`. The Wave 0 execution-bridge decision is authoritative over these conditional
-placements.
+Wasm inspection and capture remain inside the isolated frontend boundary and may support
+interactive diagnostics, but they are not the authoritative offline export path.
 
 ### Extraction posture
 
@@ -743,12 +760,12 @@ of these are true:
 Until then, co-location is useful because the render and catalog seams are still being discovered.
 Directory isolation and contract tests prevent that convenience from becoming an implicit API.
 
-Two concrete co-location seams remain before extraction is honest. The server distribution build
+One concrete co-location seam remains before extraction is honest. The server distribution build
 currently packages the `:ui-builder` Wasm task output directly, even though the server runtime
 classpath is clean; that must become an immutable released frontend artifact or an independent
-deployment input. The first durable `DesignService` also incubates in `:ui-builder`; production
-server routes must consume a separately published pure service port/implementation rather than add
-a `:server -> :ui-builder` project dependency.
+deployment input. The durable service seam is explicit: production routes consume the published
+transport-free `ui-builder-runtime` port/implementation and never add a `:server -> :ui-builder`
+project dependency.
 
 Do not add a reverse `:render-host -> :server` edge, a web server to `:render-host`, `mavenLocal()`, a
 composite include, or implementation code to the contracts repository. `checkServeModuleBoundary`
