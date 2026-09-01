@@ -57,9 +57,9 @@ private suspend fun awaitBrowserPromise(promise: Promise<JsString>): String =
         continuation.resume(value.toString())
         null
       }
-      .catch { failure ->
+      .catch {
         continuation.resumeWithException(
-          UiBuilderProtocolException("UI-builder browser transport failed: $failure")
+          UiBuilderProtocolException(browserUiBuilderTransportFailureMessage())
         )
         null
       }
@@ -71,7 +71,14 @@ private fun fetchUiBuilder(
   body: String,
 ): Promise<JsString> =
   js(
-    """fetch(endpoint, {
+    """(function () {
+      var url = new URL(endpoint, window.location.href);
+      if (url.origin !== window.location.origin) {
+        throw new Error('UI-builder HTTP endpoint must be same-origin');
+      }
+      var pageToken = new URL(window.location.href).searchParams.get('token');
+      if (pageToken && !url.searchParams.has('token')) url.searchParams.set('token', pageToken);
+      return fetch(url.toString(), {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': contentType, 'Accept': 'application/json' },
@@ -80,8 +87,12 @@ private fun fetchUiBuilder(
       return response.text().then(function (responseBody) {
         return JSON.stringify({ statusCode: response.status, body: responseBody });
       });
-    })"""
+      });
+    })()"""
   )
+
+internal fun browserUiBuilderTransportFailureMessage(): String =
+  "UI-builder browser transport failed"
 
 internal fun browserUiBuilderWebSocketUrl(
   endpoint: String,
@@ -96,6 +107,11 @@ internal fun browserUiBuilderWebSocketUrl(
       }
       var resolvedEndpoint = endpoint.replace('{designId}', encodeURIComponent(designId));
       var url = new URL(resolvedEndpoint, window.location.href);
+      if (url.origin !== window.location.origin) {
+        throw new Error('UI-builder WebSocket endpoint must be same-origin');
+      }
+      var pageToken = new URL(window.location.href).searchParams.get('token');
+      if (pageToken && !url.searchParams.has('token')) url.searchParams.set('token', pageToken);
       if (url.protocol === 'http:') url.protocol = 'ws:';
       if (url.protocol === 'https:') url.protocol = 'wss:';
       if (hasAfterSequence) url.searchParams.set('afterSequence', afterSequence);

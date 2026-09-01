@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.js.ExperimentalWasmJsInterop::class)
+
 package ee.schimke.composeai.uibuilder.client
 
 import kotlin.test.Test
@@ -47,4 +49,43 @@ class BrowserUiBuilderTransportTest {
       )
     }
   }
+
+  @Test
+  fun `page token is encoded on the same-origin WebSocket without entering diagnostics`() {
+    val original = browserLocation()
+    try {
+      replaceBrowserLocation("?token=operator%20token%26scope%3Dwrite")
+      val url =
+        browserUiBuilderWebSocketUrl(
+          endpoint = "/api/ui-builder/v1/designs/{designId}/updates",
+          designId = "design",
+          afterSequence = "7",
+          hasAfterSequence = true,
+        )
+
+      assertTrue(url.contains("token=operator+token%26scope%3Dwrite"))
+      assertFalse(url.contains("operator token"))
+      assertFalse(browserUiBuilderTransportFailureMessage().contains("operator"))
+      assertFalse(browserUiBuilderTransportFailureMessage().contains("scope"))
+    } finally {
+      replaceBrowserLocation(original)
+    }
+  }
+
+  @Test
+  fun `credentialed transport rejects cross-origin WebSocket endpoints`() {
+    assertFailsWith<Throwable> {
+      browserUiBuilderWebSocketUrl(
+        endpoint = "https://attacker.invalid/api/ui-builder/v1/designs/{designId}/updates",
+        designId = "design",
+        afterSequence = "",
+        hasAfterSequence = false,
+      )
+    }
+  }
 }
+
+@JsFun("() => window.location.href") private external fun browserLocation(): String
+
+@JsFun("(value) => window.history.replaceState(null, '', value)")
+private external fun replaceBrowserLocation(value: String)

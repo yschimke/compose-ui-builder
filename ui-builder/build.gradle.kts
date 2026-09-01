@@ -178,3 +178,10 @@ tasks.register<Sync>("wasmFrontendDist") {
   }
   into(layout.buildDirectory.dir("wasmDist"))
 }
+
+// `:server:installDist` stages the development Wasm app while callers may also request the Kotlin
+// browser production distribution. Both Kotlin tasks touch the shared root package directory, so
+// keep their writes ordered when they appear in one task graph.
+tasks.named("wasmJsBrowserProductionWebpack") {
+  mustRunAfter("wasmJsDevelopmentExecutableCompileSync")
+}

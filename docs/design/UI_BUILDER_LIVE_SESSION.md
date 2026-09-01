@@ -4,7 +4,7 @@ The `/ui-builder/` Wasm application keeps its fixture-backed editor as the defau
 persistent session is explicit:
 
 ```text
-/ui-builder/?session=live&designId=jetcaster-discover&actor=operator&clientId=browser-a
+/ui-builder/?session=live&designId=jetcaster-discover&actor=operator&clientId=browser-a&token=…
 ```
 
 On a fresh server, add `create=1`. The browser first attempts `OpenDesign`; only a `notFound`
@@ -21,10 +21,13 @@ than leaving a browser-only document behind.
 Operation IDs combine the configured logical `clientId` with a per-page nonce. Snapshot resets and
 browser reloads therefore cannot accidentally replay an earlier operation ID.
 
-Optional `endpoint` and `updatesEndpoint` query values override the same-origin defaults. They may
-carry the existing server `token` query parameter where operator or agent-grant authentication is
-required. The transport still authenticates the actor independently: the URL `actor` must match the
-identity derived by the server.
+The top-level `token` query value is the existing server operator or agent-grant credential. The
+browser carries it to the same-origin request endpoint and WebSocket upgrade using the server's
+canonical `token` query. It is never placed in editor state, status text, protocol envelopes, or
+transport diagnostics. Optional `endpoint` and `updatesEndpoint` values may override the defaults,
+but browser transports reject cross-origin endpoints before sending a request. The transport still
+authenticates the actor independently: the URL `actor` must match the identity derived by the
+server.
 
 The toolbar reports connecting, saving, rejected, snapshot-recovery, and live sequence states. Its
 Reconnect action reopens the WebSocket from the client's last exclusive durable cursor and then
