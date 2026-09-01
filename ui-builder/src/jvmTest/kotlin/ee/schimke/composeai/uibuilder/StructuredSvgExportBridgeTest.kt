@@ -45,9 +45,8 @@ class StructuredSvgExportBridgeTest {
     assertEquals(4, Regex("<image\\b").findAll(firstRaw.svg).count())
     assertTrue(firstRaw.rasterRecords.isEmpty())
     assertFalse(Regex("(?:href|src)=\"https?://").containsMatchIn(firstRaw.svg))
-    val textElements =
-      checkNotNull(parseStrictSvg(firstRaw.svg).document).elements.filter { it.name == "text" }
-    assertEquals(37, textElements.size)
+    val elements = checkNotNull(parseStrictSvg(firstRaw.svg).document).elements
+    val textElements = elements.filter { it.name == "text" }
     assertTrue(textElements.all { it.attributes["font-family"] == "Inter" })
     assertTrue(textElements.all { it.attributes["font-style"] == "normal" })
     assertTrue(textElements.all { it.attributes["data-compose-node-id"] in document.nodes })
@@ -60,12 +59,60 @@ class StructuredSvgExportBridgeTest {
       }
     )
     assertTrue(textElements.all { it.attributes["data-compose-typography-token"] != null })
-    assertEquals(setOf("400", "500"), textElements.map { it.attributes["font-weight"] }.toSet())
     assertEquals(
-      document.nodes.values.filter { it.componentId == "m3/text" }.map { it.id }.toSet(),
-      textElements.map { it.attributes.getValue("data-compose-node-id") }.toSet(),
+      setOf("400", "500", "600"),
+      textElements.map { it.attributes["font-weight"] }.toSet(),
     )
+    val emittedTextNodeIds =
+      textElements.map { it.attributes.getValue("data-compose-node-id") }.toSet()
+    // Skia may split a wrapped text node into a different number of line fragments across its
+    // Linux and macOS backends. Authored node identity is the stable structural contract.
+    assertEquals(26, emittedTextNodeIds.size)
+    assertEquals(
+      document.nodes.values.filter { it.componentId == "m3/text" }.map { it.id }.toSet() -
+        "detail-episode-139-meta",
+      emittedTextNodeIds,
+    )
+    assertFalse("detail-episode-139-meta" in emittedTextNodeIds)
     assertEquals(textElements.size, textElements.map { it.attributes.getValue("id") }.toSet().size)
+    val authoredIconNodeIds =
+      setOf(
+        "chip-crime-check",
+        "detail-episode-139-more-icon",
+        "detail-episode-139-play-icon",
+        "detail-episode-139-queue-icon",
+        "detail-episode-140-more-icon",
+        "detail-episode-140-play-icon",
+        "detail-episode-140-queue-icon",
+        "detail-follow-icon",
+        "detail-more-icon",
+        "main-episode-more-icon",
+        "main-episode-play-icon",
+        "main-episode-queue-icon",
+        "podcast-card-android-follow-icon",
+        "podcast-card-google-follow-icon",
+        "search-account-icon",
+        "search-leading-icon",
+        "toolbar-discover-icon",
+        "toolbar-library-icon",
+      )
+    assertEquals(
+      authoredIconNodeIds,
+      document.nodes.values.filter { it.componentId == "m3/icon" }.map { it.id }.toSet(),
+    )
+    authoredIconNodeIds.forEach { nodeId ->
+      val icon = document.nodes.getValue(nodeId)
+      val isolated =
+        document.copy(
+          id = "${document.id}-vector-proof-$nodeId",
+          roots = listOf(nodeId),
+          nodes = mapOf(nodeId to icon),
+        )
+      val iconRecording = JvmSkiaStructuredSvgRecorder.record(isolated)
+      assertTrue(Regex("<path\\b").containsMatchIn(iconRecording.svg), nodeId)
+      assertFalse(Regex("<image\\b").containsMatchIn(iconRecording.svg), nodeId)
+      assertTrue(iconRecording.rasterRecords.isEmpty(), nodeId)
+    }
 
     val result = executeSavedDocumentSvgExport(job, catalog, JvmSkiaStructuredSvgRecorder)
     val exported = assertIs<SavedDocumentSvgExportResult.Ok>(result, result.toString())

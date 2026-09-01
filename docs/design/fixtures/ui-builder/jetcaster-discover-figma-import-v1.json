@@ -1,24 +1,24 @@
 {
   "schemaVersion": 2,
   "status": "no-go",
-  "capturedAt": "2026-08-31T20:57:19Z",
+  "capturedAt": "2026-08-31T22:27:32Z",
   "latestLocalExport": {
     "designId": "fixture-jetcaster-discover-expanded",
-    "revision": 99,
-    "documentContentSha256": "09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643",
-    "svgSha256": "ba9ef57c2eece563c66ffe3c153255bcb17133c88b6629ec318c1aad82f47115",
-    "svgBytes": 147147,
+    "revision": 108,
+    "documentContentSha256": "5d58ee43992be772626f2fd6a7e1cae094fa25ca7babdf55418ad80bca702b39",
+    "svgSha256": "74a9b2eb62cb882ea09812decea25f48d07e0b7317d51d8f14c97f24c49fea6c",
+    "svgBytes": 148372,
     "width": 1280,
     "height": 800,
     "typography": {
-      "textFragmentCount": 37,
-      "authoredTextNodeCount": 25,
+      "textFragmentCount": 38,
+      "authoredTextNodeCount": 27,
       "family": "Inter",
       "familySource": "figma-inter-adapter-v1",
       "materialTokenSource": "material3-token-v1",
-      "styleCounts": { "normal": 37 },
-      "weightCounts": { "400": 25, "500": 12 },
-      "nodeProvenanceCount": 37
+      "styleCounts": { "normal": 38 },
+      "weightCounts": { "400": 18, "500": 18, "600": 2 },
+      "nodeProvenanceCount": 38
     }
   },
   "lastCompletedFigmaImport": {
@@ -61,7 +61,7 @@
   },
   "privateImportGate": {
     "status": "pending-explicit-upload-authorization",
-    "sourceSvgSha256": "ba9ef57c2eece563c66ffe3c153255bcb17133c88b6629ec318c1aad82f47115",
+    "sourceSvgSha256": "74a9b2eb62cb882ea09812decea25f48d07e0b7317d51d8f14c97f24c49fea6c",
     "draftCreated": true,
     "draftMutated": false,
     "requiredEvidence": [
@@ -71,8 +71,8 @@
     ]
   },
   "findings": [
-    "The latest local SVG is deterministic and carries exact authored node and Material typography-token provenance on all 37 text fragments.",
-    "The latest local SVG explicitly requests Inter with 25 regular and 12 medium fragments; a focused synthetic export also proves regular, medium and bold serialization.",
+    "The latest local SVG is deterministic and carries exact authored node and Material typography-token provenance on all 38 visible text fragments; the clipped second-episode metadata remains authored but is correctly absent from the 1280x800 export viewport.",
+    "The latest local SVG explicitly requests Inter with 18 regular, 18 medium, and 2 semibold fragments; a focused synthetic export also proves regular, medium and bold serialization.",
     "The last completed Figma import used the preceding SVG, normalized every text fragment to Inter Regular and differed from its then-current clean Wasm snapshot by 5.597%.",
     "The latest SVG has not been uploaded because repository artifact upload to the private draft is awaiting explicit authorization.",
     "Figma weight preservation and current raster parity therefore remain unmeasured and the product/Figma gate remains NO-GO."

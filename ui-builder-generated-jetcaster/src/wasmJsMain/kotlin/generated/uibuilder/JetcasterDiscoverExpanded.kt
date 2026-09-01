@@ -1,4 +1,4 @@
-// Generator content SHA-256: 9b03d5a3e13c87145244526db38f4ac14801ab21bb8f56d480447321d68f191c
+// Generator content SHA-256: 51c187093b7e7b3b31fc27fb29bd423c07943c8d320920c003671fd91bc4c2e5
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -26,12 +26,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 
-// Generated from design fixture-jetcaster-discover-expanded revision 99.
+// Generated from design fixture-jetcaster-discover-expanded revision 108.
 // Catalog m3-catalog@candidate; capability candidate.
 // TODO[ADAPTIVE_COMPATIBILITY_HELPER] node=pane-scaffold: two-pane helper does not prove adaptive
 // posture or motion parity
@@ -110,6 +111,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       text = "Search for a podcast",
                       style = MaterialTheme.typography.bodyLarge,
                       color = MaterialTheme.colorScheme.onSurfaceVariant,
+                      fontWeight = null,
                       maxLines = 2147483647,
                       overflow = TextOverflow.Ellipsis,
                       modifier = Modifier,
@@ -172,6 +174,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   text = "Crime",
                                   style = MaterialTheme.typography.bodyMedium,
                                   color = Color.Unspecified,
+                                  fontWeight = null,
                                   maxLines = 2147483647,
                                   overflow = TextOverflow.Ellipsis,
                                   modifier = Modifier,
@@ -204,6 +207,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   text = "News",
                                   style = MaterialTheme.typography.bodyMedium,
                                   color = Color.Unspecified,
+                                  fontWeight = null,
                                   maxLines = 2147483647,
                                   overflow = TextOverflow.Ellipsis,
                                   modifier = Modifier,
@@ -226,6 +230,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   text = "Comedy",
                                   style = MaterialTheme.typography.bodyMedium,
                                   color = Color.Unspecified,
+                                  fontWeight = null,
                                   maxLines = 2147483647,
                                   overflow = TextOverflow.Ellipsis,
                                   modifier = Modifier,
@@ -313,6 +318,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     text = "Android Developers Backstage",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color(0xFFFFFFFF),
+                                    fontWeight = null,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier =
@@ -393,6 +399,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     text = "Google Developers podcast",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color(0xFFFFFFFF),
+                                    fontWeight = null,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier =
@@ -454,6 +461,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     text = "Episode 140: Lorem ipsum dolor",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = Color.Unspecified,
+                                    fontWeight = null,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier,
@@ -464,6 +472,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     text = "Android Developers Backstage",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = null,
                                     maxLines = 2147483647,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier,
@@ -475,6 +484,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                       "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = Color.Unspecified,
+                                    fontWeight = null,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier,
@@ -522,6 +532,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   text = "May 16, 2024 · 42 min",
                                   style = MaterialTheme.typography.bodySmall,
                                   color = Color.Unspecified,
+                                  fontWeight = null,
                                   maxLines = 1,
                                   overflow = TextOverflow.Ellipsis,
                                   modifier = Modifier.weight(1f),
@@ -604,6 +615,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         text = "Library",
                         style = MaterialTheme.typography.labelLarge,
                         color = Color.Unspecified,
+                        fontWeight = null,
                         maxLines = 2147483647,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier,
@@ -640,6 +652,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                           text = "Discover",
                           style = MaterialTheme.typography.labelLarge,
                           color = MaterialTheme.colorScheme.onTertiary,
+                          fontWeight = null,
                           maxLines = 2147483647,
                           overflow = TextOverflow.Ellipsis,
                           modifier = Modifier,
@@ -677,6 +690,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                   text = "Podcast details",
                   style = MaterialTheme.typography.titleLarge,
                   color = Color.Unspecified,
+                  fontWeight = null,
                   maxLines = 2147483647,
                   overflow = TextOverflow.Ellipsis,
                   modifier = Modifier.weight(1f),
@@ -754,11 +768,12 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                               // node:detail-podcast-title component:m3/text symbol:Text
-                              // typed-properties:{"maxLines":{"type":"int","value":3},"style":{"type":"typographyToken","value":"headlineSmall"},"text":{"type":"string","value":"Android Developers Backstage"}}
+                              // typed-properties:{"fontWeight":{"type":"enum","value":"semiBold"},"maxLines":{"type":"int","value":3},"style":{"type":"typographyToken","value":"headlineSmall"},"text":{"type":"string","value":"Android Developers Backstage"}}
                               Text(
                                 text = "Android Developers Backstage",
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = Color.Unspecified,
+                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier,
@@ -769,6 +784,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 text = "Android Developers",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = null,
                                 maxLines = 2147483647,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier,
@@ -779,12 +795,27 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 onClick = { Unit },
                                 modifier = Modifier.semantics { selected = true },
                               ) {
+                                // node:detail-follow-icon component:m3/icon symbol:Icon
+                                // typed-properties:{"contentDescription":{"type":"string","value":""},"iconKey":{"type":"enum","value":"check"}}
+                                Icon(
+                                  imageVector = builderIcon("check"),
+                                  contentDescription = null,
+                                  tint = LocalContentColor.current,
+                                  modifier =
+                                    Modifier.padding(
+                                      start = 0.dp,
+                                      top = 0.dp,
+                                      end = 8.dp,
+                                      bottom = 0.dp,
+                                    ),
+                                )
                                 // node:detail-follow-label component:m3/text symbol:Text
                                 // typed-properties:{"style":{"type":"typographyToken","value":"labelLarge"},"text":{"type":"string","value":"Following"}}
                                 Text(
                                   text = "Following",
                                   style = MaterialTheme.typography.labelLarge,
                                   color = Color.Unspecified,
+                                  fontWeight = null,
                                   maxLines = 2147483647,
                                   overflow = TextOverflow.Ellipsis,
                                   modifier = Modifier,
@@ -804,6 +835,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         "An official podcast from the Android team, featuring conversations about the latest platform, tools, libraries, and people behind Android development.",
                       style = MaterialTheme.typography.bodyLarge,
                       color = MaterialTheme.colorScheme.onSurfaceVariant,
+                      fontWeight = null,
                       maxLines = 2147483647,
                       overflow = TextOverflow.Ellipsis,
                       modifier = Modifier,
@@ -818,11 +850,11 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       verticalAlignment = Alignment.CenterVertically,
                     ) {
                       // node:detail-category-chip component:m3/filter-chip symbol:FilterChip
-                      // typed-properties:{"enabled":{"type":"bool","value":false},"selected":{"type":"bool","value":false}}
+                      // typed-properties:{"enabled":{"type":"bool","value":true},"selected":{"type":"bool","value":false}}
                       FilterChip(
                         selected = false,
                         onClick = { Unit },
-                        enabled = false,
+                        enabled = true,
                         shape = RoundedCornerShape(16.dp),
                         label = {
                           // node:detail-category-label component:m3/text symbol:Text
@@ -831,6 +863,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                             text = "Technology",
                             style = MaterialTheme.typography.labelLarge,
                             color = Color.Unspecified,
+                            fontWeight = null,
                             maxLines = 2147483647,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier,
@@ -854,6 +887,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       text = "Latest episodes",
                       style = MaterialTheme.typography.titleLarge,
                       color = Color.Unspecified,
+                      fontWeight = null,
                       maxLines = 2147483647,
                       overflow = TextOverflow.Ellipsis,
                       modifier = Modifier,
@@ -870,38 +904,58 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       ) {
                         Box(Modifier.fillMaxSize()) {
                           // node:detail-episode-140-column component:layout/column symbol:Column
-                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":8}}
+                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":0}}
                           Column(
                             modifier =
                               Modifier.padding(
                                 start = 16.dp,
-                                top = 16.dp,
+                                top = 12.dp,
                                 end = 16.dp,
                                 bottom = 12.dp,
                               ),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(0.dp),
                           ) {
-                            // node:detail-episode-140-title component:m3/text symbol:Text
-                            // typed-properties:{"maxLines":{"type":"int","value":2},"style":{"type":"typographyToken","value":"titleMedium"},"text":{"type":"string","value":"Episode 140: Lorem ipsum dolor"}}
-                            Text(
-                              text = "Episode 140: Lorem ipsum dolor",
-                              style = MaterialTheme.typography.titleMedium,
-                              color = Color.Unspecified,
-                              maxLines = 2,
-                              overflow = TextOverflow.Ellipsis,
+                            // node:detail-episode-140-copy component:layout/column symbol:Column
+                            // typed-properties:{"verticalSpacingDp":{"type":"float","value":4}}
+                            Column(
                               modifier = Modifier,
-                            )
-                            // node:detail-episode-140-summary component:m3/text symbol:Text
-                            // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Romain, Chet and Tor talk with the System UI team about Bubbles."}}
-                            Text(
-                              text =
-                                "Romain, Chet and Tor talk with the System UI team about Bubbles.",
-                              style = MaterialTheme.typography.bodyMedium,
-                              color = MaterialTheme.colorScheme.onSurfaceVariant,
-                              maxLines = 2,
-                              overflow = TextOverflow.Ellipsis,
-                              modifier = Modifier,
-                            )
+                              verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                              // node:detail-episode-140-title component:m3/text symbol:Text
+                              // typed-properties:{"maxLines":{"type":"int","value":2},"style":{"type":"typographyToken","value":"titleMedium"},"text":{"type":"string","value":"Episode 140: Lorem ipsum dolor"}}
+                              Text(
+                                text = "Episode 140: Lorem ipsum dolor",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.Unspecified,
+                                fontWeight = null,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier,
+                              )
+                              // node:detail-episode-140-podcast component:m3/text symbol:Text
+                              // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"Android Developers Backstage"}}
+                              Text(
+                                text = "Android Developers Backstage",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = null,
+                                maxLines = 2147483647,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier,
+                              )
+                              // node:detail-episode-140-summary component:m3/text symbol:Text
+                              // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"Romain, Chet and Tor talk with the System UI team about Bubbles."}}
+                              Text(
+                                text =
+                                  "Romain, Chet and Tor talk with the System UI team about Bubbles.",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = null,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier,
+                              )
+                            }
                             // node:detail-episode-140-footer component:layout/row symbol:Row
                             // typed-properties:{"verticalAlignment":{"type":"enum","value":"center"}}
                             Row(
@@ -932,6 +986,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 text = "May 16, 2024 · 42 min",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Unspecified,
+                                fontWeight = null,
                                 maxLines = 2147483647,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
@@ -955,6 +1010,25 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   modifier = Modifier,
                                 )
                               }
+                              // node:detail-episode-140-more component:m3/icon-button
+                              // symbol:IconButton
+                              // typed-properties:{"contentDescription":{"type":"string","value":"More Episode 140 options"}}
+                              IconButton(
+                                onClick = {},
+                                modifier =
+                                  Modifier.semantics {
+                                    contentDescription = "More Episode 140 options"
+                                  },
+                              ) {
+                                // node:detail-episode-140-more-icon component:m3/icon symbol:Icon
+                                // typed-properties:{"iconKey":{"type":"enum","value":"moreVert"}}
+                                Icon(
+                                  imageVector = builderIcon("moreVert"),
+                                  contentDescription = null,
+                                  tint = LocalContentColor.current,
+                                  modifier = Modifier,
+                                )
+                              }
                             }
                           }
                         }
@@ -972,38 +1046,58 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       ) {
                         Box(Modifier.fillMaxSize()) {
                           // node:detail-episode-139-column component:layout/column symbol:Column
-                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":8}}
+                          // typed-properties:{"verticalSpacingDp":{"type":"float","value":0}}
                           Column(
                             modifier =
                               Modifier.padding(
                                 start = 16.dp,
-                                top = 16.dp,
+                                top = 12.dp,
                                 end = 16.dp,
                                 bottom = 12.dp,
                               ),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(0.dp),
                           ) {
-                            // node:detail-episode-139-title component:m3/text symbol:Text
-                            // typed-properties:{"maxLines":{"type":"int","value":2},"style":{"type":"typographyToken","value":"titleMedium"},"text":{"type":"string","value":"Episode 139: Compose across screens"}}
-                            Text(
-                              text = "Episode 139: Compose across screens",
-                              style = MaterialTheme.typography.titleMedium,
-                              color = Color.Unspecified,
-                              maxLines = 2,
-                              overflow = TextOverflow.Ellipsis,
+                            // node:detail-episode-139-copy component:layout/column symbol:Column
+                            // typed-properties:{"verticalSpacingDp":{"type":"float","value":4}}
+                            Column(
                               modifier = Modifier,
-                            )
-                            // node:detail-episode-139-summary component:m3/text symbol:Text
-                            // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"A conversation about adaptive layouts, large screens, and practical Compose architecture."}}
-                            Text(
-                              text =
-                                "A conversation about adaptive layouts, large screens, and practical Compose architecture.",
-                              style = MaterialTheme.typography.bodyMedium,
-                              color = MaterialTheme.colorScheme.onSurfaceVariant,
-                              maxLines = 2,
-                              overflow = TextOverflow.Ellipsis,
-                              modifier = Modifier,
-                            )
+                              verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                              // node:detail-episode-139-title component:m3/text symbol:Text
+                              // typed-properties:{"maxLines":{"type":"int","value":2},"style":{"type":"typographyToken","value":"titleMedium"},"text":{"type":"string","value":"Episode 139: Compose across screens"}}
+                              Text(
+                                text = "Episode 139: Compose across screens",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.Unspecified,
+                                fontWeight = null,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier,
+                              )
+                              // node:detail-episode-139-podcast component:m3/text symbol:Text
+                              // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"Android Developers Backstage"}}
+                              Text(
+                                text = "Android Developers Backstage",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = null,
+                                maxLines = 2147483647,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier,
+                              )
+                              // node:detail-episode-139-summary component:m3/text symbol:Text
+                              // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"A conversation about adaptive layouts, large screens, and practical Compose architecture."}}
+                              Text(
+                                text =
+                                  "A conversation about adaptive layouts, large screens, and practical Compose architecture.",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = null,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier,
+                              )
+                            }
                             // node:detail-episode-139-footer component:layout/row symbol:Row
                             // typed-properties:{"verticalAlignment":{"type":"enum","value":"center"}}
                             Row(
@@ -1034,6 +1128,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 text = "May 9, 2024 · 38 min",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Unspecified,
+                                fontWeight = null,
                                 maxLines = 2147483647,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
@@ -1052,6 +1147,25 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                 // typed-properties:{"iconKey":{"type":"enum","value":"playlistAdd"}}
                                 Icon(
                                   imageVector = builderIcon("playlistAdd"),
+                                  contentDescription = null,
+                                  tint = LocalContentColor.current,
+                                  modifier = Modifier,
+                                )
+                              }
+                              // node:detail-episode-139-more component:m3/icon-button
+                              // symbol:IconButton
+                              // typed-properties:{"contentDescription":{"type":"string","value":"More Episode 139 options"}}
+                              IconButton(
+                                onClick = {},
+                                modifier =
+                                  Modifier.semantics {
+                                    contentDescription = "More Episode 139 options"
+                                  },
+                              ) {
+                                // node:detail-episode-139-more-icon component:m3/icon symbol:Icon
+                                // typed-properties:{"iconKey":{"type":"enum","value":"moreVert"}}
+                                Icon(
+                                  imageVector = builderIcon("moreVert"),
                                   contentDescription = null,
                                   tint = LocalContentColor.current,
                                   modifier = Modifier,

@@ -516,7 +516,7 @@ private class ComposeEmitter(
   private fun emitText(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "Text(text = \"${node.string("text").escape()}\", style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.colorExpression("color")}, maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
+      "Text(text = \"${node.string("text").escape()}\", style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.colorExpression("color")}, fontWeight = ${node.fontWeightExpression()}, maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
     )
   }
 
@@ -753,6 +753,14 @@ private fun UiBuilderNode.buttonSymbol(): String =
     "filledTonal" -> "FilledTonalButton"
     "fab" -> "FloatingActionButton"
     else -> "Button"
+  }
+
+private fun UiBuilderNode.fontWeightExpression(): String =
+  when (string("fontWeight")) {
+    "bold" -> "FontWeight.Bold"
+    "semiBold" -> "FontWeight.SemiBold"
+    "medium" -> "FontWeight.Medium"
+    else -> "null"
   }
 
 private fun UiBuilderNode.modifierArgument(): String = "modifier = ${modifierExpression()}"
@@ -1097,7 +1105,18 @@ private val HANDLED_FIELDS =
     "m3/surface" to HandledFields(setOf("containerColor"), setOf("content")),
     "m3/tab" to HandledFields(setOf("selected"), setOf("text")),
     "m3/text" to
-      HandledFields(setOf("text", "style", "color", "maxLines", "overflow", "alignment", "weight")),
+      HandledFields(
+        setOf(
+          "text",
+          "style",
+          "fontWeight",
+          "color",
+          "maxLines",
+          "overflow",
+          "alignment",
+          "weight",
+        )
+      ),
     "shape/colour-dot" to HandledFields(setOf("color", "diameterDp")),
     "shape/linear-gradient" to HandledFields(setOf("startColor", "endColor", "direction")),
     "shape/radial-gradient" to
@@ -1129,6 +1148,7 @@ private val GENERATED_IMPORTS =
       "androidx.compose.ui.graphics.Path",
       "androidx.compose.ui.graphics.drawscope.Stroke",
       "androidx.compose.ui.graphics.vector.ImageVector",
+      "androidx.compose.ui.text.font.FontWeight",
       "androidx.compose.ui.semantics.contentDescription",
       "androidx.compose.ui.semantics.selected",
       "androidx.compose.ui.semantics.semantics",

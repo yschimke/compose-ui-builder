@@ -99,8 +99,8 @@ test("public operations build the Jetcaster expanded two-pane semantic tree", ()
   const input = operations();
   const { document, hash } = replayCandidateOperations(input);
 
-  assert.equal(document.revision, 99);
-  assert.equal(Object.keys(document.nodes).length, 99);
+  assert.equal(document.revision, 108);
+  assert.equal(Object.keys(document.nodes).length, 108);
   assert.deepEqual(document.roots, ["root-surface"]);
   assert.deepEqual(document.nodes["pane-scaffold"].slots, {
     mainPane: ["main-background"],
@@ -114,6 +114,32 @@ test("public operations build the Jetcaster expanded two-pane semantic tree", ()
   assert.deepEqual(document.nodes["main-content"].slots.children, [
     "discover-grid",
     "floating-toolbar",
+  ]);
+  assert.deepEqual(document.nodes["detail-follow"].slots.content, [
+    "detail-follow-icon",
+    "detail-follow-label",
+  ]);
+  assert.deepEqual(document.nodes["detail-episode-140-copy"].slots.children, [
+    "detail-episode-140-title",
+    "detail-episode-140-podcast",
+    "detail-episode-140-summary",
+  ]);
+  assert.deepEqual(document.nodes["detail-episode-140-footer"].slots.children, [
+    "detail-episode-140-play",
+    "detail-episode-140-meta",
+    "detail-episode-140-queue",
+    "detail-episode-140-more",
+  ]);
+  assert.deepEqual(document.nodes["detail-episode-139-copy"].slots.children, [
+    "detail-episode-139-title",
+    "detail-episode-139-podcast",
+    "detail-episode-139-summary",
+  ]);
+  assert.deepEqual(document.nodes["detail-episode-139-footer"].slots.children, [
+    "detail-episode-139-play",
+    "detail-episode-139-meta",
+    "detail-episode-139-queue",
+    "detail-episode-139-more",
   ]);
   assert.equal(hash, input.expectedDocumentHash);
 });
@@ -151,11 +177,15 @@ test("real Figma import evidence remains an explicit no-go until raster parity p
 
   assert.equal(evidence.schemaVersion, 2);
   assert.equal(evidence.status, "no-go");
+  assert.equal(local.revision, document.revision);
   assert.equal(local.documentContentSha256, hash);
   assert.equal(local.width, document.environment.widthDp);
   assert.equal(local.height, document.environment.heightDp);
-  assert.equal(local.typography.textFragmentCount, 37);
-  assert.equal(local.typography.authoredTextNodeCount, 25);
+  assert.equal(local.typography.textFragmentCount, 38);
+  assert.equal(
+    local.typography.authoredTextNodeCount,
+    Object.values(document.nodes).filter(({ componentId }) => componentId === "m3/text").length,
+  );
   assert.equal(local.typography.family, "Inter");
   assert.equal(local.typography.familySource, "figma-inter-adapter-v1");
   assert.equal(local.typography.materialTokenSource, "material3-token-v1");
@@ -168,7 +198,14 @@ test("real Figma import evidence remains an explicit no-go until raster parity p
   assert.equal(completed.figmaImport.rootWidth, completed.sourceExport.width);
   assert.equal(completed.figmaImport.rootHeight, completed.sourceExport.height);
   assert.equal(completed.figmaImport.imagePaintCount, authoredImages.length);
-  assert.equal(completed.figmaImport.typeCounts.TEXT, local.typography.textFragmentCount);
+  assert.equal(
+    Object.values(completed.figmaImport.fontFamilyCounts).reduce((sum, count) => sum + count, 0),
+    completed.figmaImport.typeCounts.TEXT,
+  );
+  assert.equal(
+    Object.values(completed.figmaImport.fontStyleCounts).reduce((sum, count) => sum + count, 0),
+    completed.figmaImport.typeCounts.TEXT,
+  );
   assert.ok(completed.figmaImport.typeCounts.VECTOR > 0);
   assert.deepEqual(completed.figmaImport.fontFamilyCounts, { Inter: 37 });
   assert.deepEqual(completed.figmaImport.fontStyleCounts, { Regular: 37 });

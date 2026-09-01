@@ -36,7 +36,7 @@ class UiBuilderInspectionTest {
       snapshot.slots.single { it.parentNodeId == "category-row" && it.slotName == "items" }
 
     assertEquals("compose-ui-builder-inspection/v1", snapshot.schema)
-    assertEquals("fixture-jetcaster-discover-expanded@99", snapshot.generation.key)
+    assertEquals("fixture-jetcaster-discover-expanded@108", snapshot.generation.key)
     assertEquals(false, snapshot.generation.completed)
     assertEquals(document.nodes.keys.sorted(), snapshot.generation.expectedAuthoredNodeIds)
     assertEquals(

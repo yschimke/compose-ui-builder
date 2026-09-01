@@ -8,8 +8,8 @@
   ],
   "comparisonFixture": {
     "resource": "jetcaster-discover-operations-v1.json",
-    "revision": 99,
-    "documentHash": "09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643"
+    "revision": 108,
+    "documentHash": "5d58ee43992be772626f2fd6a7e1cae094fa25ca7babdf55418ad80bca702b39"
   },
   "source": {
     "repository": "android/compose-samples",

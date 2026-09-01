@@ -131,8 +131,8 @@ capabilities. It may not silently substitute a different layout when exporting c
 The checked-in candidate contracts are:
 
 - [`jetcaster-discover-operations-v1.json`](fixtures/ui-builder/jetcaster-discover-operations-v1.json):
-  100 public operations reducing to 99 semantic nodes and canonical document hash
-  `09b7af04ab546421f72b81b1c49564f044790b8f2db4d2304dc66ff73c148643`.
+  109 public operations reducing to 108 semantic nodes and canonical document hash
+  `5d58ee43992be772626f2fd6a7e1cae094fa25ca7babdf55418ad80bca702b39`.
 - [`jetcaster-discover-capabilities-v1.json`](fixtures/ui-builder/jetcaster-discover-capabilities-v1.json):
   24 generic component capabilities, including explicit planned/unsupported Wasm states and SVG
   evidence scoped to each authored usage in this frozen benchmark.
@@ -174,18 +174,18 @@ Confetti stays in CI as the fast, no-network compact regression. Jetcaster is th
 
 - The independent direct-Compose Wasm oracle, provenance record, and reviewable PNG are checked in
   under `ui-builder-reference-jetcaster` and `preview-harness/snapshots`.
-- The builder replays all 100 public operations and has explicit native dispatch for all 24
-  capability ids used by the resulting 99-node document.
+- The builder replays all 109 public operations and has explicit native dispatch for all 24
+  capability ids used by the resulting 108-node document.
 - Strict capability validation reports unknown ids/properties/modifiers/slots and keeps planned or
   unsupported Wasm status visible rather than substituting silently.
 - The expanded independent-oracle comparison reports `1.498%` differing pixels at threshold
   `0.1`; the compact `412 x 800` comparison reports `1.255%`. Both replay the same frozen
-  revision-99 document, and CI enforces an interim ceiling of `2%`. This is a convergence guard,
+  revision-108 document, and CI enforces an interim ceiling of `2%`. This is a convergence guard,
   not the exact release gate.
 - Revision-keyed bounds, text baselines, authored semantics, clean/editor invariance, and compact
   supporting-pane exclusion are executable. Merged accessibility semantics and off-screen lazy
   content remain open.
-- Capability-driven code generation covers the 99-node fixture with located diagnostics and now
+- Capability-driven code generation covers the 108-node fixture with located diagnostics and now
   compiles as the standalone `ui-builder-generated-jetcaster` CMP/Wasm application. Its independent
   reference comparison differs by `2.003%` expanded and `2.817%` compact at pixelmatch threshold
   `0.1`, with `2.1%` and `3.0%` interim spike ceilings respectively and a committed expanded-render

@@ -420,9 +420,22 @@ private fun String.annotateTextTypography(
   val parsed =
     requireNotNull(parseStrictSvg(this).document) { "Skia text output is not valid structured SVG" }
   val textElements = parsed.elements.filter { it.name == "text" }
+  val viewportWidthPx =
+    document.environmentNumber("widthDp") * document.environmentNumber("density")
+  val viewportHeightPx =
+    document.environmentNumber("heightDp") * document.environmentNumber("density")
   val inspectedText =
     inspection.nodes
-      .filter { it.componentId == "m3/text" && it.bounds != null && it.text != null }
+      .filter { node ->
+        val bounds = node.bounds
+        node.componentId == "m3/text" &&
+          bounds != null &&
+          node.text != null &&
+          bounds.right > 0f &&
+          bounds.bottom > 0f &&
+          bounds.x < viewportWidthPx &&
+          bounds.y < viewportHeightPx
+      }
       .associateBy(UiBuilderNodeInspection::nodeId)
   if (textElements.isEmpty()) {
     require(inspectedText.isEmpty()) { "SVG omitted ${inspectedText.size} measured text nodes" }

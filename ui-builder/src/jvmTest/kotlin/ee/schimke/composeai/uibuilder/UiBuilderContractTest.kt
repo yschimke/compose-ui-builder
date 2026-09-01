@@ -98,8 +98,8 @@ class UiBuilderContractTest {
     val result = UiBuilderReducer.replay(fixture)
     val canonical = canonicalJson(json.parseToJsonElement(json.encodeToString(result.document)))
 
-    assertEquals(99, result.document.revision)
-    assertEquals(99, result.document.nodes.size)
+    assertEquals(108, result.document.revision)
+    assertEquals(108, result.document.nodes.size)
     assertEquals(listOf("root-surface"), result.document.roots)
     assertEquals(
       listOf("main-background"),

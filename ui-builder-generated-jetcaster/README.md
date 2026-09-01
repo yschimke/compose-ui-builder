@@ -1,6 +1,6 @@
 # Capability-generated Jetcaster Compose/Wasm fixture
 
-This module compiles the readable Compose source generated from the frozen 99-node Jetcaster
+This module compiles the readable Compose source generated from the frozen 108-node Jetcaster
 document and its pinned capability catalog. `:ui-builder:generateJetcasterComposeFixture` replays
 the public operations and overwrites `JetcasterDiscoverExpanded.kt` using only
 `CapabilityComposeCodeExporter`; the host `Main.kt` supplies the Wasm viewport and pinned dark

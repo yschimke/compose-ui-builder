@@ -47,7 +47,7 @@ class UiBuilderEditorStateTest {
     val insertedId = "editor-m3-text-001"
 
     assertTrue(inserted.lastOutcome is CommandOutcome.Accepted, inserted.lastOutcome.toString())
-    assertEquals(100, inserted.document.revision)
+    assertEquals(109, inserted.document.revision)
     assertEquals(insertedId, inserted.selectedNodeId)
     assertEquals(
       insertedId,
@@ -56,7 +56,7 @@ class UiBuilderEditorStateTest {
 
     val edited = reducer.reduce(inserted, UiBuilderEditorEvent.SetText(insertedId, "From canvas"))
     assertIs<CommandOutcome.Accepted>(edited.lastOutcome)
-    assertEquals(101, edited.document.revision)
+    assertEquals(110, edited.document.revision)
     assertEquals(
       "From canvas",
       edited.document.nodes
@@ -73,7 +73,7 @@ class UiBuilderEditorStateTest {
     val moved = reducer.reduce(edited, move)
     val children = moved.document.nodes.getValue("discover-grid").slots.getValue("items")
     assertIs<CommandOutcome.Accepted>(moved.lastOutcome)
-    assertEquals(102, moved.document.revision)
+    assertEquals(111, moved.document.revision)
     assertEquals(insertedId, children[children.lastIndex - 1])
   }
 
@@ -123,7 +123,7 @@ class UiBuilderEditorStateTest {
       )
 
     assertTrue(inserted.lastOutcome is CommandOutcome.Accepted, inserted.lastOutcome.toString())
-    assertEquals(101, inserted.document.nodes.size)
+    assertEquals(110, inserted.document.nodes.size)
     val searchBar = inserted.document.nodes.getValue("editor-m3-search-bar-001")
     val inputId = searchBar.slots.getValue("inputField").single()
     assertEquals("m3/search-input-field", inserted.document.nodes.getValue(inputId).componentId)
@@ -166,7 +166,7 @@ class UiBuilderEditorStateTest {
   fun `layer tree follows authored slot order and records parents`() {
     val rows = reducer.treeRows(document)
 
-    assertEquals(99, rows.size)
+    assertEquals(108, rows.size)
     assertEquals("root-surface", rows.first().nodeId)
     val discover = rows.first { it.nodeId == "discover-grid" }
     assertEquals(5, discover.depth)
