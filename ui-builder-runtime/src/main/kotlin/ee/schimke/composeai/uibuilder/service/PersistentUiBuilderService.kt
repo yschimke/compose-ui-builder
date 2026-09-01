@@ -381,6 +381,11 @@ class PersistentUiBuilderService(
       is UiBuilderServiceRequest.OpenDesign -> open(call.actor, request.designId, revision = null)
       is UiBuilderServiceRequest.GetDesignAccess -> access(call.actor, request.designId)
       is UiBuilderServiceRequest.UpdateDesignAccess -> updateAccess(call.actor, request)
+      is UiBuilderServiceRequest.PreviewCatalogUpgrade ->
+        serviceError(
+          ServiceErrorCodeV1.BAD_REQUEST,
+          "catalog upgrade preview is not configured by this runtime",
+        )
       is UiBuilderServiceRequest.ApplyOperation -> apply(call.actor, request.submission)
       is UiBuilderServiceRequest.GetSnapshot -> open(call.actor, request.designId, request.revision)
       is UiBuilderServiceRequest.GetDelta -> delta(call.actor, request)
@@ -407,6 +412,9 @@ class PersistentUiBuilderService(
     }
     val now = clock.millis()
     val document = requested.copy(createdAtEpochMillis = now, updatedAtEpochMillis = now)
+    validateEnvironment(document.environment)?.let {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it.message)
+    }
     documentQuotaIssue(document, countRejection = true)?.let {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it)
     }
@@ -1036,6 +1044,29 @@ class PersistentUiBuilderService(
         "an atomic batch requires at least one mutation",
       )
     }
+    val environmentChanges =
+      command.operations.flatMapIndexed { operationIndex, mutation ->
+        if (mutation is UpdateEnvironmentMutationV1)
+          mutation.changes.map { operationIndex to it.field }
+        else emptyList()
+      }
+    val duplicateEnvironmentField =
+      environmentChanges.groupBy { it.second }.entries.firstOrNull { it.value.size > 1 }
+    if (duplicateEnvironmentField != null) {
+      val duplicate = duplicateEnvironmentField.value[1]
+      return rejectedReduction(
+        design,
+        command.operationId,
+        rejected(
+          command.operationId,
+          design.document.revision,
+          RejectionCodeV1.INVALID_COMMAND,
+          "environment field ${duplicate.second} is changed more than once",
+          operationIndex = duplicate.first,
+          environmentField = duplicate.second,
+        ),
+      )
+    }
     if (
       command.baseRevision < design.document.revision &&
         command.operations.any { it is DeleteNodeMutationV1 || it is RestoreNodeMutationV1 }
@@ -1228,6 +1259,7 @@ class PersistentUiBuilderService(
         documentHash(document),
         idempotentReplay = false,
         conflicts = conflicts,
+        documentUpdatedAtEpochMillis = now,
       )
     val kind =
       when (submission) {
@@ -1497,6 +1529,67 @@ class PersistentUiBuilderService(
             conflicts,
           )
         }
+        is UpdateEnvironmentMutationV1 -> {
+          if (mutation.changes.isEmpty()) {
+            fail(
+              RejectionCodeV1.INVALID_COMMAND,
+              "environment change list is empty",
+              operationIndex = index,
+            )
+          }
+          val fields = mutation.changes.map(EnvironmentChangeV1::field)
+          val duplicate = fields.groupingBy { it }.eachCount().entries.firstOrNull { it.value > 1 }
+          if (duplicate != null) {
+            fail(
+              RejectionCodeV1.INVALID_COMMAND,
+              "environment field ${duplicate.key} is changed more than once",
+              operationIndex = index,
+              environmentField = duplicate.key,
+            )
+          }
+          val before = working.document.environment
+          val after = mutation.changes.fold(before, DesignEnvironmentV1::applyChange)
+          validateEnvironment(after)?.let { issue ->
+            fail(
+              RejectionCodeV1.INVALID_DOCUMENT,
+              issue.message,
+              operationIndex = index,
+              environmentField = issue.field,
+            )
+          }
+          val conflicts = fields.mapNotNull { environmentField ->
+            val overwrittenRevision =
+              original.acceptedOperations.values
+                .asSequence()
+                .filter { it.committedRevision > command.baseRevision }
+                .filter { accepted ->
+                  accepted.changes.any { change ->
+                    change is EnvironmentChangeRecordV1 && environmentField in change.fields
+                  }
+                }
+                .maxOfOrNull(AcceptedOperationRecordV1::committedRevision)
+            overwrittenRevision?.let {
+              CommandConflictV1(
+                code = ConflictCodeV1.STALE_ENVIRONMENT_WRITE,
+                nodeId = null,
+                overwrittenRevision = it,
+                environmentField = environmentField,
+              )
+            }
+          }
+          val document = working.document.copy(environment = after)
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            EnvironmentChangeRecordV1(fields.distinct(), before, after),
+            conflicts,
+          )
+        }
+        is CatalogUpgradeMutationV1 ->
+          fail(
+            RejectionCodeV1.INVALID_COMMAND,
+            "catalog upgrades require the preview/apply service path",
+            operationIndex = index,
+          )
       }
     } catch (failure: ReductionFailure) {
       MutationResult(error = failure.rejection(command.operationId, working.document.revision))
@@ -1573,6 +1666,24 @@ class PersistentUiBuilderService(
               tombstones = tombstones - change.nodeId
             }
             working = WorkingDesign(document, tombstones, positions)
+          }
+          is EnvironmentChangeRecordV1 -> {
+            val expected = if (undo) change.after else change.before
+            val target = if (undo) change.before else change.after
+            val current = working.document.environment
+            val mismatch = change.fields.firstOrNull { current.value(it) != expected.value(it) }
+            if (mismatch != null) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "environment field changed after the target operation",
+                environmentField = mismatch,
+              )
+            }
+            working =
+              working.copy(
+                document =
+                  working.document.copy(environment = current.copyFieldsFrom(target, change.fields))
+              )
           }
         }
       }
@@ -2044,6 +2155,14 @@ private data class PropertyChangeV1(
 ) : ChangeRecordV1
 
 @Serializable
+@SerialName("environment")
+private data class EnvironmentChangeRecordV1(
+  val fields: List<EnvironmentFieldV1>,
+  val before: DesignEnvironmentV1,
+  val after: DesignEnvironmentV1,
+) : ChangeRecordV1
+
+@Serializable
 @SerialName("structure")
 private data class StructureChangeV1(
   val nodeId: String,
@@ -2092,7 +2211,11 @@ private fun fail(
   operationIndex: Int? = null,
   nodeId: String? = null,
   field: String? = null,
-): Nothing = throw ReductionFailure(rejected("", 0, code, message, operationIndex, nodeId, field))
+  environmentField: EnvironmentFieldV1? = null,
+): Nothing =
+  throw ReductionFailure(
+    rejected("", 0, code, message, operationIndex, nodeId, field, environmentField)
+  )
 
 private fun rejected(
   operationId: String,
@@ -2102,8 +2225,18 @@ private fun rejected(
   operationIndex: Int? = null,
   nodeId: String? = null,
   field: String? = null,
+  environmentField: EnvironmentFieldV1? = null,
 ): RejectedOutcomeV1 =
-  RejectedOutcomeV1(operationId, revision, code, message, operationIndex, nodeId, field)
+  RejectedOutcomeV1(
+    operationId,
+    revision,
+    code,
+    message,
+    operationIndex,
+    nodeId,
+    field,
+    environmentField,
+  )
 
 private fun PersistedDesignV1.allows(actorId: String, action: DesignAccessActionV1): Boolean =
   actorId == access.ownerActorId ||
@@ -2501,6 +2634,123 @@ private fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     ExportFormatV1.COMPOSE -> exportCapabilities.composeCode
     ExportFormatV1.SVG -> exportCapabilities.svg
     ExportFormatV1.PNG -> exportCapabilities.png
+  }
+
+private data class EnvironmentValidationIssue(
+  val field: EnvironmentFieldV1,
+  val message: String,
+)
+
+private fun validateEnvironment(environment: DesignEnvironmentV1): EnvironmentValidationIssue? =
+  with(environment) {
+    val zoom = browserZoomPercent
+    val time = fixedTime
+    when {
+      environment.widthDp <= 0 ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.WIDTH_DP,
+          "environment.widthDp must be positive",
+        )
+      environment.heightDp <= 0 ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.HEIGHT_DP,
+          "environment.heightDp must be positive",
+        )
+      !environment.density.isFinite() || environment.density <= 0.0 ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.DENSITY,
+          "environment.density must be finite and positive",
+        )
+      environment.locale.isBlank() ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.LOCALE,
+          "environment.locale must not be blank",
+        )
+      !environment.fontScale.isFinite() || environment.fontScale <= 0.0 ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.FONT_SCALE,
+          "environment.fontScale must be finite and positive",
+        )
+      zoom != null && zoom <= 0 ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.BROWSER_ZOOM_PERCENT,
+          "environment.browserZoomPercent must be positive when set",
+        )
+      time != null && time.isBlank() ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.FIXED_TIME,
+          "environment.fixedTime must not be blank when set",
+        )
+      else -> null
+    }
+  }
+
+private fun DesignEnvironmentV1.applyChange(change: EnvironmentChangeV1): DesignEnvironmentV1 =
+  when (change) {
+    is SetWidthDpEnvironmentChangeV1 -> copy(widthDp = change.value)
+    is SetHeightDpEnvironmentChangeV1 -> copy(heightDp = change.value)
+    is SetDensityEnvironmentChangeV1 -> copy(density = change.value)
+    is SetThemeEnvironmentChangeV1 -> copy(theme = change.value)
+    is SetLocaleEnvironmentChangeV1 -> copy(locale = change.value)
+    is SetFontScaleEnvironmentChangeV1 -> copy(fontScale = change.value)
+    is SetLayoutDirectionEnvironmentChangeV1 -> copy(layoutDirection = change.value)
+    is SetDynamicColorEnvironmentChangeV1 -> copy(dynamicColor = change.value)
+    ResetDynamicColorEnvironmentChangeV1 -> copy(dynamicColor = null)
+    is SetWindowPostureEnvironmentChangeV1 -> copy(windowPosture = change.value)
+    ResetWindowPostureEnvironmentChangeV1 -> copy(windowPosture = null)
+    is SetBrowserZoomPercentEnvironmentChangeV1 -> copy(browserZoomPercent = change.value)
+    ResetBrowserZoomPercentEnvironmentChangeV1 -> copy(browserZoomPercent = null)
+    is SetFixedTimeEnvironmentChangeV1 -> copy(fixedTime = change.value)
+    ResetFixedTimeEnvironmentChangeV1 -> copy(fixedTime = null)
+    is SetAnimationsEnvironmentChangeV1 -> copy(animations = change.value)
+    ResetAnimationsEnvironmentChangeV1 -> copy(animations = null)
+    is SetNetworkAccessEnvironmentChangeV1 -> copy(networkAccess = change.value)
+    ResetNetworkAccessEnvironmentChangeV1 -> copy(networkAccess = null)
+    is SetBackgroundEnvironmentChangeV1 -> copy(background = change.value)
+    ResetBackgroundEnvironmentChangeV1 -> copy(background = null)
+  }
+
+private fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
+  when (field) {
+    EnvironmentFieldV1.WIDTH_DP -> widthDp
+    EnvironmentFieldV1.HEIGHT_DP -> heightDp
+    EnvironmentFieldV1.DENSITY -> density
+    EnvironmentFieldV1.THEME -> theme
+    EnvironmentFieldV1.DYNAMIC_COLOR -> dynamicColor
+    EnvironmentFieldV1.LOCALE -> locale
+    EnvironmentFieldV1.FONT_SCALE -> fontScale
+    EnvironmentFieldV1.LAYOUT_DIRECTION -> layoutDirection
+    EnvironmentFieldV1.WINDOW_POSTURE -> windowPosture
+    EnvironmentFieldV1.BROWSER_ZOOM_PERCENT -> browserZoomPercent
+    EnvironmentFieldV1.FIXED_TIME -> fixedTime
+    EnvironmentFieldV1.ANIMATIONS -> animations
+    EnvironmentFieldV1.NETWORK_ACCESS -> networkAccess
+    EnvironmentFieldV1.BACKGROUND -> background
+  }
+
+private fun DesignEnvironmentV1.copyFieldsFrom(
+  source: DesignEnvironmentV1,
+  fields: List<EnvironmentFieldV1>,
+): DesignEnvironmentV1 =
+  fields.fold(this) { environment, field ->
+    when (field) {
+      EnvironmentFieldV1.WIDTH_DP -> environment.copy(widthDp = source.widthDp)
+      EnvironmentFieldV1.HEIGHT_DP -> environment.copy(heightDp = source.heightDp)
+      EnvironmentFieldV1.DENSITY -> environment.copy(density = source.density)
+      EnvironmentFieldV1.THEME -> environment.copy(theme = source.theme)
+      EnvironmentFieldV1.DYNAMIC_COLOR -> environment.copy(dynamicColor = source.dynamicColor)
+      EnvironmentFieldV1.LOCALE -> environment.copy(locale = source.locale)
+      EnvironmentFieldV1.FONT_SCALE -> environment.copy(fontScale = source.fontScale)
+      EnvironmentFieldV1.LAYOUT_DIRECTION ->
+        environment.copy(layoutDirection = source.layoutDirection)
+      EnvironmentFieldV1.WINDOW_POSTURE -> environment.copy(windowPosture = source.windowPosture)
+      EnvironmentFieldV1.BROWSER_ZOOM_PERCENT ->
+        environment.copy(browserZoomPercent = source.browserZoomPercent)
+      EnvironmentFieldV1.FIXED_TIME -> environment.copy(fixedTime = source.fixedTime)
+      EnvironmentFieldV1.ANIMATIONS -> environment.copy(animations = source.animations)
+      EnvironmentFieldV1.NETWORK_ACCESS -> environment.copy(networkAccess = source.networkAccess)
+      EnvironmentFieldV1.BACKGROUND -> environment.copy(background = source.background)
+    }
   }
 
 private fun notFound(designId: String): UiBuilderServiceError =

@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.CommandOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignAccessControlV1
 import ee.schimke.composeai.uibuilder.protocol.DesignAccessMutationV1
@@ -44,6 +46,13 @@ sealed interface UiBuilderServiceRequest {
     val designId: String,
     val baseAccessRevision: Long,
     val mutations: List<DesignAccessMutationV1>,
+  ) : UiBuilderServiceRequest
+
+  data class PreviewCatalogUpgrade(
+    val designId: String,
+    val baseRevision: Long,
+    val sourceCatalogPin: CatalogReferenceV1,
+    val targetCatalogPin: CatalogReferenceV1,
   ) : UiBuilderServiceRequest
 
   data class ApplyOperation(val submission: UiBuilderSubmission) : UiBuilderServiceRequest
@@ -123,6 +132,8 @@ sealed interface UiBuilderServiceResponse {
 
   data class DesignAccess(val designId: String, val access: DesignAccessControlV1) :
     UiBuilderServiceResponse
+
+  data class CatalogUpgradePreview(val preview: CatalogUpgradePreviewV1) : UiBuilderServiceResponse
 
   data class Snapshot(val snapshot: ServiceSnapshotV1) : UiBuilderServiceResponse
 

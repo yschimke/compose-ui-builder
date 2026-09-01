@@ -34,6 +34,10 @@ private val bridgeJson = Json {
   ignoreUnknownKeys = true
 }
 
+// The authoritative JVM service hashes the complete serializable document, including explicit
+// nulls. Keep renderer conversion permissive while matching that exact hash representation here.
+private val documentHashJson = Json(bridgeJson) { explicitNulls = true }
+
 /** Lossless for the renderer-owned subset; newer protocol-only metadata is deliberately ignored. */
 fun DesignDocumentV1.toRendererDocument(): UiBuilderDocument {
   require(revision in 0..Int.MAX_VALUE.toLong()) { "design revision does not fit the renderer" }
@@ -51,7 +55,9 @@ fun UiBuilderDocument.toProtocolDocument(): DesignDocumentV1 =
  * does not retain the server's tombstones and compensation history. A property-only delta is safe
  * to reduce directly after the strict update client has established sequence continuity. Retaining
  * and reducing the authoritative protocol document avoids a lossy renderer round-trip; callers must
- * still verify [expectedHash] before displaying the projected renderer document.
+ * still verify [expectedHash] before displaying the projected renderer document. Outcomes written
+ * before the authoritative document timestamp was added cannot reproduce the hashed document and
+ * deliberately return null so the caller retains the snapshot fallback.
  */
 internal data class PropertyDeltaCandidate(
   val protocolDocument: DesignDocumentV1,
@@ -95,8 +101,14 @@ internal fun DesignDocumentV1.preparePropertyDelta(
             ))
     }
     val revision = committed.outcome.committedRevision
+    val updatedAtEpochMillis = committed.outcome.documentUpdatedAtEpochMillis ?: return null
     if (revision !in 0..Int.MAX_VALUE.toLong()) return null
-    protocol = protocol.copy(revision = revision, nodes = protocolNodes)
+    protocol =
+      protocol.copy(
+        revision = revision,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        nodes = protocolNodes,
+      )
     renderer = renderer.copy(revision = revision.toInt(), nodes = rendererNodes)
   }
   if (protocol.revision != delta.currentRevision) return null
@@ -108,7 +120,7 @@ internal fun DesignDocumentV1.preparePropertyDelta(
 }
 
 internal fun DesignDocumentV1.canonicalDocumentHash(): String {
-  val element = bridgeJson.encodeToJsonElement(DesignDocumentV1.serializer(), this)
+  val element = documentHashJson.encodeToJsonElement(DesignDocumentV1.serializer(), this)
   return sha256Hex(canonicalProtocolJson(element))
 }
 

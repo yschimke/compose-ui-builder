@@ -42,6 +42,159 @@ class PersistentUiBuilderServiceTest {
   private val outsider = AuthenticatedUiBuilderActor("outsider")
 
   @Test
+  fun `typed render environment updates are document level atomic and compensatable`() {
+    val clock = MutableClock(1_000)
+    val storage = MemoryStorage()
+    var service = service(storage = storage, clock = clock)
+    create(service)
+    val original = currentDocument(service)
+
+    clock.nowMillis = 2_000
+    val accepted =
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "render-environment",
+              0,
+              UpdateEnvironmentMutationV1(
+                listOf(
+                  SetWidthDpEnvironmentChangeV1(412),
+                  SetHeightDpEnvironmentChangeV1(915),
+                  SetDensityEnvironmentChangeV1(3.0),
+                  SetThemeEnvironmentChangeV1(ThemeV1.DARK),
+                  SetLocaleEnvironmentChangeV1("ar-EG"),
+                  SetFontScaleEnvironmentChangeV1(1.4),
+                  SetLayoutDirectionEnvironmentChangeV1(LayoutDirectionV1.RTL),
+                )
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(2_000L, accepted.documentUpdatedAtEpochMillis)
+    val committed = currentDocument(service)
+    assertEquals(412, committed.environment.widthDp)
+    assertEquals(915, committed.environment.heightDp)
+    assertEquals(3.0, committed.environment.density)
+    assertEquals(ThemeV1.DARK, committed.environment.theme)
+    assertEquals("ar-EG", committed.environment.locale)
+    assertEquals(1.4, committed.environment.fontScale)
+    assertEquals(LayoutDirectionV1.RTL, committed.environment.layoutDirection)
+    assertEquals(original.nodes, committed.nodes, "environment values must not leak into nodes")
+
+    service = service(storage = storage, clock = clock)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo(
+            "design",
+            "undo-render-environment",
+            "browser",
+            1,
+            "render-environment",
+          )
+        ),
+      )
+    )
+    assertEquals(original.environment, currentDocument(service).environment)
+  }
+
+  @Test
+  fun `environment update rejects duplicate and invalid fields without a partial commit`() {
+    val service = service()
+    create(service)
+    val original = currentDocument(service)
+
+    val duplicate =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "duplicate-environment",
+              0,
+              UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.2))),
+              UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.4))),
+            )
+          ),
+        )
+      )
+    assertEquals(EnvironmentFieldV1.FONT_SCALE, duplicate.environmentField)
+
+    val invalid =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "invalid-environment",
+              0,
+              UpdateEnvironmentMutationV1(
+                listOf(
+                  SetWidthDpEnvironmentChangeV1(412),
+                  SetFontScaleEnvironmentChangeV1(0.0),
+                )
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(EnvironmentFieldV1.FONT_SCALE, invalid.environmentField)
+    assertEquals(original, currentDocument(service))
+  }
+
+  @Test
+  fun `stale environment conflicts are field granular`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "dark-theme",
+            0,
+            UpdateEnvironmentMutationV1(listOf(SetThemeEnvironmentChangeV1(ThemeV1.DARK))),
+          )
+        ),
+      )
+    )
+
+    val stale =
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "stale-environment",
+              0,
+              UpdateEnvironmentMutationV1(
+                listOf(
+                  SetThemeEnvironmentChangeV1(ThemeV1.SYSTEM),
+                  SetFontScaleEnvironmentChangeV1(1.4),
+                )
+              ),
+            )
+          ),
+        )
+      )
+    val conflict = assertIs<CommandConflictV1>(stale.conflicts.single())
+    assertEquals(ConflictCodeV1.STALE_ENVIRONMENT_WRITE, conflict.code)
+    assertEquals(EnvironmentFieldV1.THEME, conflict.environmentField)
+    assertEquals(null, conflict.nodeId)
+    assertEquals(1, conflict.overwrittenRevision)
+  }
+
+  @Test
   fun `private designs enforce access CAS and every request variant`() {
     val exports = mutableListOf<RevisionPinnedUiBuilderExport>()
     val service = service(exportRequests = exports)
@@ -163,18 +316,18 @@ class PersistentUiBuilderServiceTest {
         )
       )
     assertEquals(1, accepted.sequence)
+    assertEquals(1_000L, accepted.documentUpdatedAtEpochMillis)
     assertIs<UiBuilderServiceResponse.Snapshot>(
       execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1))
     )
-    assertEquals(
-      listOf("insert"),
+    val committed =
       assertIs<UiBuilderServiceResponse.Delta>(
           execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 50))
         )
         .delta
         .operations
-        .map { it.outcome.operationId },
-    )
+    assertEquals(listOf("insert"), committed.map { it.outcome.operationId })
+    assertEquals(listOf(1_000L), committed.map { it.outcome.documentUpdatedAtEpochMillis })
     assertIs<UiBuilderServiceResponse.PresenceAccepted>(
       execute(
         service,

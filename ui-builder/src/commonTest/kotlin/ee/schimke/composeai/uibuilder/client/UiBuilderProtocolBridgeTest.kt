@@ -115,7 +115,9 @@ class UiBuilderProtocolBridgeTest {
   @Test
   fun `authoritative property delta applies only when the server hash verifies`() {
     val before = protocolDocument(revision = 7, text = "Before")
-    val after = protocolDocument(revision = 8, text = "After")
+    val committedAt = 1_750_000_010_123
+    val after =
+      protocolDocument(revision = 8, text = "After").copy(updatedAtEpochMillis = committedAt)
     val command =
       DesignCommandV1(
         designId = before.id,
@@ -132,6 +134,7 @@ class UiBuilderProtocolBridgeTest {
         sequence = 4,
         documentHash = after.canonicalDocumentHash(),
         idempotentReplay = false,
+        documentUpdatedAtEpochMillis = committedAt,
       )
     val delta =
       ServiceDeltaV1(
@@ -171,6 +174,23 @@ class UiBuilderProtocolBridgeTest {
         )
       )
     assertFalse(wrongHash.hasVerifiedHash())
+
+    assertEquals(
+      null,
+      before.preparePropertyDelta(
+        before.toRendererDocument(),
+        delta.copy(
+          operations =
+            listOf(
+              CommittedOperationV1(
+                command,
+                accepted.copy(documentUpdatedAtEpochMillis = null),
+              )
+            )
+        ),
+      ),
+      "legacy outcomes without the committed document timestamp require a snapshot",
+    )
   }
 
   private fun protocolDocument(revision: Long, text: String): DesignDocumentV1 =

@@ -19,6 +19,7 @@ import ee.schimke.composeai.uibuilder.protocol.HttpRequestEnvelopeV1
 import ee.schimke.composeai.uibuilder.protocol.HttpResponseEnvelopeV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
+import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.OutcomeDesignUpdateV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceDesignUpdateV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceLeaveV1
@@ -28,8 +29,10 @@ import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceSnapshotV1
+import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotDesignUpdateV1
 import ee.schimke.composeai.uibuilder.protocol.ThemeV1
+import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.startCoroutine
@@ -40,6 +43,52 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class UiBuilderProtocolClientTest {
+  @Test
+  fun `HTTP preserves typed document environment mutations`() {
+    val accepted =
+      AcceptedOutcomeV1(
+        operationId = "environment",
+        committedRevision = 1,
+        sequence = 1,
+        documentHash = "hash",
+        idempotentReplay = false,
+        documentUpdatedAtEpochMillis = 2_000,
+      )
+    val transport = RecordingHttpTransport { request ->
+      val envelope = decodeRequest(request.body)
+      val apply = assertIs<ApplyOperationRequestV1>(envelope.request)
+      val command = assertIs<DesignCommandV1>(apply.submission)
+      val mutation = assertIs<UpdateEnvironmentMutationV1>(command.operations.single())
+      assertEquals(1.4, assertIs<SetFontScaleEnvironmentChangeV1>(mutation.changes.single()).value)
+      HttpResponseEnvelopeV1(
+          requestId = envelope.requestId,
+          response = OperationOutcomeResponseV1(accepted),
+        )
+        .encoded()
+    }
+    val result = runImmediate {
+      client(transport)
+        .execute(
+          ApplyOperationRequestV1(
+            DesignCommandV1(
+              "design",
+              "environment",
+              "actor",
+              "browser",
+              0,
+              listOf(UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.4)))),
+            )
+          )
+        )
+    }
+
+    assertEquals(
+      accepted,
+      assertIs<OperationOutcomeResponseV1>(assertIs<UiBuilderHttpResult.Response>(result).response)
+        .outcome,
+    )
+  }
+
   @Test
   fun `HTTP requests use deterministic ids authenticated actor envelope and strict correlation`() {
     val transport = RecordingHttpTransport { request ->

@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewResponseV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.CreateDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.DeltaDesignUpdateV1
@@ -26,6 +27,7 @@ import ee.schimke.composeai.uibuilder.protocol.PointerV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceAcceptedResponseV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceDesignUpdateV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceV1
+import ee.schimke.composeai.uibuilder.protocol.PreviewCatalogUpgradeRequestV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorV1
@@ -68,6 +70,13 @@ object UiBuilderProtocolMapper {
             request.baseAccessRevision,
             request.mutations,
           )
+        is PreviewCatalogUpgradeRequestV1 ->
+          UiBuilderServiceRequest.PreviewCatalogUpgrade(
+            request.designId,
+            request.baseRevision,
+            request.sourceCatalogPin,
+            request.targetCatalogPin,
+          )
         is ApplyOperationRequestV1 -> {
           val submission = request.submission.toServiceSubmission(actor) ?: return actorMismatch()
           UiBuilderServiceRequest.ApplyOperation(submission)
@@ -102,6 +111,13 @@ object UiBuilderProtocolMapper {
           request.baseAccessRevision,
           request.mutations,
         )
+      is UiBuilderServiceRequest.PreviewCatalogUpgrade ->
+        PreviewCatalogUpgradeRequestV1(
+          request.designId,
+          request.baseRevision,
+          request.sourceCatalogPin,
+          request.targetCatalogPin,
+        )
       is UiBuilderServiceRequest.ApplyOperation ->
         ApplyOperationRequestV1(request.submission.toProtocolSubmission(call.actor))
       is UiBuilderServiceRequest.GetSnapshot ->
@@ -124,6 +140,8 @@ object UiBuilderProtocolMapper {
         DesignsResponseV1(response.designs, response.nextCursor)
       is UiBuilderServiceResponse.DesignAccess ->
         DesignAccessResponseV1(response.designId, response.access)
+      is UiBuilderServiceResponse.CatalogUpgradePreview ->
+        CatalogUpgradePreviewResponseV1(response.preview)
       is UiBuilderServiceResponse.Snapshot -> SnapshotResponseV1(response.snapshot)
       is UiBuilderServiceResponse.OperationOutcome -> OperationOutcomeResponseV1(response.outcome)
       is UiBuilderServiceResponse.Delta -> DeltaResponseV1(response.delta)
@@ -140,6 +158,8 @@ object UiBuilderProtocolMapper {
         UiBuilderServiceResponse.Designs(response.designs, response.nextCursor)
       is DesignAccessResponseV1 ->
         UiBuilderServiceResponse.DesignAccess(response.designId, response.access)
+      is CatalogUpgradePreviewResponseV1 ->
+        UiBuilderServiceResponse.CatalogUpgradePreview(response.preview)
       is SnapshotResponseV1 -> UiBuilderServiceResponse.Snapshot(response.snapshot)
       is OperationOutcomeResponseV1 -> UiBuilderServiceResponse.OperationOutcome(response.outcome)
       is DeltaResponseV1 -> UiBuilderServiceResponse.Delta(response.delta)

@@ -19,6 +19,17 @@ class UiBuilderProtocolMapperTest {
         DeleteNodeMutationV1("node"),
         RestoreNodeMutationV1("node", location),
         SetPropertyMutationV1("node", "text", StringValueV1("Hello")),
+        UpdateEnvironmentMutationV1(
+          listOf(
+            SetWidthDpEnvironmentChangeV1(412),
+            SetHeightDpEnvironmentChangeV1(915),
+            SetDensityEnvironmentChangeV1(3.0),
+            SetThemeEnvironmentChangeV1(ThemeV1.DARK),
+            SetLocaleEnvironmentChangeV1("ar-EG"),
+            SetFontScaleEnvironmentChangeV1(1.4),
+            SetLayoutDirectionEnvironmentChangeV1(LayoutDirectionV1.RTL),
+          )
+        ),
       )
     val requests =
       listOf(
@@ -46,6 +57,12 @@ class UiBuilderProtocolMapperTest {
               RevokeDesignShareLinkMutationV1("share"),
               TransferDesignOwnershipMutationV1("next-owner"),
             ),
+        ),
+        PreviewCatalogUpgradeRequestV1(
+          designId = "design",
+          baseRevision = 4,
+          sourceCatalogPin = document().catalogPin,
+          targetCatalogPin = document().catalogPin.copy(catalogRevision = "next"),
         ),
         ApplyOperationRequestV1(
           DesignCommandV1("design", "batch", trusted.actorId, "browser", 4, mutations)
@@ -81,6 +98,17 @@ class UiBuilderProtocolMapperTest {
         CatalogsResponseV1(listOf(catalog())),
         DesignsResponseV1(listOf(listItem()), nextCursor = "next"),
         DesignAccessResponseV1("design", access()),
+        CatalogUpgradePreviewResponseV1(
+          CatalogUpgradePreviewV1(
+            designId = "design",
+            baseRevision = 4,
+            sourceCatalogPin = document().catalogPin,
+            targetCatalogPin = document().catalogPin.copy(catalogRevision = "next"),
+            sourceDocumentHash = "source-hash",
+            status = CatalogUpgradePreviewStatusV1.BLOCKED,
+            previewDigest = "preview-digest",
+          )
+        ),
         SnapshotResponseV1(snapshot),
         OperationOutcomeResponseV1(accepted),
         OperationOutcomeResponseV1(
@@ -312,5 +340,6 @@ class UiBuilderProtocolMapperTest {
       documentHash = "hash",
       idempotentReplay = false,
       conflicts = listOf(CommandConflictV1(ConflictCodeV1.STALE_MOVE, "node", null, 3)),
+      documentUpdatedAtEpochMillis = 1_750_000_010_123,
     )
 }
