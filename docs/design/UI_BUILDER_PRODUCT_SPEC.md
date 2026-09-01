@@ -768,6 +768,15 @@ transport-free `ui-builder-runtime` port/implementation and never add a `:server
 project dependency. Moving the frontend out remains a release/deployment decision, not a source API
 discovery exercise.
 
+`scripts/check-ui-builder-external-consumer.sh` makes that artifact seam executable. It publishes
+the runtime and frontend to a fresh temporary Maven repository, copies a minimal Gradle consumer
+and wrapper outside this checkout, compiles and runs against the runtime coordinate, and resolves
+the frontend only through its exact distribution attributes. The consumer rejects project
+components, artifacts under the producer checkout, source-path leakage in the repository, malformed
+metadata, and an incomplete frontend ZIP. This proves the two published artifacts can be consumed
+without `mavenLocal()`, a composite build, or project substitution; the broader extraction criteria
+still require the released-server operation-replay and version-skew tests above.
+
 Do not add a reverse `:render-host -> :server` edge, a web server to `:render-host`, `mavenLocal()`, a
 composite include, or implementation code to the contracts repository. `checkServeModuleBoundary`
 and `checkRenderHostIsServerFree` remain positive resolved-classpath gates.
