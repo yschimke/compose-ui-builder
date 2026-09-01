@@ -1188,6 +1188,16 @@ private fun publishEditorState(state: UiBuilderEditorState) {
       ?.jsonPrimitive
       ?.contentOrNull
       .orEmpty()
+  val selectedIconKey =
+    state.selectedNodeId
+      ?.let(state.document.nodes::get)
+      ?.properties
+      ?.get("iconKey")
+      ?.jsonObject
+      ?.get("value")
+      ?.jsonPrimitive
+      ?.contentOrNull
+      .orEmpty()
   val mainBackgroundChildren =
     state.document.nodes["main-background"]?.slots?.get("children").orEmpty().joinToString(",")
   val outcome =
@@ -1206,6 +1216,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
     operationSequence = state.operationSequence,
     outcome = outcome,
     selectedText = selectedText,
+    selectedIconKey = selectedIconKey,
     mainBackgroundChildren = mainBackgroundChildren,
     documentHash = sha256Hex(canonicalDocument(state.document)),
     outcomeNodeId = rejection?.nodeId.orEmpty(),
@@ -1221,7 +1232,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
 }
 
 @JsFun(
-  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, mainBackgroundChildren, documentHash, outcomeNodeId, outcomeField, widthDp, heightDp, density, fontScale, locale, theme, layoutDirection) => {
+  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, selectedIconKey, mainBackgroundChildren, documentHash, outcomeNodeId, outcomeField, widthDp, heightDp, density, fontScale, locale, theme, layoutDirection) => {
     globalThis.__uiBuilderEditor = {
       revision,
       nodeCount,
@@ -1230,6 +1241,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
       operationSequence,
       outcome,
       selectedText,
+      selectedIconKey,
       mainBackgroundChildren: mainBackgroundChildren ? mainBackgroundChildren.split(',') : [],
       documentHash,
       outcomeNodeId,
@@ -1247,6 +1259,7 @@ private external fun publishEditorManifest(
   operationSequence: Int,
   outcome: String,
   selectedText: String,
+  selectedIconKey: String,
   mainBackgroundChildren: String,
   documentHash: String,
   outcomeNodeId: String,

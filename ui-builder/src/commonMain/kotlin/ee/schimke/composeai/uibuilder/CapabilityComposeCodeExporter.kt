@@ -704,9 +704,7 @@ private class ComposeEmitter(
       appendLine(
         "@Composable private fun BuilderAssetImage(assetKey: String, contentDescription: String?, contentScale: String, modifier: Modifier = Modifier) { check(contentScale == \"crop\" || contentScale.isEmpty()) { \"Unsupported content scale: ${'$'}contentScale\" }; ${renderer.symbol}(assetKey = assetKey, contentDescription = contentDescription, modifier = modifier) }"
       )
-      appendLine(
-        "private fun builderIcon(key: String): ImageVector = when (key) { \"search\" -> Icons.Default.Search; \"accountCircle\" -> Icons.Default.AccountCircle; \"check\" -> Icons.Default.Check; \"checkCircle\" -> Icons.Default.CheckCircle; \"addCircle\" -> Icons.Default.AddCircle; \"playCircle\" -> Icons.Default.PlayCircle; \"playlistAdd\" -> Icons.Default.PlaylistAdd; \"moreVert\" -> Icons.Default.MoreVert; \"videoLibrary\" -> Icons.Default.VideoLibrary; else -> Icons.Default.Category }"
-      )
+      appendLine(builderIconFunction())
       return
     }
     appendLine(
@@ -723,9 +721,7 @@ private class ComposeEmitter(
     appendLine(
       "  else -> listOf(Color(0xFFFF00FF), Color(0xFF202020), Color(0xFFFF00FF)) }; check(contentScale == \"crop\" || contentScale.isEmpty()) { \"Unsupported content scale: ${'$'}contentScale\" }; drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height))); drawCircle(Color.White.copy(alpha = .18f), size.minDimension * .34f, Offset(size.width * .76f, size.height * .24f)); drawCircle(Color.Black.copy(alpha = .18f), size.minDimension * .22f, Offset(size.width * .22f, size.height * .72f)); val path = Path().apply { moveTo(size.width * .19f, size.height * .32f); lineTo(size.width * .48f, size.height * .18f); lineTo(size.width * .82f, size.height * .58f); lineTo(size.width * .48f, size.height * .78f); close() }; drawPath(path, Color.White.copy(alpha = .27f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .30f, size.height * .39f), Size(size.width * .10f, size.height * .28f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .47f, size.height * .30f), Size(size.width * .10f, size.height * .38f)); drawRect(Color.White.copy(alpha = .72f), Offset(size.width * .64f, size.height * .43f), Size(size.width * .10f, size.height * .24f)); drawCircle(Color.White.copy(alpha = .72f), size.minDimension * .28f, style = Stroke(size.minDimension * .035f)) } }"
     )
-    appendLine(
-      "private fun builderIcon(key: String): ImageVector = when (key) { \"search\" -> Icons.Default.Search; \"accountCircle\" -> Icons.Default.AccountCircle; \"check\" -> Icons.Default.Check; \"checkCircle\" -> Icons.Default.CheckCircle; \"addCircle\" -> Icons.Default.AddCircle; \"playCircle\" -> Icons.Default.PlayCircle; \"playlistAdd\" -> Icons.Default.PlaylistAdd; \"moreVert\" -> Icons.Default.MoreVert; \"videoLibrary\" -> Icons.Default.VideoLibrary; else -> Icons.Default.Category }"
-    )
+    appendLine(builderIconFunction())
   }
 
   private fun appendLine(value: String = "") {
@@ -736,6 +732,14 @@ private class ComposeEmitter(
 }
 
 private fun UiBuilderNode.slot(name: String): List<String> = slots[name].orEmpty()
+
+private fun builderIconFunction(): String = buildString {
+  append("private fun builderIcon(key: String): ImageVector = when (key) { ")
+  GoogleMaterialIcons.forEach { icon ->
+    append("\"").append(icon.key).append("\" -> ").append(icon.composeExpression).append("; ")
+  }
+  append("else -> error(\"Unsupported Google Material icon: ${'$'}key\") }")
+}
 
 private fun UiBuilderNode.obj(name: String): JsonObject =
   properties[name]?.let { it as? JsonObject } ?: JsonObject(emptyMap())
@@ -1200,7 +1204,9 @@ private val GENERATED_IMPORTS =
       "androidx.compose.foundation.shape.RoundedCornerShape",
       "androidx.compose.foundation.text.BasicTextField",
       "androidx.compose.material.icons.Icons",
+      "androidx.compose.material.icons.automirrored.filled.*",
       "androidx.compose.material.icons.filled.*",
+      "androidx.compose.material.icons.outlined.*",
       "androidx.compose.material3.*",
       "androidx.compose.runtime.*",
       "androidx.compose.ui.Alignment",

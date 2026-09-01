@@ -838,7 +838,9 @@ private fun PropertyControl(
           )
         }
       }
-      EditorPropertyControl.Enum -> EnumPropertyControl(field, commit)
+      EditorPropertyControl.Enum ->
+        if (field.name == "iconKey") GoogleIconPropertyControl(field, commit)
+        else EnumPropertyControl(field, commit)
       EditorPropertyControl.Number ->
         DraftPropertyControl(field, onTextInputFocusChanged, commit, showSteppers = true)
       EditorPropertyControl.Text,
@@ -1097,6 +1099,65 @@ private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> 
         )
       }
     }
+  }
+}
+
+@Composable
+private fun GoogleIconPropertyControl(field: EditorPropertyField, commit: (String) -> Unit) {
+  var expanded by remember(field.nodeId, field.name) { mutableStateOf(false) }
+  var query by remember(field.nodeId, field.name) { mutableStateOf("") }
+  val current = googleMaterialIcon(field.value)
+  Text(
+    "Google Material Icons catalog",
+    Modifier.padding(top = 7.dp),
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+  )
+  Button(
+    onClick = { expanded = true },
+    modifier =
+      Modifier.padding(top = 7.dp).fillMaxWidth().semantics {
+        contentDescription = "Choose Google icon"
+      },
+  ) {
+    current?.let { Icon(it.imageVector, null, Modifier.size(20.dp)) }
+    Text(current?.label ?: "Choose Google icon", Modifier.padding(start = 8.dp))
+  }
+  DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+    Text(
+      "Google Material Icons",
+      Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+      style = MaterialTheme.typography.labelLarge,
+      fontWeight = FontWeight.Bold,
+    )
+    BasicTextField(
+      value = query,
+      onValueChange = { query = it },
+      modifier =
+        Modifier.width(280.dp)
+          .padding(10.dp)
+          .semantics { contentDescription = "Google icon search" }
+          .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+          .padding(10.dp),
+      singleLine = true,
+      textStyle =
+        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+    )
+    GoogleMaterialIcons.filter {
+        query.isBlank() ||
+          it.label.contains(query, ignoreCase = true) ||
+          it.key.contains(query, ignoreCase = true)
+      }
+      .forEach { icon ->
+        DropdownMenuItem(
+          text = { Text(icon.label) },
+          leadingIcon = { Icon(icon.imageVector, null, Modifier.size(20.dp)) },
+          onClick = {
+            expanded = false
+            commit(icon.key)
+          },
+        )
+      }
   }
 }
 

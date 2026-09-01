@@ -35,21 +35,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Coffee
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -1202,23 +1187,8 @@ private fun UiBuilderNode.verticalAlignment() =
   }
 
 private fun UiBuilderNode.icon(): ImageVector =
-  when (val key = string("iconKey")) {
-    "accessTime" -> Icons.Filled.AccessTime
-    "accountCircle" -> Icons.Filled.AccountCircle
-    "addCircle" -> Icons.Filled.AddCircle
-    "bookmark" -> Icons.Filled.Bookmark
-    "bookmarkBorder" -> Icons.Outlined.BookmarkBorder
-    "check" -> Icons.Filled.Check
-    "checkCircle" -> Icons.Filled.CheckCircle
-    "coffee" -> Icons.Filled.Coffee
-    "genres" -> Icons.Filled.Category
-    "moreVert" -> Icons.Filled.MoreVert
-    "playCircle" -> Icons.Filled.PlayCircle
-    "playlistAdd" -> Icons.AutoMirrored.Filled.PlaylistAdd
-    "search" -> Icons.Filled.Search
-    "videoLibrary" -> Icons.Filled.VideoLibrary
-    else -> error("unsupported icon '$key' on $id")
-  }
+  googleMaterialIcon(string("iconKey"))?.imageVector
+    ?: error("unsupported Google Material icon '${string("iconKey")}' on $id")
 
 @Composable
 private fun BuilderIcon(node: UiBuilderNode, modifier: Modifier) {

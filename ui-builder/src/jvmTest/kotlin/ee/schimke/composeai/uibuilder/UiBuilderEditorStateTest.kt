@@ -156,6 +156,65 @@ class UiBuilderEditorStateTest {
   }
 
   @Test
+  fun `Google icon edit uses the typed inspector collaboration command`() {
+    val initial = reducer.initial(document, selectedNodeId = "search-leading-icon")
+    val edited =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.CommitProperty("search-leading-icon", "iconKey", "home"),
+      )
+
+    assertIs<CommandOutcome.Accepted>(edited.lastOutcome)
+    assertEquals(
+      "home",
+      edited.document.nodes
+        .getValue("search-leading-icon")
+        .properties
+        .getValue("iconKey")
+        .jsonObject
+        .getValue("value")
+        .jsonPrimitive
+        .content,
+    )
+    val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited))
+    assertIs<DesignOperation.SetProperty>(submission.command.operations.single())
+  }
+
+  @Test
+  fun `Google icon picker and capability allowlist stay in sync`() {
+    val allowed =
+      catalog.componentsById
+        .getValue("m3/icon")
+        .propertiesByName
+        .getValue("iconKey")
+        .allowedValues
+        .map { it.jsonPrimitive.content }
+        .toSet()
+
+    assertEquals(GoogleMaterialIcons.map { it.key }.toSet(), allowed)
+    assertTrue(GoogleMaterialIcons.size >= 40)
+    val field =
+      reducer
+        .propertyFields(reducer.initial(document, selectedNodeId = "search-leading-icon"))
+        .single { it.name == "iconKey" }
+    assertEquals(EditorPropertyControl.Enum, field.control)
+    assertEquals(allowed, field.choices.toSet())
+  }
+
+  @Test
+  fun `typed property edit rejects an icon outside the Google catalog`() {
+    val initial = reducer.initial(document, selectedNodeId = "search-leading-icon")
+    val edited =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.CommitProperty("search-leading-icon", "iconKey", "notInCatalog"),
+      )
+
+    assertIs<CommandOutcome.Rejected>(edited.lastOutcome)
+    assertEquals(document, edited.document)
+  }
+
+  @Test
   fun `insert rejects a stale or incompatible destination without changing the document`() {
     val initial = reducer.initial(document, selectedNodeId = "discover-grid")
     val attempted =

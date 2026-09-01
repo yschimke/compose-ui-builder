@@ -319,7 +319,7 @@
       "traits": ["IconContent"],
       "slots": [],
       "properties": [
-        { "name": "iconKey", "jsonType": "string", "required": true },
+        { "name": "iconKey", "jsonType": "string", "required": true, "allowedValues": ["accessTime", "accountCircle", "add", "addCircle", "arrowBack", "arrowForward", "bookmark", "bookmarkBorder", "calendarMonth", "cameraAlt", "check", "checkCircle", "chevronRight", "close", "coffee", "delete", "download", "edit", "email", "expandMore", "favorite", "genres", "home", "image", "info", "locationOn", "lock", "menu", "moreVert", "notifications", "pauseCircle", "person", "phone", "playCircle", "playlistAdd", "refresh", "remove", "search", "settings", "share", "star", "stopCircle", "upload", "videoLibrary", "visibility", "warning"] },
         { "name": "contentDescription", "jsonType": ["string", "null"], "required": false },
         { "name": "sizeDp", "jsonType": "number", "required": false },
         { "name": "color", "jsonType": "string", "required": false }

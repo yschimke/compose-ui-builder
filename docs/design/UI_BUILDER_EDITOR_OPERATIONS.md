@@ -31,3 +31,15 @@ The same harness separately crops the pinned design canvas and compares it with 
 Jetcaster render using exact geometry assertions and the existing sub-0.2% one-channel raster
 tolerance. Editor chrome and history controls therefore cannot change the design's layout mode or
 canvas geometry unnoticed.
+
+## Property and Google icon editing
+
+The property inspector is driven by the selected component's capability schema. It exposes text,
+bounded numbers, booleans, enums, and colors, including optional properties that are not yet
+authored on the node. Icon nodes additionally use a searchable Google Material Icons picker. Icon
+keys share one allowlist across capability validation, the native renderer, structured SVG
+recording, and generated Compose export.
+
+| Before | Catalog | After |
+| --- | --- | --- |
+| ![Search icon before editing](../../preview-harness/snapshots/ui-builder-google-icon-before.png) | ![Searchable Google Material Icons catalog](../../preview-harness/snapshots/ui-builder-google-icon-picker.png) | ![Home icon after editing](../../preview-harness/snapshots/ui-builder-google-icon-selected.png) |
