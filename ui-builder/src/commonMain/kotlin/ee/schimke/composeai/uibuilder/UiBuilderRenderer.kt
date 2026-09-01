@@ -6,7 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -151,19 +150,100 @@ fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
   else listOf(UiBuilderLayer.Design)
 
-class UiBuilderSurfaceInputController {
-  private var dispatcher: ((CatalogRuntimeInput, () -> Unit) -> Unit)? = null
+sealed interface UiBuilderSemanticActionResult {
+  data object Applied : UiBuilderSemanticActionResult
 
-  fun dispatch(input: CatalogRuntimeInput, onApplied: () -> Unit): Boolean {
-    val current = dispatcher ?: return false
-    current(input, onApplied)
-    return true
+  data class Rejected(val code: String, val message: String) : UiBuilderSemanticActionResult
+}
+
+internal data class UiBuilderSemanticActionEntry(
+  val enabled: Boolean = true,
+  val activate: (() -> Unit)? = null,
+  val scrollBy: ((Float) -> Float)? = null,
+)
+
+class UiBuilderSemanticActionController {
+  private var entries = emptyMap<String, UiBuilderSemanticActionEntry>()
+  private var viewportBounds: UiBuilderPixelBounds? = null
+
+  internal fun install(
+    value: Map<String, UiBuilderSemanticActionEntry>,
+    viewport: UiBuilderPixelBounds?,
+  ) {
+    entries = value
+    viewportBounds = viewport
   }
 
-  internal fun install(value: (CatalogRuntimeInput, () -> Unit) -> Unit) {
-    dispatcher = value
+  fun dispatch(
+    action: CatalogRuntimeAction,
+    snapshot: UiBuilderInspectionSnapshot?,
+  ): UiBuilderSemanticActionResult {
+    if (
+      snapshot == null ||
+        snapshot.documentId != action.documentId ||
+        snapshot.documentRevision != action.documentRevision
+    ) {
+      return UiBuilderSemanticActionResult.Rejected(
+        "STALE_DOCUMENT",
+        "action does not target the current inspection snapshot",
+      )
+    }
+    val inspected =
+      snapshot.nodes.singleOrNull { it.nodeId == action.nodeId }
+        ?: return UiBuilderSemanticActionResult.Rejected(
+          "UNKNOWN_NODE",
+          "semantic node was not found",
+        )
+    val bounds = inspected.bounds
+    val viewport = viewportBounds
+    if (bounds == null || viewport == null || !bounds.intersects(viewport)) {
+      return UiBuilderSemanticActionResult.Rejected(
+        "ACTION_NOT_VISIBLE",
+        "semantic node is not measured inside the current Compose viewport",
+      )
+    }
+    val entry =
+      entries[action.nodeId]
+        ?: return UiBuilderSemanticActionResult.Rejected(
+          "ACTION_NOT_AVAILABLE",
+          "semantic node does not expose this action in the current composition",
+        )
+    return when (action.kind) {
+      "activate" -> {
+        if (!entry.enabled || inspected.semantics.enabled == false) {
+          UiBuilderSemanticActionResult.Rejected("ACTION_DISABLED", "semantic node is disabled")
+        } else if ("click" !in inspected.semantics.actions || entry.activate == null) {
+          UiBuilderSemanticActionResult.Rejected(
+            "ACTION_NOT_AVAILABLE",
+            "semantic node does not expose activate",
+          )
+        } else {
+          entry.activate.invoke()
+          UiBuilderSemanticActionResult.Applied
+        }
+      }
+      "scrollBy" -> {
+        val scrollBy =
+          entry.scrollBy
+            ?: return UiBuilderSemanticActionResult.Rejected(
+              "ACTION_NOT_AVAILABLE",
+              "semantic node does not expose vertical scrollBy",
+            )
+        scrollBy(requireNotNull(action.deltaY).toFloat())
+        UiBuilderSemanticActionResult.Applied
+      }
+      else -> UiBuilderSemanticActionResult.Rejected("UNSUPPORTED_ACTION", "unsupported action")
+    }
   }
 }
+
+private fun UiBuilderPixelBounds.intersects(other: UiBuilderPixelBounds): Boolean =
+  width > 0f &&
+    height > 0f &&
+    x < other.right &&
+    right > other.x &&
+    y < other.bottom &&
+    bottom > other.y
 
 /** Native Compose design pixels plus an optional sibling-only editor overlay. */
 @Composable
@@ -172,21 +252,24 @@ fun UiBuilderSurface(
   editorOverlay: Boolean = false,
   selectedNodeId: String? = null,
   onNodeSelected: ((String) -> Unit)? = null,
-  runtimeInputController: UiBuilderSurfaceInputController? = null,
+  runtimeActionController: UiBuilderSemanticActionController? = null,
+  renderSessionId: String = "",
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
 ) {
-  val bounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
-  val overlayBounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
-  val scrollStates =
-    remember(document.id, document.revision) { mutableMapOf<String, ScrollableState>() }
-  val pressedNodes = remember(document.id, document.revision) { mutableMapOf<Int, String>() }
+  val bounds =
+    remember(document.id, document.revision, renderSessionId) { mutableStateMapOf<String, Rect>() }
+  val overlayBounds =
+    remember(document.id, document.revision, renderSessionId) { mutableStateMapOf<String, Rect>() }
+  val semanticActions = mutableMapOf<String, UiBuilderSemanticActionEntry>()
   var surfaceCoordinates by
-    remember(document.id, document.revision) { mutableStateOf<LayoutCoordinates?>(null) }
+    remember(document.id, document.revision, renderSessionId) {
+      mutableStateOf<LayoutCoordinates?>(null)
+    }
   val currentInspectionCallback = rememberUpdatedState(onInspectionSnapshot)
   val currentInspectionInvalidated = rememberUpdatedState(onInspectionInvalidated)
   val inspection =
-    remember(document.id, document.revision) {
+    remember(document.id, document.revision, renderSessionId) {
       UiBuilderInspectionCollector(
         document = document,
         onSnapshot = { snapshot -> currentInspectionCallback.value?.invoke(snapshot) },
@@ -213,44 +296,11 @@ fun UiBuilderSurface(
   val density = LocalDensity.current
   SideEffect { inspection.updateState(state) }
   SideEffect {
-    runtimeInputController?.install { input, onApplied ->
-      val point = Offset(input.x.toFloat(), input.y.toFloat())
-      if (input.kind == "pointer") {
-        val pointerId = requireNotNull(input.pointerId)
-        val hit =
-          bounds
-            .filter { (nodeId, rect) ->
-              rect.contains(point) && document.nodes[nodeId]?.eventBindings?.get("click") != null
-            }
-            .minByOrNull { (_, rect) -> rect.width * rect.height }
-            ?.key
-        when (input.phase) {
-          "down" -> hit?.let { pressedNodes[pointerId] = it }
-          "up" ->
-            pressedNodes
-              .remove(pointerId)
-              ?.takeIf { it == hit }
-              ?.let { nodeId ->
-                document.nodes
-                  .getValue(nodeId)
-                  .dispatch("click", state, onState = { key, value -> state[key] = value })
-              }
-          "cancel" -> pressedNodes.remove(pointerId)
-        }
-        inspection.updateState(state)
-        onApplied()
-      } else {
-        if (input.kind == "wheel") {
-          scrollStates
-            .filterKeys { nodeId -> bounds[nodeId]?.contains(point) == true }
-            .minByOrNull { (nodeId, _) -> bounds.getValue(nodeId).let { it.width * it.height } }
-            ?.value
-            ?.dispatchRawDelta(requireNotNull(input.deltaY).toFloat())
-        }
-        inspection.updateState(state)
-        onApplied()
-      }
-    }
+    val size = surfaceCoordinates?.size
+    runtimeActionController?.install(
+      semanticActions.toMap(),
+      size?.let { UiBuilderPixelBounds(0f, 0f, it.width.toFloat(), it.height.toFloat()) },
+    )
   }
   val colorScheme =
     when {
@@ -259,7 +309,20 @@ fun UiBuilderSurface(
       else -> lightColorScheme()
     }
   MaterialTheme(colorScheme = colorScheme) {
-    Box(Modifier.fillMaxSize().onGloballyPositioned { surfaceCoordinates = it }) {
+    Box(
+      Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+        surfaceCoordinates = coordinates
+        runtimeActionController?.install(
+          semanticActions.toMap(),
+          UiBuilderPixelBounds(
+            0f,
+            0f,
+            coordinates.size.width.toFloat(),
+            coordinates.size.height.toFloat(),
+          ),
+        )
+      }
+    ) {
       document.roots.forEach { root ->
         RenderNode(
           document = document,
@@ -292,7 +355,7 @@ fun UiBuilderSurface(
               with(density) { document.nodes.getValue(id).textContentTopPaddingDp().dp.toPx() },
             )
           },
-          scrollStates = scrollStates,
+          semanticActions = semanticActions,
         )
       }
       if (editorOverlay) {
@@ -330,16 +393,21 @@ private fun RenderNode(
   onState: (String, String?) -> Unit,
   onBounds: (String, LayoutCoordinates) -> Unit,
   onTextLayout: (String, TextLayoutResult) -> Unit,
-  scrollStates: MutableMap<String, ScrollableState>,
+  semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
   modifier: Modifier = Modifier,
 ) {
   val node = requireNotNull(document.nodes[nodeId]) { "unknown node: $nodeId" }
+  val enabled = node.bool("enabled", true)
+  val activate = { node.dispatch("click", state, onState) }
+  if (node.eventBindings["click"] != null) {
+    semanticActions[node.id] = UiBuilderSemanticActionEntry(enabled = enabled, activate = activate)
+  }
   val measured =
     node.modifiers
       .fold(modifier.onGloballyPositioned { onBounds(node.id, it) }) { result, value ->
         result.applyModifier(value.jsonObject, node.id)
       }
-      .then(node.actionModifier(state, onState))
+      .then(node.actionModifier(activate, enabled))
   fun slot(name: String) = node.slots[name].orEmpty()
   val child: @Composable (String, Modifier) -> Unit = { id, next ->
     RenderNode(
@@ -349,7 +417,7 @@ private fun RenderNode(
       onState,
       onBounds,
       onTextLayout,
-      scrollStates,
+      semanticActions,
       next,
     )
   }
@@ -414,7 +482,6 @@ private fun RenderNode(
       }
     "layout/lazy-row" -> {
       val lazyState = rememberLazyListState()
-      scrollStates[node.id] = lazyState
       LazyRow(
         modifier = measured,
         state = lazyState,
@@ -426,7 +493,8 @@ private fun RenderNode(
     }
     "layout/lazy-column" -> {
       val lazyState = rememberLazyListState()
-      scrollStates[node.id] = lazyState
+      semanticActions[node.id] =
+        semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
       LazyColumn(
         modifier = measured,
         state = lazyState,
@@ -439,7 +507,8 @@ private fun RenderNode(
     "layout/lazy-grid" -> {
       val minimum = node.obj("columns").number("minimumCellWidthDp", 362f).coerceAtLeast(1f)
       val lazyState = rememberLazyGridState()
-      scrollStates[node.id] = lazyState
+      semanticActions[node.id] =
+        semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
       LazyVerticalGrid(
         columns = GridCells.Adaptive(minimum.dp),
         modifier = measured,
@@ -460,7 +529,6 @@ private fun RenderNode(
     }
     "layout/horizontal-carousel" -> {
       val lazyState = rememberLazyListState()
-      scrollStates[node.id] = lazyState
       CompatibleHorizontalCarousel(node, measured, lazyState, slot("items")) { id, next ->
         child(id, next)
       }
@@ -513,9 +581,9 @@ private fun RenderNode(
     "m3/filter-chip" ->
       FilterChip(
         selected = node.resolvedBool("selected", state),
-        onClick = { node.dispatch("click", state, onState) },
+        onClick = activate,
         modifier = measured,
-        enabled = node.bool("enabled", true),
+        enabled = enabled,
         label = { slot("label").forEach { child(it, Modifier) } },
         leadingIcon =
           slot("leadingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
@@ -529,8 +597,9 @@ private fun RenderNode(
     "m3/tab" ->
       Tab(
         node.bool("selected"),
-        { node.dispatch("click", state, onState) },
+        activate,
         measured,
+        enabled = enabled,
         text = { slot("text").forEach { child(it, Modifier) } },
       )
     "m3/list-item" ->
@@ -567,21 +636,23 @@ private fun RenderNode(
       }
     "m3/icon-button" ->
       IconButton(
-        { node.dispatch("click", state, onState) },
-        measured
-          .size(node.float("sizeDp", 48f).dp)
-          .then(
-            if ("selected" in node.properties) {
-              Modifier.background(Color.Black.copy(alpha = 0.46f), CircleShape)
-            } else {
-              Modifier
-            }
-          ),
+        onClick = activate,
+        modifier =
+          measured
+            .size(node.float("sizeDp", 48f).dp)
+            .then(
+              if ("selected" in node.properties) {
+                Modifier.background(Color.Black.copy(alpha = 0.46f), CircleShape)
+              } else {
+                Modifier
+              }
+            ),
+        enabled = enabled,
       ) {
         slot("content").forEach { child(it, Modifier) }
       }
     "m3/button" ->
-      BuilderButton(node, measured, state, onState) {
+      BuilderButton(node, measured, activate, enabled) {
         slot("content").forEach { child(it, Modifier) }
       }
     "m3/horizontal-floating-toolbar" ->
@@ -743,14 +814,13 @@ private fun CompatibleFloatingToolbar(
 private fun BuilderButton(
   node: UiBuilderNode,
   modifier: Modifier,
-  state: Map<String, String?>,
-  onState: (String, String?) -> Unit,
+  click: () -> Unit,
+  enabled: Boolean,
   content: @Composable () -> Unit,
 ) {
-  val click = { node.dispatch("click", state, onState) }
   when (node.string("style")) {
-    "text" -> TextButton(click, modifier) { content() }
-    "filledTonal" -> FilledTonalButton(click, modifier) { content() }
+    "text" -> TextButton(click, modifier, enabled = enabled) { content() }
+    "filledTonal" -> FilledTonalButton(click, modifier, enabled = enabled) { content() }
     "fab" ->
       FloatingActionButton(
         click,
@@ -763,6 +833,7 @@ private fun BuilderButton(
       Button(
         click,
         modifier,
+        enabled = enabled,
         colors =
           ButtonDefaults.buttonColors(
             node.color("containerColor", MaterialTheme.colorScheme.primary)
@@ -923,11 +994,13 @@ private fun Modifier.applyModifier(value: JsonObject, nodeId: String): Modifier 
   }
 
 private fun UiBuilderNode.actionModifier(
-  state: Map<String, String?>,
-  onState: (String, String?) -> Unit,
+  activate: () -> Unit,
+  enabled: Boolean,
 ): Modifier =
   if (eventBindings["click"] == null || componentId in INTERACTIVE_COMPONENTS) Modifier
-  else Modifier.clickable { dispatch("click", state, onState) }
+  else Modifier.clickable(enabled = enabled, onClick = activate)
+
+private fun UiBuilderSemanticActionEntry?.orEmpty() = this ?: UiBuilderSemanticActionEntry()
 
 private fun UiBuilderNode.childAlignment(): Alignment =
   when (string("alignment")) {

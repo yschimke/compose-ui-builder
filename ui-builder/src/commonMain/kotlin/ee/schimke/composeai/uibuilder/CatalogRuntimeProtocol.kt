@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import kotlin.math.absoluteValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -29,24 +28,21 @@ sealed interface CatalogRuntimeCommand {
 
   data class Render(val requestId: String, val document: UiBuilderDocument) : CatalogRuntimeCommand
 
-  data class DispatchInput(val requestId: String, val input: CatalogRuntimeInput) :
+  data class DispatchAction(val requestId: String, val action: CatalogRuntimeAction) :
     CatalogRuntimeCommand
 }
 
 @Serializable
-data class CatalogRuntimeInput(
+data class CatalogRuntimeAction(
+  val documentId: String,
   val documentRevision: Int,
+  val nodeId: String,
   val kind: String,
-  val phase: String? = null,
-  val x: Double,
-  val y: Double,
-  val pointerId: Int? = null,
-  val button: Int? = null,
-  val buttons: Int? = null,
-  val deltaMode: Int? = null,
   val deltaX: Double? = null,
   val deltaY: Double? = null,
 )
+
+private data class DocumentRef(val id: String, val revision: Int)
 
 /**
  * Security and compatibility gate for a renderer frame.
@@ -60,8 +56,9 @@ class CatalogRuntimeProtocolEndpoint(
   private val protocolVersion: Int = CATALOG_RUNTIME_PROTOCOL_VERSION,
 ) {
   private var parentOrigin: String? = null
-  private var documentRevision: Int? = null
-  private var pendingRender: Pair<String, Int>? = null
+  private var activeDocument: DocumentRef? = null
+  private var pendingRender: Pair<String, DocumentRef>? = null
+  private val pendingActions = mutableMapOf<String, DocumentRef>()
   private val acceptedRequestIds = mutableSetOf<String>()
 
   fun receive(origin: String, sourceIsParent: Boolean, encoded: String): CatalogRuntimeCommand? {
@@ -107,7 +104,7 @@ class CatalogRuntimeProtocolEndpoint(
       "initialize" -> {
         if (lockedOrigin == null) parentOrigin = origin
         CatalogRuntimeCommand.Reply(
-          message.reply("initialized", buildJsonObject { put("interaction", "pointer-wheel") })
+          message.reply("initialized", buildJsonObject { put("interaction", "semantic-actions") })
         )
       }
       "renderDocument" -> {
@@ -140,11 +137,12 @@ class CatalogRuntimeProtocolEndpoint(
             )
           )
         }
-        documentRevision = null
-        pendingRender = message.requestId to document.revision
+        activeDocument = null
+        pendingActions.clear()
+        pendingRender = message.requestId to DocumentRef(document.id, document.revision)
         CatalogRuntimeCommand.Render(message.requestId, document)
       }
-      "dispatchInput" -> parseInput(message)
+      "dispatchAction" -> parseAction(message)
       else ->
         CatalogRuntimeCommand.Reply(
           message.reply(
@@ -159,20 +157,37 @@ class CatalogRuntimeProtocolEndpoint(
   }
 
   fun rendered(requestId: String, snapshot: UiBuilderInspectionSnapshot): CatalogRuntimeMessage {
-    if (pendingRender == requestId to snapshot.documentRevision) {
-      documentRevision = snapshot.documentRevision
+    val ref = DocumentRef(snapshot.documentId, snapshot.documentRevision)
+    if (pendingRender == requestId to ref) {
+      activeDocument = ref
       pendingRender = null
+      return inspectionReply(requestId, "rendered", snapshot)
     }
-    return inspectionReply(requestId, "rendered", snapshot)
+    return actionRejected(
+      requestId,
+      "STALE_RENDER_COMPLETION",
+      "render completion does not match the pending request and document revision",
+    )
   }
 
-  fun inputDispatched(
+  fun actionDispatched(
     requestId: String,
     snapshot: UiBuilderInspectionSnapshot,
-  ): CatalogRuntimeMessage = inspectionReply(requestId, "inputDispatched", snapshot)
+  ): CatalogRuntimeMessage {
+    val ref = DocumentRef(snapshot.documentId, snapshot.documentRevision)
+    if (pendingActions.remove(requestId) == ref && activeDocument == ref) {
+      return inspectionReply(requestId, "actionDispatched", snapshot)
+    }
+    return actionRejected(
+      requestId,
+      "STALE_ACTION_COMPLETION",
+      "action completion does not match the accepted request and document revision",
+    )
+  }
 
-  fun inputRejected(requestId: String, code: String, description: String): CatalogRuntimeMessage =
-    CatalogRuntimeMessage(
+  fun actionRejected(requestId: String, code: String, description: String): CatalogRuntimeMessage {
+    pendingActions.remove(requestId)
+    return CatalogRuntimeMessage(
       protocolVersion = protocolVersion,
       runtimeId = runtimeId,
       requestId = requestId,
@@ -183,6 +198,7 @@ class CatalogRuntimeProtocolEndpoint(
           put("message", description)
         },
     )
+  }
 
   private fun inspectionReply(
     requestId: String,
@@ -206,61 +222,39 @@ class CatalogRuntimeProtocolEndpoint(
         },
     )
 
-  private fun parseInput(message: CatalogRuntimeMessage): CatalogRuntimeCommand {
-    val currentRevision =
-      documentRevision
-        ?: return message.error("NO_DOCUMENT", "renderDocument must complete before dispatchInput")
-    val input =
+  private fun parseAction(message: CatalogRuntimeMessage): CatalogRuntimeCommand {
+    val current =
+      activeDocument
+        ?: return message.error("NO_DOCUMENT", "renderDocument must complete before dispatchAction")
+    val action =
       try {
         RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
-          CatalogRuntimeInput.serializer(),
+          CatalogRuntimeAction.serializer(),
           message.payload,
         )
       } catch (_: Exception) {
-        return message.error("INVALID_INPUT", "dispatchInput payload is malformed")
+        return message.error("INVALID_ACTION", "dispatchAction payload is malformed")
       }
-    if (input.documentRevision != currentRevision) {
-      return message.error("STALE_DOCUMENT", "input does not target the active document revision")
+    val target = DocumentRef(action.documentId, action.documentRevision)
+    if (target != current) {
+      return message.error("STALE_DOCUMENT", "action does not target the active document revision")
     }
-    if (!input.x.isFinite() || !input.y.isFinite() || input.x < 0 || input.y < 0) {
-      return message.error("INVALID_INPUT", "input coordinates must be finite and non-negative")
+    if (action.nodeId.isBlank() || action.nodeId.length > MAX_NODE_ID_LENGTH) {
+      return message.error("INVALID_ACTION", "action nodeId is invalid")
     }
-    return when (input.kind) {
-      "pointer" -> {
-        if (
-          input.phase !in POINTER_PHASES ||
-            input.pointerId == null ||
-            input.pointerId !in 0..MAX_POINTER_ID ||
-            input.button == null ||
-            input.button !in -1..4 ||
-            input.buttons == null ||
-            input.buttons !in 0..31 ||
-            input.deltaMode != null ||
-            input.deltaX != null ||
-            input.deltaY != null
-        ) {
-          message.error("INVALID_INPUT", "pointer input fields are invalid")
-        } else CatalogRuntimeCommand.DispatchInput(message.requestId, input)
+    val valid =
+      when (action.kind) {
+        "activate" -> action.deltaX == null && action.deltaY == null
+        "scrollBy" ->
+          action.deltaX == 0.0 &&
+            action.deltaY?.isFinite() == true &&
+            action.deltaY != 0.0 &&
+            kotlin.math.abs(action.deltaY) <= MAX_SCROLL_DELTA
+        else -> return message.error("UNSUPPORTED_ACTION", "action kind is not supported")
       }
-      "wheel" -> {
-        if (
-          input.phase != null ||
-            input.pointerId != null ||
-            input.button != null ||
-            input.buttons != null ||
-            input.deltaMode != PIXEL_DELTA_MODE ||
-            input.deltaX == null ||
-            input.deltaY == null ||
-            !input.deltaX.isFinite() ||
-            !input.deltaY.isFinite() ||
-            input.deltaX.absoluteValue > MAX_WHEEL_DELTA ||
-            input.deltaY.absoluteValue > MAX_WHEEL_DELTA
-        ) {
-          message.error("INVALID_INPUT", "wheel input fields are invalid")
-        } else CatalogRuntimeCommand.DispatchInput(message.requestId, input)
-      }
-      else -> message.error("UNSUPPORTED_INPUT", "input kind is not supported")
-    }
+    if (!valid) return message.error("INVALID_ACTION", "semantic action fields are invalid")
+    pendingActions[message.requestId] = target
+    return CatalogRuntimeCommand.DispatchAction(message.requestId, action)
   }
 
   fun encode(message: CatalogRuntimeMessage): String =
@@ -273,7 +267,13 @@ class CatalogRuntimeHostSession(
   private val protocolVersion: Int = CATALOG_RUNTIME_PROTOCOL_VERSION,
   private val rendererOrigin: String = "null",
 ) {
-  private val pending = mutableMapOf<String, String>()
+  private sealed interface Pending {
+    data object Initialize : Pending
+
+    data class Inspection(val responseType: String, val document: DocumentRef) : Pending
+  }
+
+  private val pending = mutableMapOf<String, Pending>()
 
   fun request(
     requestId: String,
@@ -281,7 +281,27 @@ class CatalogRuntimeHostSession(
     payload: JsonObject = JsonObject(emptyMap()),
   ): String {
     require(requestId.isNotBlank() && requestId !in pending)
-    pending[requestId] = type
+    pending[requestId] =
+      when (type) {
+        "initialize" -> Pending.Initialize
+        "renderDocument" -> {
+          val document =
+            RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
+              UiBuilderDocument.serializer(),
+              payload.getValue("document"),
+            )
+          Pending.Inspection("rendered", DocumentRef(document.id, document.revision))
+        }
+        "dispatchAction" -> {
+          val action =
+            RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(CatalogRuntimeAction.serializer(), payload)
+          Pending.Inspection(
+            "actionDispatched",
+            DocumentRef(action.documentId, action.documentRevision),
+          )
+        }
+        else -> error("unsupported runtime request: $type")
+      }
     return RUNTIME_PROTOCOL_JSON.encodeToString(
       CatalogRuntimeMessage(
         protocolVersion = protocolVersion,
@@ -301,27 +321,99 @@ class CatalogRuntimeHostSession(
       } catch (_: Exception) {
         return null
       }
-    val expectedType = pending[response.requestId]
-    val expectedResponseType =
-      when (expectedType) {
-        "initialize" -> "initialized"
-        "renderDocument" -> "rendered"
-        "dispatchInput" -> "inputDispatched"
-        else -> null
-      }
+    val expected = pending[response.requestId]
     if (
       response.schema != CATALOG_RUNTIME_PROTOCOL_SCHEMA ||
         response.protocolVersion != protocolVersion ||
         response.runtimeId != runtimeId ||
-        expectedType == null ||
-        (response.type != "error" && response.type != expectedResponseType)
+        expected == null
     ) {
       return null
+    }
+    if (response.type != "error") {
+      when (expected) {
+        Pending.Initialize -> if (response.type != "initialized") return null
+        is Pending.Inspection -> {
+          if (response.type != expected.responseType) return null
+          val snapshot = validatedInspection(response.payload) ?: return null
+          if (
+            snapshot.documentId != expected.document.id ||
+              snapshot.documentRevision != expected.document.revision
+          ) {
+            return null
+          }
+        }
+      }
     }
     pending.remove(response.requestId)
     return response
   }
+
+  private fun validatedInspection(payload: JsonObject): UiBuilderInspectionSnapshot? {
+    val snapshot =
+      try {
+        RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
+          UiBuilderInspectionSnapshot.serializer(),
+          payload.getValue("inspection"),
+        )
+      } catch (_: Exception) {
+        return null
+      }
+    if (
+      snapshot.schema != INSPECTION_SCHEMA ||
+        snapshot.coordinateSpace != "root-render-pixels" ||
+        snapshot.coordinatePrecision != "1/64px" ||
+        snapshot.nodes.isEmpty() ||
+        snapshot.nodes.size > MAX_INSPECTION_NODES ||
+        snapshot.slots.size > MAX_INSPECTION_SLOTS ||
+        snapshot.nodes.map { it.nodeId }.toSet().size != snapshot.nodes.size ||
+        snapshot.generation.key != "${snapshot.documentId}@${snapshot.documentRevision}" ||
+        snapshot.generation.stabilityFrames !in 1..MAX_STABILITY_FRAMES ||
+        snapshot.generation.expectedAuthoredNodeIds.size > MAX_INSPECTION_NODES ||
+        snapshot.generation.expectedAuthoredTextNodeIds.size > MAX_INSPECTION_NODES ||
+        snapshot.generation.measuredNodeIds.size > MAX_INSPECTION_NODES ||
+        snapshot.generation.measuredTextNodeIds.size > MAX_INSPECTION_NODES
+    ) {
+      return null
+    }
+    if (
+      snapshot.nodes.any { node ->
+        node.nodeId.isBlank() ||
+          node.nodeId.length > MAX_NODE_ID_LENGTH ||
+          node.semantics.actions.size > MAX_SEMANTIC_ACTIONS ||
+          node.bounds?.isValid() == false ||
+          node.text?.let { text ->
+            text.lineCount < 0 ||
+              !text.firstBaselineY.isFinite() ||
+              !text.lastBaselineY.isFinite() ||
+              kotlin.math.abs(text.firstBaselineY) > MAX_INSPECTION_COORDINATE ||
+              kotlin.math.abs(text.lastBaselineY) > MAX_INSPECTION_COORDINATE
+          } == true
+      } ||
+        snapshot.slots.any { slot ->
+          slot.parentNodeId.isBlank() ||
+            slot.childNodeIds.size > MAX_SLOT_CHILDREN ||
+            slot.measuredChildNodeIds.size > MAX_SLOT_CHILDREN ||
+            slot.bounds?.isValid() == false
+        }
+    ) {
+      return null
+    }
+    return snapshot
+  }
 }
+
+private fun UiBuilderPixelBounds.isValid(): Boolean =
+  x.isFinite() &&
+    y.isFinite() &&
+    width.isFinite() &&
+    height.isFinite() &&
+    width >= 0f &&
+    height >= 0f &&
+    kotlin.math.abs(x) <= MAX_INSPECTION_COORDINATE &&
+    kotlin.math.abs(y) <= MAX_INSPECTION_COORDINATE &&
+    width <= MAX_INSPECTION_COORDINATE &&
+    height <= MAX_INSPECTION_COORDINATE
 
 private fun CatalogRuntimeMessage.reply(type: String, payload: JsonObject) =
   copy(type = type, payload = payload)
@@ -337,10 +429,15 @@ private fun CatalogRuntimeMessage.error(code: String, description: String) =
     )
   )
 
-private val POINTER_PHASES = setOf("down", "move", "up", "cancel")
-private const val MAX_POINTER_ID = 1024
-private const val PIXEL_DELTA_MODE = 0
-private const val MAX_WHEEL_DELTA = 100_000.0
+private const val MAX_NODE_ID_LENGTH = 512
+private const val MAX_SCROLL_DELTA = 100_000.0
+private const val INSPECTION_SCHEMA = "compose-ui-builder-inspection/v1"
+private const val MAX_INSPECTION_NODES = 10_000
+private const val MAX_INSPECTION_SLOTS = 20_000
+private const val MAX_SLOT_CHILDREN = 10_000
+private const val MAX_SEMANTIC_ACTIONS = 64
+private const val MAX_STABILITY_FRAMES = 120
+private const val MAX_INSPECTION_COORDINATE = 1_000_000f
 
 internal val RUNTIME_PROTOCOL_JSON = Json {
   encodeDefaults = true

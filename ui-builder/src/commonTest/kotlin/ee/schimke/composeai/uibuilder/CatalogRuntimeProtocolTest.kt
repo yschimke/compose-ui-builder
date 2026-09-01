@@ -12,362 +12,278 @@ import kotlinx.serialization.json.put
 
 class CatalogRuntimeProtocolTest {
   @Test
-  fun `initializes renders and correlates measured response on locked origin`() {
-    val endpoint = CatalogRuntimeProtocolEndpoint("m3-2026.09")
-    val host = CatalogRuntimeHostSession("m3-2026.09")
-    val initialize = host.request("request-1", "initialize")
-    val initialized =
-      assertIs<CatalogRuntimeCommand.Reply>(
-          endpoint.receive("https://preview.example", true, initialize)
-        )
-        .message
-    assertEquals(
-      "initialized",
-      host.accept("null", true, endpoint.encode(initialized))?.type,
-    )
-
-    val document = document()
-    val render =
-      host.request(
-        "request-2",
-        "renderDocument",
-        buildJsonObject {
-          put(
-            "document",
-            RUNTIME_PROTOCOL_JSON.encodeToJsonElement(UiBuilderDocument.serializer(), document),
-          )
-        },
-      )
+  fun `correlates render and semantic action with exact document`() {
+    val endpoint = initializedEndpoint()
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val render = requestRender(endpoint, host, "render-1", document())
+    val snapshot = snapshot(document())
+    assertEquals("rendered", endpoint.rendered(render.requestId, snapshot).type)
     val command =
-      assertIs<CatalogRuntimeCommand.Render>(
-        endpoint.receive("https://preview.example", true, render)
-      )
-    assertEquals(document, command.document)
-    val response =
-      endpoint.rendered(command.requestId, UiBuilderInspectionCollector(document).snapshot())
-    assertEquals("rendered", host.accept("null", true, endpoint.encode(response))?.type)
-    assertNull(host.accept("null", true, endpoint.encode(response)), "request id is single use")
-  }
-
-  @Test
-  fun `rejects wrong source origin runtime and protocol`() {
-    val endpoint = CatalogRuntimeProtocolEndpoint("m3-2026.09")
-    val host = CatalogRuntimeHostSession("m3-2026.09")
-    val initialize = host.request("request-1", "initialize")
-    assertNull(endpoint.receive("https://preview.example", false, initialize))
-    endpoint.receive("https://preview.example", true, initialize)
-    assertNull(
-      endpoint.receive("https://attacker.example", true, host.request("request-2", "dispatchInput"))
-    )
-    assertNull(host.accept("https://preview.example", true, "{}"))
-    assertNull(host.accept("null", false, "{}"))
-
-    val wrong = CatalogRuntimeProtocolEndpoint("another-runtime")
-    val error =
-      assertIs<CatalogRuntimeCommand.Reply>(
-        wrong.receive("https://preview.example", true, initialize)
-      )
-    assertEquals("PROTOCOL_MISMATCH", error.message.payload.getValue("code").toString().trim('"'))
-  }
-
-  @Test
-  fun `accepts correlated pointer and wheel input for the active revision`() {
-    val endpoint = CatalogRuntimeProtocolEndpoint("m3-2026.09")
-    val host = CatalogRuntimeHostSession("m3-2026.09")
-    endpoint.receive("https://preview.example", true, host.request("request-1", "initialize"))
-    render(endpoint, host, "request-2")
-
-    val pointer =
-      input(
-        CatalogRuntimeInput(
-          documentRevision = 1,
-          kind = "pointer",
-          phase = "down",
-          x = 80.5,
-          y = 40.25,
-          pointerId = 1,
-          button = 0,
-          buttons = 1,
-        )
-      )
-    val pointerCommand =
-      assertIs<CatalogRuntimeCommand.DispatchInput>(
+      assertIs<CatalogRuntimeCommand.DispatchAction>(
         endpoint.receive(
-          "https://preview.example",
+          ORIGIN,
           true,
-          host.request("request-3", "dispatchInput", pointer),
+          host.request("action-1", "dispatchAction", action("design", 1, "root", "activate")),
         )
       )
-    assertEquals("pointer", pointerCommand.input.kind)
-    val pointerResponse =
-      endpoint.inputDispatched(
-        pointerCommand.requestId,
-        UiBuilderInspectionCollector(document()).snapshot(),
-      )
-    assertEquals(
-      "inputDispatched",
-      host.accept("null", true, endpoint.encode(pointerResponse))?.type,
-    )
+    assertEquals("root", command.action.nodeId)
+    val response = endpoint.actionDispatched(command.requestId, snapshot)
+    assertEquals("actionDispatched", host.accept("null", true, endpoint.encode(response))?.type)
+  }
 
-    val wheelCommand =
-      assertIs<CatalogRuntimeCommand.DispatchInput>(
+  @Test
+  fun `late render cannot complete a newer request`() {
+    val endpoint = initializedEndpoint()
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val first = requestRender(endpoint, host, "render-1", document(1))
+    val second = requestRender(endpoint, host, "render-2", document(2))
+    assertEquals(
+      "STALE_RENDER_COMPLETION",
+      endpoint.rendered(first.requestId, snapshot(document(1))).code(),
+    )
+    assertEquals("rendered", endpoint.rendered(second.requestId, snapshot(document(2))).type)
+  }
+
+  @Test
+  fun `action cannot return a newer inspection revision`() {
+    val endpoint = initializedEndpoint()
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val first = requestRender(endpoint, host, "render-1", document(1))
+    endpoint.rendered(first.requestId, snapshot(document(1)))
+    val command =
+      assertIs<CatalogRuntimeCommand.DispatchAction>(
         endpoint.receive(
-          "https://preview.example",
+          ORIGIN,
           true,
-          host.request(
-            "request-4",
-            "dispatchInput",
-            input(
-              CatalogRuntimeInput(
-                documentRevision = 1,
-                kind = "wheel",
-                x = 900.0,
-                y = 400.0,
-                deltaMode = 0,
-                deltaX = 0.0,
-                deltaY = 320.0,
-              )
-            ),
-          ),
+          host.request("action-1", "dispatchAction", action("design", 1, "root", "activate")),
         )
       )
-    assertEquals(320.0, wheelCommand.input.deltaY)
-  }
-
-  @Test
-  fun `rejects input until the requested document has a measured render`() {
-    val endpoint = CatalogRuntimeProtocolEndpoint("m3-2026.09")
-    val host = CatalogRuntimeHostSession("m3-2026.09")
-    endpoint.receive("https://preview.example", true, host.request("request-1", "initialize"))
-    val command = requestRender(endpoint, host, "request-2")
-    val input =
-      input(
-        CatalogRuntimeInput(
-          documentRevision = 1,
-          kind = "wheel",
-          x = 1.0,
-          y = 1.0,
-          deltaMode = 0,
-          deltaX = 0.0,
-          deltaY = 1.0,
-        )
-      )
-    val beforeRender =
-      assertIs<CatalogRuntimeCommand.Reply>(
-        endpoint.receive(
-          "https://preview.example",
-          true,
-          host.request("request-3", "dispatchInput", input),
-        )
-      )
-    assertEquals("NO_DOCUMENT", beforeRender.message.payload["code"].toString().trim('"'))
-
-    endpoint.rendered(command.requestId, UiBuilderInspectionCollector(document()).snapshot())
-    assertIs<CatalogRuntimeCommand.DispatchInput>(
-      endpoint.receive(
-        "https://preview.example",
-        true,
-        host.request("request-4", "dispatchInput", input),
-      )
+    requestRender(endpoint, host, "render-2", document(2))
+    assertEquals(
+      "STALE_ACTION_COMPLETION",
+      endpoint.actionDispatched(command.requestId, snapshot(document(2))).code(),
     )
   }
 
   @Test
-  fun `rejects malformed stale unsupported duplicate and wrong-origin input`() {
-    val endpoint = CatalogRuntimeProtocolEndpoint("m3-2026.09")
-    val host = CatalogRuntimeHostSession("m3-2026.09")
-    endpoint.receive("https://preview.example", true, host.request("request-1", "initialize"))
-    render(endpoint, host, "request-2")
-
-    fun error(requestId: String, payload: JsonObject): String {
-      val reply =
-        assertIs<CatalogRuntimeCommand.Reply>(
-          endpoint.receive(
-            "https://preview.example",
-            true,
-            host.request(requestId, "dispatchInput", payload),
-          )
-        )
-      return reply.message.payload.getValue("code").toString().trim('"')
-    }
-
-    assertEquals(
-      "INVALID_INPUT",
-      error(
-        "request-3",
-        buildJsonObject {
-          put("documentRevision", 1)
-          put("kind", "pointer")
-          put("x", -1)
-          put("y", 10)
-        },
-      ),
-    )
-    assertEquals(
-      "STALE_DOCUMENT",
-      error(
-        "request-4",
-        input(
-          CatalogRuntimeInput(
-            documentRevision = 0,
-            kind = "wheel",
-            x = 1.0,
-            y = 1.0,
-            deltaMode = 0,
-            deltaX = 0.0,
-            deltaY = 1.0,
-          )
-        ),
-      ),
-    )
-    assertEquals(
-      "UNSUPPORTED_INPUT",
-      error(
-        "request-5",
-        input(CatalogRuntimeInput(1, "keyboard", x = 1.0, y = 1.0)),
-      ),
-    )
-    assertEquals(
-      "INVALID_INPUT",
-      error(
-        "request-5b",
-        input(
-          CatalogRuntimeInput(
-            documentRevision = 1,
-            kind = "wheel",
-            x = 1.0,
-            y = 1.0,
-            deltaMode = 1,
-            deltaX = 0.0,
-            deltaY = 1.0,
-          )
-        ),
-      ),
-    )
-
-    val accepted =
-      host.request(
-        "request-6",
-        "dispatchInput",
-        input(CatalogRuntimeInput(1, "keyboard", x = 1.0, y = 1.0)),
-      )
-    endpoint.receive("https://preview.example", true, accepted)
-    val duplicate =
-      assertIs<CatalogRuntimeCommand.Reply>(
-        endpoint.receive("https://preview.example", true, accepted)
-      )
-    assertEquals("DUPLICATE_REQUEST", duplicate.message.payload["code"].toString().trim('"'))
-    assertNull(
-      endpoint.receive(
-        "https://attacker.example",
-        true,
-        host.request(
-          "request-7",
-          "dispatchInput",
-          input(CatalogRuntimeInput(1, "keyboard", x = 1.0, y = 1.0)),
-        ),
-      )
-    )
-  }
-
-  @Test
-  fun `render rejects a document pinned to another runtime`() {
-    val endpoint = CatalogRuntimeProtocolEndpoint("m3-2026.09")
-    val host = CatalogRuntimeHostSession("m3-2026.09")
-    endpoint.receive("https://preview.example", true, host.request("request-1", "initialize"))
-    val other =
-      document().copy(catalogPin = buildJsonObject { put("nativeRuntimeId", "another-runtime") })
-    val response =
+  fun `rejects malformed stale horizontal and unknown actions`() {
+    val endpoint = initializedEndpoint()
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val render = requestRender(endpoint, host, "render-1", document())
+    endpoint.rendered(render.requestId, snapshot(document()))
+    fun error(id: String, payload: JsonObject) =
       assertIs<CatalogRuntimeCommand.Reply>(
           endpoint.receive(
-            "https://preview.example",
+            ORIGIN,
             true,
-            host.request(
-              "request-2",
-              "renderDocument",
-              buildJsonObject {
-                put(
-                  "document",
-                  RUNTIME_PROTOCOL_JSON.encodeToJsonElement(
-                    UiBuilderDocument.serializer(),
-                    other,
-                  ),
-                )
-              },
-            ),
+            if (id == "bad") encodedRequest(id, "dispatchAction", payload)
+            else host.request(id, "dispatchAction", payload),
           )
         )
         .message
-    assertEquals("RUNTIME_PIN_MISMATCH", response.payload.getValue("code").toString().trim('"'))
+        .code()
+    assertEquals("INVALID_ACTION", error("bad", buildJsonObject { put("kind", "activate") }))
+    assertEquals("STALE_DOCUMENT", error("stale", action("design", 0, "root", "activate")))
+    assertEquals("UNSUPPORTED_ACTION", error("unknown", action("design", 1, "root", "focus")))
+    assertEquals(
+      "INVALID_ACTION",
+      error("horizontal", action("design", 1, "root", "scrollBy", 4.0, 20.0)),
+    )
   }
 
   @Test
-  fun `host ignores wrong source origin identity protocol and correlation without consuming request`() {
-    val host = CatalogRuntimeHostSession("m3-2026.09")
-    host.request("request-1", "dispatchInput")
-    val valid =
+  fun `rejects wrong source origin runtime protocol and duplicate`() {
+    val endpoint = CatalogRuntimeProtocolEndpoint(RUNTIME)
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val initialize = host.request("initialize", "initialize")
+    assertNull(endpoint.receive(ORIGIN, false, initialize))
+    endpoint.receive(ORIGIN, true, initialize)
+    assertNull(endpoint.receive("https://attacker.example", true, initialize))
+    val duplicate =
+      assertIs<CatalogRuntimeCommand.Reply>(endpoint.receive(ORIGIN, true, initialize))
+    assertEquals("DUPLICATE_REQUEST", duplicate.message.code())
+    val wrong = CatalogRuntimeProtocolEndpoint("wrong")
+    assertEquals(
+      "PROTOCOL_MISMATCH",
+      assertIs<CatalogRuntimeCommand.Reply>(wrong.receive(ORIGIN, true, initialize)).message.code(),
+    )
+  }
+
+  @Test
+  fun `host validates inspection before consuming correlation`() {
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    host.request(
+      "render-1",
+      "renderDocument",
+      buildJsonObject { put("document", documentElement(document())) },
+    )
+    assertNull(
+      host.accept(
+        "null",
+        true,
+        encode(response("render-1", snapshot(document()).copy(nodes = emptyList()))),
+      )
+    )
+    assertNull(
+      host.accept(
+        "null",
+        true,
+        encode(response("render-1", snapshot(document()).copy(documentId = "other"))),
+      )
+    )
+    val malformed =
+      snapshot(document()).let { value ->
+        value.copy(
+          nodes = value.nodes.map { it.copy(bounds = UiBuilderPixelBounds(2_000_000f, 0f, 1f, 1f)) }
+        )
+      }
+    assertNull(host.accept("null", true, encode(response("render-1", malformed))))
+    val oversized =
+      snapshot(document()).let { value ->
+        value.copy(
+          generation = value.generation.copy(expectedAuthoredNodeIds = List(10_001) { "node-$it" })
+        )
+      }
+    assertNull(host.accept("null", true, encode(response("render-1", oversized))))
+    assertEquals(
+      "rendered",
+      host.accept("null", true, encode(response("render-1", snapshot(document()))))?.type,
+    )
+    assertNull(host.accept("null", true, encode(response("render-1", snapshot(document())))))
+  }
+
+  @Test
+  fun `host rejects empty action completion without consuming request`() {
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    host.request("action-1", "dispatchAction", action("design", 1, "root", "activate"))
+    val empty =
       CatalogRuntimeMessage(
         protocolVersion = 1,
-        runtimeId = "m3-2026.09",
-        requestId = "request-1",
-        type = "inputDispatched",
+        runtimeId = RUNTIME,
+        requestId = "action-1",
+        type = "actionDispatched",
       )
-    fun encoded(message: CatalogRuntimeMessage) =
-      RUNTIME_PROTOCOL_JSON.encodeToString(CatalogRuntimeMessage.serializer(), message)
-
-    assertNull(host.accept("null", false, encoded(valid)))
-    assertNull(host.accept("https://attacker.example", true, encoded(valid)))
-    assertNull(host.accept("null", true, encoded(valid.copy(runtimeId = "wrong"))))
-    assertNull(host.accept("null", true, encoded(valid.copy(protocolVersion = 2))))
-    assertNull(host.accept("null", true, encoded(valid.copy(requestId = "not-pending"))))
-    assertEquals("inputDispatched", host.accept("null", true, encoded(valid))?.type)
-    assertNull(host.accept("null", true, encoded(valid)), "correlation is consumed exactly once")
+    assertNull(host.accept("null", true, encode(empty)))
+    val valid = response("action-1", snapshot(document()), "actionDispatched")
+    assertEquals("actionDispatched", host.accept("null", true, encode(valid))?.type)
   }
 
-  private fun document() =
-    UiBuilderDocument(
-      schema = "compose-ui-builder-document/v1",
-      id = "design",
-      title = "Design",
-      revision = 1,
-      catalogPin = buildJsonObject { put("nativeRuntimeId", "m3-2026.09") },
-      environment = JsonObject(emptyMap()),
-      stateVariables = JsonObject(emptyMap()),
-      roots = emptyList(),
-      nodes = emptyMap(),
-    )
-
-  private fun input(value: CatalogRuntimeInput): JsonObject =
-    RUNTIME_PROTOCOL_JSON.encodeToJsonElement(CatalogRuntimeInput.serializer(), value).jsonObject
-
-  private fun render(
-    endpoint: CatalogRuntimeProtocolEndpoint,
-    host: CatalogRuntimeHostSession,
-    requestId: String,
-  ) {
-    val command = requestRender(endpoint, host, requestId)
-    endpoint.rendered(command.requestId, UiBuilderInspectionCollector(document()).snapshot())
+  @Test
+  fun `host rejects wrong source origin identity protocol and correlation`() {
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    host.request("action-1", "dispatchAction", action("design", 1, "root", "activate"))
+    val valid = response("action-1", snapshot(document()), "actionDispatched")
+    assertNull(host.accept("null", false, encode(valid)))
+    assertNull(host.accept("https://attacker.example", true, encode(valid)))
+    assertNull(host.accept("null", true, encode(valid.copy(runtimeId = "wrong"))))
+    assertNull(host.accept("null", true, encode(valid.copy(protocolVersion = 2))))
+    assertNull(host.accept("null", true, encode(valid.copy(requestId = "not-pending"))))
+    assertEquals("actionDispatched", host.accept("null", true, encode(valid))?.type)
   }
+
+  private fun initializedEndpoint() =
+    CatalogRuntimeProtocolEndpoint(RUNTIME).also { endpoint ->
+      endpoint.receive(
+        ORIGIN,
+        true,
+        CatalogRuntimeHostSession(RUNTIME).request("initialize", "initialize"),
+      )
+    }
 
   private fun requestRender(
     endpoint: CatalogRuntimeProtocolEndpoint,
     host: CatalogRuntimeHostSession,
     requestId: String,
+    document: UiBuilderDocument,
   ): CatalogRuntimeCommand.Render =
     assertIs(
       endpoint.receive(
-        "https://preview.example",
+        ORIGIN,
         true,
         host.request(
           requestId,
           "renderDocument",
-          buildJsonObject {
-            put(
-              "document",
-              RUNTIME_PROTOCOL_JSON.encodeToJsonElement(UiBuilderDocument.serializer(), document()),
-            )
-          },
+          buildJsonObject { put("document", documentElement(document)) },
         ),
       )
     )
+
+  private fun document(revision: Int = 1) =
+    UiBuilderDocument(
+      "compose-ui-builder-document/v1",
+      "design",
+      "Design",
+      revision,
+      buildJsonObject { put("nativeRuntimeId", RUNTIME) },
+      JsonObject(emptyMap()),
+      JsonObject(emptyMap()),
+      listOf("root"),
+      mapOf("root" to UiBuilderNode("root", "layout/box")),
+    )
+
+  private fun snapshot(document: UiBuilderDocument): UiBuilderInspectionSnapshot {
+    val collector = UiBuilderInspectionCollector(document)
+    collector.recordNodeBounds("root", 0f, 0f, 100f, 100f)
+    return collector.snapshot()
+  }
+
+  private fun action(
+    documentId: String,
+    revision: Int,
+    nodeId: String,
+    kind: String,
+    deltaX: Double? = null,
+    deltaY: Double? = null,
+  ) =
+    RUNTIME_PROTOCOL_JSON.encodeToJsonElement(
+        CatalogRuntimeAction.serializer(),
+        CatalogRuntimeAction(documentId, revision, nodeId, kind, deltaX, deltaY),
+      )
+      .jsonObject
+
+  private fun documentElement(document: UiBuilderDocument) =
+    RUNTIME_PROTOCOL_JSON.encodeToJsonElement(UiBuilderDocument.serializer(), document)
+
+  private fun response(
+    requestId: String,
+    snapshot: UiBuilderInspectionSnapshot,
+    type: String = "rendered",
+  ) =
+    CatalogRuntimeMessage(
+      protocolVersion = 1,
+      runtimeId = RUNTIME,
+      requestId = requestId,
+      type = type,
+      payload =
+        buildJsonObject {
+          put(
+            "inspection",
+            RUNTIME_PROTOCOL_JSON.encodeToJsonElement(
+              UiBuilderInspectionSnapshot.serializer(),
+              snapshot,
+            ),
+          )
+        },
+    )
+
+  private fun encode(message: CatalogRuntimeMessage) =
+    RUNTIME_PROTOCOL_JSON.encodeToString(CatalogRuntimeMessage.serializer(), message)
+
+  private fun encodedRequest(requestId: String, type: String, payload: JsonObject) =
+    encode(
+      CatalogRuntimeMessage(
+        protocolVersion = 1,
+        runtimeId = RUNTIME,
+        requestId = requestId,
+        type = type,
+        payload = payload,
+      )
+    )
+
+  private fun CatalogRuntimeMessage.code() = payload.getValue("code").toString().trim('"')
+
+  private companion object {
+    const val RUNTIME = "m3-2026.09"
+    const val ORIGIN = "https://preview.example"
+  }
 }

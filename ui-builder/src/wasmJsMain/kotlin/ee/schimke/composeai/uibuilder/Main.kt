@@ -139,7 +139,7 @@ private external fun sandboxRendererRuntimeId(): String
 /**
  * Minimal editor-side vertical slice for the isolated runtime. The iframe owns design pixels; the
  * absolutely positioned sibling owns selection geometry and never participates in renderer layout.
- * Input and inspection share reversible root-render coordinates; the sibling overlay remains
+ * Semantic actions target inspected Compose nodes by stable id; the sibling overlay remains
  * pointer-inert and outside the renderer's Compose tree.
  */
 private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit =
@@ -198,20 +198,61 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
           y: geometry.offsetY + y * geometry.scaleY,
         };
       };
-      const shellToRenderer = (x, y) => {
-        const geometry = rendererGeometry();
-        return {
-          x: (x - geometry.offsetX) / geometry.scaleX,
-          y: (y - geometry.offsetY) / geometry.scaleY,
-        };
-      };
       const request = (type, payload) => {
         const requestId = 'browser-' + (++sequence);
-        pending.set(requestId, type);
+        const document = type === 'renderDocument' ? payload?.document : null;
+        const action = type === 'dispatchAction' ? payload : null;
+        pending.set(requestId, {
+          type,
+          documentId: document?.id ?? action?.documentId,
+          documentRevision: document?.revision ?? action?.documentRevision,
+        });
         frame.contentWindow.postMessage(JSON.stringify({
           schema, protocolVersion, runtimeId, requestId, type, payload: payload || {}
         }), '*'); // opaque sandbox origins require `*`; source and response origin are checked.
         return requestId;
+      };
+      const finiteBound = (value) => Number.isFinite(value) && Math.abs(value) <= 1000000;
+      const validBounds = (bounds) => bounds == null || (
+        finiteBound(bounds.x) && finiteBound(bounds.y) &&
+        finiteBound(bounds.width) && finiteBound(bounds.height) &&
+        bounds.width >= 0 && bounds.height >= 0
+      );
+      const validInspection = (inspection, expected) => {
+        if (!inspection || inspection.schema !== 'compose-ui-builder-inspection/v1' ||
+            inspection.documentId !== expected.documentId ||
+            inspection.documentRevision !== expected.documentRevision ||
+            inspection.coordinateSpace !== 'root-render-pixels' ||
+            inspection.coordinatePrecision !== '1/64px' ||
+            !Array.isArray(inspection.nodes) || inspection.nodes.length === 0 ||
+            inspection.nodes.length > 10000 || !Array.isArray(inspection.slots) ||
+            inspection.slots.length > 20000 || !inspection.generation ||
+            inspection.generation.key !== inspection.documentId + '@' + inspection.documentRevision ||
+            !Number.isInteger(inspection.generation.stabilityFrames) ||
+            inspection.generation.stabilityFrames < 1 || inspection.generation.stabilityFrames > 120)
+          return false;
+        for (const field of ['expectedAuthoredNodeIds', 'expectedAuthoredTextNodeIds',
+                             'measuredNodeIds', 'measuredTextNodeIds']) {
+          if (!Array.isArray(inspection.generation[field]) ||
+              inspection.generation[field].length > 10000) return false;
+        }
+        const ids = new Set();
+        for (const node of inspection.nodes) {
+          if (!node || typeof node.nodeId !== 'string' || !node.nodeId ||
+              node.nodeId.length > 512 || ids.has(node.nodeId) || !validBounds(node.bounds) ||
+              !node.semantics || !Array.isArray(node.semantics.actions) ||
+              node.semantics.actions.length > 64) return false;
+          if (node.text && (!Number.isInteger(node.text.lineCount) || node.text.lineCount < 0 ||
+              !finiteBound(node.text.firstBaselineY) || !finiteBound(node.text.lastBaselineY)))
+            return false;
+          ids.add(node.nodeId);
+        }
+        return inspection.slots.every((slot) => slot &&
+          typeof slot.parentNodeId === 'string' && slot.parentNodeId &&
+          typeof slot.slotName === 'string' &&
+          Array.isArray(slot.childNodeIds) && slot.childNodeIds.length <= 10000 &&
+          Array.isArray(slot.measuredChildNodeIds) && slot.measuredChildNodeIds.length <= 10000 &&
+          validBounds(slot.bounds));
       };
       const drawOverlay = (inspection) => {
         overlay.replaceChildren();
@@ -238,10 +279,12 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
         if (message.schema !== schema || message.protocolVersion !== protocolVersion ||
             message.runtimeId !== runtimeId || !pending.has(message.requestId)) return;
         const expected = pending.get(message.requestId);
-        const expectedResponse = expected === 'initialize' ? 'initialized' :
-          expected === 'renderDocument' ? 'rendered' :
-          expected === 'dispatchInput' ? 'inputDispatched' : null;
+        const expectedResponse = expected.type === 'initialize' ? 'initialized' :
+          expected.type === 'renderDocument' ? 'rendered' :
+          expected.type === 'dispatchAction' ? 'actionDispatched' : null;
         if (message.type !== 'error' && message.type !== expectedResponse) return;
+        if ((message.type === 'rendered' || message.type === 'actionDispatched') &&
+            !validInspection(message.payload?.inspection, expected)) return;
         pending.delete(message.requestId);
         responses.set(message.requestId, message);
         if (message.type === 'initialized') {
@@ -252,7 +295,7 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
         } else if (message.type === 'rendered') {
           drawOverlay(message.payload.inspection);
           document.documentElement.dataset.uiBuilderSandboxReady = 'true';
-        } else if (message.type === 'inputDispatched') {
+        } else if (message.type === 'actionDispatched') {
           drawOverlay(message.payload.inspection);
         } else if (message.type === 'error') {
           globalThis.__uiBuilderSandboxLastError = message.payload;
@@ -264,44 +307,27 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
           if (!initialized) request('initialize');
         }, 250);
       });
-      globalThis.__uiBuilderSandboxDispatchInput = (payload) => request('dispatchInput', payload);
+      globalThis.__uiBuilderSandboxDispatchAction = (payload) => request('dispatchAction', payload);
       globalThis.__uiBuilderSandboxResponse = (requestId) => responses.get(requestId) || null;
-      globalThis.__uiBuilderSandboxPointerAtNode = (nodeId, phase) => {
-        const node = globalThis.__uiBuilderSandboxInspection?.nodes?.find((it) => it.nodeId === nodeId);
-        if (!node?.bounds) throw new Error('node has no measured bounds: ' + nodeId);
-        const shellPoint = rendererToShell(
-          node.bounds.x + node.bounds.width / 2,
-          node.bounds.y + node.bounds.height / 2,
-        );
-        const { x, y } = shellToRenderer(shellPoint.x, shellPoint.y);
-        const revision = globalThis.__uiBuilderSandboxInspection.documentRevision;
-        if (phase !== 'down' && phase !== 'up') throw new Error('unsupported pointer phase: ' + phase);
-        return request('dispatchInput', {
-          documentRevision: revision, kind: 'pointer', phase, x, y,
-          pointerId: 1, button: 0, buttons: phase === 'down' ? 1 : 0,
+      globalThis.__uiBuilderSandboxActivateNode = (nodeId) => {
+        const inspection = globalThis.__uiBuilderSandboxInspection;
+        return request('dispatchAction', {
+          documentId: inspection.documentId,
+          documentRevision: inspection.documentRevision,
+          nodeId,
+          kind: 'activate',
         });
       };
-      globalThis.__uiBuilderSandboxWheelAtNode = (nodeId, deltaY) => {
-        const node = globalThis.__uiBuilderSandboxInspection?.nodes?.find((it) => it.nodeId === nodeId);
-        if (!node?.bounds) throw new Error('node has no measured bounds: ' + nodeId);
-        const shellPoint = rendererToShell(
-          node.bounds.x + node.bounds.width / 2,
-          node.bounds.y + Math.min(node.bounds.height / 2, 160),
-        );
-        const point = shellToRenderer(shellPoint.x, shellPoint.y);
-        return request('dispatchInput', {
-          documentRevision: globalThis.__uiBuilderSandboxInspection.documentRevision,
-          kind: 'wheel',
-          x: point.x,
-          y: point.y,
-          deltaMode: 0,
+      globalThis.__uiBuilderSandboxScrollNodeBy = (nodeId, deltaY) => {
+        const inspection = globalThis.__uiBuilderSandboxInspection;
+        return request('dispatchAction', {
+          documentId: inspection.documentId,
+          documentRevision: inspection.documentRevision,
+          nodeId,
+          kind: 'scrollBy',
           deltaX: 0,
           deltaY,
         });
-      };
-      globalThis.__uiBuilderSandboxCoordinateRoundTrip = (x, y) => {
-        const shellPoint = rendererToShell(x, y);
-        return shellToRenderer(shellPoint.x, shellPoint.y);
       };
     })()"""
   )

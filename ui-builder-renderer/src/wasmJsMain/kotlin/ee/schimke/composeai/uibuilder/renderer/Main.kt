@@ -10,18 +10,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.ComposeViewport
+import ee.schimke.composeai.uibuilder.CatalogRuntimeAction
 import ee.schimke.composeai.uibuilder.CatalogRuntimeCommand
 import ee.schimke.composeai.uibuilder.CatalogRuntimeProtocolEndpoint
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderInspectionSnapshot
+import ee.schimke.composeai.uibuilder.UiBuilderSemanticActionController
+import ee.schimke.composeai.uibuilder.UiBuilderSemanticActionResult
 import ee.schimke.composeai.uibuilder.UiBuilderSurface
-import ee.schimke.composeai.uibuilder.UiBuilderSurfaceInputController
 
 private var document by mutableStateOf<UiBuilderDocument?>(null)
-private var renderRequestId by mutableStateOf<String?>(null)
+private var renderRequest by mutableStateOf<RenderRequest?>(null)
 private var latestSnapshot: UiBuilderInspectionSnapshot? = null
+private var completedRenderRequestId: String? = null
 private lateinit var endpoint: CatalogRuntimeProtocolEndpoint
-private val inputController = UiBuilderSurfaceInputController()
+private val actionController = UiBuilderSemanticActionController()
+
+private data class RenderRequest(val requestId: String, val documentId: String, val revision: Int)
 
 fun main() {
   val runtimeId = runtimeIdFromPath()
@@ -31,49 +36,48 @@ fun main() {
       null -> Unit
       is CatalogRuntimeCommand.Reply -> postRuntimeMessage(endpoint.encode(command.message))
       is CatalogRuntimeCommand.Render -> {
-        renderRequestId = command.requestId
+        renderRequest =
+          RenderRequest(command.requestId, command.document.id, command.document.revision)
+        completedRenderRequestId = null
         latestSnapshot = null
         document = command.document
       }
-      is CatalogRuntimeCommand.DispatchInput -> {
-        if (!runtimeInputInsideViewport(command.input.x, command.input.y)) {
-          postRuntimeMessage(
-            endpoint.encode(
-              endpoint.inputRejected(
-                command.requestId,
-                "INPUT_OUT_OF_BOUNDS",
-                "input coordinates must fall inside the renderer viewport",
+      is CatalogRuntimeCommand.DispatchAction -> {
+        when (val result = actionController.dispatch(command.action, latestSnapshot)) {
+          UiBuilderSemanticActionResult.Applied ->
+            scheduleActionCompletion { completeAction(command.requestId, command.action) }
+          is UiBuilderSemanticActionResult.Rejected ->
+            postRuntimeMessage(
+              endpoint.encode(
+                endpoint.actionRejected(command.requestId, result.code, result.message)
               )
             )
-          )
-        } else if (
-          !inputController.dispatch(command.input) {
-            scheduleInputCompletion { completeInput(command.requestId) }
-          }
-        ) {
-          postRuntimeMessage(
-            endpoint.encode(
-              endpoint.inputRejected(
-                command.requestId,
-                "RENDERER_NOT_READY",
-                "renderer input surface has not been installed",
-              )
-            )
-          )
         }
       }
     }
   }
   ComposeViewport(viewportContainerId = "composeApp") {
     document?.let { current ->
+      val request = renderRequest ?: return@let
       UiBuilderSurface(
         document = current,
         editorOverlay = false,
-        runtimeInputController = inputController,
+        runtimeActionController = actionController,
+        renderSessionId = request.requestId,
         onInspectionSnapshot = { snapshot ->
+          if (
+            snapshot.documentId != request.documentId ||
+              snapshot.documentRevision != request.revision
+          )
+            return@UiBuilderSurface
           latestSnapshot = snapshot
-          val requestId = renderRequestId ?: return@UiBuilderSurface
-          scheduleMeasuredResponse(endpoint.encode(endpoint.rendered(requestId, snapshot)))
+          if (completedRenderRequestId == request.requestId) return@UiBuilderSurface
+          scheduleMeasuredResponse {
+            if (completedRenderRequestId == request.requestId) return@scheduleMeasuredResponse
+            val response = endpoint.rendered(request.requestId, snapshot)
+            if (response.type == "rendered") completedRenderRequestId = request.requestId
+            postRuntimeMessage(endpoint.encode(response))
+          }
         },
       )
       LaunchedEffect(current.id, current.revision) { markRendererReady() }
@@ -81,16 +85,20 @@ fun main() {
   }
 }
 
-private fun completeInput(requestId: String) {
+private fun completeAction(requestId: String, action: CatalogRuntimeAction) {
   val snapshot = latestSnapshot
   val response =
-    if (snapshot == null) {
-      endpoint.inputRejected(
+    if (
+      snapshot == null ||
+        snapshot.documentId != action.documentId ||
+        snapshot.documentRevision != action.documentRevision
+    ) {
+      endpoint.actionRejected(
         requestId,
-        "NO_INSPECTION",
-        "renderer has no stable inspection for the active document",
+        "STALE_ACTION_COMPLETION",
+        "renderer no longer has the action's exact document revision",
       )
-    } else endpoint.inputDispatched(requestId, snapshot)
+    } else endpoint.actionDispatched(requestId, snapshot)
   postRuntimeMessage(endpoint.encode(response))
 }
 
@@ -122,7 +130,7 @@ private fun installRuntimeReceiver(handler: (String, String) -> Unit): Unit =
 private fun postRuntimeMessage(encoded: String): Unit =
   js("globalThis.parent.postMessage(encoded, globalThis.__uiBuilderParentOrigin)")
 
-private fun scheduleMeasuredResponse(encoded: String): Unit =
+private fun scheduleMeasuredResponse(callback: () -> Unit): Unit =
   js(
     """(function () {
       const token = (globalThis.__uiBuilderMeasureToken || 0) + 1;
@@ -130,21 +138,18 @@ private fun scheduleMeasuredResponse(encoded: String): Unit =
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           if (globalThis.__uiBuilderMeasureToken !== token) return;
-          globalThis.parent.postMessage(encoded, globalThis.__uiBuilderParentOrigin);
+          callback();
         });
       });
     })()"""
   )
 
-private fun scheduleInputCompletion(callback: () -> Unit): Unit =
+private fun scheduleActionCompletion(callback: () -> Unit): Unit =
   js(
     """requestAnimationFrame(function () {
       requestAnimationFrame(function () { requestAnimationFrame(callback); });
     })"""
   )
-
-@JsFun("(x, y) => x >= 0 && y >= 0 && x < globalThis.innerWidth && y < globalThis.innerHeight")
-private external fun runtimeInputInsideViewport(x: Double, y: Double): Boolean
 
 @JsFun("() => document.documentElement.dataset.uiBuilderRendererReady = 'true'")
 private external fun markRendererReady()
