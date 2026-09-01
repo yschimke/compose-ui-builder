@@ -1,6 +1,6 @@
 # Compose UI Builder product specification
 
-**Status:** proposed
+**Status:** implementation in review; release gate remains open
 
 **Product surface:** Compose Multiplatform/Wasm builder plus an MCP adapter
 
@@ -22,12 +22,27 @@ This is a distinct product from the catalog and preview surfaces at `preview.coo
 catalog inventory, metadata, fonts, source information, render products, authentication patterns,
 and rendering infrastructure, but it does not turn a preview session into an editable document.
 
-The current `?compose=1` prototype proves that compiled catalog composables can be dragged, nested
-through `PreviewSlot`, and interacted with in Wasm. It is not the product model. Its root is a fixed
-vertical list, its state lives only in browser memory, and its drag gutters, borders, and slot
-placeholders participate in layout. The product must render the actual screen on the canvas and put
-selection, insertion, and drag affordances in a separate overlay that never changes or exports the
-design.
+The original `?compose=1` prototype proved that compiled catalog composables could be dragged and
+nested through `PreviewSlot`, but its browser-local fixed list and layout-affecting handles were not
+the product model. The distinct `/ui-builder/` application now renders saved semantic documents,
+and the renderer-only CMP/Wasm artifact reports measurements across a sandboxed iframe to a sibling
+overlay that does not change Compose pixels. The old `/wasm/<system>/` catalog app remains a separate
+feature.
+
+### Implementation snapshot (2026-09-01)
+
+These are implemented review branches, not a claim that every stack is merged or released:
+
+| Slice | Executable evidence | Status |
+| --- | --- | --- |
+| Reducer, compensation, persistence, restart recovery, and 60-minute three-client soak | [`CollaborationConvergenceTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CollaborationConvergenceTest.kt), [`PersistentUiBuilderServiceTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceTest.kt), and [#113 soak evidence](https://github.com/yschimke/compose-preview-server/pull/113#issuecomment-5486199877) | implemented |
+| Authenticated browser/MCP convergence, ACL isolation, reconnect, restart, and deterministic exports | [#116 Gate 2 harness](https://github.com/yschimke/compose-preview-server/pull/116) and [#128 production operation replay](https://github.com/yschimke/compose-preview-server/pull/128) | implemented; stacks still under review |
+| Generated Compose and existing Playground/BTA preview adapter | [`CapabilityComposeCodeExporterTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporterTest.kt) and [#126](https://github.com/yschimke/compose-preview-server/pull/126) | implemented |
+| Published runtime/editor artifacts and extraction seam | [#123](https://github.com/yschimke/compose-preview-server/pull/123) and [#129 external-consumer gate](https://github.com/yschimke/compose-preview-server/pull/129) | implemented for runtime/web artifacts; full released-version matrix open |
+| Exact runtime hosting and sandboxed renderer/measurement protocol | [`ServeUiBuilderRuntimeAssetsTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt) and [`ui-builder-renderer.spec.mjs`](../../preview-harness/ui-builder-renderer.spec.mjs) | implemented; v1 intentionally rejects input |
+| Jetcaster builder/generated fidelity | [#124](https://github.com/yschimke/compose-preview-server/pull/124) | under 0.22% in expanded and compact modes; exact protected golden remains open |
+| Performance | [#118](https://github.com/yschimke/compose-preview-server/pull/118) | propagation/reopen pass; canvas p95 `39.5ms` misses `16.67ms` |
+| Contracts, Figma import, and release fidelity | [contracts #30–32](https://github.com/yschimke/compose-preview-contracts/pulls) and the Wave 0 remaining-output list | open; no unreleased-coordinate workaround and no unauthorized Figma upload |
 
 ## 2. Product promise
 
@@ -358,13 +373,17 @@ using `session` for both concepts in APIs and UI.
 
 ## 9. Persistence and access
 
-Introduce a `DesignStore` boundary supporting atomic append plus revision, snapshot/replay, history,
-soft deletion, export provenance, and bounded compaction.
+The transport-free `ui-builder-runtime` now owns the `DesignStore`/service boundary for atomic
+mutation plus revision, snapshot/replay, history, tombstones, export provenance, and bounded
+compaction. Its recovery, compensation, access, and durable-sequence behavior is executable in
+[`PersistentUiBuilderServiceTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceTest.kt)
+and
+[`FileDesignStoreTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/FileDesignStoreTest.kt).
 
-The first deployment may use a file-backed, single-server-process implementation with an advisory
-lock, append-only operations, checksummed snapshots, atomic replacement, and startup recovery. That
-scope must be explicit. The interface must not bake in process memory so a transactional database
-adapter can later support multiple server replicas.
+The current implementation uses a file-backed, single-server-process store with an advisory lock,
+checksummed state, atomic replacement, retained backup recovery, bounded compaction, and startup
+replay. That scope remains explicit. The interface does not bake in process memory, so a
+transactional database adapter can later support multiple server replicas.
 
 Required durability properties:
 
@@ -375,20 +394,28 @@ Required durability properties:
 - storage, document size, operation rate, asset size, and connected-client counts are bounded; and
 - backup/restore and schema migration are tested before public multi-user use.
 
-Persistence also includes the renderable catalog runtime contract. For every catalog revision the
-product promises to reopen, the deployment must either retain a version-addressed builder Wasm
+Persistence also includes the renderable catalog runtime contract. Exact version-addressed runtime
+hosting and the renderer-only CMP/Wasm artifact now implement the selected Wave 0 policy. For every
+catalog revision the product promises to reopen, the deployment must either retain a
+version-addressed builder Wasm
 bundle/native adapter, prove a compatibility guarantee that the current adapter renders the pinned
-capability digest identically, or require an explicit migration before rendering. Wave 0 chooses
-one policy. A stored catalog hash without executable code that understands it is not a valid pin.
+capability digest identically, or require an explicit migration before rendering. Wave 0 selected
+exact retained bundles plus explicit migration for unavailable/retired pins. The remaining
+operational decision is how long deployments retain a runtime and how
+retirement forces an explicit migration. A stored catalog hash without executable code that
+understands it is not a valid pin.
 
-Reuse the current front-door and GitHub identity rules for human access. Agent grants should gain a
-separate design-write capability rather than treating editing as a higher point on the
+The implementation reuses the current front-door and GitHub identity rules for human access. Agent
+grants have a separate design-write capability rather than treating editing as a higher point on the
 `preview -> live -> playground` compute ladder. Read, write, export, and any server-side compile or
 render costs must be authorized independently. A grant may not approve another grant.
 
 Designs are private to their owner/collaborators by default. Sharing requires an explicit ACL or
 unguessable read-only link. Every mutation and export records the actor identity without recording
-bearer credentials.
+bearer credentials. Route-level isolation is covered by
+[`ServeUiBuilderRoutesTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRoutesTest.kt),
+and the installed-browser plus real-MCP flow by
+[#116](https://github.com/yschimke/compose-preview-server/pull/116).
 
 ## 10. Rendering model
 
@@ -430,14 +457,18 @@ Generate a deterministic Kotlin syntax tree/template projection, not code scrape
 - The stated product tolerance is “almost compiling”; the Confetti golden is held to the stronger
   requirement that it compiles in a pinned CMP/Wasm fixture project.
 
-Existing catalog source/usage and Code Connect metadata can supply symbols, imports, required
-parameters, and slot mappings, but the whole-screen AST-to-Kotlin generator is new work.
+Existing catalog source/usage and Code Connect metadata supply symbols, imports, required
+parameters, and slot mappings. The capability-driven whole-screen generator now emits the full
+Jetcaster fixture deterministically, fails closed on unknown catalog/modifier values, and reports
+located diagnostics; see
+[`CapabilityComposeCodeExporterTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporterTest.kt).
 
 ### Figma-compatible SVG
 
 The repository already serves layered, self-contained `compose/figma-svg` for daemon-rendered
-catalog previews and inlines hybrid raster crops that Figma cannot fetch. A dynamically assembled
-design does not yet have that export path.
+catalog previews and inlines hybrid raster crops that Figma cannot fetch. Dynamically assembled,
+revision-pinned designs now reach that export lane through generated Compose and the existing
+Playground/BTA/preview machinery.
 
 Wave 0 compared two approaches for the execution bridge that exports a saved revision when no
 editor browser is open:
@@ -456,8 +487,9 @@ The builder reuses the Playground execution path. It deterministically generates
 for a pinned design/catalog revision plus a tiny `@Preview` entry, then submits that controlled
 source to the existing compiler and render lane. The full Jetcaster source already compiles and
 renders as CMP/Wasm, and saved revisions already export structured SVG without an editor browser;
-the remaining implementation seam is the preview-entry/Playground adapter, not a second compiler or
-renderer architecture.
+[#126](https://github.com/yschimke/compose-preview-server/pull/126) implements the deterministic
+preview-entry/Playground adapter and exercises real BTA compilation, preview discovery, and
+first-frame handoff. No second compiler or renderer architecture is needed.
 
 The choice of execution bridge does not waive the Figma gate. Import a nested screen with text,
 clipping, elevation, and images into Figma and compare its rasterization to the clean Wasm render.
@@ -490,7 +522,10 @@ Initial resources:
 - render image plus structured node/slot inspection; and
 - export result and diagnostics.
 
-Initial tools:
+The thin adapter and these eight tools landed in
+[`compose-ai-tools` #4929](https://github.com/yschimke/compose-ai-tools/pull/4929). The follow-up
+[#4933](https://github.com/yschimke/compose-ai-tools/pull/4933) makes every render/SVG/Compose export
+name an explicit committed revision instead of accepting a moving default:
 
 - `create_design`
 - `open_design`
@@ -599,9 +634,18 @@ accepted-event sequence while a browser remains connected.
 The work is organized around stable integration contracts so independent contributors or agents can
 work concurrently. A wave is a dependency boundary, not a single serial team.
 
+Current roadmap truth:
+
+| Gate | Evidence | Current result |
+| --- | --- | --- |
+| Wave 0 | independent Jetcaster oracle, reducer/model tests, offline execution bridge, exact retained runtime plus sandbox protocol | core spikes complete; SVG/Figma conformance, Confetti correction, protected-golden review, and released contract coordinates remain |
+| Gate 1 | persisted round trip, strict validator, clean sibling overlay, revision-pinned code/SVG jobs | executable on current review stacks; release-boundary compatibility is not yet proven |
+| Gate 2 | [real MCP/browser/restart harness #116](https://github.com/yschimke/compose-preview-server/pull/116) plus [public Jetcaster operation replay #128](https://github.com/yschimke/compose-preview-server/pull/128) | behavior proven on installed development distributions; merge/release and released-version replay remain |
+| Release | [fidelity #124](https://github.com/yschimke/compose-preview-server/pull/124), [performance #118](https://github.com/yschimke/compose-preview-server/pull/118), and section 14 | open: Figma parity, protected golden, one-frame canvas p95, contract releases/catalog upgrade, and final audit |
+
 ### Wave 0: answer the irreversible questions
 
-Run four time-boxed spikes in parallel:
+The four time-boxed spikes ran in parallel:
 
 | Spike | Output | Stop/go gate |
 | --- | --- | --- |
@@ -614,9 +658,13 @@ Run four time-boxed spikes in parallel:
 strategy/execution bridge, executable catalog-retention policy, developer-authored Wasm golden, and
 complete Jetcaster gap list. Do not scale editor implementation before this gate.
 
+The reducer and runtime-pinning stop/go questions now pass executable tests. The execution bridge
+works without an editor browser, but its Figma raster result does not meet the product threshold.
+Accepted contract additions also remain open/unreleased, so Gate 0 is not recorded as fully closed.
+
 ### Wave 1: foundations against shared fixtures
 
-After the Wave 0 RFCs, run these workstreams in parallel:
+These workstreams proceeded in parallel against checked-in fixtures:
 
 | Workstream | Deliverable | Depends on |
 | --- | --- | --- |
@@ -631,6 +679,13 @@ After the Wave 0 RFCs, run these workstreams in parallel:
 **Gate 1:** one fixture round-trips without loss; service and Wasm resolve the same tree; invalid
 cycles/slots/props are rejected; the overlay changes no design bounds; code and SVG jobs are pinned
 to a revision.
+
+Each behavior above has executable evidence, including
+[`PersistentUiBuilderServiceTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceTest.kt),
+[`CapabilityComposeCodeExporterTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporterTest.kt),
+and
+[`ui-builder-renderer.spec.mjs`](../../preview-harness/ui-builder-renderer.spec.mjs). Formal release
+closure remains downstream of Gate 0's contract and Figma items.
 
 ### Wave 2: collaborative vertical slice
 
@@ -649,15 +704,21 @@ Continue in parallel, integrating through the Gate 1 API:
 reconnect preserve it; the full Jetcaster screen is assembled only through public builder operations;
 both exports are produced from the committed revision.
 
+The installed-distribution harness on #116 proves the real external MCP/browser/restart path; #128
+adds the full Jetcaster public-operation replay and production PNG/SVG comparison. This is executable
+Gate 2 evidence, not a claim that the stacked PRs or their coordinates are released.
+
 ### Wave 3: fidelity and product hardening
 
 Parallel finishing work:
 
 - tune Jetcaster geometry, typography, tokens, data, assets, interaction, and responsive behaviour;
 - complete SVG structure/fallback fixes and generated-code diagnostics;
-- add schema/catalog migrations, explicit catalog upgrade, export history, and audit trail;
-- add accessibility, keyboard editing, error recovery, quotas, rate limits, backpressure, metrics,
-  backup/restore, and concurrency/security soak tests; and
+- finish explicit catalog upgrade preview/apply/rollback after the contracts release; persistence
+  schema migration, export audit, backup/restore, and bounded compaction already have coverage;
+- finish accessibility and keyboard breadth; error recovery, presence, quotas, rate limits,
+  backpressure, metrics, backup/restore, and concurrency/soak coverage already exist on the review
+  stacks; and
 - update the visual harness and add viewable before/after evidence for every UI-affecting change.
 
 **Release gate:** every requirement in section 14 passes, including Figma import, compiled Jetcaster
@@ -697,13 +758,19 @@ benchmark cannot close until all lanes integrate.
 | Product is coupled back into preview session lifecycle | Saved design disappears or render hosts stay resident | Separate design identity/store/protocol; borrow lifecycle patterns but not session state |
 | New dependencies violate repository boundaries | Render host gains a web/MCP server or module direction reverses | Wire shapes in contracts, pure export in render-host, routes/store in server, MCP as API adapter |
 
-Decisions still requiring implementation evidence:
+Decisions still requiring implementation or operational evidence:
 
-1. retained versioned native bundles versus a catalog runtime compatibility/migration policy;
-2. exact stable child-position key, stale-command resolution, and compensating undo rules;
-3. file-backed single-process store format versus a transactional database for the first public
-   deployment; and
-4. which Jetcaster containers are generic primitives versus reusable semantic catalog templates.
+1. the retention/support window for exact versioned runtime bundles and the operator workflow for
+   retiring a pin into explicit catalog migration;
+2. file-backed single-process storage versus a transactional database for the first multi-replica
+   public deployment;
+3. which Jetcaster containers graduate from fixture-specific semantic templates into reusable
+   generic catalog primitives; and
+4. the accepted Figma fallback policy if structured SVG cannot reach the clean-render threshold.
+
+Stable position keys, stale-command resolution, and structural/scalar compensating undo are no
+longer open decisions; they are executable in
+[`CollaborationConvergenceTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CollaborationConvergenceTest.kt).
 
 ## 17. Repository placement
 
@@ -760,13 +827,17 @@ of these are true:
 Until then, co-location is useful because the render and catalog seams are still being discovered.
 Directory isolation and contract tests prevent that convenience from becoming an implicit API.
 
-The co-located build now expresses both extraction seams as artifacts. The server distribution
+The co-located build now expresses the extraction seams as artifacts. The server distribution
 consumes the `compose-preview-ui-builder-web` archive variant instead of reaching into the
 `:ui-builder` task graph or output directory; replacing its project producer with a released
 coordinate does not change distribution assembly. Production routes consume the published
 transport-free `ui-builder-runtime` port/implementation and never add a `:server -> :ui-builder`
-project dependency. Moving the frontend out remains a release/deployment decision, not a source API
-discovery exercise.
+project dependency. `:ui-builder-renderer` produces a separate renderer-only CMP/Wasm directory and
+ZIP rather than publishing the combined editor as a runtime. The external-consumer gate in
+[#129](https://github.com/yschimke/compose-preview-server/pull/129) proves isolated coordinate
+consumption for the runtime and web archive; adding the renderer ZIP and a full released-version
+operation replay remains part of the extraction gate. Moving the frontend out remains a
+release/deployment decision, not a source API discovery exercise.
 
 `scripts/check-ui-builder-external-consumer.sh` makes that artifact seam executable. It publishes
 the runtime and frontend to a fresh temporary Maven repository, copies a minimal Gradle consumer
