@@ -332,7 +332,7 @@ class PersistentUiBuilderServiceTest {
       ),
     )
 
-    mutableClock.epochMillis += 30_000
+    mutableClock.nowMillis += 30_000
     execute(
       service,
       viewer,
@@ -1257,6 +1257,8 @@ class PersistentUiBuilderServiceTest {
     override fun withZone(zone: ZoneId): Clock = this
 
     override fun instant(): Instant = Instant.ofEpochMilli(nowMillis)
+
+    override fun millis(): Long = nowMillis
   }
 
   private fun validExporter(
@@ -1368,16 +1370,6 @@ class PersistentUiBuilderServiceTest {
       bytes = value.copyOf()
       return true
     }
-  }
-
-  private class MutableClock(var epochMillis: Long) : Clock() {
-    override fun getZone(): ZoneId = ZoneOffset.UTC
-
-    override fun withZone(zone: ZoneId): Clock = this
-
-    override fun instant(): Instant = Instant.ofEpochMilli(epochMillis)
-
-    override fun millis(): Long = epochMillis
   }
 
   private class FailingStorage : UiBuilderStateStorage {
