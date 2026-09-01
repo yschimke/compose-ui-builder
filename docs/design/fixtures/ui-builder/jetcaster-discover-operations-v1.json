@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-operations/v1-candidate",
   "documentSchema": "compose-ui-builder-document/v1-candidate",
   "designId": "fixture-jetcaster-discover-expanded",
-  "expectedDocumentHash": "5d58ee43992be772626f2fd6a7e1cae094fa25ca7babdf55418ad80bca702b39",
+  "expectedDocumentHash": "dbd6d052f9b766db76aa7541927bacc5b6d993367f66ff05d98383be7be04cdc",
   "operations": [
     {
       "operationId": "create",
@@ -111,7 +111,7 @@
         "componentId": "m3/search-bar",
         "properties": {
           "expanded": { "type": "bool", "value": false },
-          "tonalElevationDp": { "type": "float", "value": 0.0 }
+          "tonalElevationDp": { "type": "float", "value": 2.0 }
         },
         "modifiers": [{ "type": "fillMaxWidth" }, { "type": "padding", "startDp": 16, "topDp": 8, "endDp": 16, "bottomDp": 8 }]
       }
@@ -285,7 +285,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "podcast-card-android", "slot": "content" },
       "afterNodeId": "podcast-card-android-gradient",
-      "node": { "id": "podcast-card-android-follow", "componentId": "m3/icon-button", "properties": { "alignment": { "type": "enum", "value": "topStart" }, "selected": { "type": "bool", "value": true }, "contentDescription": { "type": "string", "value": "Unfollow Android Developers Backstage" } } }
+      "node": { "id": "podcast-card-android-follow", "componentId": "m3/icon-button", "properties": { "alignment": { "type": "enum", "value": "topStart" }, "selected": { "type": "bool", "value": true }, "contentDescription": { "type": "string", "value": "Unfollow Android Developers Backstage" } }, "modifiers": [{ "type": "padding", "startDp": 4, "topDp": 4, "endDp": 4, "bottomDp": 4 }] }
     },
     {
       "operationId": "insert-podcast-card-android-follow-icon",
@@ -298,7 +298,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "podcast-card-android", "slot": "content" },
       "afterNodeId": "podcast-card-android-follow",
-      "node": { "id": "podcast-card-android-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Android Developers Backstage" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "color", "value": "#FFFFFFFF" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" }, "alignment": { "type": "enum", "value": "bottomStart" } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 12, "bottomDp": 16 }] }
+      "node": { "id": "podcast-card-android-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Android Developers Backstage" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "color", "value": "#FFFFFFFF" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" }, "alignment": { "type": "enum", "value": "bottomStart" } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 16, "bottomDp": 16 }] }
     },
     {
       "operationId": "insert-podcast-card-google",
@@ -325,20 +325,20 @@
       "type": "insertNode",
       "parent": { "nodeId": "podcast-card-google", "slot": "content" },
       "afterNodeId": "podcast-card-google-gradient",
-      "node": { "id": "podcast-card-google-follow", "componentId": "m3/icon-button", "properties": { "alignment": { "type": "enum", "value": "topStart" }, "selected": { "type": "bool", "value": false }, "contentDescription": { "type": "string", "value": "Follow Google Developers podcast" } } }
+      "node": { "id": "podcast-card-google-follow", "componentId": "m3/icon-button", "properties": { "alignment": { "type": "enum", "value": "topStart" }, "selected": { "type": "bool", "value": false }, "contentDescription": { "type": "string", "value": "Follow Google Developers podcast" } }, "modifiers": [{ "type": "padding", "startDp": 4, "topDp": 4, "endDp": 4, "bottomDp": 4 }] }
     },
     {
       "operationId": "insert-podcast-card-google-follow-icon",
       "type": "insertNode",
       "parent": { "nodeId": "podcast-card-google-follow", "slot": "content" },
-      "node": { "id": "podcast-card-google-follow-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "addCircle" }, "color": { "type": "colorToken", "value": "onSurface" } } }
+      "node": { "id": "podcast-card-google-follow-icon", "componentId": "m3/icon", "properties": { "iconKey": { "type": "enum", "value": "addCircle" }, "color": { "type": "color", "value": "#FFFFFFFF" } } }
     },
     {
       "operationId": "insert-podcast-card-google-title",
       "type": "insertNode",
       "parent": { "nodeId": "podcast-card-google", "slot": "content" },
       "afterNodeId": "podcast-card-google-follow",
-      "node": { "id": "podcast-card-google-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Google Developers podcast" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "color", "value": "#FFFFFFFF" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" }, "alignment": { "type": "enum", "value": "bottomStart" } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 12, "bottomDp": 16 }] }
+      "node": { "id": "podcast-card-google-title", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "Google Developers podcast" }, "style": { "type": "typographyToken", "value": "bodyMedium" }, "color": { "type": "color", "value": "#FFFFFFFF" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" }, "alignment": { "type": "enum", "value": "bottomStart" } }, "modifiers": [{ "type": "padding", "startDp": 16, "topDp": 0, "endDp": 16, "bottomDp": 16 }] }
     },
     {
       "operationId": "insert-main-episode-card",
@@ -383,7 +383,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "main-episode-copy", "slot": "children" },
       "afterNodeId": "main-episode-podcast",
-      "node": { "id": "main-episode-summary", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
+      "node": { "id": "main-episode-summary", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!" }, "style": { "type": "typographyToken", "value": "titleSmall" }, "color": { "type": "colorToken", "value": "onSurfaceVariant" }, "maxLines": { "type": "int", "value": 2 }, "overflow": { "type": "enum", "value": "ellipsis" } } }
     },
     {
       "operationId": "insert-main-episode-image",
@@ -416,7 +416,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "main-episode-footer", "slot": "children" },
       "afterNodeId": "main-episode-play",
-      "node": { "id": "main-episode-meta", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "May 16, 2024 · 42 min" }, "style": { "type": "typographyToken", "value": "bodySmall" }, "weight": { "type": "float", "value": 1.0 }, "maxLines": { "type": "int", "value": 1 } } }
+      "node": { "id": "main-episode-meta", "componentId": "m3/text", "properties": { "text": { "type": "string", "value": "May 16, 2024 · 42 min" }, "style": { "type": "typographyToken", "value": "bodySmall" }, "weight": { "type": "float", "value": 1.0 }, "maxLines": { "type": "int", "value": 1 } }, "modifiers": [{ "type": "padding", "startDp": 8, "topDp": 0, "endDp": 8, "bottomDp": 0 }] }
     },
     {
       "operationId": "insert-main-episode-queue",

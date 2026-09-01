@@ -1,4 +1,4 @@
-// Generator content SHA-256: 51c187093b7e7b3b31fc27fb29bd423c07943c8d320920c003671fd91bc4c2e5
+// Generator content SHA-256: 932d9577e8bbc42dfdebbc6c04df2791ffc8b72f9f15bfd4d0cf4f642a969274
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -79,10 +79,10 @@ fun JetcasterDiscoverExpandedSupportingPane() {
             containerColor = Color.Transparent,
             topBar = {
               // node:search-bar component:m3/search-bar symbol:SearchBar
-              // typed-properties:{"expanded":{"type":"bool","value":false},"tonalElevationDp":{"type":"float","value":0}}
+              // typed-properties:{"expanded":{"type":"bool","value":false},"tonalElevationDp":{"type":"float","value":2}}
               BuilderSearchBar(
                 expanded = false,
-                tonalElevation = 0.dp,
+                tonalElevation = 2.dp,
                 modifier =
                   Modifier.fillMaxWidth()
                     .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
@@ -294,7 +294,13 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   IconButton(
                                     onClick = {},
                                     modifier =
-                                      Modifier.align(Alignment.TopStart)
+                                      Modifier.padding(
+                                          start = 4.dp,
+                                          top = 4.dp,
+                                          end = 4.dp,
+                                          bottom = 4.dp,
+                                        )
+                                        .align(Alignment.TopStart)
                                         .semantics {
                                           contentDescription =
                                             "Unfollow Android Developers Backstage"
@@ -325,7 +331,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                       Modifier.padding(
                                           start = 16.dp,
                                           top = 0.dp,
-                                          end = 12.dp,
+                                          end = 16.dp,
                                           bottom = 16.dp,
                                         )
                                         .align(Alignment.BottomStart),
@@ -376,7 +382,13 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   IconButton(
                                     onClick = {},
                                     modifier =
-                                      Modifier.align(Alignment.TopStart)
+                                      Modifier.padding(
+                                          start = 4.dp,
+                                          top = 4.dp,
+                                          end = 4.dp,
+                                          bottom = 4.dp,
+                                        )
+                                        .align(Alignment.TopStart)
                                         .semantics {
                                           contentDescription = "Follow Google Developers podcast"
                                         }
@@ -385,11 +397,11 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   ) {
                                     // node:podcast-card-google-follow-icon component:m3/icon
                                     // symbol:Icon
-                                    // typed-properties:{"color":{"type":"colorToken","value":"onSurface"},"iconKey":{"type":"enum","value":"addCircle"}}
+                                    // typed-properties:{"color":{"type":"color","value":"#FFFFFFFF"},"iconKey":{"type":"enum","value":"addCircle"}}
                                     Icon(
                                       imageVector = builderIcon("addCircle"),
                                       contentDescription = null,
-                                      tint = MaterialTheme.colorScheme.onSurface,
+                                      tint = Color(0xFFFFFFFF),
                                       modifier = Modifier,
                                     )
                                   }
@@ -406,7 +418,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                       Modifier.padding(
                                           start = 16.dp,
                                           top = 0.dp,
-                                          end = 12.dp,
+                                          end = 16.dp,
                                           bottom = 16.dp,
                                         )
                                         .align(Alignment.BottomStart),
@@ -478,12 +490,12 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                     modifier = Modifier,
                                   )
                                   // node:main-episode-summary component:m3/text symbol:Text
-                                  // typed-properties:{"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!"}}
+                                  // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"titleSmall"},"text":{"type":"string","value":"In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!"}}
                                   Text(
                                     text =
                                       "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!",
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = Color.Unspecified,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = null,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
@@ -535,7 +547,14 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                                   fontWeight = null,
                                   maxLines = 1,
                                   overflow = TextOverflow.Ellipsis,
-                                  modifier = Modifier.weight(1f),
+                                  modifier =
+                                    Modifier.padding(
+                                        start = 8.dp,
+                                        top = 0.dp,
+                                        end = 8.dp,
+                                        bottom = 0.dp,
+                                      )
+                                      .weight(1f),
                                 )
                                 // node:main-episode-queue component:m3/icon-button
                                 // symbol:IconButton

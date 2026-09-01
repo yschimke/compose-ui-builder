@@ -9,7 +9,7 @@
   "comparisonFixture": {
     "resource": "jetcaster-discover-operations-v1.json",
     "revision": 108,
-    "documentHash": "5d58ee43992be772626f2fd6a7e1cae094fa25ca7babdf55418ad80bca702b39"
+    "documentHash": "dbd6d052f9b766db76aa7541927bacc5b6d993367f66ff05d98383be7be04cdc"
   },
   "source": {
     "repository": "android/compose-samples",

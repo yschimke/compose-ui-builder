@@ -5,9 +5,9 @@
   "latestLocalExport": {
     "designId": "fixture-jetcaster-discover-expanded",
     "revision": 108,
-    "documentContentSha256": "5d58ee43992be772626f2fd6a7e1cae094fa25ca7babdf55418ad80bca702b39",
-    "svgSha256": "74a9b2eb62cb882ea09812decea25f48d07e0b7317d51d8f14c97f24c49fea6c",
-    "svgBytes": 148372,
+    "documentContentSha256": "dbd6d052f9b766db76aa7541927bacc5b6d993367f66ff05d98383be7be04cdc",
+    "svgSha256": "8d7bc85fb6f8870a161bd5a1ca28ca5da384c149b3ab28f708d8fc1e95b9ac9a",
+    "svgBytes": 148370,
     "width": 1280,
     "height": 800,
     "typography": {
@@ -61,7 +61,7 @@
   },
   "privateImportGate": {
     "status": "pending-explicit-upload-authorization",
-    "sourceSvgSha256": "74a9b2eb62cb882ea09812decea25f48d07e0b7317d51d8f14c97f24c49fea6c",
+    "sourceSvgSha256": "8d7bc85fb6f8870a161bd5a1ca28ca5da384c149b3ab28f708d8fc1e95b9ac9a",
     "draftCreated": true,
     "draftMutated": false,
     "requiredEvidence": [
