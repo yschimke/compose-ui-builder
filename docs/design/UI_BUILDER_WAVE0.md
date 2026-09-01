@@ -389,12 +389,20 @@ is deliberately no `latest` or `current` alias. The common Wasm client loader fe
 pinned manifest, checks protocol, identity and digest against its descriptor, and returns the exact
 entrypoint URL.
 
-This does **not** yet complete the renderer split. The currently published
-`compose-preview-ui-builder-web` archive is the combined editor shell and in-process renderer; it
-has no sandboxed render/measure/input protocol and is therefore not registered as a native runtime.
-A separately produced renderer-only bundle and surface protocol integration remain required before
-the editor can mount the returned entrypoint. Treating the combined shell as that renderer would
-create a version-looking URL without the promised isolation or protocol compatibility.
+The renderer split now has an executable vertical slice. `:ui-builder-renderer` produces a distinct
+renderer-only CMP/Wasm directory and ZIP, including the verified v1 runtime manifest; the combined
+`compose-preview-ui-builder-web` archive remains the editor shell and is not registered as a native
+runtime. The editor can mount an exact `nativeRuntimeId` entrypoint in an opaque-origin iframe and
+round-trip a real Jetcaster document into measured authored-node and slot bounds. A pointer-inert
+sibling overlay maps those root-render coordinates without becoming part of the Compose tree or
+changing its pixels. The protocol validates source, locks origin, checks exact runtime/protocol
+identity, and correlates every response to one pending request.
+
+Protocol v1 deliberately supports render and measure only. `dispatchInput` returns the explicit
+`UNSUPPORTED_INPUT` error; interaction semantics and authoritative state reconciliation remain a
+later protocol version, rather than an implied forwarding path that can silently diverge. The
+browser harness runs the actual editor artifact and renderer artifact across the iframe boundary,
+asserts node/slot measurements and overlay separation, and proves floating runtime ids are rejected.
 
 This separates editor fixes from catalog pixel compatibility and gives SVG capture an explicit
 Wasm boundary if recorded-scene export wins. The spike must prove that the overlay can map measured

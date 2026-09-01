@@ -14,6 +14,7 @@ tasks.named("check") {
   dependsOn(
     ":render-host:check",
     ":ui-builder-runtime:check",
+    ":ui-builder-renderer:check",
     ":ui-builder-web:check",
     ":server:check",
     ":slot-preview-runtime:check",
@@ -30,6 +31,7 @@ tasks.register("ktfmtCheckAll") {
   dependsOn(
     ":render-host:ktfmtCheck",
     ":ui-builder-runtime:ktfmtCheck",
+    ":ui-builder-renderer:ktfmtCheck",
     ":server:ktfmtCheck",
     ":slot-preview-runtime:ktfmtCheck",
     ":ui-builder:ktfmtCheck",
@@ -45,6 +47,7 @@ tasks.register("ktfmtFormat") {
   dependsOn(
     ":render-host:ktfmtFormat",
     ":ui-builder-runtime:ktfmtFormat",
+    ":ui-builder-renderer:ktfmtFormat",
     ":server:ktfmtFormat",
     ":slot-preview-runtime:ktfmtFormat",
     ":ui-builder:ktfmtFormat",

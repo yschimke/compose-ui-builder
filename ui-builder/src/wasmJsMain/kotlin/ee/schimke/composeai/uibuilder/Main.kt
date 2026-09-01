@@ -76,19 +76,160 @@ import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.Promise
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 fun main() {
+  val rendererRuntimeId = sandboxRendererRuntimeId()
+  if (rendererRuntimeId.isNotEmpty()) {
+    MainScope().launch {
+      val fixture =
+        Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
+      val fixtureDocument = UiBuilderReducer.replay(fixture).document
+      // The checked-in benchmark predates retained runtimes and carries the placeholder
+      // `candidate` pin. This isolated transport fixture gives that document the exact runtime
+      // selected by the test shell; production documents arrive with this pin already persisted.
+      val document =
+        fixtureDocument.copy(
+          catalogPin =
+            JsonObject(
+              fixtureDocument.catalogPin +
+                ("nativeRuntimeId" to kotlinx.serialization.json.JsonPrimitive(rendererRuntimeId))
+            )
+        )
+      mountSandboxRenderer(
+        rendererRuntimeId,
+        inspectionJson.encodeToString(UiBuilderDocument.serializer(), document),
+      )
+    }
+    return
+  }
   ComposeViewport(viewportContainerId = "composeApp") {
     if (liveSessionEnabled()) LiveSessionApp() else VisualFixtureApp(captureMode())
   }
 }
+
+@JsFun(
+  """() => {
+    const value = new URLSearchParams(globalThis.location.search).get('rendererRuntimeId') || '';
+    if (value && (!/^[A-Za-z0-9._-]+$/.test(value) || value === 'latest' || value === 'current')) {
+      throw new Error('rendererRuntimeId must be an exact safe runtime id');
+    }
+    return value;
+  }"""
+)
+private external fun sandboxRendererRuntimeId(): String
+
+/**
+ * Minimal editor-side vertical slice for the isolated runtime. The iframe owns design pixels; the
+ * absolutely positioned sibling owns selection geometry and never participates in renderer layout.
+ * This mode deliberately does not forward input until protocol semantics are specified.
+ */
+private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit =
+  js(
+    """(async function () {
+      const protocolVersion = 1;
+      const schema = 'compose-ui-builder-renderer/v1';
+      const root = '/ui-builder/runtime/' + encodeURIComponent(runtimeId) + '/';
+      const response = await fetch(root + 'runtime-manifest.json', {
+        credentials: 'same-origin', headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) throw new Error('runtime manifest HTTP ' + response.status);
+      const manifest = await response.json();
+      if (manifest.schema !== 'compose-ui-builder-runtime/v1' ||
+          manifest.runtimeId !== runtimeId || manifest.protocolVersion !== protocolVersion ||
+          typeof manifest.entrypoint !== 'string' ||
+          !/^[A-Za-z0-9._/-]+$/.test(manifest.entrypoint) ||
+          manifest.entrypoint.split('/').some((part) => !part || part === '.' || part === '..')) {
+        throw new Error('pinned runtime manifest does not match the editor protocol');
+      }
+
+      const shell = document.getElementById('composeApp');
+      shell.replaceChildren();
+      shell.style.position = 'relative';
+      const frame = document.createElement('iframe');
+      frame.id = 'ui-builder-renderer-frame';
+      frame.title = 'Native Compose design renderer';
+      frame.sandbox = 'allow-scripts';
+      frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent';
+      frame.src = root + manifest.entrypoint;
+      const overlay = document.createElement('div');
+      overlay.id = 'ui-builder-renderer-overlay';
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden';
+      shell.append(frame, overlay);
+
+      let sequence = 0;
+      let initialized = false;
+      let initializeTimer = null;
+      const pending = new Map();
+      const request = (type, payload) => {
+        const requestId = 'browser-' + (++sequence);
+        pending.set(requestId, type);
+        frame.contentWindow.postMessage(JSON.stringify({
+          schema, protocolVersion, runtimeId, requestId, type, payload: payload || {}
+        }), '*'); // opaque sandbox origins require `*`; source and response origin are checked.
+        return requestId;
+      };
+      const drawOverlay = (inspection) => {
+        overlay.replaceChildren();
+        const frameRect = frame.getBoundingClientRect();
+        const shellRect = shell.getBoundingClientRect();
+        const scaleX = frameRect.width / frame.clientWidth;
+        const scaleY = frameRect.height / frame.clientHeight;
+        for (const node of inspection.nodes || []) {
+          if (!node.bounds) continue;
+          const marker = document.createElement('div');
+          marker.dataset.nodeId = node.nodeId;
+          marker.style.cssText = 'position:absolute;box-sizing:border-box;border:1px solid transparent';
+          marker.style.left = (frameRect.left - shellRect.left + node.bounds.x * scaleX) + 'px';
+          marker.style.top = (frameRect.top - shellRect.top + node.bounds.y * scaleY) + 'px';
+          marker.style.width = (node.bounds.width * scaleX) + 'px';
+          marker.style.height = (node.bounds.height * scaleY) + 'px';
+          overlay.append(marker);
+        }
+        globalThis.__uiBuilderSandboxInspection = inspection;
+        globalThis.__uiBuilderSandboxOverlayCount = overlay.childElementCount;
+      };
+      addEventListener('message', (event) => {
+        if (event.source !== frame.contentWindow || event.origin !== 'null' || typeof event.data !== 'string') return;
+        let message;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (message.schema !== schema || message.protocolVersion !== protocolVersion ||
+            message.runtimeId !== runtimeId || !pending.has(message.requestId)) return;
+        const expected = pending.get(message.requestId);
+        const expectedResponse = expected === 'initialize' ? 'initialized' :
+          expected === 'renderDocument' ? 'rendered' : null;
+        if (message.type !== 'error' && message.type !== expectedResponse) return;
+        pending.delete(message.requestId);
+        if (message.type === 'initialized') {
+          if (initialized) return;
+          initialized = true;
+          if (initializeTimer !== null) clearInterval(initializeTimer);
+          request('renderDocument', { document: JSON.parse(documentJson) });
+        } else if (message.type === 'rendered') {
+          drawOverlay(message.payload.inspection);
+          document.documentElement.dataset.uiBuilderSandboxReady = 'true';
+        } else if (message.type === 'error') {
+          throw new Error(message.payload.code + ': ' + message.payload.message);
+        }
+      });
+      frame.addEventListener('load', () => {
+        request('initialize');
+        initializeTimer = setInterval(() => {
+          if (!initialized) request('initialize');
+        }, 250);
+      });
+      globalThis.__uiBuilderSandboxDispatchInput = (payload) => request('dispatchInput', payload);
+    })()"""
+  )
 
 private data class LiveSessionConfig(
   val designId: String,
