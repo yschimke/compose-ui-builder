@@ -3,21 +3,29 @@ package ee.schimke.composeai.uibuilder.client
 import ee.schimke.composeai.uibuilder.DesignCommand
 import ee.schimke.composeai.uibuilder.DesignOperation
 import ee.schimke.composeai.uibuilder.EditorSubmission
+import ee.schimke.composeai.uibuilder.protocol.AcceptedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.AnimationStateV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
+import ee.schimke.composeai.uibuilder.protocol.CommittedOperationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignEnvironmentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
+import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
+import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.ThemeV1
 import ee.schimke.composeai.uibuilder.protocol.WindowPostureV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class UiBuilderProtocolBridgeTest {
@@ -103,4 +111,97 @@ class UiBuilderProtocolBridgeTest {
     assertEquals(41, command.baseRevision)
     assertIs<SetPropertyMutationV1>(command.operations.single())
   }
+
+  @Test
+  fun `authoritative property delta applies only when the server hash verifies`() {
+    val before = protocolDocument(revision = 7, text = "Before")
+    val after = protocolDocument(revision = 8, text = "After")
+    val command =
+      DesignCommandV1(
+        designId = before.id,
+        operationId = "remote-property",
+        actorId = "operator",
+        clientId = "browser-a",
+        baseRevision = 7,
+        operations = listOf(SetPropertyMutationV1("title", "text", StringValueV1("After"))),
+      )
+    val accepted =
+      AcceptedOutcomeV1(
+        operationId = command.operationId,
+        committedRevision = 8,
+        sequence = 4,
+        documentHash = after.canonicalDocumentHash(),
+        idempotentReplay = false,
+      )
+    val delta =
+      ServiceDeltaV1(
+        designId = before.id,
+        afterSequence = 3,
+        throughSequence = 4,
+        currentRevision = 8,
+        retainedFromSequence = 0,
+        operations = listOf(CommittedOperationV1(command, accepted)),
+      )
+
+    val candidate = assertNotNull(before.preparePropertyDelta(before.toRendererDocument(), delta))
+    assertTrue(candidate.hasVerifiedHash())
+    val applied = candidate.rendererDocument
+    assertEquals(8, applied.revision)
+    assertEquals(after, candidate.protocolDocument)
+    assertEquals(
+      "After",
+      applied.nodes
+        .getValue("title")
+        .properties["text"]
+        ?.jsonObject
+        ?.get("value")
+        ?.jsonPrimitive
+        ?.content,
+    )
+    val wrongHash =
+      assertNotNull(
+        before.preparePropertyDelta(
+          before.toRendererDocument(),
+          delta.copy(
+            operations =
+              listOf(
+                CommittedOperationV1(command, accepted.copy(documentHash = "not-the-server-hash"))
+              )
+          ),
+        )
+      )
+    assertFalse(wrongHash.hasVerifiedHash())
+  }
+
+  private fun protocolDocument(revision: Long, text: String): DesignDocumentV1 =
+    DesignDocumentV1(
+      schema = "compose-ui-builder/v1",
+      id = "shared-design",
+      title = "Shared design",
+      revision = revision,
+      catalogPin = CatalogReferenceV1("m3", "2026.08", "sha256:test", "m3-runtime"),
+      environment =
+        DesignEnvironmentV1(
+          widthDp = 1280,
+          heightDp = 800,
+          density = 1.0,
+          theme = ThemeV1.LIGHT,
+          locale = "en-US",
+          fontScale = 1.0,
+          layoutDirection = LayoutDirectionV1.LTR,
+          windowPosture = WindowPostureV1.FLAT,
+          animations = AnimationStateV1.SETTLED,
+        ),
+      stateVariables = emptyMap(),
+      roots = listOf("title"),
+      nodes =
+        mapOf(
+          "title" to
+            DesignNodeV1(
+              id = "title",
+              componentId = "m3/text",
+              properties = mapOf("text" to StringValueV1(text)),
+            )
+        ),
+    )
 }

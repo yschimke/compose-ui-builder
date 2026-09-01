@@ -17,12 +17,15 @@ import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
+import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
+import ee.schimke.composeai.uibuilder.sha256Hex
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 
 private val bridgeJson = Json {
   classDiscriminator = "type"
@@ -40,6 +43,87 @@ fun DesignDocumentV1.toRendererDocument(): UiBuilderDocument {
 /** Creates a v1 service document from the renderer model used by deterministic fixture replay. */
 fun UiBuilderDocument.toProtocolDocument(): DesignDocumentV1 =
   bridgeJson.decodeFromString(bridgeJson.encodeToString(this))
+
+/**
+ * Applies the authoritative pushed fast path used by live property editing.
+ *
+ * Structural edits and undo/redo deliberately fall back to a snapshot because the renderer model
+ * does not retain the server's tombstones and compensation history. A property-only delta is safe
+ * to reduce directly after the strict update client has established sequence continuity. Retaining
+ * and reducing the authoritative protocol document avoids a lossy renderer round-trip; callers must
+ * still verify [expectedHash] before displaying the projected renderer document.
+ */
+internal data class PropertyDeltaCandidate(
+  val protocolDocument: DesignDocumentV1,
+  val rendererDocument: UiBuilderDocument,
+  val expectedHash: String,
+) {
+  fun hasVerifiedHash(): Boolean = protocolDocument.canonicalDocumentHash() == expectedHash
+}
+
+internal fun DesignDocumentV1.preparePropertyDelta(
+  rendererDocument: UiBuilderDocument,
+  delta: ServiceDeltaV1,
+): PropertyDeltaCandidate? {
+  if (delta.operations.isEmpty()) return null
+  if (revision.toInt() != rendererDocument.revision) return null
+  var protocol = this
+  var renderer = rendererDocument
+  delta.operations.forEach { committed ->
+    val command = committed.submission as? DesignCommandV1 ?: return null
+    val mutations = command.operations.map { it as? SetPropertyMutationV1 ?: return null }
+    var protocolNodes = protocol.nodes
+    var rendererNodes = renderer.nodes
+    mutations.forEach { mutation ->
+      val protocolNode = protocolNodes[mutation.nodeId] ?: return null
+      val rendererNode = rendererNodes[mutation.nodeId] ?: return null
+      protocolNodes =
+        protocolNodes +
+          (protocolNode.id to
+            protocolNode.copy(
+              properties = protocolNode.properties + (mutation.property to mutation.value)
+            ))
+      val rendererValue = bridgeJson.encodeToJsonElement(UiValueV1.serializer(), mutation.value)
+      rendererNodes =
+        rendererNodes +
+          (rendererNode.id to
+            rendererNode.copy(
+              properties =
+                kotlinx.serialization.json.JsonObject(
+                  rendererNode.properties + (mutation.property to rendererValue)
+                )
+            ))
+    }
+    val revision = committed.outcome.committedRevision
+    if (revision !in 0..Int.MAX_VALUE.toLong()) return null
+    protocol = protocol.copy(revision = revision, nodes = protocolNodes)
+    renderer = renderer.copy(revision = revision.toInt(), nodes = rendererNodes)
+  }
+  if (protocol.revision != delta.currentRevision) return null
+  return PropertyDeltaCandidate(
+    protocolDocument = protocol,
+    rendererDocument = renderer,
+    expectedHash = delta.operations.last().outcome.documentHash,
+  )
+}
+
+internal fun DesignDocumentV1.canonicalDocumentHash(): String {
+  val element = bridgeJson.encodeToJsonElement(DesignDocumentV1.serializer(), this)
+  return sha256Hex(canonicalProtocolJson(element))
+}
+
+private fun canonicalProtocolJson(element: JsonElement): String =
+  when (element) {
+    is kotlinx.serialization.json.JsonObject ->
+      element.entries
+        .sortedBy { it.key }
+        .joinToString(",", "{", "}") { (key, value) ->
+          "${kotlinx.serialization.json.JsonPrimitive(key)}:${canonicalProtocolJson(value)}"
+        }
+    is kotlinx.serialization.json.JsonArray ->
+      element.joinToString(",", "[", "]", transform = ::canonicalProtocolJson)
+    is kotlinx.serialization.json.JsonPrimitive -> element.toString()
+  }
 
 fun EditorSubmission.toProtocolSubmission(
   actorId: String,

@@ -152,17 +152,24 @@ fun UiBuilderSurface(
   selectedNodeId: String? = null,
   onNodeSelected: ((String) -> Unit)? = null,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
+  onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
 ) {
   val bounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
   val overlayBounds = remember(document.id, document.revision) { mutableStateMapOf<String, Rect>() }
   var surfaceCoordinates by
     remember(document.id, document.revision) { mutableStateOf<LayoutCoordinates?>(null) }
   val currentInspectionCallback = rememberUpdatedState(onInspectionSnapshot)
+  val currentInspectionInvalidated = rememberUpdatedState(onInspectionInvalidated)
   val inspection =
     remember(document.id, document.revision) {
-      UiBuilderInspectionCollector(document) { snapshot ->
-        currentInspectionCallback.value?.invoke(snapshot)
-      }
+      UiBuilderInspectionCollector(
+        document = document,
+        onSnapshot = { snapshot -> currentInspectionCallback.value?.invoke(snapshot) },
+        onInvalidated =
+          onInspectionInvalidated?.let {
+            { collector -> currentInspectionInvalidated.value?.invoke(collector) }
+          },
+      )
     }
   val state =
     remember(document.id) {

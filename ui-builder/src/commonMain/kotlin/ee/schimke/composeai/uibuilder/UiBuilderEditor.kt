@@ -100,6 +100,7 @@ fun UiBuilderEditor(
   onCanvasBoundsChanged: (Rect) -> Unit = {},
   onDropTargetChanged: (Boolean, String) -> Unit = { _, _ -> },
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
+  onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
   showSelectionOverlay: Boolean = true,
   actorId: String = EDITOR_ACTOR_ID,
   clientId: String = EDITOR_CLIENT_ID,
@@ -194,6 +195,7 @@ fun UiBuilderEditor(
           dropHovered = canvasDropHovered,
           showSelectionOverlay = showSelectionOverlay,
           onInspectionSnapshot = onInspectionSnapshot,
+          onInspectionInvalidated = onInspectionInvalidated,
           modifier =
             Modifier.weight(1f).fillMaxHeight().background(Color(0xff0d0e11)).padding(20.dp),
         )
@@ -373,6 +375,7 @@ private fun PinnedDesignCanvas(
   dropHovered: Boolean,
   showSelectionOverlay: Boolean,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)?,
+  onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
   modifier: Modifier = Modifier,
 ) {
   val sourceWidth =
@@ -410,6 +413,7 @@ private fun PinnedDesignCanvas(
         selectedNodeId = selectedNodeId,
         onNodeSelected = onNodeSelected,
         onInspectionSnapshot = onInspectionSnapshot,
+        onInspectionInvalidated = onInspectionInvalidated,
       )
     }
   }

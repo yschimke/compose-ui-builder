@@ -66,19 +66,24 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderHttpResult
 import ee.schimke.composeai.uibuilder.client.UiBuilderLiveSessionApi
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolUpdateClient
+import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
+import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.Promise
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.yield
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -255,13 +260,20 @@ private fun LiveSessionApp() {
       )
     }
   var document by remember { mutableStateOf<UiBuilderDocument?>(null) }
+  var authoritativeDocument by remember { mutableStateOf<DesignDocumentV1?>(null) }
   var catalog by remember { mutableStateOf<CapabilityCatalog?>(null) }
   var sessionStatus by remember { mutableStateOf("Connecting…") }
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
   var authoritativeGeneration by remember { mutableStateOf(0) }
+  val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
 
   fun acceptSnapshot(response: SnapshotResponseV1) {
-    document = response.snapshot.state.document.toRendererDocument()
+    recordAuthoritativeReceipt(
+      response.snapshot.state.document.revision.toInt(),
+      response.snapshot.state.lastSequence,
+    )
+    authoritativeDocument = response.snapshot.state.document
+    document = authoritativeDocument?.toRendererDocument()
     authoritativeGeneration += 1
     sessionStatus = "Live · ${config.actorId} · seq ${response.snapshot.state.lastSequence}"
   }
@@ -313,12 +325,73 @@ private fun LiveSessionApp() {
           ) { update ->
             when (update) {
               is UiBuilderClientUpdate.Snapshot -> {
-                document = update.update.snapshot.state.document.toRendererDocument()
+                recordProtocolReceipt(
+                  kind = "snapshot",
+                  revision = update.update.snapshot.state.document.revision.toInt(),
+                  sequence = update.update.snapshot.state.lastSequence,
+                )
+                recordAuthoritativeReceipt(
+                  update.update.snapshot.state.document.revision.toInt(),
+                  update.update.snapshot.state.lastSequence,
+                )
+                authoritativeDocument = update.update.snapshot.state.document
+                document = authoritativeDocument?.toRendererDocument()
                 authoritativeGeneration += 1
                 sessionStatus =
                   "Live · ${config.actorId} · seq ${update.update.snapshot.state.lastSequence}"
               }
-              is UiBuilderClientUpdate.Delta -> refreshSnapshot("Syncing remote edits…")
+              is UiBuilderClientUpdate.Delta -> {
+                val revision =
+                  update.update.delta.operations.lastOrNull()?.outcome?.committedRevision?.toInt()
+                    ?: -1
+                recordProtocolReceipt(
+                  kind = "delta",
+                  revision = revision,
+                  sequence = update.update.delta.throughSequence,
+                )
+                val projectionStartedAt = monotonicNow()
+                val candidate = document?.let { rendererDocument ->
+                  authoritativeDocument?.preparePropertyDelta(
+                    rendererDocument = rendererDocument,
+                    delta = update.update.delta,
+                  )
+                }
+                recordPerformancePhase(
+                  name = "propertyDeltaProjection",
+                  revision = revision,
+                  startedAtMs = projectionStartedAt,
+                  completedAtMs = monotonicNow(),
+                )
+                val hashStartedAt = monotonicNow()
+                val verified = candidate?.hasVerifiedHash() == true
+                recordPerformancePhase(
+                  name = "propertyDeltaHash",
+                  revision = revision,
+                  startedAtMs = hashStartedAt,
+                  completedAtMs = monotonicNow(),
+                )
+                recordPerformancePhase(
+                  name =
+                    if (verified) "verifiedPropertyDeltaAccepted"
+                    else "verifiedPropertyDeltaFallback",
+                  revision = revision,
+                  startedAtMs = projectionStartedAt,
+                  completedAtMs = monotonicNow(),
+                )
+                if (!verified) {
+                  refreshSnapshot("Syncing remote edits…")
+                } else {
+                  recordAuthoritativeReceipt(
+                    candidate.rendererDocument.revision,
+                    update.update.delta.throughSequence,
+                  )
+                  authoritativeDocument = candidate.protocolDocument
+                  document = candidate.rendererDocument
+                  authoritativeGeneration += 1
+                  sessionStatus =
+                    "Live · ${config.actorId} · seq ${update.update.delta.throughSequence}"
+                }
+              }
               is UiBuilderClientUpdate.Outcome -> refreshSnapshot("Confirming operation…")
               is UiBuilderClientUpdate.SnapshotRequired ->
                 refreshSnapshot("Snapshot recovery · after ${update.afterSequence ?: 0}")
@@ -384,8 +457,8 @@ private fun LiveSessionApp() {
       onCanvasMetrics = ::publishEditorCanvasMetrics,
       onCanvasBoundsChanged = ::publishEditorCanvasBounds,
       onDropTargetChanged = ::publishEditorDropTarget,
-      onInspectionSnapshot = { snapshot ->
-        publishInspection(inspectionJson.encodeToString(snapshot))
+      onInspectionInvalidated = { collector ->
+        inspectionPublisher.offer(collector, loadedDocument.revision)
       },
     )
     LaunchedEffect(loadedDocument.revision) { markReady() }
@@ -743,6 +816,54 @@ private external fun liveConfigFlag(name: String): Boolean
 private external fun markReady()
 
 @JsFun(
+  """(kind, revision, sequence) => {
+    const state = globalThis.__uiBuilderPerformance || {
+      schema: 'compose-ui-builder-performance/v1',
+      protocolReceipts: [], authoritativeReceipts: [], canvasApplies: [], cleanRenders: [], phases: []
+    };
+    state.protocolReceipts.push({ kind, revision, sequence, receivedAtMs: performance.now() });
+    if (state.protocolReceipts.length > 512) state.protocolReceipts.shift();
+    globalThis.__uiBuilderPerformance = state;
+  }"""
+)
+private external fun recordProtocolReceipt(kind: String, revision: Int, sequence: Long)
+
+@JsFun(
+  """(revision, sequence) => {
+    const state = globalThis.__uiBuilderPerformance || {
+      schema: 'compose-ui-builder-performance/v1',
+      protocolReceipts: [], authoritativeReceipts: [], canvasApplies: [], cleanRenders: [], phases: []
+    };
+    state.authoritativeReceipts.push({
+      revision, sequence, receivedAtMs: performance.now(), consumed: false
+    });
+    if (state.authoritativeReceipts.length > 512) state.authoritativeReceipts.shift();
+    globalThis.__uiBuilderPerformance = state;
+  }"""
+)
+private external fun recordAuthoritativeReceipt(revision: Int, sequence: Long)
+
+@JsFun("() => performance.now()") private external fun monotonicNow(): Double
+
+@JsFun(
+  """(name, revision, startedAtMs, completedAtMs) => {
+    const state = globalThis.__uiBuilderPerformance;
+    if (!state) return;
+    state.phases = state.phases || [];
+    state.phases.push({
+      name, revision, startedAtMs, completedAtMs, durationMs: completedAtMs - startedAtMs
+    });
+    if (state.phases.length > 512) state.phases.shift();
+  }"""
+)
+private external fun recordPerformancePhase(
+  name: String,
+  revision: Int,
+  startedAtMs: Double,
+  completedAtMs: Double,
+)
+
+@JsFun(
   """(structurallyValid, wasmRenderable, pendingIds) => {
     globalThis.__uiBuilderCapabilityValidation = {
       structurallyValid,
@@ -764,7 +885,28 @@ private external fun publishCapabilityDiagnostics(
     globalThis.__uiBuilderInspectionToken = token;
     manifest.generation.completed = false;
     globalThis.__uiBuilderInspection = manifest;
+    let canvasApplied = false;
     const settle = (frames) => requestAnimationFrame(() => {
+      const performanceState = globalThis.__uiBuilderPerformance;
+      if (performanceState && !canvasApplied) {
+        canvasApplied = true;
+        const receipt = [...performanceState.authoritativeReceipts]
+          .reverse()
+          .find((candidate) =>
+            candidate.revision === manifest.documentRevision && !candidate.consumed
+          );
+        if (receipt) {
+          receipt.consumed = true;
+          const completedAtMs = performance.now();
+          performanceState.canvasApplies.push({
+            revision: manifest.documentRevision,
+            receiptAtMs: receipt.receivedAtMs,
+            completedAtMs,
+            latencyMs: completedAtMs - receipt.receivedAtMs
+          });
+          if (performanceState.canvasApplies.length > 512) performanceState.canvasApplies.shift();
+        }
+      }
       if (globalThis.__uiBuilderInspectionToken !== token) return;
       if (frames > 1) {
         settle(frames - 1);
@@ -773,6 +915,17 @@ private external fun publishCapabilityDiagnostics(
       manifest.generation.completed = true;
       globalThis.__uiBuilderInspection = manifest;
       document.documentElement.dataset.uiBuilderInspectionGeneration = manifest.generation.key;
+      if (performanceState) {
+        const completedAtMs = performance.now();
+        const cleanRender = {
+          revision: manifest.documentRevision,
+          completedAtMs,
+          generationKey: manifest.generation.key
+        };
+        performanceState.cleanRenders.push(cleanRender);
+        if (performanceState.cleanRenders.length > 512) performanceState.cleanRenders.shift();
+        if (!performanceState.interactive) performanceState.interactive = cleanRender;
+      }
     });
     settle(manifest.generation.stabilityFrames);
   }"""
@@ -780,6 +933,44 @@ private external fun publishCapabilityDiagnostics(
 private external fun publishInspection(json: String)
 
 private val inspectionJson = Json { encodeDefaults = true }
+
+/**
+ * Compose reports node bounds synchronously for every laid-out node. Publishing a complete encoded
+ * manifest for every callback blocks the browser render opportunity with repeated whole-document
+ * serialization. Yielding once coalesces that burst while retaining the latest complete snapshot;
+ * [publishInspection] still places the canvas marker only after the subsequent animation frame.
+ */
+private class CoalescingInspectionPublisher(private val scope: CoroutineScope) {
+  private var pending: UiBuilderInspectionCollector? = null
+  private var job: Job? = null
+
+  fun offer(collector: UiBuilderInspectionCollector, revision: Int) {
+    pending = collector
+    if (job?.isActive == true) return
+    val invalidatedAt = monotonicNow()
+    recordPerformancePhase(
+      name = "inspectionInvalidated",
+      revision = revision,
+      startedAtMs = invalidatedAt,
+      completedAtMs = invalidatedAt,
+    )
+    job = scope.launch {
+      yield()
+      val latest = pending ?: return@launch
+      pending = null
+      val startedAt = monotonicNow()
+      val snapshot = latest.snapshot()
+      val encoded = inspectionJson.encodeToString(snapshot)
+      recordPerformancePhase(
+        name = "inspectionEncode",
+        revision = snapshot.documentRevision,
+        startedAtMs = startedAt,
+        completedAtMs = monotonicNow(),
+      )
+      publishInspection(encoded)
+    }
+  }
+}
 
 private fun publishEditorState(state: UiBuilderEditorState) {
   val selectedText =

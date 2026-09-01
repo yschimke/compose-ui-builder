@@ -102,6 +102,7 @@ data class UiBuilderSemanticsInspection(
 class UiBuilderInspectionCollector(
   private val document: UiBuilderDocument,
   private val onSnapshot: (UiBuilderInspectionSnapshot) -> Unit = {},
+  private val onInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
 ) {
   private val bounds = mutableMapOf<String, UiBuilderPixelBounds>()
   private val textLayouts = mutableMapOf<String, LocalTextLayout>()
@@ -110,7 +111,7 @@ class UiBuilderInspectionCollector(
   fun updateState(value: Map<String, String?>) {
     if (state == value) return
     state = value.toMap()
-    onSnapshot(snapshot())
+    publish()
   }
 
   fun recordNodeBounds(nodeId: String, left: Float, top: Float, right: Float, bottom: Float) {
@@ -122,7 +123,7 @@ class UiBuilderInspectionCollector(
         width = (right - left).quantized(),
         height = (bottom - top).quantized(),
       )
-    onSnapshot(snapshot())
+    publish()
   }
 
   fun recordTextLayout(
@@ -141,7 +142,11 @@ class UiBuilderInspectionCollector(
         firstBaseline = (contentOffsetY + firstBaseline).quantized(),
         lastBaseline = (contentOffsetY + lastBaseline).quantized(),
       )
-    onSnapshot(snapshot())
+    publish()
+  }
+
+  private fun publish() {
+    if (onInvalidated == null) onSnapshot(snapshot()) else onInvalidated.invoke(this)
   }
 
   fun snapshot(): UiBuilderInspectionSnapshot =
