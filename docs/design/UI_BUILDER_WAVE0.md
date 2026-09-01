@@ -378,9 +378,23 @@ The recommended spike is a version-addressed renderer runtime:
 The design pins `nativeRuntimeId`; the capability manifest declares its asset URL, protocol
 version, and integrity digest. The target Wasm editor loads the matching renderer in a sandboxed
 surface and communicates through a narrow versioned render/measure/input protocol. Old runtime
-assets are retained for the published support window. The current spike only proves exact pin
-resolution (with no latest fallback) and reversible editor/runtime coordinate mapping; immutable
-runtime hosting and the sandboxed protocol loader are not implemented yet.
+assets are retained for the published support window.
+
+The server hosting foundation accepts explicit `runtimeId=directory` inputs, snapshots and verifies
+each directory before binding, and serves only exact ids from the immutable route above. Every
+input has a `runtime-manifest.json` with schema `compose-ui-builder-runtime/v1`, its exact runtime
+id, positive protocol version, safe relative entrypoint, and a lowercase SHA-256 tree digest. The
+digest covers the sorted non-manifest assets as `path`, NUL, decimal byte length, NUL, bytes. There
+is deliberately no `latest` or `current` alias. The common Wasm client loader fetches only the
+pinned manifest, checks protocol, identity and digest against its descriptor, and returns the exact
+entrypoint URL.
+
+This does **not** yet complete the renderer split. The currently published
+`compose-preview-ui-builder-web` archive is the combined editor shell and in-process renderer; it
+has no sandboxed render/measure/input protocol and is therefore not registered as a native runtime.
+A separately produced renderer-only bundle and surface protocol integration remain required before
+the editor can mount the returned entrypoint. Treating the combined shell as that renderer would
+create a version-looking URL without the promised isolation or protocol compatibility.
 
 This separates editor fixes from catalog pixel compatibility and gives SVG capture an explicit
 Wasm boundary if recorded-scene export wins. The spike must prove that the overlay can map measured

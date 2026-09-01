@@ -2,6 +2,8 @@
 
 package ee.schimke.composeai.uibuilder.client
 
+import ee.schimke.composeai.uibuilder.CatalogRuntimeManifestResponse
+import ee.schimke.composeai.uibuilder.CatalogRuntimeManifestTransport
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -23,6 +25,15 @@ class BrowserUiBuilderHttpTransport : UiBuilderHttpTransport {
       )
     val response = protocolJson.decodeFromString(BrowserHttpResponse.serializer(), encoded)
     return UiBuilderHttpResponse(response.statusCode, response.body)
+  }
+}
+
+/** Same-origin manifest fetch used before mounting an exact pinned renderer surface. */
+class BrowserCatalogRuntimeManifestTransport : CatalogRuntimeManifestTransport {
+  override suspend fun get(url: String): CatalogRuntimeManifestResponse {
+    val encoded = awaitBrowserPromise(fetchRuntimeManifest(url))
+    val response = protocolJson.decodeFromString(BrowserHttpResponse.serializer(), encoded)
+    return CatalogRuntimeManifestResponse(response.statusCode, response.body)
   }
 }
 
@@ -89,6 +100,20 @@ private fun fetchUiBuilder(
       });
       });
     })()"""
+  )
+
+private fun fetchRuntimeManifest(url: String): Promise<JsString> =
+  js(
+    """fetch(url, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' },
+      cache: 'force-cache'
+    }).then(function (response) {
+      return response.text().then(function (responseBody) {
+        return JSON.stringify({ statusCode: response.status, body: responseBody });
+      });
+    })"""
   )
 
 internal fun browserUiBuilderTransportFailureMessage(): String =
