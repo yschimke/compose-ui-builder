@@ -54,7 +54,11 @@ class UiBuilderEditorStateTest {
       inserted.document.nodes.getValue("discover-grid").slots.getValue("items").last(),
     )
 
-    val edited = reducer.reduce(inserted, UiBuilderEditorEvent.SetText(insertedId, "From canvas"))
+    val edited =
+      reducer.reduce(
+        inserted,
+        UiBuilderEditorEvent.CommitProperty(insertedId, "text", "From canvas"),
+      )
     assertIs<CommandOutcome.Accepted>(edited.lastOutcome)
     assertEquals(110, edited.document.revision)
     assertEquals(
@@ -84,7 +88,7 @@ class UiBuilderEditorStateTest {
     val edited =
       liveReducer.reduce(
         initial,
-        UiBuilderEditorEvent.SetText("main-episode-title", "Shared title"),
+        UiBuilderEditorEvent.CommitProperty("main-episode-title", "text", "Shared title"),
       )
 
     val submission =
@@ -110,6 +114,186 @@ class UiBuilderEditorStateTest {
     assertIs<CommandOutcome.Rejected>(attempted.lastOutcome)
     assertEquals(document.revision, attempted.document.revision)
     assertEquals(document.nodes, attempted.document.nodes)
+  }
+
+  @Test
+  fun `inspector derives typed fields for scaffold container and Jetcaster text`() {
+    val scaffold = reducer.propertyFields(reducer.initial(document, "pane-scaffold"))
+    assertEquals(EditorPropertyControl.Enum, scaffold.single { it.name == "layoutMode" }.control)
+    assertEquals(
+      EditorPropertyControl.Number,
+      scaffold.single { it.name == "mainPanePreferredWidthDp" }.control,
+    )
+    assertEquals(
+      EditorPropertyControl.Boolean,
+      scaffold.single { it.name == "supportingPaneVisible" }.control,
+    )
+
+    val container = reducer.propertyFields(reducer.initial(document, "main-scaffold"))
+    assertTrue(
+      container.any { it.name == "loading" && it.control == EditorPropertyControl.Boolean }
+    )
+
+    val text = reducer.propertyFields(reducer.initial(document, "detail-podcast-title"))
+    assertEquals(EditorPropertyControl.Text, text.single { it.name == "text" }.control)
+    assertEquals(EditorPropertyControl.Color, text.single { it.name == "color" }.control)
+    assertEquals(EditorPropertyControl.Enum, text.single { it.name == "style" }.control)
+    assertEquals(EditorPropertyControl.Number, text.single { it.name == "maxLines" }.control)
+    assertEquals(EditorPropertyControl.Boolean, text.single { it.name == "softWrap" }.control)
+    assertTrue(
+      text.none {
+        it.name in setOf("fontScale", "density", "locale", "theme", "viewport", "layoutDirection")
+      }
+    )
+  }
+
+  @Test
+  fun `typed commits validate before one authoritative property operation`() {
+    val initial = reducer.initial(document, "pane-scaffold")
+    val invalid =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.CommitProperty(
+          "pane-scaffold",
+          "mainPanePreferredWidthDp",
+          "5000",
+        ),
+      )
+    val rejection = assertIs<CommandOutcome.Rejected>(invalid.lastOutcome)
+    assertEquals("pane-scaffold", rejection.nodeId)
+    assertEquals("mainPanePreferredWidthDp", rejection.field)
+    assertEquals(document.revision, invalid.document.revision)
+    assertNull(reducer.acceptedSubmission(initial, invalid))
+    assertTrue(
+      reducer
+        .propertyFields(invalid)
+        .single { it.name == "mainPanePreferredWidthDp" }
+        .error
+        ?.contains("0..4096") == true
+    )
+
+    val accepted =
+      reducer.reduce(
+        invalid,
+        UiBuilderEditorEvent.CommitProperty(
+          "pane-scaffold",
+          "mainPanePreferredWidthDp",
+          "800",
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(accepted.lastOutcome)
+    assertEquals(document.revision + 1, accepted.document.revision)
+    val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(invalid, accepted))
+    val operation = assertIs<DesignOperation.SetProperty>(submission.command.operations.single())
+    assertEquals("pane-scaffold", operation.nodeId)
+    assertEquals("mainPanePreferredWidthDp", operation.property)
+    assertEquals(
+      "800.0",
+      operation.value.jsonObject.getValue("value").jsonPrimitive.content,
+    )
+    assertNull(
+      reducer.propertyFields(accepted).single { it.name == "mainPanePreferredWidthDp" }.error
+    )
+  }
+
+  @Test
+  fun `enum boolean and color edits preserve catalog value shapes`() {
+    val initial = reducer.initial(document, "pane-scaffold")
+    val enumEdited =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.CommitProperty("pane-scaffold", "layoutMode", "twoPane"),
+      )
+    val booleanEdited =
+      reducer.reduce(
+        enumEdited,
+        UiBuilderEditorEvent.CommitProperty(
+          "pane-scaffold",
+          "supportingPaneVisible",
+          "false",
+        ),
+      )
+    val selectedText = booleanEdited.copy(selectedNodeId = "detail-podcast-title")
+    val colorEdited =
+      reducer.reduce(
+        selectedText,
+        UiBuilderEditorEvent.CommitProperty(
+          "detail-podcast-title",
+          "color",
+          "onSurfaceVariant",
+        ),
+      )
+
+    assertIs<CommandOutcome.Accepted>(enumEdited.lastOutcome)
+    assertIs<CommandOutcome.Accepted>(booleanEdited.lastOutcome)
+    assertIs<CommandOutcome.Accepted>(colorEdited.lastOutcome)
+    assertEquals(
+      "twoPane",
+      enumEdited.document.nodes
+        .getValue("pane-scaffold")
+        .properties
+        .getValue("layoutMode")
+        .jsonObject
+        .getValue("value")
+        .jsonPrimitive
+        .content,
+    )
+    assertEquals(
+      "false",
+      booleanEdited.document.nodes
+        .getValue("pane-scaffold")
+        .properties
+        .getValue("supportingPaneVisible")
+        .jsonObject
+        .getValue("value")
+        .jsonPrimitive
+        .content,
+    )
+    assertEquals(
+      "onSurfaceVariant",
+      colorEdited.document.nodes
+        .getValue("detail-podcast-title")
+        .properties
+        .getValue("color")
+        .jsonObject
+        .getValue("value")
+        .jsonPrimitive
+        .content,
+    )
+  }
+
+  @Test
+  fun `Text line ranges and positive weight reject with a located error`() {
+    val initial = reducer.initial(document, "detail-podcast-title")
+    val maxExpanded =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.CommitProperty("detail-podcast-title", "maxLines", "5"),
+      )
+    val minEdited =
+      reducer.reduce(
+        maxExpanded,
+        UiBuilderEditorEvent.CommitProperty("detail-podcast-title", "minLines", "4"),
+      )
+    val invalidMax =
+      reducer.reduce(
+        minEdited,
+        UiBuilderEditorEvent.CommitProperty("detail-podcast-title", "maxLines", "3"),
+      )
+    val maxRejection = assertIs<CommandOutcome.Rejected>(invalidMax.lastOutcome)
+    assertEquals("detail-podcast-title", maxRejection.nodeId)
+    assertEquals("maxLines", maxRejection.field)
+    assertEquals(minEdited.document.revision, invalidMax.document.revision)
+    assertTrue(maxRejection.message.contains("minLines"))
+
+    val invalidWeight =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.CommitProperty("detail-podcast-title", "weight", "0"),
+      )
+    val weightRejection = assertIs<CommandOutcome.Rejected>(invalidWeight.lastOutcome)
+    assertEquals("weight", weightRejection.field)
+    assertTrue(weightRejection.message.contains("0.1..100"))
   }
 
   @Test

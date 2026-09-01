@@ -111,10 +111,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
@@ -596,10 +599,22 @@ private fun RenderNode(
         color = node.color("color", Color.Unspecified),
         style = node.textStyle(),
         fontWeight = node.fontWeight(),
+        fontStyle = node.fontStyle(),
+        fontSize =
+          node.float("fontSizeSp").takeIf { it > 0f }?.sp
+            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        lineHeight =
+          node.float("lineHeightSp").takeIf { it > 0f }?.sp
+            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        letterSpacing =
+          node.float("letterSpacingSp").takeIf { "letterSpacingSp" in node.properties }?.sp
+            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        textDecoration = node.textDecoration(),
+        minLines = node.integer("minLines", 1),
         maxLines = node.integer("maxLines", Int.MAX_VALUE),
-        overflow =
-          if (node.string("overflow") == "ellipsis") TextOverflow.Ellipsis else TextOverflow.Clip,
-        textAlign = if (node.string("textAlign") == "center") TextAlign.Center else TextAlign.Start,
+        softWrap = node.bool("softWrap", true),
+        overflow = node.textOverflow(),
+        textAlign = node.textAlign(),
         onTextLayout = { onTextLayout(node.id, it) },
       )
     "asset/image" -> AssetPlaceholder(node, measured)
@@ -983,6 +998,11 @@ private fun UiBuilderNode.bool(name: String, fallback: Boolean = false): Boolean
 @Composable
 private fun UiBuilderNode.textStyle() =
   when (string("style")) {
+    "displayLarge" -> MaterialTheme.typography.displayLarge
+    "displayMedium" -> MaterialTheme.typography.displayMedium
+    "displaySmall" -> MaterialTheme.typography.displaySmall
+    "headlineLarge" -> MaterialTheme.typography.headlineLarge
+    "headlineMedium" -> MaterialTheme.typography.headlineMedium
     "headlineSmall" -> MaterialTheme.typography.headlineSmall
     "titleLarge" -> MaterialTheme.typography.titleLarge
     "titleMedium" -> MaterialTheme.typography.titleMedium
@@ -991,6 +1011,7 @@ private fun UiBuilderNode.textStyle() =
     "bodyMedium" -> MaterialTheme.typography.bodyMedium
     "bodySmall" -> MaterialTheme.typography.bodySmall
     "labelLarge" -> MaterialTheme.typography.labelLarge
+    "labelMedium" -> MaterialTheme.typography.labelMedium
     "labelSmall" -> MaterialTheme.typography.labelSmall
     "" -> LocalTextStyle.current
     else -> error("unsupported text style '${string("style")}' on $id")
@@ -998,9 +1019,39 @@ private fun UiBuilderNode.textStyle() =
 
 private fun UiBuilderNode.fontWeight() =
   when (string("fontWeight")) {
+    "normal" -> FontWeight.Normal
     "bold" -> FontWeight.Bold
     "semiBold" -> FontWeight.SemiBold
     "medium" -> FontWeight.Medium
+    else -> null
+  }
+
+private fun UiBuilderNode.fontStyle() =
+  when (string("fontStyle")) {
+    "normal" -> FontStyle.Normal
+    "italic" -> FontStyle.Italic
+    else -> null
+  }
+
+private fun UiBuilderNode.textOverflow() =
+  when (string("overflow")) {
+    "ellipsis" -> TextOverflow.Ellipsis
+    "visible" -> TextOverflow.Visible
+    else -> TextOverflow.Clip
+  }
+
+private fun UiBuilderNode.textAlign() =
+  when (string("textAlign")) {
+    "center" -> TextAlign.Center
+    "end" -> TextAlign.End
+    "justify" -> TextAlign.Justify
+    else -> TextAlign.Start
+  }
+
+private fun UiBuilderNode.textDecoration() =
+  when (string("textDecoration")) {
+    "underline" -> TextDecoration.Underline
+    "lineThrough" -> TextDecoration.LineThrough
     else -> null
   }
 

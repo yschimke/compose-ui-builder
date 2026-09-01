@@ -313,6 +313,7 @@ private data class LiveSessionConfig(
   val httpEndpoint: String,
   val webSocketEndpoint: String,
   val createIfMissing: Boolean,
+  val template: String,
   val operationIdPrefix: String,
   val displayName: String,
   val colorArgbHex: String,
@@ -377,13 +378,21 @@ private fun LiveSessionApp() {
     catalog = CapabilityCatalogParser.parse(catalogSource)
     val openResult =
       UiBuilderLiveSessionApi(config.designId, http).openOrCreate(config.createIfMissing) {
-        sessionStatus = "Creating ${config.designId} from the Jetcaster fixture…"
+        sessionStatus = "Creating ${config.designId} from the ${config.template} template…"
         val fixture =
           Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
-        UiBuilderReducer.replay(fixture)
-          .document
-          .copy(id = config.designId, revision = 0)
-          .toProtocolDocument()
+        val fixtureDocument = UiBuilderReducer.replay(fixture).document
+        val initialDocument =
+          if (config.template == "blank") {
+            blankUiBuilderDocument(
+              designId = config.designId,
+              catalogPin = fixtureDocument.catalogPin,
+              environment = fixtureDocument.environment,
+            )
+          } else {
+            fixtureDocument.copy(id = config.designId, revision = 0)
+          }
+        initialDocument.toProtocolDocument()
       }
     when (val result = openResult) {
       is UiBuilderHttpResult.Response -> {
@@ -583,6 +592,7 @@ private fun LiveSessionApp() {
       },
       authoritativeGeneration = authoritativeGeneration,
       collaborators = collaborators,
+      onHelp = ::openUiBuilderGuide,
       onStateChanged = {
         selectedNodeId = it.selectedNodeId
         publishEditorState(it)
@@ -652,6 +662,7 @@ private fun VisualFixtureApp(mode: String) {
             publishInspection(inspectionJson.encodeToString(snapshot))
           },
           showSelectionOverlay = mode != "interactive-editor-clean",
+          onHelp = ::openUiBuilderGuide,
         )
       }
     } else {
@@ -919,6 +930,7 @@ private fun liveSessionConfig(): LiveSessionConfig =
           "/api/ui-builder/v1/designs/{designId}/updates",
         ),
       createIfMissing = liveConfigFlag("create"),
+      template = liveConfigValue("template", "jetcaster"),
       operationIdPrefix = "${liveConfigValue("clientId", "browser-editor")}-${livePageNonce()}",
       displayName = liveConfigValue("displayName", "Browser user"),
       colorArgbHex = liveConfigValue("color", "#FF6574CD"),
@@ -928,7 +940,15 @@ private fun liveSessionConfig(): LiveSessionConfig =
       require(it.actorId.isNotBlank()) { "live actor must not be blank" }
       require(it.clientId.isNotBlank()) { "live clientId must not be blank" }
       require(Regex("#[0-9A-Fa-f]{8}").matches(it.colorArgbHex)) { "live color must be #AARRGGBB" }
+      require(it.template in setOf("jetcaster", "blank")) {
+        "live template must be jetcaster or blank"
+      }
     }
+
+@JsFun(
+  """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
+)
+private external fun openUiBuilderGuide()
 
 @JsFun(
   """(name, fallback) => {
@@ -1150,6 +1170,7 @@ private fun publishEditorState(state: UiBuilderEditorState) {
       is CommandOutcome.Accepted -> "accepted"
       is CommandOutcome.Rejected -> "rejected:${state.lastOutcome.code}"
     }
+  val rejection = state.lastOutcome as? CommandOutcome.Rejected
   publishEditorManifest(
     revision = state.document.revision,
     nodeCount = state.document.nodes.size,
@@ -1160,11 +1181,13 @@ private fun publishEditorState(state: UiBuilderEditorState) {
     selectedText = selectedText,
     mainBackgroundChildren = mainBackgroundChildren,
     documentHash = sha256Hex(canonicalDocument(state.document)),
+    outcomeNodeId = rejection?.nodeId.orEmpty(),
+    outcomeField = rejection?.field.orEmpty(),
   )
 }
 
 @JsFun(
-  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, mainBackgroundChildren, documentHash) => {
+  """(revision, nodeCount, selectedNodeId, catalogQuery, operationSequence, outcome, selectedText, mainBackgroundChildren, documentHash, outcomeNodeId, outcomeField) => {
     globalThis.__uiBuilderEditor = {
       revision,
       nodeCount,
@@ -1174,7 +1197,9 @@ private fun publishEditorState(state: UiBuilderEditorState) {
       outcome,
       selectedText,
       mainBackgroundChildren: mainBackgroundChildren ? mainBackgroundChildren.split(',') : [],
-      documentHash
+      documentHash,
+      outcomeNodeId,
+      outcomeField
     };
     document.documentElement.dataset.uiBuilderEditorRevision = String(revision);
   }"""
@@ -1189,6 +1214,8 @@ private external fun publishEditorManifest(
   selectedText: String,
   mainBackgroundChildren: String,
   documentHash: String,
+  outcomeNodeId: String,
+  outcomeField: String,
 )
 
 @JsFun(

@@ -237,7 +237,9 @@ private class ComposeEmitter(
     appendLine()
     appendLine("package generated.uibuilder")
     appendLine()
-    (GENERATED_IMPORTS + listOfNotNull(assetAdapter?.renderer?.importName))
+    (GENERATED_IMPORTS +
+        additionalTextImports() +
+        listOfNotNull(assetAdapter?.renderer?.importName))
       .distinct()
       .sorted()
       .forEach { importName -> appendLine("import $importName") }
@@ -514,10 +516,38 @@ private class ComposeEmitter(
   }
 
   private fun emitText(node: UiBuilderNode, level: Int) {
+    val optionalArguments = buildList {
+      if ("fontStyle" in node.properties) add("fontStyle = ${node.fontStyleExpression()}")
+      if ("fontSizeSp" in node.properties)
+        add("fontSize = ${node.optionalSpExpression("fontSizeSp")}")
+      if ("lineHeightSp" in node.properties)
+        add("lineHeight = ${node.optionalSpExpression("lineHeightSp")}")
+      if ("letterSpacingSp" in node.properties)
+        add("letterSpacing = ${node.optionalSpExpression("letterSpacingSp")}")
+      if ("textDecoration" in node.properties)
+        add("textDecoration = ${node.textDecorationExpression()}")
+      if ("minLines" in node.properties) add("minLines = ${node.integer("minLines", 1)}")
+      if ("softWrap" in node.properties) add("softWrap = ${node.boolValue("softWrap", true)}")
+      if ("textAlign" in node.properties) add("textAlign = ${node.textAlignExpression()}")
+    }
+      .joinToString(separator = "") { "$it, " }
     line(
       level,
-      "Text(text = \"${node.string("text").escape()}\", style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.colorExpression("color")}, fontWeight = ${node.fontWeightExpression()}, maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
+      "Text(text = \"${node.string("text").escape()}\", style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.colorExpression("color")}, fontWeight = ${node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
     )
+  }
+
+  private fun additionalTextImports(): List<String> {
+    val propertyNames = document.nodes.values.flatMap { it.properties.keys }.toSet()
+    return buildList {
+      if ("fontStyle" in propertyNames) add("androidx.compose.ui.text.font.FontStyle")
+      if ("textAlign" in propertyNames) add("androidx.compose.ui.text.style.TextAlign")
+      if ("textDecoration" in propertyNames) add("androidx.compose.ui.text.style.TextDecoration")
+      if (propertyNames.any { it in setOf("fontSizeSp", "lineHeightSp", "letterSpacingSp") }) {
+        add("androidx.compose.ui.unit.TextUnit")
+        add("androidx.compose.ui.unit.sp")
+      }
+    }
   }
 
   private fun emitIcon(node: UiBuilderNode, level: Int) {
@@ -757,6 +787,7 @@ private fun UiBuilderNode.buttonSymbol(): String =
 
 private fun UiBuilderNode.fontWeightExpression(): String =
   when (string("fontWeight")) {
+    "normal" -> "FontWeight.Normal"
     "bold" -> "FontWeight.Bold"
     "semiBold" -> "FontWeight.SemiBold"
     "medium" -> "FontWeight.Medium"
@@ -787,7 +818,9 @@ private fun UiBuilderNode.modifierExpression(): String {
   expression +=
     when (string("alignment")) {
       "topStart" -> ".align(Alignment.TopStart)"
+      "topCenter" -> ".align(Alignment.TopCenter)"
       "topEnd" -> ".align(Alignment.TopEnd)"
+      "centerStart" -> ".align(Alignment.CenterStart)"
       "bottomStart" -> ".align(Alignment.BottomStart)"
       "bottomCenter" -> ".align(Alignment.BottomCenter)"
       "bottomEnd" -> ".align(Alignment.BottomEnd)"
@@ -858,6 +891,31 @@ private fun UiBuilderNode.colorExpression(name: String): String {
     else -> "Color.Unspecified"
   }
 }
+
+private fun UiBuilderNode.optionalSpExpression(name: String): String =
+  if (name in properties) "${number(name).floatLiteral()}.sp" else "TextUnit.Unspecified"
+
+private fun UiBuilderNode.fontStyleExpression(): String =
+  when (string("fontStyle")) {
+    "normal" -> "FontStyle.Normal"
+    "italic" -> "FontStyle.Italic"
+    else -> "null"
+  }
+
+private fun UiBuilderNode.textDecorationExpression(): String =
+  when (string("textDecoration")) {
+    "underline" -> "TextDecoration.Underline"
+    "lineThrough" -> "TextDecoration.LineThrough"
+    else -> "null"
+  }
+
+private fun UiBuilderNode.textAlignExpression(): String =
+  when (string("textAlign")) {
+    "center" -> "TextAlign.Center"
+    "end" -> "TextAlign.End"
+    "justify" -> "TextAlign.Justify"
+    else -> "TextAlign.Start"
+  }
 
 private fun UiBuilderDocument.exportFunctionName(): String =
   title.identifier().replaceFirstChar { it.uppercase() }.ifEmpty { "GeneratedScreen" }
@@ -1110,9 +1168,17 @@ private val HANDLED_FIELDS =
           "text",
           "style",
           "fontWeight",
+          "fontStyle",
           "color",
+          "fontSizeSp",
+          "lineHeightSp",
+          "letterSpacingSp",
+          "minLines",
           "maxLines",
+          "softWrap",
           "overflow",
+          "textAlign",
+          "textDecoration",
           "alignment",
           "weight",
         )

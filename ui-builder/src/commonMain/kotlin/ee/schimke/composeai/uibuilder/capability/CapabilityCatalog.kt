@@ -2,9 +2,12 @@ package ee.schimke.composeai.uibuilder.capability
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable
@@ -65,7 +68,31 @@ data class PropertyCapability(
   val required: Boolean = false,
   val allowedValues: List<JsonElement> = emptyList(),
   val notes: String? = null,
+  @Transient val editor: PropertyEditorCapability? = null,
 )
+
+/**
+ * Builder-only presentation metadata for a catalog property. This is deliberately carried by the
+ * catalog resource rather than the collaboration wire protocol: it describes how an editor may
+ * safely author an existing JSON property shape, not a new persisted value kind.
+ */
+@Serializable
+data class PropertyEditorCapability(
+  val control: PropertyEditorControl? = null,
+  val minimum: Double? = null,
+  val maximum: Double? = null,
+  val step: Double? = null,
+  val suggestedValues: List<String> = emptyList(),
+)
+
+@Serializable
+enum class PropertyEditorControl {
+  @SerialName("text") TEXT,
+  @SerialName("boolean") BOOLEAN,
+  @SerialName("number") NUMBER,
+  @SerialName("enum") ENUM,
+  @SerialName("color") COLOR,
+}
 
 @Serializable
 data class WasmCapability(
@@ -97,7 +124,10 @@ object CapabilityCatalogParser {
   fun parse(source: String): CapabilityCatalog = parse(json.parseToJsonElement(source))
 
   fun parse(element: JsonElement): CapabilityCatalog =
-    json.decodeFromJsonElement<CapabilityCatalog>(element).also(::validateCatalogShape)
+    json
+      .decodeFromJsonElement<CapabilityCatalog>(element)
+      .withEditorMetadata()
+      .also(::validateCatalogShape)
 
   private fun validateCatalogShape(catalog: CapabilityCatalog) {
     require(catalog.schema.isNotBlank()) { "capability schema must be non-empty" }
@@ -121,4 +151,91 @@ object CapabilityCatalogParser {
       }
     }
   }
+
+  /**
+   * Adds builder-only presentation metadata without adding fields to the released catalog wire
+   * shape. Enum choices remain authoritative catalog data; the bounds below describe the range that
+   * both the renderer and Compose exporter can safely round trip.
+   */
+  private fun CapabilityCatalog.withEditorMetadata(): CapabilityCatalog =
+    copy(
+      components =
+        components.map { component ->
+          component.copy(
+            properties =
+              component.properties.map { property ->
+                property.copy(editor = editorMetadata(component.componentId, property))
+              }
+          )
+        }
+    )
+
+  private fun editorMetadata(
+    componentId: String,
+    property: PropertyCapability,
+  ): PropertyEditorCapability? {
+    if (property.allowedValues.isNotEmpty()) {
+      return PropertyEditorCapability(control = PropertyEditorControl.ENUM)
+    }
+    EDITOR_OVERRIDES[componentId to property.name]?.let {
+      return it
+    }
+    return when ((property.jsonType as? JsonPrimitive)?.contentOrNull) {
+      "string" -> PropertyEditorCapability(control = PropertyEditorControl.TEXT)
+      "boolean" -> PropertyEditorCapability(control = PropertyEditorControl.BOOLEAN)
+      else -> null
+    }
+  }
+
+  private val MATERIAL_COLOR_TOKENS =
+    listOf(
+      "background",
+      "surface",
+      "surfaceContainer",
+      "surfaceContainerLow",
+      "surfaceContainerHigh",
+      "surfaceContainerHighest",
+      "primary",
+      "tertiary",
+      "onTertiary",
+      "onSurface",
+      "onSurfaceVariant",
+      "outlineVariant",
+      "transparent",
+    )
+
+  private val EDITOR_OVERRIDES =
+    mapOf(
+      ("layout/supporting-pane-scaffold" to "mainPanePreferredWidthDp") to
+        numberEditor(0.0, 4096.0, 1.0),
+      ("layout/supporting-pane-scaffold" to "supportingPanePreferredWidthDp") to
+        numberEditor(0.0, 4096.0, 1.0),
+      ("layout/supporting-pane-scaffold" to "paneSpacingDp") to numberEditor(0.0, 512.0, 1.0),
+      ("m3/button" to "containerColor") to colorEditor(),
+      ("m3/text" to "color") to colorEditor(),
+      ("m3/text" to "fontSizeSp") to numberEditor(1.0, 512.0, 1.0),
+      ("m3/text" to "lineHeightSp") to numberEditor(1.0, 1024.0, 1.0),
+      ("m3/text" to "letterSpacingSp") to numberEditor(-32.0, 128.0, 0.1),
+      ("m3/text" to "minLines") to numberEditor(1.0, 100.0, 1.0),
+      ("m3/text" to "maxLines") to numberEditor(1.0, 100.0, 1.0),
+      ("m3/text" to "weight") to numberEditor(0.1, 100.0, 0.1),
+    )
+
+  private fun numberEditor(
+    minimum: Double,
+    maximum: Double,
+    step: Double,
+  ) =
+    PropertyEditorCapability(
+      control = PropertyEditorControl.NUMBER,
+      minimum = minimum,
+      maximum = maximum,
+      step = step,
+    )
+
+  private fun colorEditor() =
+    PropertyEditorCapability(
+      control = PropertyEditorControl.COLOR,
+      suggestedValues = MATERIAL_COLOR_TOKENS,
+    )
 }

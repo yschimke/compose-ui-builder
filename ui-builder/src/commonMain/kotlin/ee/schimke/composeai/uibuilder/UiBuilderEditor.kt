@@ -31,10 +31,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
@@ -80,7 +83,6 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import kotlin.math.roundToInt
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 private val EditorColors =
@@ -112,6 +114,7 @@ fun UiBuilderEditor(
   onSubmission: ((EditorSubmission) -> Unit)? = null,
   authoritativeGeneration: Int = 0,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
+  onHelp: (() -> Unit)? = null,
 ) {
   val reducer =
     remember(catalog, actorId, clientId, operationIdPrefix) {
@@ -163,6 +166,7 @@ fun UiBuilderEditor(
         sessionLabel = sessionLabel,
         collaborators = collaborators,
         onReconnect = onReconnect,
+        onHelp = onHelp,
         dispatch = ::dispatch,
       )
       Row(Modifier.fillMaxSize()) {
@@ -207,6 +211,7 @@ fun UiBuilderEditor(
         )
         PropertyInspector(
           state,
+          fields = reducer.propertyFields(state),
           onTextInputFocusChanged = { textInputFocused = it },
           dispatch = ::dispatch,
         )
@@ -225,6 +230,7 @@ private fun EditorToolbar(
   sessionLabel: String,
   collaborators: List<UiBuilderCollaborator>,
   onReconnect: (() -> Unit)?,
+  onHelp: (() -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
@@ -282,6 +288,9 @@ private fun EditorToolbar(
       )
       if (onReconnect != null) {
         EditorAction(label = "Reconnect", shortcut = "", enabled = true, onClick = onReconnect)
+      }
+      if (onHelp != null) {
+        EditorAction(label = "Help", shortcut = "", enabled = true, onClick = onHelp)
       }
       Text(
         "Revision ${state.document.revision}  ·  ${state.document.nodes.size} nodes",
@@ -680,6 +689,7 @@ private fun String.toPresenceColor(): Color {
 @Composable
 private fun PropertyInspector(
   state: UiBuilderEditorState,
+  fields: List<EditorPropertyField>,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
@@ -709,57 +719,47 @@ private fun PropertyInspector(
         Modifier.padding(vertical = 14.dp),
         color = MaterialTheme.colorScheme.outline,
       )
-      if (node.componentId == "m3/text") {
-        val current =
-          node.properties["text"]?.jsonObject?.get("value")?.jsonPrimitive?.contentOrNull.orEmpty()
-        var draft by remember(node.id, current) { mutableStateOf(current) }
-        Text("Text", style = MaterialTheme.typography.labelLarge)
-        BasicTextField(
-          value = draft,
-          onValueChange = { draft = it },
-          modifier =
-            Modifier.fillMaxWidth()
-              .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
-              .semantics { contentDescription = "Text property" }
-              .padding(top = 7.dp)
-              .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-              .padding(10.dp),
-          textStyle =
-            MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-        )
-        Button(
-          onClick = { dispatch(UiBuilderEditorEvent.SetText(node.id, draft)) },
-          modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
-        ) {
-          Text("Apply text")
-        }
-        TextButton(
-          onClick = { dispatch(UiBuilderEditorEvent.SetText(node.id, "Edited in Compose")) },
-          modifier = Modifier.fillMaxWidth(),
-        ) {
-          Text("Use sample text")
-        }
-      } else {
-        node.properties.forEach { (name, value) ->
-          Text(name, style = MaterialTheme.typography.labelLarge)
-          Text(
-            value.toString(),
-            Modifier.padding(bottom = 12.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
+      LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+        itemsIndexed(fields, key = { _, field -> field.name }) { _, field ->
+          PropertyControl(
+            field = field,
+            onTextInputFocusChanged = onTextInputFocusChanged,
+            commit = { value ->
+              dispatch(UiBuilderEditorEvent.CommitProperty(node.id, field.name, value))
+            },
           )
         }
-        if (node.properties.isEmpty()) {
-          Text(
-            "This component has no authored properties.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-          )
+        if (fields.isEmpty()) {
+          item {
+            Text(
+              "This component has no catalog properties.",
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
+        }
+        if (node.modifiers.isNotEmpty()) {
+          item {
+            HorizontalDivider(Modifier.padding(vertical = 12.dp))
+            Text("Modifiers", style = MaterialTheme.typography.labelLarge)
+            Text(
+              "Shown from the document. Modifier parameter editing waits for an authoritative modifier operation.",
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelSmall,
+            )
+          }
+          itemsIndexed(node.modifiers) { _, modifier ->
+            Text(
+              modifier.toString(),
+              Modifier.padding(top = 6.dp),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
+              maxLines = 3,
+              overflow = TextOverflow.Ellipsis,
+            )
+          }
         }
       }
-      Spacer(Modifier.weight(1f))
       val outcome = state.lastOutcome
       if (outcome != null) {
         Text(
@@ -777,3 +777,161 @@ private fun PropertyInspector(
     }
   }
 }
+
+@Composable
+private fun PropertyControl(
+  field: EditorPropertyField,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  commit: (String) -> Unit,
+) {
+  Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+    Text(
+      field.label + if (field.required) " *" else "",
+      style = MaterialTheme.typography.labelLarge,
+    )
+    when (field.control) {
+      EditorPropertyControl.Boolean -> {
+        val checked = field.value.toBooleanStrictOrNull() ?: false
+        Row(
+          Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+          Text(if (checked) "On" else "Off", style = MaterialTheme.typography.bodySmall)
+          Switch(
+            checked = checked,
+            onCheckedChange = { commit(it.toString()) },
+            modifier = Modifier.semantics { contentDescription = "${field.label} property" },
+          )
+        }
+      }
+      EditorPropertyControl.Enum -> EnumPropertyControl(field, commit)
+      EditorPropertyControl.Number ->
+        DraftPropertyControl(field, onTextInputFocusChanged, commit, showSteppers = true)
+      EditorPropertyControl.Text,
+      EditorPropertyControl.Color ->
+        DraftPropertyControl(field, onTextInputFocusChanged, commit, showSteppers = false)
+      EditorPropertyControl.Unsupported ->
+        Text(
+          field.value.ifEmpty { "Not set" },
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    field.notes?.let {
+      Text(
+        it,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+    field.error?.let {
+      Text(
+        it,
+        Modifier.semantics { contentDescription = "${field.label} validation error" },
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+  }
+}
+
+@Composable
+private fun DraftPropertyControl(
+  field: EditorPropertyField,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  commit: (String) -> Unit,
+  showSteppers: Boolean,
+) {
+  var draft by remember(field.nodeId, field.name, field.value) { mutableStateOf(field.value) }
+  BasicTextField(
+    value = draft,
+    onValueChange = { draft = it },
+    modifier =
+      Modifier.fillMaxWidth()
+        .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
+        .semantics { contentDescription = "${field.label} property" }
+        .padding(top = 7.dp)
+        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+        .padding(10.dp),
+    textStyle =
+      MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+    singleLine = field.name != "text",
+  )
+  if (showSteppers) {
+    val bounds = field.numberBounds
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+      TextButton(
+        onClick = {
+          val current = draft.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
+          draft =
+            (current - (bounds?.step ?: 1.0))
+              .coerceIn(bounds!!.minimum, bounds.maximum)
+              .editorNumber(bounds.integer)
+          commit(draft)
+        }
+      ) {
+        Text("−")
+      }
+      Text(
+        bounds
+          ?.let { "${it.minimum.editorNumber(it.integer)}…${it.maximum.editorNumber(it.integer)}" }
+          .orEmpty(),
+        Modifier.padding(top = 14.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+      TextButton(
+        onClick = {
+          val current = draft.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
+          draft =
+            (current + (bounds?.step ?: 1.0))
+              .coerceIn(bounds!!.minimum, bounds.maximum)
+              .editorNumber(bounds.integer)
+          commit(draft)
+        }
+      ) {
+        Text("+")
+      }
+    }
+  }
+  Button(
+    onClick = { commit(draft) },
+    modifier = Modifier.padding(top = 7.dp).fillMaxWidth(),
+  ) {
+    Text("Apply ${field.label.lowercase()}")
+  }
+  if (field.name == "text") {
+    TextButton(onClick = { commit("Edited in Compose") }, modifier = Modifier.fillMaxWidth()) {
+      Text("Use sample text")
+    }
+  }
+}
+
+@Composable
+private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> Unit) {
+  var expanded by remember(field.nodeId, field.name) { mutableStateOf(false) }
+  Box(Modifier.fillMaxWidth()) {
+    Button(
+      onClick = { expanded = true },
+      modifier =
+        Modifier.fillMaxWidth().semantics { contentDescription = "${field.label} property" },
+    ) {
+      Text(field.value.ifEmpty { "Choose…" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      field.choices.forEach { choice ->
+        DropdownMenuItem(
+          text = { Text(choice) },
+          onClick = {
+            expanded = false
+            commit(choice)
+          },
+        )
+      }
+    }
+  }
+}
+
+private fun Double.editorNumber(integer: Boolean): String =
+  if (integer || this % 1.0 == 0.0) toLong().toString() else toString()

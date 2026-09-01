@@ -135,6 +135,47 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
+  fun `Text typed capability fields round trip to Compose including every advertised alignment`() {
+    val title = document.nodes.getValue("detail-podcast-title")
+    val properties =
+      JsonObject(
+        title.properties +
+          mapOf(
+            "fontWeight" to property("enum", JsonPrimitive("normal")),
+            "fontStyle" to property("enum", JsonPrimitive("italic")),
+            "fontSizeSp" to property("float", JsonPrimitive(24.0)),
+            "lineHeightSp" to property("float", JsonPrimitive(32.0)),
+            "letterSpacingSp" to property("float", JsonPrimitive(0.5)),
+            "minLines" to property("int", JsonPrimitive(2)),
+            "maxLines" to property("int", JsonPrimitive(4)),
+            "softWrap" to property("bool", JsonPrimitive(false)),
+            "overflow" to property("enum", JsonPrimitive("visible")),
+            "textAlign" to property("enum", JsonPrimitive("end")),
+            "textDecoration" to property("enum", JsonPrimitive("underline")),
+            "alignment" to property("enum", JsonPrimitive("topCenter")),
+          )
+      )
+    val edited =
+      document.copy(nodes = document.nodes + (title.id to title.copy(properties = properties)))
+
+    val source =
+      CapabilityComposeCodeExporter.export(edited, catalog, artworkAdapter).requireSource()
+
+    assertTrue(source.contains("fontWeight = FontWeight.Normal"))
+    assertTrue(source.contains("fontStyle = FontStyle.Italic"))
+    assertTrue(source.contains("fontSize = 24f.sp"))
+    assertTrue(source.contains("lineHeight = 32f.sp"))
+    assertTrue(source.contains("letterSpacing = 0.5f.sp"))
+    assertTrue(source.contains("minLines = 2"))
+    assertTrue(source.contains("maxLines = 4"))
+    assertTrue(source.contains("softWrap = false"))
+    assertTrue(source.contains("overflow = TextOverflow.Visible"))
+    assertTrue(source.contains("textAlign = TextAlign.End"))
+    assertTrue(source.contains("textDecoration = TextDecoration.Underline"))
+    assertTrue(source.contains(".align(Alignment.TopCenter)"))
+  }
+
+  @Test
   fun `unbound assets use a visible declared placeholder with located diagnostics`() {
     val result = ComposeCodeExporter.export(document, catalog)
     val source = assertNotNull(result.source)
@@ -410,6 +451,9 @@ class CapabilityComposeCodeExporterTest {
     assertNull(result.source)
     assertTrue(result.diagnostics.any { it.code == code }, result.diagnostics.joinToString())
   }
+
+  private fun property(type: String, value: JsonPrimitive): JsonObject =
+    JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))
 
   private fun ee.schimke.composeai.uibuilder.capability.CapabilityCatalog.withSvg(
     componentId: String,

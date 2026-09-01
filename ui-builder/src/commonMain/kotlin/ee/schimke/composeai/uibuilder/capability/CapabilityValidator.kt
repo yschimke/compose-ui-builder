@@ -177,6 +177,20 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
           )
       }
     }
+
+    val minLines = node.properties["minLines"]?.unwrapPropertyValue()?.jsonPrimitive?.longOrNull
+    val maxLines = node.properties["maxLines"]?.unwrapPropertyValue()?.jsonPrimitive?.longOrNull
+    if (minLines != null && maxLines != null && minLines > maxLines) {
+      listOf("minLines", "maxLines").forEach { field ->
+        issues +=
+          issue(
+            CapabilityIssueCode.INVALID_PROPERTY_VALUE,
+            node,
+            "minLines must not exceed maxLines",
+            field,
+          )
+      }
+    }
   }
 
   private fun validateModifiers(

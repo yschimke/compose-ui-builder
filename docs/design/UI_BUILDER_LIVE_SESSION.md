@@ -11,6 +11,9 @@ On a fresh server, add `create=1`. The browser first attempts `OpenDesign`; only
 response enables the explicit create path, which seeds the requested ID from the current Jetcaster
 fixture at revision zero. An existing design is never overwritten.
 
+Add `template=blank` to seed a minimal scaffold with an empty content box instead. See the
+[getting-started guide](../UI_BUILDER_GETTING_STARTED.md) for the complete from-scratch workflow.
+
 The browser opens the design through the released v1 HTTP envelope, renders the authoritative
 snapshot, and subscribes to `/api/ui-builder/v1/designs/{designId}/updates`. Editor batches, undo,
 and redo retain the actor/client identity from the URL and use the currently rendered authoritative

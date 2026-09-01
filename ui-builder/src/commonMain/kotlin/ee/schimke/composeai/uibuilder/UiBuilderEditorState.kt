@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
+import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -11,8 +12,40 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
+
+enum class EditorPropertyControl {
+  Text,
+  Boolean,
+  Number,
+  Enum,
+  Color,
+  Unsupported,
+}
+
+data class EditorNumberBounds(
+  val minimum: Double,
+  val maximum: Double,
+  val step: Double,
+  val integer: Boolean,
+)
+
+data class EditorPropertyField(
+  val nodeId: String,
+  val name: String,
+  val label: String,
+  val required: Boolean,
+  val control: EditorPropertyControl,
+  val value: String,
+  val choices: List<String> = emptyList(),
+  val numberBounds: EditorNumberBounds? = null,
+  val error: String? = null,
+  val notes: String? = null,
+)
+
+data class EditorPropertyLocation(val nodeId: String, val property: String)
 
 enum class EditorComponentKind(val label: String) {
   Scaffold("Scaffolds"),
@@ -47,6 +80,7 @@ data class UiBuilderEditorState(
   val lastOutcome: CommandOutcome? = null,
   val selectionBeforeOperations: Map<String, String?> = emptyMap(),
   val selectionAfterOperations: Map<String, String?> = emptyMap(),
+  val propertyErrors: Map<EditorPropertyLocation, String> = emptyMap(),
 ) {
   val document: UiBuilderDocument
     get() = collaboration.document
@@ -71,7 +105,8 @@ sealed interface UiBuilderEditorEvent {
     val placeAfterTarget: Boolean,
   ) : UiBuilderEditorEvent
 
-  data class SetText(val nodeId: String, val text: String) : UiBuilderEditorEvent
+  data class CommitProperty(val nodeId: String, val property: String, val draft: String) :
+    UiBuilderEditorEvent
 
   data object DeleteSelected : UiBuilderEditorEvent
 
@@ -115,7 +150,8 @@ class UiBuilderEditorReducer(
         else state
       is UiBuilderEditorEvent.InsertComponent -> insert(state, event.componentId, event.target)
       is UiBuilderEditorEvent.MoveNode -> move(state, event)
-      is UiBuilderEditorEvent.SetText -> setText(state, event.nodeId, event.text)
+      is UiBuilderEditorEvent.CommitProperty ->
+        commitProperty(state, event.nodeId, event.property, event.draft)
       UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
       UiBuilderEditorEvent.DuplicateSelected -> duplicateSelected(state)
       UiBuilderEditorEvent.Undo -> undo(state)
@@ -215,6 +251,46 @@ class UiBuilderEditorReducer(
     return rows
   }
 
+  fun propertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
+    val node = state.selectedNodeId?.let(state.document.nodes::get) ?: return emptyList()
+    val component = catalog.componentsById[node.componentId] ?: return emptyList()
+    return component.properties.map { property ->
+      val encoded = node.properties[property.name] as? JsonObject
+      val value = encoded?.get("value")
+      val typeNames = property.typeNames() - "null"
+      val declaredControl = property.editor?.control
+      val numberBounds = property.numberBounds(typeNames)
+      val control =
+        when {
+          declaredControl == PropertyEditorControl.COLOR -> EditorPropertyControl.Color
+          property.allowedValues.isNotEmpty() || declaredControl == PropertyEditorControl.ENUM ->
+            EditorPropertyControl.Enum
+          declaredControl == PropertyEditorControl.TEXT -> EditorPropertyControl.Text
+          declaredControl == PropertyEditorControl.BOOLEAN || typeNames == setOf("boolean") ->
+            EditorPropertyControl.Boolean
+          (declaredControl == PropertyEditorControl.NUMBER ||
+            typeNames == setOf("number") ||
+            typeNames == setOf("integer")) && numberBounds != null -> EditorPropertyControl.Number
+          typeNames == setOf("string") -> EditorPropertyControl.Text
+          else -> EditorPropertyControl.Unsupported
+        }
+      EditorPropertyField(
+        nodeId = node.id,
+        name = property.name,
+        label = property.name.humanLabel(),
+        required = property.required,
+        control = control,
+        value = value?.jsonPrimitive?.content ?: "",
+        choices =
+          property.allowedValues.mapNotNull { it.jsonPrimitive.contentOrNull } +
+            property.editor?.suggestedValues.orEmpty(),
+        numberBounds = numberBounds,
+        error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
+        notes = property.notes,
+      )
+    }
+  }
+
   fun dropTarget(state: UiBuilderEditorState, componentId: String): ParentSlot? {
     val component = catalog.componentsById[componentId] ?: return null
     return findDestination(state.document, state.selectedNodeId, component)
@@ -294,16 +370,53 @@ class UiBuilderEditorReducer(
     )
   }
 
-  private fun setText(
+  private fun commitProperty(
     state: UiBuilderEditorState,
     nodeId: String,
-    text: String,
+    propertyName: String,
+    draft: String,
   ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
     val node = state.document.nodes[nodeId] ?: return state
-    if (node.componentId != "m3/text") return state
+    val property = catalog.componentsById[node.componentId]?.propertiesByName?.get(propertyName)
+    if (property == null) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "Property $propertyName is not declared by ${node.componentId}",
+        nodeId,
+        propertyName,
+      )
+    }
+    val field =
+      propertyFields(state.copy(selectedNodeId = nodeId)).firstOrNull { it.name == propertyName }
+        ?: return state
+    val parsed = field.parseDraft(draft)
+    if (parsed is PropertyDraft.Invalid) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        parsed.message,
+        nodeId,
+        propertyName,
+      )
+    }
+    val value = (parsed as PropertyDraft.Valid).value
+    val existingType =
+      (node.properties[propertyName] as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull
+    val encoded = literal(existingType ?: field.defaultEncodedType(), value)
+    validator.validate(state.document, nodeId, propertyName, encoded)?.let { issue ->
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        issue.message,
+        nodeId,
+        propertyName,
+      )
+    }
     return state.apply(
-      state.operationSequence + 1,
-      listOf(DesignOperation.SetProperty(nodeId, "text", literal("string", JsonPrimitive(text)))),
+      sequence,
+      listOf(DesignOperation.SetProperty(nodeId, propertyName, encoded)),
       selectionAfter = nodeId,
     )
   }
@@ -434,6 +547,19 @@ class UiBuilderEditorReducer(
       selectedNodeId = if (accepted) selectionAfter else selectedNodeId,
       operationSequence = sequence,
       lastOutcome = application.outcome,
+      propertyErrors =
+        if (accepted) {
+          val touched =
+            application.state.acceptedCommands.values
+              .maxByOrNull(AcceptedCommand::committedRevision)
+              ?.command
+              ?.operations
+              ?.filterIsInstance<DesignOperation.SetProperty>()
+              .orEmpty()
+              .map { EditorPropertyLocation(it.nodeId, it.property) }
+              .toSet()
+          propertyErrors - touched
+        } else propertyErrors,
       selectionBeforeOperations =
         if (accepted && acceptedOperationId != null)
           selectionBeforeOperations + (acceptedOperationId to selectedNodeId)
@@ -449,10 +575,17 @@ class UiBuilderEditorReducer(
     sequence: Int,
     code: RejectionCode,
     message: String,
+    nodeId: String? = null,
+    field: String? = null,
   ): UiBuilderEditorState =
     copy(
       operationSequence = sequence,
-      lastOutcome = CommandOutcome.Rejected(code = code, message = message),
+      lastOutcome =
+        CommandOutcome.Rejected(code = code, message = message, nodeId = nodeId, field = field),
+      propertyErrors =
+        if (nodeId != null && field != null)
+          propertyErrors + (EditorPropertyLocation(nodeId, field) to message)
+        else propertyErrors,
     )
 
   private fun findDestination(
@@ -676,6 +809,80 @@ private fun JsonElement.asLiteral(propertyName: String): JsonObject {
 
 private fun literal(type: String, value: JsonElement): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))
+
+private sealed interface PropertyDraft {
+  data class Valid(val value: JsonElement) : PropertyDraft
+
+  data class Invalid(val message: String) : PropertyDraft
+}
+
+private fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
+  return when (control) {
+    EditorPropertyControl.Text -> PropertyDraft.Valid(JsonPrimitive(draft))
+    EditorPropertyControl.Boolean ->
+      draft.toBooleanStrictOrNull()?.let { PropertyDraft.Valid(JsonPrimitive(it)) }
+        ?: PropertyDraft.Invalid("$label must be true or false")
+    EditorPropertyControl.Enum ->
+      if (draft in choices) PropertyDraft.Valid(JsonPrimitive(draft))
+      else PropertyDraft.Invalid("$label must be one of ${choices.joinToString()}")
+    EditorPropertyControl.Number -> {
+      val bounds = numberBounds ?: return PropertyDraft.Invalid("$label has no safe editor range")
+      val number = draft.toDoubleOrNull()
+      when {
+        number == null || !number.isFinite() -> PropertyDraft.Invalid("$label must be a number")
+        bounds.integer && number % 1.0 != 0.0 ->
+          PropertyDraft.Invalid("$label must be a whole number")
+        number < bounds.minimum || number > bounds.maximum ->
+          PropertyDraft.Invalid(
+            "$label must be ${bounds.minimum.format()}..${bounds.maximum.format()}"
+          )
+        bounds.integer -> PropertyDraft.Valid(JsonPrimitive(number.toLong()))
+        else -> PropertyDraft.Valid(JsonPrimitive(number))
+      }
+    }
+    EditorPropertyControl.Color -> {
+      val color = draft.trim()
+      if (color.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")) || color in choices)
+        PropertyDraft.Valid(JsonPrimitive(color))
+      else
+        PropertyDraft.Invalid("$label must be #RRGGBB, #AARRGGBB, or a listed Material color token")
+    }
+    EditorPropertyControl.Unsupported ->
+      PropertyDraft.Invalid("$label cannot be safely edited from its catalog metadata")
+  }
+}
+
+private fun EditorPropertyField.defaultEncodedType(): String =
+  when (control) {
+    EditorPropertyControl.Text -> "string"
+    EditorPropertyControl.Boolean -> "bool"
+    EditorPropertyControl.Number -> if (numberBounds?.integer == true) "int" else "float"
+    EditorPropertyControl.Enum -> if (name == "style") "typographyToken" else "enum"
+    EditorPropertyControl.Color -> "color"
+    EditorPropertyControl.Unsupported -> "string"
+  }
+
+private fun PropertyCapability.typeNames(): Set<String> =
+  when (jsonType) {
+    is JsonArray -> jsonType.mapTo(linkedSetOf()) { it.jsonPrimitive.content }
+    else -> setOf(jsonType.jsonPrimitive.content)
+  }
+
+private fun PropertyCapability.numberBounds(typeNames: Set<String>): EditorNumberBounds? {
+  if (typeNames != setOf("number") && typeNames != setOf("integer")) return null
+  val editor = editor
+  val minimum = editor?.minimum ?: return null
+  val maximum = editor.maximum ?: return null
+  val step = editor.step ?: if (typeNames == setOf("integer")) 1.0 else 0.1
+  if (!minimum.isFinite() || !maximum.isFinite() || !step.isFinite()) return null
+  if (minimum > maximum || step <= 0.0) return null
+  return EditorNumberBounds(minimum, maximum, step, typeNames == setOf("integer"))
+}
+
+private fun String.humanLabel(): String =
+  replace(Regex("([a-z0-9])([A-Z])"), "$1 $2").replaceFirstChar { it.uppercase() }
+
+private fun Double.format(): String = if (this % 1.0 == 0.0) toLong().toString() else toString()
 
 private fun UiBuilderDocument.location(nodeId: String): ParentSlot? {
   nodes.values.forEach { parent ->
