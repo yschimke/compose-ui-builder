@@ -30,12 +30,15 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -101,6 +104,18 @@ private enum class MobileEditorPanel {
   Properties,
 }
 
+data class UiBuilderNewDesignTemplate(
+  val id: String,
+  val label: String,
+  val supportingText: String,
+)
+
+data class UiBuilderNewDesignCatalog(
+  val systemId: String,
+  val label: String,
+  val templates: List<UiBuilderNewDesignTemplate>,
+)
+
 @Composable
 fun UiBuilderEditor(
   document: UiBuilderDocument,
@@ -119,7 +134,11 @@ fun UiBuilderEditor(
   onReconnect: (() -> Unit)? = null,
   onSubmission: ((EditorSubmission) -> Unit)? = null,
   authoritativeGeneration: Int = 0,
+  initialSelectedNodeId: String? = null,
+  initialCatalogQuery: String = "",
   collaborators: List<UiBuilderCollaborator> = emptyList(),
+  newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
+  onCreateDesign: ((catalogSystemId: String, designId: String, templateId: String) -> Unit)? = null,
   onHelp: (() -> Unit)? = null,
 ) {
   val reducer =
@@ -127,14 +146,42 @@ fun UiBuilderEditor(
       UiBuilderEditorReducer(catalog, actorId, clientId, operationIdPrefix)
     }
   var state by
-    remember(document.id, document.revision, authoritativeGeneration) {
-      mutableStateOf(reducer.initial(document, selectedNodeId = document.roots.firstOrNull()))
+    remember(document.id) {
+      mutableStateOf(
+        reducer
+          .initial(
+            document,
+            selectedNodeId =
+              initialSelectedNodeId?.takeIf(document.nodes::containsKey)
+                ?: document.roots.firstOrNull(),
+          )
+          .copy(catalogQuery = initialCatalogQuery)
+      )
     }
+  LaunchedEffect(document.revision, authoritativeGeneration) {
+    if (state.document != document) {
+      state =
+        reducer
+          .initial(
+            document,
+            selectedNodeId =
+              state.selectedNodeId?.takeIf(document.nodes::containsKey)
+                ?: initialSelectedNodeId?.takeIf(document.nodes::containsKey)
+                ?: document.roots.firstOrNull(),
+          )
+          .copy(
+            catalogQuery = state.catalogQuery,
+            operationSequence = state.operationSequence,
+            inspectorMode = state.inspectorMode,
+          )
+    }
+  }
   var catalogDragPosition by remember { mutableStateOf<Offset?>(null) }
   var draggedComponentId by remember { mutableStateOf<String?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
   var textInputFocused by remember { mutableStateOf(false) }
   var mobilePanel by remember(document.id) { mutableStateOf(MobileEditorPanel.None) }
+  var showNewDesign by remember(document.id) { mutableStateOf(false) }
   val editorFocusRequester = remember { FocusRequester() }
   val draggedTarget = draggedComponentId?.let { reducer.dropTarget(state, it) }
   val canvasDropHovered =
@@ -144,6 +191,10 @@ fun UiBuilderEditor(
     val current = reducer.reduce(previous, event)
     state = current
     reducer.acceptedSubmission(previous, current)?.let { onSubmission?.invoke(it) }
+  }
+  fun focusEditor() {
+    textInputFocused = false
+    editorFocusRequester.requestFocus()
   }
   LaunchedEffect(state) { onStateChanged(state) }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
@@ -162,6 +213,7 @@ fun UiBuilderEditor(
       collaborators = collaborators,
       dropTargetLabel = reducer.dropTargetLabel(state, draggedComponentId ?: "m3/text"),
       onCatalogDrag = { componentId, position ->
+        if (position != null) focusEditor()
         draggedComponentId = componentId
         catalogDragPosition = position
       },
@@ -174,7 +226,16 @@ fun UiBuilderEditor(
         draggedComponentId = null
         catalogDragPosition = null
       },
+      canAddCatalogComponent = { reducer.dropTarget(state, it) != null },
+      onCatalogAdd = { componentId ->
+        focusEditor()
+        reducer.dropTarget(state, componentId)?.let { target ->
+          dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target))
+          if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+        }
+      },
       moveTarget = { nodeId, direction -> reducer.moveTarget(state, nodeId, direction) },
+      onEditorInteraction = ::focusEditor,
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,
@@ -184,7 +245,10 @@ fun UiBuilderEditor(
     PinnedDesignCanvas(
       document = state.document,
       selectedNodeId = state.selectedNodeId,
-      onNodeSelected = { dispatch(UiBuilderEditorEvent.SelectNode(it)) },
+      onNodeSelected = {
+        focusEditor()
+        dispatch(UiBuilderEditorEvent.SelectNode(it))
+      },
       onCanvasMetrics = onCanvasMetrics,
       onCanvasBounds = {
         canvasBounds = it
@@ -229,6 +293,10 @@ fun UiBuilderEditor(
             canDuplicate = reducer.canDuplicateSelected(state),
             canUndo = reducer.canUndo(state),
             canRedo = reducer.canRedo(state),
+            onNewDesign =
+              if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
+                { showNewDesign = true }
+              } else null,
             onReconnect = onReconnect,
             onHelp = onHelp,
             dispatch = ::dispatch,
@@ -242,6 +310,10 @@ fun UiBuilderEditor(
             canRedo = reducer.canRedo(state),
             sessionLabel = sessionLabel,
             collaborators = collaborators,
+            onNewDesign =
+              if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
+                { showNewDesign = true }
+              } else null,
             onReconnect = onReconnect,
             onHelp = onHelp,
             dispatch = ::dispatch,
@@ -291,7 +363,120 @@ fun UiBuilderEditor(
           }
         }
       }
+      if (showNewDesign && onCreateDesign != null) {
+        NewDesignDialog(
+          catalogs = newDesignCatalogs,
+          initialCatalogSystemId =
+            document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull
+              ?: newDesignCatalogs.first().systemId,
+          onDismiss = { showNewDesign = false },
+          onCreate = onCreateDesign,
+        )
+      }
     }
+  }
+}
+
+@Composable
+private fun NewDesignDialog(
+  catalogs: List<UiBuilderNewDesignCatalog>,
+  initialCatalogSystemId: String,
+  onDismiss: (() -> Unit)?,
+  onCreate: (catalogSystemId: String, designId: String, templateId: String) -> Unit,
+) {
+  val initialCatalog =
+    catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
+  var selectedCatalogId by remember { mutableStateOf(initialCatalog.systemId) }
+  var selectedTemplateId by remember {
+    mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
+  }
+  var designId by remember { mutableStateOf("") }
+  val selectedCatalog = catalogs.first { it.systemId == selectedCatalogId }
+  val selectedTemplate =
+    selectedCatalog.templates.firstOrNull { it.id == selectedTemplateId }
+      ?: selectedCatalog.templates.first()
+  val designIdValid = designId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]*"))
+
+  AlertDialog(
+    onDismissRequest = { onDismiss?.invoke() },
+    title = { Text("Create a new design") },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Catalog", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          catalogs.forEach { catalog ->
+            FilterChip(
+              selected = catalog.systemId == selectedCatalogId,
+              onClick = {
+                selectedCatalogId = catalog.systemId
+                selectedTemplateId = catalog.templates.first().id
+              },
+              label = { Text(catalog.label) },
+            )
+          }
+        }
+        Text("Starting point", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          selectedCatalog.templates.forEach { template ->
+            FilterChip(
+              selected = template.id == selectedTemplate.id,
+              onClick = { selectedTemplateId = template.id },
+              label = { Text(template.label) },
+            )
+          }
+        }
+        Text(
+          selectedTemplate.supportingText,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.bodySmall,
+        )
+        Text("Design ID", style = MaterialTheme.typography.labelLarge)
+        OutlinedTextField(
+          value = designId,
+          onValueChange = { designId = it },
+          modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Design ID" },
+          placeholder = { Text("my-widget") },
+          supportingText = {
+            Text(
+              if (designId.isEmpty() || designIdValid) {
+                "Letters, numbers, dots, underscores, and hyphens"
+              } else {
+                "Start with a letter or number and use only path-safe characters"
+              }
+            )
+          },
+          isError = designId.isNotEmpty() && !designIdValid,
+          singleLine = true,
+        )
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = { onCreate(selectedCatalog.systemId, designId, selectedTemplate.id) },
+        enabled = designIdValid,
+      ) {
+        Text("Create")
+      }
+    },
+    dismissButton = { if (onDismiss != null) TextButton(onClick = onDismiss) { Text("Cancel") } },
+  )
+}
+
+@Composable
+fun UiBuilderNewDesignScreen(
+  catalogs: List<UiBuilderNewDesignCatalog>,
+  initialCatalogSystemId: String,
+  onCreate: (catalogSystemId: String, designId: String, templateId: String) -> Unit,
+) {
+  require(catalogs.isNotEmpty()) { "new design screen requires at least one catalog" }
+  MaterialTheme(colorScheme = EditorColors) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+    NewDesignDialog(
+      catalogs = catalogs,
+      initialCatalogSystemId = initialCatalogSystemId,
+      onDismiss = null,
+      onCreate = onCreate,
+    )
   }
 }
 
@@ -302,6 +487,7 @@ private fun MobileEditorToolbar(
   canDuplicate: Boolean,
   canUndo: Boolean,
   canRedo: Boolean,
+  onNewDesign: (() -> Unit)?,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -323,6 +509,15 @@ private fun MobileEditorToolbar(
           Text("More")
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+          if (onNewDesign != null) {
+            DropdownMenuItem(
+              text = { Text("New design") },
+              onClick = {
+                expanded = false
+                onNewDesign()
+              },
+            )
+          }
           DropdownMenuItem(
             text = { Text("Duplicate") },
             enabled = canDuplicate,
@@ -407,6 +602,7 @@ private fun EditorToolbar(
   canRedo: Boolean,
   sessionLabel: String,
   collaborators: List<UiBuilderCollaborator>,
+  onNewDesign: (() -> Unit)?,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -439,6 +635,9 @@ private fun EditorToolbar(
             )
           }
         }
+      }
+      if (onNewDesign != null) {
+        EditorAction(label = "New design", shortcut = "", enabled = true, onClick = onNewDesign)
       }
       EditorAction(
         label = "Undo",
@@ -538,7 +737,10 @@ private fun EditorNavigator(
   dropTargetLabel: String,
   onCatalogDrag: (String, Offset?) -> Unit,
   onCatalogDrop: (String, Offset) -> Unit,
+  canAddCatalogComponent: (String) -> Boolean,
+  onCatalogAdd: (String) -> Unit,
   moveTarget: (String, EditorMoveDirection) -> UiBuilderEditorEvent.MoveNode?,
+  onEditorInteraction: () -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(300.dp).fillMaxHeight(),
@@ -562,6 +764,8 @@ private fun EditorNavigator(
             item = item,
             onDrag = { onCatalogDrag(item.componentId, it) },
             onDrop = { onCatalogDrop(item.componentId, it) },
+            canAdd = canAddCatalogComponent(item.componentId),
+            onAdd = { onCatalogAdd(item.componentId) },
           )
         }
       }
@@ -573,8 +777,14 @@ private fun EditorNavigator(
             row = row,
             selected = row.nodeId == state.selectedNodeId,
             collaborators = collaborators.filter { row.nodeId in it.selectedNodeIds },
-            onSelect = { dispatch(UiBuilderEditorEvent.SelectNode(row.nodeId)) },
-            onMove = { direction -> moveTarget(row.nodeId, direction)?.let(dispatch) },
+            onSelect = {
+              onEditorInteraction()
+              dispatch(UiBuilderEditorEvent.SelectNode(row.nodeId))
+            },
+            onMove = { direction ->
+              onEditorInteraction()
+              moveTarget(row.nodeId, direction)?.let(dispatch)
+            },
           )
         }
       }
@@ -745,44 +955,45 @@ private fun CatalogRow(
   item: EditorCatalogItem,
   onDrag: (Offset?) -> Unit,
   onDrop: (Offset) -> Unit,
+  canAdd: Boolean,
+  onAdd: () -> Unit,
 ) {
   var dragDistance by remember { mutableFloatStateOf(0f) }
-  var rowOrigin by remember { mutableStateOf(Offset.Zero) }
+  var dragOrigin by remember { mutableStateOf(Offset.Zero) }
   var lastPosition by remember { mutableStateOf(Offset.Zero) }
   Row(
-    Modifier.fillMaxWidth()
-      .height(42.dp)
-      .onGloballyPositioned { rowOrigin = it.boundsInRoot().topLeft }
-      .pointerInput(item.componentId) {
-        detectDragGestures(
-          onDragStart = {
-            dragDistance = 0f
-            lastPosition = rowOrigin + it
-            onDrag(lastPosition)
-          },
-          onDragEnd = {
-            if (dragDistance > 8f) onDrop(lastPosition) else onDrag(null)
-            dragDistance = 0f
-          },
-          onDragCancel = {
-            dragDistance = 0f
-            onDrag(null)
-          },
-          onDrag = { change, amount ->
-            change.consume()
-            dragDistance += amount.getDistance()
-            lastPosition = rowOrigin + change.position
-            onDrag(lastPosition)
-          },
-        )
-      }
-      .padding(horizontal = 12.dp),
+    Modifier.fillMaxWidth().height(42.dp).padding(horizontal = 12.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Icon(
       Icons.Filled.DragIndicator,
       contentDescription = "Drag ${item.displayName}",
-      Modifier.size(18.dp),
+      modifier =
+        Modifier.size(18.dp)
+          .onGloballyPositioned { dragOrigin = it.boundsInRoot().topLeft }
+          .pointerInput(item.componentId) {
+            detectDragGestures(
+              onDragStart = {
+                dragDistance = 0f
+                lastPosition = dragOrigin + it
+                onDrag(lastPosition)
+              },
+              onDragEnd = {
+                if (dragDistance > 8f) onDrop(lastPosition) else onDrag(null)
+                dragDistance = 0f
+              },
+              onDragCancel = {
+                dragDistance = 0f
+                onDrag(null)
+              },
+              onDrag = { change, amount ->
+                change.consume()
+                dragDistance += amount.getDistance()
+                lastPosition = dragOrigin + change.position
+                onDrag(lastPosition)
+              },
+            )
+          },
       tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Column(Modifier.padding(start = 8.dp).weight(1f)) {
@@ -792,6 +1003,15 @@ private fun CatalogRow(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelSmall,
         maxLines = 1,
+      )
+    }
+    TextButton(
+      onClick = onAdd,
+      enabled = canAdd,
+    ) {
+      Text(
+        "Add",
+        Modifier.semantics { contentDescription = "Add ${item.displayName}" },
       )
     }
   }
@@ -811,56 +1031,62 @@ private fun LayerRow(
     Modifier.fillMaxWidth()
       .height(34.dp)
       .background(background)
-      .clickable(onClick = onSelect)
-      .pointerInput(row.nodeId) {
-        detectDragGestures(
-          onDragStart = { verticalDrag = 0f },
-          onDragEnd = {
-            when {
-              verticalDrag > 12f -> onMove(EditorMoveDirection.After)
-              verticalDrag < -12f -> onMove(EditorMoveDirection.Before)
-            }
-            verticalDrag = 0f
-          },
-          onDragCancel = { verticalDrag = 0f },
-          onDrag = { change, amount ->
-            change.consume()
-            verticalDrag += amount.y
-          },
-        )
-      }
       .padding(start = (8 + row.depth * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Icon(
       Icons.Filled.DragIndicator,
       contentDescription = "Reorder ${row.nodeId}",
-      Modifier.size(16.dp),
+      modifier =
+        Modifier.size(16.dp).pointerInput(row.nodeId) {
+          detectDragGestures(
+            onDragStart = { verticalDrag = 0f },
+            onDragEnd = {
+              when {
+                verticalDrag > 12f -> onMove(EditorMoveDirection.After)
+                verticalDrag < -12f -> onMove(EditorMoveDirection.Before)
+              }
+              verticalDrag = 0f
+            },
+            onDragCancel = { verticalDrag = 0f },
+            onDrag = { change, amount ->
+              change.consume()
+              verticalDrag += amount.y
+            },
+          )
+        },
       tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Text(
-      row.label,
-      Modifier.padding(start = 5.dp).weight(1f),
-      style = MaterialTheme.typography.bodySmall,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
-    collaborators.take(3).forEach { collaborator ->
-      Box(
-        Modifier.padding(end = 3.dp)
-          .size(8.dp)
-          .background(collaborator.colorArgbHex.toPresenceColor(), RoundedCornerShape(4.dp))
-          .clearAndSetSemantics {}
+    Row(
+      Modifier.fillMaxHeight().weight(1f).clickable(onClick = onSelect).semantics {
+        contentDescription = "Select ${row.nodeId}"
+      },
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+        row.label,
+        Modifier.padding(start = 5.dp).weight(1f),
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      collaborators.take(3).forEach { collaborator ->
+        Box(
+          Modifier.padding(end = 3.dp)
+            .size(8.dp)
+            .background(collaborator.colorArgbHex.toPresenceColor(), RoundedCornerShape(4.dp))
+            .clearAndSetSemantics {}
+        )
+      }
+      Text(
+        row.nodeId,
+        Modifier.width(92.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
       )
     }
-    Text(
-      row.nodeId,
-      Modifier.width(92.dp),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
   }
 }
 

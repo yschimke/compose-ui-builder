@@ -41,13 +41,17 @@ still belongs behind `:render-host`, and there is no server/MCP export integrati
 The public operation fixture remains under `docs/design/fixtures/ui-builder`. JVM tests consume that
 same file directly; the Wasm application and eventual MCP adapter must call the same reducer API.
 
-The standalone `/ui-builder/` application now opens a native Compose editor seeded from the frozen
-Jetcaster operations fixture. Its searchable M3 catalog, layers tree, canvas selection overlay and
-property inspector all mutate the document through `CollaborationReducer`; catalog drops resolve
-against the visibly named selected slot. The editor measures the design at its pinned 1280×800dp
-viewport and applies a sibling visual transform to fit the workspace, so the side panels cannot
-silently trigger a compact Jetcaster layout. `?mode=jetcaster-builder` remains the clean harness
-surface and does not compose editor controls or transforms.
+The hosted `/ui-builder/` application opens a catalog-aware New design chooser when no design is
+named, then a native Compose editor backed by the persistent live service. New design remains
+available in the desktop toolbar and compact More menu. Its searchable catalog, layers tree,
+canvas selection overlay and property inspector all mutate the document through
+`CollaborationReducer`; catalog drops resolve against the visibly named selected slot. The editor
+also exposes an accessible Add action for the same compatible target and preserves selection,
+search, inspector mode, and operation numbering when live authoritative snapshots arrive. The editor
+measures the design at its pinned 1280×800dp viewport and applies a sibling visual transform to fit
+the workspace, so the side panels cannot silently trigger a compact layout. Explicit `?mode=…`
+URLs retain the frozen local fixtures; `?mode=jetcaster-builder` remains the clean harness surface
+and does not compose editor controls or transforms.
 
 On viewports narrower than 840dp, the interactive editor starts with only the scaled design and a
 compact toolbar visible. Persistent bottom tabs open collapsible component and property docks;

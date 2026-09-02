@@ -6,15 +6,24 @@ The UI builder is a separate Compose/Wasm authoring surface. `/ui-builder/` rema
 Each design remains pinned to one catalog while the service can host a small operator-selected set.
 Publishing a preview catalog never enables authoring for it automatically.
 
-## Start from a blank screen
+## Create a design in the website
 
-Start the server with UI-builder persistence and open:
+Start the server with UI-builder persistence and open `/ui-builder/`. The website opens its New
+design chooser when no design is named. The same chooser is available from **New design** in every
+live editor.
 
-```text
-/ui-builder/?session=live&create=1&template=blank&designId=my-screen
-```
+1. Choose **Material 3** for a blank Compose screen, or **Remote Material 3** for a Wear widget.
+2. For a widget, choose **Small widget** (216×76dp) or **Large widget** (216×124dp).
+3. Enter a path-safe design ID and select **Create**. The website retains the current operator
+   token and collaboration identity while it opens the catalog-scoped design.
+4. For a widget, search for a Column, Row, Box, or Surface and select **Add** (or drag it) to place
+   it in the scaffold's single `content` slot. The inserted container stays selected; search for
+   Text or other content and select **Add** again to fill its children slot. This container-first
+   step is how one widget holds multiple ordered items.
+5. Select a node and edit it in Properties. Changes are committed to the live revision
+   automatically; Undo, Redo, Duplicate, and Delete use the same collaboration log.
 
-For the Remote Compose M3 instance, use a distinct design id under:
+Direct creation URLs remain available for automation and bookmarks:
 
 ```text
 /ui-builder/remote-m3/?session=live&create=1&template=wear-widget-small&designId=my-remote-screen
@@ -29,14 +38,13 @@ a 216×76dp host frame with an empty content slot. Use `template=wear-widget-lar
 credentials are intentionally absent from this example: supply them through the server and client
 credential facilities, never in a shared URL, shell history, or process arguments.
 
-1. Select the scaffold or content box in Layers.
-2. Search the M3 component catalog, drag a component, and release it over the canvas. The catalog
-   resolves the concrete compatible slot before submitting the insert.
-3. Select a node and use Properties. Text, booleans, catalog choices, bounded numbers, and declared
-   colors are validated locally and then submitted as the ordinary authoritative `SetProperty`
-   operation. A rejection names the node and field beside the control.
-4. Use Undo, Redo, Duplicate, and Delete in the toolbar. Help returns to this guide.
-5. Export SVG or Compose from the current committed revision through the server or MCP adapter.
+Catalog Add actions and drops resolve the concrete compatible slot before submitting the insert.
+The selected node, catalog search, inspector mode, and generated operation sequence survive each
+authoritative collaboration snapshot. Text, booleans,
+catalog choices, bounded numbers, and declared colors are validated locally and then submitted as
+the ordinary authoritative `SetProperty` operation. A rejection names the node and field beside
+the control. Help returns to this guide. SVG and Compose export use the current committed revision
+through the server or MCP adapter.
 
 The canvas uses real catalog components where a supported Compose/Wasm adapter exists. A
 compatibility adapter is explicit capability metadata, not a claim that an unavailable platform

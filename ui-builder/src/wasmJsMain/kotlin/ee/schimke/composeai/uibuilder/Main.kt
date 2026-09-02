@@ -342,6 +342,7 @@ private data class LiveSessionConfig(
   val clientId: String,
   val httpEndpoint: String,
   val webSocketEndpoint: String,
+  val startWithNewDesign: Boolean,
   val createIfMissing: Boolean,
   val template: String,
   val operationIdPrefix: String,
@@ -365,11 +366,13 @@ private fun LiveSessionApp() {
   var document by remember { mutableStateOf<UiBuilderDocument?>(null) }
   var authoritativeDocument by remember { mutableStateOf<DesignDocumentV1?>(null) }
   var catalog by remember { mutableStateOf<CapabilityCatalog?>(null) }
+  var newDesignCatalogs by remember { mutableStateOf<List<UiBuilderNewDesignCatalog>>(emptyList()) }
   var sessionStatus by remember { mutableStateOf("Connecting…") }
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
   var authoritativeGeneration by remember { mutableStateOf(0) }
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
   var selectedNodeId by remember { mutableStateOf<String?>(null) }
+  var catalogQuery by remember { mutableStateOf("") }
   var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
   var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
 
@@ -407,7 +410,12 @@ private fun LiveSessionApp() {
   }
 
   LaunchedEffect(config) {
-    val selectedCatalog = loadLiveCatalog(http, config.catalogSystemId)
+    val availableCatalogs = loadLiveCatalogs(http)
+    val selectedCatalog =
+      availableCatalogs.singleOrNull { it.benchmark.catalogSystemId == config.catalogSystemId }
+        ?: error("UI builder is not enabled for catalog ${config.catalogSystemId}")
+    newDesignCatalogs = availableCatalogs.mapNotNull(::newDesignCatalog)
+    if (config.startWithNewDesign) return@LaunchedEffect
     catalog =
       CapabilityCatalogParser.parse(
         Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), selectedCatalog)
@@ -599,6 +607,15 @@ private fun LiveSessionApp() {
 
   val loadedDocument = document
   val loadedCatalog = catalog
+  if (config.startWithNewDesign && newDesignCatalogs.isNotEmpty()) {
+    UiBuilderNewDesignScreen(
+      catalogs = newDesignCatalogs,
+      initialCatalogSystemId = config.catalogSystemId,
+      onCreate = ::navigateToNewDesign,
+    )
+    LaunchedEffect(newDesignCatalogs) { markReady() }
+    return
+  }
   if (loadedDocument != null && loadedCatalog != null) {
     val collaborators = presenceState.collaborators(config.actorId)
     LaunchedEffect(collaborators) {
@@ -648,10 +665,15 @@ private fun LiveSessionApp() {
         }
       },
       authoritativeGeneration = authoritativeGeneration,
+      initialSelectedNodeId = selectedNodeId,
+      initialCatalogQuery = catalogQuery,
       collaborators = collaborators,
+      newDesignCatalogs = newDesignCatalogs,
+      onCreateDesign = ::navigateToNewDesign,
       onHelp = ::openUiBuilderGuide,
       onStateChanged = {
         selectedNodeId = it.selectedNodeId
+        catalogQuery = it.catalogQuery
         publishEditorState(it)
       },
       onCanvasMetrics = ::publishEditorCanvasMetrics,
@@ -972,7 +994,12 @@ private external fun fetchTextPromise(url: String): Promise<JsString>
 @JsFun("() => new URLSearchParams(globalThis.location.search).get('mode') || 'interactive-editor'")
 private external fun captureMode(): String
 
-@JsFun("() => new URLSearchParams(globalThis.location.search).get('session') === 'live'")
+@JsFun(
+  """() => {
+    const params = new URLSearchParams(globalThis.location.search);
+    return params.get('session') === 'live' || !params.has('mode');
+  }"""
+)
 private external fun liveSessionEnabled(): Boolean
 
 private fun liveSessionConfig(): LiveSessionConfig {
@@ -991,6 +1018,7 @@ private fun liveSessionConfig(): LiveSessionConfig {
           "updatesEndpoint",
           "/api/ui-builder/v1/designs/{designId}/updates",
         ),
+      startWithNewDesign = !liveConfigPresent("designId"),
       createIfMissing = liveConfigFlag("create"),
       template = liveConfigValue("template", "jetcaster"),
       operationIdPrefix = "${liveConfigValue("clientId", "browser-editor")}-${livePageNonce()}",
@@ -1013,19 +1041,51 @@ private fun liveSessionConfig(): LiveSessionConfig {
     }
 }
 
-private suspend fun loadLiveCatalog(
-  http: UiBuilderProtocolHttpClient,
-  systemId: String,
-): CatalogCapabilityV1 =
+private suspend fun loadLiveCatalogs(http: UiBuilderProtocolHttpClient): List<CatalogCapabilityV1> =
   when (val result = http.execute(ListCatalogsRequestV1)) {
     is UiBuilderHttpResult.Response -> {
       val catalogs =
         result.response as? CatalogsResponseV1 ?: error("unexpected list-catalogs response")
-      catalogs.catalogs.singleOrNull { it.benchmark.catalogSystemId == systemId }
-        ?: error("UI builder is not enabled for catalog $systemId")
+      catalogs.catalogs
     }
     is UiBuilderHttpResult.ServiceError -> error(result.error.message)
     is UiBuilderHttpResult.SnapshotRequired -> error(result.error.message)
+  }
+
+private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCatalog? =
+  when (catalog.benchmark.catalogSystemId) {
+    "m3-catalog" ->
+      UiBuilderNewDesignCatalog(
+        systemId = "m3-catalog",
+        label = "Material 3",
+        templates =
+          listOf(
+            UiBuilderNewDesignTemplate(
+              id = "blank",
+              label = "Blank screen",
+              supportingText = "A Material scaffold with an empty content container.",
+            )
+          ),
+      )
+    "remote-m3" ->
+      UiBuilderNewDesignCatalog(
+        systemId = "remote-m3",
+        label = "Remote Material 3",
+        templates =
+          listOf(
+            UiBuilderNewDesignTemplate(
+              id = "wear-widget-small",
+              label = "Small widget",
+              supportingText = "216×76dp host with a single content slot.",
+            ),
+            UiBuilderNewDesignTemplate(
+              id = "wear-widget-large",
+              label = "Large widget",
+              supportingText = "216×124dp host with a single content slot.",
+            ),
+          ),
+      )
+    else -> null
   }
 
 @JsFun(
@@ -1035,6 +1095,31 @@ private suspend fun loadLiveCatalog(
   }"""
 )
 private external fun uiBuilderCatalogFromPath(): String
+
+@JsFun(
+  """(catalogSystemId, designId, templateId) => {
+    const current = new URL(globalThis.location.href);
+    const path = catalogSystemId === 'm3-catalog'
+      ? '/ui-builder/'
+      : '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/';
+    const next = new URL(path, current.origin);
+    ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
+      .forEach((name) => {
+        const value = current.searchParams.get(name);
+        if (value !== null) next.searchParams.set(name, value);
+      });
+    next.searchParams.set('session', 'live');
+    next.searchParams.set('create', '1');
+    next.searchParams.set('template', templateId);
+    next.searchParams.set('designId', designId);
+    globalThis.location.assign(next.toString());
+  }"""
+)
+private external fun navigateToNewDesign(
+  catalogSystemId: String,
+  designId: String,
+  templateId: String,
+)
 
 @JsFun(
   """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
@@ -1048,6 +1133,9 @@ private external fun openUiBuilderGuide()
   }"""
 )
 private external fun liveConfigValue(name: String, fallback: String): String
+
+@JsFun("(name) => new URLSearchParams(globalThis.location.search).has(name)")
+private external fun liveConfigPresent(name: String): Boolean
 
 @JsFun(
   """(name) => {

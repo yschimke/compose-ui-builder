@@ -30,6 +30,17 @@ dependency on Glance preview tooling.
 | --- | --- |
 | ![M3 catalog UI-builder instance](evidence/ui-builder-remote-compose/m3-catalog-builder.png) | ![Remote M3 UI-builder instance](evidence/ui-builder-remote-compose/remote-m3-builder.png) |
 
+The catalog-scoped site also owns the complete first-use path. Opening the builder without a
+design selects an enabled catalog and template, validates the design ID, and navigates into the
+new live document without requiring a hand-authored URL. Each compatible catalog row has an **Add**
+action as well as drag-and-drop. Selection, search, and generated-operation numbering survive
+authoritative collaboration snapshots, so authors can add a container and immediately add its
+children without reselecting or re-searching after every save.
+
+| New Remote M3 widget | Authored entirely in the website |
+| --- | --- |
+| ![New widget catalog, template, and design ID chooser](evidence/ui-builder-remote-compose/new-widget-dialog.png) | ![Large Wear widget with a Column and edited Text](evidence/ui-builder-remote-compose/new-widget-complete.png) |
+
 ## Named slots
 
 Every key in the node's `slots` map registers a Remote Compose custom-component config of the same
