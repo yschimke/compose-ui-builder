@@ -411,11 +411,11 @@ private fun LiveSessionApp() {
 
   LaunchedEffect(config) {
     val availableCatalogs = loadLiveCatalogs(http)
+    newDesignCatalogs = availableCatalogs.mapNotNull(::newDesignCatalog)
+    if (config.startWithNewDesign) return@LaunchedEffect
     val selectedCatalog =
       availableCatalogs.singleOrNull { it.benchmark.catalogSystemId == config.catalogSystemId }
         ?: error("UI builder is not enabled for catalog ${config.catalogSystemId}")
-    newDesignCatalogs = availableCatalogs.mapNotNull(::newDesignCatalog)
-    if (config.startWithNewDesign) return@LaunchedEffect
     catalog =
       CapabilityCatalogParser.parse(
         Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), selectedCatalog)
