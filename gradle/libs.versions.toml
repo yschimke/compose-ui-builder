@@ -6,7 +6,7 @@ compose-multiplatform = "1.11.1"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
 composeai-tools = "1.62.0"
-composeai-contracts = "2.3.0"
+composeai-contracts = "2.4.0"
 rc-players = "1.56.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
@@ -31,6 +31,7 @@ composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remote
 composeai-slot-preview-runtime = { module = "ee.schimke.composeai:slot-preview-runtime", version.ref = "composeai-tools" }
 
 composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol", version.ref = "composeai-contracts" }
+composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol", version.ref = "composeai-contracts" }
 composeai-common-io = { module = "ee.schimke.composeai:common-io", version.ref = "composeai-contracts" }
 composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core", version.ref = "composeai-contracts" }
 composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core", version.ref = "composeai-contracts" }
