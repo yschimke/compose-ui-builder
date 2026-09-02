@@ -99,3 +99,9 @@ poll URL only at the advertised interval. Store the approved bearer in the MCP h
 environment facility. Do not embed the bearer in a URL, checked-in configuration, or command-line
 argument. Browser and MCP changes then converge through the same revision log; neither automates
 the other's UI.
+
+This authoring MCP is intentionally separate from the preview server's
+[catalog MCP](design/CATALOG_MCP.md). UI-builder tools use named read/write/export capabilities and
+a stateful Streamable HTTP session; catalog tools use cumulative `preview`/`live` scopes and the
+aggregate stateless `/mcp` endpoint. They share the `/agent-access` request, authenticated-user approval,
+poll, expiry, and revocation machinery, so an installation does not need a second token issuer.
