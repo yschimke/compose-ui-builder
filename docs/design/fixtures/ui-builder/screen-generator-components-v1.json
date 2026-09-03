@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 2,
+  "module": "test-catalog",
+  "variant": "release",
+  "components": [
+    {
+      "canonicalId": "test-catalog/androidx.compose.foundation.layout.ColumnKt.Column",
+      "componentIds": ["layout/column"],
+      "symbol": {
+        "jvmOwner": "androidx.compose.foundation.layout.ColumnKt",
+        "callable": "androidx.compose.foundation.layout.Column",
+        "name": "Column",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "typeFqn": "androidx.compose.ui.Modifier",
+          "hasDefault": true
+        },
+        {
+          "name": "content",
+          "type": "ColumnScope.() -> Unit",
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "code": {
+        "call": "Column(content = {})",
+        "imports": ["androidx.compose.foundation.layout.Column"]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "test-catalog/androidx.compose.material3.SurfaceKt.Surface",
+      "componentIds": ["m3/surface"],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.SurfaceKt",
+        "callable": "androidx.compose.material3.Surface",
+        "name": "Surface",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "typeFqn": "androidx.compose.ui.Modifier",
+          "hasDefault": true
+        },
+        {
+          "name": "shape",
+          "type": "Shape",
+          "typeFqn": "androidx.compose.ui.graphics.Shape",
+          "hasDefault": true
+        },
+        {
+          "name": "color",
+          "type": "Color",
+          "typeFqn": "androidx.compose.ui.graphics.Color",
+          "hasDefault": true
+        },
+        { "name": "content", "type": "() -> Unit", "composableSlot": true }
+      ],
+      "slots": [{ "name": "content", "required": true }],
+      "code": {
+        "call": "Surface(content = {})",
+        "imports": ["androidx.compose.material3.Surface"]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "test-catalog/androidx.compose.material3.TextKt.Text",
+      "componentIds": ["m3/text"],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TextKt",
+        "callable": "androidx.compose.material3.Text",
+        "name": "Text",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        { "name": "text", "type": "String", "typeFqn": "kotlin.String" },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "typeFqn": "androidx.compose.ui.Modifier",
+          "hasDefault": true
+        },
+        {
+          "name": "color",
+          "type": "Color",
+          "typeFqn": "androidx.compose.ui.graphics.Color",
+          "hasDefault": true
+        },
+        {
+          "name": "textAlign",
+          "type": "TextAlign?",
+          "typeFqn": "androidx.compose.ui.text.style.TextAlign",
+          "hasDefault": true,
+          "nullable": true
+        },
+        {
+          "name": "style",
+          "type": "TextStyle",
+          "typeFqn": "androidx.compose.ui.text.TextStyle",
+          "hasDefault": true
+        }
+      ],
+      "code": {
+        "call": "Text(text = \"\")",
+        "imports": ["androidx.compose.material3.Text"]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "test-catalog/androidx.compose.material3.CardKt.Card",
+      "componentIds": ["m3/card"],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.CardKt",
+        "callable": "androidx.compose.material3.Card",
+        "name": "Card",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "typeFqn": "androidx.compose.ui.Modifier",
+          "hasDefault": true
+        },
+        {
+          "name": "shape",
+          "type": "Shape",
+          "typeFqn": "androidx.compose.ui.graphics.Shape",
+          "hasDefault": true
+        },
+        {
+          "name": "content",
+          "type": "ColumnScope.() -> Unit",
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "code": {
+        "call": "Card(content = {})",
+        "imports": ["androidx.compose.material3.Card"]
+      },
+      "signatureKnown": true
+    }
+  ]
+}
