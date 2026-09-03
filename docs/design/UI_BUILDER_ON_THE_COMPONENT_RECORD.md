@@ -118,8 +118,56 @@ not consumed. Arity is the trigger for asking the question, never the answer.
 | `properties` | `property`-role parameters; `jsonType` from the Kotlin type, `allowedValues` from an enum's constants |
 | `PropertyEditorControl` | the parameter's type — **for the control kind only**, see below |
 | `slots` | `@Composable` lambda parameters, plus authored policy for any **value parameters the lambda receives** (see below). **Only whether the lambda argument is required** follows from the signature. Child occupancy does not (a required `RowScope` lambda may emit 0..N children), and `acceptedRoles`/`acceptedTraits` are **not** recoverable from a receiver scope. Both stay authored policy; the scope is recorded because it decides what a child's modifier may call |
-| `code.symbol` / `code.imports` | the record's source-level **callable** FQN, never the JVM file-facade owner — deriving imports from the facade prints `androidx.compose.material3.ButtonKt`, which does not resolve |
+| `code.symbol` / `code.imports` | the record's source-level **callable** FQN, never the JVM file-facade owner — deriving imports from the facade prints `androidx.compose.material3.ButtonKt`, which does not resolve. The producer now *prints* this rather than leaving it to be assembled — see below |
 | `wasm.adapterStatus` / `svg.status` | the conformance tier the component proved |
+
+### The producer prints the call site, and says when it cannot
+
+`ComponentSnippets.callSite` (compose-ai-tools) returns either an `Emitted(imports, code)` —
+`Button(onClick = {}, content = {})` — or a `Refused(reason)`. It emits only what it can prove
+type-checks from the record alone, and a functional test compiles the output against real
+`androidx.compose.material3` so the Kotlin compiler, not a reviewer, decides. Over a
+28-component Material 3 surface, 26 emit and 2 refuse (`TextField` / `OutlinedTextField`, whose
+required `state: TextFieldState` has no literal).
+
+Two consequences for this side:
+
+* **A refusal is a tier signal, not an error.** A component whose call site cannot be printed
+  cannot reach the Compose exporter, and the reason is phrased for a human or a model to act on.
+  That is the mechanical gate §6 of the plan asks for, arriving for free rather than as another
+  authored table.
+* **Do not re-derive the call site here.** The three things that make refusal sound —
+  `signatureKnown` (unreadable metadata degrades `parameters` to an empty list, which reads
+  identically to a parameterless composable), `symbol.receiver` (`AnimatedVisibility` is declared
+  on `ColumnScope` and resolves only inside a `Column`), and the `…Kt`-facade evidence in
+  `symbol.callable` — are producer-side knowledge. A second implementation would have to
+  rediscover all three, which is how the three-way drift in §1.4 started.
+
+### Nullability does not come from the type string
+
+`jsonType` and `PropertyEditorControl` are authored today; the table above is what generating
+them would derive. When that generation is written, the obvious way to decide
+`PropertyCapability.required` — "the rendered type ends in `?`, so the property is optional" —
+is wrong. A rendered type ends in `?` both when the parameter is nullable (`String?`) and when
+it is a **non-null** function whose *return* is nullable (`(Int) -> String?`). Treating the
+second as optional makes the generated adapter pass `null` where the signature forbids it.
+
+`TargetParameter.nullable` carries this structurally, read from metadata. Use it. The producer
+hit this exact trap while generating call sites and caught it only by reverting the change to
+check the test depended on it.
+
+Related: `renderType` now parenthesises nullable function types, so `((Boolean) -> Unit)?` no
+longer arrives spelled `(Boolean) -> Unit?` — which said the callback returns `Unit?` and is
+nullable nowhere. Any parser here that split on `->` was reading the old spelling.
+
+### `symbol.callable` was unusable for value-class components
+
+Kotlin mangles the JVM name of any function whose signature mentions a value class, so
+`androidx.compose.material3.Text` compiles to `TextKt."Text-Nvy7gAk"` — `TextUnit`, `Color`,
+`TextOverflow`. Until this was demangled, every Material 3 component mentioning `Color`, `Dp` or
+`TextUnit` was **absent from the record entirely**, and so from any capability catalog generated
+off it. Worth knowing when comparing a generated catalog against the hand-written one: a
+component missing on the generated side may be this rather than a modelling gap.
 
 **A slot lambda can receive values, and building it from children alone drops them.**
 `layout/scaffold`'s content lambda is handed `PaddingValues`, and both current surfaces
