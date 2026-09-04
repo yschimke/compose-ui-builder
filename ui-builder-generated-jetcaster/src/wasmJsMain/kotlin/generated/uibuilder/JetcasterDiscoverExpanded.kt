@@ -1,4 +1,4 @@
-// Generator content SHA-256: 8dc6d6e0933979f1db6d8ec8beeef1f810c56da6ec53f5dc85f8926ff8ffaff1
+// Generator content SHA-256: b84b484c7e0a5e3fa9d60557f7ecd739fb212e16998c8fc811769677307fa613
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -43,10 +43,10 @@ import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 // but not Material carousel masking
 @Composable
 fun JetcasterDiscoverExpandedSupportingPane() {
-  var searchQuery by remember { mutableStateOf("") }
-  var selectedCategory by remember { mutableStateOf("Crime") }
-  var selectedDestination by remember { mutableStateOf("Discover") }
-  var selectedPodcast by remember { mutableStateOf("android-developers-backstage") }
+  var searchQuery: String by remember { mutableStateOf("") }
+  var selectedCategory: String by remember { mutableStateOf("Crime") }
+  var selectedDestination: String by remember { mutableStateOf("Discover") }
+  var selectedPodcast: String by remember { mutableStateOf("android-developers-backstage") }
   // node:root-surface component:m3/surface symbol:Surface
   // typed-properties:{"containerColor":{"type":"colorToken","value":"background"}}
   Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

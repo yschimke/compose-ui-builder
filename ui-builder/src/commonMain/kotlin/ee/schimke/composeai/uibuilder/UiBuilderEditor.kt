@@ -7,7 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -70,8 +73,12 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -79,6 +86,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -160,20 +169,7 @@ fun UiBuilderEditor(
     }
   LaunchedEffect(document.revision, authoritativeGeneration) {
     if (state.document != document) {
-      state =
-        reducer
-          .initial(
-            document,
-            selectedNodeId =
-              state.selectedNodeId?.takeIf(document.nodes::containsKey)
-                ?: initialSelectedNodeId?.takeIf(document.nodes::containsKey)
-                ?: document.roots.firstOrNull(),
-          )
-          .copy(
-            catalogQuery = state.catalogQuery,
-            operationSequence = state.operationSequence,
-            inspectorMode = state.inspectorMode,
-          )
+      state = reducer.reconciled(state, document, initialSelectedNodeId)
     }
   }
   var catalogDragPosition by remember { mutableStateOf<Offset?>(null) }
@@ -291,6 +287,11 @@ fun UiBuilderEditor(
             state = state,
             canDelete = reducer.canDeleteSelected(state),
             canDuplicate = reducer.canDuplicateSelected(state),
+            canCopy = reducer.canCopySelected(state),
+            canCut = reducer.canCutSelected(state),
+            canPaste = reducer.canPaste(state),
+            wrapCandidates = reducer.wrapCandidates(state),
+            canUnwrap = reducer.canUnwrapSelected(state),
             canUndo = reducer.canUndo(state),
             canRedo = reducer.canRedo(state),
             onNewDesign =
@@ -306,6 +307,11 @@ fun UiBuilderEditor(
             state = state,
             canDelete = reducer.canDeleteSelected(state),
             canDuplicate = reducer.canDuplicateSelected(state),
+            canCopy = reducer.canCopySelected(state),
+            canCut = reducer.canCutSelected(state),
+            canPaste = reducer.canPaste(state),
+            wrapCandidates = reducer.wrapCandidates(state),
+            canUnwrap = reducer.canUnwrapSelected(state),
             canUndo = reducer.canUndo(state),
             canRedo = reducer.canRedo(state),
             sessionLabel = sessionLabel,
@@ -485,6 +491,11 @@ private fun MobileEditorToolbar(
   state: UiBuilderEditorState,
   canDelete: Boolean,
   canDuplicate: Boolean,
+  canCopy: Boolean,
+  canCut: Boolean,
+  canPaste: Boolean,
+  wrapCandidates: List<EditorCatalogItem>,
+  canUnwrap: Boolean,
   canUndo: Boolean,
   canRedo: Boolean,
   onNewDesign: (() -> Unit)?,
@@ -524,6 +535,30 @@ private fun MobileEditorToolbar(
             onClick = {
               expanded = false
               dispatch(UiBuilderEditorEvent.DuplicateSelected)
+            },
+          )
+          DropdownMenuItem(
+            text = { Text("Copy") },
+            enabled = canCopy,
+            onClick = {
+              expanded = false
+              dispatch(UiBuilderEditorEvent.CopySelected)
+            },
+          )
+          DropdownMenuItem(
+            text = { Text("Cut") },
+            enabled = canCut,
+            onClick = {
+              expanded = false
+              dispatch(UiBuilderEditorEvent.CutSelected)
+            },
+          )
+          DropdownMenuItem(
+            text = { Text("Paste") },
+            enabled = canPaste,
+            onClick = {
+              expanded = false
+              dispatch(UiBuilderEditorEvent.Paste)
             },
           )
           DropdownMenuItem(
@@ -598,6 +633,11 @@ private fun EditorToolbar(
   state: UiBuilderEditorState,
   canDelete: Boolean,
   canDuplicate: Boolean,
+  canCopy: Boolean,
+  canCut: Boolean,
+  canPaste: Boolean,
+  wrapCandidates: List<EditorCatalogItem>,
+  canUnwrap: Boolean,
   canUndo: Boolean,
   canRedo: Boolean,
   sessionLabel: String,
@@ -657,6 +697,55 @@ private fun EditorToolbar(
         enabled = canDuplicate,
         onClick = { dispatch(UiBuilderEditorEvent.DuplicateSelected) },
       )
+      if (wrapCandidates.isNotEmpty()) {
+        var wrapOpen by remember { mutableStateOf(false) }
+        Box {
+          EditorAction(
+            label = "Wrap",
+            shortcut = "",
+            enabled = true,
+            onClick = { wrapOpen = true },
+          )
+          DropdownMenu(expanded = wrapOpen, onDismissRequest = { wrapOpen = false }) {
+            // Only what will work. The list is computed from both ends — the parent slot has to
+            // accept the container and the container needs a slot that accepts every selected
+            // node — so this menu is a promise rather than a guess.
+            wrapCandidates.forEach { candidate ->
+              DropdownMenuItem(
+                text = { Text(candidate.displayName) },
+                onClick = {
+                  wrapOpen = false
+                  dispatch(UiBuilderEditorEvent.WrapSelection(candidate.componentId))
+                },
+              )
+            }
+          }
+        }
+      }
+      EditorAction(
+        label = "Unwrap",
+        shortcut = "",
+        enabled = canUnwrap,
+        onClick = { dispatch(UiBuilderEditorEvent.UnwrapSelection) },
+      )
+      EditorAction(
+        label = "Copy",
+        shortcut = "Ctrl/⌘+C",
+        enabled = canCopy,
+        onClick = { dispatch(UiBuilderEditorEvent.CopySelected) },
+      )
+      EditorAction(
+        label = "Cut",
+        shortcut = "Ctrl/⌘+X",
+        enabled = canCut,
+        onClick = { dispatch(UiBuilderEditorEvent.CutSelected) },
+      )
+      EditorAction(
+        label = "Paste",
+        shortcut = "Ctrl/⌘+V",
+        enabled = canPaste,
+        onClick = { dispatch(UiBuilderEditorEvent.Paste) },
+      )
       EditorAction(
         label = "Delete",
         shortcut = "Delete/Backspace",
@@ -706,6 +795,13 @@ private fun EditorAction(
   }
 }
 
+/** How a click on a layer row changes the selection. */
+private enum class LayerSelectionGesture {
+  Replace,
+  Toggle,
+  Range,
+}
+
 private fun editorShortcut(
   event: KeyEvent,
   enabled: Boolean,
@@ -719,6 +815,22 @@ private fun editorShortcut(
       command && event.key == Key.Y -> UiBuilderEditorEvent.Redo
       command && event.key == Key.Z -> UiBuilderEditorEvent.Undo
       command && event.key == Key.D -> UiBuilderEditorEvent.DuplicateSelected
+      // Reorder before plain navigation, so the modified arrows are not eaten by selection.
+      command && event.key == Key.DirectionUp ->
+        UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.Before)
+      command && event.key == Key.DirectionDown ->
+        UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.After)
+      !command && event.key == Key.DirectionDown ->
+        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Next)
+      !command && event.key == Key.DirectionUp ->
+        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Previous)
+      !command && event.key == Key.DirectionLeft ->
+        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Parent)
+      !command && event.key == Key.DirectionRight ->
+        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.FirstChild)
+      command && event.key == Key.C -> UiBuilderEditorEvent.CopySelected
+      command && event.key == Key.X -> UiBuilderEditorEvent.CutSelected
+      command && event.key == Key.V -> UiBuilderEditorEvent.Paste
       !command && event.key in setOf(Key.Delete, Key.Backspace) ->
         UiBuilderEditorEvent.DeleteSelected
       else -> null
@@ -775,11 +887,19 @@ private fun EditorNavigator(
         itemsIndexed(treeRows, key = { _, row -> row.nodeId }) { _, row ->
           LayerRow(
             row = row,
-            selected = row.nodeId == state.selectedNodeId,
+            // Every selected node is highlighted, not just the anchor — a selection you cannot see
+            // is one you cannot trust before pressing Delete.
+            selected = row.nodeId in state.selection,
             collaborators = collaborators.filter { row.nodeId in it.selectedNodeIds },
-            onSelect = {
+            onSelect = { gesture ->
               onEditorInteraction()
-              dispatch(UiBuilderEditorEvent.SelectNode(row.nodeId))
+              dispatch(
+                when (gesture) {
+                  LayerSelectionGesture.Replace -> UiBuilderEditorEvent.SelectNode(row.nodeId)
+                  LayerSelectionGesture.Toggle -> UiBuilderEditorEvent.ToggleNode(row.nodeId)
+                  LayerSelectionGesture.Range -> UiBuilderEditorEvent.ExtendSelectionTo(row.nodeId)
+                }
+              )
             },
             onMove = { direction ->
               onEditorInteraction()
@@ -1022,7 +1142,7 @@ private fun LayerRow(
   row: EditorTreeRow,
   selected: Boolean,
   collaborators: List<UiBuilderCollaborator>,
-  onSelect: () -> Unit,
+  onSelect: (LayerSelectionGesture) -> Unit,
   onMove: (EditorMoveDirection) -> Unit,
 ) {
   var verticalDrag by remember { mutableFloatStateOf(0f) }
@@ -1058,9 +1178,58 @@ private fun LayerRow(
       tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Row(
-      Modifier.fillMaxHeight().weight(1f).clickable(onClick = onSelect).semantics {
-        contentDescription = "Select ${row.nodeId}"
-      },
+      Modifier.fillMaxHeight()
+        .weight(1f)
+        // Not `clickable`: it cannot see which modifier keys are down, and ctrl/⌘-click and
+        // shift-click are how a selection is built up in every tool people arrive from.
+        //
+        // On the release, not the press. Every attempt to scroll this list on a touch screen
+        // begins with a press, and selecting there meant scrolling the layers panel changed the
+        // selection. `waitForUpOrCancellation` returns null once an ancestor claims the gesture,
+        // which is the cancellation `clickable` gave for free and this had to get back.
+        .pointerInput(row.nodeId) {
+          awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            val modifiers = currentEvent.keyboardModifiers
+            if (waitForUpOrCancellation() == null) return@awaitEachGesture
+            onSelect(
+              when {
+                modifiers.isShiftPressed -> LayerSelectionGesture.Range
+                modifiers.isCtrlPressed || modifiers.isMetaPressed -> LayerSelectionGesture.Toggle
+                else -> LayerSelectionGesture.Replace
+              }
+            )
+          }
+        }
+        // Dropping `clickable` also dropped the activation action, the focusability and the key
+        // handling it supplied, so a screen reader could find a layer and not select it, and the
+        // keyboard could neither reach one nor activate it. The pointer path keeps the modifier
+        // keys; these restore the rest. `focusable` and a semantics action are not enough on their
+        // own: they expose focus and an accessibility action, and leave Enter and Space inert.
+        .onKeyEvent { event ->
+          if (
+            event.type == KeyEventType.KeyUp &&
+              (event.key == Key.Enter || event.key == Key.NumPadEnter || event.key == Key.Spacebar)
+          ) {
+            onSelect(
+              when {
+                event.isShiftPressed -> LayerSelectionGesture.Range
+                event.isCtrlPressed || event.isMetaPressed -> LayerSelectionGesture.Toggle
+                else -> LayerSelectionGesture.Replace
+              }
+            )
+            true
+          } else false
+        }
+        .focusable()
+        .semantics {
+          contentDescription = "Select ${row.nodeId}"
+          this.selected = selected
+          onClick(label = "Select") {
+            onSelect(LayerSelectionGesture.Replace)
+            true
+          }
+        },
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Text(
@@ -1078,8 +1247,10 @@ private fun LayerRow(
             .clearAndSetSemantics {}
         )
       }
+      // The type when the row is named after its content, the id otherwise. A content-named row
+      // would otherwise stop saying what it is, and an unnamed one already says that in `label`.
       Text(
-        row.nodeId,
+        if (row.named) row.componentLabel else row.nodeId,
         Modifier.width(92.dp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelSmall,
@@ -1233,7 +1404,12 @@ private fun PropertyControl(
 ) {
   Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
     Text(
-      field.label + if (field.required) " *" else "",
+      field.label +
+        (if (field.required) " *" else "") +
+        // Say what an edit will hit. A control that silently spans six nodes is one people stop
+        // trusting the first time it changes something they were not looking at.
+        (if (field.nodeCount > 1) " · ${field.nodeCount} selected" else "") +
+        (if (field.mixed) " · mixed" else ""),
       style = MaterialTheme.typography.labelLarge,
     )
     when (field.control) {
@@ -1253,7 +1429,8 @@ private fun PropertyControl(
         }
       }
       EditorPropertyControl.Enum ->
-        if (field.name == "iconKey") GoogleIconPropertyControl(field, commit)
+        if (field.name == "iconKey")
+          GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
         else EnumPropertyControl(field, commit)
       EditorPropertyControl.Number ->
         DraftPropertyControl(field, onTextInputFocusChanged, commit, showSteppers = true)
@@ -1544,7 +1721,11 @@ private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> 
 }
 
 @Composable
-private fun GoogleIconPropertyControl(field: EditorPropertyField, commit: (String) -> Unit) {
+private fun GoogleIconPropertyControl(
+  field: EditorPropertyField,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  commit: (String) -> Unit,
+) {
   var expanded by remember(field.nodeId, field.name) { mutableStateOf(false) }
   var query by remember(field.nodeId, field.name) { mutableStateOf("") }
   val current = googleMaterialIcon(field.value)
@@ -1578,6 +1759,10 @@ private fun GoogleIconPropertyControl(field: EditorPropertyField, commit: (Strin
         Modifier.width(280.dp)
           .padding(10.dp)
           .semantics { contentDescription = "Google icon search" }
+          // The one text field in the editor that never reported focus. Every editor chord is
+          // gated on `textInputFocused`, so while someone typed an icon name here Backspace still
+          // meant delete-the-selection and Ctrl/⌘+V still meant paste-a-subtree.
+          .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
           .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
           .padding(10.dp),
       singleLine = true,

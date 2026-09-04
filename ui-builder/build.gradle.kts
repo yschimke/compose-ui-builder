@@ -186,3 +186,13 @@ tasks.register<Sync>("wasmFrontendDist") {
 tasks.named("wasmJsBrowserProductionWebpack") {
   mustRunAfter("wasmJsDevelopmentExecutableCompileSync")
 }
+
+// The packaged renderer bundle is embedded in :ui-builder-runtime's jar and ships in the server, so
+// it carries the production preview and nothing else. `UiBuilderEditorChromePreview` exists to be
+// diffed, not shipped: leaving it in the bundle took it from 478 KB to 1.6 MB, because the editor
+// chrome drags in the whole authoring UI that the document renderer never touches.
+tasks.named<ee.schimke.composeai.plugin.BundlePreviewTask>("composePreviewBundle") {
+  previewIds.set(
+    listOf("ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview")
+  )
+}
