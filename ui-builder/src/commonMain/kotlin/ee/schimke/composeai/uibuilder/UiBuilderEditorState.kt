@@ -760,6 +760,36 @@ class UiBuilderEditorReducer(
    * read there and accepts `stateEquals`. Asking this up front lets the inspector offer the shape
    * that will be accepted, instead of offering one and relaying the catalog's refusal.
    */
+  /**
+   * Whether a binding on [propertyName] would be accepted at all.
+   *
+   * Answered by building the value the bind would write and putting it through the same validator
+   * the bind itself uses, rather than by reasoning about types a second time. The catalog refuses a
+   * state read on plenty of properties — `m3/text.text` is `string` and takes a literal, not a
+   * reference — and a menu that offers a binding the reducer will refuse is a menu that lies. The
+   * wrap menu is built the same way and for the same reason.
+   */
+  fun canBindToState(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    propertyName: String,
+  ): Boolean {
+    val variable = state.document.stateVariables.keys.firstOrNull() ?: return false
+    if (state.document.nodes[nodeId] == null) return false
+    val candidate =
+      if (bindingNeedsComparison(state, nodeId, propertyName))
+        JsonObject(
+          mapOf(
+            "type" to JsonPrimitive("stateEquals"),
+            "variable" to JsonPrimitive(variable),
+            "value" to JsonPrimitive("probe"),
+          )
+        )
+      else
+        JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive(variable)))
+    return validator.validate(state.document, nodeId, propertyName, candidate) == null
+  }
+
   fun bindingNeedsComparison(
     state: UiBuilderEditorState,
     nodeId: String,

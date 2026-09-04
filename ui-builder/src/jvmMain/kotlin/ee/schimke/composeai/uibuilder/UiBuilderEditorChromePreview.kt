@@ -86,6 +86,24 @@ fun UiBuilderIssuesInspectorPreview() {
 }
 
 /**
+ * A state-bound property, in the inspector that can now see it.
+ *
+ * `chip-crime.selected` is bound to `stateEquals(selectedCategory, "Crime")` in the fixture. Until
+ * this change the panel drew a switch for it — a control the reducer refuses, because the value is
+ * the binding — and said nothing about the binding at all. It now says what it is bound to and
+ * offers the one edit that works.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderStateBindingPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "chip-crime",
+  )
+}
+
+/**
  * The canvas handed to the screen.
  *
  * The selection overlay is gone, so a tap reaches the component under it and the renderer's state

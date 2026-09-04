@@ -286,10 +286,32 @@ fun UiBuilderEditor(
   // Called inline it would run all of that on every recomposition of the inspector — which is
   // every keystroke in a property field and every frame of a drag.
   val problems = remember(reducer, state.document) { reducer.problems(state.document) }
+  val propertyFields = reducer.propertyFields(state)
+  // Which of those a binding must reach as a comparison rather than a bare read. Computed beside
+  // the fields so the inspector is not asking the reducer the same question twice per frame.
+  val comparisonBindingProperties =
+    state.selectedNodeId?.let { nodeId ->
+      propertyFields
+        .filter { reducer.bindingNeedsComparison(state, nodeId, it.name) }
+        .map { it.name }
+        .toSet()
+    } ?: emptySet()
+  // Only the properties a binding would actually be accepted on. A menu that offers one the
+  // reducer will refuse is a menu that lies, which is the rule the wrap menu already follows.
+  val bindableProperties =
+    state.selectedNodeId?.let { nodeId ->
+      propertyFields
+        .filter { reducer.canBindToState(state, nodeId, it.name) }
+        .map { it.name }
+        .toSet()
+    } ?: emptySet()
   val inspector: @Composable (Modifier) -> Unit = { modifier ->
     PropertyInspector(
       state = state,
-      fields = reducer.propertyFields(state),
+      fields = propertyFields,
+      stateVariables = reducer.stateVariableNames(state),
+      comparisonBindingProperties = comparisonBindingProperties,
+      bindableProperties = bindableProperties,
       problems = problems,
       themeSettings = reducer.themeSettings(state),
       onTextInputFocusChanged = { textInputFocused = it },
@@ -1574,6 +1596,9 @@ private fun String.toPresenceColor(): Color {
 private fun PropertyInspector(
   state: UiBuilderEditorState,
   fields: List<EditorPropertyField>,
+  stateVariables: List<String>,
+  comparisonBindingProperties: Set<String>,
+  bindableProperties: Set<String>,
   problems: List<EditorProblem>,
   themeSettings: EditorThemeSettings,
   onTextInputFocusChanged: (Boolean) -> Unit,
@@ -1659,7 +1684,20 @@ private fun PropertyInspector(
         itemsIndexed(fields, key = { _, field -> field.name }) { _, field ->
           PropertyControl(
             field = field,
+            stateVariables = if (field.name in bindableProperties) stateVariables else emptyList(),
+            needsComparison = field.name in comparisonBindingProperties,
             onTextInputFocusChanged = onTextInputFocusChanged,
+            onBind = { variable, equalsValue ->
+              dispatch(
+                UiBuilderEditorEvent.BindPropertyToState(
+                  node.id,
+                  field.name,
+                  variable,
+                  equalsValue,
+                )
+              )
+            },
+            onUnbind = { dispatch(UiBuilderEditorEvent.UnbindProperty(node.id, field.name)) },
             commit = { value ->
               dispatch(UiBuilderEditorEvent.CommitProperty(node.id, field.name, value))
             },
@@ -1717,7 +1755,11 @@ private fun PropertyInspector(
 @Composable
 private fun PropertyControl(
   field: EditorPropertyField,
+  stateVariables: List<String>,
+  needsComparison: Boolean,
   onTextInputFocusChanged: (Boolean) -> Unit,
+  onBind: (String, String?) -> Unit,
+  onUnbind: () -> Unit,
   commit: (String) -> Unit,
 ) {
   Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
@@ -1730,6 +1772,18 @@ private fun PropertyControl(
         (if (field.mixed) " · mixed" else ""),
       style = MaterialTheme.typography.labelLarge,
     )
+    val bound = field.boundVariable
+    if (bound != null) {
+      // The literal control is not drawn for a bound property, because it does not work: an edit
+      // is refused with "cannot be safely edited from its catalog metadata", which is a true
+      // message and a poor answer to a control that looks editable. What a bound property needs is
+      // to say what it is bound to and offer the way back.
+      StateBindingRow(bound, onUnbind)
+      return@Column
+    }
+    if (stateVariables.isNotEmpty() && field.control != EditorPropertyControl.Unsupported) {
+      StateBindMenu(field, stateVariables, needsComparison, onTextInputFocusChanged, onBind)
+    }
     when (field.control) {
       EditorPropertyControl.Boolean -> {
         val checked = field.value.toBooleanStrictOrNull() ?: false
@@ -1776,6 +1830,106 @@ private fun PropertyControl(
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.labelSmall,
       )
+    }
+  }
+}
+
+/**
+ * What a bound property says instead of a control it cannot honour.
+ *
+ * The reducer refuses a literal edit on a state-bound property — the value is the binding, and
+ * overwriting it silently would be the wrong answer — so the inspector drew a control that always
+ * failed. This says what it is bound to and offers the one edit that does work.
+ */
+@Composable
+private fun StateBindingRow(variable: String, onUnbind: () -> Unit) {
+  Row(
+    Modifier.fillMaxWidth().padding(top = 4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween,
+  ) {
+    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+      Text(
+        "state · $variable",
+        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        style = MaterialTheme.typography.labelMedium,
+      )
+    }
+    TextButton(
+      onClick = onUnbind,
+      modifier = Modifier.semantics { contentDescription = "Unbind $variable" },
+    ) {
+      Text("Unbind")
+    }
+  }
+}
+
+/**
+ * Binding a property to a declared state variable.
+ *
+ * Two shapes, and the catalog decides which: a bare read yields the variable's value and suits a
+ * property typed like it, while a boolean property cannot take a string variable's value and needs
+ * `stateEquals` — a comparison, which needs a value to compare against. Asking for that value only
+ * once a variable is chosen keeps the common case one click.
+ */
+@Composable
+private fun StateBindMenu(
+  field: EditorPropertyField,
+  stateVariables: List<String>,
+  needsComparison: Boolean,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  onBind: (String, String?) -> Unit,
+) {
+  var open by remember(field.nodeId, field.name) { mutableStateOf(false) }
+  var pending by remember(field.nodeId, field.name) { mutableStateOf<String?>(null) }
+  var comparison by remember(field.nodeId, field.name) { mutableStateOf("") }
+  Box {
+    TextButton(
+      onClick = { open = true },
+      modifier = Modifier.semantics { contentDescription = "Bind ${field.label} to state" },
+    ) {
+      Text("Bind to state", style = MaterialTheme.typography.labelMedium)
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+      stateVariables.forEach { variable ->
+        DropdownMenuItem(
+          text = { Text(variable) },
+          onClick = {
+            open = false
+            if (needsComparison) pending = variable else onBind(variable, null)
+          },
+        )
+      }
+    }
+  }
+  val variable = pending
+  if (variable != null) {
+    Text(
+      "$variable equals",
+      Modifier.padding(top = 4.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+      Box(Modifier.weight(1f)) {
+        SearchField(
+          comparison,
+          placeholder = "Value to compare",
+          onFocusChanged = onTextInputFocusChanged,
+        ) {
+          comparison = it
+        }
+      }
+      TextButton(
+        onClick = {
+          onBind(variable, comparison)
+          pending = null
+          comparison = ""
+        },
+        enabled = comparison.isNotBlank(),
+      ) {
+        Text("Bind")
+      }
     }
   }
 }
