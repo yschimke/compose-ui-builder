@@ -126,12 +126,23 @@ data class PropertyChange(
   val address: PropertyAddress,
   val before: JsonElement?,
   val after: JsonElement,
+  /**
+   * The revision that owned [address] before this command wrote it, or null if nothing had.
+   *
+   * Undo is a rewind, so it puts this back rather than stamping its own revision — see
+   * [CollaborationReducer.undo]. Without it a second undo saw the first undo's revision on the
+   * address, compared it against the older command's own `committedRevision`, and refused as
+   * `UNSAFE_COMPENSATION`.
+   */
+  val beforeVersion: Int? = null,
 )
 
 data class EnvironmentChange(
   val field: String,
   val before: JsonElement?,
   val after: JsonElement,
+  /** The revision that owned [field] before this command wrote it — see [PropertyChange]. */
+  val beforeVersion: Int? = null,
 )
 
 enum class StructuralChangeKind {
@@ -637,12 +648,16 @@ object CollaborationReducer {
     }
     val targetActiveRevision =
       state.activeOperationVersions[target.command.operationId] ?: target.committedRevision
+    // The property and environment lanes compare against the target's own revision: both undo and
+    // redo restore version stamps rather than minting them, so an operation's addresses always
+    // carry the revision that operation committed at. Anything else on the address — a
+    // collaborator's write — leaves a different revision and is still refused.
     if (scalarOnly) {
       target.propertyChanges.asReversed().distinctBy(PropertyChange::address).forEach { change ->
         val current =
           state.document.nodes[change.address.nodeId]?.properties?.get(change.address.property)
         val currentVersion = state.propertyVersions[change.address]
-        if (current != change.after || currentVersion != targetActiveRevision) {
+        if (current != change.after || currentVersion != target.committedRevision) {
           return state.rejected(
             RejectionCode.UNSAFE_COMPENSATION,
             "property changed after ${target.command.operationId} at revision $currentVersion",
@@ -656,7 +671,7 @@ object CollaborationReducer {
         ->
         val current = state.document.environment[change.field]
         val currentVersion = state.environmentVersions[change.field]
-        if (current != change.after || currentVersion != targetActiveRevision) {
+        if (current != change.after || currentVersion != target.committedRevision) {
           return state.rejected(
             RejectionCode.UNSAFE_COMPENSATION,
             "environment changed after ${target.command.operationId} at revision $currentVersion",
@@ -676,7 +691,7 @@ object CollaborationReducer {
         .distinct()
         .forEach { address ->
           val version = state.propertyVersions[address]
-          if (version != targetActiveRevision) {
+          if (version != target.committedRevision) {
             return state.rejected(
               RejectionCode.UNSAFE_COMPENSATION,
               "property changed after ${target.command.operationId} at revision $version",
@@ -762,16 +777,27 @@ object CollaborationReducer {
         canonicalDocument,
         targetActiveRevision,
       )
+    // An undo is a rewind, not a new write: it puts each address back to the value *and the
+    // revision* it held before the target touched it. Stamping `committedRevision` here instead
+    // left the address owned by the undo, so the next undo compared that against the older
+    // command's `committedRevision`, saw a mismatch and refused as `UNSAFE_COMPENSATION` — which
+    // is why undo worked exactly once and then silently stopped while `canUndo` stayed true.
+    //
+    // `asReversed()` so that a command writing one address twice restores the version from before
+    // its *first* write, matching the value `before` restores.
     val propertyVersions =
       if (target.propertyChanges.isNotEmpty())
-        target.propertyChanges.fold(changed.propertyVersions) { versions, change ->
-          versions + (change.address to committedRevision)
+        target.propertyChanges.asReversed().fold(changed.propertyVersions) { versions, change ->
+          if (change.beforeVersion == null) versions - change.address
+          else versions + (change.address to change.beforeVersion)
         }
       else changed.propertyVersions
     val environmentVersions =
       if (target.environmentChanges.isNotEmpty())
-        target.environmentChanges.fold(changed.environmentVersions) { versions, change ->
-          versions + (change.field to committedRevision)
+        target.environmentChanges.asReversed().fold(changed.environmentVersions) { versions, change
+          ->
+          if (change.beforeVersion == null) versions - change.field
+          else versions + (change.field to change.beforeVersion)
         }
       else changed.environmentVersions
     val structuralVersions =
@@ -882,12 +908,16 @@ object CollaborationReducer {
     val environmentOnly = hasEnvironment && !hasProperties && !hasStructure
     val structuralOnly = hasStructure && !hasProperties
     val mixed = hasProperties && hasStructure && !hasEnvironment
+    // "Nothing has touched this address since the undo" — and since the undo *rewound* the
+    // address to the revision that owned it beforehand rather than stamping its own, that is the
+    // revision to expect here. Comparing against `undo.committedRevision` was the matching half of
+    // the stamp that made sequential undo impossible.
     if (scalarOnly) {
       undo.target.propertyChanges.distinctBy(PropertyChange::address).forEach { change ->
         val current =
           state.document.nodes[change.address.nodeId]?.properties?.get(change.address.property)
         val currentVersion = state.propertyVersions[change.address]
-        if (current != change.before || currentVersion != undo.committedRevision) {
+        if (current != change.before || currentVersion != change.beforeVersion) {
           return state.rejected(
             RejectionCode.UNSAFE_COMPENSATION,
             "property changed after ${undo.command.operationId} at revision $currentVersion",
@@ -900,7 +930,7 @@ object CollaborationReducer {
       undo.target.environmentChanges.distinctBy(EnvironmentChange::field).forEach { change ->
         val current = state.document.environment[change.field]
         val currentVersion = state.environmentVersions[change.field]
-        if (current != change.before || currentVersion != undo.committedRevision) {
+        if (current != change.before || currentVersion != change.beforeVersion) {
           return state.rejected(
             RejectionCode.UNSAFE_COMPENSATION,
             "environment changed after ${undo.command.operationId} at revision $currentVersion",
@@ -924,20 +954,18 @@ object CollaborationReducer {
         "undo record has no compensating changes",
       )
     } else {
-      undo.target.propertyChanges
-        .map { it.address }
-        .distinct()
-        .forEach { address ->
-          val version = state.propertyVersions[address]
-          if (version != undo.committedRevision) {
-            return state.rejected(
-              RejectionCode.UNSAFE_COMPENSATION,
-              "property changed after ${undo.command.operationId} at revision $version",
-              nodeId = address.nodeId,
-              field = address.property,
-            )
-          }
+      undo.target.propertyChanges.distinctBy(PropertyChange::address).forEach { change ->
+        val address = change.address
+        val version = state.propertyVersions[address]
+        if (version != change.beforeVersion) {
+          return state.rejected(
+            RejectionCode.UNSAFE_COMPENSATION,
+            "property changed after ${undo.command.operationId} at revision $version",
+            nodeId = address.nodeId,
+            field = address.property,
+          )
         }
+      }
       state
         .validateStructuralCompensation(
           undo.target.structuralChanges,
@@ -1010,16 +1038,23 @@ object CollaborationReducer {
     val committedRevision = state.document.revision + 1
     val document = changed.document.copy(revision = committedRevision)
     val canonicalDocument = canonicalDocument(document)
+    // Redo is the mirror of undo: it puts the target's own revision back on every address the
+    // target owned, rather than minting a new one. Minting made the *second* redo in a chain find
+    // this redo's revision where it expected the earlier operation's, and refuse — the same shape
+    // of failure the undo stamp caused, one lane over.
+    //
+    // Structural versions below keep minting `committedRevision`, and the structural guards keep
+    // reading `activeOperationVersions`. That lane is untouched here.
     val propertyVersions =
       if (hasProperties)
         undo.target.propertyChanges.fold(changed.propertyVersions) { versions, change ->
-          versions + (change.address to committedRevision)
+          versions + (change.address to undo.target.committedRevision)
         }
       else changed.propertyVersions
     val environmentVersions =
       if (hasEnvironment)
         undo.target.environmentChanges.fold(changed.environmentVersions) { versions, change ->
-          versions + (change.field to committedRevision)
+          versions + (change.field to undo.target.committedRevision)
         }
       else changed.environmentVersions
     val structuralVersions =
@@ -1239,7 +1274,7 @@ private fun CollaborationState.applyOperation(
       val before = document.nodes[operation.nodeId]?.properties?.get(operation.property)
       val changed = setProperty(operation, propertyValidator)
       trace.propertyTouches += address
-      val change = PropertyChange(address, before, operation.value)
+      val change = PropertyChange(address, before, operation.value, propertyVersions[address])
       trace.propertyChanges += change
       trace.compensationChanges += CompensationChange.Property(change)
       changed
@@ -1253,7 +1288,13 @@ private fun CollaborationState.applyOperation(
               environment = JsonObject(document.environment + (operation.field to operation.value))
             )
         )
-      val change = EnvironmentChange(operation.field, before, operation.value)
+      val change =
+        EnvironmentChange(
+          operation.field,
+          before,
+          operation.value,
+          environmentVersions[operation.field],
+        )
       trace.environmentTouches += operation.field
       trace.environmentChanges += change
       trace.compensationChanges += CompensationChange.Environment(change)
