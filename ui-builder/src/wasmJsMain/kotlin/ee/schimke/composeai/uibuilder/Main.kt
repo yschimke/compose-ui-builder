@@ -345,6 +345,8 @@ private data class LiveSessionConfig(
   val startWithNewDesign: Boolean,
   val createIfMissing: Boolean,
   val template: String,
+  /** Declared at creation because no released mutation reaches `stateVariables` afterwards. */
+  val state: List<NewDesignState>,
   val operationIdPrefix: String,
   val displayName: String,
   val colorArgbHex: String,
@@ -449,6 +451,7 @@ private fun LiveSessionApp() {
               designId = config.designId,
               catalogPin = JsonObject(catalogPin),
               environment = fixtureDocument.environment,
+              state = config.state,
             )
           } else {
             fixtureDocument.copy(
@@ -611,7 +614,9 @@ private fun LiveSessionApp() {
     UiBuilderNewDesignScreen(
       catalogs = newDesignCatalogs,
       initialCatalogSystemId = config.catalogSystemId,
-      onCreate = ::navigateToNewDesign,
+      onCreate = { catalogSystemId, designId, templateId, state ->
+        navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
+      },
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
     return
@@ -669,7 +674,9 @@ private fun LiveSessionApp() {
       initialCatalogQuery = catalogQuery,
       collaborators = collaborators,
       newDesignCatalogs = newDesignCatalogs,
-      onCreateDesign = ::navigateToNewDesign,
+      onCreateDesign = { catalogSystemId, designId, templateId, state ->
+        navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
+      },
       onHelp = ::openUiBuilderGuide,
       onStateChanged = {
         selectedNodeId = it.selectedNodeId
@@ -1021,6 +1028,7 @@ private fun liveSessionConfig(): LiveSessionConfig {
       startWithNewDesign = !liveConfigPresent("designId"),
       createIfMissing = liveConfigFlag("create"),
       template = liveConfigValue("template", "jetcaster"),
+      state = decodeNewDesignStates(liveConfigValue("state", "[]")),
       operationIdPrefix = "${liveConfigValue("clientId", "browser-editor")}-${livePageNonce()}",
       displayName = liveConfigValue("displayName", "Browser user"),
       colorArgbHex = liveConfigValue("color", "#FF6574CD"),
@@ -1097,7 +1105,7 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
 private external fun uiBuilderCatalogFromPath(): String
 
 @JsFun(
-  """(catalogSystemId, designId, templateId) => {
+  """(catalogSystemId, designId, templateId, state) => {
     const current = new URL(globalThis.location.href);
     const path = catalogSystemId === 'm3-catalog'
       ? '/ui-builder/'
@@ -1110,6 +1118,7 @@ private external fun uiBuilderCatalogFromPath(): String
       });
     next.searchParams.set('session', 'live');
     next.searchParams.set('create', '1');
+    if (state && state !== '[]') next.searchParams.set('state', state);
     next.searchParams.set('template', templateId);
     next.searchParams.set('designId', designId);
     globalThis.location.assign(next.toString());
@@ -1119,6 +1128,7 @@ private external fun navigateToNewDesign(
   catalogSystemId: String,
   designId: String,
   templateId: String,
+  state: String,
 )
 
 @JsFun(

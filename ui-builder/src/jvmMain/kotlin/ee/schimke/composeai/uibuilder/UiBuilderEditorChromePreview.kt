@@ -86,6 +86,39 @@ fun UiBuilderIssuesInspectorPreview() {
 }
 
 /**
+ * The new-design dialog, where a screen's state is declared.
+ *
+ * `CreateDesign` carries a whole document and no released mutation reaches `stateVariables`
+ * afterwards, so this is the only moment a design can be given the variables the inspector then
+ * binds properties to. `blankUiBuilderDocument` has taken them since #238 and nothing called it
+ * with any.
+ */
+@Preview(widthDp = 900, heightDp = 900)
+@Composable
+fun UiBuilderNewDesignPreview() {
+  UiBuilderNewDesignScreen(
+    catalogs =
+      listOf(
+        UiBuilderNewDesignCatalog(
+          systemId = "m3-catalog",
+          label = "Material 3",
+          templates =
+            listOf(
+              UiBuilderNewDesignTemplate("blank", "Blank", "A scaffold and an empty container."),
+              UiBuilderNewDesignTemplate(
+                "jetcaster",
+                "Jetcaster",
+                "The frozen discover screen, as a starting point.",
+              ),
+            ),
+        )
+      ),
+    initialCatalogSystemId = "m3-catalog",
+    onCreate = { _, _, _, _ -> },
+  )
+}
+
+/**
  * A state-bound property, in the inspector that can now see it.
  *
  * `chip-crime.selected` is bound to `stateEquals(selectedCategory, "Crime")` in the fixture. Until

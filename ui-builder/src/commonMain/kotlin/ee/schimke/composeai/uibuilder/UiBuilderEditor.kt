@@ -159,7 +159,14 @@ fun UiBuilderEditor(
   initialPreviewMode: Boolean = false,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
-  onCreateDesign: ((catalogSystemId: String, designId: String, templateId: String) -> Unit)? = null,
+  onCreateDesign:
+    ((
+      catalogSystemId: String,
+      designId: String,
+      templateId: String,
+      state: List<NewDesignState>,
+    ) -> Unit)? =
+    null,
   onHelp: (() -> Unit)? = null,
 ) {
   val reducer =
@@ -443,7 +450,13 @@ private fun NewDesignDialog(
   catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
   onDismiss: (() -> Unit)?,
-  onCreate: (catalogSystemId: String, designId: String, templateId: String) -> Unit,
+  onCreate:
+    (
+      catalogSystemId: String,
+      designId: String,
+      templateId: String,
+      state: List<NewDesignState>,
+    ) -> Unit,
 ) {
   val initialCatalog =
     catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
@@ -457,6 +470,12 @@ private fun NewDesignDialog(
     selectedCatalog.templates.firstOrNull { it.id == selectedTemplateId }
       ?: selectedCatalog.templates.first()
   val designIdValid = designId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]*"))
+  var declared by remember { mutableStateOf(listOf<NewDesignState>()) }
+  var variableName by remember { mutableStateOf("") }
+  var variableKind by remember { mutableStateOf(NewDesignStateType.Flag) }
+  var variableInitial by remember { mutableStateOf("") }
+  val variableNameValid =
+    NEW_DESIGN_STATE_NAME.matches(variableName) && declared.none { it.name == variableName }
 
   AlertDialog(
     onDismissRequest = { onDismiss?.invoke() },
@@ -509,11 +528,71 @@ private fun NewDesignDialog(
           isError = designId.isNotEmpty() && !designIdValid,
           singleLine = true,
         )
+        // State is declared here because `CreateDesign` carries a whole document and no released
+        // mutation reaches `stateVariables` afterwards. Until one does, this is the only moment a
+        // design can be given the variables the inspector then binds properties to.
+        Text("State", style = MaterialTheme.typography.labelLarge)
+        Text(
+          "Variables this screen reacts to. A property can be bound to one once the design exists.",
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.bodySmall,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          NewDesignStateType.entries.forEach { kind ->
+            FilterChip(
+              selected = kind == variableKind,
+              onClick = { variableKind = kind },
+              label = { Text(kind.label) },
+            )
+          }
+        }
+        Row(
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          OutlinedTextField(
+            value = variableName,
+            onValueChange = { variableName = it },
+            modifier = Modifier.weight(1f).semantics { contentDescription = "State name" },
+            placeholder = { Text("expanded") },
+            isError = variableName.isNotEmpty() && !variableNameValid,
+            singleLine = true,
+          )
+          OutlinedTextField(
+            value = variableInitial,
+            onValueChange = { variableInitial = it },
+            modifier = Modifier.weight(1f).semantics { contentDescription = "State initial value" },
+            placeholder = { Text(variableKind.placeholder) },
+            singleLine = true,
+          )
+          TextButton(
+            onClick = {
+              declared +=
+                NewDesignState(variableName, variableKind, variableKind.parse(variableInitial))
+              variableName = ""
+              variableInitial = ""
+            },
+            enabled = variableNameValid,
+          ) {
+            Text("Add")
+          }
+        }
+        if (declared.isNotEmpty()) {
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            declared.forEach { variable ->
+              FilterChip(
+                selected = false,
+                onClick = { declared = declared - variable },
+                label = { Text("${variable.name} · ${variable.type.label}") },
+              )
+            }
+          }
+        }
       }
     },
     confirmButton = {
       Button(
-        onClick = { onCreate(selectedCatalog.systemId, designId, selectedTemplate.id) },
+        onClick = { onCreate(selectedCatalog.systemId, designId, selectedTemplate.id, declared) },
         enabled = designIdValid,
       ) {
         Text("Create")
@@ -527,7 +606,13 @@ private fun NewDesignDialog(
 fun UiBuilderNewDesignScreen(
   catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
-  onCreate: (catalogSystemId: String, designId: String, templateId: String) -> Unit,
+  onCreate:
+    (
+      catalogSystemId: String,
+      designId: String,
+      templateId: String,
+      state: List<NewDesignState>,
+    ) -> Unit,
 ) {
   require(catalogs.isNotEmpty()) { "new design screen requires at least one catalog" }
   MaterialTheme(colorScheme = EditorColors) {
