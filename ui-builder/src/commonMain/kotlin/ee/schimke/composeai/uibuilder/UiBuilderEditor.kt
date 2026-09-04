@@ -647,17 +647,26 @@ private fun EditorToolbar(
   onHelp: (() -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
+  var showShortcuts by remember { mutableStateOf(false) }
+  if (showShortcuts) {
+    EditorShortcutsDialog(onDismiss = { showShortcuts = false })
+  }
   Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
     Row(
       Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 18.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Text("Compose UI Builder", fontWeight = FontWeight.Bold)
+      // Yields rather than pushes. The toolbar has gained a control in most of the last few
+      // changes, and an unconstrained title crowds them out of the row on the narrowest window
+      // that still calls itself a desktop.
       Text(
         "${state.document.title} · ${state.document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull.orEmpty()}",
-        Modifier.padding(start = 14.dp),
+        Modifier.padding(start = 14.dp).weight(1f, fill = false),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelLarge,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
       )
       Spacer(Modifier.weight(1f))
       collaborators.take(4).forEach { collaborator ->
@@ -752,6 +761,12 @@ private fun EditorToolbar(
         enabled = canDelete,
         onClick = { dispatch(UiBuilderEditorEvent.DeleteSelected) },
       )
+      EditorAction(
+        label = "Shortcuts",
+        shortcut = "",
+        enabled = true,
+        onClick = { showShortcuts = true },
+      )
       if (onReconnect != null) {
         EditorAction(label = "Reconnect", shortcut = "", enabled = true, onClick = onReconnect)
       }
@@ -795,6 +810,57 @@ private fun EditorAction(
   }
 }
 
+@Composable
+private fun EditorShortcutsDialog(onDismiss: () -> Unit) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text("Keyboard and pointer") },
+    text = { EditorShortcutsPanel() },
+    confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+  )
+}
+
+/**
+ * The shortcut table, rendered from [EDITOR_SHORTCUTS] and [EDITOR_GESTURES] rather than retyped.
+ *
+ * Separate from the dialog so it can be previewed on its own: a help surface that drifts from the
+ * handler is worse than no help surface, and the only way to keep it honest is for both to read the
+ * same list and for a render to show what the list currently says.
+ */
+@Composable
+internal fun EditorShortcutsPanel(modifier: Modifier = Modifier) {
+  Column(modifier.width(460.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Text("Keys", style = MaterialTheme.typography.labelLarge)
+    EDITOR_SHORTCUTS.forEach { shortcut -> EditorShortcutRow(shortcut.chord, shortcut.description) }
+    Spacer(Modifier.height(10.dp))
+    Text("Pointer", style = MaterialTheme.typography.labelLarge)
+    EDITOR_GESTURES.forEach { (gesture, description) -> EditorShortcutRow(gesture, description) }
+  }
+}
+
+@Composable
+private fun EditorShortcutRow(chord: String, description: String) {
+  Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Surface(
+      Modifier.width(178.dp),
+      shape = RoundedCornerShape(6.dp),
+      color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+      Text(
+        chord,
+        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        style = MaterialTheme.typography.labelMedium,
+      )
+    }
+    Text(
+      description,
+      Modifier.padding(start = 12.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
+  }
+}
+
 /** How a click on a layer row changes the selection. */
 private enum class LayerSelectionGesture {
   Replace,
@@ -808,36 +874,171 @@ private fun editorShortcut(
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ): Boolean {
   if (!enabled || event.type != KeyEventType.KeyDown) return false
-  val command = event.isCtrlPressed || event.isMetaPressed
-  val editorEvent =
-    when {
-      command && event.key == Key.Z && event.isShiftPressed -> UiBuilderEditorEvent.Redo
-      command && event.key == Key.Y -> UiBuilderEditorEvent.Redo
-      command && event.key == Key.Z -> UiBuilderEditorEvent.Undo
-      command && event.key == Key.D -> UiBuilderEditorEvent.DuplicateSelected
-      // Reorder before plain navigation, so the modified arrows are not eaten by selection.
-      command && event.key == Key.DirectionUp ->
-        UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.Before)
-      command && event.key == Key.DirectionDown ->
-        UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.After)
-      !command && event.key == Key.DirectionDown ->
-        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Next)
-      !command && event.key == Key.DirectionUp ->
-        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Previous)
-      !command && event.key == Key.DirectionLeft ->
-        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Parent)
-      !command && event.key == Key.DirectionRight ->
-        UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.FirstChild)
-      command && event.key == Key.C -> UiBuilderEditorEvent.CopySelected
-      command && event.key == Key.X -> UiBuilderEditorEvent.CutSelected
-      command && event.key == Key.V -> UiBuilderEditorEvent.Paste
-      !command && event.key in setOf(Key.Delete, Key.Backspace) ->
-        UiBuilderEditorEvent.DeleteSelected
-      else -> null
-    } ?: return false
-  dispatch(editorEvent)
+  val chord =
+    EditorChord(
+      key = event.key,
+      command = event.isCtrlPressed || event.isMetaPressed,
+      shift = event.isShiftPressed,
+    )
+  val match = EDITOR_SHORTCUTS.firstOrNull { it.matches(chord) } ?: return false
+  dispatch(match.event)
   return true
 }
+
+/** The part of a key press a shortcut is allowed to look at. */
+internal data class EditorChord(val key: Key, val command: Boolean, val shift: Boolean)
+
+/**
+ * One chord the editor answers to.
+ *
+ * [shift] is `null` for "does not care", which is not the same as `false`: `Ctrl/⌘+Z` fires whether
+ * or not shift is down, and only reaches the undo entry because the redo entry above it claims the
+ * shifted spelling first.
+ */
+internal data class EditorShortcut(
+  val chord: String,
+  val description: String,
+  val event: UiBuilderEditorEvent,
+  val keys: Set<Key>,
+  val command: Boolean,
+  val shift: Boolean? = null,
+) {
+  fun matches(pressed: EditorChord): Boolean =
+    pressed.command == command && (shift == null || shift == pressed.shift) && pressed.key in keys
+}
+
+/**
+ * Every key chord the editor answers to, in the order it tries them, and the list the shortcuts
+ * panel renders.
+ *
+ * One table rather than a `when` plus a hand-written help sheet, because the second of those is
+ * wrong within two commits. Most of what this editor learned to do — extending a selection,
+ * reordering, wrapping, the clipboard — arrived with no visible affordance at all: reorder is a
+ * chord and a drag gesture and appears on no button, and arrow-key navigation appears nowhere. A
+ * capability nobody can find is one the tool does not have.
+ *
+ * Order is behaviour: the redo entry has to precede undo, and the reordering arrows have to precede
+ * the navigating ones or a modified arrow is eaten by selection. `editorShortcutsAreAllReachable`
+ * asserts every entry is the first match for its own chord, so a reordering that shadows one fails
+ * rather than quietly dropping a row the panel still advertises.
+ */
+internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
+  listOf(
+    EditorShortcut(
+      chord = "Ctrl/\u2318+Shift+Z",
+      description = "Redo",
+      event = UiBuilderEditorEvent.Redo,
+      keys = setOf(Key.Z),
+      command = true,
+      shift = true,
+    ),
+    EditorShortcut(
+      chord = "Ctrl/\u2318+Y",
+      description = "Redo",
+      event = UiBuilderEditorEvent.Redo,
+      keys = setOf(Key.Y),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "Ctrl/\u2318+Z",
+      description = "Undo",
+      event = UiBuilderEditorEvent.Undo,
+      keys = setOf(Key.Z),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "Ctrl/\u2318+D",
+      description = "Duplicate the selection in place",
+      event = UiBuilderEditorEvent.DuplicateSelected,
+      keys = setOf(Key.D),
+      command = true,
+    ),
+    // Reorder before plain navigation, so the modified arrows are not eaten by selection.
+    EditorShortcut(
+      chord = "Ctrl/\u2318+\u2191",
+      description = "Move the selection earlier in its slot",
+      event = UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.Before),
+      keys = setOf(Key.DirectionUp),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "Ctrl/\u2318+\u2193",
+      description = "Move the selection later in its slot",
+      event = UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.After),
+      keys = setOf(Key.DirectionDown),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "\u2193",
+      description = "Select the next layer",
+      event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Next),
+      keys = setOf(Key.DirectionDown),
+      command = false,
+    ),
+    EditorShortcut(
+      chord = "\u2191",
+      description = "Select the previous layer",
+      event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Previous),
+      keys = setOf(Key.DirectionUp),
+      command = false,
+    ),
+    EditorShortcut(
+      chord = "\u2190",
+      description = "Select the parent",
+      event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Parent),
+      keys = setOf(Key.DirectionLeft),
+      command = false,
+    ),
+    EditorShortcut(
+      chord = "\u2192",
+      description = "Select the first child",
+      event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.FirstChild),
+      keys = setOf(Key.DirectionRight),
+      command = false,
+    ),
+    EditorShortcut(
+      chord = "Ctrl/\u2318+C",
+      description = "Copy the selection",
+      event = UiBuilderEditorEvent.CopySelected,
+      keys = setOf(Key.C),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "Ctrl/\u2318+X",
+      description = "Cut the selection",
+      event = UiBuilderEditorEvent.CutSelected,
+      keys = setOf(Key.X),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "Ctrl/\u2318+V",
+      description = "Paste into the selected container",
+      event = UiBuilderEditorEvent.Paste,
+      keys = setOf(Key.V),
+      command = true,
+    ),
+    EditorShortcut(
+      chord = "Delete / Backspace",
+      description = "Delete the selection",
+      event = UiBuilderEditorEvent.DeleteSelected,
+      keys = setOf(Key.Delete, Key.Backspace),
+      command = false,
+    ),
+  )
+
+/**
+ * The pointer gestures, which no chord and no button can advertise.
+ *
+ * They are the least discoverable thing in the editor and the most load-bearing: without them a
+ * selection is one node, and every batch operation this editor gained is unreachable.
+ */
+internal val EDITOR_GESTURES: List<Pair<String, String>> =
+  listOf(
+    "Ctrl/\u2318 + click a layer" to "Add one layer to the selection, or take it out",
+    "Shift + click a layer" to "Extend the selection to that layer",
+    "Drag a layer row" to "Reorder within the slot",
+    "Drag a catalog component" to "Insert it where it is dropped",
+  )
 
 @Composable
 private fun EditorNavigator(
