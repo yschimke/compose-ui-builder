@@ -15,7 +15,7 @@ composeai-contracts = "2.5.0"
 # split cannot produce two versions of one internal module. Collapse it back into `composeai-tools`
 # at the next Renovate bump that reaches this version.
 composeai-preview-discovery = "1.71.0"
-rc-players = "1.56.0"
+rc-players = "1.56.1"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
