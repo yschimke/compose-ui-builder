@@ -178,8 +178,8 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
       }
     }
 
-    val minLines = node.properties["minLines"]?.unwrapPropertyValue()?.jsonPrimitive?.longOrNull
-    val maxLines = node.properties["maxLines"]?.unwrapPropertyValue()?.jsonPrimitive?.longOrNull
+    val minLines = node.properties["minLines"].lineCountOrNull()
+    val maxLines = node.properties["maxLines"].lineCountOrNull()
     if (minLines != null && maxLines != null && minLines > maxLines) {
       listOf("minLines", "maxLines").forEach { field ->
         issues +=
@@ -324,6 +324,23 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
 
 private fun JsonElement.unwrapPropertyValue(): JsonElement =
   (this as? JsonObject)?.get("value") ?: this
+
+/**
+ * The line count a `minLines` / `maxLines` property states outright, or null when it does not state
+ * one.
+ *
+ * Null covers the case that matters: a property **bound to state** is an object with no `value` key
+ * (`{"type":"state","variable":…}`), so [unwrapPropertyValue] hands the object straight back. Read
+ * with `.jsonPrimitive` that threw, and it threw out of the validator — which is called on every
+ * write, and on every keystroke in the inspector through `canBindToState`, whose whole job is to
+ * probe a property with exactly such a binding. Any text node was enough to take the editor down.
+ *
+ * Skipping the min-vs-max comparison is the right answer rather than a way around the crash: a
+ * bound line count has no value at author time to compare. Whether the binding is *allowed* on the
+ * property at all is a separate question, and one [acceptsType] already answers.
+ */
+private fun JsonElement?.lineCountOrNull(): Long? =
+  (this?.unwrapPropertyValue() as? JsonPrimitive)?.longOrNull
 
 private fun PropertyCapability.typeNames(): Set<String> =
   when (jsonType) {
