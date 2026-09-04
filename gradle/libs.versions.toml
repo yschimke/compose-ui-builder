@@ -5,7 +5,7 @@ ktfmt-cli = "0.64"
 compose-multiplatform = "1.11.1"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
-composeai-tools = "1.67.0"
+composeai-tools = "1.71.0"
 composeai-contracts = "2.5.0"
 # `preview-discovery` is pinned apart from the rest of compose-ai-tools because the version that
 # carries `ScreenGenerator` is newer than the plugin/renderer floor this build resolves, and
