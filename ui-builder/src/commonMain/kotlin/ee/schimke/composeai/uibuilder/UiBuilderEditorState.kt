@@ -126,18 +126,18 @@ data class ScreenEnvironmentSettings(
 
 fun UiBuilderDocument.screenEnvironmentSettings(): ScreenEnvironmentSettings =
   ScreenEnvironmentSettings(
-    widthDp = environment["widthDp"]?.jsonPrimitive?.content?.toIntOrNull() ?: 1280,
-    heightDp = environment["heightDp"]?.jsonPrimitive?.content?.toIntOrNull() ?: 800,
-    density = environment["density"]?.jsonPrimitive?.doubleOrNull ?: 1.0,
-    fontScale = environment["fontScale"]?.jsonPrimitive?.doubleOrNull ?: 1.0,
-    locale = environment["locale"]?.jsonPrimitive?.content.orEmpty().ifBlank { "en-US" },
+    widthDp = environment["widthDp"]?.primitiveOrNull()?.content?.toIntOrNull() ?: 1280,
+    heightDp = environment["heightDp"]?.primitiveOrNull()?.content?.toIntOrNull() ?: 800,
+    density = environment["density"]?.primitiveOrNull()?.doubleOrNull ?: 1.0,
+    fontScale = environment["fontScale"]?.primitiveOrNull()?.doubleOrNull ?: 1.0,
+    locale = environment["locale"]?.primitiveOrNull()?.content.orEmpty().ifBlank { "en-US" },
     theme =
       EditorScreenTheme.entries.firstOrNull {
-        it.wireValue == environment["theme"]?.jsonPrimitive?.content
+        it.wireValue == environment["theme"]?.primitiveOrNull()?.content
       } ?: EditorScreenTheme.System,
     layoutDirection =
       EditorLayoutDirection.entries.firstOrNull {
-        it.wireValue == environment["layoutDirection"]?.jsonPrimitive?.content
+        it.wireValue == environment["layoutDirection"]?.primitiveOrNull()?.content
       } ?: EditorLayoutDirection.Ltr,
   )
 
@@ -231,7 +231,24 @@ enum class EditorInspectorMode {
   Properties,
   Theme,
   Screen,
+  Issues,
 }
+
+/**
+ * One thing standing between the current document and an export.
+ *
+ * Read straight out of [validateDocumentForExport], which is the fail-closed gate the code and SVG
+ * projections already run. Surfacing that function rather than a second set of rules is the whole
+ * point: a panel with its own opinion would eventually disagree with the thing that actually
+ * refuses, and the disagreement would be discovered at export time — which is exactly the moment
+ * this exists to avoid.
+ */
+data class EditorProblem(
+  val code: String,
+  val message: String,
+  val nodeId: String? = null,
+  val componentId: String? = null,
+)
 
 data class EditorThemeSettings(
   val primaryColor: String = "#FFD0BCFF",
@@ -409,7 +426,7 @@ private enum class StateKind {
  * Kotlin type the exporter declares. `isString` settles it wherever `valueType` is absent.
  */
 private fun declaredStateKind(declaration: JsonObject?): StateKind {
-  when (declaration?.get("valueType")?.jsonPrimitive?.contentOrNull) {
+  when (declaration?.get("valueType")?.primitiveOrNull()?.contentOrNull) {
     "bool" -> return StateKind.BOOLEAN
     "int" -> return StateKind.INTEGER
     "float" -> return StateKind.DECIMAL
@@ -427,7 +444,7 @@ private fun declaredStateKind(declaration: JsonObject?): StateKind {
 
 /** A variable the document declares nullable, and so the only kind `selectOrClear` may clear. */
 private fun declaredNullable(declaration: JsonObject?): Boolean =
-  declaration?.get("nullable")?.jsonPrimitive?.booleanOrNull
+  declaration?.get("nullable")?.primitiveOrNull()?.booleanOrNull
     ?: (declaration?.get("initialValue") is JsonNull)
 
 /**
@@ -736,8 +753,15 @@ class UiBuilderEditorReducer(
 
   fun treeRows(document: UiBuilderDocument): List<EditorTreeRow> {
     val rows = mutableListOf<EditorTreeRow>()
+    val seen = mutableSetOf<String>()
     fun visit(nodeId: String, depth: Int, parent: ParentSlot?) {
-      val node = document.nodes.getValue(nodeId)
+      // A reference to a node that is not there, and a reference to one already on this path, are
+      // both things `validateDocumentForExport` reports — `UNKNOWN_ROOT`, `UNKNOWN_CHILD`,
+      // `GRAPH_CYCLE`. The navigator is built before the inspector, so `getValue` and an unbounded
+      // recursion took the whole editor down before the Issues panel could name any of them: the
+      // one document that most needs the panel was the one that could not show it.
+      val node = document.nodes[nodeId] ?: return
+      if (!seen.add(nodeId)) return
       val capability = catalog.componentsById[node.componentId]
       val componentLabel = capability?.displayName ?: node.componentId
       rows +=
@@ -786,7 +810,17 @@ class UiBuilderEditorReducer(
     return component.properties
       .filterNot { it.name in THEME_PROPERTIES }
       .filter { nodes.size == 1 || sharedByAll(it) }
-      .map { property ->
+      .flatMap { property ->
+        val objectEdges =
+          property.editor?.objectKind?.let { kind ->
+            EDITOR_OBJECT_VALUE_EDGES[kind]?.let { kind to it }
+          }
+        if (objectEdges != null) {
+          val (kind, edges) = objectEdges
+          return@flatMap edges.map { edge ->
+            objectEdgeField(state, nodes, node, property, kind, edge)
+          }
+        }
         val encoded = node.properties[property.name] as? JsonObject
         val value = encoded?.get("value")
         val typeNames = property.typeNames() - "null"
@@ -815,9 +849,9 @@ class UiBuilderEditorReducer(
           nodes
             .map { other ->
               (other.properties[property.name] as? JsonObject)
-                ?.takeIf { it["type"]?.jsonPrimitive?.contentOrNull in STATE_VALUE_TYPES }
+                ?.takeIf { it["type"]?.primitiveOrNull()?.contentOrNull in STATE_VALUE_TYPES }
                 ?.get("variable")
-                ?.jsonPrimitive
+                ?.primitiveOrNull()
                 ?.contentOrNull
             }
             .distinct()
@@ -825,24 +859,104 @@ class UiBuilderEditorReducer(
           nodes.map { (it.properties[property.name] as? JsonObject)?.get("value") }.distinct()
         val mixed = encodedValues.size > 1
         EditorPropertyField(
-          nodeCount = nodes.size,
-          mixed = mixed,
-          boundVariable = boundVariables.singleOrNull(),
-          nodeId = node.id,
-          name = property.name,
-          label = property.name.humanLabel(),
-          required = property.required,
-          control = control,
-          value = if (mixed) "" else value?.jsonPrimitive?.content ?: "",
-          choices =
-            property.allowedValues.mapNotNull { it.jsonPrimitive.contentOrNull } +
-              property.editor?.suggestedValues.orEmpty(),
-          numberBounds = numberBounds,
-          error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
-          notes = property.notes,
-        )
+            nodeCount = nodes.size,
+            mixed = mixed,
+            boundVariable = boundVariables.singleOrNull(),
+            nodeId = node.id,
+            name = property.name,
+            label = property.name.humanLabel(),
+            required = property.required,
+            control = control,
+            value = if (mixed) "" else value?.primitiveOrNull()?.content ?: "",
+            choices =
+              property.allowedValues.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } +
+                property.editor?.suggestedValues.orEmpty(),
+            numberBounds = numberBounds,
+            error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
+            notes = property.notes,
+          )
+          .let(::listOf)
       }
   }
+
+  /**
+   * One numeric edge of an object-valued property, as its own number field.
+   *
+   * Four fields rather than one composite control: the edges are independent numbers with their own
+   * bounds, and a padding edited edge by edge reuses the number control's parsing, its bounds
+   * message and its behaviour across a multi-selection instead of growing a second copy of all
+   * three. The field is addressed as `property.edge`, and [commitProperty] merges it back into the
+   * whole value, because the wire carries one `padding` and not four numbers.
+   */
+  private fun objectEdgeField(
+    state: UiBuilderEditorState,
+    nodes: List<UiBuilderNode>,
+    anchor: UiBuilderNode,
+    property: PropertyCapability,
+    kind: String,
+    edge: EditorObjectEdge,
+  ): EditorPropertyField {
+    val values =
+      nodes
+        .map { other ->
+          (other.properties[property.name] as? JsonObject)
+            ?.takeIf { it["type"]?.primitiveOrNull()?.contentOrNull == kind }
+            ?.get(edge.field)
+            ?.primitiveOrNull()
+            ?.contentOrNull
+        }
+        .distinct()
+    val mixed = values.size > 1
+    return EditorPropertyField(
+      nodeCount = nodes.size,
+      mixed = mixed,
+      nodeId = anchor.id,
+      name = "${property.name}.${edge.field}",
+      label = "${property.name.humanLabel()} · ${edge.label}",
+      // An edge is never required on its own: the value is required or absent as a whole.
+      required = false,
+      control = EditorPropertyControl.Number,
+      value = if (mixed) "" else values.singleOrNull() ?: edge.minimum.format(),
+      numberBounds = EditorNumberBounds(edge.minimum, edge.maximum, 1.0, integer = false),
+      error = state.propertyErrors[EditorPropertyLocation(anchor.id, property.name)],
+      notes = property.notes,
+    )
+  }
+
+  /**
+   * Everything the Compose export gate would refuse, against the document as it stands.
+   *
+   * The editor validates each write as it happens, so a rejected edit never lands — but nothing was
+   * checking the document as a whole. A node can become unreachable when its parent is deleted, a
+   * required property can be missing on a node nobody touched, and a catalog pin can drift; none of
+   * those is a rejected write, and all of them are a failed export. Until now the first anyone knew
+   * was the export refusing.
+   *
+   * Read from [CapabilityComposeCodeExporter.diagnose] rather than from `validateDocumentForExport`
+   * alone, because those are two different questions and only the wider one is the promise this
+   * panel makes. A design can satisfy every structural rule and still hold a component the exporter
+   * has no emitter for, or a modifier the catalog does not allow on it — and against the narrower
+   * gate the panel said nothing was blocking an export right up until the export refused.
+   *
+   * Errors only. A warning is something the export notes and proceeds through, so listing it beside
+   * the things that stop the build would make the panel's one claim untrue in the other direction.
+   *
+   * A node id that no longer exists is dropped rather than offered as something to select.
+   *
+   * Takes the document rather than the state because it reads nothing else, which is what lets the
+   * caller cache it against the document alone.
+   */
+  fun problems(document: UiBuilderDocument): List<EditorProblem> =
+    CapabilityComposeCodeExporter.diagnose(document, catalog)
+      .filter { it.severity == ComposeExportSeverity.ERROR }
+      .map { diagnostic ->
+        EditorProblem(
+          code = diagnostic.code,
+          message = diagnostic.message,
+          nodeId = diagnostic.nodeId?.takeIf(document.nodes::containsKey),
+          componentId = diagnostic.componentId,
+        )
+      }
 
   fun themeSettings(state: UiBuilderEditorState): EditorThemeSettings {
     val host = state.document.themeHost() ?: return EditorThemeSettings()
@@ -988,14 +1102,18 @@ class UiBuilderEditorReducer(
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val node = state.document.nodes[nodeId] ?: return state
-    val property = catalog.componentsById[node.componentId]?.propertiesByName?.get(propertyName)
+    // `contentPadding.topDp` addresses one edge of an object-valued property; the wire still
+    // carries the whole value, so everything below works on the base name.
+    val baseName = propertyName.substringBefore('.')
+    val edgeName = propertyName.substringAfter('.', missingDelimiterValue = "").ifEmpty { null }
+    val property = catalog.componentsById[node.componentId]?.propertiesByName?.get(baseName)
     if (property == null) {
       return state.rejected(
         sequence,
         RejectionCode.INVALID_PROPERTY,
-        "Property $propertyName is not declared by ${node.componentId}",
+        "Property $baseName is not declared by ${node.componentId}",
         nodeId,
-        propertyName,
+        baseName,
       )
     }
     val field =
@@ -1008,7 +1126,7 @@ class UiBuilderEditorReducer(
         RejectionCode.INVALID_PROPERTY,
         parsed.message,
         nodeId,
-        propertyName,
+        baseName,
       )
     }
     val value = (parsed as PropertyDraft.Valid).value
@@ -1018,30 +1136,44 @@ class UiBuilderEditorReducer(
     val targets =
       (state.selection.filter { it != nodeId } + nodeId).mapNotNull { id ->
         state.document.nodes[id]?.takeIf {
-          catalog.componentsById[it.componentId]?.propertiesByName?.containsKey(propertyName) ==
-            true
+          catalog.componentsById[it.componentId]?.propertiesByName?.containsKey(baseName) == true
         }
       }
     val operations = mutableListOf<DesignOperation>()
     targets.forEach { target ->
       // Each node keeps its own encoded type. Two nodes can hold the same property as a literal and
       // as a token, and rewriting one to the other's shape would change more than was asked.
-      val existingType =
-        (target.properties[propertyName] as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull
-      val encoded = literal(existingType ?: field.defaultEncodedType(), value)
+      val existingValue = target.properties[baseName] as? JsonObject
+      val existingType = existingValue?.get("type")?.primitiveOrNull()?.contentOrNull
+      val encoded =
+        if (edgeName == null) literal(existingType ?: field.defaultEncodedType(), value)
+        else
+          objectValueWithEdge(
+            kind = property.editor?.objectKind ?: existingType.orEmpty(),
+            existing = existingValue,
+            edgeName = edgeName,
+            edgeValue = value,
+          )
+            ?: return state.rejected(
+              sequence,
+              RejectionCode.INVALID_PROPERTY,
+              "${field.label} cannot be safely edited from its catalog metadata",
+              target.id,
+              baseName,
+            )
       // Validated per node rather than once for the anchor: the same value can be legal on one
       // component and not another, and a rejected edit must reject the whole batch rather than
       // apply to the nodes that happened to come first.
-      validator.validate(state.document, target.id, propertyName, encoded)?.let { issue ->
+      validator.validate(state.document, target.id, baseName, encoded)?.let { issue ->
         return state.rejected(
           sequence,
           RejectionCode.INVALID_PROPERTY,
           issue.message,
           target.id,
-          propertyName,
+          baseName,
         )
       }
-      operations += DesignOperation.SetProperty(target.id, propertyName, encoded)
+      operations += DesignOperation.SetProperty(target.id, baseName, encoded)
     }
     if (operations.isEmpty()) return state
     return state
@@ -1361,7 +1493,7 @@ class UiBuilderEditorReducer(
     val property =
       catalog.componentsById[node.componentId]?.propertiesByName?.get(propertyName) ?: return state
     val current =
-      (node.properties[propertyName] as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull
+      (node.properties[propertyName] as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull
     if (current !in STATE_VALUE_TYPES) return state
     // Deliberately not `defaultEncodedValue`: for some properties the catalog default *is* a state
     // binding — a text field's `value` defaults to one — so unbinding to the default would leave
@@ -1924,10 +2056,10 @@ private fun UiBuilderDocument.themeHost(): UiBuilderNode? =
   roots.asSequence().mapNotNull(nodes::get).firstOrNull { it.componentId == "m3/surface" }
 
 private fun UiBuilderNode.stringValue(name: String, fallback: String): String =
-  properties[name]?.jsonObject?.get("value")?.jsonPrimitive?.content ?: fallback
+  properties[name]?.jsonObject?.get("value")?.primitiveOrNull()?.content ?: fallback
 
 private fun UiBuilderNode.floatValue(name: String, fallback: Float): Float =
-  properties[name]?.jsonObject?.get("value")?.jsonPrimitive?.doubleOrNull?.toFloat() ?: fallback
+  properties[name]?.jsonObject?.get("value")?.primitiveOrNull()?.doubleOrNull?.toFloat() ?: fallback
 
 private fun String.isArgbColor(): Boolean =
   startsWith("#") &&
@@ -2160,7 +2292,7 @@ private fun UiBuilderNode.contentLabel(capability: ComponentCapability): String?
   fun valueOf(name: String) =
     (properties[name] as? JsonObject)
       ?.get("value")
-      ?.jsonPrimitive
+      ?.primitiveOrNull()
       ?.contentOrNull
       ?.trim()
       ?.takeIf(String::isNotEmpty)
@@ -2362,7 +2494,7 @@ private fun JsonObject.withFreshInstanceIdentity(copyNodeId: String): JsonObject
       present.associateWith { name ->
         val existing = this[name] as? JsonObject
         literal(
-          existing?.get("type")?.jsonPrimitive?.contentOrNull ?: "string",
+          existing?.get("type")?.primitiveOrNull()?.contentOrNull ?: "string",
           JsonPrimitive(copyNodeId),
         )
       }
@@ -2385,6 +2517,69 @@ private fun JsonElement.asLiteral(propertyName: String): JsonObject {
 
 private fun literal(type: String, value: JsonElement): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))
+
+/** One numeric edge of an object-valued property the editor knows how to author. */
+internal data class EditorObjectEdge(
+  val field: String,
+  val label: String,
+  val minimum: Double,
+  val maximum: Double,
+)
+
+/**
+ * The object-valued shapes the inspector can author, and the numeric edges each is made of.
+ *
+ * Closed on purpose. A property the catalog declares as `"object"` and this map does not name stays
+ * unsupported, which is the safe answer: `itemSpans` is an arbitrary map of child id to span and
+ * there is no honest four-field control for it.
+ */
+internal val EDITOR_OBJECT_VALUE_EDGES: Map<String, List<EditorObjectEdge>> =
+  mapOf(
+    "padding" to
+      listOf(
+        EditorObjectEdge("startDp", "start", 0.0, MAXIMUM_AUTHORED_EDGE_DP),
+        EditorObjectEdge("topDp", "top", 0.0, MAXIMUM_AUTHORED_EDGE_DP),
+        EditorObjectEdge("endDp", "end", 0.0, MAXIMUM_AUTHORED_EDGE_DP),
+        EditorObjectEdge("bottomDp", "bottom", 0.0, MAXIMUM_AUTHORED_EDGE_DP),
+      ),
+    "adaptiveGrid" to
+      listOf(
+        EditorObjectEdge("minimumCellWidthDp", "minimum cell width", 1.0, MAXIMUM_AUTHORED_EDGE_DP)
+      ),
+  )
+
+private const val MAXIMUM_AUTHORED_EDGE_DP = 4096.0
+
+/**
+ * The whole object value with one edge replaced, or null when the shape is not one this editor
+ * authors.
+ *
+ * Every edge is written, not just the one that changed: the wire carries a `padding` as four
+ * numbers and a value missing one of them is a different value, so an edge absent from the document
+ * takes its own minimum rather than disappearing.
+ */
+private fun objectValueWithEdge(
+  kind: String,
+  existing: JsonObject?,
+  edgeName: String,
+  edgeValue: JsonElement,
+): JsonObject? {
+  val edges = EDITOR_OBJECT_VALUE_EDGES[kind] ?: return null
+  if (edges.none { it.field == edgeName }) return null
+  val carried = existing?.takeIf { it["type"]?.primitiveOrNull()?.contentOrNull == kind }
+  return JsonObject(
+    buildMap {
+      put("type", JsonPrimitive(kind))
+      edges.forEach { edge ->
+        put(
+          edge.field,
+          if (edge.field == edgeName) edgeValue
+          else carried?.get(edge.field) ?: JsonPrimitive(edge.minimum),
+        )
+      }
+    }
+  )
+}
 
 private sealed interface PropertyDraft {
   data class Valid(val value: JsonElement) : PropertyDraft
@@ -2468,6 +2663,16 @@ private fun UiBuilderDocument.location(nodeId: String): ParentSlot? {
   }
   return null
 }
+
+/**
+ * The primitive a wire value holds, or null where it holds an array or an object.
+ *
+ * `jsonPrimitive` throws on anything else, and everything read through these accessors came off the
+ * wire: a property encoded as `{"type": "string", "value": []}` is exactly what
+ * `INVALID_PROPERTY_TYPE` reports, so the inspector must be able to draw the document that holds
+ * one rather than take the editor down before the Issues panel can name it.
+ */
+private fun JsonElement?.primitiveOrNull(): JsonPrimitive? = this as? JsonPrimitive
 
 private fun UiBuilderDocument.children(parent: ParentSlot?): List<String> =
   if (parent == null) roots else nodes.getValue(parent.nodeId).slots[parent.slot].orEmpty()

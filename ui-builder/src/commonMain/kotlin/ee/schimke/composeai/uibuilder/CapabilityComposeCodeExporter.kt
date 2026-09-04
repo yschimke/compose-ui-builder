@@ -93,6 +93,39 @@ object CapabilityComposeCodeExporter {
     catalog: CapabilityCatalog,
     assetAdapter: ComposeAssetAdapter? = null,
   ): ComposeExportResult {
+    val diagnostics = diagnose(document, catalog, assetAdapter).toMutableList()
+    val provenance =
+      document.exportProvenance(
+        EXPORTER_VERSION,
+        declaredFallbacks = document.unboundAssetKeys(assetAdapter).map { "asset-placeholder:$it" },
+        assetAdapterId = assetAdapter?.id,
+      )
+    if (diagnostics.any { it.severity == ComposeExportSeverity.ERROR }) {
+      return ComposeExportResult(null, provenance, diagnostics)
+    }
+    val emitter = ComposeEmitter(document, catalog, diagnostics, assetAdapter)
+    val source = emitter.emit()
+    return ComposeExportResult(source, provenance, diagnostics)
+  }
+
+  /**
+   * Everything this exporter would refuse the document for, without generating a line of source.
+   *
+   * Split out of [export] so the editor's Issues panel can read the gate that actually refuses
+   * rather than restate it. Document-level validity and the Compose projection are two different
+   * questions: a design can satisfy every structural rule and still hold a component this exporter
+   * has no emitter for, and a panel that reported only the first said "nothing is blocking an
+   * export" right up until the export refused.
+   *
+   * The document-level pass short-circuits the per-node one, as it did inside [export]: a broken
+   * graph makes every node-level answer unreliable, and the structural problems are what to fix
+   * first anyway.
+   */
+  fun diagnose(
+    document: UiBuilderDocument,
+    catalog: CapabilityCatalog,
+    assetAdapter: ComposeAssetAdapter? = null,
+  ): List<ComposeExportDiagnostic> {
     val diagnostics =
       validateDocumentForExport(document, catalog).mapTo(mutableListOf()) { issue ->
         ComposeExportDiagnostic(
@@ -119,21 +152,9 @@ object CapabilityComposeCodeExporter {
           message = "asset renderer symbol and import must be non-blank",
         )
     }
-    val unboundAssetKeys =
-      document.nodes.values
-        .filter { it.componentId == "asset/image" }
-        .map { it.string("assetKey") }
-        .filter { it !in assetAdapter?.bindings.orEmpty() }
-        .distinct()
-        .sorted()
-    val provenance =
-      document.exportProvenance(
-        EXPORTER_VERSION,
-        declaredFallbacks = unboundAssetKeys.map { "asset-placeholder:$it" },
-        assetAdapterId = assetAdapter?.id,
-      )
+    val unboundAssetKeys = document.unboundAssetKeys(assetAdapter)
     if (diagnostics.isNotEmpty()) {
-      return ComposeExportResult(null, provenance, diagnostics)
+      return diagnostics
     }
 
     document.nodes.values.sortedBy(UiBuilderNode::id).forEach { node ->
@@ -215,15 +236,26 @@ object CapabilityComposeCodeExporter {
       }
     }
 
-    if (diagnostics.any { it.severity == ComposeExportSeverity.ERROR }) {
-      return ComposeExportResult(null, provenance, diagnostics)
-    }
-
-    val emitter = ComposeEmitter(document, catalog, diagnostics, assetAdapter)
-    val source = emitter.emit()
-    return ComposeExportResult(source, provenance, diagnostics)
+    return diagnostics
   }
 }
+
+/**
+ * The asset keys no adapter binds, which are both a provenance fallback and a warning.
+ *
+ * The key is read as a primitive *if it is one*. `UiBuilderNode.string` goes through
+ * `jsonPrimitive`, which throws on an array or an object — and a malformed `assetKey` is precisely
+ * what `INVALID_PROPERTY_TYPE` already reports, so decoding it eagerly turned a diagnostic into a
+ * crash. The editor asks for these diagnostics on every document now, which is what made a latent
+ * throw in the export path a way to take the whole editor down.
+ */
+private fun UiBuilderDocument.unboundAssetKeys(assetAdapter: ComposeAssetAdapter?): List<String> =
+  nodes.values
+    .filter { it.componentId == "asset/image" }
+    .mapNotNull { (it.obj("assetKey")["value"] as? JsonPrimitive)?.contentOrNull }
+    .filter { it !in assetAdapter?.bindings.orEmpty() }
+    .distinct()
+    .sorted()
 
 private class ComposeEmitter(
   private val document: UiBuilderDocument,
@@ -341,7 +373,7 @@ private class ComposeEmitter(
       "m3/horizontal-divider" ->
         line(
           bodyLevel,
-          "HorizontalDivider(color = ${node.colorExpression("color")}, ${node.modifierArgument()})",
+          "HorizontalDivider(${node.dimensionArgument("thickness", "thicknessDp")}color = ${node.colorExpression("color")}, ${node.modifierArgument()})",
         )
       "m3/text" -> emitText(node, bodyLevel)
       "m3/icon" -> emitIcon(node, bodyLevel)
@@ -476,7 +508,7 @@ private class ComposeEmitter(
     val minimum = node.obj("columns").number("minimumCellWidthDp", 362f)
     line(
       level,
-      "LazyVerticalGrid(columns = GridCells.Adaptive(${minimum.dpLiteral()}), contentPadding = ${node.obj("contentPadding").paddingValuesExpression()}, ${node.modifierArgument()}) {",
+      "LazyVerticalGrid(columns = GridCells.Adaptive(${minimum.dpLiteral()}), contentPadding = ${node.obj("contentPadding").paddingValuesExpression()}, verticalArrangement = Arrangement.spacedBy(${node.number("verticalSpacingDp").dpLiteral()}), horizontalArrangement = Arrangement.spacedBy(${node.number("horizontalSpacingDp").dpLiteral()}), ${node.modifierArgument()}) {",
     )
     node.slot("items").forEach { id ->
       val full = document.nodes.getValue(id).string("span") == "full"
@@ -649,7 +681,7 @@ private class ComposeEmitter(
   private fun emitSurface(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "Surface(${node.modifierArgument()}, color = ${node.colorExpression("containerColor")}) {",
+      "Surface(${node.modifierArgument()}, shape = ${node.shapeExpression()}, color = ${node.colorExpression("containerColor")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}) {",
     )
     node.slot("content").forEach { emitNode(it, level + 1) }
     line(level, "}")
@@ -658,7 +690,7 @@ private class ComposeEmitter(
   private fun emitCard(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "Card(${node.modifierArgument()}, shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}), colors = builderCardColors(${node.colorExpression("containerColor")})) {",
+      "Card(${node.modifierArgument()}, shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}), elevation = CardDefaults.cardElevation(defaultElevation = ${node.number("elevationDp").dpLiteral()}), colors = builderCardColors(${node.colorExpression("containerColor")})) {",
     )
     line(level + 1, "Box(Modifier.fillMaxSize()) {")
     node.slot("content").forEach { emitNode(it, level + 2) }
@@ -691,7 +723,7 @@ private class ComposeEmitter(
   private fun emitToolbar(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "BuilderHorizontalFloatingToolbar(expanded = ${node.boolValue("expanded", true)}, containerColor = ${node.colorExpression("containerColor")}, ${node.modifierArgument()}) {",
+      "BuilderHorizontalFloatingToolbar(expanded = ${node.boolValue("expanded", true)}, containerColor = ${node.colorExpression("containerColor")}, contentPadding = ${node.toolbarContentPaddingExpression()}, ${node.modifierArgument()}) {",
     )
     node.slot("content").forEach { emitNode(it, level + 1) }
     line(level, "}")
@@ -724,7 +756,7 @@ private class ComposeEmitter(
       "@Composable private fun BuilderSnackbarHost(visible: Boolean) { if (visible) Snackbar { Text(\"Snackbar\") } }"
     )
     appendLine(
-      "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, tonalElevation = 6.dp, shadowElevation = 8.dp) { Row(Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
+      "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, contentPadding: PaddingValues, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, tonalElevation = 6.dp, shadowElevation = 8.dp) { Row(Modifier.padding(contentPadding), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
     )
     appendLine(
       "@Composable private fun BuilderRadialGradient(modifier: Modifier, innerColor: Color, innerAlpha: Float, outerColor: Color, centerFraction: Offset) { Box(modifier.drawBehind { drawRect(Brush.radialGradient(listOf(innerColor.copy(alpha = innerAlpha), outerColor), center = Offset(size.width * centerFraction.x, size.height * centerFraction.y), radius = size.maxDimension * .82f)) }) }"
@@ -1219,6 +1251,39 @@ private fun Float.dpLiteral(): String = if (this % 1f == 0f) "${toInt()}.dp" els
 
 private fun Float.floatLiteral(): String = if (this % 1f == 0f) "${toInt()}f" else "${this}f"
 
+/**
+ * The shape argument for a node, mirroring what the renderer draws for the same node.
+ *
+ * A `shape` token wins over `shapeDp`, exactly as `UiBuilderNode.shape` decides it in the renderer:
+ * they are two spellings of one value and a component that read only one of them disagreed with the
+ * preview about half the documents.
+ */
+private fun UiBuilderNode.shapeExpression(): String {
+  val token = string("shape")
+  val corner = if (token.isNotEmpty()) shapeDp(token) else number("shapeDp")
+  return "RoundedCornerShape(${corner.dpLiteral()})"
+}
+
+/**
+ * `parameter = <n>.dp, ` when the document carries the dimension, and nothing when it does not.
+ *
+ * Absent is not zero for every parameter: a divider with no declared thickness wants Material's
+ * hairline, and emitting `thickness = 0.dp` would generate a divider that draws nothing.
+ */
+private fun UiBuilderNode.dimensionArgument(parameter: String, property: String): String =
+  obj(property)["value"]?.jsonPrimitive?.floatOrNull?.let { "$parameter = ${it.dpLiteral()}, " }
+    ?: ""
+
+/**
+ * A floating toolbar's own padding, or the 6dp both projections used to hard-code.
+ *
+ * The catalog exposes four padding edges for this component and nothing read them, so the edit was
+ * accepted, stored, and discarded. Absent stays 6dp rather than becoming zero: that is what the
+ * toolbar has always drawn, and a `contentPadding` nobody authored should not change it.
+ */
+private fun UiBuilderNode.toolbarContentPaddingExpression(): String =
+  (properties["contentPadding"] as? JsonObject)?.paddingValuesExpression() ?: "PaddingValues(6.dp)"
+
 private fun shapeDp(value: String?): Float =
   when (value) {
     "large" -> 16f
@@ -1340,6 +1405,25 @@ internal val COMPOSE_EMITTED_CLICK_COMPONENTS: Set<String> by lazy {
   HANDLED_FIELDS.filterValues { "click" in it.events }.keys
 }
 
+/**
+ * The dimensions this exporter emits, as `componentId.property`.
+ *
+ * The catalog gives every `…Dp` a number editor from its name alone, which is the right default and
+ * was the wrong rule on its own: a dimension no emitter reads is a control whose every value is
+ * discarded, and `layout/lazy-grid.verticalSpacingDp` was exactly that — authored, stored, offered,
+ * and drawn as zero by both projections.
+ *
+ * Derived rather than listed for the same reason [COMPOSE_EMITTED_CLICK_COMPONENTS] is: adding a
+ * dimension to an emitter is what should make it editable, and two places holding one rule is how
+ * it came to disagree in the first place.
+ */
+internal val COMPOSE_EMITTED_DP_PROPERTIES: Set<String> by lazy {
+  HANDLED_FIELDS.flatMap { (componentId, fields) ->
+      fields.properties.filter { it.endsWith("Dp") }.map { "$componentId.$it" }
+    }
+    .toSet()
+}
+
 private val HANDLED_FIELDS =
   mapOf(
     "asset/image" to HandledFields(setOf("assetKey", "contentDescription", "contentScale")),
@@ -1360,7 +1444,16 @@ private val HANDLED_FIELDS =
     "layout/lazy-column" to
       HandledFields(setOf("contentPadding", "scrollStateKey", "verticalSpacingDp"), setOf("items")),
     "layout/lazy-grid" to
-      HandledFields(setOf("columns", "contentPadding", "scrollStateKey"), setOf("items")),
+      HandledFields(
+        setOf(
+          "columns",
+          "contentPadding",
+          "horizontalSpacingDp",
+          "scrollStateKey",
+          "verticalSpacingDp",
+        ),
+        setOf("items"),
+      ),
     "layout/lazy-row" to
       HandledFields(
         setOf("contentPadding", "horizontalSpacingDp", "span", "stableKey"),
@@ -1391,7 +1484,8 @@ private val HANDLED_FIELDS =
         setOf("content"),
         setOf("click"),
       ),
-    "m3/card" to HandledFields(setOf("containerColor", "shape", "stableKey"), setOf("content")),
+    "m3/card" to
+      HandledFields(setOf("containerColor", "elevationDp", "shape", "stableKey"), setOf("content")),
     "m3/center-aligned-top-app-bar" to HandledFields(slots = setOf("title")),
     "m3/filter-chip" to
       HandledFields(
@@ -1399,9 +1493,12 @@ private val HANDLED_FIELDS =
         setOf("label", "leadingIcon"),
         setOf("click"),
       ),
-    "m3/horizontal-divider" to HandledFields(setOf("color")),
+    "m3/horizontal-divider" to HandledFields(setOf("color", "thicknessDp")),
     "m3/horizontal-floating-toolbar" to
-      HandledFields(setOf("alignment", "containerColor", "expanded"), setOf("content")),
+      HandledFields(
+        setOf("alignment", "containerColor", "contentPadding", "expanded"),
+        setOf("content"),
+      ),
     "m3/icon" to HandledFields(setOf("iconKey", "contentDescription", "color", "sizeDp")),
     "m3/icon-button" to
       HandledFields(
@@ -1419,7 +1516,11 @@ private val HANDLED_FIELDS =
         setOf("valueChange"),
       ),
     "m3/snackbar-host" to HandledFields(setOf("visible")),
-    "m3/surface" to HandledFields(setOf("containerColor"), setOf("content")),
+    "m3/surface" to
+      HandledFields(
+        setOf("containerColor", "shape", "shapeDp", "tonalElevationDp"),
+        setOf("content"),
+      ),
     "m3/tab" to HandledFields(setOf("selected"), setOf("text")),
     "m3/text" to
       HandledFields(

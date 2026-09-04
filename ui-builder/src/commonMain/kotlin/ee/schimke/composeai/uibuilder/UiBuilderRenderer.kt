@@ -40,6 +40,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -103,6 +104,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -451,8 +453,15 @@ private fun RenderNode(
   onTextLayout: (String, TextLayoutResult) -> Unit,
   semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
   modifier: Modifier = Modifier,
+  ancestors: Set<String> = emptySet(),
 ) {
-  val node = requireNotNull(document.nodes[nodeId]) { "unknown node: $nodeId" }
+  // A reference to a node that is not there, and a reference to one already on this path, are both
+  // things the export gate reports — `UNKNOWN_CHILD`, `GRAPH_CYCLE`. `requireNotNull` and an
+  // unbounded recursion took the whole composition down instead, which meant the editor could not
+  // draw the document its own Issues panel exists to describe. Drawing nothing for the bad
+  // reference and everything else as usual is what leaves the diagnostic to the panel.
+  val node = document.nodes[nodeId]
+  if (node == null || nodeId in ancestors) return
   val enabled = node.bool("enabled", true)
   val activate = { node.dispatch("click", state, onState) }
   if (node.eventBindings["click"] != null) {
@@ -466,6 +475,7 @@ private fun RenderNode(
       }
       .then(node.actionModifier(activate, enabled))
   fun slot(name: String) = node.slots[name].orEmpty()
+  val here = ancestors + nodeId
   val child: @Composable (String, Modifier) -> Unit = { id, next ->
     RenderNode(
       document,
@@ -476,6 +486,7 @@ private fun RenderNode(
       onTextLayout,
       semanticActions,
       next,
+      here,
     )
   }
 
@@ -598,6 +609,10 @@ private fun RenderNode(
         modifier = measured,
         state = lazyState,
         contentPadding = node.obj("contentPadding").paddingValues(),
+        // The catalog declares both on this component and nothing read either, so a grid's
+        // spacing was authored, stored, offered in the inspector, and drawn as zero.
+        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+        horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
       ) {
         items(
           items = slot("items"),
@@ -693,6 +708,7 @@ private fun RenderNode(
         measured,
         shape = node.shape(themeCornerRadius),
         color = node.color("containerColor", Color.Transparent),
+        tonalElevation = node.float("tonalElevationDp").dp,
       ) {
         slot("content").forEach { child(it, Modifier) }
       }
@@ -744,6 +760,9 @@ private fun RenderNode(
     "m3/horizontal-divider" ->
       HorizontalDivider(
         measured,
+        // Absent means Material's own thickness, not zero — a hairline is what a divider is, and
+        // `float(name)`'s zero fallback would have drawn nothing at all.
+        thickness = node.dimension("thicknessDp") ?: DividerDefaults.Thickness,
         color = node.color("color", MaterialTheme.colorScheme.outlineVariant),
       )
     "m3/icon" -> BuilderIcon(node, measured)
@@ -1038,7 +1057,11 @@ private fun CompatibleFloatingToolbar(
     shadowElevation = 8.dp,
   ) {
     Row(
-      Modifier.padding(6.dp),
+      // The catalog exposes four padding edges for this component and nothing read them. Absent
+      // stays the 6dp this toolbar has always drawn rather than becoming zero.
+      Modifier.padding(
+        (node.properties["contentPadding"] as? JsonObject)?.paddingValues() ?: PaddingValues(6.dp)
+      ),
       horizontalArrangement = Arrangement.spacedBy(6.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1408,6 +1431,10 @@ private fun UiBuilderNode.string(name: String): String =
 
 private fun UiBuilderNode.float(name: String, fallback: Float = 0f): Float =
   obj(name)["value"]?.jsonPrimitive?.floatOrNull ?: fallback
+
+/** A dimension the document actually carries, or null — which is not the same as zero. */
+private fun UiBuilderNode.dimension(name: String): Dp? =
+  obj(name)["value"]?.jsonPrimitive?.floatOrNull?.dp
 
 private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
   obj(name)["value"]?.jsonPrimitive?.intOrNull ?: fallback

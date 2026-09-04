@@ -5,6 +5,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -40,11 +41,74 @@ fun UiBuilderEditorChromePreview() {
  */
 private const val EDITOR_CHROME_PREVIEW_SELECTION = "search-placeholder"
 
+/**
+ * The inspector with a layout container selected.
+ *
+ * A second preview rather than a second selection on the first, because they answer different
+ * questions: that one is the editor's shape, this one is what the property panel will actually let
+ * a person change about a screen's layout. `discover-grid` is a `layout/lazy-grid`, which declares
+ * spacing, an adaptive column rule and a content padding — the three shapes the inspector used to
+ * refuse.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderLayoutInspectorPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "discover-grid",
+  )
+}
+
 private val editorChromePreviewDocument: UiBuilderDocument by lazy {
   UiBuilderReducer.replay(
       Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject
     )
     .document
+}
+
+/**
+ * The issues panel with something to say.
+ *
+ * The checked-in fixture is clean, which is the right baseline and a useless render: an empty panel
+ * proves nothing about how a problem reads. Two are seeded here instead, one of each kind the gate
+ * finds — a node missing a property its component requires, and a node no root can reach.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderIssuesInspectorPreview() {
+  UiBuilderEditor(
+    document = editorIssuesPreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialInspectorMode = EditorInspectorMode.Issues,
+  )
+}
+
+private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
+  val document = editorChromePreviewDocument
+  val placeholder = document.nodes.getValue(EDITOR_CHROME_PREVIEW_SELECTION)
+  val searchInput = document.nodes.getValue("search-input")
+  document.copy(
+    nodes =
+      document.nodes +
+        mapOf(
+          // `m3/text` requires `text`, and a node that lost it is not a rejected write — nothing
+          // wrote to it. It is a document that will not export.
+          placeholder.id to
+            placeholder.copy(properties = JsonObject(placeholder.properties - "text")),
+          // Dropping the child leaves the icon in `nodes` with no parent, which is the shape a
+          // botched delete leaves behind. The slot it moves to names a node that was never there,
+          // which is the other half: the canvas and the layers panel both walk that reference, and
+          // both used to take the editor down on it rather than leave it to the panel to report.
+          searchInput.id to
+            searchInput.copy(
+              slots =
+                searchInput.slots - "trailingIcon" +
+                  mapOf("leadingIcon" to listOf("search-leading-icon", "icon-that-was-deleted"))
+            ),
+        )
+  )
 }
 
 private val editorChromePreviewCatalog: CapabilityCatalog by lazy {

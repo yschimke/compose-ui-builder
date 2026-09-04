@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.capability
 
+import ee.schimke.composeai.uibuilder.COMPOSE_EMITTED_DP_PROPERTIES
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -89,6 +90,12 @@ data class PropertyCapability(
 @Serializable
 data class PropertyEditorCapability(
   val control: PropertyEditorControl? = null,
+  /**
+   * For a property the catalog declares only as `"object"`, which of the closed value shapes it
+   * holds — `padding`, `adaptiveGrid`. The catalog says `"object"` and stops, so without this the
+   * inspector cannot tell a four-edge padding from an arbitrary map and refuses to edit either.
+   */
+  val objectKind: String? = null,
   val minimum: Double? = null,
   val maximum: Double? = null,
   val step: Double? = null,
@@ -204,9 +211,49 @@ object CapabilityCatalogParser {
     return when ((property.jsonType as? JsonPrimitive)?.contentOrNull) {
       "string" -> PropertyEditorCapability(control = PropertyEditorControl.TEXT)
       "boolean" -> PropertyEditorCapability(control = PropertyEditorControl.BOOLEAN)
+      // A numeric property carries its unit in its name, and that is enough to give it a range.
+      //
+      // Without one it has no bounds, and a number with no bounds is `Unsupported` in the
+      // inspector — which is how every spacing, size, elevation and thickness in this catalog came
+      // to be uneditable while `m3/text` had six working number fields. Fourteen of the catalog's
+      // twenty-two numeric properties were in that state, including `verticalSpacingDp` on Column
+      // and `horizontalSpacingDp` on Row: the two controls a person reaches for first.
+      //
+      // A rule rather than fourteen more entries in [EDITOR_OVERRIDES], because the next component
+      // to declare a `…Dp` should arrive editable rather than waiting for someone to notice. An
+      // explicit override still wins: it is consulted above this.
+      "number",
+      "integer" ->
+        // …and only where a projection reads it. A dimension no emitter takes is a control whose
+        // every value is discarded — worse than no control, because the design then looks
+        // authored and renders and exports as if it were not. `COMPOSE_EMITTED_DP_PROPERTIES` is
+        // derived from the exporter's own field table, so adding a dimension to an emitter is
+        // what makes it editable, rather than someone remembering to.
+        if (
+          property.name.endsWith("Dp") &&
+            "$componentId.${property.name}" in COMPOSE_EMITTED_DP_PROPERTIES
+        )
+          // Arrangement spacing may be negative — that is how children are made to overlap, and
+          // `Arrangement.spacedBy` and the exporter both take the signed value. A padding or a
+          // size may not, so the floor is per property rather than one blanket zero.
+          numberEditor(
+            if (property.name.endsWith("SpacingDp")) -MAXIMUM_AUTHORED_DP else 0.0,
+            MAXIMUM_AUTHORED_DP,
+            1.0,
+          )
+        else null
       else -> null
     }
   }
+
+  /**
+   * Wide enough for any dimension this renderer can lay out and narrow enough to stay a dimension.
+   *
+   * The bound is not a design opinion about how much padding is reasonable — it is the range the
+   * renderer and the Compose exporter both round trip, which is what a number editor's bounds mean
+   * everywhere else in this file.
+   */
+  private const val MAXIMUM_AUTHORED_DP = 4096.0
 
   private val MATERIAL_COLOR_TOKENS =
     listOf(
@@ -240,7 +287,17 @@ object CapabilityCatalogParser {
       ("m3/text" to "minLines") to numberEditor(1.0, 100.0, 1.0),
       ("m3/text" to "maxLines") to numberEditor(1.0, 100.0, 1.0),
       ("m3/text" to "weight") to numberEditor(0.1, 100.0, 0.1),
+      // Declared `"object"` and nothing else, so the shape has to be named here. Both are closed
+      // protocol value types the renderer already reads and the exporter already emits; only the
+      // inspector could not reach them.
+      ("layout/lazy-column" to "contentPadding") to objectEditor("padding"),
+      ("layout/lazy-grid" to "contentPadding") to objectEditor("padding"),
+      ("layout/lazy-row" to "contentPadding") to objectEditor("padding"),
+      ("m3/horizontal-floating-toolbar" to "contentPadding") to objectEditor("padding"),
+      ("layout/lazy-grid" to "columns") to objectEditor("adaptiveGrid"),
     )
+
+  private fun objectEditor(kind: String) = PropertyEditorCapability(objectKind = kind)
 
   private fun numberEditor(
     minimum: Double,
