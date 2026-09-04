@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.input.key.Key
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -11,7 +12,7 @@ import kotlin.test.assertTrue
  * testing is that those cannot disagree.
  */
 class EditorShortcutTableTest {
-  private fun resolve(chord: EditorChord) = EDITOR_SHORTCUTS.firstOrNull { it.matches(chord) }
+  private fun resolve(chord: EditorChord) = editorShortcutFor(chord)
 
   @Test
   fun `every advertised shortcut is reachable`() {
@@ -81,6 +82,34 @@ class EditorShortcutTableTest {
     assertEquals(chords.distinct(), chords, "two rows would advertise the same chord")
     assertTrue(EDITOR_SHORTCUTS.all { it.chord.isNotBlank() && it.description.isNotBlank() })
     assertTrue(EDITOR_GESTURES.all { it.first.isNotBlank() && it.second.isNotBlank() })
+  }
+
+  @Test
+  fun `previewing leaves only the chord that ends it`() {
+    // With the selection overlay gone there is nothing on screen to show what a Delete or an arrow
+    // just did, so those chords would edit invisibly and surprise later.
+    val previewing = EditorChord(Key.Enter, command = true, shift = false)
+    assertEquals(
+      UiBuilderEditorEvent.TogglePreview,
+      editorShortcutFor(previewing, previewing = true)?.event,
+    )
+    listOf(Key.Delete, Key.Z, Key.C, Key.V, Key.D, Key.DirectionDown, Key.P).forEach { key ->
+      assertNull(
+        editorShortcutFor(
+          EditorChord(
+            key,
+            command = key != Key.Delete && key != Key.DirectionDown,
+            shift = false,
+          ),
+          previewing = true,
+        ),
+        "$key should be inert while previewing",
+      )
+    }
+    // And every one of them is live again the moment the canvas comes back.
+    assertNotNull(editorShortcutFor(EditorChord(Key.Delete, command = false, shift = false)))
+    // Ctrl/⌘+P is the browser's print dialog and is deliberately not ours, previewing or not.
+    assertNull(editorShortcutFor(EditorChord(Key.P, command = true, shift = false)))
   }
 
   @Test

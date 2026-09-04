@@ -86,6 +86,26 @@ fun UiBuilderIssuesInspectorPreview() {
 }
 
 /**
+ * The canvas handed to the screen.
+ *
+ * The selection overlay is gone, so a tap reaches the component under it and the renderer's state
+ * writes actually run. The toolbar says which side it is on. Nothing else moves — the panels stay
+ * live on purpose, because they are explicit actions, unlike a keystroke aimed at the canvas.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderPreviewModePreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    // The same node `UiBuilderLayoutInspectorPreview` selects, and a big one, so the selection
+    // overlay's absence is the visible half of a change that is otherwise all behaviour.
+    initialSelectedNodeId = "discover-grid",
+    initialPreviewMode = true,
+  )
+}
+
+/**
  * The layers panel filtered, which is the state the panel spends most of its useful life in.
  *
  * `m3/filter-chip` narrows a hundred and eight rows to the fixture's four chips plus the chain that

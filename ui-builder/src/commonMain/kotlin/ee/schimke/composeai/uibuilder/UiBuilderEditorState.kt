@@ -207,6 +207,14 @@ data class UiBuilderEditorState(
   val clipboard: EditorClipboard? = null,
   val catalogQuery: String = "",
   val layerQuery: String = "",
+  /**
+   * Whether taps on the canvas drive the screen instead of selecting layers.
+   *
+   * The renderer has always been interactive — a click binding writes state and the composition
+   * reacts — but in the editor a full-size selection overlay sits on top of it and swallows every
+   * tap. So a screen wired to react could not be made to react by the person who wired it.
+   */
+  val previewMode: Boolean = false,
   val operationSequence: Int = 0,
   val lastOutcome: CommandOutcome? = null,
   val selectionBeforeOperations: Map<String, String?> = emptyMap(),
@@ -273,6 +281,15 @@ sealed interface UiBuilderEditorEvent {
 
   /** Narrows the layers panel. Purely a view over the document; it writes nothing. */
   data class SearchLayers(val query: String) : UiBuilderEditorEvent
+
+  /**
+   * Hands the canvas to the screen and back.
+   *
+   * The only editor event that stays live while previewing. Everything else is suppressed, because
+   * the chords that select and delete would otherwise still be editing a document nobody can see
+   * themselves editing.
+   */
+  data object TogglePreview : UiBuilderEditorEvent
 
   /**
    * Selects every row the layers filter matched.
@@ -562,6 +579,7 @@ class UiBuilderEditorReducer(
       clipboard = state.clipboard,
       catalogQuery = state.catalogQuery,
       layerQuery = state.layerQuery,
+      previewMode = state.previewMode,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
     )
@@ -571,6 +589,7 @@ class UiBuilderEditorReducer(
     when (event) {
       is UiBuilderEditorEvent.SearchCatalog -> state.copy(catalogQuery = event.query)
       is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
+      is UiBuilderEditorEvent.TogglePreview -> state.copy(previewMode = !state.previewMode)
       is UiBuilderEditorEvent.SelectAllMatches -> selectAllMatches(state)
       is UiBuilderEditorEvent.SelectNode ->
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))

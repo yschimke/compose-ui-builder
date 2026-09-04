@@ -190,5 +190,19 @@ class EditorLayerFilterTest {
     )
   }
 
+  @Test
+  fun `an authoritative update does not drop out of preview mode`() {
+    // Same reconciliation, same reason: preview mode is view state, and saving while previewing
+    // threw you back into the editor without explaining why.
+    val previewing =
+      reducer.reduce(
+        reducer.initial(document, selectedNodeId = "root-surface"),
+        UiBuilderEditorEvent.TogglePreview,
+      )
+    assertTrue(previewing.previewMode)
+
+    assertTrue(reducer.reconciled(previewing, previewing.document.copy(revision = 99)).previewMode)
+  }
+
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }
