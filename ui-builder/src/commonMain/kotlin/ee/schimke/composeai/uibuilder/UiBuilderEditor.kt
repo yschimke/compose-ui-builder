@@ -154,6 +154,7 @@ fun UiBuilderEditor(
   authoritativeGeneration: Int = 0,
   initialSelectedNodeId: String? = null,
   initialCatalogQuery: String = "",
+  initialLayerQuery: String = "",
   initialInspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
@@ -174,7 +175,11 @@ fun UiBuilderEditor(
               initialSelectedNodeId?.takeIf(document.nodes::containsKey)
                 ?: document.roots.firstOrNull(),
           )
-          .copy(catalogQuery = initialCatalogQuery, inspectorMode = initialInspectorMode)
+          .copy(
+            catalogQuery = initialCatalogQuery,
+            layerQuery = initialLayerQuery,
+            inspectorMode = initialInspectorMode,
+          )
       )
     }
   LaunchedEffect(document.revision, authoritativeGeneration) {
@@ -210,12 +215,17 @@ fun UiBuilderEditor(
       draggedTarget?.let { "${it.nodeId}.${it.slot}" } ?: "No compatible slot",
     )
   }
+  // Cached for the same reason as the issues scan further down, at a smaller scale: the filter
+  // lowercases and scans four strings for every node in the document, and the panel recomposes far
+  // more often than either the document or the query changes.
+  val treeRows =
+    remember(reducer, state.document, state.layerQuery) { reducer.visibleTreeRows(state) }
   val navigator: @Composable (Modifier, Boolean) -> Unit = { modifier, closeAfterDrop ->
     EditorNavigator(
       state = state,
       catalogSystemId = catalog.benchmark.catalogSystemId,
       catalogItems = reducer.catalogItems(state.catalogQuery),
-      treeRows = reducer.treeRows(state.document),
+      treeRows = treeRows,
       collaborators = collaborators,
       dropTargetLabel = reducer.dropTargetLabel(state, draggedComponentId ?: "m3/text"),
       onCatalogDrag = { componentId, position ->
@@ -1082,6 +1092,7 @@ private fun EditorNavigator(
       )
       SearchField(
         state.catalogQuery,
+        placeholder = "Search components",
         onFocusChanged = onTextInputFocusChanged,
       ) {
         dispatch(UiBuilderEditorEvent.SearchCatalog(it))
@@ -1099,7 +1110,34 @@ private fun EditorNavigator(
         }
       }
       HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-      PanelHeading("Layers", "Drag vertically to reorder")
+      val matches = treeRows.count(EditorTreeRow::matched)
+      PanelHeading(
+        "Layers",
+        if (state.layerQuery.isBlank()) "Drag vertically to reorder"
+        else "$matches of ${state.document.nodes.size} match",
+      )
+      SearchField(
+        state.layerQuery,
+        // Reusing the catalog's field meant reusing its placeholder, so an empty layers filter
+        // invited you to search components. Two fields, two things to look for.
+        placeholder = "Filter layers",
+        onFocusChanged = onTextInputFocusChanged,
+      ) {
+        dispatch(UiBuilderEditorEvent.SearchLayers(it))
+      }
+      // The multi-node inspector is only as reachable as the selection is. Filtering to every text
+      // on the screen and then taking all of them is what makes restyling a screen one edit.
+      if (state.layerQuery.isNotBlank() && matches > 0) {
+        TextButton(
+          onClick = {
+            onEditorInteraction()
+            dispatch(UiBuilderEditorEvent.SelectAllMatches)
+          },
+          modifier = Modifier.padding(horizontal = 8.dp),
+        ) {
+          Text("Select all $matches")
+        }
+      }
       LazyColumn(Modifier.fillMaxSize()) {
         itemsIndexed(treeRows, key = { _, row -> row.nodeId }) { _, row ->
           LayerRow(
@@ -1236,6 +1274,7 @@ private fun PanelHeading(title: String, supporting: String) {
 @Composable
 private fun SearchField(
   value: String,
+  placeholder: String,
   onFocusChanged: (Boolean) -> Unit,
   onValueChange: (String) -> Unit,
 ) {
@@ -1253,7 +1292,7 @@ private fun SearchField(
       Box(Modifier.weight(1f)) {
         if (value.isEmpty()) {
           Text(
-            "Search components",
+            placeholder,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
           )
@@ -1452,6 +1491,11 @@ private fun LayerRow(
       Text(
         row.label,
         Modifier.padding(start = 5.dp).weight(1f),
+        // A row kept only to carry a matching descendant is context, and reads as context. Without
+        // this a filter looks like it matched the ancestors too.
+        color =
+          if (row.matched) MaterialTheme.colorScheme.onSurface
+          else MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

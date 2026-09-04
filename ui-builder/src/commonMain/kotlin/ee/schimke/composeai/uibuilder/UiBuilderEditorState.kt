@@ -78,6 +78,12 @@ data class EditorTreeRow(
   val componentLabel: String,
   val depth: Int,
   val parent: ParentSlot?,
+  /**
+   * Whether the row answers the layers filter itself, rather than being shown to carry a descendant
+   * that does. False rows are context: they keep the indentation meaningful and are not what
+   * "select all matches" selects.
+   */
+  val matched: Boolean = true,
 ) {
   /** Whether [label] came from the node's own content rather than from its component. */
   val named: Boolean
@@ -200,6 +206,7 @@ data class UiBuilderEditorState(
   val selection: List<String> = emptyList(),
   val clipboard: EditorClipboard? = null,
   val catalogQuery: String = "",
+  val layerQuery: String = "",
   val operationSequence: Int = 0,
   val lastOutcome: CommandOutcome? = null,
   val selectionBeforeOperations: Map<String, String?> = emptyMap(),
@@ -263,6 +270,18 @@ sealed interface UiBuilderEditorEvent {
   data class SearchCatalog(val query: String) : UiBuilderEditorEvent
 
   data class SelectNode(val nodeId: String) : UiBuilderEditorEvent
+
+  /** Narrows the layers panel. Purely a view over the document; it writes nothing. */
+  data class SearchLayers(val query: String) : UiBuilderEditorEvent
+
+  /**
+   * Selects every row the layers filter matched.
+   *
+   * The multi-node property editor is only as reachable as the selection is: restyling every text
+   * on a screen meant finding each of them by eye in a hundred-row tree. Filter, then take all of
+   * them in one press.
+   */
+  data object SelectAllMatches : UiBuilderEditorEvent
 
   /** Add or remove one node, leaving the rest of the selection alone (ctrl/⌘-click). */
   data class ToggleNode(val nodeId: String) : UiBuilderEditorEvent
@@ -542,6 +561,7 @@ class UiBuilderEditorReducer(
       selection = survivingSelection.ifEmpty { rebuilt.selection },
       clipboard = state.clipboard,
       catalogQuery = state.catalogQuery,
+      layerQuery = state.layerQuery,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
     )
@@ -550,6 +570,8 @@ class UiBuilderEditorReducer(
   fun reduce(state: UiBuilderEditorState, event: UiBuilderEditorEvent): UiBuilderEditorState =
     when (event) {
       is UiBuilderEditorEvent.SearchCatalog -> state.copy(catalogQuery = event.query)
+      is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
+      is UiBuilderEditorEvent.SelectAllMatches -> selectAllMatches(state)
       is UiBuilderEditorEvent.SelectNode ->
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))
         else state
@@ -779,6 +801,64 @@ class UiBuilderEditorReducer(
     }
     document.roots.forEach { visit(it, 0, null) }
     return rows
+  }
+
+  /**
+   * The layers panel's rows, narrowed by [UiBuilderEditorState.layerQuery].
+   *
+   * A row survives the filter when it matches **or when one of its descendants does**, because a
+   * tree filtered to bare matches loses the indentation that made it a tree: a row three levels
+   * deep would sit flush against an unrelated root. Ancestors come through as context, with
+   * [EditorTreeRow.matched] false, so nothing selects them by accident.
+   *
+   * Matching is over everything the panel and the document call the node — what it says, what its
+   * component is called, its own id and its component id — because those are the four things a
+   * person types when looking for one.
+   */
+  fun visibleTreeRows(state: UiBuilderEditorState): List<EditorTreeRow> {
+    val rows = treeRows(state.document)
+    val needle = state.layerQuery.trim().lowercase()
+    if (needle.isEmpty()) return rows
+    fun EditorTreeRow.matches(): Boolean =
+      label.lowercase().contains(needle) ||
+        componentLabel.lowercase().contains(needle) ||
+        nodeId.lowercase().contains(needle) ||
+        componentId.lowercase().contains(needle)
+    val matched = rows.map { it.matches() }
+    // A row is kept when it matched, or when it is an ancestor of one.
+    //
+    // Ancestors come from parent pointers built in one forward pass: on a pre-order walk the most
+    // recent row at depth d-1 is the parent of a row at depth d. The previous version scanned
+    // *backwards over every preceding row* for each match, which is quadratic — one root with
+    // 9,999 matching children walked some 50 million rows, synchronously in the Wasm UI, on every
+    // keystroke in the filter field. The service permits 10,000-node designs.
+    val parent = IntArray(rows.size) { -1 }
+    val deepest = rows.maxOfOrNull(EditorTreeRow::depth) ?: -1
+    val ancestorAtDepth = IntArray(deepest + 1) { -1 }
+    rows.forEachIndexed { index, row ->
+      parent[index] = if (row.depth == 0) -1 else ancestorAtDepth[row.depth - 1]
+      ancestorAtDepth[row.depth] = index
+    }
+    val keep = BooleanArray(rows.size)
+    rows.indices.forEach { index ->
+      if (!matched[index]) return@forEach
+      keep[index] = true
+      // Stop at the first ancestor already kept: whatever marked it walked its own chain to the
+      // root, so everything above is kept too. That is what keeps the total linear.
+      var above = parent[index]
+      while (above >= 0 && !keep[above]) {
+        keep[above] = true
+        above = parent[above]
+      }
+    }
+    return rows.indices
+      .filter { keep[it] }
+      .map { index -> rows[index].copy(matched = matched[index]) }
+  }
+
+  private fun selectAllMatches(state: UiBuilderEditorState): UiBuilderEditorState {
+    val matches = visibleTreeRows(state).filter(EditorTreeRow::matched).map(EditorTreeRow::nodeId)
+    return if (matches.isEmpty()) state else state.copy(selection = matches)
   }
 
   /**
@@ -1353,7 +1433,7 @@ class UiBuilderEditorReducer(
   private fun extendSelection(state: UiBuilderEditorState, nodeId: String): UiBuilderEditorState {
     if (nodeId !in state.document.nodes) return state
     val anchor = state.selectedNodeId ?: return state.copy(selection = listOf(nodeId))
-    val order = treeRows(state.document).map(EditorTreeRow::nodeId)
+    val order = visibleTreeRows(state).map(EditorTreeRow::nodeId)
     val from = order.indexOf(anchor)
     val to = order.indexOf(nodeId)
     if (from < 0 || to < 0) return state.copy(selection = listOf(nodeId))
@@ -1367,7 +1447,9 @@ class UiBuilderEditorReducer(
     state: UiBuilderEditorState,
     move: EditorSelectionMove,
   ): UiBuilderEditorState {
-    val rows = treeRows(state.document)
+    // The visible rows, not the whole tree: an arrow press should land where the panel shows the
+    // next row, and while a filter is on that is not the same list.
+    val rows = visibleTreeRows(state)
     if (rows.isEmpty()) return state
     val index = rows.indexOfFirst { it.nodeId == state.selectedNodeId }
     // Nothing selected yet: any step starts at the top, which is what a first arrow press means.

@@ -85,6 +85,24 @@ fun UiBuilderIssuesInspectorPreview() {
   )
 }
 
+/**
+ * The layers panel filtered, which is the state the panel spends most of its useful life in.
+ *
+ * `m3/filter-chip` narrows a hundred and eight rows to the fixture's four chips plus the chain that
+ * holds them, and the panel offers to select all four at once — which is what makes the multi-node
+ * inspector reachable on a screen this size.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderLayerFilterPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialLayerQuery = "m3/filter-chip",
+  )
+}
+
 private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
   val document = editorChromePreviewDocument
   val placeholder = document.nodes.getValue(EDITOR_CHROME_PREVIEW_SELECTION)
