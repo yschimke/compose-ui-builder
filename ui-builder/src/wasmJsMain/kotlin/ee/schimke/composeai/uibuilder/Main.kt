@@ -369,6 +369,7 @@ private fun LiveSessionApp() {
   var authoritativeDocument by remember { mutableStateOf<DesignDocumentV1?>(null) }
   var catalog by remember { mutableStateOf<CapabilityCatalog?>(null) }
   var newDesignCatalogs by remember { mutableStateOf<List<UiBuilderNewDesignCatalog>>(emptyList()) }
+  var devicePresets by remember { mutableStateOf<List<UiBuilderDevicePreset>>(emptyList()) }
   var sessionStatus by remember { mutableStateOf("Connecting…") }
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
   var authoritativeGeneration by remember { mutableStateOf(0) }
@@ -410,6 +411,8 @@ private fun LiveSessionApp() {
       }
     }
   }
+
+  LaunchedEffect(Unit) { devicePresets = loadDevicePresets() }
 
   LaunchedEffect(config) {
     val availableCatalogs = loadLiveCatalogs(http)
@@ -673,6 +676,7 @@ private fun LiveSessionApp() {
       initialSelectedNodeId = selectedNodeId,
       initialCatalogQuery = catalogQuery,
       collaborators = collaborators,
+      devicePresets = devicePresets,
       newDesignCatalogs = newDesignCatalogs,
       onCreateDesign = { catalogSystemId, designId, templateId, state ->
         navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
@@ -1048,6 +1052,53 @@ private fun liveSessionConfig(): LiveSessionConfig {
       }
     }
 }
+
+/**
+ * The Screen inspector's device frames, read from the server.
+ *
+ * The server derives them from `DeviceDimensions`, the JVM-only catalog the render lane resolves
+ * against; `wasmJs` cannot depend on it, which is exactly why this crosses the wire instead of
+ * being a constant in `:ui-builder`. A failure is not fatal — the inspector falls back to the raw
+ * width/height/density fields, which is where it was before the menu existed.
+ */
+private suspend fun loadDevicePresets(): List<UiBuilderDevicePreset> =
+  try {
+    devicePresetJson
+      .decodeFromString(DevicePresetsPayload.serializer(), fetchText(DEVICE_PRESETS_PATH))
+      .presets
+      .map {
+        UiBuilderDevicePreset(
+          id = it.id,
+          label = it.label,
+          group = it.group,
+          widthDp = it.widthDp,
+          heightDp = it.heightDp,
+          density = it.density,
+        )
+      }
+  } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+    throw cancelled
+  } catch (_: Exception) {
+    emptyList()
+  }
+
+private const val DEVICE_PRESETS_PATH = "/api/ui-builder/v1/device-presets"
+
+/** Tolerant on purpose: a server that learns a new preset field must not blank the whole menu. */
+private val devicePresetJson = Json { ignoreUnknownKeys = true }
+
+@kotlinx.serialization.Serializable
+private data class DevicePresetsPayload(val presets: List<DevicePresetWire> = emptyList())
+
+@kotlinx.serialization.Serializable
+private data class DevicePresetWire(
+  val id: String,
+  val label: String,
+  val group: String,
+  val widthDp: Int,
+  val heightDp: Int,
+  val density: Double,
+)
 
 private suspend fun loadLiveCatalogs(http: UiBuilderProtocolHttpClient): List<CatalogCapabilityV1> =
   when (val result = http.execute(ListCatalogsRequestV1)) {

@@ -158,6 +158,12 @@ fun UiBuilderEditor(
   initialInspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
   initialPreviewMode: Boolean = false,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
+  /**
+   * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
+   * the JVM-only render catalog they come from. Empty (the default) simply hides the menu and
+   * leaves the raw fields, so a host that has no catalog to hand still gets a working inspector.
+   */
+  devicePresets: List<UiBuilderDevicePreset> = emptyList(),
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
   onCreateDesign:
     ((
@@ -321,6 +327,7 @@ fun UiBuilderEditor(
       bindableProperties = bindableProperties,
       problems = problems,
       themeSettings = reducer.themeSettings(state),
+      devicePresets = devicePresets,
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,
@@ -1686,6 +1693,7 @@ private fun PropertyInspector(
   bindableProperties: Set<String>,
   problems: List<EditorProblem>,
   themeSettings: EditorThemeSettings,
+  devicePresets: List<UiBuilderDevicePreset>,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
@@ -1738,6 +1746,7 @@ private fun PropertyInspector(
       if (state.inspectorMode == EditorInspectorMode.Screen) {
         ScreenEnvironmentInspector(
           document = state.document,
+          devicePresets = devicePresets,
           onTextInputFocusChanged = onTextInputFocusChanged,
           dispatch = dispatch,
         )
@@ -2184,6 +2193,7 @@ private fun InspectorModeButton(
 @Composable
 private fun ScreenEnvironmentInspector(
   document: UiBuilderDocument,
+  devicePresets: List<UiBuilderDevicePreset>,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
@@ -2208,6 +2218,24 @@ private fun ScreenEnvironmentInspector(
     style = MaterialTheme.typography.bodySmall,
   )
   HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
+  if (devicePresets.isNotEmpty()) {
+    DevicePresetPicker(
+      presets = devicePresets,
+      selected = current.matchingDevicePreset(devicePresets),
+      onPick = { preset ->
+        // Width, height and density move together, in one dispatch, so the frame is one undoable
+        // step — `updateEnvironment` folds the three `SetEnvironment` operations into a single
+        // `DesignCommand`, and undo targets a command. Applying them as three edits would make
+        // checking a phone, then a tablet, then undoing leave a phone-width tablet on the canvas.
+        val applied = current.withDevicePreset(preset)
+        width = applied.widthDp.toString()
+        height = applied.heightDp.toString()
+        density = applied.density.toString()
+        validationError = applied.validationError()
+        if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(applied))
+      },
+    )
+  }
   Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     EnvironmentTextField(
       label = "Width (dp)",
@@ -2307,6 +2335,71 @@ private fun ScreenEnvironmentInspector(
     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
   ) {
     Text("Apply screen settings")
+  }
+}
+
+/**
+ * The frame menu — grouped by device family, each entry carrying the geometry the render lane
+ * resolves for it.
+ *
+ * Shows every device the catalog knows rather than a curated handful. A curated handful is exactly
+ * the hand-maintained list this feature exists to avoid, and it is the list that goes stale the
+ * first time the render catalog learns a device.
+ */
+@Composable
+private fun DevicePresetPicker(
+  presets: List<UiBuilderDevicePreset>,
+  selected: UiBuilderDevicePreset?,
+  onPick: (UiBuilderDevicePreset) -> Unit,
+) {
+  var expanded by remember { mutableStateOf(false) }
+  Text("Device", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+  Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp)) {
+    Button(
+      onClick = { expanded = true },
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Device preset" },
+    ) {
+      Text(
+        // A hand-typed frame is a legitimate state, not an error — name it rather than showing a
+        // device the canvas is not actually at.
+        selected?.label ?: "Custom size",
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      presets.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
+        Text(
+          group,
+          Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+          fontWeight = FontWeight.Bold,
+        )
+        devices.forEach { preset ->
+          DropdownMenuItem(
+            text = {
+              Column {
+                Text(
+                  preset.label,
+                  fontWeight =
+                    if (preset.id == selected?.id) FontWeight.Bold else FontWeight.Normal,
+                )
+                Text(
+                  preset.summary,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  style = MaterialTheme.typography.bodySmall,
+                )
+              }
+            },
+            onClick = {
+              expanded = false
+              onPick(preset)
+            },
+          )
+        }
+      }
+    }
   }
 }
 

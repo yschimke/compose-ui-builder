@@ -147,10 +147,22 @@ fun UiBuilderDocument.screenEnvironmentSettings(): ScreenEnvironmentSettings =
       } ?: EditorLayoutDirection.Ltr,
   )
 
+/**
+ * The dp floor a screen frame may sit at. 180 rather than a rounder number because that is the
+ * smallest frame the render lane's device catalog offers (`id:wearos_square`, 180 × 180) — a floor
+ * above it would reject half the Wear presets the Screen inspector lists, for a frame the renderer
+ * produces happily.
+ */
+private const val MIN_SCREEN_DP = 180
+
+private const val MAX_SCREEN_DP = 3840
+
 fun ScreenEnvironmentSettings.validationError(): String? =
   when {
-    widthDp !in 240..3840 -> "Width must be between 240 and 3840 dp."
-    heightDp !in 240..3840 -> "Height must be between 240 and 3840 dp."
+    widthDp !in MIN_SCREEN_DP..MAX_SCREEN_DP ->
+      "Width must be between $MIN_SCREEN_DP and $MAX_SCREEN_DP dp."
+    heightDp !in MIN_SCREEN_DP..MAX_SCREEN_DP ->
+      "Height must be between $MIN_SCREEN_DP and $MAX_SCREEN_DP dp."
     !density.isFinite() || density !in 0.5..4.0 -> "Density must be between 0.5 and 4.0."
     !fontScale.isFinite() || fontScale !in 0.5..3.0 -> "Font scale must be between 0.5 and 3.0."
     locale.length !in 2..64 || !Regex("[A-Za-z]{2,8}([_-][A-Za-z0-9]{1,8})*").matches(locale) ->

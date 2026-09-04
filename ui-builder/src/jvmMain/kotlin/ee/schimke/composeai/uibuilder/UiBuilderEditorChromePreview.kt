@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -173,6 +174,71 @@ fun UiBuilderLayerFilterPreview() {
     initialLayerQuery = "m3/filter-chip",
   )
 }
+
+/**
+ * The Screen inspector's device menu, with the canvas on a phone frame.
+ *
+ * Pairs with [UiBuilderDevicePresetTabletPreview]: same document, same catalog, same inspector tab,
+ * one preset apart. Read side by side they are the evidence that picking a frame moves the canvas —
+ * width, height and density together — which is the thing five raw text fields never showed.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderDevicePresetPhonePreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument.onDevice(PREVIEW_PHONE),
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "discover-grid",
+    initialInspectorMode = EditorInspectorMode.Screen,
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/** The same editor one preset over — see [UiBuilderDevicePresetPhonePreview]. */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderDevicePresetTabletPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument.onDevice(PREVIEW_TABLET),
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "discover-grid",
+    initialInspectorMode = EditorInspectorMode.Screen,
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/**
+ * Three frames for the two previews above, and nothing else reads them.
+ *
+ * A preview cannot reach the server, and the server is where the real list comes from — it resolves
+ * `DeviceDimensions`, the JVM-only catalog the render lane uses, precisely because `:ui-builder`
+ * cannot. So these are fixture values, in the same category as the ones the tests state, and they
+ * are deliberately three rather than a curated catalog: a fourth entry here would start to look
+ * like the hard-coded device list this feature exists to not have.
+ */
+private val PREVIEW_PHONE =
+  UiBuilderDevicePreset("id:pixel_7", "Pixel 7", "Phones", 411, 914, 2.625)
+private val PREVIEW_TABLET =
+  UiBuilderDevicePreset("id:pixel_tablet", "Pixel Tablet", "Tablets", 1280, 800, 2.0)
+private val PREVIEW_DEVICE_PRESETS =
+  listOf(
+    PREVIEW_PHONE,
+    UiBuilderDevicePreset("id:pixel_fold", "Pixel Fold", "Foldables", 841, 701, 2.625),
+    PREVIEW_TABLET,
+  )
+
+private fun UiBuilderDocument.onDevice(preset: UiBuilderDevicePreset): UiBuilderDocument =
+  copy(
+    environment =
+      JsonObject(
+        environment +
+          mapOf(
+            "widthDp" to JsonPrimitive(preset.widthDp),
+            "heightDp" to JsonPrimitive(preset.heightDp),
+            "density" to JsonPrimitive(preset.density),
+          )
+      )
+  )
 
 private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
   val document = editorChromePreviewDocument
