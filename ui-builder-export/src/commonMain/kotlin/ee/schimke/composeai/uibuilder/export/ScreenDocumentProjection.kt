@@ -150,8 +150,9 @@ private fun parameterForSlot(componentId: String, slot: String): String =
  * So the derivation stayed refused and the mapping is **authored**: [ENUM_MEMBERS] for the values
  * that are members of a type, [ICON_MEMBERS] for the icon keys, which are extension properties on
  * `Icons.Filled` and therefore a [ScreenValue.Chain] rather than a path. A value neither table
- * names is still refused by name — `expandedTwoPane` and `uncontained` select a *component* rather
- * than an argument, and no table of members can express that.
+ * names is still refused by name, under a reason authored for it in [VARIANT_PROPERTIES]:
+ * `expandedTwoPane` is a mode of one adaptive component and `uncontained` names which carousel to
+ * call, and neither is a member of anything a table could hold.
  */
 object ScreenDocumentProjection {
 
@@ -1198,14 +1199,9 @@ object ScreenDocumentProjection {
       val mapping =
         ENUM_MEMBERS[componentId]?.get(property)
           ?: return refuse(
-            if (componentId to property in VARIANT_PROPERTIES) {
-              "$where is `$entry`, which names a component variant rather than a value: the " +
-                "catalog spells three Compose components as one id, and choosing between them is " +
-                "a call-site decision this projection cannot make from a parameter"
-            } else {
-              "$where is the enum value `$entry`, and nothing maps this catalog property's " +
+            VARIANT_PROPERTIES[componentId to property]?.let { "$where is `$entry`, which $it" }
+              ?: "$where is the enum value `$entry`, and nothing maps this catalog property's " +
                 "values to Kotlin members"
-            }
           )
       val path =
         mapping.members[entry]
@@ -1894,16 +1890,34 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Properties whose values pick a **component**, not an argument.
+   * Properties whose values do not name a member of anything, and **why**, per entry.
    *
-   * No table of *members* can express these, because the value names a component rather than an
-   * argument. [COMPONENT_VARIANTS] is where that becomes expressible — `m3/card` went through it
-   * and is no longer here — so what is left is the ones nothing selects yet, and the refusal says
-   * so rather than reading like a missing member.
+   * A set with one shared sentence was enough while every entry was a card: `m3/card`'s `variant`
+   * really did spell three Compose components as one id, and the refusal said so. Both entries left
+   * moved on from that and the sentence did not, so it went on telling an operator the catalog
+   * spells three components as one id about a property where that is simply untrue
+   * ([compose-preview-server#394](https://github.com/yschimke/compose-preview-server/issues/394)).
+   *
+   * The two remaining are not even the same kind of wrong as each other — one names a **mode** of a
+   * single adaptive component and the other names **which** carousel to call — which is why the
+   * reason is authored per entry rather than shared. A refusal an operator cannot act on is worth
+   * about as much as no refusal, and one that describes a different component is worth less.
+   *
+   * [COMPONENT_VARIANTS] is where "picks a component" became expressible, and an id that goes
+   * through it leaves this table — `m3/card`, `m3/button`, `m3/text-field` and
+   * `m3/progress-indicator` all have.
+   *
+   * Each value completes "…`$entry`, which …".
    */
-  private val VARIANT_PROPERTIES: Set<Pair<String, String>> =
-    setOf(
-      "layout/supporting-pane-scaffold" to "layoutMode",
-      "layout/horizontal-carousel" to "kind",
+  private val VARIANT_PROPERTIES: Map<Pair<String, String>, String> =
+    mapOf(
+      ("layout/supporting-pane-scaffold" to "layoutMode") to
+        "names a layout mode of one adaptive component rather than a value: " +
+          "`SupportingPaneScaffold` decides how many panes to show from a scaffold directive and " +
+          "the window it is measured in, so there is no parameter for a mode to be written to",
+      ("layout/horizontal-carousel" to "kind") to
+        "names which carousel function to call rather than an argument to one, and no record " +
+          "selects a carousel yet: its `items` is a `CarouselScope` DSL, which is a slot shape " +
+          "this projection cannot emit",
     )
 }
