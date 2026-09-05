@@ -37,7 +37,11 @@ maven-publish = "0.37.0"
 # shared ref would have forced a plugin and renderer bump into the same change. That floor caught
 # up at 1.80.0 — the three refs met — so the split is gone rather than left reading as a live
 # constraint. Split them again only if the floor falls behind a coordinate this build needs.
-composeai-tools = "1.80.0"
+#
+# 1.82.0 is a floor rather than a bump: `ScreenDocumentProjection` emits `ChainLink
+# .receiverScopeFqn` and `ScreenValue.Fractional32`, which is how a layout weight became
+# expressible (compose-ai-tools#5212), and neither exists below it.
+composeai-tools = "1.82.0"
 composeai-contracts = "2.7.0"
 rc-players = "1.57.0"
 kotlinx-coroutines = "1.11.0"

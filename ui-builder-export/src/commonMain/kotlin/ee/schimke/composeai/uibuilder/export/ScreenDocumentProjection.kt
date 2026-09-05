@@ -130,6 +130,13 @@ private fun parameterForSlot(componentId: String, slot: String): String =
  */
 object ScreenDocumentProjection {
 
+  /**
+   * The Kotlin parameter a catalog slot fills. Public only so `M3CatalogSlotScopeTest` can walk the
+   * same alias the projection does when it checks [SLOT_SCOPES] against the shipped record.
+   */
+  fun parameterForSlotName(componentId: String, slot: String): String =
+    parameterForSlot(componentId, slot)
+
   sealed interface Outcome {
     data class Projected(val document: ScreenDocument) : Outcome
 
@@ -205,7 +212,15 @@ object ScreenDocumentProjection {
     val reasons = mutableListOf<String>()
     private val visiting = mutableSetOf<String>()
 
-    fun node(id: String): ScreenNode? {
+    /**
+     * @param scope the receiver of the slot this node sits in, or null at the root.
+     *
+     * Threaded down rather than looked up, because a node has no parent pointer and the answer is
+     * about placement rather than about the node. It is what `weight` and `matchParentSize` need:
+     * both are declared on a slot's receiver, so whether either compiles is decided here and
+     * nowhere else.
+     */
+    fun node(id: String, scope: String? = null): ScreenNode? {
       val node = document.nodes[id]
       if (node == null) {
         reasons += "the document references node `$id`, which it does not define"
@@ -221,18 +236,20 @@ object ScreenDocumentProjection {
       try {
         return ScreenNode(
           componentId = node.componentId,
-          arguments = arguments(node),
+          arguments = arguments(node, scope),
           slots =
-            node.slots
-              .mapKeys { (slot, _) -> parameterForSlot(node.componentId, slot) }
-              .mapValues { (_, children) -> children.mapNotNull { child -> node(child) } },
+            node.slots.entries.associate { (slot, children) ->
+              val childScope = SLOT_SCOPES[node.componentId]?.get(slot)
+              parameterForSlot(node.componentId, slot) to
+                children.mapNotNull { child -> node(child, childScope) }
+            },
         )
       } finally {
         visiting.remove(id)
       }
     }
 
-    private fun arguments(node: DesignNodeV1): Map<String, ScreenValue> {
+    private fun arguments(node: DesignNodeV1, scope: String?): Map<String, ScreenValue> {
       unexpressible(node)
       val arguments = mutableMapOf<String, ScreenValue>()
       // Properties that are not arguments at all — `m3/icon`'s `sizeDp` is `Modifier.size(24.dp)`,
@@ -241,6 +258,10 @@ object ScreenDocumentProjection {
       // in a fixed order instead of two arguments the generator would reject the second of.
       val fromProperties = mutableListOf<ChainLink>()
       for ((property, value) in node.properties) {
+        if (property == WEIGHT) {
+          weightLink(value, node, scope)?.let { fromProperties += it }
+          continue
+        }
         val link = MODIFIER_PROPERTIES[node.componentId]?.get(property)
         if (link != null) {
           modifierLink(link, value, node, property)?.let { fromProperties += it }
@@ -254,9 +275,56 @@ object ScreenDocumentProjection {
         arguments[target.parameter] = retarget(target, value, node, property) ?: continue
       }
       if (node.modifiers.isNotEmpty() || fromProperties.isNotEmpty() || tagNodes) {
-        modifiers(node, fromProperties)?.let { arguments["modifier"] = it }
+        modifiers(node, fromProperties, scope)?.let { arguments["modifier"] = it }
       }
       return arguments
+    }
+
+    /**
+     * The `Modifier.weight(…)` a layout weight becomes, or null having said why there isn't one.
+     *
+     * Two things had to change upstream before this could exist, and both were about spelling
+     * rather than about the value. `Modifier.weight` is declared on `RowScope` and `ColumnScope`,
+     * so it is legal only in the slot the node was placed in — [ChainLink.receiverScopeFqn] states
+     * that and `ScreenGenerator` checks it against the slot it emits into. And it takes a `Float`,
+     * which a nested `Fractional` could not be: nested, a fraction renders as a `Double` and
+     * `weight(1.0)` does not compile, which is what [ScreenValue.Fractional32] exists for.
+     *
+     * Outside a row or a column it stays refused, and the refusal now says where the node actually
+     * is — a weight on a `Box` child is a design mistake worth reading rather than a gap in a
+     * table.
+     */
+    private fun weightLink(value: UiValueV1, node: DesignNodeV1, scope: String?): ChainLink? {
+      val where = "node `${node.id}`.`weight`"
+      if (scope != ROW_SCOPE && scope != COLUMN_SCOPE) {
+        refuse(
+          "$where is a layout weight, which `Modifier.weight` supplies from a row's or column's " +
+            "scope; this node sits " +
+            (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
+        )
+        return null
+      }
+      val number =
+        when (value) {
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else -> {
+            refuse("$where becomes `Modifier.weight`, which needs a number")
+            return null
+          }
+        }
+      val weight = number.toFloat()
+      // The same narrowing rule `Dp` gets: a weight that does not survive `Float` would be emitted
+      // as `Infinity` or collapse to zero, which is a number the design never contained.
+      if (!weight.isFinite() || (weight == 0f && number != 0.0)) {
+        refuse("$where is $number, which does not survive `Float`")
+        return null
+      }
+      return ChainLink(
+        "$scope.weight",
+        positional = listOf(ScreenValue.Fractional32(weight)),
+        receiverScopeFqn = scope,
+      )
     }
 
     /**
@@ -317,11 +385,15 @@ object ScreenDocumentProjection {
     }
 
     /** The `modifier` argument for a node's modifier list, or null having said why not. */
-    private fun modifiers(node: DesignNodeV1, fromProperties: List<ChainLink>): ScreenValue? {
+    private fun modifiers(
+      node: DesignNodeV1,
+      fromProperties: List<ChainLink>,
+      scope: String?,
+    ): ScreenValue? {
       // Every modifier is visited even after one fails. A non-local `return` out of the map stopped
       // at the first, which quietly broke this projection's one promise: `Outcome.Refused` carries
       // *every* unexpressible thing so a document can be fixed in one pass, not one per export.
-      val links = node.modifiers.map { link(it, node.id) }
+      val links = node.modifiers.map { link(it, node.id, scope) }
       if (links.any { it == null }) return null
       // Last in the chain, so a tagged preview and its untagged export differ by exactly one
       // appended link and nothing about the modifiers a designer wrote moves.
@@ -337,7 +409,7 @@ object ScreenDocumentProjection {
       )
     }
 
-    private fun link(modifier: DesignModifierV1, nodeId: String): ChainLink? =
+    private fun link(modifier: DesignModifierV1, nodeId: String, scope: String?): ChainLink? =
       when (modifier) {
         FillMaxWidthModifierV1 -> ChainLink("androidx.compose.foundation.layout.fillMaxWidth")
         FillMaxSizeModifierV1 -> ChainLink("androidx.compose.foundation.layout.fillMaxSize")
@@ -401,15 +473,19 @@ object ScreenDocumentProjection {
           }
         }
         // `matchParentSize` is declared on `BoxScope`, so it compiles inside a `Box` slot and
-        // nowhere else. The record does carry each slot's receiver scope, but this projection does
-        // not know which slot a node was placed in, and emitting a scoped modifier on that basis
-        // would generate an unresolved reference for every node that is not in a `Box`.
+        // nowhere else. This projection now knows which slot a node was placed in, so the answer
+        // is a lookup rather than the refusal it used to be — and outside a `Box` it is still a
+        // refusal, because emitting it there is an unresolved reference.
         MatchParentSizeModifierV1 ->
-          null.also {
-            reasons +=
-              "node `$nodeId` uses `matchParentSize`, which is declared on `BoxScope` and cannot " +
-                "be proven in scope here"
-          }
+          if (scope == BOX_SCOPE)
+            ChainLink("$BOX_SCOPE.matchParentSize", receiverScopeFqn = BOX_SCOPE)
+          else
+            null.also {
+              reasons +=
+                "node `$nodeId` uses `matchParentSize`, which is declared on `BoxScope` and is in " +
+                  "scope only inside a `layout/box` slot; this node sits " +
+                  (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
+            }
         else ->
           null.also {
             reasons +=
@@ -972,12 +1048,9 @@ object ScreenDocumentProjection {
    * `CapabilityComposeCodeExporter` already knew all of this. It is not on the export path, which
    * is why the knowledge had to be restated somewhere the export can reach.
    *
-   * Deliberately not exhaustive. `weight` is absent for two reasons that both have to go before it
-   * can be here: `Modifier.weight` is declared on `RowScope` and `ColumnScope`, so it is legal only
-   * in the slot a node was placed in — the same scope question that keeps `matchParentSize` refused
-   * — and it takes a `Float`, which [ScreenValue] has no literal for in a nested position (a
-   * `Fractional` renders as a `Double` there, and `weight(1.0)` does not compile). Neither is a
-   * naming problem, so neither is fixed by a row in this table.
+   * Deliberately not exhaustive, and `weight` is deliberately not here: it is not a parameter under
+   * another name, it is a **modifier whose legality depends on the slot the node sits in**. It goes
+   * through `weightLink` and [SLOT_SCOPES] instead, which is the route `matchParentSize` takes too.
    */
   private val PROPERTY_PARAMETERS: Map<String, Map<String, ParameterTarget>> =
     mapOf(
@@ -1129,6 +1202,32 @@ object ScreenDocumentProjection {
    */
   private val MODIFIER_PROPERTIES: Map<String, Map<String, String>> =
     mapOf("m3/icon" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"))
+
+  private const val WEIGHT = "weight"
+  private const val ROW_SCOPE = "androidx.compose.foundation.layout.RowScope"
+  private const val COLUMN_SCOPE = "androidx.compose.foundation.layout.ColumnScope"
+  private const val BOX_SCOPE = "androidx.compose.foundation.layout.BoxScope"
+
+  /**
+   * The receiver each catalog slot's children are composed under, where it has one.
+   *
+   * The fifth authored table, and the only one that describes **placement** rather than a value.
+   * Keyed by the catalog's own slot name, like [SLOT_PARAMETERS] — `children` here, `content` on
+   * the record's side — because that is what the document holds.
+   *
+   * It has to agree with the record's `composableSlotReceiver`, since that is what the generator
+   * compares a scoped link's claim against, and `M3CatalogSlotScopeTest` is what keeps the two from
+   * drifting. A slot with no entry composes its children under no receiver, which is correct for
+   * `m3/surface`'s `content` and every `layout/scaffold` slot, and is why a `weight` there refuses.
+   */
+  val SLOT_SCOPES: Map<String, Map<String, String>> =
+    mapOf(
+      "layout/column" to mapOf("children" to COLUMN_SCOPE),
+      "layout/row" to mapOf("children" to ROW_SCOPE),
+      "layout/box" to mapOf("children" to BOX_SCOPE),
+      "m3/card" to mapOf("content" to COLUMN_SCOPE),
+      "m3/button" to mapOf("content" to ROW_SCOPE),
+    )
 
   private const val ICONS_PACKAGE = "androidx.compose.material.icons"
   private const val ICONS = "$ICONS_PACKAGE.Icons"
