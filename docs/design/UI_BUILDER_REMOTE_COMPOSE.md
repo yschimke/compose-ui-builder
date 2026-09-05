@@ -184,6 +184,34 @@ resolution, logging, haptics, time, and accessibility are player host services r
 in the composite document. Defaults are used in the first slice; a shared host-services object is
 the next extension if applications need to inject those consistently across nested players.
 
+## No borrow crosses into `@RemoteComposable`
+
+The `wear-m3` catalog settled a neighbouring question with a rule — [never fake a component so it
+runs in Wasm](UI_BUILDER_WEAR_SCREEN.md#the-line-a-component-is-never-faked-so-it-can-run-in-wasm) —
+and with one carve-out: foundation may be borrowed, because `Box`, `Column` and `Row` are one
+declaration that mobile Compose and Wear Compose genuinely share. **The rule applies here. The
+carve-out cannot.**
+
+A `remote-m3` design generates a `@RemoteComposable` body, and Remote Compose is a separate
+composable world rather than a library layered on the usual one: a `@RemoteComposable` function
+cannot call `@UiComposable` content, so it no more compiles against
+`androidx.compose.foundation.layout.Column` than against `androidx.compose.material3.Text`. Foundation
+does not cross that boundary; nothing does. Everything a widget body is written in comes from the
+remote APIs — `remote-creation-compose` (`RemoteColumn`, `RemoteRow`, `RemoteBox`, `RemoteModifier`,
+`.rs` / `.rdp` / `.rsp`), `remote-foundation`, and `remote-material3` (`RemoteText`,
+`RemoteMaterialTheme`) — which is what
+[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteContentEmitter.kt)
+imports, and all it imports.
+
+So the "borrow foundation, rename the Material" split is not available to this catalog. The ids it
+publishes for authoring — `layout/box`, `layout/column`, `layout/row`, `m3/surface`, `m3/text` — are
+stand-ins for remote components all the way down, and the generated code translates every one of
+them: `layout/column` becomes `RemoteColumn`, `m3/text` becomes `RemoteText`. Renaming them
+`remote-m3/…` would be an id migration, so the palette stops implying Jetpack Compose components a
+widget can never hold. It is not the foundation carve-out `wear-m3` got, and applying that carve-out
+here — leaving `layout/column` because "foundation is shared" — would keep in the palette the one id
+whose sharing claim is provably false.
+
 ## Follow-up features useful to every CMP player
 
 1. A suspendable, size-limited document resolver with content hashes, caching, cancellation, and

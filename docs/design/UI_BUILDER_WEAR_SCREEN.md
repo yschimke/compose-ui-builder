@@ -99,6 +99,12 @@ upstream nobody in this repository compiles.
 
 So the canvas is not the fidelity surface for `wear-m3`, and it is not going to become one.
 
+`remote-m3` is the same rule with a stricter conclusion, and it is written up in
+[`UI_BUILDER_REMOTE_COMPOSE.md`](UI_BUILDER_REMOTE_COMPOSE.md#no-borrow-crosses-into-remotecomposable):
+a widget body is `@RemoteComposable`, which cannot call `@UiComposable` content at all, so even the
+foundation carve-out above is unavailable there — that catalog's borrows are stand-ins all the way
+down.
+
 ### Where a Wear design gets looked at instead
 
 The **streaming preview** — the native render lane,
