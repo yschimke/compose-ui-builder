@@ -627,7 +627,11 @@ fun wearScreenUiBuilderDocument(
         properties =
           JsonObject(
             mapOf(
-              "variant" to literal("enum", JsonPrimitive("filled")),
+              // `title`, which is the `TitleCard` this row has always generated. It read
+              // `filled` while the variant list was the borrowed mobile one, where Material's
+              // three are filled / elevated / outlined; Wear's four are the four cards it
+              // publishes, and a filled Wear card is not one of them.
+              "variant" to literal("enum", JsonPrimitive("title")),
               "shape" to literal("enum", JsonPrimitive("large")),
             )
           ),
@@ -678,7 +682,10 @@ fun wearScreenUiBuilderDocument(
         UiBuilderNode(
           id = "edge-button",
           componentId = "wear-m3/button",
-          properties = JsonObject(mapOf("style" to literal("enum", JsonPrimitive("filled")))),
+          // `variant`, not `style`: the borrowed mobile property carried `fab` and `elevated`,
+          // which no watch publishes, so `wear-m3/button` declares Wear's four under the name
+          // every other Wear component uses for the same idea.
+          properties = JsonObject(mapOf("variant" to literal("enum", JsonPrimitive("filled")))),
           modifiers = JsonArray(emptyList()),
           slots = mapOf("content" to listOf("edge-button-label")),
         ),

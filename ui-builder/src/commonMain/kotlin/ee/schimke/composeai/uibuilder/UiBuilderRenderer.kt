@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -114,6 +115,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -1085,6 +1087,17 @@ private fun RenderNode(
           .clip(CircleShape)
           .background(Color(parseArgb(node.string("color"))))
       )
+    // A Wear component with no Material 3 counterpart, drawn as a named placeholder and not as a
+    // lookalike. See [WearNativeOnlyPlaceholder] for why this is the honest shape rather than a
+    // gap in the implementation.
+    in WEAR_NATIVE_ONLY ->
+      WearNativeOnlyPlaceholder(node, measured) {
+        // Every slot's children, flattened. A placeholder cannot lay a child out the way the real
+        // component would — that is what makes it a placeholder — but dropping the children would
+        // hide whole subtrees from the layers panel's counterpart on the canvas, and an icon
+        // inside an icon button is the thing an author is looking for.
+        node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+      }
     else -> UnsupportedComponentDiagnostic(node.componentId, measured)
   }
 }
@@ -1818,6 +1831,72 @@ private fun AssetPlaceholder(node: UiBuilderNode, modifier: Modifier) {
       size.minDimension * 0.28f,
       style = Stroke(size.minDimension * 0.035f),
     )
+  }
+}
+
+/**
+ * The Wear components this catalog publishes and the browser cannot draw, as ids.
+ *
+ * Derived from `WearScreenCodeExporter`'s own constants rather than listed again: the generator and
+ * the canvas have to agree about which ids these are, and two lists is two chances not to.
+ */
+private val WEAR_NATIVE_ONLY: Set<String> = WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS
+
+/**
+ * A Wear component the canvas names instead of drawing.
+ *
+ * ## Why this is the honest shape, and not a gap
+ *
+ * `docs/design/UI_BUILDER_WEAR_SCREEN.md` rules out one thing exactly: *do not fabricate a
+ * component in the Wasm canvas to stand in for a library the canvas cannot link*. Wear Material 3
+ * is an Android AAR; a `CheckboxButton` drawn here would be a Material 3 `Checkbox` in a row at a
+ * width, a corner radius and a label baseline read off a screenshot — an impression of upstream
+ * with nothing in this build to check it against, and wrong silently.
+ *
+ * So it is not drawn. What is drawn is the node's *identity and place*: a dashed outline carrying
+ * the component's name, sized by whatever the layout gives it, with its children inside. That is
+ * enough to author with — you can see the row is there, select it, reorder it, put an icon in it —
+ * and it claims nothing about size, colour or shape. The picture comes from the native lane, which
+ * compiles this design's own generated Kotlin against real Wear Compose on the Android daemon;
+ * `wear-m3` declares that lane authoritative and this canvas approximate, and the editor's render
+ * surface menu says so where a renderer is chosen.
+ *
+ * A dashed outline rather than [UnsupportedComponentDiagnostic]'s error container, because nothing
+ * is wrong. The component is in the catalog, it exports, and it renders — just not here.
+ */
+@Composable
+private fun WearNativeOnlyPlaceholder(
+  node: UiBuilderNode,
+  modifier: Modifier,
+  content: @Composable ColumnScope.() -> Unit,
+) {
+  val outline = MaterialTheme.colorScheme.outline
+  Column(
+    modifier
+      .fillMaxWidth()
+      .drawBehind {
+        drawRoundRect(
+          color = outline,
+          cornerRadius = CornerRadius(8.dp.toPx()),
+          style =
+            androidx.compose.ui.graphics.drawscope.Stroke(
+              width = 1.dp.toPx(),
+              pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
+            ),
+        )
+      }
+      .padding(horizontal = 10.dp, vertical = 8.dp),
+    verticalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
+    Text(
+      node.componentId.substringAfter('/').replace('-', ' '),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelMedium,
+    )
+    node.string("label").takeIf(String::isNotEmpty)?.let {
+      Text(it, color = MaterialTheme.colorScheme.onSurface)
+    }
+    content()
   }
 }
 

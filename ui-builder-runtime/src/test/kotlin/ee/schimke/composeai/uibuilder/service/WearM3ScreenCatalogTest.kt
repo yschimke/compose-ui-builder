@@ -5,6 +5,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The `wear-m3` authoring surface: what it admits, and what it says when asked for something else.
@@ -52,7 +54,11 @@ class WearM3ScreenCatalogTest {
       listOf("timeText", "scrollIndicator", "background"),
       scaffold.properties.map { it.name },
     )
-    assertEquals(listOf("content", "edgeButton"), scaffold.slots.map { it.name })
+    // `overlays` is the third and it is not a content slot: Wear's dialogs take a `visible` flag
+    // and draw over the whole display, so the generator writes them as siblings of the
+    // `ScreenScaffold` rather than as rows of its list. A slot in `content` would have made a
+    // full-screen dialog into a scrolling item.
+    assertEquals(listOf("content", "edgeButton", "overlays"), scaffold.slots.map { it.name })
     assertEquals("Scaffold", scaffold.role)
   }
 
@@ -127,5 +133,92 @@ class WearM3ScreenCatalogTest {
 
     assertTrue("wear-m3-catalog" in failure.message.orEmpty(), failure.message.orEmpty())
     assertTrue("no packaged adapter" in failure.message.orEmpty(), failure.message.orEmpty())
+  }
+
+  /**
+   * Every Wear component the generator writes is a component the palette offers.
+   *
+   * The list is literal rather than derived, and it has to be: `:ui-builder-runtime` may not depend
+   * on `:ui-builder-export` (`checkUiBuilderRuntimeBoundary` allows the protocol and nothing else),
+   * so the two halves of this pairing live in modules that cannot see each other. What holds them
+   * together is this set and `WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS` being edited in the
+   * same change — and `WearComponentExportTest`, over in `:ui-builder`, asserting the other
+   * direction: that every id in that set generates a call site.
+   *
+   * A component in one and not the other is the failure worth catching. In the palette and not the
+   * generator is a drop that exports as a refusal; in the generator and not the palette is dead
+   * code nobody can reach.
+   */
+  @Test
+  fun `the palette offers every Wear component the generator can write`() {
+    assertEquals(
+      listOf(
+        "wear-m3/alert-dialog",
+        "wear-m3/button-group",
+        "wear-m3/checkbox-button",
+        "wear-m3/confirmation-dialog",
+        "wear-m3/date-picker",
+        "wear-m3/edge-button",
+        "wear-m3/icon",
+        "wear-m3/icon-button",
+        "wear-m3/list-sub-header",
+        "wear-m3/open-on-phone-dialog",
+        "wear-m3/progress-indicator",
+        "wear-m3/radio-button",
+        "wear-m3/slider",
+        "wear-m3/stepper",
+        "wear-m3/switch-button",
+        "wear-m3/text-button",
+        "wear-m3/time-picker",
+      ),
+      wear.components
+        .map { it.componentId }
+        .filter { it.startsWith("wear-m3/") }
+        .filterNot {
+          it in
+            setOf(
+              "wear-m3/screen-scaffold",
+              "wear-m3/transforming-lazy-column",
+              "wear-m3/list-header",
+              "wear-m3/text",
+              "wear-m3/card",
+              "wear-m3/button",
+            )
+        }
+        .sorted(),
+    )
+  }
+
+  /**
+   * The catalog says which renderer may claim to be showing you a Wear design, and it is not this
+   * browser.
+   *
+   * Read by `UiBuilderPreviewSurfaces`, which the editor uses to open a Wear design on the host's
+   * renderer and to refuse the Preview mode where there is no host renderer, and by `:server` to
+   * send the compile to the Robolectric daemon. All three of those used to be a guess made
+   * separately — the editor's Preview mode showed a canvas of Material 3 lookalikes and called it a
+   * preview, which is the specific false claim this declaration exists to retire.
+   */
+  @Test
+  fun `the catalog declares its canvas approximate and its native render authoritative`() {
+    val surfaces = wear.statusSemantics.getValue("previewSurfaces").jsonObject
+
+    assertEquals(
+      "approximate",
+      surfaces.getValue("wasm").jsonObject.getValue("fidelity").jsonPrimitive.content,
+    )
+    assertTrue(
+      surfaces.getValue("wasm").jsonObject.getValue("reason").jsonPrimitive.content.isNotBlank()
+    )
+    assertEquals(
+      "authoritative",
+      surfaces.getValue("native").jsonObject.getValue("fidelity").jsonPrimitive.content,
+    )
+    // Robolectric, and not a preference: `androidx.wear.compose:compose-material3` is an Android
+    // AAR, so the desktop Skiko daemon cannot compile a Wear screen at all.
+    assertEquals(
+      "android",
+      surfaces.getValue("native").jsonObject.getValue("backend").jsonPrimitive.content,
+    )
   }
 }

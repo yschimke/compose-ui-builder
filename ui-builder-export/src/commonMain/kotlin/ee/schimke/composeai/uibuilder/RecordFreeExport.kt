@@ -49,16 +49,30 @@ object RecordFreeExport {
    * @param packageName the package the emitted file declares, or null for a snippet without one —
    *   which is what the editor's Code pane wants and what an exported *file* must not be.
    */
-  fun generate(document: UiBuilderDocument, packageName: String? = null): Generated? =
+  fun generate(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+  ): Generated? =
     when {
+      // A widget takes no [tagNodes]: it generates a `WearWidgetDocument` of Remote Compose, whose
+      // nodes are not Compose modifiers and which the native preview lane does not compile anyway
+      // ([composeCompilable]). Accepting the flag and dropping it would read as support.
       document.isWearWidget() -> WearWidgetCodeExporter.export(document, packageName).generated()
-      document.isWearScreen() -> WearScreenCodeExporter.export(document, packageName).generated()
+      document.isWearScreen() ->
+        WearScreenCodeExporter.export(document, packageName, tagNodes).generated()
       else -> null
     }
 
   /** What a record-free design generates, or why it does not. */
   sealed interface Generated {
-    data class Emitted(val source: String) : Generated
+    /**
+     * @param composableName the function the file declares, where the emitter writes one this
+     *   caller has to name again — the native preview lane wraps it in a `@Preview` and imports it
+     *   by name. Null for a Wear widget, whose source declares a `WearWidgetDocument` rather than a
+     *   composable and which that lane does not compile ([composeCompilable]).
+     */
+    data class Emitted(val source: String, val composableName: String? = null) : Generated
 
     data class Refused(val reasons: List<String>) : Generated
   }
@@ -74,9 +88,13 @@ object RecordFreeExport {
    * own boundary; the emitters never read it, and the artifact's provenance header carries the
    * revision the export was pinned to.
    */
-  fun generate(document: DesignDocumentV1, packageName: String? = null): Generated? {
+  fun generate(
+    document: DesignDocumentV1,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+  ): Generated? {
     if (!document.isRecordFree()) return null
-    return runCatching { generate(document.toUiBuilderDocument(), packageName) }
+    return runCatching { generate(document.toUiBuilderDocument(), packageName, tagNodes) }
       .getOrElse { failure ->
         Generated.Refused(
           listOf(
@@ -97,6 +115,28 @@ object RecordFreeExport {
    */
   fun applies(document: DesignDocumentV1): Boolean = document.isRecordFree()
 
+  /**
+   * Whether a record-free design's source is **Kotlin a Compose classpath can build**.
+   *
+   * The two record-free emitters are not the same kind of thing, and the native preview lane is
+   * where the difference finally matters. [WearScreenCodeExporter] writes ordinary Wear Compose —
+   * `ScreenScaffold`, `TitleCard`, `Text` — so a host holding a bundle that carries
+   * `androidx.wear.compose:compose-material3` can compile it and render it on the
+   * Android/Robolectric daemon, which is the only honest picture a Wear design has: the browser's
+   * Wasm canvas cannot link an Android AAR and never will
+   * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`). [WearWidgetCodeExporter] writes a
+   * `WearWidgetDocument` — Remote Compose, played rather than composed — which is not a `@Preview`
+   * this lane can discover and render, so a widget still gets the refusal.
+   *
+   * Asked of the emitter's target rather than of the catalog id, for the reason
+   * [CATALOG_SYSTEM_IDS] is derived: a third record-free emitter answers this question by which of
+   * the two shapes it writes, not by being added to a list somebody remembers.
+   */
+  fun composeCompilable(document: DesignDocumentV1): Boolean {
+    val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return false
+    return root.componentId == WearScreenCodeExporter.SCAFFOLD
+  }
+
   /** Whether [document]'s single root is one the emitters above accept. */
   private fun DesignDocumentV1.isRecordFree(): Boolean {
     val root = roots.singleOrNull()?.let(nodes::get) ?: return false
@@ -112,7 +152,7 @@ object RecordFreeExport {
 
   private fun WearScreenCodeExporter.Result.generated(): Generated =
     when (this) {
-      is WearScreenCodeExporter.Result.Emitted -> Generated.Emitted(source)
+      is WearScreenCodeExporter.Result.Emitted -> Generated.Emitted(source, screenName)
       is WearScreenCodeExporter.Result.Refused -> Generated.Refused(reasons)
     }
 }

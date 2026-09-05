@@ -81,8 +81,17 @@ what the design says it holds.
 
 ## The line: a component is never faked so it can run in Wasm
 
-The three ids above are the last of their kind. `wear-m3/checkbox-button`, `wear-m3/switch-button`
-and `wear-m3/radio-button` were built, reviewed and
+> **Update.** The rule below still stands word for word. What changed is the sentence it ends on —
+> *"they arrive with the streaming preview or they do not arrive"* — because the streaming preview
+> arrived. `wear-m3` now declares its canvas **approximate** and the Android render lane
+> **authoritative**, and seventeen Wear components have joined the catalog *without* a Wasm
+> lookalike between them: the canvas gives each a named placeholder and the picture comes from real
+> Wear Compose on the Robolectric daemon. See
+> [The canvas is not the preview](#the-canvas-is-not-the-preview-and-now-says-so) and
+> [What the catalog offers now](#what-the-catalog-offers-now).
+
+The three ids above are the last of their kind *drawn as lookalikes*. `wear-m3/checkbox-button`,
+`wear-m3/switch-button` and `wear-m3/radio-button` were built, reviewed and
 [closed unmerged](https://github.com/yschimke/compose-preview-server/pull/395), and the reason is the
 rule this section states:
 
@@ -104,6 +113,115 @@ So the canvas is not the fidelity surface for `wear-m3`, and it is not going to 
 a widget body is `@RemoteComposable`, which cannot call `@UiComposable` content at all, so even the
 foundation carve-out above is unavailable there — that catalog's borrows are stand-ins all the way
 down.
+
+## The canvas is not the preview, and now says so
+
+The editor had two renderers and one of them was quietly claiming to be the other. Pressing
+**Preview** on a `wear-m3` design hid the editor chrome and showed the Wasm canvas — a picture of
+Material 3 components standing in for Wear ones — under a control whose entire meaning is *this is
+your screen*. Nothing was mislabelled; the label was just never asked to be true.
+
+The catalog now says which renderer may make that claim. `wear-m3`'s `statusSemantics` carries a
+`previewSurfaces` block, read by
+[`UiBuilderPreviewSurfaces`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderPreviewSurfaces.kt):
+
+| Surface | Fidelity | Because |
+| --- | --- | --- |
+| `wasm` | `approximate` | The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an Android AAR. Author on it; do not read a size, a colour or a shape off it. |
+| `native` | `authoritative`, backend `android` | Compiles this design's own generated Kotlin against real Wear Compose and renders it on Robolectric. |
+
+Three things read it, and each of them used to guess:
+
+- **The editor opens a Wear design on the host's renderer**, not on the canvas, where the host has
+  one. Pressing **Preview** switches the render surface *before* the mode, so the first frame it
+  shows is already the faithful one; where the host cannot compile, the Preview position is refused
+  and carries the catalog's own sentence instead of being a grey button.
+- **The render-surface menu** describes the Wasm entry as "stand-ins, for authoring" rather than as
+  "Drawn in this browser". It is never removed — the canvas is what a node is selected and dragged
+  on, and an editor with no canvas is not an editor.
+- **The server** sends the compile to the Robolectric daemon rather than to Skiko, because the
+  backend is part of the same declaration.
+
+A catalog that says nothing gets the old behaviour exactly: authoritative canvas, desktop daemon.
+`m3-catalog` says nothing, and should not — its canvas draws the same Material 3 its export names.
+
+## The native lane takes a Wear design
+
+`ScreenGeneratorComposeExportExecutor.generate` used to turn away every record-free design with one
+refusal, and the sentence it ended on — *"export it instead, and preview it on the canvas"* — sent a
+Wear author to the one surface that cannot answer their question. It now splits the two record-free
+emitters by what they actually write:
+
+- **A Wear screen is Wear Compose.** `ScreenScaffold`, `TitleCard`, `Text` — ordinary Kotlin, which
+  compiles against a bundle carrying `androidx.wear.compose:compose-material3` and renders on the
+  Android daemon. It goes through.
+- **A Wear widget is Remote Compose.** A `WearWidgetDocument` is played rather than composed, so
+  there is no `@Preview` to discover and no frame at the end of compiling it. It still refuses, and
+  now says *that* rather than something about Wear.
+
+Two things had to be true for the screen half to work, and neither was:
+
+**The generated source has to carry node ids.** A streamed frame is a picture, and a picture is not
+an editor — without a tag there is no way to say which rectangle draws the card you selected.
+`WearScreenCodeExporter` now threads `Modifier.testTag("<node id>")` through every emitted call when
+the native lane asks, including the `ScreenScaffold` itself and the `TransformingLazyColumn`. An
+export artifact is left untagged: a test tag is not something a designer asked for in source they
+keep.
+
+**A builder catalog id is not a served catalog id.** The Wear bundle is another repository's catalog,
+served under whatever `--catalogs` id its operator gave it, so
+`--ui-builder-native-catalog wear-m3=wear-m3-catalog` maps the two. The packaged image passes exactly
+that by default. A host with no mapping refuses with `NO_NATIVE_CATALOG` and names the flag — a
+compile against a desktop classpath would fail on every `androidx.wear.compose` import and read like
+the design is broken, which is the wrong half of the system to send anyone to.
+
+One bug fell out of writing the round trip, and it had been there since the generator landed:
+`AppScaffold` is emitted for every design and was imported only for designs declaring a `timeText`,
+so every Wear screen without one generated a file that did not compile.
+
+## What the catalog offers now
+
+`wear-m3` was a scaffold, a list, a header and three renamed borrows — a palette of containers with
+almost nothing to put in them. It now carries Wear's own vocabulary, following `m3-catalog`'s own
+approach: an id per component, a `variant` property where upstream publishes a family rather than a
+component, starter content so a dropped node looks typical, and a generated call site proved by a
+test.
+
+| | |
+| --- | --- |
+| Content | `wear-m3/text`, `wear-m3/card` (`title` · `app` · `outlined` · `plain`), `wear-m3/icon`, `wear-m3/list-header`, `wear-m3/list-sub-header` |
+| Actions | `wear-m3/button` (`filled` · `filled-tonal` · `outlined` · `child`), `wear-m3/icon-button`, `wear-m3/text-button`, `wear-m3/button-group`, `wear-m3/edge-button` |
+| Selection | `wear-m3/checkbox-button`, `wear-m3/switch-button`, `wear-m3/radio-button` |
+| Value | `wear-m3/slider`, `wear-m3/stepper`, `wear-m3/progress-indicator` (`circular` · `segmented-circular` · `linear` · `arc`) |
+| Full screen | `wear-m3/date-picker`, `wear-m3/time-picker` |
+| Overlays | `wear-m3/alert-dialog`, `wear-m3/confirmation-dialog`, `wear-m3/open-on-phone-dialog` |
+| Containers | `wear-m3/screen-scaffold`, `wear-m3/transforming-lazy-column` |
+| Borrowed | `layout/box`, `layout/column`, `layout/row`, `asset/image`, `remote-compose/document` |
+
+Three of those are not rows of a list, and the catalog says so structurally rather than in prose:
+
+- **A dialog is a screen state.** It takes a `visible` flag and draws over everything, so the
+  scaffold grew an `overlays` slot and the generator writes dialogs as siblings of the
+  `ScreenScaffold` inside `AppScaffold`. Dropped into the list, one is refused by name with the slot
+  it belongs in.
+- **A `Stepper` and a picker own the display.** They go in the scaffold's content slot *instead of*
+  the list, and the generator writes them straight into `ScreenScaffold`'s content lambda.
+- **`EdgeButton` is a component now**, not a `wear-m3/button` in a slot that happened to generate
+  one, so it can carry the size enum upstream publishes. A plain button in that slot still works,
+  because designs written before the id exist.
+
+Two things a `Slider`, a `Stepper`, a selection control and a dialog all need: they are **controlled**
+components, so the generated screen hoists a `remember` for each and passes the callback. A generated
+screen whose checkbox cannot be ticked is a picture of a screen.
+
+### None of them is drawn on the canvas
+
+Not one. Each shows as a dashed outline carrying the component's name, its label where it has one,
+and its children — enough to select, reorder and fill, and claiming nothing about size, colour or
+shape. That is [the rule](#the-line-a-component-is-never-faked-so-it-can-run-in-wasm) kept rather
+than bent: the reason it existed was that a hand-assembled lookalike is *wrong silently in the one
+surface an author trusts*, and the fix is not a better lookalike, it is a surface that says what it
+is worth.
 
 ### Where a Wear design gets looked at instead
 

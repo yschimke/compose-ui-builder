@@ -120,6 +120,32 @@ a claim that what an author sees is what they get, so `wear-m3` joined the defau
 claim had a render behind it — the Kotlin it generates is compiled by real Wear Compose in
 compose-ai-tools' `wear-m3` harness catalog, and the stitched capture matches the canvas to a dp.
 
+### Which renderer is telling you the truth
+
+The **Design / Preview** switch and the render-surface menu are two different questions, and on
+`wear-m3` the answer to the second one is not the browser. Wear Material 3 is an Android AAR, and
+the canvas is Compose Multiplatform for Wasm: it draws Wear's containers as measured stand-ins and
+Wear's controls as named placeholders, because there is no version of it that can link the real
+library. That is stated in the catalog rather than left to be discovered — the render-surface menu
+describes the Wasm entry as "stand-ins, for authoring", and pressing **Preview** switches to the
+host's renderer before it switches mode.
+
+The host's renderer compiles the design's own generated Kotlin against a real Wear classpath and
+draws it on the Android/Robolectric daemon. It needs one line of configuration, because the bundle
+carrying `androidx.wear.compose:compose-material3` is a different served catalog from the design's
+own id:
+
+```text
+--ui-builder-native-catalog wear-m3=wear-m3-catalog
+```
+
+The packaged deployment passes exactly that. A host without it says so, naming the flag, rather than
+compiling Wear source against a desktop classpath and reporting the wall of unresolved imports as
+though the design were broken.
+
+`m3-catalog` needs none of this: its canvas draws the same Material 3 its export names, so the
+browser is authoritative and the native lane is the second opinion rather than the only one.
+
 `remote-m3` is a deliberately small adapter: Small and Large Wear widget scaffolds plus Box, Row,
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.

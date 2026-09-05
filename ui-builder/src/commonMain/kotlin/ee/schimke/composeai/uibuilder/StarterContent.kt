@@ -108,6 +108,34 @@ internal object StarterContent {
       // Zero is already what the catalog's neutral default writes; it is spelled out because a tab
       // row is required to carry the index and a row with none draws no indicator at all.
       "m3/primary-tab-row" to mapOf("selectedIndex" to starterNumber(0)),
+      // Wear's own, and the reason each needs a seed is the reason its mobile counterpart does —
+      // with one difference that matters. These are not drawn on the canvas at all: they show as a
+      // named placeholder, and the picture comes from the Android preview. So a seeded `label` is
+      // the *only* thing that distinguishes one dropped row from the next until somebody renders,
+      // which makes the seed more load-bearing here than on the mobile side rather than less.
+      WearScreenCodeExporter.CHECKBOX_BUTTON to
+        mapOf("label" to starterLiteral("string", "Checkbox"), "checked" to starterBool(true)),
+      WearScreenCodeExporter.SWITCH_BUTTON to
+        mapOf("label" to starterLiteral("string", "Switch"), "checked" to starterBool(true)),
+      WearScreenCodeExporter.RADIO_BUTTON to
+        mapOf("label" to starterLiteral("string", "Option"), "selected" to starterBool(true)),
+      WearScreenCodeExporter.LIST_SUB_HEADER to
+        mapOf("text" to starterLiteral("string", "Section")),
+      // A slider at zero is a track with the thumb against the decrement button, which reads as
+      // broken; a `valueTo` of one and a value in the middle reads as new.
+      WearScreenCodeExporter.SLIDER to
+        mapOf("value" to starterFraction(0.5), "valueTo" to starterNumber(1)),
+      WearScreenCodeExporter.STEPPER to
+        mapOf("value" to starterFraction(0.5), "valueTo" to starterNumber(1)),
+      WearScreenCodeExporter.PROGRESS_INDICATOR to mapOf("progress" to starterFraction(0.6)),
+      // A dialog arrives *showing*. Its `visible` flag is what the generated code reads, and a
+      // dialog seeded hidden is a node in the layers panel with nothing to look at on any surface —
+      // including the Android one, which is where the whole point of this component is.
+      WearScreenCodeExporter.ALERT_DIALOG to
+        mapOf("title" to starterLiteral("string", "Are you sure?"), "visible" to starterBool(true)),
+      WearScreenCodeExporter.CONFIRMATION_DIALOG to
+        mapOf("text" to starterLiteral("string", "Done"), "visible" to starterBool(true)),
+      WearScreenCodeExporter.OPEN_ON_PHONE_DIALOG to mapOf("visible" to starterBool(true)),
     )
 
   private val TABLE: Map<String, Map<String, List<StarterNode>>> =
@@ -120,6 +148,23 @@ internal object StarterContent {
       // decision here is which icon — and any icon reads as an icon button, while the enum's first
       // entry (`accessTime`) reads as a clock somebody forgot to change.
       "m3/icon-button" to mapOf("content" to listOf(icon("favorite", "Favorite"))),
+      // The Wear pair, seeded for the same reasons as the mobile ones above: an icon button whose
+      // one required child is missing is an empty circle, and a text button with no label is a
+      // pill. `wear-m3/icon` takes the same icon keys `m3/icon` does — the vectors are
+      // `androidx.compose.material.icons`, which both platforms share.
+      WearScreenCodeExporter.ICON_BUTTON to mapOf("content" to listOf(wearIcon("favorite"))),
+      WearScreenCodeExporter.TEXT_BUTTON to mapOf("content" to listOf(wearText("Button"))),
+      // Buttons, because `ButtonGroup` lays out buttons — anything else has no scope to be laid
+      // out in, and the export refuses it.
+      WearScreenCodeExporter.BUTTON_GROUP to
+        mapOf(
+          "children" to
+            listOf(
+              StarterNode(WearScreenCodeExporter.BUTTON),
+              StarterNode(WearScreenCodeExporter.BUTTON),
+            )
+        ),
+      WearScreenCodeExporter.EDGE_BUTTON to mapOf("content" to listOf(wearText("Done"))),
       "m3/filter-chip" to mapOf("label" to listOf(text("Filter", "labelLarge"))),
       "m3/center-aligned-top-app-bar" to mapOf("title" to listOf(text("Title", "titleLarge"))),
       // A label and a placeholder, which is the field Material's own samples draw. An empty text
@@ -227,6 +272,26 @@ private fun icon(iconKey: String, contentDescription: String): StarterNode =
         "iconKey" to starterLiteral("enum", iconKey),
         "contentDescription" to starterLiteral("string", contentDescription),
       ),
+  )
+
+/**
+ * `wear-m3/text`, seeded the way [text] seeds the mobile one — minus the style.
+ *
+ * No `style` argument: Wear's type scale is its own and the mobile `labelLarge` the borrow carries
+ * is not one of its names, so seeding one would put a value in the document that the Wear generator
+ * would then have to refuse. The component's default is Wear's own, which is the right answer.
+ */
+private fun wearText(value: String): StarterNode =
+  StarterNode(
+    componentId = WearScreenCodeExporter.TEXT,
+    properties = mapOf("text" to starterLiteral("string", value)),
+  )
+
+/** `wear-m3/icon`, off the same key table `m3/icon` uses — the vectors are shared. */
+private fun wearIcon(iconKey: String): StarterNode =
+  StarterNode(
+    componentId = WearScreenCodeExporter.ICON,
+    properties = mapOf("iconKey" to starterLiteral("enum", iconKey)),
   )
 
 private fun column(vararg children: StarterNode): StarterNode =

@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.capability
 
 import ee.schimke.composeai.uibuilder.COMPOSE_EMITTED_DP_PROPERTIES
+import ee.schimke.composeai.uibuilder.UiBuilderPreviewSurfaces
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -20,6 +21,18 @@ data class CapabilityCatalog(
 ) {
   val componentsById: Map<String, ComponentCapability> by lazy {
     components.associateBy(ComponentCapability::componentId)
+  }
+
+  /**
+   * Which renderer may claim to be showing you this catalog's designs.
+   *
+   * Read out of [statusSemantics] rather than declared as a field for the reason
+   * [UiBuilderPreviewSurfaces] gives: the wire type is published from another repository. A catalog
+   * that says nothing lands on the default — the canvas is authoritative — which is what every
+   * catalog but `wear-m3` is.
+   */
+  val previewSurfaces: UiBuilderPreviewSurfaces by lazy {
+    UiBuilderPreviewSurfaces.from(statusSemantics)
   }
 }
 

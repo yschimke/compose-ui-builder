@@ -4,6 +4,7 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
+import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DiagnosticSeverityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportArtifactV1
@@ -12,6 +13,10 @@ import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 import ee.schimke.composeai.uibuilder.protocol.ExportEncodingV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.SlotCardinalityV1
+import ee.schimke.composeai.uibuilder.protocol.SvgCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -27,12 +32,15 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /**
  * The explicitly enabled production catalogs admitted by the v1 service.
@@ -478,6 +486,469 @@ private fun wearTransformingLazyColumnProperties(): List<PropertyCapabilityV1> =
   )
 
 /**
+ * The Wear Material 3 components this catalog offers that have **no Material 3 counterpart at
+ * all**.
+ *
+ * ## Why these can exist now, when `wear-m3/checkbox-button` was refused once
+ *
+ * `docs/design/UI_BUILDER_WEAR_SCREEN.md` rules out one specific thing, and it is worth quoting
+ * rather than paraphrasing: *do not fabricate a component in the Wasm canvas to stand in for a
+ * library the canvas cannot link*. That rule closed
+ * [#395](https://github.com/yschimke/compose-preview-server/pull/395), which built
+ * `CheckboxButton`, `SwitchButton` and `RadioButton` as hand-assembled Material 3 shapes at sizes
+ * read off a screenshot — an impression of upstream with nothing in the build to check it against,
+ * wrong silently in the one surface an author trusts. The same document says what would let them
+ * in: *they arrive with the streaming preview or they do not arrive*.
+ *
+ * They arrive with the streaming preview. `ServeUiBuilderNativePreview` now compiles a Wear
+ * design's own generated Kotlin against a bundle carrying `androidx.wear.compose:compose-material3`
+ * and renders it on the Android/Robolectric daemon, and `wear-m3` declares that lane authoritative
+ * and its own canvas approximate (`previewSurfaces`, read by `UiBuilderPreviewSurfaces`). So the
+ * premise the rule rests on — that the canvas is the surface an author trusts — is no longer true
+ * here, and the rule itself is kept rather than bent: **nothing below is drawn as a lookalike**.
+ * The canvas gives each of these a named placeholder occupying its place in the layout and claiming
+ * nothing about its size, colour or shape, and the picture comes from Android.
+ *
+ * What that buys is the whole point. A Wear screen can now hold the controls Wear actually
+ * publishes — a labelled full-width `CheckboxButton`, a `Slider`, a `DatePicker` — instead of a
+ * palette of three renamed borrows and a container to put them in.
+ *
+ * ## The three that stay lookalikes
+ *
+ * `wear-m3/text`, `wear-m3/card` and `wear-m3/button` keep the Material 3 drawing they have, for
+ * the reason that made them acceptable in the first place: each is a *rename* of a borrow the
+ * canvas was already drawing, not a shape assembled for the occasion. `WearCanvasStandInTest` pins
+ * that map to exactly those three, and nothing here joins it.
+ */
+private fun wearNativeOnlyComponents(
+  supportedWasm: WasmCapabilityV1,
+  blockedSvg: SvgCapabilityV1?,
+  iconKeys: List<JsonElement>,
+): List<ComponentCapabilityV1> {
+  /** The note every component in this group carries, with its own composable named. */
+  fun note(composable: String, extra: String = "") =
+    "Wear Material 3's `$composable`." +
+      (if (extra.isEmpty()) "" else " $extra") +
+      " The canvas draws a named placeholder where this node sits rather than the component: " +
+      "`androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a " +
+      "hand-drawn lookalike would be an impression of upstream with nothing in this build to check " +
+      "it against. Switch the render surface to Android for the real one — that lane compiles this " +
+      "design's own generated Kotlin against real Wear Compose."
+
+  fun component(
+    componentId: String,
+    displayName: String,
+    composable: String,
+    role: String,
+    traits: List<String>,
+    properties: List<PropertyCapabilityV1> = emptyList(),
+    slots: List<SlotCapabilityV1> = emptyList(),
+    extra: String = "",
+  ) =
+    ComponentCapabilityV1(
+      componentId = componentId,
+      displayName = displayName,
+      role = role,
+      traits = traits,
+      slots = slots,
+      properties = properties,
+      // No modifier vocabulary, and that is a statement rather than an omission. A Wear control is
+      // laid out by the list and the scaffold around it — a `CheckboxButton` is a full-width row
+      // whose height upstream fixes — and `WearScreenCodeExporter` writes the whole screen, so
+      // there is no per-node modifier chain for it to carry one into.
+      modifierCapabilities = emptyList(),
+      wasm = supportedWasm.copy(notes = note(composable, extra)),
+      // The call site comes from `WearScreenCodeExporter`, which writes the whole screen, and never
+      // from a per-component record: `wear-m3` has none, deliberately.
+      code = null,
+      svg =
+        blockedSvg?.copy(
+          notes =
+            "A placeholder on the canvas must not claim structured SVG parity with $composable."
+        ),
+    )
+
+  /** `label` and `secondaryLabel`, which is the shape every Wear selection control shares. */
+  fun labelled(secondary: Boolean = true) = buildList {
+    add(
+      PropertyCapabilityV1(
+        name = "label",
+        jsonType = JsonPrimitive("string"),
+        required = true,
+        notes =
+          "The row's primary label. Wear's selection controls are labelled rows, not bare boxes.",
+      )
+    )
+    if (secondary) {
+      add(
+        PropertyCapabilityV1(
+          name = "secondaryLabel",
+          jsonType = JsonPrimitive("string"),
+          notes = "The second line, where there is one. Empty emits no `secondaryLabel` argument.",
+        )
+      )
+    }
+  }
+
+  /**
+   * A checked/selected flag, drivable from a state variable exactly as `m3/checkbox.checked` is.
+   */
+  fun flag(name: String, notes: String) =
+    PropertyCapabilityV1(
+      name = name,
+      // `object` beside `boolean` for the reason the five mobile flags carry it: a state binding
+      // arrives as a wrapper object, and a declaration of `boolean` alone judges the binding by
+      // whatever scalar happens to be inside it.
+      jsonType = JsonArray(listOf(JsonPrimitive("boolean"), JsonPrimitive("object"))),
+      notes = notes,
+    )
+
+  fun enum(name: String, values: List<String>, notes: String, required: Boolean = false) =
+    PropertyCapabilityV1(
+      name = name,
+      jsonType = JsonPrimitive("string"),
+      required = required,
+      allowedValues = values.map(::JsonPrimitive),
+      notes = notes,
+    )
+
+  fun number(name: String, notes: String) =
+    PropertyCapabilityV1(
+      name = name,
+      jsonType = JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object"))),
+      notes = notes,
+    )
+
+  fun text(name: String, notes: String, required: Boolean = false) =
+    PropertyCapabilityV1(
+      name = name,
+      jsonType = JsonPrimitive("string"),
+      required = required,
+      notes = notes,
+    )
+
+  /** One content slot holding a single child, for the components whose API takes one lambda. */
+  fun singleSlot(name: String, traits: List<String>, min: Int = 0) =
+    SlotCapabilityV1(
+      name = name,
+      cardinality = SlotCardinalityV1(min = min, max = 1),
+      ordered = true,
+      acceptedRoles = emptyList(),
+      acceptedTraits = traits,
+    )
+
+  fun manySlot(name: String, traits: List<String>) =
+    SlotCapabilityV1(
+      name = name,
+      cardinality = SlotCardinalityV1(min = 0, max = null),
+      ordered = true,
+      acceptedRoles = emptyList(),
+      acceptedTraits = traits,
+    )
+
+  val listItem = listOf("ListItem", "WearListContent")
+
+  return listOf(
+    component(
+      componentId = "wear-m3/icon",
+      displayName = "Icon",
+      composable = "Icon",
+      role = "Leaf",
+      traits = listOf("Adornment"),
+      properties =
+        listOf(
+          PropertyCapabilityV1(
+            name = "iconKey",
+            jsonType = JsonPrimitive("string"),
+            required = true,
+            allowedValues = iconKeys,
+            // The same keys `m3/icon` offers, and deliberately the same table. An icon is
+            // `androidx.compose.material.icons`, which is not Material 3 and not Wear Material 3 —
+            // it is the shared vector library both draw with — so this is one of the few places a
+            // Wear component and a mobile one really do name the same symbol.
+            notes =
+              "A Material icon key, resolved to `Icons.…` by the same table `m3/icon` uses. The " +
+                "vectors are `androidx.compose.material.icons`, which both platforms share, so " +
+                "this key means the same thing on a watch as on a phone.",
+          ),
+          number("sizeDp", "The icon's box. Wear's own default is 24dp inside a button."),
+        ),
+    ),
+    component(
+      componentId = "wear-m3/icon-button",
+      displayName = "Icon button",
+      composable = "IconButton",
+      role = "Container",
+      traits = listOf("Action", "ListItem"),
+      slots = listOf(singleSlot("content", listOf("Adornment"), min = 1)),
+      properties =
+        listOf(
+          enum(
+            "variant",
+            listOf("filled", "filled-tonal", "filled-variant", "outlined", "standard"),
+            "Which of the five `IconButton` overloads is written: `FilledIconButton`, " +
+              "`FilledTonalIconButton`, `FilledVariantIconButton`, `OutlinedIconButton` or plain " +
+              "`IconButton`. A variant selects the composable rather than tinting one, the way " +
+              "`m3/button`'s style does.",
+          )
+        ),
+    ),
+    component(
+      componentId = "wear-m3/text-button",
+      displayName = "Text button",
+      composable = "TextButton",
+      role = "Container",
+      traits = listOf("Action", "ListItem"),
+      slots = listOf(singleSlot("content", listOf("AnyContent"), min = 1)),
+      properties =
+        listOf(
+          enum(
+            "variant",
+            listOf("filled", "filled-tonal", "filled-variant", "outlined", "standard"),
+            "As `wear-m3/icon-button`'s: the variant names the composable — `FilledTextButton` " +
+              "and the rest — rather than recolouring one.",
+          )
+        ),
+    ),
+    component(
+      componentId = "wear-m3/list-sub-header",
+      displayName = "List sub-header",
+      composable = "ListSubHeader",
+      role = "Leaf",
+      traits = listItem,
+      properties = listOf(text("text", "The sub-header's label.", required = true)),
+      extra =
+        "The second level of list heading, under `wear-m3/list-header`: smaller, start-aligned, " +
+          "and the one used to divide a long list into named runs.",
+    ),
+    component(
+      componentId = "wear-m3/checkbox-button",
+      displayName = "Checkbox button",
+      composable = "CheckboxButton",
+      role = "Leaf",
+      traits = listItem + "Selection",
+      properties =
+        labelled() + flag("checked", "Whether the box is ticked. Bindable to a state variable."),
+      extra =
+        "A full-width labelled row with the checkbox at its end — not the mobile 20dp square, " +
+          "which is the whole reason `m3/checkbox` could never have been borrowed for it.",
+    ),
+    component(
+      componentId = "wear-m3/switch-button",
+      displayName = "Switch button",
+      composable = "SwitchButton",
+      role = "Leaf",
+      traits = listItem + "Selection",
+      properties =
+        labelled() + flag("checked", "Whether the switch is on. Bindable to a state variable."),
+      extra = "The same labelled row as `wear-m3/checkbox-button`, with a switch as its control.",
+    ),
+    component(
+      componentId = "wear-m3/radio-button",
+      displayName = "Radio button",
+      composable = "RadioButton",
+      role = "Leaf",
+      traits = listItem + "Selection",
+      properties =
+        labelled() + flag("selected", "Whether this row is the chosen one of its group."),
+      extra = "The same labelled row again, with a radio control and single-choice semantics.",
+    ),
+    component(
+      componentId = "wear-m3/slider",
+      displayName = "Slider",
+      composable = "Slider",
+      role = "Leaf",
+      traits = listItem,
+      properties =
+        listOf(
+          number("value", "The current value, between `valueFrom` and `valueTo`."),
+          number("valueFrom", "The low end of the range. 0 when absent."),
+          number("valueTo", "The high end of the range. 1 when absent."),
+          number("steps", "How many discrete stops sit between the ends. 0 is continuous."),
+          enum(
+            "segmented",
+            listOf("segmented", "continuous"),
+            "Whether the track is drawn as separated segments, which is what Wear's stepped " +
+              "slider looks like.",
+          ),
+        ),
+      extra =
+        "Wear's slider is a row with a decrement and an increment button around the track, not a " +
+          "bare thumb on a line.",
+    ),
+    component(
+      componentId = "wear-m3/stepper",
+      displayName = "Stepper",
+      composable = "Stepper",
+      role = "Container",
+      traits = listOf("ScreenContent"),
+      slots = listOf(singleSlot("content", listOf("AnyContent"), min = 1)),
+      properties =
+        listOf(
+          number("value", "The current value."),
+          number("valueFrom", "The low end of the range. 0 when absent."),
+          number("valueTo", "The high end of the range. 1 when absent."),
+          number("steps", "How many discrete stops sit between the ends. 0 is continuous."),
+        ),
+      extra =
+        "A full-screen control: increment and decrement buttons at the top and bottom of the " +
+          "round display with the current value between them. It is not a list row, which is why " +
+          "it carries `ScreenContent` rather than `ListItem`.",
+    ),
+    component(
+      componentId = "wear-m3/progress-indicator",
+      displayName = "Progress indicator",
+      composable = "CircularProgressIndicator",
+      role = "Leaf",
+      traits = listItem + "ScreenContent",
+      properties =
+        listOf(
+          enum(
+            "variant",
+            listOf("circular", "segmented-circular", "linear", "arc"),
+            "Which indicator is written: `CircularProgressIndicator`, " +
+              "`SegmentedCircularProgressIndicator`, `LinearProgressIndicator` or " +
+              "`ArcProgressIndicator`. The circular ones ring the whole display; the linear one is " +
+              "a list row.",
+          ),
+          number("progress", "0..1. Absent is the indeterminate form, which takes no progress."),
+          number("segments", "How many segments the segmented circular form is divided into."),
+        ),
+      extra = "Wear publishes four, and which one you get is the `variant`.",
+    ),
+    component(
+      componentId = "wear-m3/edge-button",
+      displayName = "Edge button",
+      composable = "EdgeButton",
+      role = "Container",
+      traits = listOf("Action"),
+      slots = listOf(singleSlot("content", listOf("AnyContent"), min = 1)),
+      properties =
+        listOf(
+          enum(
+            "size",
+            listOf("extra-small", "small", "medium", "large"),
+            "`EdgeButtonSize`. The button's shape comes from the screen's bottom curve, so its " +
+              "size is chosen from upstream's four rather than set in dp.",
+          )
+        ),
+      extra =
+        "The button that hugs the bottom of a round screen. It belongs in the scaffold's " +
+          "`edgeButton` slot, where `ScreenScaffold` reveals it from the scroll state; it is a " +
+          "component of its own now rather than a `wear-m3/button` placed there, because " +
+          "`EdgeButton` is a different composable with a different shape and a size enum.",
+    ),
+    component(
+      componentId = "wear-m3/button-group",
+      displayName = "Button group",
+      composable = "ButtonGroup",
+      role = "Container",
+      traits = listItem,
+      slots = listOf(manySlot("children", listOf("Action"))),
+      extra =
+        "A row of buttons that share the width and grow the one being pressed. Its children are " +
+          "buttons; anything else has no `ButtonGroupScope` to be laid out in.",
+    ),
+    component(
+      componentId = "wear-m3/alert-dialog",
+      displayName = "Alert dialog",
+      composable = "AlertDialog",
+      role = "Container",
+      traits = listOf("Overlay"),
+      slots =
+        listOf(
+          manySlot("content", listOf("AnyContent")),
+          singleSlot("confirmButton", listOf("Action")),
+          singleSlot("dismissButton", listOf("Action")),
+        ),
+      properties =
+        listOf(
+          text("title", "The dialog's title.", required = true),
+          text("text", "The supporting line under the title. Empty emits no `text` argument."),
+          flag(
+            "visible",
+            "Whether the dialog is showing. A dialog is a screen state rather than a place in the " +
+              "layout, so this is what the generated `AlertDialog(visible = …)` reads.",
+          ),
+        ),
+      extra =
+        "Wear's own, which is a full-screen scrolling dialog with its buttons on the bottom curve " +
+          "— not a card floating over a scrim.",
+    ),
+    component(
+      componentId = "wear-m3/confirmation-dialog",
+      displayName = "Confirmation dialog",
+      composable = "ConfirmationDialog",
+      role = "Leaf",
+      traits = listOf("Overlay"),
+      properties =
+        listOf(
+          text("text", "The line shown under the icon.", required = true),
+          enum(
+            "variant",
+            listOf("generic", "success", "failure"),
+            "`ConfirmationDialog`, `SuccessConfirmationDialog` or `FailureConfirmationDialog`. " +
+              "The two named ones bring their own icon and curved text; the generic one takes the " +
+              "text alone.",
+          ),
+          flag("visible", "Whether it is showing, as for `wear-m3/alert-dialog`."),
+        ),
+      extra =
+        "The brief full-screen acknowledgement Wear shows after an action and then dismisses.",
+    ),
+    component(
+      componentId = "wear-m3/open-on-phone-dialog",
+      displayName = "Open on phone dialog",
+      composable = "OpenOnPhoneDialog",
+      role = "Leaf",
+      traits = listOf("Overlay"),
+      properties =
+        listOf(
+          text("text", "The curved line under the animation. Empty takes upstream's own."),
+          flag("visible", "Whether it is showing, as for `wear-m3/alert-dialog`."),
+        ),
+      extra =
+        "The one Wear surface with no mobile analogue at all: it tells the wearer the rest of this " +
+          "journey happens on their phone.",
+    ),
+    component(
+      componentId = "wear-m3/date-picker",
+      displayName = "Date picker",
+      composable = "DatePicker",
+      role = "Leaf",
+      traits = listOf("ScreenContent"),
+      properties =
+        listOf(
+          text("initialDate", "ISO-8601 `yyyy-MM-dd`. Empty picks upstream's own initial date."),
+          enum(
+            "type",
+            listOf("year-month-day", "day-month-year", "month-day-year"),
+            "`DatePickerType`, which is field order rather than formatting.",
+          ),
+        ),
+      extra = "A full-screen three-column picker, driven by the rotary side button.",
+    ),
+    component(
+      componentId = "wear-m3/time-picker",
+      displayName = "Time picker",
+      composable = "TimePicker",
+      role = "Leaf",
+      traits = listOf("ScreenContent"),
+      properties =
+        listOf(
+          text("initialTime", "ISO-8601 `HH:mm[:ss]`. Empty picks upstream's own initial time."),
+          enum(
+            "type",
+            listOf("hours-minutes-seconds", "hours-minutes-am-pm", "hours-minutes-24h"),
+            "`TimePickerType`, which decides both the columns and the clock.",
+          ),
+        ),
+      extra = "The time counterpart of `wear-m3/date-picker`, and the same full-screen shape.",
+    ),
+  )
+}
+
+/**
  * `wear-m3`: the Wear Compose Material 3 screen, as an authoring surface.
  *
  * ## Why this is a re-creation and not the library
@@ -530,6 +1001,18 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       acceptedRoles = emptyList(),
       acceptedTraits = listOf("Action"),
     )
+  // Wear's dialogs are a screen *state*, not a place in the layout: each takes a `visible` flag and
+  // draws over the whole display when it is set, and upstream's own samples put them beside the
+  // scaffold in the same `AppScaffold`. A slot in `content` would have made them list rows, which
+  // is a full-screen dialog inside a scrolling item. Unbounded, because a screen can have more than
+  // one dialog it shows at different moments — only one is ever `visible`.
+  val overlaySlot =
+    contentSlot.copy(
+      name = "overlays",
+      cardinality = contentSlot.cardinality.copy(min = 0, max = null),
+      acceptedRoles = emptyList(),
+      acceptedTraits = listOf("Overlay"),
+    )
 
   val scaffold =
     box.copy(
@@ -537,7 +1020,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       displayName = "Wear screen · ScreenScaffold",
       role = "Scaffold",
       traits = listOf("ScreenContent", "WearScreenHost"),
-      slots = listOf(contentSlot, edgeButtonSlot),
+      slots = listOf(contentSlot, edgeButtonSlot, overlaySlot),
       properties = wearScreenScaffoldProperties(),
       modifierCapabilities = emptyList(),
       wasm =
@@ -650,9 +1133,56 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
 
   val wearText = wearOwn("m3/text", "wear-m3/text", "Text", "a Material 3 Text", "`Text`")
   val wearCard =
-    wearOwn("m3/card", "wear-m3/card", "Title card", "a Material 3 Card", "`TitleCard`")
+    wearOwn("m3/card", "wear-m3/card", "Card", "a Material 3 Card", "`TitleCard`").let { card ->
+      // A variant that **selects the composable**, the way `m3/card`'s does — not a recolouring of
+      // one. Wear publishes four cards with different content lambdas: `TitleCard` (title,
+      // subtitle, time), `AppCard` (an app name and icon above the title), `OutlinedCard` and the
+      // plain `Card`. Rolling them into one id with a variant rather than four ids is the
+      // `m3/card` precedent, and it keeps the palette the size of the vocabulary rather than the
+      // size of the API.
+      card.copy(
+        properties =
+          card.properties.filterNot { it.name == "variant" } +
+            PropertyCapabilityV1(
+              name = "variant",
+              jsonType = JsonPrimitive("string"),
+              allowedValues = listOf("title", "app", "outlined", "plain").map(::JsonPrimitive),
+              notes =
+                "Which card is written: `TitleCard`, `AppCard`, `OutlinedCard` or `Card`. " +
+                  "`title` is the default and is the one a Wear list is mostly made of.",
+            )
+      )
+    }
   val wearButton =
-    wearOwn("m3/button", "wear-m3/button", "Button", "a Material 3 Button", "`Button`")
+    wearOwn("m3/button", "wear-m3/button", "Button", "a Material 3 Button", "`Button`").let { button
+      ->
+      // The same treatment, and the same reason. Wear's four are `Button`, `FilledTonalButton`,
+      // `OutlinedButton` and `ChildButton`; the mobile `style` list this borrowed carried `fab` and
+      // `elevated`, which no watch publishes, so the property is replaced rather than filtered.
+      button.copy(
+        properties =
+          button.properties.filterNot { it.name == "variant" || it.name == "style" } +
+            PropertyCapabilityV1(
+              name = "variant",
+              jsonType = JsonPrimitive("string"),
+              allowedValues =
+                listOf("filled", "filled-tonal", "outlined", "child").map(::JsonPrimitive),
+              notes =
+                "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or " +
+                  "`ChildButton`. There is no `fab` — a watch has no floating action button, " +
+                  "which is one of the things a borrowed `m3/button` was quietly offering.",
+            )
+      )
+    }
+  val nativeOnly =
+    wearNativeOnlyComponents(
+      supportedWasm = supportedWasm,
+      blockedSvg = blockedSvg,
+      // The icon key table is `m3/icon`'s, taken from the catalog rather than restated: two lists
+      // of icon names is two chances to disagree about which vector `genres` is.
+      iconKeys =
+        components.getValue("m3/icon").properties.single { it.name == "iconKey" }.allowedValues,
+    )
 
   // Foundation only. Every one of these is `androidx.compose.foundation` or `androidx.compose.ui`,
   // shared by both platforms, so borrowing it claims nothing about which Material library a Wear
@@ -707,6 +1237,43 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
     }
 
   return base.copy(
+    // The one thing this catalog has to say about itself that is not a component.
+    //
+    // The Wasm canvas is where a `wear-m3` design is *authored* — you select a node on it, drag it,
+    // watch the layout — and it is not where the design is *looked at*. It cannot be: every Wear
+    // component on it is a Material 3 lookalike, because `androidx.wear.compose:compose-material3`
+    // is an Android AAR and a Wasm build links no AAR, ever. Saying that here rather than leaving
+    // each surface to work it out is what stops the editor offering a Preview mode whose claim is
+    // false and the server picking a daemon by guessing from a catalog id.
+    //
+    // `statusSemantics` rather than a field of its own because `CatalogCapabilityV1` is published
+    // from compose-preview-contracts and cannot grow one from here; this map is the catalog's own
+    // open vocabulary and already carries `adapterStatus` and `svgStatus`. Read back by
+    // `UiBuilderPreviewSurfaces.from`.
+    statusSemantics =
+      JsonObject(
+        base.statusSemantics +
+          ("previewSurfaces" to
+            buildJsonObject {
+              putJsonObject("wasm") {
+                put("fidelity", JsonPrimitive("approximate"))
+                put(
+                  "reason",
+                  JsonPrimitive(
+                    "The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an " +
+                      "Android AAR, so every Wear component here is drawn by its nearest Material " +
+                      "3 lookalike. Author on it; do not read a size, a colour or a shape off it. " +
+                      "The Android preview compiles this design's own generated Kotlin against " +
+                      "real Wear Compose."
+                  ),
+                )
+              }
+              putJsonObject("native") {
+                put("fidelity", JsonPrimitive("authoritative"))
+                put("backend", JsonPrimitive("android"))
+              }
+            })
+      ),
     benchmark =
       base.benchmark.copy(
         id = "wear-m3-screen-scaffold",
@@ -716,6 +1283,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       ),
     components =
       listOf(scaffold, transformingLazyColumn, listHeader, wearText, wearCard, wearButton) +
+        nativeOnly +
         borrowed,
   )
 }

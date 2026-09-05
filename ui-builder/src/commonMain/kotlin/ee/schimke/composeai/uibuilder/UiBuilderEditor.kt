@@ -426,7 +426,22 @@ fun UiBuilderEditor(
             inspectorMode = initialInspectorMode,
             previewMode = initialPreviewMode,
             codePaneVisible = initialCodePaneVisible,
-            previewSurface = initialPreviewSurface,
+            // A catalog whose canvas is only a stand-in opens on the host's renderer instead, where
+            // the host has one. Not a preference — on `wear-m3` the canvas draws Material 3
+            // lookalikes because a Wasm build cannot link `androidx.wear.compose:compose-material3`
+            // at all, so a Wasm-first editor opens every Wear design on a picture of the wrong
+            // library. An explicit [initialPreviewSurface] from the host still wins: it is a host
+            // saying which surface it wants captured.
+            previewSurface =
+              if (
+                initialPreviewSurface == EditorPreviewSurface.Wasm &&
+                  !catalog.previewSurfaces.wasm.fidelity.isAuthoritative &&
+                  onRequestNativeRender != null
+              ) {
+                EditorPreviewSurface.Native
+              } else {
+                initialPreviewSurface
+              },
           )
       )
     }
@@ -982,6 +997,8 @@ fun UiBuilderEditor(
             // Absent where the host cannot draw: a project with no compile lane has exactly one
             // renderer, and offering a choice between it and nothing is not a choice.
             previewSurface = if (onRequestNativeRender == null) null else state.previewSurface,
+            previewSurfaces = catalog.previewSurfaces,
+            nativeAvailable = onRequestNativeRender != null,
             dispatch = ::dispatch,
           )
         }
@@ -1554,6 +1571,10 @@ private fun EditorToolbar(
    * offered a choice between it and nothing.
    */
   previewSurface: EditorPreviewSurface? = null,
+  /** What this design's catalog says each renderer's picture of it is worth. */
+  previewSurfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
+  /** Whether the host can compile and draw this design at all. */
+  nativeAvailable: Boolean = false,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var showShortcuts by remember { mutableStateOf(false) }
@@ -1579,7 +1600,12 @@ private fun EditorToolbar(
       // the mode switch, and a mode switch that reads like a button is the thing people press by
       // accident and cannot find on purpose.
       Spacer(Modifier.weight(1f))
-      CanvasModeSwitch(previewing = state.previewMode, dispatch = dispatch)
+      CanvasModeSwitch(
+        previewing = state.previewMode,
+        canvasClaim = previewSurfaces.wasm,
+        nativeAvailable = nativeAvailable,
+        dispatch = dispatch,
+      )
       Spacer(Modifier.weight(1f))
       // Only once there is something to hide — a picture, a placed piece or a mark. An
       // always-present control for a feature most designs never use is exactly the crowding the
@@ -1603,7 +1629,7 @@ private fun EditorToolbar(
         dispatch(UiBuilderEditorEvent.ToggleCodePane)
       }
       if (previewSurface != null) {
-        RenderSurfaceMenu(previewSurface, dispatch)
+        RenderSurfaceMenu(previewSurface, previewSurfaces, dispatch)
       }
       if (collaborators.isNotEmpty()) {
         Spacer(Modifier.width(6.dp))
@@ -1706,7 +1732,28 @@ private fun DocumentIdentity(state: UiBuilderEditorState, modifier: Modifier = M
  * gets the control every tool uses for a mode.
  */
 @Composable
-private fun CanvasModeSwitch(previewing: Boolean, dispatch: (UiBuilderEditorEvent) -> Unit) {
+private fun CanvasModeSwitch(
+  previewing: Boolean,
+  /**
+   * What the browser's own canvas is worth on this catalog.
+   *
+   * Preview mode is a claim — "this is your screen, without the editor on top of it" — and on a
+   * catalog whose canvas draws stand-ins the claim is false. Where the host can compile the design
+   * the mode still exists and answers with the host's renderer instead; where it cannot, the
+   * position is refused, carrying the catalog's own sentence about why rather than a grey button.
+   */
+  canvasClaim: UiBuilderPreviewSurfaces.SurfaceClaim = UiBuilderPreviewSurfaces.DEFAULT.wasm,
+  nativeAvailable: Boolean = false,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  val canvasIsAuthoritative = canvasClaim.fidelity.isAuthoritative
+  val previewEnabled = canvasIsAuthoritative || nativeAvailable
+  val previewDescription =
+    when {
+      previewEnabled -> "Preview (Ctrl/⌘+Enter)"
+      canvasClaim.reason.isNotEmpty() -> "Preview unavailable: ${canvasClaim.reason}"
+      else -> "Preview unavailable: this catalog has no faithful renderer on this host"
+    }
   SingleChoiceSegmentedButtonRow {
     SegmentedButton(
       selected = !previewing,
@@ -1719,11 +1766,21 @@ private fun CanvasModeSwitch(previewing: Boolean, dispatch: (UiBuilderEditorEven
     )
     SegmentedButton(
       selected = previewing,
-      onClick = { if (!previewing) dispatch(UiBuilderEditorEvent.TogglePreview) },
+      enabled = previewEnabled,
+      onClick = {
+        if (previewing) return@SegmentedButton
+        // Switch the renderer *before* the mode, so the first frame Preview shows is already the
+        // faithful one. Entering Preview and then noticing the canvas is a lookalike is the
+        // sequence this whole declaration exists to prevent.
+        if (!canvasIsAuthoritative) {
+          dispatch(UiBuilderEditorEvent.ShowPreviewSurface(EditorPreviewSurface.Native))
+        }
+        dispatch(UiBuilderEditorEvent.TogglePreview)
+      },
       shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
       icon = {},
       label = { Text("Preview", style = MaterialTheme.typography.labelLarge) },
-      modifier = Modifier.semantics { contentDescription = "Preview (Ctrl/⌘+Enter)" }.width(112.dp),
+      modifier = Modifier.semantics { contentDescription = previewDescription }.width(112.dp),
     )
   }
 }
@@ -1738,6 +1795,14 @@ private fun CanvasModeSwitch(previewing: Boolean, dispatch: (UiBuilderEditorEven
 @Composable
 private fun RenderSurfaceMenu(
   surface: EditorPreviewSurface,
+  /**
+   * The catalog's own claims, so an option that cannot tell the truth says so where it is chosen.
+   *
+   * The Wasm entry is never *removed* on such a catalog: the browser canvas is what a node is
+   * selected and dragged on, and an editor with no canvas is not an editor. What it loses is the
+   * word "immediate" standing alone as its whole description.
+   */
+  surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var open by remember { mutableStateOf(false) }
@@ -1757,7 +1822,7 @@ private fun RenderSurfaceMenu(
             Column {
               Text(option.label())
               Text(
-                option.supportingText(),
+                option.supportingText(surfaces),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelSmall,
               )
@@ -2093,10 +2158,25 @@ private fun EditorPreviewSurface.label(): String =
     EditorPreviewSurface.Both -> "Both"
   }
 
-private fun EditorPreviewSurface.supportingText(): String =
+/**
+ * One line under each renderer's name, which is where a catalog's own caveat belongs.
+ *
+ * "Drawn in this browser" is a complete description on `m3-catalog`, where the canvas draws the
+ * same Material 3 the export names. On `wear-m3` it is the least interesting true thing about it,
+ * and the interesting one — those are stand-ins for a library no browser can link — is exactly what
+ * somebody choosing a renderer needs to read.
+ */
+private fun EditorPreviewSurface.supportingText(
+  surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT
+): String =
   when (this) {
-    EditorPreviewSurface.Wasm -> "Drawn in this browser"
-    EditorPreviewSurface.Native -> "Compiled and drawn on the host"
+    EditorPreviewSurface.Wasm ->
+      if (surfaces.wasm.fidelity.isAuthoritative) "Drawn in this browser"
+      else "Drawn in this browser — stand-ins, for authoring"
+    EditorPreviewSurface.Native ->
+      if (surfaces.native.backend == UiBuilderPreviewSurfaces.BACKEND_ANDROID)
+        "Compiled and drawn on the host, on Android"
+      else "Compiled and drawn on the host"
     EditorPreviewSurface.Both -> "Side by side, to compare them"
   }
 
