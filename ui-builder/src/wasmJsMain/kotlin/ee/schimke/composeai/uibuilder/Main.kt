@@ -63,10 +63,12 @@ import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderHttpTransport
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderSocketState
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderWebSocketTransport
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
+import ee.schimke.composeai.uibuilder.client.SnapshotDisposition
 import ee.schimke.composeai.uibuilder.client.UiBuilderClientUpdate
 import ee.schimke.composeai.uibuilder.client.UiBuilderHttpRequest
 import ee.schimke.composeai.uibuilder.client.UiBuilderHttpResult
 import ee.schimke.composeai.uibuilder.client.UiBuilderLiveSessionApi
+import ee.schimke.composeai.uibuilder.client.UiBuilderLiveSessionSync
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolUpdateClient
 import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
@@ -89,6 +91,7 @@ import kotlin.js.Promise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -406,11 +409,19 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
   var catalogQuery by remember { mutableStateOf("") }
   var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
   var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
+  // Which snapshot may be shown, and which revision the next command claims as its base. See
+  // [UiBuilderLiveSessionSync]: without it a burst of edits raced its own round trips and the
+  // canvas dropped most of them.
+  val sync = remember(config.designId) { UiBuilderLiveSessionSync() }
+  // The newest snapshot held back while the operator's own edits are still queued, displayed once
+  // the queue drains.
+  var heldSnapshot by remember(config.designId) { mutableStateOf<SnapshotResponseV1?>(null) }
+  // Edits wait here rather than each opening its own request. Unbounded because dropping one would
+  // lose an edit the canvas is already showing; a burst is twenty, not twenty thousand.
+  val submissions = remember(config.designId) { Channel<EditorSubmission>(Channel.UNLIMITED) }
+  DisposableEffect(submissions) { onDispose { submissions.close() } }
 
-  fun acceptSnapshot(response: SnapshotResponseV1) {
-    require(response.snapshot.state.document.catalogPin.systemId == config.catalogSystemId) {
-      "design ${config.designId} belongs to ${response.snapshot.state.document.catalogPin.systemId}, not ${config.catalogSystemId}"
-    }
+  fun displaySnapshot(response: SnapshotResponseV1) {
     recordAuthoritativeReceipt(
       response.snapshot.state.document.revision.toInt(),
       response.snapshot.state.lastSequence,
@@ -423,19 +434,97 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       "${config.catalogSystemId} · Live · ${config.actorId}/${config.clientId} · seq ${response.snapshot.state.lastSequence}"
   }
 
+  fun acceptSnapshot(response: SnapshotResponseV1) {
+    require(response.snapshot.state.document.catalogPin.systemId == config.catalogSystemId) {
+      "design ${config.designId} belongs to ${response.snapshot.state.document.catalogPin.systemId}, not ${config.catalogSystemId}"
+    }
+    when (
+      sync.receiveSnapshot(
+        sequence = response.snapshot.state.lastSequence,
+        revision = response.snapshot.state.document.revision.toInt(),
+      )
+    ) {
+      SnapshotDisposition.DISPLAY -> {
+        heldSnapshot = null
+        displaySnapshot(response)
+      }
+      // Presence still moves on, because who else is here is not part of the document and holding
+      // it back would blank the collaborator cursors for the length of the burst.
+      SnapshotDisposition.DEFER -> {
+        heldSnapshot = response
+        presenceState = presenceState.replace(response.snapshot.presence, browserNowMillis())
+      }
+      SnapshotDisposition.STALE -> Unit
+    }
+  }
+
+  suspend fun syncSnapshot(reason: String) {
+    sessionStatus = reason
+    when (val result = http.execute(OpenDesignRequestV1(config.designId))) {
+      is UiBuilderHttpResult.Response -> {
+        val response = result.response as? SnapshotResponseV1
+        if (response == null) sessionStatus = "Live error · unexpected snapshot response"
+        else acceptSnapshot(response)
+      }
+      is UiBuilderHttpResult.ServiceError -> sessionStatus = "Live error · ${result.error.message}"
+      is UiBuilderHttpResult.SnapshotRequired ->
+        sessionStatus = "Snapshot required · ${result.error.message}"
+    }
+  }
+
   fun refreshSnapshot(reason: String) {
-    scope.launch {
-      sessionStatus = reason
-      when (val result = http.execute(OpenDesignRequestV1(config.designId))) {
-        is UiBuilderHttpResult.Response -> {
-          val response = result.response as? SnapshotResponseV1
-          if (response == null) sessionStatus = "Live error · unexpected snapshot response"
-          else acceptSnapshot(response)
+    scope.launch { syncSnapshot(reason) }
+  }
+
+  /**
+   * Drains the edit queue one submission at a time.
+   *
+   * Serialized on purpose. Each command claims the revision the *previous* one produced, which is
+   * what keeps its insertion anchor — the node that command added — resolvable at the base it
+   * names; and one request at a time cannot be overtaken by the next.
+   */
+  LaunchedEffect(config.designId, http) {
+    for (submission in submissions) {
+      try {
+        val expectedRevision = sync.baseRevision
+        if (expectedRevision == null) {
+          // Unreachable in practice — the editor is not composed until the first snapshot has
+          // landed — and it says so rather than dropping the edit silently if it ever is.
+          sessionStatus = "Live error · no authoritative revision to edit from"
+        } else {
+          sessionStatus = "Saving revision $expectedRevision…"
+          val request =
+            ApplyOperationRequestV1(
+              submission.toProtocolSubmission(
+                actorId = config.actorId,
+                clientId = config.clientId,
+                authoritativeRevision = expectedRevision,
+              )
+            )
+          when (val result = http.execute(request)) {
+            is UiBuilderHttpResult.Response -> {
+              val response = result.response as? OperationOutcomeResponseV1
+              sessionStatus =
+                if (response == null) "Live error · unexpected operation response"
+                else "Accepted · syncing authoritative revision…"
+              syncSnapshot(sessionStatus)
+            }
+            is UiBuilderHttpResult.ServiceError -> {
+              sessionStatus = "Rejected · ${result.error.message}"
+              syncSnapshot(sessionStatus)
+            }
+            is UiBuilderHttpResult.SnapshotRequired ->
+              syncSnapshot("Snapshot recovery · ${result.error.message}")
+          }
         }
-        is UiBuilderHttpResult.ServiceError ->
-          sessionStatus = "Live error · ${result.error.message}"
-        is UiBuilderHttpResult.SnapshotRequired ->
-          sessionStatus = "Snapshot required · ${result.error.message}"
+      } finally {
+        sync.completeSubmission()
+      }
+      if (sync.releaseDeferredSnapshot()) {
+        heldSnapshot?.let { held ->
+          heldSnapshot = null
+          displaySnapshot(held)
+        }
       }
     }
   }
@@ -594,12 +683,19 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
                   sequence = update.update.delta.throughSequence,
                 )
                 val projectionStartedAt = monotonicNow()
-                val candidate = document?.let { rendererDocument ->
-                  authoritativeDocument?.preparePropertyDelta(
-                    rendererDocument = rendererDocument,
-                    delta = update.update.delta,
-                  )
-                }
+                // Not while the operator's own edits are still queued: projecting a collaborator's
+                // property write onto the displayed document would rebuild the editor from a
+                // document those edits are not in yet. The fetch below answers with a snapshot,
+                // which the deferral holds until the queue drains.
+                val candidate =
+                  if (sync.pendingSubmissions > 0) null
+                  else
+                    document?.let { rendererDocument ->
+                      authoritativeDocument?.preparePropertyDelta(
+                        rendererDocument = rendererDocument,
+                        delta = update.update.delta,
+                      )
+                    }
                 recordPerformancePhase(
                   name = "propertyDeltaProjection",
                   revision = revision,
@@ -607,7 +703,8 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
                   completedAtMs = monotonicNow(),
                 )
                 val hashStartedAt = monotonicNow()
-                val verified = candidate?.hasVerifiedHash() == true
+                val projected = candidate?.takeIf { it.hasVerifiedHash() }
+                val verified = projected != null
                 recordPerformancePhase(
                   name = "propertyDeltaHash",
                   revision = revision,
@@ -622,18 +719,31 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
                   startedAtMs = projectionStartedAt,
                   completedAtMs = monotonicNow(),
                 )
-                if (!verified) {
-                  refreshSnapshot("Syncing remote edits…")
-                } else {
+                // The projected document is only displayed when the session agrees it is the
+                // newest thing seen — a snapshot fetch racing this delta can already have carried
+                // the design past it, and drawing the delta then would be a rollback.
+                val disposition = projected?.let {
+                  sync.receiveSnapshot(
+                    sequence = update.update.delta.throughSequence,
+                    revision = it.rendererDocument.revision,
+                  )
+                }
+                if (projected != null && disposition == SnapshotDisposition.DISPLAY) {
                   recordAuthoritativeReceipt(
-                    candidate.rendererDocument.revision,
+                    projected.rendererDocument.revision,
                     update.update.delta.throughSequence,
                   )
-                  authoritativeDocument = candidate.protocolDocument
-                  document = candidate.rendererDocument
+                  heldSnapshot = null
+                  authoritativeDocument = projected.protocolDocument
+                  document = projected.rendererDocument
                   authoritativeGeneration += 1
                   sessionStatus =
                     "Live · ${config.actorId} · seq ${update.update.delta.throughSequence}"
+                } else {
+                  // Unverified, held back behind the operator's own queue, or already overtaken:
+                  // ask for a snapshot rather than guessing, and let the deferral decide when it
+                  // may be shown.
+                  refreshSnapshot("Syncing remote edits…")
                 }
               }
               is UiBuilderClientUpdate.Outcome -> refreshSnapshot("Confirming operation…")
@@ -736,32 +846,12 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
         refreshSnapshot("Reconnecting…")
       },
       onSubmission = { submission ->
-        val expectedRevision = document?.revision ?: return@UiBuilderEditor
-        scope.launch {
-          sessionStatus = "Saving revision $expectedRevision…"
-          val request =
-            ApplyOperationRequestV1(
-              submission.toProtocolSubmission(
-                actorId = config.actorId,
-                clientId = config.clientId,
-                authoritativeRevision = expectedRevision,
-              )
-            )
-          when (val result = http.execute(request)) {
-            is UiBuilderHttpResult.Response -> {
-              val response = result.response as? OperationOutcomeResponseV1
-              sessionStatus =
-                if (response == null) "Live error · unexpected operation response"
-                else "Accepted · syncing authoritative revision…"
-              refreshSnapshot(sessionStatus)
-            }
-            is UiBuilderHttpResult.ServiceError -> {
-              sessionStatus = "Rejected · ${result.error.message}"
-              refreshSnapshot(sessionStatus)
-            }
-            is UiBuilderHttpResult.SnapshotRequired ->
-              refreshSnapshot("Snapshot recovery · ${result.error.message}")
-          }
+        // Queued rather than sent: the revision this command claims, and the order it reaches the
+        // server in, are the drain loop's to decide.
+        sync.enqueueSubmission()
+        if (submissions.trySend(submission).isFailure) {
+          sync.completeSubmission()
+          sessionStatus = "Live error · the edit queue is closed"
         }
       },
       authoritativeGeneration = authoritativeGeneration,
