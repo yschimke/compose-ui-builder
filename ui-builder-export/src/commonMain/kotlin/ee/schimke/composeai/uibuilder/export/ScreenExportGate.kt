@@ -36,25 +36,48 @@ object ScreenExportGate {
   /** The package a generated screen is emitted into. */
   const val PACKAGE_NAME: String = "generated.uibuilder"
 
-  /** Why the export would refuse [document], or empty when it would succeed. */
-  fun refusals(document: DesignDocumentV1, record: ComponentRecordFile?): List<String> {
+  /**
+   * The whole answer, rather than the half each caller happened to need first.
+   *
+   * Two surfaces want two halves of this and neither should run the generator twice to get its own:
+   * the problems panel wants [Refused.reasons], the code pane wants [Emitted.source]. A gate that
+   * could only report refusals is why the editor kept a second emitter — it had no way to ask this
+   * one for the Kotlin.
+   */
+  sealed interface Outcome {
+    /** The Kotlin the export would write. */
+    data class Emitted(val source: String) : Outcome
+
+    /** Every unexpressible thing found, not the first — a builder wants the whole list. */
+    data class Refused(val reasons: List<String>) : Outcome
+  }
+
+  /** What the export would produce for [document], or why it would refuse. */
+  fun export(document: DesignDocumentV1, record: ComponentRecordFile?): Outcome {
     if (record == null) {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
       // from "this design is unexpressible", and only the first is fixed by configuration.
-      return listOf(
-        "no component record is configured for this catalog, so nothing can be exported"
+      return Outcome.Refused(
+        listOf("no component record is configured for this catalog, so nothing can be exported")
       )
     }
     return when (val projected = ScreenDocumentProjection.project(document)) {
-      is ScreenDocumentProjection.Outcome.Refused -> projected.reasons
+      is ScreenDocumentProjection.Outcome.Refused -> Outcome.Refused(projected.reasons)
       is ScreenDocumentProjection.Outcome.Projected ->
         when (
           val generated =
             ScreenGenerator.generate(projected.document, record, PACKAGE_NAME, EXPRESSION_PACKAGES)
         ) {
-          is ScreenGenerator.Result.Refused -> generated.reasons
-          is ScreenGenerator.Result.Emitted -> emptyList()
+          is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
+          is ScreenGenerator.Result.Emitted -> Outcome.Emitted(generated.source)
         }
     }
   }
+
+  /** Why the export would refuse [document], or empty when it would succeed. */
+  fun refusals(document: DesignDocumentV1, record: ComponentRecordFile?): List<String> =
+    when (val outcome = export(document, record)) {
+      is Outcome.Refused -> outcome.reasons
+      is Outcome.Emitted -> emptyList()
+    }
 }

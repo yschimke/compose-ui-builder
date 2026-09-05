@@ -240,6 +240,121 @@ private fun UiBuilderDocument.onDevice(preset: UiBuilderDevicePreset): UiBuilder
       )
   )
 
+/**
+ * The code pane open on a design that exports.
+ *
+ * The builder's proposition is that a design *is* code, and until this pane the only way to read
+ * the code a design produced was to run an export and open the artifact. What it draws is the real
+ * `ScreenGenerator` output for the document beside it — same generator, same component record and
+ * same allow-list the server's export runs — so this render is also the evidence that the two
+ * builders now share one emitter.
+ *
+ * A small authored document rather than the Jetcaster fixture, because the fixture does not export
+ * and this preview is the case where there is Kotlin to show. [UiBuilderCodePaneRefusedPreview] is
+ * the other half.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderCodePanePreview() {
+  UiBuilderEditor(
+    document = editorCodePanePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "code-pane-heading",
+    initialCodePaneVisible = true,
+  )
+}
+
+/**
+ * The code pane on a design the export refuses.
+ *
+ * Pairs with [UiBuilderCodePanePreview]. The reasons appear where the source would, rather than the
+ * pane going blank and leaving them behind the Issues tab — a designer looking at the code pane on
+ * a design that cannot generate is looking at exactly the question the refusals answer.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderCodePaneRefusedPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialCodePaneVisible = true,
+  )
+}
+
+/**
+ * A scaffold, a column, a heading and a rule — every id backed by the component record.
+ *
+ * Authored here rather than replayed, because the point is a document the generator can express:
+ * the fixture reaches for an adaptive grid, an enum value with no Kotlin member and a state read,
+ * and refuses on all three.
+ */
+private val editorCodePanePreviewDocument: UiBuilderDocument by lazy {
+  val blank =
+    blankUiBuilderDocument(
+      designId = "code-pane-preview",
+      catalogPin = editorChromePreviewDocument.catalogPin,
+      environment = editorChromePreviewDocument.environment,
+    )
+  blank.copy(
+    title = "Discover header",
+    nodes =
+      blank.nodes +
+        mapOf(
+          "screen-content" to
+            blank.nodes
+              .getValue("screen-content")
+              .copy(slots = mapOf("children" to listOf("code-pane-column"))),
+          "code-pane-column" to
+            UiBuilderNode(
+              id = "code-pane-column",
+              componentId = "layout/column",
+              slots =
+                mapOf(
+                  "children" to listOf("code-pane-heading", "code-pane-rule", "code-pane-card")
+                ),
+            ),
+          "code-pane-card" to
+            UiBuilderNode(
+              id = "code-pane-card",
+              componentId = "m3/card",
+              slots = mapOf("content" to listOf("code-pane-card-text")),
+            ),
+          "code-pane-card-text" to
+            UiBuilderNode(
+              id = "code-pane-card-text",
+              componentId = "m3/text",
+              properties =
+                JsonObject(
+                  mapOf(
+                    "text" to previewStringValue("Latest episodes"),
+                    "style" to previewTypedValue("typographyToken", "titleMedium"),
+                  )
+                ),
+            ),
+          "code-pane-heading" to
+            UiBuilderNode(
+              id = "code-pane-heading",
+              componentId = "m3/text",
+              properties =
+                JsonObject(
+                  mapOf(
+                    "text" to previewStringValue("Discover"),
+                    "style" to previewTypedValue("typographyToken", "headlineSmall"),
+                  )
+                ),
+            ),
+          "code-pane-rule" to
+            UiBuilderNode(id = "code-pane-rule", componentId = "m3/horizontal-divider"),
+        ),
+  )
+}
+
+private fun previewStringValue(value: String): JsonObject = previewTypedValue("string", value)
+
+private fun previewTypedValue(type: String, value: String): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
+
 private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
   val document = editorChromePreviewDocument
   val placeholder = document.nodes.getValue(EDITOR_CHROME_PREVIEW_SELECTION)

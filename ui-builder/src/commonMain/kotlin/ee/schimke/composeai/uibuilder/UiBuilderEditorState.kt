@@ -235,6 +235,14 @@ data class UiBuilderEditorState(
   val selectionAfterOperations: Map<String, String?> = emptyMap(),
   val propertyErrors: Map<EditorPropertyLocation, String> = emptyMap(),
   val inspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
+  /**
+   * Whether the Kotlin the export would write is shown under the canvas.
+   *
+   * Off by default: it costs a generator run per document change, and a designer who never opens it
+   * should not pay for one. On, it is the answer to "what did that edit do to the code", which is
+   * the question the canvas alone cannot answer.
+   */
+  val codePaneVisible: Boolean = false,
 ) {
   /**
    * The anchor: the most recently selected node.
@@ -254,6 +262,18 @@ data class UiBuilderEditorState(
 
   val canRedo: Boolean
     get() = redoTargetUndoId() != null
+}
+
+/**
+ * What the code pane has to show: the export's Kotlin, or the reasons there is none.
+ *
+ * Two cases rather than a nullable string, because "no code" is never nothing to say — the refusals
+ * are the actionable half, and a blank pane would hide them behind the problems tab.
+ */
+sealed interface EditorGeneratedCode {
+  data class Source(val kotlin: String) : EditorGeneratedCode
+
+  data class Refused(val reasons: List<String>) : EditorGeneratedCode
 }
 
 enum class EditorInspectorMode {
@@ -304,6 +324,9 @@ sealed interface UiBuilderEditorEvent {
    * themselves editing.
    */
   data object TogglePreview : UiBuilderEditorEvent
+
+  /** Shows or hides the generated-Kotlin pane under the canvas. */
+  data object ToggleCodePane : UiBuilderEditorEvent
 
   /**
    * Selects every row the layers filter matched.
@@ -594,6 +617,7 @@ class UiBuilderEditorReducer(
       catalogQuery = state.catalogQuery,
       layerQuery = state.layerQuery,
       previewMode = state.previewMode,
+      codePaneVisible = state.codePaneVisible,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
     )
@@ -604,6 +628,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.SearchCatalog -> state.copy(catalogQuery = event.query)
       is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
       is UiBuilderEditorEvent.TogglePreview -> state.copy(previewMode = !state.previewMode)
+      is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
       is UiBuilderEditorEvent.SelectAllMatches -> selectAllMatches(state)
       is UiBuilderEditorEvent.SelectNode ->
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))
@@ -1111,6 +1136,35 @@ class UiBuilderEditorReducer(
         // component — and dropping them to unify the source would narrow the panel's promise.
         exportRefusals(document))
       .distinctBy { it.code to it.message }
+
+  /**
+   * The Kotlin the Compose export would write for [document], or why it would not.
+   *
+   * The same call the problems panel makes, asked for its other half. Before this the editor could
+   * show a designer what was blocking an export but never what an export would produce, so the only
+   * way to read the code your edits were writing was to run the export and download the artifact.
+   *
+   * Total for the same reason [exportRefusals] is: a malformed property makes `toProtocolDocument`
+   * fail its decode, and a pane that propagated that would take the editor down over exactly the
+   * document whose code someone is trying to read.
+   */
+  fun generatedCode(document: UiBuilderDocument): EditorGeneratedCode = runCatching {
+    when (
+      val outcome =
+        ScreenExportGate.export(document.toProtocolDocument(), embeddedComponentRecord())
+    ) {
+      is ScreenExportGate.Outcome.Emitted -> EditorGeneratedCode.Source(outcome.source)
+      is ScreenExportGate.Outcome.Refused -> EditorGeneratedCode.Refused(outcome.reasons)
+    }
+  }
+    .getOrElse { failure ->
+      EditorGeneratedCode.Refused(
+        listOf(
+          "this design could not be read as a protocol document" +
+            (failure.message?.let { ": $it" } ?: "")
+        )
+      )
+    }
 
   /**
    * What the Compose export would refuse, as editor problems.

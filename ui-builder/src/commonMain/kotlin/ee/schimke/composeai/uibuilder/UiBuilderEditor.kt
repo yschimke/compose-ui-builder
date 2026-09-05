@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,8 +29,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Search
@@ -89,10 +93,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlin.math.roundToInt
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -120,6 +126,7 @@ private enum class MobileEditorPanel {
   None,
   Components,
   Properties,
+  Code,
 }
 
 data class UiBuilderNewDesignTemplate(
@@ -157,6 +164,7 @@ fun UiBuilderEditor(
   initialLayerQuery: String = "",
   initialInspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
   initialPreviewMode: Boolean = false,
+  initialCodePaneVisible: Boolean = false,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   /**
    * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
@@ -194,6 +202,7 @@ fun UiBuilderEditor(
             layerQuery = initialLayerQuery,
             inspectorMode = initialInspectorMode,
             previewMode = initialPreviewMode,
+            codePaneVisible = initialCodePaneVisible,
           )
       )
     }
@@ -299,6 +308,13 @@ fun UiBuilderEditor(
   // Called inline it would run all of that on every recomposition of the inspector — which is
   // every keystroke in a property field and every frame of a drag.
   val problems = remember(reducer, state.document) { reducer.problems(state.document) }
+  // Cached the same way and for the same reason, and only while the pane is open: generating is a
+  // projection plus a full generator run, which nobody should pay for on every recomposition — or
+  // at all, with the pane closed.
+  val generatedCode =
+    if (state.codePaneVisible || mobilePanel == MobileEditorPanel.Code) {
+      remember(reducer, state.document) { reducer.generatedCode(state.document) }
+    } else null
   val propertyFields = reducer.propertyFields(state)
   // Which of those a binding must reach as a comparison rather than a bare read. Computed beside
   // the fields so the inspector is not asking the reducer the same question twice per frame.
@@ -398,10 +414,18 @@ fun UiBuilderEditor(
           if (!compact) {
             Row(Modifier.fillMaxSize()) {
               navigator(Modifier.width(300.dp).fillMaxHeight(), false)
-              canvas(
-                Modifier.weight(1f).fillMaxHeight().background(Color(0xff0d0e11)).padding(20.dp),
-                Alignment.TopStart,
-              )
+              Column(Modifier.weight(1f).fillMaxHeight()) {
+                canvas(
+                  Modifier.fillMaxWidth().weight(1f).background(Color(0xff0d0e11)).padding(20.dp),
+                  Alignment.TopStart,
+                )
+                // Under the canvas rather than beside it: generated Kotlin is long lines and the
+                // canvas is a phone-shaped thing, so height is what the code has to spare and
+                // width is what the canvas cannot.
+                if (generatedCode != null) {
+                  GeneratedCodePane(generatedCode, Modifier.fillMaxWidth().weight(0.8f))
+                }
+              }
               inspector(Modifier.width(INSPECTOR_WIDTH).fillMaxHeight())
             }
           } else {
@@ -426,6 +450,15 @@ fun UiBuilderEditor(
                   .fillMaxWidth()
                   .fillMaxHeight(0.72f)
                   .padding(bottom = 56.dp)
+              )
+            }
+            if (mobilePanel == MobileEditorPanel.Code && generatedCode != null) {
+              GeneratedCodePane(
+                generatedCode,
+                Modifier.align(Alignment.BottomCenter)
+                  .fillMaxWidth()
+                  .fillMaxHeight(0.72f)
+                  .padding(bottom = 56.dp),
               )
             }
             MobilePanelDock(
@@ -751,6 +784,7 @@ private fun MobilePanelDock(
     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
       MobilePanelButton("Components", MobileEditorPanel.Components, panel, onPanelChanged)
       MobilePanelButton("Properties", MobileEditorPanel.Properties, panel, onPanelChanged)
+      MobilePanelButton("Code", MobileEditorPanel.Code, panel, onPanelChanged)
     }
   }
 }
@@ -915,6 +949,14 @@ private fun EditorToolbar(
         shortcut = "Ctrl/\u2318+Enter",
         enabled = true,
         onClick = { dispatch(UiBuilderEditorEvent.TogglePreview) },
+      )
+      // Beside Preview because it is the same kind of control: both change what the canvas column
+      // is showing rather than editing the document.
+      EditorAction(
+        label = if (state.codePaneVisible) "Code · hide" else "Code",
+        shortcut = "",
+        enabled = true,
+        onClick = { dispatch(UiBuilderEditorEvent.ToggleCodePane) },
       )
       EditorAction(
         label = "Shortcuts",
@@ -2149,6 +2191,72 @@ private fun ProblemsInspector(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall,
           )
+        }
+      }
+    }
+  }
+}
+
+/**
+ * The Kotlin the Compose export would write for the document on the canvas.
+ *
+ * ## Why it is here rather than behind the export button
+ *
+ * The builder's proposition is that a design *is* code. Until this pane the only way to read the
+ * code a design produced was to run an export and open the artifact, which is a round trip long
+ * enough that nobody made it after a single edit — so "what did dropping that Column do to the
+ * source" was, in practice, unanswerable.
+ *
+ * ## Why it shows refusals in the same place
+ *
+ * [EditorGeneratedCode.Refused] is not an error state of this pane, it is the pane's other answer.
+ * A design the export cannot express has no source to show, and the reasons are what a designer
+ * needs in order to make one — putting them behind a different tab would mean the pane silently
+ * showed nothing whenever it mattered most.
+ *
+ * The text is selectable and not editable: it is generated, and a pane that let you type into it
+ * would be offering an edit the next keystroke on the canvas throws away.
+ */
+@Composable
+private fun GeneratedCodePane(code: EditorGeneratedCode, modifier: Modifier = Modifier) {
+  Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+      when (code) {
+        is EditorGeneratedCode.Source -> {
+          Text(
+            "Compose export · ${ScreenExportGate.PACKAGE_NAME}",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall,
+          )
+          val vertical = rememberScrollState()
+          val horizontal = rememberScrollState()
+          SelectionContainer(Modifier.padding(top = 8.dp)) {
+            Text(
+              code.kotlin,
+              Modifier.fillMaxSize().verticalScroll(vertical).horizontalScroll(horizontal),
+              // Generated Kotlin is aligned by column, so a proportional face would misreport the
+              // indentation the export actually writes.
+              fontFamily = FontFamily.Monospace,
+              style = MaterialTheme.typography.bodySmall,
+              softWrap = false,
+            )
+          }
+        }
+        is EditorGeneratedCode.Refused -> {
+          Text(
+            "No Compose source · the export would refuse this design",
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelSmall,
+          )
+          LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
+            itemsIndexed(code.reasons) { _, reason ->
+              Text(
+                reason,
+                Modifier.padding(bottom = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+              )
+            }
+          }
         }
       }
     }
