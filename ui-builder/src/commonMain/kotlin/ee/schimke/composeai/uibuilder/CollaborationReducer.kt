@@ -1579,14 +1579,8 @@ private fun CollaborationState.relocateStable(
   liveNode(nodeId)
   val destinationParent = destination.parent
   if (destinationParent != null) {
-    val parent = liveNode(destinationParent.nodeId)
-    if (destinationParent.slot !in parent.slots) {
-      fail(
-        RejectionCode.INVALID_LOCATION,
-        "unknown slot ${destinationParent.slot} on ${destinationParent.nodeId}",
-        nodeId,
-      )
-    }
+    // The slot need not already be there; see `validateDestination`.
+    liveNode(destinationParent.nodeId)
     if (destinationParent.nodeId in document.descendants(nodeId)) {
       fail(RejectionCode.CYCLE, "restoring the move would create a cycle", nodeId)
     }
@@ -1708,11 +1702,15 @@ private fun CollaborationState.validateDestination(
   basePositions: Map<String, StableNodePosition>,
   movingNodeId: String?,
 ) {
+  // The parent has to be there. The *slot* does not have to be there yet: a node's `slots` map
+  // holds the children each slot has, so a slot with none is simply an absent key, and requiring
+  // the key made every empty slot unreachable — neither an insert nor a move could land in one.
+  // A document authored here carries every declared slot from the moment its node is inserted, so
+  // this only ever bit documents replayed from the wire, where the editor offered the empty slot
+  // as a drop target and the operation was then refused. Which slot names a component actually has
+  // is the catalog's question, and the document validator asks it of the result.
   if (parent != null) {
-    val parentNode = liveNode(parent.nodeId)
-    if (parent.slot !in parentNode.slots) {
-      fail(RejectionCode.INVALID_LOCATION, "unknown slot ${parent.slot} on ${parent.nodeId}")
-    }
+    liveNode(parent.nodeId)
   }
   if (movingNodeId != null && afterNodeId == movingNodeId) {
     fail(RejectionCode.INVALID_LOCATION, "a node cannot be positioned after itself")
@@ -1765,9 +1763,6 @@ private fun CollaborationState.rebuildLocation(parent: ParentSlot?): Collaborati
   val parentNode =
     document.nodes[parent.nodeId]
       ?: fail(RejectionCode.UNKNOWN_NODE, "unknown parent: ${parent.nodeId}")
-  if (parent.slot !in parentNode.slots) {
-    fail(RejectionCode.INVALID_LOCATION, "unknown slot ${parent.slot} on ${parent.nodeId}")
-  }
   val changedParent = parentNode.copy(slots = parentNode.slots + (parent.slot to children))
   return copy(document = document.copy(nodes = document.nodes + (parent.nodeId to changedParent)))
 }

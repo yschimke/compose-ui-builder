@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -361,6 +362,9 @@ fun UiBuilderEditor(
   var catalogDragPosition by remember { mutableStateOf<Offset?>(null) }
   var draggedComponentId by remember { mutableStateOf<String?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
+  // The factor between the frame's own pixels and the pane it is drawn in, kept so a drop landing
+  // at a window coordinate can be asked about in the space the renderer reports its slots in.
+  var canvasScale by remember { mutableFloatStateOf(1f) }
   var textInputFocused by remember { mutableStateOf(false) }
   var mobilePanel by remember(document.id) { mutableStateOf(MobileEditorPanel.None) }
   var showNewDesign by remember(document.id) { mutableStateOf(false) }
@@ -435,23 +439,36 @@ fun UiBuilderEditor(
   // Cached for the same reason as the issues scan further down, at a smaller scale: the filter
   // lowercases and scans four strings for every node in the document, and the panel recomposes far
   // more often than either the document or the query changes.
-  val treeRows =
-    remember(reducer, state.document, state.layerQuery) { reducer.visibleTreeRows(state) }
+  val layerRows = remember(reducer, state.document, state.layerQuery) { reducer.layerRows(state) }
   val navigator: @Composable (Modifier, Boolean) -> Unit = { modifier, closeAfterDrop ->
     EditorNavigator(
       state = state,
       catalogSystemId = catalog.benchmark.catalogSystemId,
       catalogItems = reducer.catalogItems(state.catalogQuery),
-      treeRows = treeRows,
+      layerRows = layerRows,
       collaborators = collaborators,
-      dropTargetLabel = reducer.dropTargetLabel(state, draggedComponentId ?: "m3/text"),
+      dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
       onCatalogDrag = { componentId, position ->
         if (position != null) focusEditor()
         draggedComponentId = componentId
         catalogDragPosition = position
       },
       onCatalogDrop = { componentId, position ->
-        val target = reducer.dropTarget(state, componentId)
+        // Where it was dropped, not where the selection happens to be. The palette's own legend
+        // says a drag inserts the component "where it is dropped", and it did not: every drop
+        // landed in the selected node's slot, so dragging onto a card put the component wherever
+        // the last click had been. The renderer already reports each slot's box, and the reference
+        // overlay already promotes a piece into the slot under it — this asks the same question.
+        val target =
+          canvasInspection?.let { snapshot ->
+            reducer.promotionTarget(
+              state,
+              componentId,
+              snapshot.slots,
+              (position.x - canvasBounds.left) / canvasScale,
+              (position.y - canvasBounds.top) / canvasScale,
+            )
+          } ?: reducer.dropTarget(state, componentId)
         if (canvasBounds.contains(position) && target != null) {
           dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target))
           if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
@@ -476,7 +493,7 @@ fun UiBuilderEditor(
         if (pendingRemoteSource == null) pendingRemoteSource = source
         if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
       },
-      moveTarget = { nodeId, direction -> reducer.moveTarget(state, nodeId, direction) },
+      moveRefusal = { nodeId, target -> reducer.moveRefusal(state, nodeId, target) },
       onEditorInteraction = ::focusEditor,
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
@@ -491,7 +508,10 @@ fun UiBuilderEditor(
         focusEditor()
         dispatch(UiBuilderEditorEvent.SelectNode(it))
       },
-      onCanvasMetrics = onCanvasMetrics,
+      onCanvasMetrics = { width, height, scale ->
+        canvasScale = scale
+        onCanvasMetrics(width, height, scale)
+      },
       onCanvasBounds = {
         canvasBounds = it
         onCanvasBoundsChanged(it)
@@ -1655,7 +1675,7 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
   listOf(
     "Ctrl/\u2318 + click a layer" to "Add one layer to the selection, or take it out",
     "Shift + click a layer" to "Extend the selection to that layer",
-    "Drag a layer row" to "Reorder within the slot",
+    "Drag a layer row" to "Drop it on the layer or the slot it should join",
     "Drag a catalog component" to "Insert it where it is dropped",
   )
 
@@ -1664,9 +1684,9 @@ private fun EditorNavigator(
   state: UiBuilderEditorState,
   catalogSystemId: String,
   catalogItems: List<EditorCatalogItem>,
-  treeRows: List<EditorTreeRow>,
+  layerRows: List<EditorLayerRow>,
   collaborators: List<UiBuilderCollaborator>,
-  dropTargetLabel: String,
+  dropTarget: ParentSlot?,
   onCatalogDrag: (String, Offset?) -> Unit,
   onCatalogDrop: (String, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
@@ -1675,7 +1695,7 @@ private fun EditorNavigator(
   pendingRemoteComposeSource: RemoteComposeSource?,
   remoteComposeFailure: String?,
   onAddRemoteComposeSource: (RemoteComposeSource) -> Unit,
-  moveTarget: (String, EditorMoveDirection) -> UiBuilderEditorEvent.MoveNode?,
+  moveRefusal: (String, ParentSlot) -> EditorMoveRefusal?,
   onEditorInteraction: () -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -1685,7 +1705,7 @@ private fun EditorNavigator(
     Column {
       PanelHeading(
         "$catalogSystemId component catalog",
-        "Drop target: $dropTargetLabel",
+        "Drop target: " + (dropTarget?.let { "${it.nodeId}.${it.slot}" } ?: "No compatible slot"),
       )
       SearchField(
         state.catalogQuery,
@@ -1739,11 +1759,24 @@ private fun EditorNavigator(
         }
       }
       HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-      val matches = treeRows.count(EditorTreeRow::matched)
+      val matches = layerRows.count { it is EditorLayerRow.Node && it.row.matched }
+      // Where each layer row sits vertically, in root pixels, kept in a plain map rather than
+      // snapshot state: it is written from layout on every scroll and every relayout, and a
+      // recomposition per frame of scrolling is a price the panel does not need to pay. The drag
+      // reads it from a callback, which is the only place it is ever read.
+      val rowBounds = remember(layerRows) { mutableMapOf<Int, ClosedFloatingPointRange<Float>>() }
+      var draggedLayer by remember { mutableStateOf<String?>(null) }
+      var landing by remember { mutableStateOf<LayerLanding?>(null) }
       PanelHeading(
         "Layers",
-        if (state.layerQuery.isBlank()) "Drag vertically to reorder"
-        else "$matches of ${state.document.nodes.size} match",
+        when {
+          draggedLayer != null ->
+            landing?.refusal?.message
+              ?: landing?.let { "Drop into ${it.target.nodeId}.${it.target.slot}" }
+              ?: "Drag over a layer or a slot"
+          state.layerQuery.isNotBlank() -> "$matches of ${state.document.nodes.size} match"
+          else -> "Drag a row onto a layer or a slot"
+        },
       )
       SearchField(
         state.layerQuery,
@@ -1768,28 +1801,80 @@ private fun EditorNavigator(
         }
       }
       LazyColumn(Modifier.fillMaxSize()) {
-        itemsIndexed(treeRows, key = { _, row -> row.nodeId }) { _, row ->
-          LayerRow(
-            row = row,
-            // Every selected node is highlighted, not just the anchor — a selection you cannot see
-            // is one you cannot trust before pressing Delete.
-            selected = row.nodeId in state.selection,
-            collaborators = collaborators.filter { row.nodeId in it.selectedNodeIds },
-            onSelect = { gesture ->
-              onEditorInteraction()
-              dispatch(
-                when (gesture) {
-                  LayerSelectionGesture.Replace -> UiBuilderEditorEvent.SelectNode(row.nodeId)
-                  LayerSelectionGesture.Toggle -> UiBuilderEditorEvent.ToggleNode(row.nodeId)
-                  LayerSelectionGesture.Range -> UiBuilderEditorEvent.ExtendSelectionTo(row.nodeId)
-                }
+        itemsIndexed(layerRows, key = { _, row -> row.layerKey() }) { index, row ->
+          val recordBounds = Modifier.onGloballyPositioned {
+            val bounds = it.boundsInRoot()
+            rowBounds[index] = bounds.top..bounds.bottom
+          }
+          when (row) {
+            is EditorLayerRow.Slot ->
+              SlotRow(
+                row = row,
+                modifier = recordBounds,
+                // The slot a catalog drop would land in, so the answer the panel heading gives in
+                // words is also given in the tree, next to the children it would join.
+                isCatalogTarget = row.parent == dropTarget,
+                landing = landing?.takeIf { it.marker == LayerLandingMarker.Into(index) },
               )
-            },
-            onMove = { direction ->
-              onEditorInteraction()
-              moveTarget(row.nodeId, direction)?.let(dispatch)
-            },
-          )
+            is EditorLayerRow.Node ->
+              LayerRow(
+                row = row.row,
+                indent = row.indent,
+                modifier = recordBounds,
+                // Every selected node is highlighted, not just the anchor — a selection you cannot
+                // see is one you cannot trust before pressing Delete.
+                selected = row.nodeId in state.selection,
+                dragged = row.nodeId == draggedLayer,
+                landing =
+                  landing?.takeIf {
+                    it.marker == LayerLandingMarker.Above(index) ||
+                      it.marker == LayerLandingMarker.Below(index)
+                  },
+                collaborators = collaborators.filter { row.nodeId in it.selectedNodeIds },
+                onSelect = { gesture ->
+                  onEditorInteraction()
+                  dispatch(
+                    when (gesture) {
+                      LayerSelectionGesture.Replace -> UiBuilderEditorEvent.SelectNode(row.nodeId)
+                      LayerSelectionGesture.Toggle -> UiBuilderEditorEvent.ToggleNode(row.nodeId)
+                      LayerSelectionGesture.Range ->
+                        UiBuilderEditorEvent.ExtendSelectionTo(row.nodeId)
+                    }
+                  )
+                },
+                onDragTo = { y ->
+                  draggedLayer = row.nodeId
+                  landing =
+                    layerLanding(
+                      nodeId = row.nodeId,
+                      y = y,
+                      rows = layerRows,
+                      bounds = rowBounds,
+                      document = state.document,
+                      refusalOf = { target -> moveRefusal(row.nodeId, target) },
+                    )
+                },
+                onDrop = {
+                  val drop = landing
+                  draggedLayer = null
+                  landing = null
+                  if (drop != null) {
+                    onEditorInteraction()
+                    // Sent even when it will be refused: the reducer owns that answer and reports
+                    // it through the same channel as every other refused edit, which is how the
+                    // operator learns *why* a slot would not take the layer rather than watching
+                    // the gesture evaporate.
+                    dispatch(
+                      UiBuilderEditorEvent.MoveNodeInto(row.nodeId, drop.target, drop.afterNodeId)
+                    )
+                  }
+                },
+                onDragCancel = {
+                  draggedLayer = null
+                  landing = null
+                },
+              )
+          }
         }
       }
     }
@@ -2076,46 +2161,213 @@ private fun CatalogRow(
   }
 }
 
+/**
+ * Where a dragged layer would land, and what the panel draws to say so.
+ *
+ * [marker] is the row the indicator is drawn on rather than a coordinate, because the indicator has
+ * to survive the list scrolling under the pointer between the frame that resolved it and the frame
+ * that draws it.
+ */
+private data class LayerLanding(
+  val target: ParentSlot,
+  val afterNodeId: String?,
+  val marker: LayerLandingMarker,
+  val refusal: EditorMoveRefusal?,
+)
+
+private sealed interface LayerLandingMarker {
+  /** Between the row above and row [index]. */
+  data class Above(val index: Int) : LayerLandingMarker
+
+  /** Between row [index] and the row below. */
+  data class Below(val index: Int) : LayerLandingMarker
+
+  /** Inside the slot row [index] names, as its first child. */
+  data class Into(val index: Int) : LayerLandingMarker
+}
+
+/**
+ * The place a layer released at [y] would go, or null when the pointer is over nothing that can
+ * take it.
+ *
+ * Resolved against the rows' measured bounds rather than a row height times an index: the panel
+ * mixes node lines and slot lines, and the list scrolls. A node line splits in half — the top half
+ * lands the drag before it, the bottom half after it, both in *that row's* slot, which is what
+ * makes a drag between slots expressible at all. A slot line lands it first in that slot, which is
+ * the only way into a slot that is still empty.
+ */
+private fun layerLanding(
+  nodeId: String,
+  y: Float,
+  rows: List<EditorLayerRow>,
+  bounds: Map<Int, ClosedFloatingPointRange<Float>>,
+  document: UiBuilderDocument,
+  refusalOf: (ParentSlot) -> EditorMoveRefusal?,
+): LayerLanding? {
+  val index = rows.indices.firstOrNull { bounds[it]?.contains(y) == true } ?: return null
+  return when (val row = rows[index]) {
+    is EditorLayerRow.Slot ->
+      LayerLanding(row.parent, null, LayerLandingMarker.Into(index), refusalOf(row.parent))
+    is EditorLayerRow.Node -> {
+      // A root has no slot to be dropped beside. Dragging one is not refused with a message,
+      // because there is nothing here to say no *to* — the pointer is simply over nothing.
+      val target = row.row.parent ?: return null
+      if (row.nodeId == nodeId) return null
+      val span = bounds.getValue(index)
+      val after =
+        if (y > (span.start + span.endInclusive) / 2f) row.nodeId
+        else document.childrenOf(target).takeWhile { it != row.nodeId }.lastOrNull()
+      LayerLanding(
+        target = target,
+        afterNodeId = after,
+        marker =
+          if (after == row.nodeId) LayerLandingMarker.Below(index)
+          else LayerLandingMarker.Above(index),
+        refusal = refusalOf(target),
+      )
+    }
+  }
+}
+
+private fun UiBuilderDocument.childrenOf(parent: ParentSlot): List<String> =
+  nodes[parent.nodeId]?.slots?.get(parent.slot).orEmpty()
+
+private fun EditorLayerRow.layerKey(): String =
+  when (this) {
+    is EditorLayerRow.Node -> "node:$nodeId"
+    is EditorLayerRow.Slot -> "slot:${parent.nodeId}.${parent.slot}"
+  }
+
+/** The colour a landing indicator is drawn in: the accent when it will land, the error when not. */
+@Composable
+private fun LayerLanding.markerColor(): Color =
+  if (refusal == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+
+/**
+ * The slot a group of children sits in.
+ *
+ * Not selectable and not draggable: a slot is not a node, it is the place one goes. It is a drop
+ * target, though, and the only one an empty slot has.
+ */
+@Composable
+private fun SlotRow(
+  row: EditorLayerRow.Slot,
+  isCatalogTarget: Boolean,
+  landing: LayerLanding?,
+  modifier: Modifier = Modifier,
+) {
+  val accent = landing?.markerColor()
+  Row(
+    modifier
+      .fillMaxWidth()
+      .height(26.dp)
+      .then(
+        if (accent != null) Modifier.background(accent.copy(alpha = 0.22f))
+        else if (isCatalogTarget) Modifier.background(Color(0xff26304a)) else Modifier
+      )
+      .padding(start = (8 + row.indent * 12).dp, end = 10.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Text(
+      row.parent.slot,
+      Modifier.weight(1f).semantics {
+        contentDescription =
+          "Slot ${row.parent.slot} of ${row.parent.nodeId}, ${row.childCount} of " +
+            (row.maxChildren?.toString() ?: "any")
+      },
+      color = accent ?: MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelMedium,
+      fontWeight = FontWeight.Bold,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Text(
+      // What is in the slot and what it will take, because "full" is the commonest reason a drop
+      // is refused and the panel should have said so before the drop.
+      when {
+        row.childCount == 0 -> "empty"
+        row.maxChildren != null -> "${row.childCount}/${row.maxChildren}"
+        else -> row.childCount.toString()
+      },
+      color =
+        if (row.full) MaterialTheme.colorScheme.error
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 1,
+    )
+  }
+}
+
 @Composable
 private fun LayerRow(
   row: EditorTreeRow,
+  indent: Int,
   selected: Boolean,
+  dragged: Boolean,
+  landing: LayerLanding?,
   collaborators: List<UiBuilderCollaborator>,
   onSelect: (LayerSelectionGesture) -> Unit,
-  onMove: (EditorMoveDirection) -> Unit,
+  onDragTo: (Float) -> Unit,
+  onDrop: () -> Unit,
+  onDragCancel: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
-  var verticalDrag by remember { mutableFloatStateOf(0f) }
-  val background = if (selected) Color(0xff30385a) else Color.Transparent
+  // Where the handle sits in the window, so the pointer's offset inside it can be turned into the
+  // one coordinate the whole panel shares. A drag leaves the handle immediately, and every row it
+  // then passes over reports its own bounds in that same space.
+  var handleOrigin by remember { mutableStateOf(Offset.Zero) }
+  val background =
+    when {
+      dragged -> Color(0xff3b4468)
+      selected -> Color(0xff30385a)
+      else -> Color.Transparent
+    }
+  val marker = landing?.markerColor()
   Row(
-    Modifier.fillMaxWidth()
+    modifier
+      .fillMaxWidth()
       .height(34.dp)
       .background(background)
-      .padding(start = (8 + row.depth * 12).dp, end = 10.dp),
+      .drawBehind {
+        // Drawn as a line at the edge the layer would land on rather than as a highlight over the
+        // row, because "before this one" and "after this one" are different answers and a
+        // highlight cannot tell them apart.
+        if (marker == null) return@drawBehind
+        val above = landing.marker is LayerLandingMarker.Above
+        drawRect(
+          color = marker,
+          topLeft = Offset(0f, if (above) 0f else size.height - 3f),
+          size = Size(size.width, 3f),
+        )
+      }
+      .padding(start = (8 + indent * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Icon(
-      Icons.Filled.DragIndicator,
-      contentDescription = "Reorder ${row.nodeId}",
-      modifier =
-        Modifier.size(16.dp).pointerInput(row.nodeId) {
+    // A 16dp icon in a 26dp target. The icon is the affordance; the box is what a pointer actually
+    // has to hit, and the difference is most of why the drag read as broken.
+    Box(
+      Modifier.size(26.dp)
+        .onGloballyPositioned { handleOrigin = it.boundsInRoot().topLeft }
+        .pointerInput(row.nodeId) {
           detectDragGestures(
-            onDragStart = { verticalDrag = 0f },
-            onDragEnd = {
-              when {
-                verticalDrag > 12f -> onMove(EditorMoveDirection.After)
-                verticalDrag < -12f -> onMove(EditorMoveDirection.Before)
-              }
-              verticalDrag = 0f
-            },
-            onDragCancel = { verticalDrag = 0f },
-            onDrag = { change, amount ->
+            onDragStart = { onDragTo(handleOrigin.y + it.y) },
+            onDragEnd = onDrop,
+            onDragCancel = onDragCancel,
+            onDrag = { change, _ ->
               change.consume()
-              verticalDrag += amount.y
+              onDragTo(handleOrigin.y + change.position.y)
             },
           )
         },
-      tint = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+      contentAlignment = Alignment.Center,
+    ) {
+      Icon(
+        Icons.Filled.DragIndicator,
+        contentDescription = "Reorder ${row.nodeId}",
+        modifier = Modifier.size(16.dp),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
     Row(
       Modifier.fillMaxHeight()
         .weight(1f)

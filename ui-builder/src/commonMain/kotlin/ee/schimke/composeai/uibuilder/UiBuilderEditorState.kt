@@ -92,6 +92,37 @@ data class EditorTreeRow(
     get() = label != componentLabel
 }
 
+/**
+ * One line of the layers panel.
+ *
+ * The panel shows more than the tree: a [Slot] line names where a group of children sits, which is
+ * the difference between "these two are siblings" and "these two are in different slots of the same
+ * parent" — a difference that decides whether a drag between them can land at all.
+ */
+sealed interface EditorLayerRow {
+  /** How far in the line is drawn. A slot line sits at the depth of the children it heads. */
+  val indent: Int
+
+  data class Node(val row: EditorTreeRow, override val indent: Int) : EditorLayerRow {
+    val nodeId: String
+      get() = row.nodeId
+  }
+
+  data class Slot(
+    val parent: ParentSlot,
+    override val indent: Int,
+    val childCount: Int,
+    /** The slot's declared ceiling, or null where it takes any number. */
+    val maxChildren: Int?,
+  ) : EditorLayerRow {
+    val full: Boolean
+      get() = maxChildren?.let { childCount >= it } == true
+  }
+}
+
+/** Why a move was refused, in the words the panel shows and the code the reducer reports. */
+data class EditorMoveRefusal(val code: RejectionCode, val message: String)
+
 enum class EditorMoveDirection {
   Before,
   After,
@@ -390,6 +421,23 @@ sealed interface UiBuilderEditorEvent {
     val nodeId: String,
     val targetNodeId: String,
     val placeAfterTarget: Boolean,
+  ) : UiBuilderEditorEvent
+
+  /**
+   * Move a node to a named place — the slot it lands in, and the child it lands after.
+   *
+   * [MoveNode] is a step within the slot a node already sits in, which is all the keyboard needs
+   * and all a one-step drag could mean. It cannot answer the layers panel's drag, where the row
+   * released under the pointer is often in a different slot, or in a different parent entirely —
+   * and where a screen whose every node is an only child in its slot has no in-slot step to take,
+   * so every drag was a no-op.
+   *
+   * A null [afterNodeId] means first in the slot.
+   */
+  data class MoveNodeInto(
+    val nodeId: String,
+    val parent: ParentSlot,
+    val afterNodeId: String? = null,
   ) : UiBuilderEditorEvent
 
   data class CommitProperty(val nodeId: String, val property: String, val draft: String) :
@@ -817,6 +865,7 @@ class UiBuilderEditorReducer(
         else state
       is UiBuilderEditorEvent.InsertComponent -> insert(state, event.componentId, event.target)
       is UiBuilderEditorEvent.MoveNode -> move(state, event)
+      is UiBuilderEditorEvent.MoveNodeInto -> moveInto(state, event)
       is UiBuilderEditorEvent.CommitProperty ->
         commitProperty(state, event.nodeId, event.property, event.draft)
       is UiBuilderEditorEvent.BindPropertyToState ->
@@ -1185,6 +1234,66 @@ class UiBuilderEditorReducer(
     return rows.indices
       .filter { keep[it] }
       .map { index -> rows[index].copy(matched = matched[index]) }
+  }
+
+  /**
+   * The layers panel's lines: the rows of [visibleTreeRows], with the slot each group of children
+   * sits in named above it.
+   *
+   * Indentation alone said a Scaffold's app bar and its screen content were siblings, which they
+   * are not: they are the only children of two different slots, and nothing in the panel said so.
+   * That reading is what made the drag look broken — dropping one onto the other is a move between
+   * slots, and it is refused for reasons the panel had no way to show.
+   *
+   * A slot line is drawn when it is a choice or a destination:
+   * - the parent declares more than one slot, so which one a child is in is information; or
+   * - the slot is empty, and is therefore the one place a drop can land that no node row names; or
+   * - the document put children under a name the catalog does not declare (a dynamic slot).
+   *
+   * A container with one slot and something in it draws none, because the indentation already says
+   * everything the slot name would. Under a filter, empty slots are left out: nothing there matches
+   * and the panel is answering a search.
+   */
+  fun layerRows(state: UiBuilderEditorState): List<EditorLayerRow> {
+    val rows = visibleTreeRows(state)
+    val byId = rows.associateBy(EditorTreeRow::nodeId)
+    val filtering = state.layerQuery.isNotBlank()
+    val lines = mutableListOf<EditorLayerRow>()
+    val seen = mutableSetOf<String>()
+    fun visit(row: EditorTreeRow, indent: Int) {
+      if (!seen.add(row.nodeId)) return
+      lines += EditorLayerRow.Node(row, indent)
+      val node = state.document.nodes[row.nodeId] ?: return
+      val capability = catalog.componentsById[node.componentId]
+      val declared = capability?.slots.orEmpty().map(SlotCapability::name)
+      // Declared order first — a Scaffold reads top bar, snackbar, content the way the catalog
+      // lists it, not the order the document happened to fill them in.
+      val slotNames = declared + node.slots.keys.filterNot(declared::contains)
+      slotNames.forEach { slotName ->
+        val children = node.slots[slotName].orEmpty()
+        val kept = children.mapNotNull(byId::get)
+        val named = declared.size > 1 || children.isEmpty() || slotName !in declared
+        if (!named) {
+          kept.forEach { visit(it, indent + 1) }
+          return@forEach
+        }
+        // The slot line sits at the depth of the children it heads rather than between them and
+        // their parent. A tree that indented twice per level ran out of width on the fourth
+        // container, and the panel is 300dp wide.
+        if (filtering && kept.isEmpty()) return@forEach
+        val slot = capability?.slot(slotName)
+        lines +=
+          EditorLayerRow.Slot(
+            parent = ParentSlot(node.id, slotName),
+            indent = indent + 1,
+            childCount = children.size,
+            maxChildren = slot?.cardinality?.max,
+          )
+        kept.forEach { visit(it, indent + 1) }
+      }
+    }
+    rows.filter { it.parent == null }.forEach { visit(it, 0) }
+    return lines
   }
 
   private fun selectAllMatches(state: UiBuilderEditorState): UiBuilderEditorState {
@@ -1672,6 +1781,102 @@ class UiBuilderEditorReducer(
       listOf(DesignOperation.MoveNode(event.nodeId, location, afterNodeId)),
       selectionAfter = event.nodeId,
     )
+  }
+
+  private fun moveInto(
+    state: UiBuilderEditorState,
+    event: UiBuilderEditorEvent.MoveNodeInto,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val refusal = moveRefusal(state, event.nodeId, event.parent)
+    if (refusal != null) {
+      return state.rejected(sequence, refusal.code, refusal.message, event.nodeId)
+    }
+    val siblings = state.document.children(event.parent)
+    val after = event.afterNodeId?.takeIf { it != event.nodeId }
+    // The drop that changes nothing is the commonest drop of all — a row picked up and released
+    // over itself — and it must not cost an operation, an undo step or a revision every
+    // collaborator has to take.
+    val settled = siblings.filterNot { it == event.nodeId }
+    val landing = if (after == null) 0 else settled.indexOf(after) + 1
+    if (state.document.location(event.nodeId) == event.parent) {
+      if (siblings.indexOf(event.nodeId) == landing) return state
+    }
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.MoveNode(event.nodeId, event.parent, after)),
+      selectionAfter = event.nodeId,
+    )
+  }
+
+  /**
+   * Why [target] will not take [nodeId], or null when it will.
+   *
+   * The panel asks this while a row is being dragged, so a slot that cannot take what is over it
+   * says so before the release rather than swallowing the gesture; the reducer asks it again on the
+   * release, because the drag is not the only thing that can send a move.
+   */
+  fun moveRefusal(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    target: ParentSlot,
+  ): EditorMoveRefusal? {
+    val node = state.document.nodes[nodeId]
+    val component = node?.let { catalog.componentsById[it.componentId] }
+    if (component == null) {
+      return EditorMoveRefusal(RejectionCode.UNKNOWN_NODE, "This catalog no longer offers $nodeId")
+    }
+    val parent = state.document.nodes[target.nodeId]
+    val parentCapability = parent?.let { catalog.componentsById[it.componentId] }
+    val declared = parentCapability?.slot(target.slot)
+    if (parent == null || declared == null) {
+      return EditorMoveRefusal(
+        RejectionCode.INVALID_LOCATION,
+        "${target.nodeId} has no ${target.slot} slot",
+      )
+    }
+    // A node cannot land inside itself. The collaboration reducer refuses this too, and would
+    // refuse it loudly; asking here means the panel can grey the row out instead.
+    if (target.nodeId == nodeId || target.nodeId in state.document.subtreeOf(nodeId)) {
+      return EditorMoveRefusal(
+        RejectionCode.CYCLE,
+        "${component.displayName} cannot go inside itself",
+      )
+    }
+    if (!declared.accepts(component)) {
+      return EditorMoveRefusal(
+        RejectionCode.INVALID_LOCATION,
+        "${component.displayName} does not belong in ${target.nodeId}.${target.slot}",
+      )
+    }
+    // The slot it is leaving has a floor as well as a ceiling. A Scaffold's `content` holds
+    // exactly one child, so dragging that child out empties a slot the document requires — the
+    // document validator refuses it, correctly, and the panel would have shown the drop as
+    // landable right up to the release.
+    val origin = state.document.location(nodeId)
+    if (origin != null && origin != target) {
+      val originSlot =
+        state.document.nodes[origin.nodeId]
+          ?.let { catalog.componentsById[it.componentId] }
+          ?.slot(origin.slot)
+      val remaining = state.document.children(origin).count { it != nodeId }
+      if (originSlot != null && remaining < originSlot.cardinality.min) {
+        return EditorMoveRefusal(
+          RejectionCode.INVALID_LOCATION,
+          "${origin.nodeId}.${origin.slot} cannot be left empty",
+        )
+      }
+    }
+    // Room is counted without the node itself, so reordering inside a full slot stays legal.
+    val occupants = state.document.children(target).count { it != nodeId }
+    if (!declared.hasRoom(occupants)) {
+      return EditorMoveRefusal(
+        RejectionCode.INVALID_LOCATION,
+        "${target.nodeId}.${target.slot} holds " +
+          "${declared.cardinality.max} ${if (declared.cardinality.max == 1) "child" else "children"}",
+      )
+    }
+    return null
   }
 
   private fun commitProperty(
@@ -3449,6 +3654,24 @@ private fun UiBuilderDocument.location(nodeId: String): ParentSlot? {
  * one rather than take the editor down before the Issues panel can name it.
  */
 private fun JsonElement?.primitiveOrNull(): JsonPrimitive? = this as? JsonPrimitive
+
+/**
+ * [nodeId] and everything under it.
+ *
+ * Guarded against a cycle in the document rather than trusting it not to hold one: this is asked
+ * about a document that is being edited, and a cycle is one of the things the inspector reports
+ * rather than one the editor may assume away.
+ */
+private fun UiBuilderDocument.subtreeOf(nodeId: String): Set<String> {
+  val collected = mutableSetOf<String>()
+  val pending = ArrayDeque(listOf(nodeId))
+  while (pending.isNotEmpty()) {
+    val next = pending.removeFirst()
+    if (!collected.add(next)) continue
+    nodes[next]?.slots?.values?.forEach(pending::addAll)
+  }
+  return collected
+}
 
 private fun UiBuilderDocument.children(parent: ParentSlot?): List<String> =
   if (parent == null) roots else nodes.getValue(parent.nodeId).slots[parent.slot].orEmpty()
