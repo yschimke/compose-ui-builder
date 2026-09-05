@@ -129,9 +129,19 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   @Test
-  fun `compose export is revision pinned deterministic and changes with saved content`() {
+  fun `an export request is revision pinned and changes with saved content`() {
+    // This used to assert the *source* a projection in this module emitted — `Text(`, the design's
+    // text, a `// Document SHA-256:` comment. That projection is gone, and the assertions went with
+    // it rather than being ported: which Kotlin a document becomes is `ScreenGenerator`'s answer,
+    // reached from `:server`, and `checkUiBuilderRuntimeBoundary` keeps it off this module's
+    // classpath on purpose.
+    //
+    // What is this module's is the *request*: that one saved revision always produces the same
+    // pinned export, and that editing the document changes it. Asserted against an executor that
+    // echoes what it was handed, so a passing test means the pinning held rather than that some
+    // emitter happened to be deterministic.
     val catalog = CurrentM3UiBuilderCatalogExecutor().listCatalogs().single()
-    val exporter = RevisionPinnedComposeExportExecutor()
+    val exporter = EchoingComposeExportExecutor()
     val first = exporter.export(pinned(document(), catalog))
     val repeated = exporter.export(pinned(document(), catalog))
     val editedDocument =
@@ -150,11 +160,7 @@ class ProductionUiBuilderRuntimeTest {
 
     assertEquals(first, repeated)
     assertEquals(sha256(first.content), first.contentDigest)
-    assertTrue(first.content.contains("Text("))
-    assertTrue(first.content.contains("Hello from the saved design"))
-    assertTrue(
-      first.content.contains("Document SHA-256: ${pinned(document(), catalog).documentHash}")
-    )
+    assertTrue(first.content.contains(pinned(document(), catalog).documentHash))
     assertNotEquals(first.contentDigest, edited.contentDigest)
     assertTrue(edited.content.contains("Changed on revision one"))
     assertFailsWith<IllegalArgumentException> {
@@ -173,7 +179,7 @@ class ProductionUiBuilderRuntimeTest {
         exporter =
           UiBuilderExportExecutor {
             exports++
-            RevisionPinnedComposeExportExecutor().export(it)
+            EchoingComposeExportExecutor().export(it)
           },
       )
 
@@ -262,7 +268,7 @@ class ProductionUiBuilderRuntimeTest {
 
         override fun close() = Unit
       }
-    ProductionUiBuilderExportExecutor(renderer).use { exporter ->
+    ProductionUiBuilderExportExecutor(renderer, EchoingComposeExportExecutor()).use { exporter ->
       val catalog =
         CurrentM3UiBuilderCatalogExecutor(exportCapabilities = exporter.capabilities)
           .listCatalogs()
@@ -391,6 +397,35 @@ private fun executeProduction(
       }
     )
   return completion?.getOrThrow() ?: error("synchronous service call suspended")
+}
+
+/**
+ * A Compose executor that echoes its request, for tests about *pinning* rather than about source.
+ *
+ * Deliberately not a generator. This module may not depend on `preview-discovery`
+ * (`checkUiBuilderRuntimeBoundary`), so anything here claiming to emit Compose would be a fourth
+ * emitter of exactly the kind the production default was removed for. Echoing the pinned document
+ * hash and the node text keeps every property these tests actually assert — determinism, digest
+ * agreement, sensitivity to an edit — without asserting a single line of Kotlin.
+ */
+private class EchoingComposeExportExecutor : UiBuilderExportExecutor {
+  override fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1 {
+    require(request.format == ExportFormatV1.COMPOSE) {
+      "${request.format} export is unsupported by this executor"
+    }
+    require(request.revision == request.document.revision) { "export revision/document mismatch" }
+    require(request.document.id == request.designId) { "export design/document mismatch" }
+    val content =
+      "// pinned ${request.designId}@${request.revision} ${request.documentHash}\n" +
+        PersistentUiBuilderServiceJsonForTest.encode(request.document)
+    return ExportArtifactV1(
+      format = ExportFormatV1.COMPOSE,
+      mediaType = "text/x-kotlin; charset=utf-8",
+      encoding = ExportEncodingV1.UTF8,
+      content = content,
+      contentDigest = sha256(content),
+    )
+  }
 }
 
 private fun sha256(value: String): String =

@@ -321,34 +321,6 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   )
 }
 
-/** Deterministic, revision-pinned Compose source projection for the strict current catalog. */
-class RevisionPinnedComposeExportExecutor : UiBuilderExportExecutor {
-  override fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1 {
-    require(request.format == ExportFormatV1.COMPOSE) {
-      "${request.format} export is unsupported by the production executor"
-    }
-    require(request.revision == request.document.revision) { "export revision/document mismatch" }
-    require(request.document.id == request.designId) { "export design/document mismatch" }
-    val source = ComposeSourceProjection(request).render()
-    return ExportArtifactV1(
-      format = ExportFormatV1.COMPOSE,
-      mediaType = "text/x-kotlin; charset=utf-8",
-      encoding = ExportEncodingV1.UTF8,
-      content = source,
-      contentDigest = source.sha256(),
-      diagnostics =
-        listOf(
-          ExportDiagnosticV1(
-            severity = DiagnosticSeverityV1.WARNING,
-            code = "ALMOST_COMPILING_PROJECTION",
-            message =
-              "Catalog symbols and the complete typed document are preserved; project-specific state and event adapters may require edits.",
-          )
-        ),
-    )
-  }
-}
-
 /** Immutable, renderer-neutral request for one exact saved document revision. */
 data class UiBuilderRenderRequest(
   val designId: String,
@@ -374,7 +346,15 @@ interface UiBuilderRenderPort : Closeable {
 /** Combines the runtime-owned Compose projection with an injected renderer-neutral port. */
 class ProductionUiBuilderExportExecutor(
   private val renderer: UiBuilderRenderPort,
-  private val compose: UiBuilderExportExecutor = RevisionPinnedComposeExportExecutor(),
+  // Required, not defaulted. It used to default to a projection this module owned, and that
+  // default is what let three different things emit Compose for one document: the real generator
+  // (`ScreenGenerator`, reached from `:server`, which is the only layer allowed to hold both the
+  // component record and this port), the editor's own exporter, and the default here — which
+  // shipped an `ALMOST_COMPILING_PROJECTION` warning on every export because it could not tell
+  // whether its output compiled. `ServeRunner` has always passed the real one, so the default was
+  // reachable only by wiring nobody does in production; a default nobody should take is worse than
+  // an argument everybody must pass.
+  private val compose: UiBuilderExportExecutor,
 ) : UiBuilderExportExecutor, Closeable {
   val capabilities: ExportCapabilitiesV1 =
     ExportCapabilitiesV1(composeCode = true, svg = renderer.supportsSvg, png = true)
@@ -512,77 +492,6 @@ fun projectRendererDocument(document: DesignDocumentV1): String {
   return canonicalJson(projected)
 }
 
-private class ComposeSourceProjection(private val request: RevisionPinnedUiBuilderExport) {
-  private val documentJson = json.encodeToJsonElement(request.document).jsonObject
-  private val nodes = documentJson.getValue("nodes").jsonObject
-  private val components = request.catalog.components.associateBy { it.componentId }
-  private val output = StringBuilder()
-
-  fun render(): String {
-    output.appendLine("@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)")
-    output.appendLine()
-    output.appendLine("package generated.uibuilder")
-    output.appendLine()
-    output.appendLine("import androidx.compose.runtime.Composable")
-    output.appendLine("import androidx.compose.ui.Modifier")
-    request.catalog.components
-      .flatMap { it.code?.imports.orEmpty() }
-      .distinct()
-      .sorted()
-      .forEach { output.appendLine("import $it") }
-    output.appendLine()
-    output.appendLine("// Design ${request.designId.escapeComment()} revision ${request.revision}")
-    output.appendLine("// Document SHA-256: ${request.documentHash}")
-    output.appendLine(
-      "// Catalog ${request.document.catalogPin.systemId}@${request.document.catalogPin.catalogRevision}; capability ${request.document.catalogPin.capabilityDigest}"
-    )
-    output.appendLine("// Canonical typed document: ${canonicalJson(documentJson).escapeComment()}")
-    output.appendLine("@Composable")
-    output.appendLine("fun ${request.document.title.identifier()}() {")
-    request.document.roots.forEach { emitNode(it, 1) }
-    output.appendLine("}")
-    return output.toString()
-  }
-
-  private fun emitNode(nodeId: String, level: Int) {
-    val node = nodes.getValue(nodeId).jsonObject
-    val componentId = node.requiredString("componentId")
-    val capability = checkNotNull(components[componentId])
-    val symbol = checkNotNull(capability.code?.symbol) { "$componentId has no code capability" }
-    line(level, "// node:${nodeId.escapeComment()} component:${componentId.escapeComment()}")
-    line(
-      level,
-      "// typed-properties:${canonicalJson(node.objectOrEmpty("properties")).escapeComment()}",
-    )
-    val modifiers = node.arrayOrEmpty("modifiers").modifierExpression()
-    val properties =
-      node
-        .objectOrEmpty("properties")
-        .entries
-        .sortedBy { it.key }
-        .map { (name, value) -> "${name.identifier()} = ${value.composeLiteral()}" }
-    val slots = node.objectOrEmpty("slots").entries.sortedBy { it.key }
-    val arguments = (listOf("modifier = $modifiers") + properties).joinToString(", ")
-    if (slots.isEmpty()) {
-      line(level, "$symbol($arguments)")
-      return
-    }
-    line(level, "$symbol(")
-    line(level + 1, "$arguments,")
-    slots.forEach { (name, children) ->
-      line(level + 1, "${name.identifier()} = {")
-      children.jsonArray.forEach { emitNode(it.jsonPrimitive.content, level + 2) }
-      line(level + 1, "},")
-    }
-    line(level, ")")
-  }
-
-  private fun line(level: Int, text: String) {
-    repeat(level) { output.append("  ") }
-    output.appendLine(text)
-  }
-}
-
 private fun validateCatalog(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
   require(catalog.schema.isNotBlank()) { "catalog schema must not be blank" }
   require(catalog.benchmark.catalogSystemId == "m3-catalog") { "unexpected catalog system" }
@@ -657,49 +566,10 @@ private fun JsonElement.accepts(value: JsonElement): Boolean {
   }
 }
 
-private fun JsonArray.modifierExpression(): String {
-  var expression = "Modifier"
-  for (element in this) {
-    val modifier = element.jsonObject
-    expression +=
-      when (modifier.requiredString("type")) {
-        "fillMaxSize" -> ".fillMaxSize()"
-        "fillMaxWidth" -> ".fillMaxWidth()"
-        "matchParentSize" -> ".matchParentSize()"
-        "padding" ->
-          ".padding(start = ${modifier.number("startDp")}.dp, top = ${modifier.number("topDp")}.dp, end = ${modifier.number("endDp")}.dp, bottom = ${modifier.number("bottomDp")}.dp)"
-        "size" -> {
-          val fallback = modifier.double("sizeDp")
-          ".size(${modifier.number("widthDp", fallback)}.dp, ${modifier.number("heightDp", fallback)}.dp)"
-        }
-        "clip" -> ".clip(MaterialTheme.shapes.${modifier.optionalString("shape") ?: "medium"})"
-        else -> error("validated modifier emitter drift")
-      }
-  }
-  return expression
-}
-
 private fun JsonObject.number(name: String, default: Double = 0.0): String =
   (this[name] as? JsonPrimitive)?.doubleOrNull?.let { value ->
     if (value.rem(1.0) == 0.0) value.toLong().toString() else value.toString()
   } ?: default.toString()
-
-private fun JsonObject.double(name: String, default: Double = 0.0): Double =
-  (this[name] as? JsonPrimitive)?.doubleOrNull ?: default
-
-private fun JsonElement.composeLiteral(): String {
-  val typed = this as? JsonObject ?: return kotlinLiteral()
-  val type = typed.optionalString("type")
-  val value = typed["value"]
-  return when (type) {
-    "colorToken" -> "MaterialTheme.colorScheme.${value?.jsonPrimitive?.content?.identifier()}"
-    "typographyToken" -> "MaterialTheme.typography.${value?.jsonPrimitive?.content?.identifier()}"
-    "shapeToken" -> "MaterialTheme.shapes.${value?.jsonPrimitive?.content?.identifier()}"
-    "state" -> typed.optionalString("variable")?.identifier() ?: "Unit"
-    "assetKey" -> value.kotlinLiteral()
-    else -> (value ?: typed).kotlinLiteral()
-  }
-}
 
 private fun JsonElement?.kotlinLiteral(): String =
   when (this) {
@@ -743,9 +613,6 @@ private fun String.identifier(): String {
 
 private fun String.escapeKotlin(): String =
   replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r")
-
-private fun String.escapeComment(): String =
-  replace("\n", " ").replace("\r", " ").replace("*/", "* /")
 
 private fun String.sha256(): String = toByteArray(Charsets.UTF_8).sha256()
 
