@@ -375,6 +375,28 @@ fun UiBuilderNativeRenderPreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialNativeRender = nativeRenderPreviewRefusal,
+    initialPreviewSurface = EditorPreviewSurface.Native,
+    onRequestNativeRender = { nativeRenderPreviewRefusal },
+  )
+}
+
+/**
+ * The comparison case: both renderers at once.
+ *
+ * Rendered as its own preview rather than folded into the one above, because they are the two
+ * shapes this control produces and a diff of either alone would not show the other moving. This is
+ * the state a Wasm project reaches for occasionally; [UiBuilderNativeRenderPreview] is the state a
+ * project with no browser renderer lives in.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderRenderComparisonPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialNativeRender = nativeRenderPreviewRefusal,
+    initialPreviewSurface = EditorPreviewSurface.Both,
     onRequestNativeRender = { nativeRenderPreviewRefusal },
   )
 }

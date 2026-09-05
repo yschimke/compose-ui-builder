@@ -243,6 +243,11 @@ data class UiBuilderEditorState(
    * the question the canvas alone cannot answer.
    */
   val codePaneVisible: Boolean = false,
+  /**
+   * Which renderer draws the design. [EditorPreviewSurface.Wasm] unless a host offers another — the
+   * editor's own canvas is the one that always exists.
+   */
+  val previewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
 ) {
   /**
    * The anchor: the most recently selected node.
@@ -274,6 +279,26 @@ sealed interface EditorGeneratedCode {
   data class Source(val kotlin: String) : EditorGeneratedCode
 
   data class Refused(val reasons: List<String>) : EditorGeneratedCode
+}
+
+/**
+ * Which renderer draws the design.
+ *
+ * Not a toggle between "canvas" and "extra pane", because the two are alternatives rather than a
+ * base and an addition: a Compose Multiplatform project that targets Wasm is best previewed in the
+ * browser, and a project that targets only Android or desktop has no browser renderer to fall back
+ * on — the host's is the *only* one. [Both] is the deliberate third case, for the times a Wasm
+ * project wants to see what the same design looks like off the browser.
+ */
+enum class EditorPreviewSurface {
+  /** The editor's own Compose/Wasm canvas. Immediate, and costs the host nothing. */
+  Wasm,
+
+  /** The host compiles the design and renders it with real Compose. */
+  Native,
+
+  /** Both at once, for comparing them. */
+  Both,
 }
 
 enum class EditorInspectorMode {
@@ -327,6 +352,9 @@ sealed interface UiBuilderEditorEvent {
 
   /** Shows or hides the generated-Kotlin pane under the canvas. */
   data object ToggleCodePane : UiBuilderEditorEvent
+
+  /** Chooses which renderer draws the design. */
+  data class ShowPreviewSurface(val surface: EditorPreviewSurface) : UiBuilderEditorEvent
 
   /**
    * Selects every row the layers filter matched.
@@ -618,6 +646,7 @@ class UiBuilderEditorReducer(
       layerQuery = state.layerQuery,
       previewMode = state.previewMode,
       codePaneVisible = state.codePaneVisible,
+      previewSurface = state.previewSurface,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
     )
@@ -629,6 +658,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
       is UiBuilderEditorEvent.TogglePreview -> state.copy(previewMode = !state.previewMode)
       is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
+      is UiBuilderEditorEvent.ShowPreviewSurface -> state.copy(previewSurface = event.surface)
       is UiBuilderEditorEvent.SelectAllMatches -> selectAllMatches(state)
       is UiBuilderEditorEvent.SelectNode ->
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))

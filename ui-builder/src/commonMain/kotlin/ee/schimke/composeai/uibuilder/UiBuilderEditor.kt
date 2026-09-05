@@ -192,6 +192,7 @@ fun UiBuilderEditor(
   onRequestNativeRender: (suspend () -> UiBuilderNativeRender)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
+  initialPreviewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   /**
    * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
@@ -230,6 +231,7 @@ fun UiBuilderEditor(
             inspectorMode = initialInspectorMode,
             previewMode = initialPreviewMode,
             codePaneVisible = initialCodePaneVisible,
+            previewSurface = initialPreviewSurface,
           )
       )
     }
@@ -339,7 +341,10 @@ fun UiBuilderEditor(
   // projection plus a full generator run, which nobody should pay for on every recomposition — or
   // at all, with the pane closed.
   var nativeRender by remember(document.id) { mutableStateOf(initialNativeRender) }
-  var nativeRequested by remember(document.id) { mutableStateOf(initialNativeRender != null) }
+  // Whether the chosen surface needs the host to draw anything. Derived rather than stored: the
+  // surface is the setting, and a second flag that could disagree with it is a bug waiting.
+  val nativeRequested =
+    onRequestNativeRender != null && state.previewSurface != EditorPreviewSurface.Wasm
   var nativePending by remember(document.id) { mutableStateOf(false) }
   // Keyed on the revision as well as the request, so asking again after an edit re-renders rather
   // than showing the frame the design used to have — a stale native render beside a live canvas is
@@ -453,12 +458,9 @@ fun UiBuilderEditor(
               } else null,
             onReconnect = onReconnect,
             onHelp = onHelp,
-            onNativeRender =
-              if (onRequestNativeRender == null) null
-              else {
-                { nativeRequested = !nativeRequested }
-              },
-            nativeRenderShown = nativeRequested,
+            // Absent where the host cannot draw: a project with no compile lane has exactly one
+            // renderer, and offering a choice between it and nothing is not a choice.
+            previewSurface = if (onRequestNativeRender == null) null else state.previewSurface,
             dispatch = ::dispatch,
           )
         }
@@ -468,16 +470,20 @@ fun UiBuilderEditor(
               navigator(Modifier.width(300.dp).fillMaxHeight(), false)
               Column(Modifier.weight(1f).fillMaxHeight()) {
                 Row(Modifier.fillMaxWidth().weight(1f)) {
-                  canvas(
-                    Modifier.weight(1f)
-                      .fillMaxHeight()
-                      .background(Color(0xff0d0e11))
-                      .padding(20.dp),
-                    Alignment.TopStart,
-                  )
-                  // Beside the canvas rather than instead of it: a difference between the two
-                  // renderers is the thing worth seeing, and one that replaced the other would
-                  // hide exactly that.
+                  // One renderer or the other, normally. A CMP project that targets Wasm is best
+                  // previewed in the browser; a project that targets only Android or desktop has
+                  // no browser renderer at all, and the host's is not an extra pane but the whole
+                  // preview. `Both` is the deliberate third case — comparing them — rather than
+                  // the layout everything else is squeezed into.
+                  if (state.previewSurface != EditorPreviewSurface.Native || !nativeRequested) {
+                    canvas(
+                      Modifier.weight(1f)
+                        .fillMaxHeight()
+                        .background(Color(0xff0d0e11))
+                        .padding(20.dp),
+                      Alignment.TopStart,
+                    )
+                  }
                   if (nativeRequested) {
                     NativeRenderPane(
                       nativeRender,
@@ -894,10 +900,10 @@ private fun EditorToolbar(
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   /**
-   * Null where the host cannot compile, so the control is absent rather than present and failing.
+   * The surface in use, or null where the host cannot compile — a project with one renderer is not
+   * offered a choice between it and nothing.
    */
-  onNativeRender: (() -> Unit)? = null,
-  nativeRenderShown: Boolean = false,
+  previewSurface: EditorPreviewSurface? = null,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var showShortcuts by remember { mutableStateOf(false) }
@@ -1030,14 +1036,16 @@ private fun EditorToolbar(
         enabled = true,
         onClick = { dispatch(UiBuilderEditorEvent.ToggleCodePane) },
       )
-      if (onNativeRender != null) {
-        // "Native", not "Android": the compile lane renders whatever the host's catalog targets,
-        // and a label naming one platform would be wrong on a desktop-only box.
+      if (previewSurface != null) {
+        // Names the surface in use rather than what pressing it will do: this control has three
+        // positions, and "Native" on a button while you are looking at the Wasm canvas is a coin
+        // toss. "Native", not "Android", because the compile lane renders whatever the host's
+        // catalog targets and naming one platform would be wrong on a desktop-only box.
         EditorAction(
-          label = if (nativeRenderShown) "Native · hide" else "Native",
+          label = "Render · ${previewSurface.label()}",
           shortcut = "",
           enabled = true,
-          onClick = onNativeRender,
+          onClick = { dispatch(UiBuilderEditorEvent.ShowPreviewSurface(previewSurface.next())) },
         )
       }
       EditorAction(
@@ -1072,6 +1080,21 @@ private fun EditorToolbar(
     }
   }
 }
+
+private fun EditorPreviewSurface.label(): String =
+  when (this) {
+    EditorPreviewSurface.Wasm -> "Wasm"
+    EditorPreviewSurface.Native -> "Native"
+    EditorPreviewSurface.Both -> "Both"
+  }
+
+/** Wasm → Native → Both → Wasm. Three positions is a cycle; four would need a menu. */
+private fun EditorPreviewSurface.next(): EditorPreviewSurface =
+  when (this) {
+    EditorPreviewSurface.Wasm -> EditorPreviewSurface.Native
+    EditorPreviewSurface.Native -> EditorPreviewSurface.Both
+    EditorPreviewSurface.Both -> EditorPreviewSurface.Wasm
+  }
 
 @Composable
 private fun EditorAction(
