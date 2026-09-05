@@ -24,7 +24,7 @@ kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
 okhttp = "5.5.0"
-okio = "3.18.1"
+okio = "3.18.2"
 classgraph = "4.8.194"
 jmdns = "3.6.3"
 
