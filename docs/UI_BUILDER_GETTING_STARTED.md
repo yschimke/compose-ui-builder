@@ -368,6 +368,13 @@ be set. For a host you start yourself:
 component ids whose Compose mapping is unambiguous; ids it does not cover are **absent rather than
 guessed**, so they refuse by name instead of emitting Kotlin that does not compile.
 
+### The export's one classpath requirement
+
+A screen holding an `m3/icon` names `Icons.Filled.AccountCircle` and its kin, and the catalog's 46
+icon keys are mostly in **`androidx.compose.material:material-icons-extended`** rather than in
+`-core`. A generated file cannot add a dependency to the project it lands in, so a project pasting
+such an export needs that artifact; everything else the export names is Compose UI and Material 3.
+
 The capability is per catalog. `remote-m3` has no record and is not meant to — Remote Compose is
 kept out of the Compose exporter by design — so a host serving both advertises Compose export on
 `m3-catalog` and not on `remote-m3`.
@@ -447,7 +454,7 @@ that line is drawn where it is, and where the one-way door between the two halve
 | `string` | Text input | Preserves an existing encoded value type; new values use `string` |
 | `boolean` | Toggle | `bool` |
 | `number` / `integer` with editor bounds | Bounded input and step controls | `float` / `int` |
-| `allowedValues` | Choice menu | Preserves the existing semantic type, such as `typographyToken` |
+| `allowedValues` | Choice menu | `enum`, or the existing semantic type such as `typographyToken` |
 | Explicit local color capability | Color/token input | Literal ARGB/RGB colors and declared Material tokens |
 | Object, array, nullable unions, or unbounded numbers | Read-only | No unsafe shape guessing |
 
@@ -455,6 +462,14 @@ Text currently covers content, typography style, weight, style, color, font size
 letter spacing, minimum/maximum lines, wrapping, overflow, alignment, decoration, box alignment,
 and layout weight. Environment axes—viewport, density, font scale, locale, theme, and layout
 direction—are deliberately not node properties.
+
+A property the catalog gives `allowedValues` takes the **`enum` wrapper**, not `string`. The two
+carry the same JSON scalar and both used to be accepted, so one authored intent could be committed
+two ways and then export down two unrelated paths; the reducer now rejects `string` on such a
+property, naming the node, the field and the wrapper it wants. A semantic type — a `style` written
+as `typographyToken` — is a different claim about the value and is still preserved. Designs that
+hold the old spelling keep rendering, keep exporting, and are rewritten to `enum` by the next edit
+to that field.
 
 Existing `size`, `fillMaxWidth`, and `padding` modifiers render and export. Their JSON is visible in
 the inspector, but modifier parameter editing is read-only until the released Design API has an

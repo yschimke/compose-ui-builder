@@ -331,6 +331,12 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
             (nodeId to
               node.copy(properties = JsonObject(node.properties + (property to encodedValue))))
       )
+    // The wrapper question first, because it is the more specific answer: a `string` on an
+    // `allowedValues` property also type-checks against `jsonType`, so the general pass below has
+    // nothing to say about it. See `CapabilityValidator.writeWrapperIssue`.
+    validator.writeWrapperIssue(node, property, encodedValue)?.let {
+      return PropertyWriteIssue(it.message)
+    }
     val relevantCodes =
       setOf(
         CapabilityIssueCode.UNKNOWN_COMPONENT,

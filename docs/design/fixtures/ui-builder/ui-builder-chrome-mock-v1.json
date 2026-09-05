@@ -61,7 +61,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -113,7 +113,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -202,7 +202,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -414,7 +414,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -860,7 +860,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "top"
           },
           "horizontalSpacingDp": {
@@ -915,7 +915,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "verticalSpacingDp": {
@@ -1086,7 +1086,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -1113,7 +1113,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -1320,7 +1320,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -1508,7 +1508,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -1571,7 +1571,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -1694,7 +1694,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -1757,7 +1757,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -1945,7 +1945,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -2008,7 +2008,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -2131,7 +2131,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -2194,7 +2194,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -2317,7 +2317,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -2380,7 +2380,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -2503,7 +2503,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -2566,7 +2566,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -2754,7 +2754,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -2817,7 +2817,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -2940,7 +2940,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -3003,7 +3003,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -3126,7 +3126,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -3181,7 +3181,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -3695,7 +3695,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -3950,7 +3950,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -4175,7 +4175,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -4202,7 +4202,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -4238,7 +4238,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -4421,7 +4421,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -4484,7 +4484,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -4614,7 +4614,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -4677,7 +4677,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -4771,7 +4771,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -4834,7 +4834,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -4928,7 +4928,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -4991,7 +4991,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -5085,7 +5085,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "start"
           },
           "verticalSpacingDp": {
@@ -5148,7 +5148,7 @@
         "componentId": "layout/row",
         "properties": {
           "verticalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "horizontalSpacingDp": {
@@ -5268,7 +5268,7 @@
         "componentId": "layout/column",
         "properties": {
           "horizontalAlignment": {
-            "type": "string",
+            "type": "enum",
             "value": "center"
           },
           "verticalSpacingDp": {

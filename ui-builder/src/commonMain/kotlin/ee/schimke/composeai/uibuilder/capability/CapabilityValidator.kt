@@ -108,6 +108,47 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
       }
     }
 
+  /**
+   * Whether one property **write** spells its wrapper the way the catalog's declaration asks for.
+   *
+   * A question [validate] deliberately does not ask. The catalog declares `m3/text.style` as
+   * `jsonType: "string"` with an `allowedValues` list, and both
+   * `{"type":"enum","value":"bodyLarge"}` and `{"type":"string","value":"bodyLarge"}` carry the
+   * same string inside — so both were accepted, both committed, and both rendered, because the
+   * renderer reads either through `string(name)`. They then diverged completely downstream: the
+   * Compose export resolves the first through the catalog's enum table and refused the second with
+   * `` `Text`.`style` is androidx.compose.ui.text.TextStyle, which Text is not `` — two unrelated
+   * refusals for one authored intent, neither of them mentioning the wrapper (issue #339).
+   *
+   * `enum` is the canonical spelling, because that is what a property with `allowedValues` means:
+   * the value is one of an enumeration the catalog names, not free text that happens to match.
+   * `jsonType` describes the JSON scalar the wrapper carries — a string — and is not the wrapper's
+   * own name; every checked-in fixture and the inspector's own editor control already agree.
+   *
+   * Asked **only on a write**, and that is the load-bearing part. Designs committed before this
+   * rule existed hold the other spelling, they render correctly, and they must keep being editable:
+   * a document-wide rule would reject an unrelated node move on a design whose `style` was written
+   * a year ago. So the rule bites where a spelling is chosen and nowhere else, and the export reads
+   * the legacy spelling through the enum table instead of refusing it.
+   */
+  fun writeWrapperIssue(
+    node: UiBuilderNode,
+    property: String,
+    encodedValue: JsonObject,
+  ): CapabilityValidationIssue? {
+    val declared = catalog.componentsById[node.componentId]?.propertiesByName?.get(property)
+    if (declared == null || declared.allowedValues.isEmpty()) return null
+    val wrapper = (encodedValue["type"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+    if (wrapper != "string") return null
+    return issue(
+      CapabilityIssueCode.INVALID_PROPERTY_TYPE,
+      node,
+      "property $property is one of this component's allowed values, so it takes the `enum` " +
+        "wrapper rather than `string`",
+      property,
+    )
+  }
+
   private fun validateNode(
     document: UiBuilderDocument,
     node: UiBuilderNode,

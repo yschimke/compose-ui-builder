@@ -348,6 +348,53 @@
       "signatureKnown": true
     },
     {
+      "canonicalId": "m3-catalog/androidx.compose.material3.IconKt.Icon",
+      "componentIds": [
+        "m3/icon"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.IconKt",
+        "callable": "androidx.compose.material3.Icon",
+        "name": "Icon",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "imageVector",
+          "type": "ImageVector",
+          "hasDefault": false,
+          "typeFqn": "androidx.compose.ui.graphics.vector.ImageVector"
+        },
+        {
+          "name": "contentDescription",
+          "type": "String?",
+          "hasDefault": false,
+          "typeFqn": "kotlin.String",
+          "nullable": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "tint",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "Icon(imageVector = TODO(), contentDescription = null)",
+        "imports": [
+          "androidx.compose.material3.Icon"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
       "canonicalId": "m3-catalog/androidx.compose.material3.ScaffoldKt.Scaffold",
       "componentIds": [
         "layout/scaffold"
@@ -441,6 +488,18 @@
           "type": "Shape",
           "hasDefault": true,
           "typeFqn": "androidx.compose.ui.graphics.Shape"
+        },
+        {
+          "name": "colors",
+          "type": "CardColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.CardColors"
+        },
+        {
+          "name": "elevation",
+          "type": "CardElevation",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.CardElevation"
         },
         {
           "name": "content",

@@ -1953,7 +1953,8 @@ class UiBuilderEditorReducer(
       // Each node keeps its own encoded type. Two nodes can hold the same property as a literal and
       // as a token, and rewriting one to the other's shape would change more than was asked.
       val existingValue = target.properties[baseName] as? JsonObject
-      val existingType = existingValue?.get("type")?.primitiveOrNull()?.contentOrNull
+      val existingType =
+        property.canonicalWrapper(existingValue?.get("type")?.primitiveOrNull()?.contentOrNull)
       val encoded =
         if (edgeName == null) literal(existingType ?: field.defaultEncodedType(), value)
         else
@@ -3141,7 +3142,7 @@ private fun ComponentCapability.defaultNode(
  */
 private fun PropertyCapability.literalDefault(): JsonObject {
   allowedValues.firstOrNull()?.let {
-    return it.asLiteral(name)
+    return it.asLiteral(this)
   }
   val types = typeNames() - "null"
   // Membership, not equality. A property declared ["boolean", "string"] — which is how the catalog
@@ -3150,7 +3151,7 @@ private fun PropertyCapability.literalDefault(): JsonObject {
   return when {
     "boolean" in types -> literal("bool", JsonPrimitive(false))
     "number" in types || "integer" in types -> literal("float", JsonPrimitive(0))
-    else -> JsonPrimitive("").asLiteral(name)
+    else -> JsonPrimitive("").asLiteral(this)
   }
 }
 
@@ -3159,7 +3160,7 @@ private fun PropertyCapability.defaultEncodedValue(
   document: UiBuilderDocument,
 ): JsonObject {
   allowedValues.firstOrNull()?.let { value ->
-    return value.asLiteral(name)
+    return value.asLiteral(this)
   }
   return when (name) {
     "text" -> literal("string", JsonPrimitive("New text"))
@@ -3189,7 +3190,7 @@ private fun PropertyCapability.defaultEncodedValue(
       )
     "startColor" -> literal("color", JsonPrimitive("#00000000"))
     "endColor" -> literal("color", JsonPrimitive("#FF000000"))
-    else -> JsonPrimitive("").asLiteral(name)
+    else -> JsonPrimitive("").asLiteral(this)
   }
 }
 
@@ -3607,15 +3608,34 @@ private fun JsonObject.withFreshInstanceIdentity(copyNodeId: String): JsonObject
   )
 }
 
-private fun JsonElement.asLiteral(propertyName: String): JsonObject {
+/**
+ * The wrapper a write to this property should carry, given the one the node already holds.
+ *
+ * Every node keeps its own encoded type, because two nodes can hold one property as a literal and
+ * as a token and rewriting either to the other's shape changes more than was asked. The one
+ * exception is a **plain `string` on a property whose values the catalog enumerates**: `enum` is
+ * the canonical wrapper there (see `CapabilityValidator.writeWrapperIssue`), `string` is the
+ * spelling that used to be written for the same intent, and the two exported down unrelated paths.
+ * Preserving it would mean a legacy design's `textAlign` could no longer be edited at all, so the
+ * next edit rewrites it instead — which is what migrates such a design without a migration.
+ *
+ * A semantic token — `typographyToken` on a `style` — is a different claim about the same value and
+ * is kept as it is.
+ */
+private fun PropertyCapability.canonicalWrapper(existingType: String?): String? =
+  if (allowedValues.isEmpty()) existingType else existingType?.takeUnless { it == "string" }
+
+private fun JsonElement.asLiteral(property: PropertyCapability): JsonObject {
   if (this is JsonNull) return literal("string", JsonPrimitive(""))
   val primitive = jsonPrimitive
   val type =
     when {
       primitive.booleanOrNull != null -> "bool"
       primitive.doubleOrNull != null -> "float"
-      propertyName.endsWith("Color") -> "color"
-      propertyName in setOf("style", "layoutMode", "iconKey") -> "enum"
+      property.name.endsWith("Color") -> "color"
+      // Read off the declaration rather than from a list of three property names, which is how
+      // `textAlign` and `horizontalAlignment` came to be written as `string` in the first place.
+      property.allowedValues.isNotEmpty() -> "enum"
       else -> "string"
     }
   return literal(type, primitive)

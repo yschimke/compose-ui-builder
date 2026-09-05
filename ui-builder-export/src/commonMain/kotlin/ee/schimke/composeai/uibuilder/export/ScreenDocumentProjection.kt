@@ -110,7 +110,7 @@ private fun parameterForSlot(componentId: String, slot: String): String =
  * deliberately does not hold, and it lives here because this is the layer that knows the catalog is
  * Material 3.
  *
- * ## Enum values are the seventh refusal
+ * ## Enum values are the seventh refusal, for the values nothing names
  *
  * An earlier revision of this file resolved an `enum` against the parameter's own recorded type,
  * appending the document's entry name to `TargetParameter.typeFqn` and calling that a claim the
@@ -122,10 +122,11 @@ private fun parameterForSlot(componentId: String, slot: String): String =
  *   live under `Icons`, while `expandedTwoPane`, `fab` and `uncontained` name authored variants
  *   with no single Kotlin type behind them.
  *
- * Nothing in the catalog maps an enum **value** to a Kotlin member — the `code` capability carries
- * a symbol per component and nothing per entry — so `enum()` refuses every `EnumValueV1` by name,
- * and the refusal says that is what is missing. A wire-to-Kotlin mapping is where this becomes
- * expressible, and it belongs in the catalog rather than in a projection.
+ * So the derivation stayed refused and the mapping is **authored**: [ENUM_MEMBERS] for the values
+ * that are members of a type, [ICON_MEMBERS] for the icon keys, which are extension properties on
+ * `Icons.Filled` and therefore a [ScreenValue.Chain] rather than a path. A value neither table
+ * names is still refused by name — `expandedTwoPane` and `uncontained` select a *component* rather
+ * than an argument, and no table of members can express that.
  */
 object ScreenDocumentProjection {
 
@@ -234,7 +235,17 @@ object ScreenDocumentProjection {
     private fun arguments(node: DesignNodeV1): Map<String, ScreenValue> {
       unexpressible(node)
       val arguments = mutableMapOf<String, ScreenValue>()
+      // Properties that are not arguments at all — `m3/icon`'s `sizeDp` is `Modifier.size(24.dp)`,
+      // which `Icon` has no parameter for. Collected here rather than emitted where they are read,
+      // so a node with an authored modifier list and a modifier-shaped property produces one chain
+      // in a fixed order instead of two arguments the generator would reject the second of.
+      val fromProperties = mutableListOf<ChainLink>()
       for ((property, value) in node.properties) {
+        val link = MODIFIER_PROPERTIES[node.componentId]?.get(property)
+        if (link != null) {
+          modifierLink(link, value, node, property)?.let { fromProperties += it }
+          continue
+        }
         val target = PROPERTY_PARAMETERS[node.componentId]?.get(property)
         if (target == null) {
           arguments[property] = value(value, node, property) ?: continue
@@ -242,10 +253,38 @@ object ScreenDocumentProjection {
         }
         arguments[target.parameter] = retarget(target, value, node, property) ?: continue
       }
-      if (node.modifiers.isNotEmpty() || tagNodes) {
-        modifiers(node)?.let { arguments["modifier"] = it }
+      if (node.modifiers.isNotEmpty() || fromProperties.isNotEmpty() || tagNodes) {
+        modifiers(node, fromProperties)?.let { arguments["modifier"] = it }
       }
       return arguments
+    }
+
+    /**
+     * One chain link for a property whose Compose spelling is a modifier, or null having said why
+     * not.
+     */
+    private fun modifierLink(
+      callableFqn: String,
+      value: UiValueV1,
+      node: DesignNodeV1,
+      property: String,
+    ): ChainLink? {
+      val where = "node `${node.id}`.`$property`"
+      val number =
+        when (value) {
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else -> {
+            refuse("$where becomes a modifier taking a `Dp`, which needs a number")
+            return null
+          }
+        }
+      val dp = dp(number)
+      if (dp == null) {
+        refuse("$where is $number, which does not survive `Dp`")
+        return null
+      }
+      return ChainLink(callableFqn, positional = listOf(dp))
     }
 
     /** Names every part of a node this projection has no expression for. */
@@ -278,7 +317,7 @@ object ScreenDocumentProjection {
     }
 
     /** The `modifier` argument for a node's modifier list, or null having said why not. */
-    private fun modifiers(node: DesignNodeV1): ScreenValue? {
+    private fun modifiers(node: DesignNodeV1, fromProperties: List<ChainLink>): ScreenValue? {
       // Every modifier is visited even after one fails. A non-local `return` out of the map stopped
       // at the first, which quietly broke this projection's one promise: `Outcome.Refused` carries
       // *every* unexpressible thing so a document can be fixed in one pass, not one per export.
@@ -291,7 +330,9 @@ object ScreenDocumentProjection {
         else listOf(ChainLink(TEST_TAG, positional = listOf(ScreenValue.Text(node.id))))
       return ScreenValue.Chain(
         receiver = ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER),
-        links = links.filterNotNull() + tag,
+        // The authored chain first, then the links a property implied, then the tag. A designer's
+        // own order is the one thing here that carries intent, so nothing is interleaved with it.
+        links = links.filterNotNull() + fromProperties + tag,
         typeFqn = MODIFIER,
       )
     }
@@ -437,6 +478,16 @@ object ScreenDocumentProjection {
     ): ScreenValue? {
       val where = "node `${node.id}`.`$property`"
       if (target.kind == TargetKind.RENAME) return value(value, node, property)
+      if (target.kind == TargetKind.CARD_COLORS) {
+        // `CardDefaults.cardColors` is `@Composable`, which is why this is expressible at all: the
+        // generated screen body is one, so the call site is legal exactly where the argument goes.
+        val color = value(value, node, property) ?: return null
+        return ScreenValue.Construct(
+          callableFqn = "androidx.compose.material3.CardDefaults.cardColors",
+          named = mapOf("containerColor" to color),
+          typeFqn = "androidx.compose.material3.CardColors",
+        )
+      }
       if (target.kind == TargetKind.SHAPE_TOKEN) {
         // Only the text spelling needs help. A `shapeToken` wrapper already resolves through the
         // same table in `value`, and the checked-in fixtures use it — narrowing this to strings
@@ -453,6 +504,12 @@ object ScreenDocumentProjection {
       val dp = dp(number) ?: return refuse("$where is $number, which does not survive `Dp`")
       return when (target.kind) {
         TargetKind.DP -> dp
+        TargetKind.CARD_ELEVATION ->
+          ScreenValue.Construct(
+            callableFqn = "androidx.compose.material3.CardDefaults.cardElevation",
+            named = mapOf("defaultElevation" to dp),
+            typeFqn = "androidx.compose.material3.CardElevation",
+          )
         TargetKind.ROUNDED_CORNER_SHAPE ->
           ScreenValue.Construct(
             callableFqn = "androidx.compose.foundation.shape.RoundedCornerShape",
@@ -473,6 +530,7 @@ object ScreenDocumentProjection {
               else ARRANGEMENT_HORIZONTAL,
           )
         TargetKind.RENAME,
+        TargetKind.CARD_COLORS,
         TargetKind.SHAPE_TOKEN -> error("handled above")
       }
     }
@@ -481,7 +539,15 @@ object ScreenDocumentProjection {
     private fun value(value: UiValueV1, node: DesignNodeV1, property: String): ScreenValue? {
       val where = "node `${node.id}`.`$property`"
       return when (value) {
-        is StringValueV1 -> ScreenValue.Text(value.value)
+        // A `string` wrapper on a property whose values are an enumeration is read through the same
+        // table the `enum` wrapper is. The reducer now rejects that spelling on a write (#339), so
+        // nothing new arrives this way — but documents committed before it did already render, and
+        // refusing them here with "`Text`.`style` is a TextStyle, which Text is not" names the
+        // wrong problem in a message that cannot be acted on from the builder.
+        is StringValueV1 ->
+          if (enumerated(node.componentId, property))
+            enum(value.value, node.componentId, property, where)
+          else ScreenValue.Text(value.value)
         is BooleanValueV1 -> ScreenValue.Bool(value.value)
         is IntegerValueV1 -> ScreenValue.Whole(value.value)
         is DecimalValueV1 -> ScreenValue.Fractional(value.value)
@@ -653,6 +719,13 @@ object ScreenDocumentProjection {
       property: String,
       where: String,
     ): ScreenValue? {
+      if (componentId to property in ICON_PROPERTIES) {
+        return icon(entry)
+          ?: refuse(
+            "$where is the icon key `$entry`, which is not one of " +
+              ICON_MEMBERS.keys.sorted().joinToString(", ")
+          )
+      }
       val mapping =
         ENUM_MEMBERS[componentId]?.get(property)
           ?: return refuse(
@@ -675,6 +748,44 @@ object ScreenDocumentProjection {
         rootFqn = path.first(),
         members = path.drop(1),
         typeFqn = mapping.typeFqn,
+      )
+    }
+
+    /**
+     * The `ImageVector` an icon key names, or null when [ICON_MEMBERS] has no entry for it.
+     *
+     * A [ScreenValue.Chain] rather than the [ScreenValue.Reference] every other enum value gets,
+     * and that is forced rather than chosen: an icon is an **extension property** on `Icons.Filled`
+     * declared in `androidx.compose.material.icons.filled`, so it resolves through an import of the
+     * property and not through a longer qualified path.
+     * `androidx.compose.material.icons.Icons.Filled.AccountCircle` written out is not a spelling of
+     * anything, which is exactly the case [ScreenValue.Chain]'s KDoc exists for.
+     */
+    /** Whether this catalog property's values are an enumeration one of the tables names. */
+    private fun enumerated(componentId: String, property: String): Boolean =
+      ENUM_MEMBERS[componentId]?.containsKey(property) == true ||
+        componentId to property in ICON_PROPERTIES
+
+    private fun icon(entry: String): ScreenValue? {
+      val path = ICON_MEMBERS[entry]?.split(".") ?: return null
+      val pack = path.dropLast(1)
+      return ScreenValue.Chain(
+        receiver =
+          ScreenValue.Reference(
+            rootFqn = ICONS,
+            members = pack,
+            // JVM-spelled, for the reason [ALIGNMENT_VERTICAL] carries: `Icons.Filled` is a nested
+            // object, and this claim is compared as a string.
+            typeFqn = pack.joinToString("\$", prefix = "$ICONS\$"),
+          ),
+        links =
+          listOf(
+            ChainLink(
+              "$ICONS_PACKAGE.${pack.joinToString(".") { it.lowercase() }}.${path.last()}",
+              property = true,
+            )
+          ),
+        typeFqn = IMAGE_VECTOR,
       )
     }
 
@@ -840,6 +951,10 @@ object ScreenDocumentProjection {
     SPACED_BY_HORIZONTAL,
     /** A theme shape role named as text — `large`. */
     SHAPE_TOKEN,
+    /** A container colour Material 3 takes as a `CardColors` bundle. */
+    CARD_COLORS,
+    /** A resting elevation in dp, which `Card` takes as a `CardElevation` bundle. */
+    CARD_ELEVATION,
   }
 
   private class ParameterTarget(val parameter: String, val kind: TargetKind)
@@ -857,11 +972,12 @@ object ScreenDocumentProjection {
    * `CapabilityComposeCodeExporter` already knew all of this. It is not on the export path, which
    * is why the knowledge had to be restated somewhere the export can reach.
    *
-   * Deliberately not exhaustive. `weight` is absent because `Modifier.weight` is declared on
-   * `RowScope` and `ColumnScope`, so it is legal only in the slot a node was placed in — the same
-   * scope question that keeps `matchParentSize` refused, and it wants the same answer rather than a
-   * guess. `m3/card`'s `containerColor` and `elevationDp` are absent because `CardDefaults` is not
-   * in the record's `Card` signature at all: that is a record gap, not a naming one.
+   * Deliberately not exhaustive. `weight` is absent for two reasons that both have to go before it
+   * can be here: `Modifier.weight` is declared on `RowScope` and `ColumnScope`, so it is legal only
+   * in the slot a node was placed in — the same scope question that keeps `matchParentSize` refused
+   * — and it takes a `Float`, which [ScreenValue] has no literal for in a nested position (a
+   * `Fractional` renders as a `Double` there, and `weight(1.0)` does not compile). Neither is a
+   * naming problem, so neither is fixed by a row in this table.
    */
   private val PROPERTY_PARAMETERS: Map<String, Map<String, ParameterTarget>> =
     mapOf(
@@ -871,7 +987,17 @@ object ScreenDocumentProjection {
           "shapeDp" to ParameterTarget("shape", TargetKind.ROUNDED_CORNER_SHAPE),
           "tonalElevationDp" to ParameterTarget("tonalElevation", TargetKind.DP),
         ),
-      "m3/card" to mapOf("shape" to ParameterTarget("shape", TargetKind.SHAPE_TOKEN)),
+      "m3/card" to
+        mapOf(
+          "shape" to ParameterTarget("shape", TargetKind.SHAPE_TOKEN),
+          "containerColor" to ParameterTarget("colors", TargetKind.CARD_COLORS),
+          "elevationDp" to ParameterTarget("elevation", TargetKind.CARD_ELEVATION),
+        ),
+      "m3/icon" to
+        mapOf(
+          "iconKey" to ParameterTarget("imageVector", TargetKind.RENAME),
+          "color" to ParameterTarget("tint", TargetKind.RENAME),
+        ),
       "layout/row" to
         mapOf(
           "horizontalSpacingDp" to
@@ -987,6 +1113,96 @@ object ScreenDocumentProjection {
               "bottomEnd" to "BottomEnd",
             )
         ),
+    )
+
+  /**
+   * Catalog properties whose Compose spelling is a **modifier link**, not a parameter.
+   *
+   * The fourth authored table, and the one whose absence reads worst: `m3/icon`'s `sizeDp` refused
+   * as "`Icon` has no parameter `sizeDp`", which is true and useless — `Icon` has no such parameter
+   * because the size goes on the modifier, and the catalog says so itself by declaring `size` in
+   * the component's `modifierCapabilities`.
+   *
+   * Only unscoped links belong here. `Modifier.weight` looks like the same shape and is not: it is
+   * declared on `RowScope`, so whether it compiles depends on the slot the node was placed in — see
+   * [PROPERTY_PARAMETERS] for why that stays refused.
+   */
+  private val MODIFIER_PROPERTIES: Map<String, Map<String, String>> =
+    mapOf("m3/icon" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"))
+
+  private const val ICONS_PACKAGE = "androidx.compose.material.icons"
+  private const val ICONS = "$ICONS_PACKAGE.Icons"
+  private const val IMAGE_VECTOR = "androidx.compose.ui.graphics.vector.ImageVector"
+
+  /** The catalog properties whose enum values are icon keys rather than members of a type. */
+  private val ICON_PROPERTIES: Set<Pair<String, String>> = setOf("m3/icon" to "iconKey")
+
+  /**
+   * Which icon each catalog `iconKey` names, as the member path under `Icons`.
+   *
+   * The same 46 keys `GoogleMaterialIconCatalog` renders with, in the same spellings, and that is
+   * the point: the builder's canvas already holds a wire-to-Kotlin mapping for every key it can
+   * draw — `GoogleMaterialIcon.composeExpression` — and a second one written from the catalog's
+   * `allowedValues` would be a second chance to disagree about which vector `genres` is (it is
+   * `Category`, which no derivation from the key would ever produce). `:ui-builder-export` cannot
+   * read that catalog, because it holds real `ImageVector`s and this module deliberately has no
+   * Compose dependency, so the mapping is restated here and `GoogleMaterialIconExportMappingTest`
+   * fails if the two ever drift.
+   *
+   * **These need `material-icons-extended` on the consumer's classpath.** Only a minority of the 46
+   * are in `material-icons-core`, and nothing in a generated file can add a dependency to the
+   * project it lands in. Stated here rather than discovered at compile time because it is the one
+   * thing about this table a reader has to know: an export that names `Icons.Filled.Coffee` is
+   * correct Kotlin and does not compile against `-core` alone.
+   */
+  val ICON_MEMBERS: Map<String, String> =
+    mapOf(
+      "accessTime" to "Filled.AccessTime",
+      "accountCircle" to "Filled.AccountCircle",
+      "add" to "Filled.Add",
+      "addCircle" to "Filled.AddCircle",
+      "arrowBack" to "AutoMirrored.Filled.ArrowBack",
+      "arrowForward" to "AutoMirrored.Filled.ArrowForward",
+      "bookmark" to "Filled.Bookmark",
+      "bookmarkBorder" to "Outlined.BookmarkBorder",
+      "calendarMonth" to "Filled.CalendarMonth",
+      "cameraAlt" to "Filled.CameraAlt",
+      "check" to "Filled.Check",
+      "checkCircle" to "Filled.CheckCircle",
+      "chevronRight" to "Filled.ChevronRight",
+      "close" to "Filled.Close",
+      "coffee" to "Filled.Coffee",
+      "delete" to "Filled.Delete",
+      "download" to "Filled.Download",
+      "edit" to "Filled.Edit",
+      "email" to "Filled.Email",
+      "expandMore" to "Filled.ExpandMore",
+      "favorite" to "Filled.Favorite",
+      "genres" to "Filled.Category",
+      "home" to "Filled.Home",
+      "image" to "Filled.Image",
+      "info" to "Filled.Info",
+      "locationOn" to "Filled.LocationOn",
+      "lock" to "Filled.Lock",
+      "menu" to "Filled.Menu",
+      "moreVert" to "Filled.MoreVert",
+      "notifications" to "Filled.Notifications",
+      "pauseCircle" to "Filled.PauseCircle",
+      "person" to "Filled.Person",
+      "phone" to "Filled.Phone",
+      "playCircle" to "Filled.PlayCircle",
+      "playlistAdd" to "AutoMirrored.Filled.PlaylistAdd",
+      "refresh" to "Filled.Refresh",
+      "remove" to "Filled.Remove",
+      "search" to "Filled.Search",
+      "settings" to "Filled.Settings",
+      "share" to "Filled.Share",
+      "star" to "Filled.Star",
+      "stopCircle" to "Filled.StopCircle",
+      "upload" to "Filled.Upload",
+      "videoLibrary" to "Filled.VideoLibrary",
+      "visibility" to "Filled.Visibility",
+      "warning" to "Filled.Warning",
     )
 
   /**
