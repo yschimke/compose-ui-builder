@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -46,6 +47,63 @@ class EditorProblemsTest {
     )
     assertTrue(
       reported.any { it.message.contains("state variable `searchQuery`") },
+      reported.toString(),
+    )
+  }
+
+  @Test
+  fun `a wear widget is judged by the emitter that writes it, not by the record-driven gate`() {
+    // Reported live on the deployed builder: the Weather sample showed two COMPOSE_EXPORT_REFUSED
+    // problems, and neither was true of it. `remote-m3/widget-container-large` is the *host* frame
+    // — the launcher draws it, `WearWidgetCodeExporter` erases it — and the panel called it "no
+    // component in this catalog"; `center` is an alignment `RemoteContentEmitter` writes, and the
+    // panel said nothing mapped it to a Kotlin member. Both came from asking `ScreenExportGate`
+    // about a design it does not write.
+    val widget =
+      weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
+
+    val reported = problems(widget).filter { it.code == "COMPOSE_EXPORT_REFUSED" }
+
+    // Scoped to the export gate's own code: this reducer holds `m3-catalog`, so the capability half
+    // still — correctly — reports the widget's components as absent from the catalog it is being
+    // judged against. That is a real pin problem and not the one this test is about. What must be
+    // gone is the *export* refusing a design it exports.
+    assertEquals(emptyList(), reported, "this widget exports; the panel should refuse nothing")
+    // And the pane and the panel agree, which is the property that broke: one said "here is your
+    // widget's Kotlin" while the other said two of its nodes could not be written.
+    assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(widget))
+  }
+
+  @Test
+  fun `a widget the emitter genuinely cannot write is still reported`() {
+    // The panel is not simply silenced for these designs. 20dp of horizontal padding is a frame the
+    // shipped preview params cannot show, so the emitter refuses it — and that refusal, unlike the
+    // two above, is about the design in front of the person reading it.
+    val widget =
+      weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
+    val rootId = widget.roots.single()
+    val root = widget.nodes.getValue(rootId)
+    val padded =
+      widget.copy(
+        nodes =
+          widget.nodes +
+            (rootId to
+              root.copy(
+                properties =
+                  JsonObject(
+                    root.properties +
+                      ("horizontalPaddingDp" to
+                        Json.parseToJsonElement("""{"type":"float","value":20.0}"""))
+                  )
+              ))
+      )
+
+    val reported = problems(padded)
+
+    assertTrue(
+      reported.any {
+        it.code == "COMPOSE_EXPORT_REFUSED" && "horizontal padding is 20dp" in it.message
+      },
       reported.toString(),
     )
   }

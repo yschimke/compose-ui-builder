@@ -46,7 +46,11 @@ object WearScreenCodeExporter {
     data class Refused(val reasons: List<String>) : Result
   }
 
-  fun export(document: UiBuilderDocument): Result {
+  /**
+   * @param packageName the package the emitted file declares, or null for the pane's snippet. See
+   *   [WearWidgetCodeExporter.export]; the two lanes differ by exactly this line.
+   */
+  fun export(document: UiBuilderDocument, packageName: String? = null): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a screen design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
     if (root.componentId != SCAFFOLD) {
@@ -83,6 +87,10 @@ object WearScreenCodeExporter {
       buildString {
         appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
         appendLine()
+        if (packageName != null) {
+          appendLine("package $packageName")
+          appendLine()
+        }
         emitter.imports(timeText != null).forEach { appendLine("import $it") }
         appendLine()
         appendLine("@Composable")

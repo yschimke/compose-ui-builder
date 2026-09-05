@@ -1505,24 +1505,19 @@ class UiBuilderEditorReducer(
    * document whose code someone is trying to read.
    */
   fun generatedCode(document: UiBuilderDocument): EditorGeneratedCode = runCatching {
-    // A Wear widget is not a screen: it ships as a `WearWidgetDocument` of Remote Compose, against
-    // no component record, so the Compose gate below can only ever refuse it. Asked first rather
-    // than as a fallback, because "refused, and also here is different code" would be two answers
-    // to one question.
-    if (document.isWearWidget()) {
-      return@runCatching when (val widget = WearWidgetCodeExporter.export(document)) {
-        is WearWidgetCodeExporter.Result.Emitted -> EditorGeneratedCode.Source(widget.source)
-        is WearWidgetCodeExporter.Result.Refused -> EditorGeneratedCode.Refused(widget.reasons)
-      }
-    }
-    // A Wear screen is not a widget and not a Material 3 screen either. It has no component record
-    // — `ScreenScaffold` takes a scroll state that has to agree with the list inside its content
-    // lambda, which a call-site emitter cannot write from a record — so the gate below could only
-    // refuse it, and asking first is the same "one answer to one question" rule the widget takes.
-    if (document.isWearScreen()) {
-      return@runCatching when (val screen = WearScreenCodeExporter.export(document)) {
-        is WearScreenCodeExporter.Result.Emitted -> EditorGeneratedCode.Source(screen.source)
-        is WearScreenCodeExporter.Result.Refused -> EditorGeneratedCode.Refused(screen.reasons)
+    // A Wear widget ships as a `WearWidgetDocument` of Remote Compose and a Wear screen's
+    // `ScreenScaffold` takes a scroll state no record can recover, so neither has a component
+    // record and the Compose gate below can only ever refuse them. Asked first rather than as a
+    // fallback, because "refused, and also here is different code" would be two answers to one
+    // question — and asked through `RecordFreeExport`, which is the same call the server's export
+    // makes, so the pane and the artifact cannot disagree about a design.
+    //
+    // No package: this pane is read and pasted into a file that already has one. The export passes
+    // `ScreenExportGate.PACKAGE_NAME` for the same designs, because an artifact *is* the file.
+    RecordFreeExport.generate(document)?.let { recordFree ->
+      return@runCatching when (recordFree) {
+        is RecordFreeExport.Generated.Emitted -> EditorGeneratedCode.Source(recordFree.source)
+        is RecordFreeExport.Generated.Refused -> EditorGeneratedCode.Refused(recordFree.reasons)
       }
     }
     when (
@@ -1543,11 +1538,20 @@ class UiBuilderEditorReducer(
     }
 
   /**
-   * What the Compose export would refuse, as editor problems.
+   * What the export would refuse, as editor problems.
    *
    * `nodeId` is deliberately null: a refusal names the component and the reason in its text, and
    * the generator reports against the *projected* screen rather than the document's node ids. A
    * guessed id would offer the designer a node to select that is not the one at fault.
+   *
+   * Asked of whichever generator actually writes the design, because a panel headed "what the
+   * export would refuse" is a claim about the export. A Wear widget judged by the record-driven
+   * gate was told two things that are not true of it: that its `remote-m3/widget-container-large`
+   * root is "no component in this catalog" — it is the host frame the launcher draws and
+   * `WearWidgetCodeExporter` deliberately erases — and that a `center` alignment maps to no Kotlin
+   * member, when `RemoteContentEmitter` writes exactly that alignment. Both refusals named a
+   * blocker on a design that exports perfectly well, and told a designer to go and undo the widget
+   * they had just drawn.
    */
   private fun exportRefusals(document: UiBuilderDocument): List<EditorProblem> =
   // Total, because the panel's contract is to *report* rather than throw. A malformed property
@@ -1555,7 +1559,13 @@ class UiBuilderEditorReducer(
   // editor down over the one document whose problems a designer most needs listed. The capability
   // diagnostics above already name that document's real fault.
   runCatching {
-    ScreenExportGate.refusals(document.toProtocolDocument(), embeddedComponentRecord())
+    when (val recordFree = RecordFreeExport.generate(document)) {
+      is RecordFreeExport.Generated.Refused -> recordFree.reasons
+      // It generates. The gate below would still refuse it — that is the whole reason these
+      // designs have their own emitter — so asking it anything here is asking the wrong question.
+      is RecordFreeExport.Generated.Emitted -> emptyList()
+      null -> ScreenExportGate.refusals(document.toProtocolDocument(), embeddedComponentRecord())
+    }
   }
     .getOrElse { emptyList() }
     .map {
@@ -3040,18 +3050,6 @@ private val THEME_PROPERTIES =
     THEME_TYPE_SCALE,
     THEME_CORNER_RADIUS,
   )
-
-/** Whether this design is a Wear widget, which generates through a different emitter entirely. */
-internal fun UiBuilderDocument.isWearWidget(): Boolean {
-  val root = roots.singleOrNull()?.let(nodes::get) ?: return false
-  return WearWidgetScaffoldSize.entries.any { it.componentId == root.componentId }
-}
-
-/** A design whose root is the Wear screen scaffold, which `WearScreenCodeExporter` writes. */
-internal fun UiBuilderDocument.isWearScreen(): Boolean {
-  val root = roots.singleOrNull()?.let(nodes::get) ?: return false
-  return root.componentId == WearScreenCodeExporter.SCAFFOLD
-}
 
 private fun UiBuilderDocument.themeHost(): UiBuilderNode? =
   roots.asSequence().mapNotNull(nodes::get).firstOrNull { it.componentId == "m3/surface" }

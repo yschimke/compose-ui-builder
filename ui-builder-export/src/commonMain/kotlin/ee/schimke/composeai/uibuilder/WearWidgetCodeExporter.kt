@@ -37,7 +37,13 @@ object WearWidgetCodeExporter {
     data class Refused(val reasons: List<String>) : Result
   }
 
-  fun export(document: UiBuilderDocument): Result {
+  /**
+   * @param packageName the package the emitted file declares, or null for the pane's snippet. A
+   *   snippet is written to be pasted into a file that already has one; an export is the file, so
+   *   the two differ by exactly this line. It goes after `@file:Suppress`, which Kotlin requires
+   *   before the package declaration.
+   */
+  fun export(document: UiBuilderDocument, packageName: String? = null): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
     val size =
@@ -88,6 +94,10 @@ object WearWidgetCodeExporter {
         appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
         appendLine("@file:Suppress(\"RestrictedApi\")")
         appendLine()
+        if (packageName != null) {
+          appendLine("package $packageName")
+          appendLine()
+        }
         emitter.imports(size.previewParamsProvider).forEach { appendLine("import $it") }
         appendLine()
         appendLine("@RemoteComposable")

@@ -107,3 +107,16 @@ private val seedJson = Json {
  */
 fun UiBuilderDocument.toDesignDocumentV1(): DesignDocumentV1 =
   seedJson.decodeFromString(seedJson.encodeToString(this))
+
+/**
+ * The released v1 service document as the candidate document, which is [toDesignDocumentV1]
+ * backwards.
+ *
+ * The same serialize/parse round trip, for the same reason and now in the direction the *server*
+ * needs: the record-free emitters in [RecordFreeExport] are written against [UiBuilderDocument]
+ * because the browser editor authors one, and the export executor holds a `DesignDocumentV1`. A
+ * second field-by-field mapping between two shapes that are the same shape is a mapping that can
+ * disagree with the first.
+ */
+fun DesignDocumentV1.toUiBuilderDocument(): UiBuilderDocument =
+  seedJson.decodeFromString(seedJson.encodeToString(this))
