@@ -1392,6 +1392,16 @@ class UiBuilderEditorReducer(
    * document whose code someone is trying to read.
    */
   fun generatedCode(document: UiBuilderDocument): EditorGeneratedCode = runCatching {
+    // A Wear widget is not a screen: it ships as a `WearWidgetDocument` of Remote Compose, against
+    // no component record, so the Compose gate below can only ever refuse it. Asked first rather
+    // than as a fallback, because "refused, and also here is different code" would be two answers
+    // to one question.
+    if (document.isWearWidget()) {
+      return@runCatching when (val widget = WearWidgetCodeExporter.export(document)) {
+        is WearWidgetCodeExporter.Result.Emitted -> EditorGeneratedCode.Source(widget.source)
+        is WearWidgetCodeExporter.Result.Refused -> EditorGeneratedCode.Refused(widget.reasons)
+      }
+    }
     when (
       val outcome =
         ScreenExportGate.export(document.toProtocolDocument(), embeddedComponentRecord())
@@ -2811,6 +2821,12 @@ private val THEME_PROPERTIES =
     THEME_TYPE_SCALE,
     THEME_CORNER_RADIUS,
   )
+
+/** Whether this design is a Wear widget, which generates through a different emitter entirely. */
+internal fun UiBuilderDocument.isWearWidget(): Boolean {
+  val root = roots.singleOrNull()?.let(nodes::get) ?: return false
+  return WearWidgetScaffoldSize.entries.any { it.componentId == root.componentId }
+}
 
 private fun UiBuilderDocument.themeHost(): UiBuilderNode? =
   roots.asSequence().mapNotNull(nodes::get).firstOrNull { it.componentId == "m3/surface" }

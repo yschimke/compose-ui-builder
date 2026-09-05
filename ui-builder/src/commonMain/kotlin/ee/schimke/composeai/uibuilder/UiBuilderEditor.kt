@@ -593,6 +593,11 @@ fun UiBuilderEditor(
     if (state.codePaneVisible || mobilePanel == MobileEditorPanel.Code) {
       remember(reducer, state.document) { reducer.generatedCode(state.document) }
     } else null
+  // Named where the document is, not inside the pane: the pane is handed source and has no way to
+  // tell which generator wrote it.
+  val generatedCodeCaption =
+    if (state.document.isWearWidget()) "Wear widget · Remote Compose"
+    else "Compose export · ${ScreenExportGate.PACKAGE_NAME}"
   val propertyFields = reducer.propertyFields(state)
   // Which of those a binding must reach as a comparison rather than a bare read. Computed beside
   // the fields so the inspector is not asking the reducer the same question twice per frame.
@@ -765,7 +770,11 @@ fun UiBuilderEditor(
                 // canvas is a phone-shaped thing, so height is what the code has to spare and
                 // width is what the canvas cannot.
                 if (generatedCode != null) {
-                  GeneratedCodePane(generatedCode, Modifier.fillMaxWidth().weight(0.8f))
+                  GeneratedCodePane(
+                    generatedCode,
+                    generatedCodeCaption,
+                    Modifier.fillMaxWidth().weight(0.8f),
+                  )
                 }
               }
               inspector(Modifier.width(INSPECTOR_WIDTH).fillMaxHeight())
@@ -797,6 +806,7 @@ fun UiBuilderEditor(
             if (mobilePanel == MobileEditorPanel.Code && generatedCode != null) {
               GeneratedCodePane(
                 generatedCode,
+                generatedCodeCaption,
                 Modifier.align(Alignment.BottomCenter)
                   .fillMaxWidth()
                   .fillMaxHeight(0.72f)
@@ -2723,13 +2733,23 @@ private fun ProblemsInspector(
  * would be offering an edit the next keystroke on the canvas throws away.
  */
 @Composable
-private fun GeneratedCodePane(code: EditorGeneratedCode, modifier: Modifier = Modifier) {
+private fun GeneratedCodePane(
+  code: EditorGeneratedCode,
+  /**
+   * What produced the source, because two generators feed this pane.
+   *
+   * A widget's Kotlin is not a Compose export and saying so would be wrong twice over: it is Remote
+   * Compose, and it goes out as a `WearWidgetDocument` rather than into that export's package.
+   */
+  caption: String,
+  modifier: Modifier = Modifier,
+) {
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
       when (code) {
         is EditorGeneratedCode.Source -> {
           Text(
-            "Compose export · ${ScreenExportGate.PACKAGE_NAME}",
+            caption,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall,
           )

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -93,6 +94,48 @@ fun EmptyWearWidgetContainerPreview() {
       }
     }
   }
+}
+
+/**
+ * The Code pane on the Hello widget: the Kotlin a widget design generates.
+ *
+ * The pane on a widget is not the Compose exporter's output and could not be — `remote-m3` has no
+ * component record, and a widget ships as a `WearWidgetDocument` of Remote Compose rather than as a
+ * screen. What it shows instead is `WearWidgetCodeExporter`'s: a `GlanceWearWidget`, its content
+ * composable, and the `@Preview` that draws it through the real host tooling. The host container
+ * appears nowhere in it, which is the point — on-device the launcher draws that.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun WearWidgetCodePanePreview() {
+  UiBuilderEditor(
+    document =
+      helloWidgetUiBuilderDocument(
+        designId = "hello-widget-code",
+        catalogPin = wearWidgetSampleCatalogPin,
+        environment = wearWidgetSampleEnvironment,
+      ),
+    catalog = wearWidgetPreviewCatalog,
+    initialSelectedNodeId = "hello-text",
+    initialCodePaneVisible = true,
+  )
+}
+
+/**
+ * The catalog the widget previews author against.
+ *
+ * The packaged M3 capability catalog, which carries every component these designs use except the
+ * two containers — those are synthesised in `:ui-builder-runtime`, which this module may not depend
+ * on. The editor draws a node whose component the catalog does not know; only the inspector is
+ * poorer for it, and the pane under test is the code one.
+ */
+private val wearWidgetPreviewCatalog by lazy {
+  CapabilityCatalogParser.parse(
+    checkNotNull(
+        WearWidgetScaffoldSize::class.java.getResource("/jetcaster-discover-capabilities-v1.json")
+      )
+      .readText()
+  )
 }
 
 /**
