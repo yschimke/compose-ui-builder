@@ -40,8 +40,24 @@ jmdns = "3.6.3"
 # Held at 1.0.0 deliberately. 1.1.0's JVM artifact is compiled for Java 21 (class file 65) and this
 # build's JVM target is 17, so it loads in the browser and throws `UnsupportedClassVersionError` in
 # `:ui-builder:jvmTest` and in the JVM chrome preview the render evidence comes from. 1.0.0 targets
-# Java 8, publishes the same wasmJs variant and the same `Highlights`/`SyntaxThemes` API. Renovate
-# will offer 1.1.0: take it only once this build's JVM target reaches 21.
+# Java 8, publishes the same wasmJs variant and the same `Highlights`/`SyntaxThemes` API.
+#
+# Renovate will offer 1.1.0. Taking it is NOT a one-line target bump, and the blocker is not our
+# own target — it is downstream. `compose-ai-tools` pins every JVM module to a 17 toolchain
+# (`ComposeAiJvmConventionsPlugin`) and its `:cli` compiles its tests against our published
+# `compose-preview-serve` (`cli/build.gradle.kts`), so class file 65 in that artifact fails their
+# build outright with "class file has wrong version 65.0, should be 61.0" — and that repository
+# has ruled out moving, because AGP and Robolectric still target 17 (its `docs/AGENT_GUIDE.md`).
+# Its `compose-preview serve` / `mcp serve` launchers exec our start script as a separate process
+# resolving `java` from JAVA_HOME/PATH, so a 21 floor also breaks a self-hoster on 17 with no
+# diagnostic (yschimke/compose-preview-server#344).
+#
+# The move that would actually unlock 1.1.0 is narrower: `:ui-builder` alone, whose JVM classes are
+# not published (`compose-preview-ui-builder-web` ships a Zip of `wasmDist`, its `jar` disabled).
+# That still puts class file 65 inside `compose-preview-ui-builder-runtime`, which embeds
+# `:ui-builder`'s `composePreviewBundle` polyglot as a resource, so whatever renders that bundle
+# would need 21 — ours does, a self-hoster on 17 would not. Weigh that against what 1.1.0 actually
+# gives us, which so far is nothing this pane uses.
 snipme-highlights = "1.0.0"
 
 [libraries]
