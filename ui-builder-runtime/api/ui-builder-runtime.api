@@ -19,8 +19,8 @@ public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCata
 	public static final field REMOTE_M3_CATALOG_SYSTEM_ID Ljava/lang/String;
 	public static final field RESOURCE Ljava/lang/String;
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun listCatalogs ()Ljava/util/List;
 	public fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
 	public fun validate (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
