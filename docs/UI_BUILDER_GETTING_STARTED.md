@@ -127,7 +127,7 @@ with the same bearer. Seven tools, one per protocol request plus the native rend
 | `ui_builder_create_design` | `ui-builder-write` | A design, from a document or copied from one |
 | `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set, delete, move |
 | `ui_builder_export` | `ui-builder-export` | The generator's Kotlin, or its refusals |
-| `ui_builder_render_native` | `ui-builder-export` | A frame compiled by real Compose on the host |
+| `ui_builder_render_native` | `ui-builder-export` | A frame compiled by real Compose on the host, plus where each node drew on it |
 
 They are absent from `tools/list` on a box that serves no builder, and `ui_builder_render_native` is
 absent on one that cannot compile — a client reads what this server can do off the tool list rather

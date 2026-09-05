@@ -11,6 +11,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -67,10 +68,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -157,7 +160,30 @@ data class UiBuilderNativeRender(
   val image: ImageBitmap? = null,
   val refusals: List<String> = emptyList(),
   val failure: String? = null,
+  /**
+   * Design node id → the box it drew, in [image]'s own pixels.
+   *
+   * What turns the frame from a picture into a surface: the selected node is outlined in it, and a
+   * click resolves to the smallest box containing the point. A node the host reports no box for —
+   * one the render never placed — is simply not selectable there, which is the same answer the
+   * inspection snapshot gives for a lazy slot that never composed.
+   */
+  val nodeBounds: Map<String, UiBuilderNativeNodeBounds> = emptyMap(),
 )
+
+/** One node's rectangle on a native frame, in that frame's pixels, origin at its top-left. */
+data class UiBuilderNativeNodeBounds(
+  val x: Int,
+  val y: Int,
+  val width: Int,
+  val height: Int,
+) {
+  internal fun contains(px: Float, py: Float): Boolean =
+    px >= x && py >= y && px < x + width && py < y + height
+
+  internal val area: Long
+    get() = width.toLong() * height.toLong()
+}
 
 @Composable
 fun UiBuilderEditor(
@@ -486,9 +512,14 @@ fun UiBuilderEditor(
                   }
                   if (nativeRequested) {
                     NativeRenderPane(
-                      nativeRender,
-                      nativePending,
-                      Modifier.weight(1f).fillMaxHeight(),
+                      render = nativeRender,
+                      pending = nativePending,
+                      selectedNodeId = state.selectedNodeId,
+                      onNodeSelected = {
+                        focusEditor()
+                        dispatch(UiBuilderEditorEvent.SelectNode(it))
+                      },
+                      modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                   }
                 }
@@ -2390,6 +2421,8 @@ private fun GeneratedCodePane(code: EditorGeneratedCode, modifier: Modifier = Mo
 private fun NativeRenderPane(
   render: UiBuilderNativeRender?,
   pending: Boolean,
+  selectedNodeId: String?,
+  onNodeSelected: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
@@ -2437,12 +2470,12 @@ private fun NativeRenderPane(
           }
         }
         render.image != null ->
-          Image(
-            bitmap = render.image,
-            contentDescription = "Native render of this design",
+          NativeRenderFrame(
+            image = render.image,
+            nodeBounds = render.nodeBounds,
+            selectedNodeId = selectedNodeId,
+            onNodeSelected = onNodeSelected,
             modifier = Modifier.fillMaxSize().padding(top = 8.dp),
-            contentScale = ContentScale.Fit,
-            alignment = Alignment.TopStart,
           )
         else ->
           Text(
@@ -2451,6 +2484,86 @@ private fun NativeRenderPane(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
           )
+      }
+    }
+  }
+}
+
+/**
+ * The frame itself, with the overlay that makes it a surface rather than a picture.
+ *
+ * ## The one coordinate transform
+ *
+ * The host reports each node's box in the frame's own pixels, and the frame is drawn scaled to fit
+ * this pane. So there is exactly one factor — `displayed / image` — and it is computed here, where
+ * the displayed size is decided, rather than being sent over the wire in a space that would have to
+ * agree with a layout nobody on the server can see. The image is laid out at that exact size
+ * instead of being left to [ContentScale.Fit], so the overlay and the pixels underneath it cannot
+ * disagree about where the frame starts.
+ *
+ * ## Hit-testing picks the smallest box
+ *
+ * A click lands inside every ancestor of the node that drew it — the column, the card, the row —
+ * and the innermost of those is the one a designer means, which is what the layers panel would
+ * select too. Ties (a wrapper exactly the size of its child) go to whichever the host reported
+ * first; there is no better answer and both are the same rectangle.
+ *
+ * A node with no reported box is not selectable here. That is the honest outcome for something the
+ * render never placed, and the layers panel still selects it.
+ */
+@Composable
+private fun NativeRenderFrame(
+  image: ImageBitmap,
+  nodeBounds: Map<String, UiBuilderNativeNodeBounds>,
+  selectedNodeId: String?,
+  onNodeSelected: (String) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  BoxWithConstraints(modifier) {
+    val density = LocalDensity.current
+    val frameWidth = image.width.toFloat()
+    val frameHeight = image.height.toFloat()
+    val availableWidth = with(density) { maxWidth.toPx() }
+    val availableHeight = with(density) { maxHeight.toPx() }
+    // `coerceAtMost(1f)`: a frame smaller than the pane is shown at its own size, because a render
+    // blown up past 1:1 is a blurrier answer to "what does this look like on the device".
+    val scale =
+      minOf(availableWidth / frameWidth, availableHeight / frameHeight)
+        .coerceAtMost(1f)
+        .coerceAtLeast(0.01f)
+    val shownWidth = with(density) { (frameWidth * scale).toDp() }
+    val shownHeight = with(density) { (frameHeight * scale).toDp() }
+    Box(
+      Modifier.size(shownWidth, shownHeight).pointerInput(nodeBounds, scale) {
+        detectTapGestures { offset ->
+          val x = offset.x / scale
+          val y = offset.y / scale
+          nodeBounds
+            .filterValues { it.contains(x, y) }
+            .minByOrNull { it.value.area }
+            ?.let { onNodeSelected(it.key) }
+        }
+      }
+    ) {
+      Image(
+        bitmap = image,
+        contentDescription = "Native render of this design",
+        // The box is already the frame's exact displayed size, so this only says "no letterboxing
+        // inside it" — the fit was decided above, where the overlay's scale was.
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.FillBounds,
+      )
+      val selected = selectedNodeId?.let(nodeBounds::get)
+      if (selected != null) {
+        val outline = MaterialTheme.colorScheme.primary
+        Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
+          drawRect(
+            color = outline,
+            topLeft = Offset(selected.x * scale, selected.y * scale),
+            size = Size(selected.width * scale, selected.height * scale),
+            style = Stroke(width = 2f),
+          )
+        }
       }
     }
   }

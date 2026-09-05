@@ -754,8 +754,17 @@ private suspend fun requestNativeRender(designId: String): UiBuilderNativeRender
     return UiBuilderNativeRender(failure = it)
   }
   val encoded = result.imageBase64 ?: return UiBuilderNativeRender()
+  // The compile lane's `image` is a `data:image/png;base64,…` URI, because that is what the
+  // playground page puts straight into an `<img src>`. Strict Base64 rejects the prefix, so a frame
+  // that arrived intact used to surface as a decode failure. Tolerant of both spellings rather than
+  // pinned to one: the field is named for its payload, and the prefix is the wrapper.
+  val payload = encoded.substringAfterLast("base64,")
   return UiBuilderNativeRender(
-    image = Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
+    image = Image.makeFromEncoded(Base64.decode(payload)).toComposeImageBitmap(),
+    nodeBounds =
+      result.nodeBounds.mapValues { (_, box) ->
+        UiBuilderNativeNodeBounds(x = box.x, y = box.y, width = box.width, height = box.height)
+      },
   )
 }
 
@@ -766,7 +775,17 @@ private val nativePreviewJson = Json { ignoreUnknownKeys = true }
 private data class NativePreviewResult(
   val imageBase64: String? = null,
   val taggedNodeIds: List<String> = emptyList(),
+  /** Design node id → its box on the frame, in the frame's own pixels. See `nodeBounds` there. */
+  val nodeBounds: Map<String, NativePreviewNodeBounds> = emptyMap(),
   val compileError: String? = null,
+)
+
+@kotlinx.serialization.Serializable
+private data class NativePreviewNodeBounds(
+  val x: Int = 0,
+  val y: Int = 0,
+  val width: Int = 0,
+  val height: Int = 0,
 )
 
 @kotlinx.serialization.Serializable

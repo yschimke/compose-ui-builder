@@ -1,6 +1,11 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -399,6 +404,79 @@ fun UiBuilderRenderComparisonPreview() {
     initialPreviewSurface = EditorPreviewSurface.Both,
     onRequestNativeRender = { nativeRenderPreviewRefusal },
   )
+}
+
+/**
+ * The overlay the native pane draws over a frame: the selected node outlined, in the frame's own
+ * pixels, scaled by the one factor that fits the frame into the pane.
+ *
+ * ## What the frame under it is, and is not
+ *
+ * It is a **geometry fixture**, not a render: flat blocks at the boxes the host would have reported
+ * for this design, drawn here so the overlay has something to sit on.
+ * [UiBuilderNativeRenderPreview] explains why no preview stands a real frame in for one the host
+ * would have produced, and that still holds — nothing here claims to be what Compose drew. What
+ * this preview is for is the half that is this repository's own code: whether the outline lands on
+ * the box the host reported, at the right scale, for the node the editor says is selected. A
+ * regression in the transform moves the outline off its block, which is exactly what a diff of this
+ * render shows.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderNativeOverlayPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialNativeRender = nativeOverlayPreviewRender,
+    initialPreviewSurface = EditorPreviewSurface.Native,
+    onRequestNativeRender = { nativeOverlayPreviewRender },
+  )
+}
+
+/**
+ * The geometry fixture behind [UiBuilderNativeOverlayPreview]: boxes for a few of the fixture's own
+ * nodes, and a frame with a flat block drawn at each of them.
+ *
+ * Deliberately blocks rather than anything that resembles a screen. A frame that looked like a
+ * render would read as one, and this is a coordinate-space fixture — the numbers are the content.
+ */
+private val nativeOverlayPreviewRender: UiBuilderNativeRender by lazy {
+  val bounds =
+    mapOf(
+      "discover-grid" to UiBuilderNativeNodeBounds(x = 32, y = 240, width = 736, height = 1120),
+      "search-bar" to UiBuilderNativeNodeBounds(x = 32, y = 96, width = 736, height = 112),
+      EDITOR_CHROME_PREVIEW_SELECTION to
+        UiBuilderNativeNodeBounds(x = 64, y = 128, width = 400, height = 48),
+    )
+  UiBuilderNativeRender(image = overlayFixtureFrame(800, 1600, bounds.values), nodeBounds = bounds)
+}
+
+/** A [width]x[height] ground with one flat block per box — see [nativeOverlayPreviewRender]. */
+private fun overlayFixtureFrame(
+  width: Int,
+  height: Int,
+  boxes: Collection<UiBuilderNativeNodeBounds>,
+): ImageBitmap {
+  val bitmap = ImageBitmap(width, height)
+  val canvas = Canvas(bitmap)
+  canvas.drawRect(
+    Rect(0f, 0f, width.toFloat(), height.toFloat()),
+    Paint().apply { color = Color(0xff16181d) },
+  )
+  val block = Paint().apply { color = Color(0xff2b3040) }
+  boxes.forEach {
+    canvas.drawRect(
+      Rect(
+        it.x.toFloat(),
+        it.y.toFloat(),
+        (it.x + it.width).toFloat(),
+        (it.y + it.height).toFloat(),
+      ),
+      block,
+    )
+  }
+  return bitmap
 }
 
 /** The fixture's own refusals, taken from the reducer rather than transcribed. */
