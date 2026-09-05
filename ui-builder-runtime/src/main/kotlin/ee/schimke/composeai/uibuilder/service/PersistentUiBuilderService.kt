@@ -31,7 +31,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 public data class UiBuilderCatalogIssue(
   val code: String,
@@ -2185,21 +2184,38 @@ public class PersistentUiBuilderService(
       } catch (failure: Exception) {
         throw UiBuilderPersistenceException("invalid UI-builder persistence UTF-8", failure)
       }
-    val format =
+    val root =
       try {
-        json.parseToJsonElement(encoded).jsonObject["format"]?.jsonPrimitive?.content
+        json.parseToJsonElement(encoded).jsonObject
       } catch (failure: Exception) {
         throw UiBuilderPersistenceException("invalid UI-builder persistence JSON", failure)
-      } ?: throw UiBuilderPersistenceException("UI-builder persistence format is missing")
+      }
+    val format =
+      (root["format"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        ?: throw UiBuilderPersistenceException("UI-builder persistence format is missing")
+    // The checksum covers the payload AS STORED — this parsed tree — and never a re-encode of the
+    // decoded value. Re-encoding checksums the CURRENT model rather than the bytes on disk, which
+    // gets both halves of the job wrong. It cannot see corruption that still decodes (the whole
+    // point of the checksum), and it fails on a file that is perfectly intact whenever the model
+    // has merely grown: `encodeDefaults = true` emits every field a data class declares, so one new
+    // property with a default re-encodes to a JSON tree the stored checksum was never taken over.
+    // That is not hypothetical — `DesignEnvironmentV1.typeface` (compose-ai-contracts 2.8.0, server
+    // 3.4.0) turned every existing deployment's state file into an unreadable one, and the server
+    // exits at construction when persistence fails to load, so the release crash-looped instead of
+    // starting. The stored tree, by contrast, is exactly what the writer checksummed: a field the
+    // model gained since is simply absent from it, and `decode` fills the default in afterwards.
+    val storedPayload =
+      root["payload"]
+        ?: throw UiBuilderPersistenceException("UI-builder persistence payload is missing")
     return when (format) {
       PersistenceFormat.V1.wire -> {
         val envelope = decodeEnvelope<PersistenceEnvelopeV1>(encoded)
-        verifyChecksum(envelope.checksumSha256, json.encodeToJsonElement(envelope.payload))
+        verifyChecksum(envelope.checksumSha256, storedPayload)
         LoadedPersistence(envelope.payload, PersistenceFormat.V1)
       }
       PersistenceFormat.V2.wire -> {
         val envelope = decodeEnvelope<PersistenceEnvelopeV2>(encoded)
-        verifyChecksum(envelope.checksumSha256, json.encodeToJsonElement(envelope.payload))
+        verifyChecksum(envelope.checksumSha256, storedPayload)
         val expectedPins = catalogPins(envelope.payload.service)
         if (envelope.payload.catalogPins != expectedPins) {
           throw UiBuilderPersistenceException(
@@ -2227,6 +2243,8 @@ public class PersistentUiBuilderService(
     }
   }
 
+  // The write side of the pairing [decode] documents: the tree checksummed here is the tree
+  // serialized on the next line, so the number on disk always describes the bytes beside it.
   private fun encode(value: PersistedServiceV1, format: PersistenceFormat): ByteArray {
     val encoded =
       when (format) {

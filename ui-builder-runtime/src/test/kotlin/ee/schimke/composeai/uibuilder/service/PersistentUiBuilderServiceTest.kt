@@ -23,6 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -1652,6 +1653,78 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a state file written before the model grew a field still loads`() {
+    val storage = FileUiBuilderStateStorage(temporaryDirectory)
+    create(service(storage = storage))
+    val stateFile = temporaryDirectory.resolve(FileUiBuilderStateStorage.STATE_FILE)
+
+    // What every deployment's file looked like before `DesignEnvironmentV1.typeface` existed: the
+    // payload is intact and self-consistent, it simply predates a field the model now declares with
+    // a default. Checksumming a re-encode of the DECODED value read this as corruption and took the
+    // whole server down with it (server 3.4.0, compose-ai-contracts 2.8.0); checksumming the stored
+    // tree reads it as what it is.
+    val root = persistenceJson.parseToJsonElement(Files.readString(stateFile)).jsonObject
+    val aged = withoutTypeface(root.getValue("payload"))
+    assertNotEquals(root.getValue("payload"), aged, "the fixture must actually drop the field")
+    val rewritten =
+      JsonObject(
+        root +
+          mapOf(
+            "checksumSha256" to
+              JsonPrimitive(sha256(canonicalPersistenceJson(aged).encodeToByteArray())),
+            "payload" to aged,
+          )
+      )
+    Files.writeString(stateFile, rewritten.toString())
+
+    val reopened = service(storage = FileUiBuilderStateStorage(temporaryDirectory))
+    assertNull(currentDocument(reopened).environment.typeface)
+  }
+
+  @Test
+  fun `an edited payload still fails closed when the checksum is left behind`() {
+    val storage = FileUiBuilderStateStorage(temporaryDirectory)
+    create(service(storage = storage))
+    val stateFile = temporaryDirectory.resolve(FileUiBuilderStateStorage.STATE_FILE)
+
+    // The other half of the same change: verifying the STORED tree must not become a way of
+    // verifying nothing. This payload is valid JSON that decodes cleanly — the kind of tampering a
+    // re-encode checksum cannot see — and it must still be refused, because its bytes are not the
+    // bytes the checksum was taken over.
+    val root = persistenceJson.parseToJsonElement(Files.readString(stateFile)).jsonObject
+    val payload = root.getValue("payload").jsonObject
+    val serviceObject = payload.getValue("service").jsonObject
+    val designs = serviceObject.getValue("designs").jsonObject
+    val design = designs.getValue("design").jsonObject
+    val document = design.getValue("document").jsonObject
+    val tampered =
+      JsonObject(
+        payload +
+          ("service" to
+            JsonObject(
+              serviceObject +
+                ("designs" to
+                  JsonObject(
+                    designs +
+                      ("design" to
+                        JsonObject(
+                          design +
+                            ("document" to
+                              JsonObject(document + ("title" to JsonPrimitive("tampered"))))
+                        ))
+                  ))
+            ))
+      )
+    Files.writeString(stateFile, JsonObject(root + ("payload" to tampered)).toString())
+
+    val failure =
+      assertFailsWith<UiBuilderPersistenceException> {
+        service(storage = FileUiBuilderStateStorage(temporaryDirectory))
+      }
+    assertContains(failure.message.orEmpty(), "checksum mismatch")
+  }
+
+  @Test
   fun `explicit backup restore recovers the previous acknowledged snapshot`() {
     val storage = FileUiBuilderStateStorage(temporaryDirectory)
     var service = service(storage = storage)
@@ -2186,6 +2259,19 @@ private fun legacyV1(v2: ByteArray): ByteArray {
     .toString()
     .encodeToByteArray()
 }
+
+/** Drop `environment.typeface` everywhere it appears, ageing a payload back past that field. */
+private fun withoutTypeface(element: JsonElement): JsonElement =
+  when (element) {
+    is JsonObject ->
+      JsonObject(
+        element
+          .filterKeys { it != "typeface" || "widthDp" !in element }
+          .mapValues { (_, value) -> withoutTypeface(value) }
+      )
+    is JsonArray -> JsonArray(element.map(::withoutTypeface))
+    is JsonPrimitive -> element
+  }
 
 private fun canonicalPersistenceJson(element: JsonElement): String =
   when (element) {
