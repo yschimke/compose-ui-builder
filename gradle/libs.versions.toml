@@ -37,7 +37,6 @@ composeai-render-session-api = { module = "ee.schimke.composeai:render-session-a
 composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-session-subprocess", version.ref = "composeai-tools" }
 composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-tools" }
 composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-tools" }
-composeai-slot-preview-runtime = { module = "ee.schimke.composeai:slot-preview-runtime", version.ref = "composeai-tools" }
 
 composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol", version.ref = "composeai-contracts" }
 composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol", version.ref = "composeai-contracts" }
