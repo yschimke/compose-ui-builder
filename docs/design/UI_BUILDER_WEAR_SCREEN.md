@@ -144,6 +144,39 @@ The scroll indicator is gone from the canvas for a related reason. It is a real 
 design and it reaches the generated code; what it has no meaning on is the *extent*, which has no
 viewport for an indicator to show a position within.
 
+### On a deployed box
+
+`wear-m3` is in the packaged image's authoring allowlist —
+`SERVE_UI_BUILDER_CATALOGS` defaults to `m3-catalog,remote-m3,wear-m3` in
+`deploy/image/entrypoint.sh` — so the chooser offers Wear Material 3 without an operator flag.
+Enabling an adapter is a claim that what an author sees is what they get, and it joined the default
+only once the round trip above put a render behind that claim.
+
+`ServeWearScreenDeploymentIntegrationTest` walks the path a person walks, over HTTP, against a
+server given exactly that catalog list: `POST /ui-builder/wear-m3` with `template=wear-list` —
+the form the New design chooser submits, seeded server-side — a `303` to `/ui-builder/wear-m3/activity`,
+the design opening as a scaffold over a seven-item list on a 192dp frame, and the export returning
+the Wear Kotlin with both previews in it. Two halves that each pass alone are not the same as one
+that works: the deploy scripts check that the entrypoint *passes* the flag, and this checks that a
+server given the flag can serve a Wear design.
+
+Note that no component record is configured for `wear-m3` and none is needed. A Wear screen is
+written by `RecordFreeExport`'s emitter rather than from a recovered signature, which is why the
+Compose-export action appears for it on a box that carries a record for `m3-catalog` alone.
+
+### The single frame, which is the other half
+
+Everything above compares extents, because that is what the canvas draws. The generated screen's
+other preview is the one a watch actually shows — `@WearPreviewDevices`, one screenful, rows
+transformed against the bezel:
+
+![The generated Wear screen rendered as a single round frame](evidence/ui-builder-wear-screen/wear-screen-single-frame.png)
+
+The first row is at full width and the second is already scaled and faded into the curve; the scroll
+indicator is on the right bezel, because a single frame is exactly where it belongs. Reading it
+beside the extent is the point of emitting both: the extent is what you author against, and this is
+what ships.
+
 ### What is still not the watch
 
 The long screenshot is not a frame. On a live screen `SurfaceTransformation` scales and fades each

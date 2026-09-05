@@ -114,10 +114,12 @@ semantic component identity while its general adaptive Material adapter remains 
 unsupported. Inspect capability notes before treating a design as portable to another runtime.
 
 Operators select the reviewed adapters with
-`--ui-builder-catalogs m3-catalog,remote-m3`. The packaged deployment uses exactly that allowlist;
-other served catalogs remain preview-only until added explicitly. `wear-m3` is a third packaged
-adapter and is **not** in that default — add it explicitly (`--ui-builder-catalogs
-m3-catalog,remote-m3,wear-m3`) while it is a prototype.
+`--ui-builder-catalogs m3-catalog,remote-m3,wear-m3`. The packaged deployment uses exactly that
+allowlist; other served catalogs remain preview-only until added explicitly. Enabling an adapter is
+a claim that what an author sees is what they get, so `wear-m3` joined the default only once that
+claim had a render behind it — the Kotlin it generates is compiled by real Wear Compose in
+compose-ai-tools' `wear-m3` harness catalog, and the stitched capture matches the canvas to a dp.
+
 `remote-m3` is a deliberately small adapter: Small and Large Wear widget scaffolds plus Box, Row,
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.
