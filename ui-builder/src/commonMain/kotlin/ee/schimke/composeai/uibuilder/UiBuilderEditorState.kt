@@ -2651,6 +2651,10 @@ class UiBuilderEditorReducer(
         // than appearing at the end of the slot and reordering the screen.
         afterNodeId = state.document.children(parent).takeWhile { it !in targets }.lastOrNull(),
         operations = operations,
+        // The wrapped nodes are the content. Starter content here would be a subtree inserted and
+        // deleted inside one batch — and the placeholder sweep below only removes the seeded
+        // children of the wrap slot, so anything seeded deeper would be left hanging.
+        seedStarterContent = false,
       )
     if (defaultError != null) {
       return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, defaultError)
@@ -3189,6 +3193,23 @@ private fun PropertyCapability.defaultEncodedValue(
   }
 }
 
+/**
+ * Append the operations that insert this component and everything it arrives holding.
+ *
+ * Two kinds of child come out of here and the difference matters. A **required-slot fill** is what
+ * keeps the document valid: a slot with a minimum has to have children or the validator refuses the
+ * whole batch, so one is picked from the slot's accepted traits. **Starter content** is what makes
+ * the insert look like something somebody designed — see [StarterContent] for why an empty
+ * container is the wrong thing to hand an operator. Starter content is checked against the catalog
+ * here and dropped when it does not check out, so it can improve an insert and can never break one.
+ *
+ * @param starter the authored seed for *this* node, when it is itself a piece of starter content.
+ *   Its properties are set over the component's defaults and the slots it names are authored
+ *   exactly; slots it does not name expand the ordinary way.
+ * @param seedStarterContent false to fill required slots and nothing more. Wrapping a selection
+ *   passes false: the container is about to be handed the real children, and starter content there
+ *   is a subtree that has to be deleted again in the same batch.
+ */
 private fun ComponentCapability.appendDefaultSubtree(
   catalog: CapabilityCatalog,
   document: UiBuilderDocument,
@@ -3196,6 +3217,8 @@ private fun ComponentCapability.appendDefaultSubtree(
   parent: ParentSlot,
   afterNodeId: String?,
   operations: MutableList<DesignOperation>,
+  starter: StarterNode? = null,
+  seedStarterContent: Boolean = true,
   componentPath: Set<String> = emptySet(),
   depth: Int = 0,
 ): String? {
@@ -3203,30 +3226,110 @@ private fun ComponentCapability.appendDefaultSubtree(
   if (componentId in componentPath) {
     return "required-slot default cycle: ${(componentPath + componentId).joinToString(" -> ")}"
   }
-  operations += DesignOperation.InsertNode(defaultNode(nodeId, document), parent, afterNodeId)
-  slots
-    .filter { it.cardinality.min > 0 }
-    .forEach { slot ->
-      repeat(slot.cardinality.min) { index ->
-        val child =
-          defaultChildFor(slot, catalog)
-            ?: return "catalog has no safe required-slot default for $componentId.${slot.name}"
-        val childId = "$nodeId-${slot.name}-${index + 1}"
-        val error =
-          child.appendDefaultSubtree(
-            catalog = catalog,
-            document = document,
-            nodeId = childId,
-            parent = ParentSlot(nodeId, slot.name),
-            afterNodeId = if (index == 0) null else "$nodeId-${slot.name}-$index",
-            operations = operations,
-            componentPath = componentPath + componentId,
-            depth = depth + 1,
-          )
-        if (error != null) return error
+  operations +=
+    DesignOperation.InsertNode(
+      defaultNode(nodeId, document).withStarterProperties(this, starter),
+      parent,
+      afterNodeId,
+    )
+  slots.forEach { slot ->
+    val children =
+      plannedChildren(slot, starter, seedStarterContent, catalog)
+        ?: return "catalog has no safe required-slot default for $componentId.${slot.name}"
+    children.forEachIndexed { index, (child, childStarter) ->
+      val childId = "$nodeId-${slot.name}-${index + 1}"
+      val error =
+        child.appendDefaultSubtree(
+          catalog = catalog,
+          document = document,
+          nodeId = childId,
+          parent = ParentSlot(nodeId, slot.name),
+          afterNodeId = if (index == 0) null else "$nodeId-${slot.name}-$index",
+          operations = operations,
+          starter = childStarter,
+          seedStarterContent = seedStarterContent,
+          componentPath = componentPath + componentId,
+          depth = depth + 1,
+        )
+      if (error != null) return error
+    }
+  }
+  return null
+}
+
+/**
+ * What goes in [slot]: the authored seed, this component's starter content, or the required fill.
+ *
+ * Null means the slot has a minimum and nothing in the catalog can satisfy it — the one case that
+ * refuses the insert. An empty list is the ordinary answer for an optional slot nobody seeded.
+ */
+private fun ComponentCapability.plannedChildren(
+  slot: SlotCapability,
+  starter: StarterNode?,
+  seedStarterContent: Boolean,
+  catalog: CapabilityCatalog,
+): List<Pair<ComponentCapability, StarterNode?>>? {
+  // A node that came from the table has already said what its slots hold, so its answer is used
+  // even when it is deliberately empty — that is how an item card opts out of the two-line starter
+  // `m3/card` would otherwise seed into it.
+  starter?.slots?.get(slot.name)?.let { authored ->
+    resolveStarterChildren(authored, slot, catalog)?.let {
+      return it
+    }
+  }
+  if (seedStarterContent && starter?.slots?.containsKey(slot.name) != true) {
+    StarterContent.forComponent(componentId)[slot.name]?.let { seeded ->
+      resolveStarterChildren(seeded, slot, catalog)?.let {
+        return it
       }
     }
-  return null
+  }
+  if (slot.cardinality.min == 0) return emptyList()
+  val child = defaultChildFor(slot, catalog) ?: return null
+  return List(slot.cardinality.min) { child to null }
+}
+
+/**
+ * [children] resolved against the catalog, or null when the seed does not fit the slot.
+ *
+ * Null degrades to the required-slot fill rather than refusing, because a stale table entry — a
+ * component that left the catalog, a slot whose accepted traits narrowed — must not be able to make
+ * a component uninsertable. `StarterContentTest` is what turns that silent degradation into a
+ * failing test.
+ */
+private fun resolveStarterChildren(
+  children: List<StarterNode>,
+  slot: SlotCapability,
+  catalog: CapabilityCatalog,
+): List<Pair<ComponentCapability, StarterNode?>>? {
+  if (children.size < slot.cardinality.min) return null
+  if (slot.cardinality.max?.let { children.size > it } == true) return null
+  return children.map { child ->
+    val capability = catalog.componentsById[child.componentId] ?: return null
+    if (!slot.accepts(capability)) return null
+    capability to child
+  }
+}
+
+/**
+ * This node with the seed's property values written over the component's own defaults.
+ *
+ * Values the component does not declare, and values outside a property's allowed set, are dropped
+ * rather than written: they would fail catalog validation, and validation failure rejects the whole
+ * insert — the one outcome starter content is never allowed to cause.
+ */
+private fun UiBuilderNode.withStarterProperties(
+  capability: ComponentCapability,
+  starter: StarterNode?,
+): UiBuilderNode {
+  val seeded =
+    starter?.properties?.filter { (name, encoded) ->
+      val property = capability.propertiesByName[name] ?: return@filter false
+      val value = encoded["value"] ?: return@filter false
+      property.allowedValues.isEmpty() || value in property.allowedValues
+    }
+  if (seeded.isNullOrEmpty()) return this
+  return copy(properties = JsonObject(properties + seeded))
 }
 
 private fun defaultChildFor(
@@ -3235,9 +3338,13 @@ private fun defaultChildFor(
 ): ComponentCapability? {
   val preferredId =
     when {
-      "IconContent" in slot.acceptedTraits -> "m3/icon"
+      // Text before icon, for a slot that accepts both. `m3/button` is such a slot, and with the
+      // icon branch first every button inserted from the palette arrived holding an icon rather
+      // than a label. A slot that means an icon says `IconContent` and not `TextContent`.
       "SearchInput" in slot.acceptedTraits -> "m3/search-input-field"
-      "TextContent" in slot.acceptedTraits || "Leaf" in slot.acceptedRoles -> "m3/text"
+      "TextContent" in slot.acceptedTraits -> "m3/text"
+      "IconContent" in slot.acceptedTraits -> "m3/icon"
+      "Leaf" in slot.acceptedRoles -> "m3/text"
       else -> "layout/box"
     }
   return catalog.componentsById[preferredId]?.takeIf(slot::accepts)

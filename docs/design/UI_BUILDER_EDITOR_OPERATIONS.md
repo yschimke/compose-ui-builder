@@ -32,6 +32,53 @@ Jetcaster render using exact geometry assertions and the existing sub-0.2% one-c
 tolerance. Editor chrome and history controls therefore cannot change the design's layout mode or
 canvas geometry unnoticed.
 
+## Starter content
+
+A container inserted from the palette arrives holding typical content rather than empty: an icon
+button holds an icon, a button reads `Button`, a card carries a title over supporting text, a lazy
+column holds three items, a search field has a placeholder and a magnifier. The seeded nodes are
+ordinary nodes — selectable, editable, deletable — so the cost of a guess nobody wanted is one
+keystroke, against retyping the same subtree on every insert.
+
+Two kinds of child come out of one insert and the difference is worth keeping straight:
+
+- a **required-slot fill** is what keeps the document valid. A slot declaring a minimum has to have
+  children or the catalog validator rejects the batch, so one is chosen from the slot's accepted
+  traits. This predates starter content and still runs.
+- **starter content** is what makes the insert look designed. It is declared per component and slot
+  in [`StarterContent.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/StarterContent.kt),
+  checked against the catalog at the point of use, and **dropped rather than enforced** when it does
+  not check out — a stale table entry degrades an insert to the old behaviour and can never make a
+  component uninsertable. `StarterContentTest` asserts the same rules, so a degradation that would
+  be silent in the product fails a build instead.
+
+Three rules the table obeys:
+
+- **Pure layout primitives are not seeded.** `layout/box`, `layout/row`, `layout/column` and
+  `m3/surface` exist to hold whatever is put in them and have no typical content to be right about.
+  The line is whether a component's *shape* is recognisable without its content.
+- **A seeded node authors its own slots or inherits the expansion.** A slot the table names is
+  authored exactly and the child does not then pick up its own starter content; a slot left unnamed
+  expands the ordinary way. That is why `m3/search-bar` needs no entry at all — the search field its
+  required `inputField` resolves to brings the placeholder and magnifier with it — and why an item
+  card in a lazy column holds one line rather than the card's own two.
+- **Wrapping a selection seeds nothing.** The wrapped nodes are the content; a seed there would be
+  inserted and deleted inside one batch.
+
+One insert is one atomic `DesignCommand`, seeded subtree included, so undo removes the whole thing
+and a rejected insert leaves no partial nodes. The largest seed in the table is well inside
+`maximumOperationsPerBatch`, and a test holds that bound.
+
+### Visual evidence
+
+`StarterContentInsertPreview` renders six palette inserts side by side, from a document the reducer
+builds rather than one anybody authored. Before and after, with what each frame shows, are in
+[`renders/ui-builder-starter-content/`](../../renders/ui-builder-starter-content/README.md).
+
+| Before | After |
+| --- | --- |
+| ![Six inserts, generic or empty](../../renders/ui-builder-starter-content/insert.before.png) | ![The same six inserts, seeded](../../renders/ui-builder-starter-content/insert.after.png) |
+
 ## Property and Google icon editing
 
 The property inspector is driven by the selected component's capability schema. It exposes text,

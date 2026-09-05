@@ -483,7 +483,11 @@ class UiBuilderEditorStateTest {
       )
 
     assertTrue(inserted.lastOutcome is CommandOutcome.Accepted, inserted.lastOutcome.toString())
-    assertEquals(110, inserted.document.nodes.size)
+    // Four nodes, not two: the required `inputField` fill resolves to a search field, and that
+    // field's starter content brings its placeholder and its magnifier with it.
+    // `StarterContentTest`
+    // owns what is seeded; this asserts only that the whole subtree lands in one accepted command.
+    assertEquals(112, inserted.document.nodes.size)
     val searchBar = inserted.document.nodes.getValue(assertNotNull(inserted.selectedNodeId))
     val inputId = searchBar.slots.getValue("inputField").single()
     assertEquals("m3/search-input-field", inserted.document.nodes.getValue(inputId).componentId)
