@@ -19,7 +19,7 @@ composeai-preview-discovery = "1.71.0"
 # browser editor reach the same `ScreenGenerator` the server exports with. Its own ref because it
 # first exists in 1.77.0, and `composeai-tools` is pinned lower.
 composeai-screen-model = "1.77.0"
-rc-players = "1.56.1"
+rc-players = "1.57.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
