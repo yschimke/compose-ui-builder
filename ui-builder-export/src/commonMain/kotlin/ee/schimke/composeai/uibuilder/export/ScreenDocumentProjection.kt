@@ -244,7 +244,7 @@ object ScreenDocumentProjection {
           arguments = arguments(node, scope, variant),
           slots =
             node.slots.entries.associate { (slot, children) ->
-              val childScope = SLOT_SCOPES[node.componentId]?.get(slot)
+              val childScope = slotScope(node.componentId, variant, slot)
               parameterForSlot(node.componentId, slot) to
                 children.mapNotNull { child -> node(child, childScope) }
             },
@@ -253,6 +253,16 @@ object ScreenDocumentProjection {
         visiting.remove(id)
       }
     }
+
+    /**
+     * The receiver a slot's children are composed under.
+     *
+     * The variant answers when there is one, because it is the component actually being emitted;
+     * [SLOT_SCOPES] answers otherwise. Reading the table in both cases would give a `fab`'s content
+     * the `RowScope` that `m3/button`'s other three values have.
+     */
+    private fun slotScope(componentId: String, variant: ComponentVariant?, slot: String): String? =
+      if (variant != null) variant.slotScopes[slot] else SLOT_SCOPES[componentId]?.get(slot)
 
     /**
      * The component a node's variant property selects, or null when it selects nothing.
@@ -1256,7 +1266,10 @@ object ScreenDocumentProjection {
    * [PROPERTY_PARAMETERS] for why that stays refused.
    */
   private val MODIFIER_PROPERTIES: Map<String, Map<String, String>> =
-    mapOf("m3/icon" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"))
+    mapOf(
+      "m3/icon" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"),
+      "m3/icon-button" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"),
+    )
 
   private const val CARD_DEFAULTS = "androidx.compose.material3.CardDefaults"
 
@@ -1271,10 +1284,27 @@ object ScreenDocumentProjection {
    *   return the same type, so the wrong one compiles and silently supplies another component's
    *   colours.
    */
-  private class ComponentVariant(val canonicalId: String, val defaults: String)
+  private class ComponentVariant(
+    val canonicalId: String,
+    val defaults: String,
+    /**
+     * The receiver each slot of **this** component composes its children under.
+     *
+     * Carried per variant rather than read from [SLOT_SCOPES], because the variant can change the
+     * answer: `m3/button` is a `RowScope` content slot for three of its four values and none at all
+     * for `fab`, since `FloatingActionButton` takes a plain `@Composable () -> Unit`. Keyed by the
+     * catalog's slot name, and a slot with no entry has no receiver — which is what makes a
+     * `weight` inside a floating action button refuse where one inside a `TextButton` does not.
+     */
+    val slotScopes: Map<String, String> = emptyMap(),
+  )
+
+  private val COLUMN_CONTENT = mapOf("content" to COLUMN_SCOPE)
+  private val ROW_CONTENT = mapOf("content" to ROW_SCOPE)
 
   /** The property that selects a component, per catalog id. */
-  private val VARIANT_SELECTORS: Map<String, String> = mapOf("m3/card" to "variant")
+  private val VARIANT_SELECTORS: Map<String, String> =
+    mapOf("m3/card" to "variant", "m3/button" to "style", "m3/icon-button" to "variant")
 
   /**
    * Which component each variant value names.
@@ -1288,24 +1318,55 @@ object ScreenDocumentProjection {
    * lists all three, while its `code.symbol` names one. This is that intent, written where the
    * export can act on it.
    *
-   * `m3/button`'s `style` and `m3/icon-button`'s `variant` are the same shape and are deliberately
-   * not here yet — `fab` is a different component with a different signature rather than another
-   * spelling of `Button`, so that one wants its own look. They stay in [VARIANT_PROPERTIES], which
-   * is now the list of variants nothing selects rather than the list of variant properties.
+   * **`fab` is the entry that is not a rename.** The other eleven are the same signature under
+   * another name, so the only thing that changes is which callable is written. `fab` is
+   * `FloatingActionButton`: it has no `enabled`, it takes a `containerColor` directly rather than
+   * through a `ButtonDefaults` bundle, and its content slot has **no receiver** where `Button`'s is
+   * a `RowScope`. That last one is why [ComponentVariant.slotScopes] exists — without it a `weight`
+   * inside a floating action button would be emitted against a receiver that is not there.
    */
   private val COMPONENT_VARIANTS: Map<String, Map<String, ComponentVariant>> =
     mapOf(
       "m3/card" to
         mapOf(
-          "filled" to ComponentVariant(CARD_ID, "card"),
-          "elevated" to ComponentVariant(ELEVATED_CARD_ID, "elevatedCard"),
-          "outlined" to ComponentVariant(OUTLINED_CARD_ID, "outlinedCard"),
-        )
+          "filled" to ComponentVariant(CARD_ID, "card", COLUMN_CONTENT),
+          "elevated" to ComponentVariant(ELEVATED_CARD_ID, "elevatedCard", COLUMN_CONTENT),
+          "outlined" to ComponentVariant(OUTLINED_CARD_ID, "outlinedCard", COLUMN_CONTENT),
+        ),
+      "m3/button" to
+        mapOf(
+          "filled" to ComponentVariant(BUTTON_ID, "button", ROW_CONTENT),
+          "filledTonal" to
+            ComponentVariant(FILLED_TONAL_BUTTON_ID, "filledTonalButton", ROW_CONTENT),
+          "text" to ComponentVariant(TEXT_BUTTON_ID, "textButton", ROW_CONTENT),
+          // No slot scopes: `FloatingActionButton`'s content is a plain `@Composable () -> Unit`.
+          "fab" to ComponentVariant(FAB_ID, "floatingActionButton"),
+        ),
+      "m3/icon-button" to
+        mapOf(
+          "standard" to ComponentVariant(ICON_BUTTON_ID, "iconButton"),
+          "filled" to ComponentVariant(FILLED_ICON_BUTTON_ID, "filledIconButton"),
+          "tonal" to ComponentVariant(FILLED_TONAL_ICON_BUTTON_ID, "filledTonalIconButton"),
+          "outlined" to ComponentVariant(OUTLINED_ICON_BUTTON_ID, "outlinedIconButton"),
+        ),
     )
 
   private const val CARD_ID = "m3-catalog/androidx.compose.material3.CardKt.Card"
   private const val ELEVATED_CARD_ID = "m3-catalog/androidx.compose.material3.CardKt.ElevatedCard"
   private const val OUTLINED_CARD_ID = "m3-catalog/androidx.compose.material3.CardKt.OutlinedCard"
+  private const val BUTTON_ID = "m3-catalog/androidx.compose.material3.ButtonKt.Button"
+  private const val FILLED_TONAL_BUTTON_ID =
+    "m3-catalog/androidx.compose.material3.ButtonKt.FilledTonalButton"
+  private const val TEXT_BUTTON_ID = "m3-catalog/androidx.compose.material3.ButtonKt.TextButton"
+  private const val FAB_ID =
+    "m3-catalog/androidx.compose.material3.FloatingActionButtonKt.FloatingActionButton"
+  private const val ICON_BUTTON_ID = "m3-catalog/androidx.compose.material3.IconButtonKt.IconButton"
+  private const val FILLED_ICON_BUTTON_ID =
+    "m3-catalog/androidx.compose.material3.IconButtonKt.FilledIconButton"
+  private const val FILLED_TONAL_ICON_BUTTON_ID =
+    "m3-catalog/androidx.compose.material3.IconButtonKt.FilledTonalIconButton"
+  private const val OUTLINED_ICON_BUTTON_ID =
+    "m3-catalog/androidx.compose.material3.IconButtonKt.OutlinedIconButton"
 
   private const val WEIGHT = "weight"
   private const val ROW_SCOPE = "androidx.compose.foundation.layout.RowScope"
@@ -1418,8 +1479,6 @@ object ScreenDocumentProjection {
    */
   private val VARIANT_PROPERTIES: Set<Pair<String, String>> =
     setOf(
-      "m3/button" to "style",
-      "m3/icon-button" to "variant",
       "layout/supporting-pane-scaffold" to "layoutMode",
       "layout/horizontal-carousel" to "kind",
     )

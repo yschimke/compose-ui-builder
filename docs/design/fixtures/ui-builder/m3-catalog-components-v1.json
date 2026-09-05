@@ -698,6 +698,169 @@
       "signatureKnown": true
     },
     {
+      "canonicalId": "m3-catalog/androidx.compose.material3.ButtonKt.FilledTonalButton",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.ButtonKt",
+        "callable": "androidx.compose.material3.FilledTonalButton",
+        "name": "FilledTonalButton",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "contentPadding",
+          "type": "PaddingValues",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.PaddingValues"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.RowScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.RowScope"
+        }
+      ],
+      "code": {
+        "call": "FilledTonalButton()",
+        "imports": [
+          "androidx.compose.material3.FilledTonalButton"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.ButtonKt.TextButton",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.ButtonKt",
+        "callable": "androidx.compose.material3.TextButton",
+        "name": "TextButton",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "contentPadding",
+          "type": "PaddingValues",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.PaddingValues"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.RowScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.RowScope"
+        }
+      ],
+      "code": {
+        "call": "TextButton()",
+        "imports": [
+          "androidx.compose.material3.TextButton"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.FloatingActionButtonKt.FloatingActionButton",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.FloatingActionButtonKt",
+        "callable": "androidx.compose.material3.FloatingActionButton",
+        "name": "FloatingActionButton",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "containerColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "FloatingActionButton()",
+        "imports": [
+          "androidx.compose.material3.FloatingActionButton"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
       "canonicalId": "m3-catalog/androidx.compose.material3.IconButtonKt.IconButton",
       "componentIds": [
         "m3/icon-button"
@@ -744,6 +907,153 @@
         "call": "IconButton()",
         "imports": [
           "androidx.compose.material3.IconButton"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.IconButtonKt.FilledIconButton",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.IconButtonKt",
+        "callable": "androidx.compose.material3.FilledIconButton",
+        "name": "FilledIconButton",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "FilledIconButton()",
+        "imports": [
+          "androidx.compose.material3.FilledIconButton"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.IconButtonKt.FilledTonalIconButton",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.IconButtonKt",
+        "callable": "androidx.compose.material3.FilledTonalIconButton",
+        "name": "FilledTonalIconButton",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "FilledTonalIconButton()",
+        "imports": [
+          "androidx.compose.material3.FilledTonalIconButton"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.IconButtonKt.OutlinedIconButton",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.IconButtonKt",
+        "callable": "androidx.compose.material3.OutlinedIconButton",
+        "name": "OutlinedIconButton",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "OutlinedIconButton()",
+        "imports": [
+          "androidx.compose.material3.OutlinedIconButton"
         ]
       },
       "signatureKnown": true
