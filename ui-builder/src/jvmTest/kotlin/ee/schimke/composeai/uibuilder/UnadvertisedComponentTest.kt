@@ -42,11 +42,12 @@ class UnadvertisedComponentTest {
    * so every node using one was `UNKNOWN_COMPONENT` — a whole screen the validator could say
    * nothing useful about.
    *
-   * Scoped to those five rather than to the document, because the fixture has other, older
-   * mismatches this change does not touch: `layout/lazy-column` gets an `initialIndex` it does not
-   * declare and no `scrollStateKey` it requires, `m3/surface` gets a `sticky`, and a filter chip's
-   * `selected` carries a `stateEquals` object the property's declared types do not admit. Those are
-   * separate gaps in separate components; folding them in here would hide what this test is for.
+   * Scoped to those five rather than to the document, because when this test was written the
+   * fixture had four other, older mismatches — an undeclared `initialIndex`, a missing
+   * `scrollStateKey`, a `sticky` on three surfaces, and a chip's `stateEquals` binding against
+   * types that did not admit an object. Those are fixed now, in `ConfettiFixtureValidatesTest`,
+   * which asserts what this one deliberately does not: that the whole document validates. The
+   * scoping stays, because a failure here should still say "the five" rather than "the fixture".
    */
   @Test
   fun `the Confetti design's use of the five now checks out against the catalog it pins`() {
@@ -164,9 +165,10 @@ class UnadvertisedComponentTest {
    * A column holding one of each of the five, built by the reducer and then edited the way an
    * operator would.
    *
-   * Assembled here rather than taken from the Confetti fixture because that document has unrelated
-   * mismatches (see above) and the export refuses a document the validator rejects — a refusal
-   * about a lazy column's missing scroll key would say nothing about a top app bar's colours.
+   * Assembled here rather than taken from the Confetti fixture because the assertions below are
+   * about *edited* values — a second tab selected, an accent colour, a scrolled app bar's two
+   * container colours — and the fixture carries the defaults. It validates and exports now
+   * (`ConfettiFixtureValidatesTest`); it just does not say anything about these properties.
    */
   private fun showcase(selectedTabIndex: Int): UiBuilderDocument {
     var state = reducer.initial(jetcaster, selectedNodeId = "main-background")

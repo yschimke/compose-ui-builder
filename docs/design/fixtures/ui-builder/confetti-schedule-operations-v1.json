@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-operations/v1-candidate",
   "documentSchema": "compose-ui-builder-document/v1-candidate",
   "designId": "fixture-confetti-schedule",
-  "expectedDocumentHash": "7a19916f450c735be6ebecfad46498f994d33abcaebf196cac24b5d539eac517",
+  "expectedDocumentHash": "7b5fec021abcd5d368e571d8b14769acbce97a7b36a6ba0b1b614f8c911a0091",
   "operations": [
     {
       "operationId": "create",
@@ -354,7 +354,7 @@
       "node": {
         "id": "schedule-list",
         "componentId": "layout/lazy-column",
-        "properties": { "initialIndex": { "type": "int", "value": 0 } },
+        "properties": { "scrollStateKey": { "type": "string", "value": "schedule-list-scroll" } },
         "modifiers": [{ "type": "fillMaxSize" }]
       }
     },
@@ -365,7 +365,7 @@
       "node": {
         "id": "time-1400",
         "componentId": "m3/surface",
-        "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "sticky": { "type": "bool", "value": true } },
+        "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" } },
         "modifiers": [{ "type": "fillMaxWidth" }]
       }
     },
@@ -443,7 +443,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "schedule-list", "slot": "items" },
       "afterNodeId": "divider-after-confetti",
-      "node": { "id": "time-1450", "componentId": "m3/surface", "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "sticky": { "type": "bool", "value": true } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+      "node": { "id": "time-1450", "componentId": "m3/surface", "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
     },
     {
       "operationId": "insert-time-1450-row",
@@ -514,7 +514,7 @@
       "type": "insertNode",
       "parent": { "nodeId": "schedule-list", "slot": "items" },
       "afterNodeId": "divider-after-lightning",
-      "node": { "id": "time-1500", "componentId": "m3/surface", "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" }, "sticky": { "type": "bool", "value": true } }, "modifiers": [{ "type": "fillMaxWidth" }] }
+      "node": { "id": "time-1500", "componentId": "m3/surface", "properties": { "containerColor": { "type": "colorToken", "value": "surfaceContainer" } }, "modifiers": [{ "type": "fillMaxWidth" }] }
     },
     {
       "operationId": "insert-time-1500-row",

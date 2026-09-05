@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -363,8 +364,32 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
   ) = CapabilityValidationIssue(code, message, node.id, node.componentId, field)
 }
 
+/**
+ * The value a property wrapper carries, or the wrapper itself when the wrapper *is* the value.
+ *
+ * A binding is the second case. `{"type": "state", "variable": …}` has no `value` key at all and so
+ * already came back whole; `{"type": "stateEquals", "variable": …, "value": …}` does have one — the
+ * operand it compares the variable against — and unwrapping to that read the binding as though the
+ * operand were the authored value. A chip whose `selected` compared against `"droidCon"` therefore
+ * validated as a **string**, and the same chip comparing against `null` (the "all" chip, which is
+ * selected when nothing is) validated as nothing at all and was reported `INVALID_PROPERTY_TYPE` on
+ * a document that is correct.
+ *
+ * So a binding wrapper is handed back whole and matches the `object` a bindable property declares,
+ * which is what `m3/slider.value` and `m3/text-field.value` already declared and what every flag a
+ * state variable can drive now declares too.
+ */
 private fun JsonElement.unwrapPropertyValue(): JsonElement =
-  (this as? JsonObject)?.get("value") ?: this
+  when {
+    this !is JsonObject -> this
+    (this["type"] as? JsonPrimitive)?.contentOrNull in STATE_BINDING_WRAPPERS -> this
+    else -> this["value"] ?: this
+  }
+
+/**
+ * The wrapper spellings that mean "read this from a declared state variable" rather than a value.
+ */
+private val STATE_BINDING_WRAPPERS = setOf("state", "stateEquals")
 
 /**
  * The line count a `minLines` / `maxLines` property states outright, or null when it does not state

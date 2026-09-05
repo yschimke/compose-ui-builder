@@ -229,7 +229,7 @@
       "properties": [
         { "name": "style", "jsonType": "string", "required": true, "allowedValues": ["filled", "filledTonal", "text", "fab"] },
         { "name": "enabled", "jsonType": "boolean", "required": false },
-        { "name": "selected", "jsonType": ["boolean", "string"], "required": false },
+        { "name": "selected", "jsonType": ["boolean", "string", "object"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types." },
         { "name": "containerColor", "jsonType": "string", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
@@ -284,7 +284,7 @@
       "traits": ["SelectionControl", "Action"],
       "slots": [],
       "properties": [
-        { "name": "checked", "jsonType": ["boolean", "string"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shape a filter chip's `selected` takes." },
+        { "name": "checked", "jsonType": ["boolean", "string", "object"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shape a filter chip's `selected` takes." },
         { "name": "enabled", "jsonType": "boolean", "required": false }
       ],
       "modifierCapabilities": ["size", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
@@ -340,7 +340,7 @@
         { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
       ],
       "properties": [
-        { "name": "selected", "jsonType": ["boolean", "string"], "required": true },
+        { "name": "selected", "jsonType": ["boolean", "string", "object"], "required": true, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types." },
         { "name": "enabled", "jsonType": "boolean", "required": false },
         { "name": "shape", "jsonType": "string", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
@@ -480,7 +480,7 @@
       "traits": ["SelectionControl", "Action"],
       "slots": [],
       "properties": [
-        { "name": "selected", "jsonType": ["boolean", "string"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is what makes a group of them pick one option between them." },
+        { "name": "selected", "jsonType": ["boolean", "string", "object"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is what makes a group of them pick one option between them." },
         { "name": "enabled", "jsonType": "boolean", "required": false }
       ],
       "modifierCapabilities": ["size", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
@@ -597,7 +597,7 @@
       "traits": ["SelectionControl", "Action"],
       "slots": [],
       "properties": [
-        { "name": "checked", "jsonType": ["boolean", "string"], "required": false },
+        { "name": "checked", "jsonType": ["boolean", "string", "object"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types." },
         { "name": "enabled", "jsonType": "boolean", "required": false }
       ],
       "modifierCapabilities": ["size", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
