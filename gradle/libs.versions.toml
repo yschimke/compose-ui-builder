@@ -5,7 +5,7 @@ ktfmt-cli = "0.64"
 compose-multiplatform = "1.11.1"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
-composeai-tools = "1.78.0"
+composeai-tools = "1.78.1"
 composeai-contracts = "2.5.0"
 # `preview-discovery` is pinned apart from the rest of compose-ai-tools because the version that
 # carries `ScreenGenerator` is newer than the plugin/renderer floor this build resolves, and
@@ -14,11 +14,11 @@ composeai-contracts = "2.5.0"
 # the rest of the floor — it depends only on kotlinx-serialization, ClassGraph and ASM — so the
 # split cannot produce two versions of one internal module. Collapse it back into `composeai-tools`
 # at the next Renovate bump that reaches this version.
-composeai-preview-discovery = "1.71.0"
+composeai-preview-discovery = "1.78.1"
 # `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
 # browser editor reach the same `ScreenGenerator` the server exports with. Its own ref because it
 # first exists in 1.77.0, and `composeai-tools` is pinned lower.
-composeai-screen-model = "1.77.0"
+composeai-screen-model = "1.78.1"
 rc-players = "1.57.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
