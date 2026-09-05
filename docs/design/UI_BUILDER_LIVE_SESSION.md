@@ -89,5 +89,26 @@ The server must include `--agent-grants --agent-grant-scopes live
 distinct short-lived grants through the real device flow, grants both authenticated actors access
 to one fresh design, and captures each Chromium context observing the other's selection.
 
+## The same session, from an agent
+
+Every accepted write reaches every subscriber on that design, whatever transport made it: an MCP
+`ui_builder_apply` and a browser's Design API request both land in one
+`PersistentUiBuilderService.apply`, which commits and then fans a `ServiceDeltaV1` out to every
+mailbox. The browser therefore sees an agent's edit without doing anything — the delta arrives on
+the socket it already holds, and the protocol client does not filter by `clientId`.
+
+The reverse needs a tool, because MCP's own server-to-client notifications are not available here:
+`/mcp` is a stateless JSON-RPC endpoint, `GET /mcp` — the Streamable-HTTP listening stream a
+notification travels on — answers `405`, and `initialize` advertises
+`resources: {"subscribe": false}`. So `ui_builder_await_design` holds the same
+`UiBuilderServicePort.subscribe` the socket is built on for the length of one call, and replies with
+the released `DesignUpdateEnvelopeV1` — the identical frame the socket delivers. Quote the
+`lastSequence` you last saw as `afterSequence`; a cursor inside the retained window is answered with
+the operations after it, and one that is too far behind or ahead of the design is answered with a
+whole snapshot, which is the service's own `catchUp` rule rather than a second one.
+
+Presence does not wake it, for the reason presence is excluded from the composition, the revision
+and the sequence above: somebody looking at a design has not changed it.
+
 Fixture modes such as `?mode=interactive-editor`, `interactive-editor-clean`, and the visual
 benchmark modes do not contact the design service and remain deterministic offline surfaces.

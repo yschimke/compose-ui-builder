@@ -446,10 +446,15 @@ with the same bearer. Seven tools, one per protocol request plus the native rend
 | `ui_builder_list_catalogs` | `ui-builder-read` | What a design's `catalogPin` may name |
 | `ui_builder_list_designs` | `ui-builder-read` | The designs on this box |
 | `ui_builder_get_design` | `ui-builder-read` | One whole document, and the revision to quote next |
+| `ui_builder_await_design` | `ui-builder-read` | Waits for somebody else to change the design, and returns what they changed |
 | `ui_builder_create_design` | `ui-builder-write` | A design, from a document or copied from one |
 | `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set, delete, move |
 | `ui_builder_export` | `ui-builder-export` | The generator's Kotlin, or its refusals |
 | `ui_builder_render_native` | `ui-builder-export` | A frame compiled by real Compose on the host, plus where each node drew on it |
+| `ui_builder_list_comments` | `ui-builder-read` | The discussion on a design, and the cursor to wait from |
+| `ui_builder_await_comments` | `ui-builder-read` | Waits for the next thing anybody says about the design |
+| `ui_builder_post_comment` | `ui-builder-write` | A reply, or a new thread pinned to a mark, a node or a point |
+| `ui_builder_resolve_comment_thread` | `ui-builder-write` | Closes a thread once it is answered, or reopens one |
 
 They are absent from `tools/list` on a box that serves no builder, and `ui_builder_render_native` is
 absent on one that cannot compile — a client reads what this server can do off the tool list rather
