@@ -8,10 +8,10 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 
-class UiBuilderPersistenceException(message: String, cause: Throwable? = null) :
+public class UiBuilderPersistenceException(message: String, cause: Throwable? = null) :
   IllegalStateException(message, cause)
 
-data class UiBuilderPersistenceMigrationResult(
+public data class UiBuilderPersistenceMigrationResult(
   val migrated: Boolean,
   val fromFormat: String,
   val toFormat: String,
@@ -21,21 +21,21 @@ data class UiBuilderPersistenceMigrationResult(
 /**
  * Atomic opaque-state storage. Implementations must replace the complete value or write nothing.
  */
-interface UiBuilderStateStorage {
-  fun load(): ByteArray?
+public interface UiBuilderStateStorage {
+  public fun load(): ByteArray?
 
-  fun replace(value: ByteArray)
+  public fun replace(value: ByteArray)
 }
 
 /** Storage that can retain and explicitly restore the exact pre-migration generation. */
-interface RecoverableUiBuilderMigrationStorage : UiBuilderStateStorage {
+public interface RecoverableUiBuilderMigrationStorage : UiBuilderStateStorage {
   /**
    * Atomically installs [value] while retaining the exact prior primary as the migration backup.
    */
-  fun replaceForMigration(value: ByteArray)
+  public fun replaceForMigration(value: ByteArray)
 
   /** Atomically restores that exact backup; false means no rollback generation is available. */
-  fun restoreMigrationBackup(): Boolean
+  public fun restoreMigrationBackup(): Boolean
 }
 
 /**
@@ -49,7 +49,7 @@ interface RecoverableUiBuilderMigrationStorage : UiBuilderStateStorage {
  * semantics; deployments requiring concurrent writers must supply a transactional
  * [UiBuilderStateStorage].
  */
-class FileUiBuilderStateStorage(
+public class FileUiBuilderStateStorage(
   root: Path,
   private val maximumBytes: Long = 32L * 1024L * 1024L,
 ) : RecoverableUiBuilderMigrationStorage {
@@ -124,7 +124,7 @@ class FileUiBuilderStateStorage(
    * restored envelope is still validated by [PersistentUiBuilderService] on its next startup.
    * Returns false when no prior generation has been recorded.
    */
-  fun restoreBackup(): Boolean = locked {
+  public fun restoreBackup(): Boolean = locked {
     if (!Files.exists(backupFile)) return@locked false
     var temporary: Path? = null
     try {
@@ -144,7 +144,7 @@ class FileUiBuilderStateStorage(
     true
   }
 
-  override fun replaceForMigration(value: ByteArray) = replace(value)
+  override fun replaceForMigration(value: ByteArray): Unit = replace(value)
 
   override fun restoreMigrationBackup(): Boolean = restoreBackup()
 
@@ -207,9 +207,9 @@ class FileUiBuilderStateStorage(
     }
   }
 
-  companion object {
-    const val STATE_FILE: String = "ui-builder-service-v1.json"
-    const val BACKUP_FILE: String = "ui-builder-service-v1.json.backup"
+  public companion object {
+    public const val STATE_FILE: String = "ui-builder-service-v1.json"
+    public const val BACKUP_FILE: String = "ui-builder-service-v1.json.backup"
     private const val LOCK_FILE = ".ui-builder-service.lock"
   }
 }

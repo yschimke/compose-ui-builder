@@ -39,20 +39,20 @@ import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdateDesignAccessRequestV1
 import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
 
-sealed interface ProtocolRequestMapping {
-  data class Mapped(val call: UiBuilderServiceCall) : ProtocolRequestMapping
+public sealed interface ProtocolRequestMapping {
+  public data class Mapped(val call: UiBuilderServiceCall) : ProtocolRequestMapping
 
-  data class Rejected(val error: UiBuilderServiceError) : ProtocolRequestMapping
+  public data class Rejected(val error: UiBuilderServiceError) : ProtocolRequestMapping
 }
 
 /** Pure conversion between the released v1 wire contract and the transport-neutral service port. */
-object UiBuilderProtocolMapper {
+public object UiBuilderProtocolMapper {
   /**
    * Maps only a typed request plus identity independently established by the transport. There is no
    * overload accepting `HttpRequestEnvelopeV1.actorId` or `McpRequestEnvelopeV1.actorId`: those are
    * untrusted serialized fields. Nested actor fields required by v1 are checked, then stripped.
    */
-  fun toServiceCall(
+  public fun toServiceCall(
     actor: AuthenticatedUiBuilderActor,
     request: UiBuilderRequestV1,
   ): ProtocolRequestMapping {
@@ -98,7 +98,7 @@ object UiBuilderProtocolMapper {
     return ProtocolRequestMapping.Mapped(UiBuilderServiceCall(actor, mapped))
   }
 
-  fun toProtocolRequest(call: UiBuilderServiceCall): UiBuilderRequestV1 =
+  public fun toProtocolRequest(call: UiBuilderServiceCall): UiBuilderRequestV1 =
     when (val request = call.request) {
       UiBuilderServiceRequest.ListCatalogs -> ListCatalogsRequestV1
       is UiBuilderServiceRequest.CreateDesign -> CreateDesignRequestV1(request.document)
@@ -133,7 +133,7 @@ object UiBuilderProtocolMapper {
         ExportDesignRequestV1(request.designId, request.revision, request.format)
     }
 
-  fun toProtocolResponse(response: UiBuilderServiceResponse): UiBuilderResponseV1 =
+  public fun toProtocolResponse(response: UiBuilderServiceResponse): UiBuilderResponseV1 =
     when (response) {
       is UiBuilderServiceResponse.Catalogs -> CatalogsResponseV1(response.catalogs)
       is UiBuilderServiceResponse.Designs ->
@@ -151,7 +151,7 @@ object UiBuilderProtocolMapper {
       is UiBuilderServiceResponse.Error -> ErrorResponseV1(response.error.toProtocol())
     }
 
-  fun toServiceResponse(response: UiBuilderResponseV1): UiBuilderServiceResponse =
+  public fun toServiceResponse(response: UiBuilderResponseV1): UiBuilderServiceResponse =
     when (response) {
       is CatalogsResponseV1 -> UiBuilderServiceResponse.Catalogs(response.catalogs)
       is DesignsResponseV1 ->
@@ -169,7 +169,10 @@ object UiBuilderProtocolMapper {
       is ErrorResponseV1 -> UiBuilderServiceResponse.Error(response.error.toService())
     }
 
-  fun toProtocolUpdate(designId: String, update: UiBuilderServiceUpdate): DesignUpdateEnvelopeV1 =
+  public fun toProtocolUpdate(
+    designId: String,
+    update: UiBuilderServiceUpdate,
+  ): DesignUpdateEnvelopeV1 =
     DesignUpdateEnvelopeV1(
       designId = designId,
       update =
@@ -181,7 +184,7 @@ object UiBuilderProtocolMapper {
         },
     )
 
-  fun toServiceUpdate(update: DesignUpdateV1): UiBuilderServiceUpdate =
+  public fun toServiceUpdate(update: DesignUpdateV1): UiBuilderServiceUpdate =
     when (update) {
       is SnapshotDesignUpdateV1 -> UiBuilderServiceUpdate.Snapshot(update.snapshot)
       is DeltaDesignUpdateV1 -> UiBuilderServiceUpdate.Delta(update.delta)

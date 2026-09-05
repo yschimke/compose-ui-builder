@@ -31,7 +31,7 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-data class UiBuilderCatalogIssue(
+public data class UiBuilderCatalogIssue(
   val code: String,
   val message: String,
   val nodeId: String? = null,
@@ -39,15 +39,18 @@ data class UiBuilderCatalogIssue(
 )
 
 /** Exact catalog lookup and catalog-specific semantic validation. No permissive default exists. */
-interface UiBuilderCatalogExecutor {
-  fun listCatalogs(): List<CatalogCapabilityV1>
+public interface UiBuilderCatalogExecutor {
+  public fun listCatalogs(): List<CatalogCapabilityV1>
 
-  fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1?
+  public fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1?
 
-  fun validate(document: DesignDocumentV1, catalog: CatalogCapabilityV1): UiBuilderCatalogIssue?
+  public fun validate(
+    document: DesignDocumentV1,
+    catalog: CatalogCapabilityV1,
+  ): UiBuilderCatalogIssue?
 }
 
-data class RevisionPinnedUiBuilderExport(
+public data class RevisionPinnedUiBuilderExport(
   val actor: AuthenticatedUiBuilderActor,
   val designId: String,
   val revision: Long,
@@ -58,8 +61,8 @@ data class RevisionPinnedUiBuilderExport(
 )
 
 /** Produces a real immutable artifact for an already authorized, revision-pinned document. */
-fun interface UiBuilderExportExecutor {
-  fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1
+public fun interface UiBuilderExportExecutor {
+  public fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1
 }
 
 private class BoundedUiBuilderExportTaskRunner(maximumConcurrentExports: Int) {
@@ -96,11 +99,11 @@ private class BoundedUiBuilderExportTaskRunner(maximumConcurrentExports: Int) {
 private class UiBuilderExportTimeoutException(cause: Throwable) :
   RuntimeException("export timed out", cause)
 
-fun interface UiBuilderSubscriberFailureHandler {
-  fun failed(failure: Throwable)
+public fun interface UiBuilderSubscriberFailureHandler {
+  public fun failed(failure: Throwable)
 }
 
-data class UiBuilderServiceLimits(
+public data class UiBuilderServiceLimits(
   val maximumDesigns: Int = 1_000,
   val maximumNodesPerDesign: Int = 10_000,
   val retainedCommittedOperations: Int = 1_024,
@@ -146,7 +149,7 @@ data class UiBuilderServiceLimits(
   }
 }
 
-class UiBuilderSubscriptionRejectedException(val error: UiBuilderServiceError) :
+public class UiBuilderSubscriptionRejectedException(public val error: UiBuilderServiceError) :
   IllegalStateException(error.message)
 
 /**
@@ -158,7 +161,7 @@ class UiBuilderSubscriptionRejectedException(val error: UiBuilderServiceError) :
  * single-process by design; [UiBuilderStateStorage] documents the stronger contract needed for a
  * multi-replica deployment.
  */
-class PersistentUiBuilderService(
+public class PersistentUiBuilderService(
   private val storage: UiBuilderStateStorage,
   private val catalogs: UiBuilderCatalogExecutor,
   private val exporter: UiBuilderExportExecutor,
@@ -1847,7 +1850,7 @@ class PersistentUiBuilderService(
    * No migration is attempted during startup. The storage must retain the exact v1 generation and
    * support explicit restore; a failed durable readback is rolled back before this method fails.
    */
-  fun migratePersistenceToLatest(): UiBuilderPersistenceMigrationResult = lock.withLock {
+  public fun migratePersistenceToLatest(): UiBuilderPersistenceMigrationResult = lock.withLock {
     if (persistenceFormat == PersistenceFormat.V2) {
       val bytes = encode(persisted, PersistenceFormat.V2)
       return UiBuilderPersistenceMigrationResult(
@@ -1985,7 +1988,7 @@ class PersistentUiBuilderService(
   private fun catalogPins(value: PersistedServiceV1): Map<String, CatalogReferenceV1> =
     value.designs.mapValues { (_, design) -> design.document.catalogPin }
 
-  companion object {
+  public companion object {
     private val json = Json { encodeDefaults = true }
   }
 }

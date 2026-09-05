@@ -41,7 +41,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * host without the packaged daemon lane advertises Compose only instead of claiming artifacts it
  * cannot produce.
  */
-class CurrentM3UiBuilderCatalogExecutor(
+public class CurrentM3UiBuilderCatalogExecutor(
   source: String = packagedM3CatalogSource(),
   catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID),
   exportCapabilities: ExportCapabilitiesV1 =
@@ -242,11 +242,12 @@ class CurrentM3UiBuilderCatalogExecutor(
     return null
   }
 
-  companion object {
-    const val RESOURCE: String = "/ee/schimke/composeai/uibuilder/catalogs/m3-catalog-v1.json"
-    const val CURRENT_CAPABILITY_DIGEST: String = "candidate"
-    const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
-    const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"
+  public companion object {
+    public const val RESOURCE: String =
+      "/ee/schimke/composeai/uibuilder/catalogs/m3-catalog-v1.json"
+    public const val CURRENT_CAPABILITY_DIGEST: String = "candidate"
+    public const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
+    public const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"
     private val SAFE_SYSTEM_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
     private fun packagedM3CatalogSource(): String =
@@ -322,7 +323,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
 }
 
 /** Immutable, renderer-neutral request for one exact saved document revision. */
-data class UiBuilderRenderRequest(
+public data class UiBuilderRenderRequest(
   val designId: String,
   val revision: Long,
   val documentHash: String,
@@ -335,16 +336,16 @@ data class UiBuilderRenderRequest(
 )
 
 /** Narrow pixel/vector port implemented by the server beside its render-host dependency. */
-interface UiBuilderRenderPort : Closeable {
-  val supportsSvg: Boolean
+public interface UiBuilderRenderPort : Closeable {
+  public val supportsSvg: Boolean
 
-  fun renderPng(request: UiBuilderRenderRequest): ByteArray
+  public fun renderPng(request: UiBuilderRenderRequest): ByteArray
 
-  fun renderSvg(request: UiBuilderRenderRequest): ByteArray
+  public fun renderSvg(request: UiBuilderRenderRequest): ByteArray
 }
 
 /** Combines the runtime-owned Compose projection with an injected renderer-neutral port. */
-class ProductionUiBuilderExportExecutor(
+public class ProductionUiBuilderExportExecutor(
   private val renderer: UiBuilderRenderPort,
   // Required, not defaulted. It used to default to a projection this module owned, and that
   // default is what let three different things emit Compose for one document: the real generator
@@ -356,7 +357,7 @@ class ProductionUiBuilderExportExecutor(
   // an argument everybody must pass.
   private val compose: UiBuilderExportExecutor,
 ) : UiBuilderExportExecutor, Closeable {
-  val capabilities: ExportCapabilitiesV1 =
+  public val capabilities: ExportCapabilitiesV1 =
     ExportCapabilitiesV1(composeCode = true, svg = renderer.supportsSvg, png = true)
 
   override fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1 =
@@ -366,7 +367,7 @@ class ProductionUiBuilderExportExecutor(
       ExportFormatV1.SVG -> request.svgArtifact(renderer.renderSvg(request.toRenderRequest()))
     }
 
-  override fun close() = renderer.close()
+  override fun close(): Unit = renderer.close()
 
   private fun RevisionPinnedUiBuilderExport.toRenderRequest(): UiBuilderRenderRequest =
     UiBuilderRenderRequest(
@@ -413,14 +414,14 @@ class ProductionUiBuilderExportExecutor(
 }
 
 /** Runtime-owned opaque preview bundle; materialization and rendering stay outside this module. */
-object PackagedUiBuilderRenderBundle {
-  const val RESOURCE: String =
+public object PackagedUiBuilderRenderBundle {
+  public const val RESOURCE: String =
     "/ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.png"
-  const val PREVIEW_ID: String =
+  public const val PREVIEW_ID: String =
     "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
-  const val DOCUMENT_OVERRIDE_KEY: String = "uiBuilder.document.v1"
+  public const val DOCUMENT_OVERRIDE_KEY: String = "uiBuilder.document.v1"
 
-  fun copyTo(root: Path): Path {
+  public fun copyTo(root: Path): Path {
     val bytes =
       checkNotNull(javaClass.getResourceAsStream(RESOURCE)) {
           "packaged UI-builder renderer bundle is missing"
@@ -448,7 +449,7 @@ object PackagedUiBuilderRenderBundle {
 }
 
 /** Canonical, loss-checked protocol → renderer wire projection used by the named override. */
-fun projectRendererDocument(document: DesignDocumentV1): String {
+public fun projectRendererDocument(document: DesignDocumentV1): String {
   require(document.revision in 0..Int.MAX_VALUE.toLong()) {
     "renderer revision is outside the v1 Int range: ${document.revision}"
   }

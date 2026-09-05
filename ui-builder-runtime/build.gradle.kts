@@ -12,7 +12,25 @@ group = "ee.schimke.composeai"
 
 val publishedArtifactId = "compose-preview-ui-builder-runtime"
 
-kotlin { jvmToolchain(17) }
+kotlin {
+  jvmToolchain(17)
+
+  // Published as `ee.schimke.composeai:compose-preview-ui-builder-runtime` and consumed across a
+  // repository boundary, so every declaration states its visibility and every public one its
+  // return type, and the committed `api/ui-builder-runtime.api` dump records, in a form a reviewer
+  // reads as a diff, exactly what a consumer may rely on.
+  //
+  // The gate fits HERE and deliberately not on `:server`: this module is five files whose surface
+  // is already a designed service port (`UiBuilderServicePort` and its request/response algebra),
+  // while `:server` would have to mark ~1,200 declarations `public` and freeze an ABI nobody
+  // designed — the reason its build file gives for staying off the gate, and it still holds.
+  explicitApi()
+
+  @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class) abiValidation()
+}
+
+// `checkKotlinAbi` is not wired into `check` by the Kotlin Gradle plugin.
+tasks.named("check") { dependsOn("checkKotlinAbi") }
 
 ktfmt { googleStyle() }
 

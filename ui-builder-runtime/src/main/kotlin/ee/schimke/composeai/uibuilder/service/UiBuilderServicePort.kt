@@ -19,53 +19,53 @@ import java.io.Closeable
 
 /** Actor identity established by the host's authentication layer, never by a request payload. */
 @JvmInline
-value class AuthenticatedUiBuilderActor(val actorId: String) {
+public value class AuthenticatedUiBuilderActor(public val actorId: String) {
   init {
     require(actorId.isNotBlank()) { "authenticated UI-builder actor id must not be blank" }
   }
 }
 
 /** One transport-neutral service invocation with its independently authenticated principal. */
-data class UiBuilderServiceCall(
+public data class UiBuilderServiceCall(
   val actor: AuthenticatedUiBuilderActor,
   val request: UiBuilderServiceRequest,
 )
 
-sealed interface UiBuilderServiceRequest {
-  data object ListCatalogs : UiBuilderServiceRequest
+public sealed interface UiBuilderServiceRequest {
+  public data object ListCatalogs : UiBuilderServiceRequest
 
-  data class CreateDesign(val document: DesignDocumentV1) : UiBuilderServiceRequest
+  public data class CreateDesign(val document: DesignDocumentV1) : UiBuilderServiceRequest
 
-  data class ListDesigns(val cursor: String?, val limit: Int) : UiBuilderServiceRequest
+  public data class ListDesigns(val cursor: String?, val limit: Int) : UiBuilderServiceRequest
 
-  data class OpenDesign(val designId: String) : UiBuilderServiceRequest
+  public data class OpenDesign(val designId: String) : UiBuilderServiceRequest
 
-  data class GetDesignAccess(val designId: String) : UiBuilderServiceRequest
+  public data class GetDesignAccess(val designId: String) : UiBuilderServiceRequest
 
-  data class UpdateDesignAccess(
+  public data class UpdateDesignAccess(
     val designId: String,
     val baseAccessRevision: Long,
     val mutations: List<DesignAccessMutationV1>,
   ) : UiBuilderServiceRequest
 
-  data class PreviewCatalogUpgrade(
+  public data class PreviewCatalogUpgrade(
     val designId: String,
     val baseRevision: Long,
     val sourceCatalogPin: CatalogReferenceV1,
     val targetCatalogPin: CatalogReferenceV1,
   ) : UiBuilderServiceRequest
 
-  data class ApplyOperation(val submission: UiBuilderSubmission) : UiBuilderServiceRequest
+  public data class ApplyOperation(val submission: UiBuilderSubmission) : UiBuilderServiceRequest
 
-  data class GetSnapshot(val designId: String, val revision: Long?) : UiBuilderServiceRequest
+  public data class GetSnapshot(val designId: String, val revision: Long?) : UiBuilderServiceRequest
 
-  data class GetDelta(val designId: String, val afterSequence: Long, val limit: Int) :
+  public data class GetDelta(val designId: String, val afterSequence: Long, val limit: Int) :
     UiBuilderServiceRequest
 
-  data class UpdatePresence(val designId: String, val presence: UiBuilderPresence) :
+  public data class UpdatePresence(val designId: String, val presence: UiBuilderPresence) :
     UiBuilderServiceRequest
 
-  data class ExportDesign(
+  public data class ExportDesign(
     val designId: String,
     val revision: Long?,
     val format: ExportFormatV1,
@@ -76,13 +76,13 @@ sealed interface UiBuilderServiceRequest {
  * An admitted collaboration submission. Actor identity is intentionally absent: the service must
  * use [UiBuilderServiceCall.actor], after the protocol mapper has checked any nested wire actor.
  */
-sealed interface UiBuilderSubmission {
-  val designId: String
-  val operationId: String
-  val clientId: String
-  val baseRevision: Long
+public sealed interface UiBuilderSubmission {
+  public val designId: String
+  public val operationId: String
+  public val clientId: String
+  public val baseRevision: Long
 
-  data class Batch(
+  public data class Batch(
     override val designId: String,
     override val operationId: String,
     override val clientId: String,
@@ -90,7 +90,7 @@ sealed interface UiBuilderSubmission {
     val operations: List<DesignMutationV1>,
   ) : UiBuilderSubmission
 
-  data class Undo(
+  public data class Undo(
     override val designId: String,
     override val operationId: String,
     override val clientId: String,
@@ -98,7 +98,7 @@ sealed interface UiBuilderSubmission {
     val targetOperationId: String,
   ) : UiBuilderSubmission
 
-  data class Redo(
+  public data class Redo(
     override val designId: String,
     override val operationId: String,
     override val clientId: String,
@@ -108,7 +108,7 @@ sealed interface UiBuilderSubmission {
 }
 
 /** Ephemeral presence after its untrusted actor field has been removed. */
-data class UiBuilderPresence(
+public data class UiBuilderPresence(
   val clientId: String,
   val displayName: String,
   val colorArgbHex: String,
@@ -124,31 +124,33 @@ data class UiBuilderPresence(
   }
 }
 
-sealed interface UiBuilderServiceResponse {
-  data class Catalogs(val catalogs: List<CatalogCapabilityV1>) : UiBuilderServiceResponse
+public sealed interface UiBuilderServiceResponse {
+  public data class Catalogs(val catalogs: List<CatalogCapabilityV1>) : UiBuilderServiceResponse
 
-  data class Designs(val designs: List<DesignListItemV1>, val nextCursor: String?) :
+  public data class Designs(val designs: List<DesignListItemV1>, val nextCursor: String?) :
     UiBuilderServiceResponse
 
-  data class DesignAccess(val designId: String, val access: DesignAccessControlV1) :
+  public data class DesignAccess(val designId: String, val access: DesignAccessControlV1) :
     UiBuilderServiceResponse
 
-  data class CatalogUpgradePreview(val preview: CatalogUpgradePreviewV1) : UiBuilderServiceResponse
+  public data class CatalogUpgradePreview(val preview: CatalogUpgradePreviewV1) :
+    UiBuilderServiceResponse
 
-  data class Snapshot(val snapshot: ServiceSnapshotV1) : UiBuilderServiceResponse
+  public data class Snapshot(val snapshot: ServiceSnapshotV1) : UiBuilderServiceResponse
 
-  data class OperationOutcome(val outcome: CommandOutcomeV1) : UiBuilderServiceResponse
+  public data class OperationOutcome(val outcome: CommandOutcomeV1) : UiBuilderServiceResponse
 
-  data class Delta(val delta: ServiceDeltaV1) : UiBuilderServiceResponse
+  public data class Delta(val delta: ServiceDeltaV1) : UiBuilderServiceResponse
 
-  data class PresenceAccepted(val designId: String, val actorId: String) : UiBuilderServiceResponse
+  public data class PresenceAccepted(val designId: String, val actorId: String) :
+    UiBuilderServiceResponse
 
-  data class Export(val artifact: ExportArtifactV1) : UiBuilderServiceResponse
+  public data class Export(val artifact: ExportArtifactV1) : UiBuilderServiceResponse
 
-  data class Error(val error: UiBuilderServiceError) : UiBuilderServiceResponse
+  public data class Error(val error: UiBuilderServiceError) : UiBuilderServiceResponse
 }
 
-data class UiBuilderServiceError(
+public data class UiBuilderServiceError(
   val code: ServiceErrorCodeV1,
   val message: String,
   val retryable: Boolean = false,
@@ -158,17 +160,17 @@ data class UiBuilderServiceError(
 )
 
 /** Transport-neutral server-push payload. */
-sealed interface UiBuilderServiceUpdate {
-  data class Snapshot(val snapshot: ServiceSnapshotV1) : UiBuilderServiceUpdate
+public sealed interface UiBuilderServiceUpdate {
+  public data class Snapshot(val snapshot: ServiceSnapshotV1) : UiBuilderServiceUpdate
 
-  data class Delta(val delta: ServiceDeltaV1) : UiBuilderServiceUpdate
+  public data class Delta(val delta: ServiceDeltaV1) : UiBuilderServiceUpdate
 
-  data class Presence(val update: PresenceUpdateV1) : UiBuilderServiceUpdate
+  public data class Presence(val update: PresenceUpdateV1) : UiBuilderServiceUpdate
 
-  data class Outcome(val outcome: CommandOutcomeV1) : UiBuilderServiceUpdate
+  public data class Outcome(val outcome: CommandOutcomeV1) : UiBuilderServiceUpdate
 }
 
-data class UiBuilderSubscriptionCall(
+public data class UiBuilderSubscriptionCall(
   val actor: AuthenticatedUiBuilderActor,
   val designId: String,
   /** Exclusive durable cursor. Null requests the current snapshot. */
@@ -182,17 +184,17 @@ data class UiBuilderSubscriptionCall(
  * callback may be invoked until the returned handle is closed; transport adapters must serialize or
  * buffer it according to their own lifecycle and backpressure policy.
  */
-interface UiBuilderServicePort {
-  suspend fun execute(call: UiBuilderServiceCall): UiBuilderServiceResponse
+public interface UiBuilderServicePort {
+  public suspend fun execute(call: UiBuilderServiceCall): UiBuilderServiceResponse
 
-  fun subscribe(
+  public fun subscribe(
     call: UiBuilderSubscriptionCall,
     listener: (UiBuilderServiceUpdate) -> Unit,
   ): Closeable
 }
 
 /** Aggregate, owner-free production diagnostics; no actor, design, operation, or capability IDs. */
-data class UiBuilderServiceDiagnostics(
+public data class UiBuilderServiceDiagnostics(
   val activeSubscribers: Int,
   val peakSubscribers: Long,
   val rejectedBatchLimit: Long,
@@ -210,6 +212,6 @@ data class UiBuilderServiceDiagnostics(
   val persistenceMigrations: Long,
 )
 
-interface UiBuilderServiceDiagnosticsSource {
-  fun diagnostics(): UiBuilderServiceDiagnostics
+public interface UiBuilderServiceDiagnosticsSource {
+  public fun diagnostics(): UiBuilderServiceDiagnostics
 }
