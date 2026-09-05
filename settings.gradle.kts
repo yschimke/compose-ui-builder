@@ -31,6 +31,12 @@ include(":ui-builder")
 include(":ui-builder-export")
 include(":ui-builder-renderer")
 include(":ui-builder-web")
+// The packaged render bundle the runtime materializes, as its own artifact rather than a resource
+// inside `:ui-builder-runtime`'s jar. It is a *frontend* build output — the polyglot carries
+// `:ui-builder`'s compiled JVM previews — and a published server-side jar was the wrong place to
+// keep it: the edge pointed the wrong way across the layer line and pinned the frontend's JVM
+// target to the server's. See yschimke/compose-preview-server#346.
+include(":ui-builder-render-bundle")
 include(":ui-builder-artwork")
 include(":ui-builder-reference-jetcaster")
 include(":ui-builder-generated-jetcaster")

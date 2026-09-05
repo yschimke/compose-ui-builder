@@ -53,21 +53,33 @@ dependencies {
   api(libs.composeai.ui.builder.protocol)
   implementation(libs.kotlinx.serialization.json)
 
+  // The packaged render bundle `PackagedUiBuilderRenderBundle.copyTo` materializes, as a sibling
+  // artifact rather than bytes in this jar.
+  //
+  // `api`, not `implementation`: `copyTo` is public API of this module and reads the bundle off the
+  // *consumer's* classpath, so a consumer that resolves this module and calls it has to receive the
+  // bundle too. An `implementation` edge would keep it off their compile classpath, which `copyTo`
+  // does not need, and off their runtime classpath, which it does — the failure landing as
+  // "packaged UI-builder renderer bundle is missing" at the first render rather than at resolve.
+  //
+  // Why this is a dependency at all, when it used to be a `processResources` copy: the bundle is a
+  // frontend build output, and a published server-side artifact carrying `:ui-builder`'s compiled
+  // JVM previews was an edge across the layer line that a repository split cannot follow, and a
+  // silent pin of the frontend's JVM target to this module's. See
+  // yschimke/compose-preview-server#346
+  // and `:ui-builder-render-bundle`'s own build file.
+  api(project(":ui-builder-render-bundle"))
+
   testImplementation(kotlin("test"))
 }
 
-// The catalog and generic render bundle belong to the runtime that controls their revision and
-// persistence lifecycle. The frontend is only a build-time producer: no project dependency enters
-// this module's runtime classpath or published POM.
+// The catalog belongs to the runtime that controls its revision and persistence lifecycle. The
+// render bundle used to be copied in beside it, from `:ui-builder`'s build directory; it is now
+// `:ui-builder-render-bundle`'s published artifact, for the reasons that dependency records.
 tasks.processResources {
   from(rootProject.file("docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json")) {
     into("ee/schimke/composeai/uibuilder/catalogs")
     rename { "m3-catalog-v1.json" }
-  }
-  dependsOn(project(":ui-builder").tasks.named("composePreviewBundle"))
-  from(project(":ui-builder").layout.buildDirectory.file("compose-previews/bundle.png")) {
-    into("ee/schimke/composeai/uibuilder/renderer")
-    rename { "ui-builder-renderer.bundle.png" }
   }
 }
 
@@ -83,9 +95,23 @@ abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
         "module ee.schimke.composeai:ui-builder-protocol",
         "module ee.schimke.composeai:ui-builder-protocol-jvm",
       )
+    /**
+     * The one project on this classpath, and the reason it does not weaken the gate.
+     *
+     * Everything this check exists to keep out — transports, renderers, daemons, MCP, Compose UI —
+     * is *code*, reachable because it sits on the classpath. `:ui-builder-render-bundle` has no
+     * source set at all: its jar is one PNG. The polyglot's embedded ZIP does carry Compose and
+     * `:ui-builder` classes, but they are opaque bytes a daemon unpacks later, not entries a
+     * classloader here can see — which is exactly the property this module already relied on when
+     * the same bytes were its own resource.
+     *
+     * Named as a single constant rather than folded into [allowedComposeAi] because it is a
+     * *project*, and a project is the thing this check is otherwise absolute about.
+     */
+    val allowedProject = "project :ui-builder-render-bundle"
     val offenders =
       resolvedComponents.get().filter { component ->
-        component.startsWith("project ") ||
+        (component.startsWith("project ") && component != allowedProject) ||
           (component.startsWith("module ee.schimke.composeai:") &&
             component !in allowedComposeAi) ||
           component.startsWith("module io.ktor:") ||
