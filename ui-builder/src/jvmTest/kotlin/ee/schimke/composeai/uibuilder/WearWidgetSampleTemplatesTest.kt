@@ -38,9 +38,12 @@ class WearWidgetSampleTemplatesTest {
   fun `the designed contents of both samples validate as ordinary components`() {
     WearWidgetSample.entries.forEach { sample ->
       val document = sample.document(sample.templateId, reference.catalogPin, reference.environment)
-      val scaffoldId = document.roots.single()
+      val scaffold = document.nodes.getValue(document.roots.single())
       val contents =
-        document.copy(roots = listOf(WIDGET_SURFACE_ID), nodes = document.nodes - scaffoldId)
+        document.copy(
+          roots = scaffold.slots.getValue("content"),
+          nodes = document.nodes - scaffold.id,
+        )
 
       val validation = CapabilityValidator(catalog).validate(contents)
 
@@ -57,17 +60,11 @@ class WearWidgetSampleTemplatesTest {
 
     val root = hello.nodes.getValue(hello.roots.single())
     assertEquals("remote-m3/widget-container-small", root.componentId)
-    // The widget's own background is the surface in the host's content slot, not the host frame.
-    val surface = hello.nodes.getValue(root.slots.getValue("content").single())
-    assertEquals("m3/surface", surface.componentId)
+    // The widget's own background is the CONTAINER's, because `WearWidgetContainer` paints it as
+    // the round rect. A filled surface in the content slot would be a different picture.
     assertEquals(
       "primary",
-      surface.properties
-        .getValue("containerColor")
-        .jsonObject
-        .getValue("value")
-        .jsonPrimitive
-        .content,
+      root.properties.getValue("background").jsonObject.getValue("value").jsonPrimitive.content,
     )
     val text = hello.nodes.getValue("hello-text")
     assertEquals(
@@ -87,21 +84,32 @@ class WearWidgetSampleTemplatesTest {
 
     val root = weather.nodes.getValue(weather.roots.single())
     assertEquals("remote-m3/widget-container-large", root.componentId)
-    val surface = weather.nodes.getValue(root.slots.getValue("content").single())
     // ColorSunny from the sample, as a literal: the widget picks it by weather, not by theme.
     assertEquals(
       "#FF2196F3",
-      surface.properties
-        .getValue("containerColor")
-        .jsonObject
-        .getValue("value")
-        .jsonPrimitive
-        .content,
+      root.properties.getValue("background").jsonObject.getValue("value").jsonPrimitive.content,
     )
     assertEquals(
       listOf("weather-location", "weather-reading"),
       weather.nodes.getValue("weather-column").slots.getValue("children"),
     )
+  }
+
+  /**
+   * A blank widget declares no background, so the scaffold's own default has to be the one
+   * `WearWidgetContainer` applies — nothing in the document says it.
+   */
+  @Test
+  fun `an empty widget template declares no container properties at all`() {
+    val small =
+      wearWidgetUiBuilderDocument(
+        "empty",
+        reference.catalogPin,
+        reference.environment,
+        WearWidgetScaffoldSize.Small,
+      )
+
+    assertTrue(small.nodes.getValue(small.roots.single()).properties.isEmpty())
   }
 
   @Test
@@ -115,9 +123,4 @@ class WearWidgetSampleTemplatesTest {
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
-
-  private companion object {
-    /** The node both samples hang their designed content from; see `wearWidgetSampleDocument`. */
-    const val WIDGET_SURFACE_ID = "widget-surface"
-  }
 }

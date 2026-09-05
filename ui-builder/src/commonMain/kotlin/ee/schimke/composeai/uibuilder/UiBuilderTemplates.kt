@@ -49,11 +49,11 @@ fun wearWidgetUiBuilderDocument(
  * [android/wear-os-samples' `WearWidget` sample](https://github.com/android/wear-os-samples/pull/1386).
  *
  * The sample writes each widget as `GlanceWearWidget.provideWidgetData` returning a
- * `WearWidgetDocument` of Remote Compose composables. The host frame around it — the squircle, its
- * padding and its corner radius — is the *host's*, not the widget's, which is exactly the split the
- * builder already draws: the scaffold is the host frame and the content slot is the widget. So the
- * question these two answer is whether the designer can express the widget half at all, and the
- * answer is yes, from ordinary catalog components.
+ * `WearWidgetDocument` of Remote Compose composables. The frame's *geometry* — the content size,
+ * the 8dp padding, the 26dp radius — comes from `WearWidgetParams`, while its *colour* is the
+ * widget's own background, which the container paints as the round rect. The scaffold models both,
+ * so the question these two answer is whether the designer can express the widget half at all, and
+ * the answer is yes, from ordinary catalog components.
  *
  * What they are not: a compile of the sample. The builder draws with Compose Material 3 and the
  * widget runs Remote Compose on a watch, so these reproduce the sample's *design* — layout,
@@ -107,12 +107,11 @@ enum class WearWidgetSample(
 }
 
 /**
- * The sample's Hello widget: `RemoteText` centred in a `RemoteBox` filling a primary background.
+ * The sample's Hello widget: `RemoteText` centred in a `RemoteBox` on a primary background.
  *
- * The surface carries the background because that is where the widget's own background lives — the
- * sample passes `WearWidgetBrush.color(colorScheme.primary)` to `WearWidgetDocument`, which paints
- * behind the widget's content and inside the host frame, and an `m3/surface` filling the content
- * slot is the same rectangle.
+ * The background is the scaffold's, matching `WearWidgetBrush.color(colorScheme.primary)` passed to
+ * `WearWidgetDocument` — the container paints it as the round rect, so the whole squircle is
+ * primary and the text sits on it inside the padding.
  *
  * Centring is the child's `alignment`, not the box's: `layout/box` aligns each child by that
  * child's own property, so `contentAlignment` on the box would render nothing.
@@ -264,23 +263,19 @@ private fun wearWidgetSampleDocument(
 ): UiBuilderDocument {
   require(designId.isNotBlank()) { "wear widget design id must not be blank" }
   val scaffoldId = "wear-widget-${size.name.lowercase()}"
-  val surfaceId = "widget-surface"
   val nodes =
     listOf(
       UiBuilderNode(
         id = scaffoldId,
         componentId = size.componentId,
-        properties = JsonObject(emptyMap()),
+        // On the scaffold, not on a surface inside it. `WearWidgetContainer` paints the widget's
+        // own background as the rounded rect, so the coloured squircle IS the widget; a filled
+        // surface in the content slot would instead draw a coloured rectangle inside a
+        // differently-coloured frame, which is not what any widget looks like.
+        properties = JsonObject(mapOf("background" to background)),
         modifiers = JsonArray(emptyList()),
-        slots = mapOf("content" to listOf(surfaceId)),
-      ),
-      UiBuilderNode(
-        id = surfaceId,
-        componentId = "m3/surface",
-        properties = JsonObject(mapOf("containerColor" to background)),
-        modifiers = JsonArray(listOf(modifier("fillMaxSize"))),
         slots = mapOf("content" to listOf(contentId)),
-      ),
+      )
     ) + content
   return UiBuilderDocument(
     schema = "compose-ui-builder-document/v1-candidate",

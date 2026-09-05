@@ -75,6 +75,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -491,19 +492,25 @@ private fun RenderNode(
   }
 
   when (node.componentId) {
+    // The two container types on a 240dp screen: `CONTAINER_TYPE_SMALL` is 200x60dp of content and
+    // `CONTAINER_TYPE_LARGE` 200x108dp, per `SquircleSmallWidgetPreviewParams` /
+    // `SquircleLargeWidgetPreviewParams`. The scaffold adds the padding, so these are the content
+    // box rather than the canvas.
     "remote-m3/widget-container-small" ->
-      WearWidgetHostScaffold(
+      WearWidgetContainerScaffold(
+        node = node,
         modifier = measured,
-        widthDp = 216,
-        heightDp = 76,
+        contentWidthDp = 200,
+        contentHeightDp = 60,
       ) {
         slot("content").forEach { child(it, Modifier.fillMaxSize()) }
       }
     "remote-m3/widget-container-large" ->
-      WearWidgetHostScaffold(
+      WearWidgetContainerScaffold(
+        node = node,
         modifier = measured,
-        widthDp = 216,
-        heightDp = 124,
+        contentWidthDp = 200,
+        contentHeightDp = 108,
       ) {
         slot("content").forEach { child(it, Modifier.fillMaxSize()) }
       }
@@ -838,24 +845,64 @@ private fun RenderNode(
  * surfaceContainerLow fill are host chrome rather than authored widget content.
  */
 @Composable
-private fun WearWidgetHostScaffold(
+private fun WearWidgetContainerScaffold(
+  node: UiBuilderNode,
   modifier: Modifier,
-  widthDp: Int,
-  heightDp: Int,
+  contentWidthDp: Int,
+  contentHeightDp: Int,
   content: @Composable () -> Unit,
 ) {
+  val horizontalPadding = node.float("horizontalPaddingDp", WEAR_WIDGET_PADDING_DP)
+  val verticalPadding = node.float("verticalPaddingDp", WEAR_WIDGET_PADDING_DP)
+  val cornerRadius = node.float("cornerRadiusDp", WEAR_WIDGET_CORNER_RADIUS_DP)
+  val background = node.color("background", WEAR_WIDGET_DEFAULT_BACKGROUND)
   Box(
     modifier =
       modifier
-        .size(widthDp.dp, heightDp.dp)
-        .clip(RoundedCornerShape(26.dp))
-        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-        .padding(8.dp),
-    contentAlignment = Alignment.Center,
+        // The canvas the preview wrapper measures: the content box plus padding on all four
+        // edges. `WearWidgetPreview` sizes its `RemoteDocumentPreview` exactly this way.
+        .size(
+          (contentWidthDp + 2f * horizontalPadding).dp,
+          (contentHeightDp + 2f * verticalPadding).dp,
+        )
+        // Drawn behind, not clipped. `WearWidgetContainer` paints the widget's background as a
+        // round rect inside `drawWithContent` and then calls `drawContent()` — content that
+        // overflows the radius is drawn over the corner rather than cut off, and a scaffold that
+        // clipped would hide exactly the overflow an author needs to see.
+        .drawBehind {
+          drawRoundRect(
+            color = background,
+            cornerRadius = CornerRadius(cornerRadius.dp.toPx(), cornerRadius.dp.toPx()),
+          )
+        }
+        .padding(horizontal = horizontalPadding.dp, vertical = verticalPadding.dp)
   ) {
     content()
   }
 }
+
+/**
+ * `androidx.glance.wear.composable.WearWidgetContainer`'s own default background.
+ *
+ * A literal, because upstream's is: it comments the constant as "Forked from
+ * androidx.wear.compose.material3.ColorScheme.surfaceContainerLow" and hard-codes `Color(red = 39,
+ * green = 36, blue = 48)`. Reading `MaterialTheme.colorScheme.surfaceContainerLow` here instead —
+ * which is what this scaffold used to do — tracks the *editor's* theme, so the frame went pale in a
+ * light theme while the real host stayed this colour whatever the widget did.
+ */
+private val WEAR_WIDGET_DEFAULT_BACKGROUND = Color(red = 39, green = 36, blue = 48)
+
+/**
+ * `verticalPaddingDp` / `horizontalPaddingDp` and `cornerRadiusDp` from the shipped
+ * `WidgetPreviewParams` providers.
+ *
+ * Every squircle, round and rectangular spec upstream publishes uses 8dp on both axes; only the
+ * corner radius varies by shape (26dp squircle, 999dp round, 0dp rectangular), which is why the
+ * radius is authored per design and the padding merely defaults.
+ */
+private const val WEAR_WIDGET_PADDING_DP = 8f
+
+private const val WEAR_WIDGET_CORNER_RADIUS_DP = 26f
 
 private const val MAX_REMOTE_COMPOSE_BASE64_CHARS = 8 * 1024 * 1024
 

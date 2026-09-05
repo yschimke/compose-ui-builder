@@ -74,10 +74,30 @@ They exist to answer one question: can the designer express a real widget? Both 
 from ordinary catalog components — `m3/surface`, `layout/box`, `layout/column`, `m3/text` — with no
 widget-specific authoring vocabulary, so anything you can do to them you can do to your own.
 
-Note where the boundary falls. The scaffold **is** the host frame — the squircle, its 8dp padding
-and its 26dp corners come from the Wear widget host, not from the widget — so picking Small or Large
-picks a canvas you design *inside* and never edit. The widget's own background is the `m3/surface`
-filling that canvas, which is what `WearWidgetDocument(background = …)` paints on-device.
+Note where the boundary falls. The scaffold **is** the host frame, modelled on
+`androidx.glance.wear.composable.WearWidgetContainer`: picking Small or Large picks the content box
+(200×60dp or 200×108dp on a 240dp screen), and the frame adds padding around it. It carries the
+container's own four parameters and nothing else —
+
+| Property | Default | What it is |
+| --- | --- | --- |
+| `background` | `#FF272430` | The **widget's** background, which the host paints as the rounded rect. The default is the literal `WearWidgetContainer` forks from Wear Material 3's `surfaceContainerLow` and applies when a widget declares none. |
+| `horizontalPaddingDp` | `8` | `WearWidgetParams.horizontalPaddingDp`. |
+| `verticalPaddingDp` | `8` | `WearWidgetParams.verticalPaddingDp`. |
+| `cornerRadiusDp` | `26` | `WearWidgetParams.cornerRadiusDp` — 26 squircle, 999 round, 0 rectangular. |
+
+The background belongs on the scaffold, not on a surface inside it. On-device the coloured squircle
+**is** the widget: `WearWidgetDocument(background = …)` hands the brush to the container, which
+paints it as the round rect and insets the content by the padding. Filling the content slot with a
+coloured surface instead draws a coloured rectangle inside a differently-coloured frame, which is
+not what any widget looks like.
+
+The radius is drawn behind the content rather than clipped, exactly as upstream does it, so content
+that overflows a corner is visible instead of silently cut off.
+
+A blank widget declares none of this, so both empty templates open on the default frame:
+
+![The empty Small and Large host frames on the default background](design/evidence/ui-builder-remote-compose/empty-widget-containers.png)
 
 | Hello widget | Weather widget |
 | --- | --- |

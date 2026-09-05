@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
 import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
 import ee.schimke.composeai.uibuilder.protocol.ExportEncodingV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
+import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -281,6 +282,50 @@ public class CurrentM3UiBuilderCatalogExecutor(
  * contract from wear-m3-catalog: 200x60dp or 200x108dp content, 8dp padding on every edge and a
  * 26dp corner radius, producing 216x76dp and 216x124dp canvases.
  */
+/**
+ * The Wear widget host frame's authored parameters.
+ *
+ * These are `androidx.glance.wear.composable.WearWidgetContainer`'s four arguments. The one that
+ * matters most is `background`: on-device it is the *widget's* own background — the brush passed to
+ * `WearWidgetDocument` — and the container paints it as the round rect, so the coloured squircle IS
+ * the widget. A scaffold without it forced an author to fake the background with a filled surface
+ * inside the content slot, which draws a coloured rectangle inside a differently-coloured frame:
+ * not what any widget looks like.
+ *
+ * Defaults match upstream. `background` defaults to the literal `#FF272430` that
+ * `WearWidgetContainer` forks from
+ * `androidx.wear.compose.material3.ColorScheme.surfaceContainerLow` and applies when a widget
+ * declares no background of its own; padding and radius default to the 8dp/26dp squircle spec every
+ * shipped `WidgetPreviewParams` provider carries.
+ */
+private fun widgetContainerProperties(): List<PropertyCapabilityV1> =
+  listOf(
+    PropertyCapabilityV1(
+      name = "background",
+      jsonType = JsonPrimitive("string"),
+      notes =
+        "The widget's own background, painted by the host as the rounded rect. Defaults to " +
+          "#FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
+    ),
+    PropertyCapabilityV1(
+      name = "horizontalPaddingDp",
+      jsonType = JsonPrimitive("number"),
+      notes = "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
+    ),
+    PropertyCapabilityV1(
+      name = "verticalPaddingDp",
+      jsonType = JsonPrimitive("number"),
+      notes = "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
+    ),
+    PropertyCapabilityV1(
+      name = "cornerRadiusDp",
+      jsonType = JsonPrimitive("number"),
+      notes =
+        "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws " +
+          "this radius behind the content rather than clipping to it.",
+    ),
+  )
+
 private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }
   val box = components.getValue("layout/box")
@@ -300,7 +345,11 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       role = "Scaffold",
       traits = listOf("ScreenContent", "WearWidgetHost", "RemoteContentHost"),
       slots = listOf(contentSlot),
-      properties = emptyList(),
+      // `WearWidgetContainer`'s own parameters, and only those. The container composable takes
+      // (horizontalPadding, verticalPadding, cornerRadius, background); the content size comes from
+      // `WearWidgetParams` and is what picks Small over Large, so it stays the component id rather
+      // than becoming a fifth property nobody could set to a legal value.
+      properties = widgetContainerProperties(),
       modifierCapabilities = emptyList(),
       wasm =
         supportedWasm.copy(
