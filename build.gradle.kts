@@ -12,7 +12,6 @@ plugins {
 tasks.named("check") {
   group = "verification"
   dependsOn(
-    ":render-host:check",
     ":ui-builder-runtime:check",
     ":ui-builder-renderer:check",
     ":ui-builder-web:check",
@@ -29,7 +28,6 @@ tasks.named("check") {
 tasks.register("ktfmtCheckAll") {
   group = "verification"
   dependsOn(
-    ":render-host:ktfmtCheck",
     ":ui-builder-runtime:ktfmtCheck",
     ":ui-builder-renderer:ktfmtCheck",
     ":server:ktfmtCheck",
@@ -45,7 +43,6 @@ tasks.register("ktfmtCheckAll") {
 tasks.register("ktfmtFormat") {
   group = "formatting"
   dependsOn(
-    ":render-host:ktfmtFormat",
     ":ui-builder-runtime:ktfmtFormat",
     ":ui-builder-renderer:ktfmtFormat",
     ":server:ktfmtFormat",

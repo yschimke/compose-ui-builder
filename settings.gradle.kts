@@ -19,7 +19,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "compose-preview-server"
 
-include(":render-host")
 include(":ui-builder-runtime")
 include(":server")
 include(":usage-source-psi")
