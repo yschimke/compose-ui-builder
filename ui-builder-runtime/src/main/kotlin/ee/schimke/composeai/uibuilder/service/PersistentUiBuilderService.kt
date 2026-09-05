@@ -25,8 +25,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -1634,23 +1636,130 @@ public class PersistentUiBuilderService(
             conflicts,
           )
         }
-        // The three document mutations contracts 2.6.0 published that this reducer still does not
-        // implement: state variables and event bindings. They arrived here as a side effect of
-        // bumping the contract for `typeface` rather than as work anybody chose to do.
-        //
-        // Rejected EXPLICITLY, one branch each, rather than behind an `else`. An `else` would also
-        // swallow the next mutation the contract adds, and losing that compile error is how this
-        // gap would go unnoticed a second time — it is exactly the exhaustiveness check that
-        // surfaced them. `UNKNOWN_OPERATION` is the honest code: the shape is understood, the
-        // behaviour is absent. Tracked in #379.
-        is SetStateVariableMutationV1,
-        is RemoveStateVariableMutationV1,
-        is SetEventBindingMutationV1 ->
-          fail(
-            RejectionCodeV1.UNKNOWN_OPERATION,
-            "this server does not implement ${mutation::class.simpleName} yet",
-            operationIndex = index,
+        is SetStateVariableMutationV1 -> {
+          if (mutation.name.isBlank()) {
+            fail(
+              RejectionCodeV1.INVALID_COMMAND,
+              "state variable name is blank",
+              operationIndex = index,
+            )
+          }
+          val before = working.document.stateVariables[mutation.name]
+          val declarations =
+            working.document.stateVariables + (mutation.name to mutation.declaration)
+          // A redefinition is a write against everything already reading the variable. Narrowing
+          // one — dropping its nullability out from under a `selectOrClear`, or changing what it
+          // holds out from under a `toggle` — leaves a design whose renderer coerces and whose
+          // exporter emits a `TODO` that throws on the first press. Refused whole rather than
+          // applied and then discovered.
+          working.document.stateUsageIssue(declarations)?.let { issue ->
+            fail(
+              RejectionCodeV1.INVALID_DOCUMENT,
+              issue.message,
+              operationIndex = index,
+              nodeId = issue.nodeId,
+              field = issue.field,
+            )
+          }
+          val document = working.document.copy(stateVariables = declarations)
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            StateVariableChangeV1(mutation.name, before, mutation.declaration),
+            staleStateWrites(original, command, mutation.name),
           )
+        }
+        is RemoveStateVariableMutationV1 -> {
+          val before =
+            working.document.stateVariables[mutation.name]
+              ?: fail(
+                RejectionCodeV1.INVALID_COMMAND,
+                "this design declares no state variable ${mutation.name}",
+                operationIndex = index,
+                field = mutation.name,
+              )
+          val declarations = working.document.stateVariables - mutation.name
+          // The obligation the contract states on this type: a property, a predicate or an action
+          // still naming the variable makes the removal a rejection rather than a write. A design
+          // that keeps the reference renders blank instead of failing, which is the worse of the
+          // two ways to be wrong.
+          working.document.stateUsageIssue(declarations)?.let { issue ->
+            fail(
+              RejectionCodeV1.INVALID_DOCUMENT,
+              issue.message,
+              operationIndex = index,
+              nodeId = issue.nodeId,
+              field = issue.field,
+            )
+          }
+          val document = working.document.copy(stateVariables = declarations)
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            StateVariableChangeV1(mutation.name, before, null),
+            staleStateWrites(original, command, mutation.name),
+          )
+        }
+        is SetEventBindingMutationV1 -> {
+          val node =
+            working.document.nodes[mutation.nodeId]
+              ?: fail(RejectionCodeV1.UNKNOWN_NODE, "unknown node", index, mutation.nodeId)
+          if (mutation.event.isBlank()) {
+            fail(
+              RejectionCodeV1.INVALID_COMMAND,
+              "event name is blank",
+              operationIndex = index,
+              nodeId = mutation.nodeId,
+            )
+          }
+          val before = node.eventBindings[mutation.event]
+          // `actions` has no default on the wire, so an unbind arrives as a present empty list
+          // rather than an absent field. Taken as the instruction it is: the event loses its
+          // binding, and the document carries no empty list to mean the same thing twice.
+          val after = mutation.actions.takeIf { it.isNotEmpty() }
+          val bindings =
+            if (after == null) node.eventBindings - mutation.event
+            else node.eventBindings + (mutation.event to after)
+          val document =
+            working.document.copy(
+              nodes = working.document.nodes + (node.id to node.copy(eventBindings = bindings))
+            )
+          document.stateUsageIssue(document.stateVariables)?.let { issue ->
+            fail(
+              RejectionCodeV1.INVALID_DOCUMENT,
+              issue.message,
+              operationIndex = index,
+              nodeId = issue.nodeId,
+              field = issue.field,
+            )
+          }
+          // The same staleness question the property and modifier lanes ask, one field over: a
+          // binding is a value, and the last writer wins.
+          val conflicts =
+            if (
+              command.baseRevision < original.document.revision &&
+                original.acceptedOperations.values.any {
+                  it.committedRevision > command.baseRevision &&
+                    it.changes.any { change ->
+                      change is EventBindingChangeV1 &&
+                        change.nodeId == mutation.nodeId &&
+                        change.event == mutation.event
+                    }
+                }
+            )
+              listOf(
+                CommandConflictV1(
+                  ConflictCodeV1.STALE_PROPERTY_WRITE,
+                  mutation.nodeId,
+                  eventBindingField(mutation.event),
+                  original.document.revision,
+                )
+              )
+            else emptyList()
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            EventBindingChangeV1(mutation.nodeId, mutation.event, before, after),
+            conflicts,
+          )
+        }
       }
     } catch (failure: ReductionFailure) {
       MutationResult(error = failure.rejection(command.operationId, working.document.revision))
@@ -1727,6 +1836,70 @@ public class PersistentUiBuilderService(
                           node.copy(modifiers = if (undo) change.before else change.after))
                   )
               )
+          }
+          is StateVariableChangeV1 -> {
+            val expected = if (undo) change.after else change.before
+            if (working.document.stateVariables[change.name] != expected) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "state variable changed after the target operation",
+                field = change.name,
+              )
+            }
+            val target = if (undo) change.before else change.after
+            val declarations =
+              if (target == null) working.document.stateVariables - change.name
+              else working.document.stateVariables + (change.name to target)
+            // Putting a declaration back is only safe if nothing has since come to read it — a
+            // removal undone is harmless, but a re-declaration undone would strand whatever was
+            // written against it in the meantime.
+            val document = working.document.copy(stateVariables = declarations)
+            document.stateUsageIssue(declarations)?.let { issue ->
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                issue.message,
+                nodeId = issue.nodeId,
+                field = issue.field,
+              )
+            }
+            working = working.copy(document = document)
+          }
+          is EventBindingChangeV1 -> {
+            val node =
+              working.document.nodes[change.nodeId]
+                ?: fail(
+                  RejectionCodeV1.UNSAFE_COMPENSATION,
+                  "event binding node no longer exists",
+                  nodeId = change.nodeId,
+                )
+            val expected = if (undo) change.after else change.before
+            if (node.eventBindings[change.event] != expected) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "event binding changed after the target operation",
+                nodeId = change.nodeId,
+                field = eventBindingField(change.event),
+              )
+            }
+            val target = if (undo) change.before else change.after
+            val bindings =
+              if (target == null) node.eventBindings - change.event
+              else node.eventBindings + (change.event to target)
+            val document =
+              working.document.copy(
+                nodes = working.document.nodes + (node.id to node.copy(eventBindings = bindings))
+              )
+            // Restoring a binding whose variable has since been removed would put back exactly the
+            // reference `removeStateVariable` refuses to leave behind.
+            document.stateUsageIssue(document.stateVariables)?.let { issue ->
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                issue.message,
+                nodeId = issue.nodeId,
+                field = issue.field,
+              )
+            }
+            working = working.copy(document = document)
           }
           is StructureChangeV1 -> {
             val expected = if (undo) change.after else change.before
@@ -2258,6 +2431,37 @@ private data class ModifierChangeV1(
   val after: List<DesignModifierV1>,
 ) : ChangeRecordV1
 
+/**
+ * One state variable's declaration, before and after.
+ *
+ * `before == null` is a declaration this operation introduced and `after == null` one it removed,
+ * so the same record compensates a `setStateVariable` and a `removeStateVariable` without a second
+ * type or a flag saying which it was.
+ */
+@Serializable
+@SerialName("stateVariable")
+private data class StateVariableChangeV1(
+  val name: String,
+  val before: StateVariableV1?,
+  val after: StateVariableV1?,
+) : ChangeRecordV1
+
+/**
+ * One event's actions on one node, before and after.
+ *
+ * Null on either side is the absent binding rather than an empty list, which is the same
+ * distinction the mutation makes: `actions: []` means unbind, and a document that stored it as an
+ * empty list would carry two spellings of "nothing is bound here".
+ */
+@Serializable
+@SerialName("eventBinding")
+private data class EventBindingChangeV1(
+  val nodeId: String,
+  val event: String,
+  val before: List<DesignActionV1>?,
+  val after: List<DesignActionV1>?,
+) : ChangeRecordV1
+
 @Serializable
 @SerialName("environment")
 private data class EnvironmentChangeRecordV1(
@@ -2634,6 +2838,164 @@ private fun DesignDocumentV1.rebuildLocation(
 
 /** What a conflict and a compensation failure call the chain, since the wire has no name for it. */
 private const val MODIFIERS_FIELD = "modifiers"
+
+private const val PREDICATE_FIELD = "predicate"
+
+/**
+ * How a rejection or a conflict names one event's binding.
+ *
+ * The wire's `field` is one string and has no separate place for an event, so the binding map and
+ * the event are spelled together — the same bargain `modifiers` makes by naming the whole chain.
+ */
+private fun eventBindingField(event: String): String = "eventBindings.$event"
+
+/** Where a document reads a state variable it should not, and under which field. */
+private data class StateUsageIssue(val nodeId: String, val field: String, val message: String)
+
+/**
+ * The first place [declarations] would leave a design saying something it cannot mean.
+ *
+ * One scan for all three state mutations, because they fail the same way from different directions:
+ * a removal can strand a reader, a redefinition can narrow one out from under its reader, and a new
+ * binding can name a variable nobody declared. Reading the whole document each time rather than the
+ * delta is deliberate — the delta is what a caller would have to get right, and getting it wrong is
+ * silent.
+ *
+ * Undeclared is not the only failure. `toggle` is `!x` and `selectOrClear` writes null, so a
+ * variable that is not a flag and one that is not nullable are refusals too: the renderer coerces
+ * and carries on, the exporter emits a `TODO` that throws on the first press, and a design only one
+ * of its two consumers can perform is worse than a rejected command.
+ */
+private fun DesignDocumentV1.stateUsageIssue(
+  declarations: Map<String, StateVariableV1>
+): StateUsageIssue? {
+  nodes.values.forEach { node ->
+    node.properties.forEach { (property, value) ->
+      value.stateReads().forEach { variable ->
+        if (variable !in declarations) {
+          return StateUsageIssue(
+            node.id,
+            property,
+            "property $property reads undeclared state variable $variable",
+          )
+        }
+      }
+    }
+    node.predicate?.stateReads()?.forEach { variable ->
+      if (variable !in declarations) {
+        return StateUsageIssue(
+          node.id,
+          PREDICATE_FIELD,
+          "predicate reads undeclared state variable $variable",
+        )
+      }
+    }
+    node.eventBindings.forEach { (event, actions) ->
+      actions.forEach { action ->
+        val variable = action.stateWrite() ?: return@forEach
+        val declaration =
+          declarations[variable]
+            ?: return StateUsageIssue(
+              node.id,
+              eventBindingField(event),
+              "$event writes undeclared state variable $variable",
+            )
+        if (action is ToggleActionV1 && !declaration.isFlag()) {
+          return StateUsageIssue(
+            node.id,
+            eventBindingField(event),
+            "$event toggles state variable $variable, which is not a flag",
+          )
+        }
+        if (action is SelectOrClearActionV1 && !declaration.isNullable()) {
+          return StateUsageIssue(
+            node.id,
+            eventBindingField(event),
+            "$event clears state variable $variable, which is not nullable",
+          )
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Whether a declaration holds a boolean, and whether it may hold null.
+ *
+ * Read the way the browser reducer reads them, `initialValue` fallback included: a declaration that
+ * names no `valueType` still has a type, and one whose initial value is null is nullable whether or
+ * not it says so. Two readings of the same document would mean a design the editor lets an author
+ * build and the server then refuses to save.
+ */
+private fun StateVariableV1.isFlag(): Boolean =
+  when (valueType) {
+    StateValueTypeV1.BOOLEAN -> true
+    null -> (initialValue as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull != null
+    else -> false
+  }
+
+private fun StateVariableV1.isNullable(): Boolean = nullable ?: (initialValue is JsonNull)
+
+/** Every state variable a value reads, including through the two values that nest others. */
+private fun UiValueV1.stateReads(): List<String> =
+  when (this) {
+    is StateValueV1 -> listOf(variable)
+    is StateEqualsValueV1 -> listOf(variable)
+    is ListValueV1 -> values.flatMap(UiValueV1::stateReads)
+    is ObjectValueV1 -> fields.values.flatMap(UiValueV1::stateReads)
+    else -> emptyList()
+  }
+
+private fun DesignPredicateV1.stateReads(): List<String> =
+  when (this) {
+    is StateEqualsPredicateV1 -> listOf(variable)
+    is StateTruthyPredicateV1 -> listOf(variable)
+    is AllPredicateV1 -> predicates.flatMap(DesignPredicateV1::stateReads)
+    is AnyPredicateV1 -> predicates.flatMap(DesignPredicateV1::stateReads)
+    is NotPredicateV1 -> predicate.stateReads()
+    else -> emptyList()
+  }
+
+/** The variable an action writes, or null for the one action that writes no state at all. */
+private fun DesignActionV1.stateWrite(): String? =
+  when (this) {
+    is SelectActionV1 -> variable
+    is SelectOrClearActionV1 -> variable
+    is SetTextActionV1 -> variable
+    is SetValueActionV1 -> variable
+    is ToggleActionV1 -> variable
+    is IncrementActionV1 -> variable
+    else -> null
+  }
+
+/**
+ * The conflicts a state write carries when someone else wrote the same variable first.
+ *
+ * `STALE_PROPERTY_WRITE` because the wire has no state-specific code and the variable's name is the
+ * field it names — the same reading the modifier lane takes for a chain.
+ */
+private fun staleStateWrites(
+  original: PersistedDesignV1,
+  command: DesignCommandV1,
+  name: String,
+): List<CommandConflictV1> =
+  if (
+    command.baseRevision < original.document.revision &&
+      original.acceptedOperations.values.any {
+        it.committedRevision > command.baseRevision &&
+          it.changes.any { change -> change is StateVariableChangeV1 && change.name == name }
+      }
+  )
+    listOf(
+      CommandConflictV1(
+        ConflictCodeV1.STALE_PROPERTY_WRITE,
+        null,
+        name,
+        original.document.revision,
+      )
+    )
+  else emptyList()
 
 private const val POSITION_STEP = 1_024
 private const val POSITION_MIDPOINT = 512

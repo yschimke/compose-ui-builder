@@ -271,6 +271,349 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a state variable is declared, redefined, removed and compensated`() {
+    val storage = MemoryStorage()
+    var service = service(storage = storage)
+    create(service)
+    assertEquals(emptyMap(), currentDocument(service).stateVariables)
+
+    val flag =
+      StateVariableV1(
+        type = StateVariableTypeV1.VALUE,
+        valueType = StateValueTypeV1.BOOLEAN,
+        initialValue = JsonPrimitive(false),
+        persistence = StatePersistenceV1.PREVIEW,
+      )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("declare", 0, SetStateVariableMutationV1("expanded", flag))
+        ),
+      )
+    )
+    assertEquals(mapOf("expanded" to flag), currentDocument(service).stateVariables)
+
+    // Redefining is the same mutation: the name is the identity and the declaration is the value.
+    val nullableFlag = flag.copy(nullable = true)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("redeclare", 1, SetStateVariableMutationV1("expanded", nullableFlag))
+        ),
+      )
+    )
+    assertEquals(nullableFlag, currentDocument(service).stateVariables.getValue("expanded"))
+
+    // Undo puts back the declaration that was there, not the absence — the record carries both
+    // sides, so the same change type compensates a redefinition and an introduction.
+    service = service(storage = storage)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-redeclare", "browser", 2, "redeclare")
+        ),
+      )
+    )
+    assertEquals(flag, currentDocument(service).stateVariables.getValue("expanded"))
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("remove", 3, RemoveStateVariableMutationV1("expanded"))
+        ),
+      )
+    )
+    assertEquals(emptyMap(), currentDocument(service).stateVariables)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 4, "remove")
+        ),
+      )
+    )
+    assertEquals(flag, currentDocument(service).stateVariables.getValue("expanded"))
+  }
+
+  @Test
+  fun `a removal that would strand a reader is refused rather than applied`() {
+    val service = service()
+    create(service)
+    val text =
+      StateVariableV1(
+        type = StateVariableTypeV1.TEXT,
+        initialValue = JsonPrimitive(""),
+        persistence = StatePersistenceV1.PREVIEW,
+      )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "declare",
+            0,
+            SetStateVariableMutationV1("query", text),
+            InsertNodeMutationV1(
+              textNode("node").copy(predicate = StateTruthyPredicateV1("query")),
+              NodeLocationV1(),
+            ),
+          )
+        ),
+      )
+    )
+
+    // The document would render blank rather than fail, which is the failure mode the contract
+    // names on this mutation: the reference has to be gone before the declaration can be.
+    val refused =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("remove", 1, RemoveStateVariableMutationV1("query"))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
+    assertEquals("node", refused.nodeId)
+    assertEquals("predicate", refused.field)
+    assertEquals(text, currentDocument(service).stateVariables.getValue("query"))
+
+    // A name nothing declared is a client bug, not a no-op: there is no before to compensate to.
+    val absent =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("remove-absent", 1, RemoveStateVariableMutationV1("nothing"))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, absent.code)
+  }
+
+  @Test
+  fun `an event binding is written, unbound by an empty list and undone`() {
+    val storage = MemoryStorage()
+    val service = service(storage = storage)
+    create(service)
+    val flag =
+      StateVariableV1(
+        type = StateVariableTypeV1.VALUE,
+        valueType = StateValueTypeV1.BOOLEAN,
+        initialValue = JsonPrimitive(false),
+        persistence = StatePersistenceV1.PREVIEW,
+      )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "seed",
+            0,
+            SetStateVariableMutationV1("expanded", flag),
+            InsertNodeMutationV1(textNode("node"), NodeLocationV1()),
+          )
+        ),
+      )
+    )
+
+    val actions = listOf(ToggleActionV1("expanded"))
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("bind", 1, SetEventBindingMutationV1("node", "click", actions))
+        ),
+      )
+    )
+    assertEquals(mapOf("click" to actions), currentNode(service, "node").eventBindings)
+
+    // `actions` has no default on the wire, so an unbind arrives as a present empty list. The
+    // event loses its binding rather than gaining an empty one.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("unbind", 2, SetEventBindingMutationV1("node", "click", emptyList()))
+        ),
+      )
+    )
+    assertEquals(emptyMap(), currentNode(service, "node").eventBindings)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-unbind", "browser", 3, "unbind")
+        ),
+      )
+    )
+    assertEquals(mapOf("click" to actions), currentNode(service, "node").eventBindings)
+  }
+
+  @Test
+  fun `an action is validated against the state it writes before it is committed`() {
+    val service = service()
+    create(service)
+    val text =
+      StateVariableV1(
+        type = StateVariableTypeV1.TEXT,
+        initialValue = JsonPrimitive(""),
+        persistence = StatePersistenceV1.PREVIEW,
+      )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "seed",
+            0,
+            SetStateVariableMutationV1("query", text),
+            InsertNodeMutationV1(textNode("node"), NodeLocationV1()),
+          )
+        ),
+      )
+    )
+
+    val undeclared =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "undeclared",
+              1,
+              SetEventBindingMutationV1("node", "click", listOf(ToggleActionV1("absent"))),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, undeclared.code)
+    assertEquals("node", undeclared.nodeId)
+    assertEquals("eventBindings.click", undeclared.field)
+
+    // `toggle` is `!x`. Against a text variable the renderer coerces and the exporter emits a
+    // `TODO` that throws on the first press, so the design never gets to hold the action.
+    val notAFlag =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "not-a-flag",
+              1,
+              SetEventBindingMutationV1("node", "click", listOf(ToggleActionV1("query"))),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, notAFlag.code)
+
+    // And `selectOrClear` writes null, which a variable that is not nullable cannot hold.
+    val notNullable =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "not-nullable",
+              1,
+              SetEventBindingMutationV1(
+                "node",
+                "click",
+                listOf(SelectOrClearActionV1("query", JsonPrimitive("a"))),
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, notNullable.code)
+    assertEquals(emptyMap(), currentNode(service, "node").eventBindings)
+
+    // A redefinition is a write against every reader too: taking the flag away from under a
+    // `toggle` is refused for the same reason removing the declaration would be.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "flag",
+            1,
+            SetStateVariableMutationV1(
+              "flag",
+              StateVariableV1(
+                type = StateVariableTypeV1.VALUE,
+                valueType = StateValueTypeV1.BOOLEAN,
+                initialValue = JsonPrimitive(false),
+                persistence = StatePersistenceV1.PREVIEW,
+              ),
+            ),
+          )
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "bind",
+            2,
+            SetEventBindingMutationV1("node", "click", listOf(ToggleActionV1("flag"))),
+          )
+        ),
+      )
+    )
+    val narrowed =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "narrow",
+              3,
+              SetStateVariableMutationV1(
+                "flag",
+                StateVariableV1(
+                  type = StateVariableTypeV1.TEXT,
+                  valueType = StateValueTypeV1.STRING,
+                  initialValue = JsonPrimitive(""),
+                  persistence = StatePersistenceV1.PREVIEW,
+                ),
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, narrowed.code)
+    assertEquals("eventBindings.click", narrowed.field)
+  }
+
+  @Test
   fun `a blank typeface is rejected rather than stored as a face called nothing`() {
     // Blank is not "the default" — reset is. A stored blank would be indistinguishable, at the
     // renderer, from a family it looked up and failed to find.
