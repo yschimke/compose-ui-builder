@@ -234,9 +234,14 @@ object ScreenDocumentProjection {
         return null
       }
       try {
+        val variant = variantOf(node)
         return ScreenNode(
-          componentId = node.componentId,
-          arguments = arguments(node, scope),
+          // A variant names a **component**, so it is spent here rather than emitted as an
+          // argument: `m3/card` with `variant = elevated` is `ElevatedCard`, which is a different
+          // callable with its own record. The catalog says as much itself — its `code.imports`
+          // lists all three — and this is the projection acting on it.
+          componentId = variant?.canonicalId ?: node.componentId,
+          arguments = arguments(node, scope, variant),
           slots =
             node.slots.entries.associate { (slot, children) ->
               val childScope = SLOT_SCOPES[node.componentId]?.get(slot)
@@ -249,7 +254,48 @@ object ScreenDocumentProjection {
       }
     }
 
-    private fun arguments(node: DesignNodeV1, scope: String?): Map<String, ScreenValue> {
+    /**
+     * The component a node's variant property selects, or null when it selects nothing.
+     *
+     * Null covers two different cases and both are right. A component with no variant property has
+     * no entry, and one whose variant is simply unset falls back to the record the catalog id
+     * already resolves to — `m3/card` is `Card`, which is what `filled` means anyway. A variant the
+     * table does not know refuses, because guessing which of three components a designer meant is
+     * the failure this whole file exists to avoid.
+     */
+    private fun variantOf(node: DesignNodeV1): ComponentVariant? {
+      val property = VARIANT_SELECTORS[node.componentId] ?: return null
+      val choices = COMPONENT_VARIANTS[node.componentId] ?: return null
+      val authored =
+        when (val value = node.properties[property]) {
+          // Either wrapper, for the same reason `value` reads both: `enum` is canonical and
+          // documents committed before that rule holds `string` (#339).
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          null -> return null
+          else -> {
+            refuse(
+              "node `${node.id}`.`$property` selects a component, so it has to be one of " +
+                choices.keys.sorted().joinToString(", ")
+            )
+            return null
+          }
+        }
+      return choices[authored]
+        ?: run {
+          refuse(
+            "node `${node.id}`.`$property` is `$authored`, which is not one of " +
+              choices.keys.sorted().joinToString(", ")
+          )
+          null
+        }
+    }
+
+    private fun arguments(
+      node: DesignNodeV1,
+      scope: String?,
+      variant: ComponentVariant?,
+    ): Map<String, ScreenValue> {
       unexpressible(node)
       val arguments = mutableMapOf<String, ScreenValue>()
       // Properties that are not arguments at all — `m3/icon`'s `sizeDp` is `Modifier.size(24.dp)`,
@@ -258,6 +304,9 @@ object ScreenDocumentProjection {
       // in a fixed order instead of two arguments the generator would reject the second of.
       val fromProperties = mutableListOf<ChainLink>()
       for ((property, value) in node.properties) {
+        // Spent on the call site above; emitting it as well would hand the component a parameter
+        // it does not declare.
+        if (variant != null && property == VARIANT_SELECTORS[node.componentId]) continue
         if (property == WEIGHT) {
           weightLink(value, node, scope)?.let { fromProperties += it }
           continue
@@ -272,7 +321,7 @@ object ScreenDocumentProjection {
           arguments[property] = value(value, node, property) ?: continue
           continue
         }
-        arguments[target.parameter] = retarget(target, value, node, property) ?: continue
+        arguments[target.parameter] = retarget(target, value, node, property, variant) ?: continue
       }
       if (node.modifiers.isNotEmpty() || fromProperties.isNotEmpty() || tagNodes) {
         modifiers(node, fromProperties, scope)?.let { arguments["modifier"] = it }
@@ -551,15 +600,21 @@ object ScreenDocumentProjection {
       value: UiValueV1,
       node: DesignNodeV1,
       property: String,
+      variant: ComponentVariant?,
     ): ScreenValue? {
       val where = "node `${node.id}`.`$property`"
       if (target.kind == TargetKind.RENAME) return value(value, node, property)
       if (target.kind == TargetKind.CARD_COLORS) {
         // `CardDefaults.cardColors` is `@Composable`, which is why this is expressible at all: the
         // generated screen body is one, so the call site is legal exactly where the argument goes.
+        //
+        // The factory follows the variant. All three return a `CardColors`, so `cardColors` would
+        // compile on an `ElevatedCard` — and would quietly give it the *filled* card's content and
+        // disabled colours for every role the designer did not set. A wrong colour that compiles is
+        // the failure mode this projection is built to refuse, so the defaults match the component.
         val color = value(value, node, property) ?: return null
         return ScreenValue.Construct(
-          callableFqn = "androidx.compose.material3.CardDefaults.cardColors",
+          callableFqn = "$CARD_DEFAULTS.${variant?.defaults ?: "card"}Colors",
           named = mapOf("containerColor" to color),
           typeFqn = "androidx.compose.material3.CardColors",
         )
@@ -582,7 +637,7 @@ object ScreenDocumentProjection {
         TargetKind.DP -> dp
         TargetKind.CARD_ELEVATION ->
           ScreenValue.Construct(
-            callableFqn = "androidx.compose.material3.CardDefaults.cardElevation",
+            callableFqn = "$CARD_DEFAULTS.${variant?.defaults ?: "card"}Elevation",
             named = mapOf("defaultElevation" to dp),
             typeFqn = "androidx.compose.material3.CardElevation",
           )
@@ -1203,6 +1258,55 @@ object ScreenDocumentProjection {
   private val MODIFIER_PROPERTIES: Map<String, Map<String, String>> =
     mapOf("m3/icon" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"))
 
+  private const val CARD_DEFAULTS = "androidx.compose.material3.CardDefaults"
+
+  /**
+   * One component a variant property selects.
+   *
+   * @property canonicalId the record to emit. A canonical id rather than a catalog alias, because
+   *   there is no catalog id for `ElevatedCard` — the catalog spells all three as `m3/card` and
+   *   distinguishes them by the property, which is precisely the mapping this table is.
+   * @property defaults the `CardDefaults` prefix whose factories match this component —
+   *   `elevatedCardColors` beside `ElevatedCard`. Carried per variant because all three factories
+   *   return the same type, so the wrong one compiles and silently supplies another component's
+   *   colours.
+   */
+  private class ComponentVariant(val canonicalId: String, val defaults: String)
+
+  /** The property that selects a component, per catalog id. */
+  private val VARIANT_SELECTORS: Map<String, String> = mapOf("m3/card" to "variant")
+
+  /**
+   * Which component each variant value names.
+   *
+   * `m3/card` is `Card`, `ElevatedCard` or `OutlinedCard` — three Compose components behind one
+   * catalog id, which is why `variant` was refused as "a call-site decision this projection cannot
+   * make from a parameter". It can make it from *here*: the decision is a lookup, and it was only
+   * ever unmakeable while there was nothing to look up in.
+   *
+   * The catalog agrees, and said so before this table existed: `m3/card`'s `code.imports` already
+   * lists all three, while its `code.symbol` names one. This is that intent, written where the
+   * export can act on it.
+   *
+   * `m3/button`'s `style` and `m3/icon-button`'s `variant` are the same shape and are deliberately
+   * not here yet — `fab` is a different component with a different signature rather than another
+   * spelling of `Button`, so that one wants its own look. They stay in [VARIANT_PROPERTIES], which
+   * is now the list of variants nothing selects rather than the list of variant properties.
+   */
+  private val COMPONENT_VARIANTS: Map<String, Map<String, ComponentVariant>> =
+    mapOf(
+      "m3/card" to
+        mapOf(
+          "filled" to ComponentVariant(CARD_ID, "card"),
+          "elevated" to ComponentVariant(ELEVATED_CARD_ID, "elevatedCard"),
+          "outlined" to ComponentVariant(OUTLINED_CARD_ID, "outlinedCard"),
+        )
+    )
+
+  private const val CARD_ID = "m3-catalog/androidx.compose.material3.CardKt.Card"
+  private const val ELEVATED_CARD_ID = "m3-catalog/androidx.compose.material3.CardKt.ElevatedCard"
+  private const val OUTLINED_CARD_ID = "m3-catalog/androidx.compose.material3.CardKt.OutlinedCard"
+
   private const val WEIGHT = "weight"
   private const val ROW_SCOPE = "androidx.compose.foundation.layout.RowScope"
   private const val COLUMN_SCOPE = "androidx.compose.foundation.layout.ColumnScope"
@@ -1307,14 +1411,13 @@ object ScreenDocumentProjection {
   /**
    * Properties whose values pick a **component**, not an argument.
    *
-   * `m3/card`.`variant` is `filled`, `elevated` or `outlined`, and Material 3 spells those as
-   * `Card`, `ElevatedCard` and `OutlinedCard` — three symbols, three records, one catalog id. No
-   * table of members can express that, so they stay refused; naming them separately keeps the
-   * refusal from reading like a missing table entry, which is a different piece of work.
+   * No table of *members* can express these, because the value names a component rather than an
+   * argument. [COMPONENT_VARIANTS] is where that becomes expressible — `m3/card` went through it
+   * and is no longer here — so what is left is the ones nothing selects yet, and the refusal says
+   * so rather than reading like a missing member.
    */
   private val VARIANT_PROPERTIES: Set<Pair<String, String>> =
     setOf(
-      "m3/card" to "variant",
       "m3/button" to "style",
       "m3/icon-button" to "variant",
       "layout/supporting-pane-scaffold" to "layoutMode",

@@ -525,6 +525,120 @@
       "signatureKnown": true
     },
     {
+      "canonicalId": "m3-catalog/androidx.compose.material3.CardKt.ElevatedCard",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.CardKt",
+        "callable": "androidx.compose.material3.ElevatedCard",
+        "name": "ElevatedCard",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "shape",
+          "type": "Shape",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Shape"
+        },
+        {
+          "name": "colors",
+          "type": "CardColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.CardColors"
+        },
+        {
+          "name": "elevation",
+          "type": "CardElevation",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.CardElevation"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "code": {
+        "call": "ElevatedCard()",
+        "imports": [
+          "androidx.compose.material3.ElevatedCard"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.CardKt.OutlinedCard",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.CardKt",
+        "callable": "androidx.compose.material3.OutlinedCard",
+        "name": "OutlinedCard",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "shape",
+          "type": "Shape",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Shape"
+        },
+        {
+          "name": "colors",
+          "type": "CardColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.CardColors"
+        },
+        {
+          "name": "elevation",
+          "type": "CardElevation",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.CardElevation"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "code": {
+        "call": "OutlinedCard()",
+        "imports": [
+          "androidx.compose.material3.OutlinedCard"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
       "canonicalId": "m3-catalog/androidx.compose.material3.ButtonKt.Button",
       "componentIds": [
         "m3/button"
