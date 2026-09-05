@@ -59,6 +59,30 @@ other served catalogs remain preview-only until added explicitly.
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.
 
+## Adding a published Remote Compose component
+
+Under the component list, a catalog that offers `remote-compose/document` also shows **Remote
+Compose documents** — every preview the *serving* catalog of the same name publishes an
+`ir/<id>.rc` for, grouped by component family and filtered by the same search box as the components
+above. On `preview.coo.ee` that is the `remote-m3` sheet: the 28 Remote Compose components of
+[yschimke/wear-m3-catalog](https://github.com/yschimke/wear-m3-catalog)'s `:remote-catalog`, in all
+their published states.
+
+**Add** fetches the document from the catalog's own `render/<id>.rc` lane, decodes it to check it
+is one, and inserts a `remote-compose/document` node already holding those bytes. The canvas then
+plays it in-process, like any other node — the same `RcComposePlayer` the deployed player lanes
+use, so what you author is what the watch draws. A row is greyed while a fetch is in flight and
+while no compatible slot is selected; a document that arrives and does not decode is refused with
+the fetched id named, and nothing is written.
+
+There is no drag handle on these rows, unlike the components above: the bytes are a network round
+trip away, so a drag would have to promise an insert on release that it cannot make. The insert
+resolves its slot when the bytes arrive rather than when the row is pressed, so moving the
+selection mid-fetch refuses rather than inserting where you are no longer looking.
+
+The palette is empty — and absent — when the box serves no catalog of that name, when that catalog
+publishes no Remote Compose documents, or when the authoring catalog has nowhere to put one.
+
 ## Compose export needs a component record
 
 The generator emits a call site only where a **discovered component record** proves one can be

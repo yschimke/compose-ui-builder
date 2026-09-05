@@ -450,6 +450,23 @@ sealed interface UiBuilderEditorEvent {
     val action: EditorStateAction,
   ) : UiBuilderEditorEvent
 
+  /**
+   * Insert a `remote-compose/document` already holding one of the catalog's published documents.
+   *
+   * Separate from [InsertComponent] for the same reason as [InsertComponentWithAction]: the wire's
+   * mutation set reaches properties one at a time, but the bytes and the node have to arrive
+   * together — a `remote-compose/document` with no `documentBase64` renders as its own error
+   * diagnostic, and collaborators would see that intermediate state on the canvas.
+   *
+   * [documentBase64] is resolved by the host, not by the reducer: the bytes come over the network
+   * and this reducer is pure. The reducer's job is to refuse what will not decode.
+   */
+  data class InsertRemoteComposeDocument(
+    val source: RemoteComposeSource,
+    val documentBase64: String,
+    val target: ParentSlot,
+  ) : UiBuilderEditorEvent
+
   data object CopySelected : UiBuilderEditorEvent
 
   data object CutSelected : UiBuilderEditorEvent
@@ -784,6 +801,8 @@ class UiBuilderEditorReducer(
       UiBuilderEditorEvent.UnwrapSelection -> unwrapSelection(state)
       is UiBuilderEditorEvent.InsertComponentWithAction ->
         insert(state, event.componentId, event.target, event.action)
+      is UiBuilderEditorEvent.InsertRemoteComposeDocument ->
+        insertRemoteComposeDocument(state, event.source, event.documentBase64, event.target)
       UiBuilderEditorEvent.CopySelected -> copySelected(state)
       UiBuilderEditorEvent.CutSelected -> cutSelected(state)
       UiBuilderEditorEvent.Paste -> paste(state)
@@ -1493,6 +1512,79 @@ class UiBuilderEditorReducer(
       val root = operations[index] as DesignOperation.InsertNode
       operations[index] = root.copy(node = root.node.copy(eventBindings = bindings))
     }
+    return state.apply(sequence, operations, selectionAfter = nodeId)
+  }
+
+  /**
+   * Insert `remote-compose/document` carrying [documentBase64].
+   *
+   * The bytes are decoded before the operation is built. The renderer decodes them too — it has to,
+   * it is what plays them — but a document that reaches the canvas undecodable is already saved,
+   * shared with every collaborator, and shown as an error box where a component should be. Refusing
+   * here is what keeps "the fetch returned an HTML error page" from becoming a design revision.
+   *
+   * The decoded document is then dropped rather than kept: [UiBuilderDocument] holds JSON, the
+   * player owns the parsed form, and a second in-memory copy would only be a second thing to
+   * invalidate.
+   */
+  private fun insertRemoteComposeDocument(
+    state: UiBuilderEditorState,
+    source: RemoteComposeSource,
+    documentBase64: String,
+    target: ParentSlot,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val component =
+      catalog.componentsById[REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID]
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_LOCATION,
+          "This catalog does not offer $REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID",
+        )
+    val resolvedTarget = findDestination(state.document, state.selectedNodeId, component)
+    if (resolvedTarget == null || resolvedTarget != target) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_LOCATION,
+        "${component.displayName} has no compatible selected slot",
+      )
+    }
+    decodeRemoteComposeDocument(documentBase64).exceptionOrNull()?.let { failure ->
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "${source.id} did not decode as a Remote Compose document: ${failure.message}",
+      )
+    }
+    val nodeId =
+      "editor-${REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID.replace('/', '-')}-" +
+        sequence.toString().padStart(3, '0')
+    val operations = mutableListOf<DesignOperation>()
+    val defaultError =
+      component.appendDefaultSubtree(
+        catalog = catalog,
+        document = state.document,
+        nodeId = nodeId,
+        parent = target,
+        afterNodeId = state.document.children(target).lastOrNull(),
+        operations = operations,
+      )
+    if (defaultError != null) {
+      return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, defaultError)
+    }
+    val index = operations.indexOfFirst { it is DesignOperation.InsertNode }
+    val root = operations[index] as DesignOperation.InsertNode
+    operations[index] =
+      root.copy(
+        node =
+          root.node.copy(
+            properties =
+              JsonObject(
+                root.node.properties +
+                  ("documentBase64" to literal("string", JsonPrimitive(documentBase64)))
+              )
+          )
+      )
     return state.apply(sequence, operations, selectionAfter = nodeId)
   }
 

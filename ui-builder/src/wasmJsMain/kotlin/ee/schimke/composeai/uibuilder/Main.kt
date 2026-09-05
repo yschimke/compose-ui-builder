@@ -693,6 +693,16 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
 
   val loadedDocument = document
   val loadedCatalog = catalog
+  // Asked once the authoring catalog is known, because the answer depends on it: a catalog that
+  // does not offer `remote-compose/document` has nowhere to put a published document, and asking
+  // its serving catalog for one would be a request whose answer could not be used.
+  var remoteComposeSources by remember { mutableStateOf(emptyList<RemoteComposeSource>()) }
+  LaunchedEffect(loadedCatalog) {
+    remoteComposeSources =
+      if (loadedCatalog?.componentsById?.containsKey(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID) == true)
+        loadRemoteComposeSources(config.catalogSystemId)
+      else emptyList()
+  }
   if (config.startWithNewDesign && newDesignCatalogs.isNotEmpty()) {
     UiBuilderNewDesignScreen(
       catalogs = newDesignCatalogs,
@@ -782,6 +792,10 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
         inspectionPublisher.offer(collector, loadedDocument.revision)
       },
       onRequestNativeRender = { requestNativeRender(config.designId) },
+      remoteComposeSources = remoteComposeSources,
+      resolveRemoteComposeDocument = { source ->
+        fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${'$'}{source.id}.rc"))
+      },
     )
     LaunchedEffect(loadedDocument.revision) { markReady() }
   }
@@ -1142,6 +1156,74 @@ private fun ScheduleListItem(
     },
   )
 }
+
+/**
+ * The Remote Compose documents the *serving* catalog of the same name publishes.
+ *
+ * The two catalogs share an id by construction — `/ui-builder/remote-m3/` authors against the
+ * capability adapter named `remote-m3`, and `/remote-m3/` serves the published catalog of the same
+ * name from the same box — so the palette needs no second piece of configuration to find its
+ * content. A box serving one without the other simply gets an empty palette.
+ *
+ * A failure is not fatal, for the same reason [loadDevicePresets]'s is not: the builder without a
+ * Remote Compose palette is where it was before this existed, while a builder that refuses to open
+ * because a catalog listing 404'd is worse than one that opens with one panel missing.
+ */
+private suspend fun loadRemoteComposeSources(catalogSystemId: String): List<RemoteComposeSource> =
+  try {
+    parseRemoteComposeSources(fetchText(catalogAssetPath(catalogSystemId, "/api/previews")))
+  } catch (failure: Throwable) {
+    emptyList()
+  }
+
+/**
+ * A path into the serving catalog's own routes, carrying this page's operator token when it has
+ * one.
+ *
+ * The builder's own requests are authenticated by session cookie or grant header, but the catalog
+ * lane in front of a token-gated `compose-preview serve` reads `?token=` — the same parameter this
+ * page was opened with. Absent on the public deployment, where the catalog lane is public.
+ */
+private fun catalogAssetPath(catalogSystemId: String, path: String): String {
+  val token = liveConfigValue("token", "")
+  val query = if (token.isBlank()) "" else "?token=${'$'}{encodeUriComponent(token)}"
+  return "/${'$'}{encodeUriComponent(catalogSystemId)}${'$'}path${'$'}query"
+}
+
+@JsFun("(value) => encodeURIComponent(value)")
+private external fun encodeUriComponent(value: String): String
+
+/** Bytes rather than text: a Remote Compose document is a binary wire format. */
+private suspend fun fetchBase64(url: String): String = suspendCancellableCoroutine { continuation ->
+  fetchBase64Promise(url)
+    .then { value ->
+      if (continuation.isActive) continuation.resume(value.toString())
+      null
+    }
+    .catch { error ->
+      if (continuation.isActive) {
+        continuation.resumeWithException(IllegalStateException(error.toString()))
+      }
+      null
+    }
+}
+
+@JsFun(
+  """(url) => fetch(url).then((response) => {
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return response.arrayBuffer();
+  }).then((buffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    // Chunked: `String.fromCharCode(...bytes)` spreads every byte as an argument, and a document of
+    // any size overflows the call stack.
+    for (let offset = 0; offset < bytes.length; offset += 8192) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(offset, offset + 8192));
+    }
+    return btoa(binary);
+  })"""
+)
+private external fun fetchBase64Promise(url: String): Promise<JsString>
 
 private suspend fun fetchText(url: String): String = suspendCancellableCoroutine { continuation ->
   fetchTextPromise(url)

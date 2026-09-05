@@ -285,6 +285,23 @@ fun UiBuilderEditor(
     ) -> Unit)? =
     null,
   onHelp: (() -> Unit)? = null,
+  /**
+   * The published Remote Compose documents the pinned catalog offers as content, if any.
+   *
+   * Supplied by the host rather than read off [catalog], because they are the *serving* catalog's
+   * previews rather than the authoring catalog's components — see [RemoteComposeSource]. Empty (the
+   * default) simply leaves the palette out, which is the right answer for a catalog whose previews
+   * are Jetpack Compose.
+   */
+  remoteComposeSources: List<RemoteComposeSource> = emptyList(),
+  /**
+   * Fetches one source's document, Base64-encoded, or throws.
+   *
+   * Suspending and host-owned: the bytes arrive over the network and neither the reducer nor this
+   * composable can reach it. Null with a non-empty [remoteComposeSources] would be a palette that
+   * cannot add anything, so the panel requires both.
+   */
+  resolveRemoteComposeDocument: (suspend (RemoteComposeSource) -> String)? = null,
 ) {
   val reducer =
     remember(catalog, actorId, clientId, operationIdPrefix) {
@@ -347,6 +364,15 @@ fun UiBuilderEditor(
   var textInputFocused by remember { mutableStateOf(false) }
   var mobilePanel by remember(document.id) { mutableStateOf(MobileEditorPanel.None) }
   var showNewDesign by remember(document.id) { mutableStateOf(false) }
+  // The source whose document is being fetched, or null. One at a time on purpose: the palette is a
+  // list of 476 rows on the Remote M3 catalog, and a double-click that started two fetches would
+  // insert the same component twice — the second insert lands against a document the first already
+  // changed, and neither the author nor their collaborators asked for it.
+  var pendingRemoteSource by remember(document.id) { mutableStateOf<RemoteComposeSource?>(null) }
+  // Only a transport failure. A document that fetched and did not decode is refused by the reducer,
+  // which reports it through the same rejection channel as every other refused edit rather than a
+  // second status line saying a different thing about the same click.
+  var remoteSourceFailure by remember(document.id) { mutableStateOf<String?>(null) }
   val editorFocusRequester = remember { FocusRequester() }
   // Held here rather than inside the flatten, which is not a composable: a text mark has to be set
   // in the same font when it is baked in as when it was drawn.
@@ -433,6 +459,15 @@ fun UiBuilderEditor(
           if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
         }
       },
+      remoteComposeSources =
+        if (resolveRemoteComposeDocument == null) emptyList() else remoteComposeSources,
+      pendingRemoteComposeSource = pendingRemoteSource,
+      remoteComposeFailure = remoteSourceFailure,
+      onAddRemoteComposeSource = { source ->
+        focusEditor()
+        if (pendingRemoteSource == null) pendingRemoteSource = source
+        if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+      },
       moveTarget = { nodeId, direction -> reducer.moveTarget(state, nodeId, direction) },
       onEditorInteraction = ::focusEditor,
       onTextInputFocusChanged = { textInputFocused = it },
@@ -498,6 +533,31 @@ fun UiBuilderEditor(
         UiBuilderNativeRender(failure = failure.message ?: "the native render request failed")
       }
     nativePending = false
+  }
+  LaunchedEffect(pendingRemoteSource) {
+    val source = pendingRemoteSource ?: return@LaunchedEffect
+    val resolve = resolveRemoteComposeDocument ?: return@LaunchedEffect
+    val encoded =
+      try {
+        resolve(source)
+      } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+        throw cancelled
+      } catch (failure: Throwable) {
+        remoteSourceFailure = "${source.label}: ${failure.message ?: "could not be fetched"}"
+        pendingRemoteSource = null
+        return@LaunchedEffect
+      }
+    // Resolved against the selection as it stands NOW, not as it stood when the row was pressed: a
+    // fetch takes a round trip, and the reducer would refuse a target the author has since moved
+    // away from. Asking again is what makes the insert land where the canvas says it will.
+    val target = reducer.dropTarget(state, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID)
+    if (target == null) {
+      remoteSourceFailure = "${source.label}: no compatible slot is selected"
+    } else {
+      remoteSourceFailure = null
+      dispatch(UiBuilderEditorEvent.InsertRemoteComposeDocument(source, encoded, target))
+    }
+    pendingRemoteSource = null
   }
   val generatedCode =
     if (state.codePaneVisible || mobilePanel == MobileEditorPanel.Code) {
@@ -1537,6 +1597,10 @@ private fun EditorNavigator(
   onCatalogDrop: (String, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
   onCatalogAdd: (String) -> Unit,
+  remoteComposeSources: List<RemoteComposeSource>,
+  pendingRemoteComposeSource: RemoteComposeSource?,
+  remoteComposeFailure: String?,
+  onAddRemoteComposeSource: (RemoteComposeSource) -> Unit,
   moveTarget: (String, EditorMoveDirection) -> UiBuilderEditorEvent.MoveNode?,
   onEditorInteraction: () -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
@@ -1566,6 +1630,38 @@ private fun EditorNavigator(
             canAdd = canAddCatalogComponent(item.componentId),
             onAdd = { onCatalogAdd(item.componentId) },
           )
+        }
+      }
+      if (remoteComposeSources.isNotEmpty()) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        // Filtered by the SAME field as the components above rather than a third search box. The
+        // two lists answer one question — "what can I put here?" — and the palette is long enough
+        // that a typed name has to narrow both or it narrows neither.
+        val visibleSources =
+          remember(remoteComposeSources, state.catalogQuery) {
+            filterRemoteComposeSources(remoteComposeSources, state.catalogQuery)
+          }
+        PanelHeading(
+          "Remote Compose documents",
+          remoteComposeFailure
+            ?: pendingRemoteComposeSource?.let { "Fetching ${it.label}\u2026" }
+            ?: "${visibleSources.size} of ${remoteComposeSources.size} published",
+        )
+        LazyColumn(Modifier.fillMaxWidth().height(180.dp)) {
+          itemsIndexed(visibleSources, key = { _, source -> source.id }) { index, source ->
+            if (index == 0 || visibleSources[index - 1].group != source.group) {
+              GroupHeading(source.group)
+            }
+            RemoteComposeSourceRow(
+              source = source,
+              // Enabled off the same question the insert will ask, so a row that cannot land is
+              // visibly unavailable rather than pressable and then refused.
+              canAdd =
+                pendingRemoteComposeSource == null &&
+                  canAddCatalogComponent(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID),
+              onAdd = { onAddRemoteComposeSource(source) },
+            )
+          }
         }
       }
       HorizontalDivider(color = MaterialTheme.colorScheme.outline)
@@ -1790,6 +1886,53 @@ private fun KindHeading(kind: EditorComponentKind) {
     style = MaterialTheme.typography.labelSmall,
     fontWeight = FontWeight.Bold,
   )
+}
+
+/** [KindHeading] for a list grouped by something other than a component kind. */
+@Composable
+private fun GroupHeading(group: String) {
+  Text(
+    group.uppercase(),
+    Modifier.fillMaxWidth()
+      .background(Color(0xff202126))
+      .padding(horizontal = 14.dp, vertical = 5.dp),
+    color = MaterialTheme.colorScheme.primary,
+    style = MaterialTheme.typography.labelSmall,
+    fontWeight = FontWeight.Bold,
+  )
+}
+
+/**
+ * One published Remote Compose document, addable into the selected slot.
+ *
+ * No drag handle, unlike [CatalogRow]. A drag inserts on release, and this insert cannot: the bytes
+ * are a network round trip away, so the drop would land nothing and the row would have promised
+ * otherwise. Add is honest about being asynchronous; a drag would not be.
+ */
+@Composable
+private fun RemoteComposeSourceRow(
+  source: RemoteComposeSource,
+  canAdd: Boolean,
+  onAdd: () -> Unit,
+) {
+  Row(
+    Modifier.fillMaxWidth().height(42.dp).padding(start = 26.dp, end = 12.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Column(Modifier.weight(1f)) {
+      Text(source.label, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+      Text(
+        source.id,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    TextButton(onClick = onAdd, enabled = canAdd) {
+      Text("Add", Modifier.semantics { contentDescription = "Add ${source.label}" })
+    }
+  }
 }
 
 @Composable

@@ -40,6 +40,48 @@ fun UiBuilderEditorChromePreview() {
 }
 
 /**
+ * The same chrome with the Remote Compose palette populated.
+ *
+ * A second preview rather than sources on the first, because the first is the answer for every
+ * catalog that publishes no Remote Compose documents — which is most of them — and this one is the
+ * answer for `remote-m3`. Both have to keep working, so both are diffed.
+ *
+ * The sources are literals rather than a catalog fetch: a preview may not read the network, and
+ * what this surface has to show is the panel's grouping, its headings and its Add affordance, none
+ * of which depends on the bytes behind a row. The resolver is present because the panel is hidden
+ * without one, and never called because nothing here presses Add.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderRemoteComposePalettePreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    // A container rather than [EDITOR_CHROME_PREVIEW_SELECTION]'s text leaf: a row's Add is enabled
+    // off the same question the insert asks, so a leaf selection would diff a palette whose every
+    // row is greyed and never show the affordance working.
+    initialSelectedNodeId = "discover-grid",
+    remoteComposeSources = REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES,
+    resolveRemoteComposeDocument = { error("a preview never adds") },
+  )
+}
+
+/**
+ * Two families and three states, so the palette's group headings are visible rather than implied.
+ */
+private val REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES =
+  listOf(
+    RemoteComposeSource("appcard__ideal__default__compact", "App card", "appcard"),
+    RemoteComposeSource("appcard__ideal__icon__compact", "App card with icon", "appcard"),
+    RemoteComposeSource("button-filled__ideal__default__compact", "Filled button", "button-filled"),
+    RemoteComposeSource(
+      "button-filled__ideal__disabled__compact",
+      "Filled button, disabled",
+      "button-filled",
+    ),
+  )
+
+/**
  * A node deep enough in the tree to exercise the layers panel's indentation and its naming, rather
  * than a root whose row says the same thing either way. It is also on screen in both panels at
  * once: its layer row is above the fold and the text it carries is in the rendered canvas, so a
