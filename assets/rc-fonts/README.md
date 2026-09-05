@@ -35,6 +35,18 @@ classic Roboto 2.x and CMP's bundled default both differ measurably (see PR hist
   from `fonts.json` and delete the two files. Dropping it only costs the Wasm lane's rendering of
   that one theme.
 
+- `inter-400.ttf` + `inter-700.ttf` — a downloadable **GoogleFont** (`role: "named"`), the face the
+  `remote-m3` catalog's four conference theme specimens name as `google:Inter` — AndroidMakers,
+  ConfettiDefault, Droidcon and KotlinConf. Without it vendored those four did not render on the
+  manifest-only lane at all: the CMP player refused the document with
+  `CoreText[21]: custom font family google:Inter (47) has no DataFont`, recorded in that branch's
+  `rc-cmp-wasm-errors/`, which is the availability check this whole `role: "named"` section exists
+  to satisfy. Fetched from the same CSS2 endpoint as the others (`wght@400` and `wght@700`).
+
+  Licensing is the ordinary case rather than Google Sans Flex's: Inter **is** in the corpus, under
+  SIL OFL-1.1, so its terms are readable there and a fork inherits them — see
+  [Inter-OFL.txt](Inter-OFL.txt), taken from `ofl/inter/OFL.txt`.
+
 The committed [`fonts.json`](fonts.json) is the **dev-time default**; the design-catalog export
 regenerates it from the per-preview `fonts/used` records (`previews/<id>.fonts.json` in the packed
 bundle → `scripts/design-artifacts/render-fonts-manifest.mjs`), so the published manifest tracks
@@ -61,6 +73,7 @@ The manifest is additive: future roles (named families, generic-family mappings 
 can be declared per family without breaking older apps, which only consume `role: "default"`.
 
 License: Apache 2.0 (Roboto / Noto Serif / Droid Sans Mono, Google) — see [LICENSE.txt](LICENSE.txt);
-Orbitron is SIL OFL-1.1 — see [Orbitron-OFL.txt](Orbitron-OFL.txt). Google Sans Flex carries no
+Orbitron is SIL OFL-1.1 — see [Orbitron-OFL.txt](Orbitron-OFL.txt); Inter is SIL OFL-1.1 — see
+[Inter-OFL.txt](Inter-OFL.txt). Google Sans Flex carries no
 corpus license file and ships under the owner's explicit redistribution clearance — see its bullet
 above before forking.
