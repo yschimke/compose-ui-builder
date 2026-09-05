@@ -350,6 +350,10 @@ enum class EditorInspectorMode {
   Theme,
   Screen,
   Issues,
+  /**
+   * The discussion about this design. See [DesignCommentBoard] for why it is not in the document.
+   */
+  Comments,
 }
 
 /**

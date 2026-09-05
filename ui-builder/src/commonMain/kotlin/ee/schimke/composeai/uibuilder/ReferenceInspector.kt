@@ -467,16 +467,24 @@ private fun ReferenceMarkupControls(
   }
 
   if (reference.marks.isNotEmpty()) {
-    Row(
-      Modifier.fillMaxWidth().padding(top = 4.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Text(
-        "${reference.marks.size} marks",
-        Modifier.weight(1f),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-      )
+    Text(
+      "${reference.marks.size} marks",
+      Modifier.padding(top = 4.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+    // Wrapped and on its own line under the count, because three verbs do not fit beside a label
+    // in a 320 dp dock: squeezed into one row, "5 marks" is broken one letter per line, which
+    // reads as a rendering fault rather than as a count.
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+      // The link into the discussion, at the point somebody has just finished drawing: this row
+      // is where "I have circled the problem" turns into "…and here is what is wrong with it".
+      // The Talk panel opens with its pin already offering the last mark drawn.
+      TextButton(
+        onClick = { dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments)) }
+      ) {
+        Text("Discuss")
+      }
       TextButton(onClick = { dispatch(UiBuilderEditorEvent.UndoReferenceMark) }) {
         Text("Undo mark")
       }

@@ -460,6 +460,36 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
     referenceLoaded = true
   }
 
+  // The comments panel's browser half: the REST calls and the feed the panel watches. Rebuilt only
+  // when the design changes, because a discussion is addressed to one design.
+  val commentHost = remember(config.designId) { BrowserCommentHost(config.designId) }
+  var commentBoard by remember(config.designId) { mutableStateOf(DesignCommentBoard()) }
+  var commentStatus by remember(config.designId) { mutableStateOf<String?>(null) }
+
+  // One socket for the life of the design. It sends the current board on connect, so there is no
+  // fetch beside it to reconcile against — the load below is only the fallback for a host that
+  // refuses the upgrade, where the panel is then a snapshot rather than a feed.
+  DisposableEffect(config.designId) {
+    val watch =
+      commentHost.watch(
+        onBoard = { board ->
+          commentBoard = board
+          commentStatus = null
+        },
+        onDropped = {
+          commentStatus = "The comment feed dropped. Reload to watch this discussion again."
+        },
+      )
+    onDispose { watch.close() }
+  }
+  LaunchedEffect(config.designId) {
+    commentHost.load()?.let { board ->
+      // Only if the socket has not already delivered something newer: the two race by design and
+      // the sequence is what settles it, rather than whichever answer happened to arrive last.
+      if (board.sequence > commentBoard.sequence) commentBoard = board
+    }
+  }
+
   // One paste listener for the life of the design, re-armed after every catch. Pasting is the
   // gesture Figma's own "copy as PNG" leaves you holding, so it goes straight to the base picture
   // rather than behind a menu.
@@ -734,6 +764,14 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       onSnapshotDesign = { references.snapshotDesign() },
       referenceStatus = referenceStatus,
       pastedReference = pastedReference,
+      comments = commentBoard,
+      commentStatus = commentStatus,
+      onPostComment = { draft ->
+        scope.launch { commentStatus = commentHost.post(draft, config.displayName) }
+      },
+      onResolveCommentThread = { threadId, resolved ->
+        scope.launch { commentStatus = commentHost.resolve(threadId, resolved) }
+      },
       onStateChanged = {
         selectedNodeId = it.selectedNodeId
         catalogQuery = it.catalogQuery

@@ -108,7 +108,7 @@ private const val COMPONENT_PIECE_SVG =
     "<rect x=\"12\" y=\"14\" width=\"120\" height=\"12\" rx=\"6\" fill=\"#b9c3ff\"/>" +
     "</svg>"
 
-private val referencePreviewDocument: UiBuilderDocument by lazy {
+internal val referencePreviewDocument: UiBuilderDocument by lazy {
   UiBuilderReducer.replay(
       Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject
     )
@@ -122,7 +122,7 @@ private val referencePreviewDocument: UiBuilderDocument by lazy {
  * rounded corner, the erase fill and the centred label are checked at all, so all of them are on
  * the canvas at once.
  */
-private val referencePreviewOverlay: RestoredReference by lazy {
+internal val referencePreviewOverlay: RestoredReference by lazy {
   val svg =
     """
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640">

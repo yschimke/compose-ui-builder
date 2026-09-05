@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
@@ -153,7 +154,8 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * A default on [PropertyInspector] alone does nothing: the desktop layout passes its own modifier,
  * so widening the default for a fourth tab widened the preview and left every real editor at the
- * three-tab width. Four tabs share it, and the widest label has to stay legible.
+ * three-tab width. The tabs are rail switches now, so a sixth panel — Talk — costs this width
+ * nothing.
  */
 private val INSPECTOR_WIDTH = 320.dp
 
@@ -336,6 +338,25 @@ fun UiBuilderEditor(
   pastedReference: ReferenceImage? = null,
   /** A sentence from the host — a refused paste, a store that would not keep it. */
   referenceStatus: String? = null,
+  /**
+   * The discussion about this design, as the host last heard it.
+   *
+   * Replaced wholesale rather than merged: the host holds a socket onto the server's comment feed
+   * and hands over what the server said, so the panel cannot show a reply the server has not
+   * stored. See [DesignCommentBoard].
+   */
+  comments: DesignCommentBoard = DesignCommentBoard(),
+  /**
+   * Sends one comment, or null where the host keeps no discussion.
+   *
+   * Null in every preview and test, where the panel then says so rather than offering a Post button
+   * that cannot work — the same rule [onPickReference] follows.
+   */
+  onPostComment: ((DesignCommentDraft) -> Unit)? = null,
+  /** Closes a thread, or reopens it. Null alongside a null [onPostComment]. */
+  onResolveCommentThread: ((threadId: String, resolved: Boolean) -> Unit)? = null,
+  /** A sentence from the host — a refused comment, a feed that dropped. */
+  commentStatus: String? = null,
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
   onCreateDesign:
     ((
@@ -463,6 +484,9 @@ fun UiBuilderEditor(
   var captureRequest by remember(document.id) { mutableStateOf<ReferenceCaptureRequest?>(null) }
   var captureSequence by remember(document.id) { mutableStateOf(0) }
   var captureFailure by remember(document.id) { mutableStateOf<String?>(null) }
+  // Which conversation is open, in the panel and under the pin. Editor state rather than document
+  // state, and per design: which thread somebody has expanded is a fact about a moment.
+  var selectedThreadId by remember(document.id) { mutableStateOf<String?>(null) }
   val draggedTarget = draggedComponentId?.let { reducer.dropTarget(state, it) }
   val canvasDropHovered =
     catalogDragPosition?.let(canvasBounds::contains) == true && draggedTarget != null
@@ -619,6 +643,12 @@ fun UiBuilderEditor(
         dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
       },
       collaborators = collaborators,
+      commentThreads = comments.pinned(state.reference.marks),
+      selectedThreadId = selectedThreadId,
+      onCommentThreadSelected = { threadId ->
+        selectedThreadId = threadId
+        dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments))
+      },
       onInspectionSnapshot = { snapshot ->
         canvasInspection = snapshot
         onInspectionSnapshot?.invoke(snapshot)
@@ -756,6 +786,12 @@ fun UiBuilderEditor(
       },
       canPromotePiece = { piece -> promotionTargetFor(piece) != null },
       referenceStatus = captureFailure ?: referenceStatus,
+      comments = comments,
+      commentStatus = commentStatus,
+      selectedThreadId = selectedThreadId,
+      onSelectThread = { selectedThreadId = it },
+      onPostComment = onPostComment,
+      onResolveCommentThread = onResolveCommentThread,
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,
@@ -970,7 +1006,16 @@ fun UiBuilderEditor(
                     label = entry.label,
                     icon = entry.icon(),
                     selected = dock == entry,
-                    badge = if (entry == EditorDock.Issues) problems.size else 0,
+                    // Two docks carry a count, and both answer the same question from the rail:
+                    // how much is waiting behind this icon. Counted rather than dotted, because a
+                    // bare dot makes somebody open the panel to find out whether it is one or
+                    // twenty.
+                    badge =
+                      when (entry) {
+                        EditorDock.Issues -> problems.size
+                        EditorDock.Comments -> comments.openThreads.size
+                        else -> 0
+                      },
                     onClick = {
                       focusEditor()
                       val mode = entry.inspectorMode()
@@ -2534,6 +2579,7 @@ private enum class EditorDock(val label: String) {
   Theme("Theme"),
   Screen("Screen"),
   Issues("Issues"),
+  Comments("Talk"),
   Code("Code"),
 }
 
@@ -2549,6 +2595,7 @@ private fun EditorDock.inspectorMode(): EditorInspectorMode? =
     EditorDock.Theme -> EditorInspectorMode.Theme
     EditorDock.Screen -> EditorInspectorMode.Screen
     EditorDock.Issues -> EditorInspectorMode.Issues
+    EditorDock.Comments -> EditorInspectorMode.Comments
     EditorDock.Code -> null
   }
 
@@ -2634,6 +2681,7 @@ private fun EditorDock.icon(): ImageVector =
     EditorDock.Theme -> Icons.Filled.Palette
     EditorDock.Screen -> Icons.Filled.PhoneAndroid
     EditorDock.Issues -> Icons.Filled.ErrorOutline
+    EditorDock.Comments -> Icons.Filled.ChatBubbleOutline
     EditorDock.Code -> Icons.Filled.Code
   }
 
@@ -2656,6 +2704,10 @@ private fun PinnedDesignCanvas(
   onMarkDrawn: (ReferenceMarkupKind, List<Float>) -> Unit,
   onPieceMoved: (String, Float, Float) -> Unit,
   collaborators: List<UiBuilderCollaborator>,
+  /** Threads with somewhere to sit on the frame; see [DesignCommentBoard.pinned]. */
+  commentThreads: List<DesignCommentThread>,
+  selectedThreadId: String?,
+  onCommentThreadSelected: (String) -> Unit,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)?,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
   contentAlignment: Alignment = Alignment.TopStart,
@@ -2709,6 +2761,15 @@ private fun PinnedDesignCanvas(
         // about this session and must not be hidden by a mock.
         ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
         RemotePresenceOverlay(collaborators, inspection)
+        // Above everything, because a pin is the one thing on this canvas a person clicks that is
+        // not part of the design: it must not end up under a mock somebody just turned up the
+        // opacity of, and it must not be what a selection outline is drawn over.
+        CommentPinOverlay(
+          threads = commentThreads,
+          marks = reference.marks,
+          selectedThreadId = selectedThreadId,
+          onSelect = onCommentThreadSelected,
+        )
       }
     }
   }
@@ -3244,6 +3305,12 @@ private fun PropertyInspector(
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
   referenceStatus: String?,
+  comments: DesignCommentBoard,
+  commentStatus: String?,
+  selectedThreadId: String?,
+  onSelectThread: (String?) -> Unit,
+  onPostComment: ((DesignCommentDraft) -> Unit)?,
+  onResolveCommentThread: ((String, Boolean) -> Unit)?,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
@@ -3262,6 +3329,8 @@ private fun PropertyInspector(
             EditorInspectorMode.Screen -> "Screen"
             EditorInspectorMode.Issues ->
               if (problems.isEmpty()) "Issues" else "Issues · ${problems.size}"
+            EditorInspectorMode.Comments ->
+              comments.openThreads.size.let { if (it == 0) "Talk" else "Talk · $it" }
           },
         supporting =
           when (state.inspectorMode) {
@@ -3269,6 +3338,7 @@ private fun PropertyInspector(
             EditorInspectorMode.Theme -> "Applies to the whole design"
             EditorInspectorMode.Screen -> "Frame, density and reference"
             EditorInspectorMode.Issues -> "What the export would refuse"
+            EditorInspectorMode.Comments -> "What people and agents have said"
           },
         onClose = onClose,
       )
@@ -3290,6 +3360,12 @@ private fun PropertyInspector(
         onPromotePiece = onPromotePiece,
         canPromotePiece = canPromotePiece,
         referenceStatus = referenceStatus,
+        comments = comments,
+        commentStatus = commentStatus,
+        selectedThreadId = selectedThreadId,
+        onSelectThread = onSelectThread,
+        onPostComment = onPostComment,
+        onResolveCommentThread = onResolveCommentThread,
         onTextInputFocusChanged = onTextInputFocusChanged,
         dispatch = dispatch,
       )
@@ -3317,12 +3393,38 @@ private fun InspectorBody(
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
   referenceStatus: String?,
+  comments: DesignCommentBoard,
+  commentStatus: String?,
+  selectedThreadId: String?,
+  onSelectThread: (String?) -> Unit,
+  onPostComment: ((DesignCommentDraft) -> Unit)?,
+  onResolveCommentThread: ((String, Boolean) -> Unit)?,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
     if (state.inspectorMode == EditorInspectorMode.Issues) {
       ProblemsInspector(problems, dispatch)
+      return@Column
+    }
+    if (state.inspectorMode == EditorInspectorMode.Comments) {
+      // Scrolled for the same reason the Screen panel is: a design with a dozen threads on it
+      // fills the dock, and a panel that silently clips its last thread is worse than one that
+      // scrolls.
+      Column(Modifier.verticalScroll(rememberScrollState())) {
+        CommentsInspector(
+          board = comments,
+          reference = state.reference,
+          selectedNodeId = state.selectedNodeId,
+          nodeLabel = { nodeId -> state.document.nodes[nodeId]?.componentId ?: nodeId },
+          selectedThreadId = selectedThreadId,
+          onSelectThread = onSelectThread,
+          onPost = onPostComment,
+          onResolve = onResolveCommentThread,
+          hostStatus = commentStatus,
+          onTextInputFocusChanged = onTextInputFocusChanged,
+        )
+      }
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Theme) {
