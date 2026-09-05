@@ -106,7 +106,9 @@ internal class BrowserCommentHost(private val designId: String) {
   ): CommentHttpResponse {
     val encoded =
       try {
-        awaitCommentString(commentFetch(method, url, body ?: "", body != null))
+        awaitCommentString(
+          commentFetch(method, sameOriginRequestUrl(url), body ?: "", body != null)
+        )
       } catch (_: Exception) {
         return CommentHttpResponse(0, "")
       }
@@ -250,22 +252,15 @@ private suspend fun awaitCommentString(promise: Promise<JsString>): String =
   }
 
 /**
- * One `fetch` with a method of our choosing, carrying the page's token where it has one.
+ * One `fetch` with a method of our choosing, cookie-bearing like every other call this app makes.
  *
- * Same-origin and cookie-bearing, like every other call this app makes; the token is copied from
- * the page URL for the token-gated deployments, exactly as the protocol transport does it.
+ * The same-origin check and the page token used to live inline here, and this was the only helper
+ * of the three that had them. They are [sameOriginRequestUrl] now, applied by the caller, so the
+ * reference and asset lanes get the same treatment instead of quietly going without.
  */
 @JsFun(
   """(method, url, body, hasBody) => {
-    const resolved = new URL(url, window.location.href);
-    if (resolved.origin !== window.location.origin) {
-      throw new Error('UI-builder comment endpoint must be same-origin');
-    }
-    const pageToken = new URL(window.location.href).searchParams.get('token');
-    if (pageToken && !resolved.searchParams.has('token')) {
-      resolved.searchParams.set('token', pageToken);
-    }
-    return fetch(resolved.toString(), {
+    return fetch(url, {
       method,
       credentials: 'same-origin',
       headers: hasBody

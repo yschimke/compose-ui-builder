@@ -229,7 +229,7 @@ internal class BrowserReferenceHost(
   ): ReferenceHttpResponse {
     val encoded =
       try {
-        awaitJsString(referenceFetch(method, url, body ?: "", body != null))
+        awaitJsString(referenceFetch(method, sameOriginRequestUrl(url), body ?: "", body != null))
       } catch (_: Exception) {
         return ReferenceHttpResponse(0, "")
       }
@@ -414,8 +414,12 @@ private suspend fun awaitJsString(promise: Promise<JsString>): String =
  *
  * The shared [ee.schimke.composeai.uibuilder.client.UiBuilderHttpTransport] is POST-only, because
  * the protocol it was built for is; these routes are plain REST, and widening that interface for
- * one caller would push a browser concern into common code. Same-origin, so the browser attaches
- * the session cookie and this needs no credential of its own.
+ * one caller would push a browser concern into common code.
+ *
+ * The URL arrives from [sameOriginRequestUrl], which is what carries the page's token. This used to
+ * say a same-origin cookie was credential enough; on a `--token` server it is not, and
+ * `/api/ui-builder/v1/designs/<id>/reference` answered 401 on every load — silently, because the
+ * caller treats a failed read as "no overlay saved yet".
  */
 @JsFun(
   """(method, url, body, hasBody) => fetch(url, {

@@ -804,7 +804,7 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       onRequestNativeRender = { requestNativeRender(config.designId) },
       remoteComposeSources = remoteComposeSources,
       resolveRemoteComposeDocument = { source ->
-        fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${'$'}{source.id}.rc"))
+        fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${source.id}.rc"))
       },
     )
     LaunchedEffect(loadedDocument.revision) { markReady() }
@@ -1190,26 +1190,9 @@ private suspend fun loadRemoteComposeSources(catalogSystemId: String): List<Remo
     emptyList()
   }
 
-/**
- * A path into the serving catalog's own routes, carrying this page's operator token when it has
- * one.
- *
- * The builder's own requests are authenticated by session cookie or grant header, but the catalog
- * lane in front of a token-gated `compose-preview serve` reads `?token=` — the same parameter this
- * page was opened with. Absent on the public deployment, where the catalog lane is public.
- */
-private fun catalogAssetPath(catalogSystemId: String, path: String): String {
-  val token = liveConfigValue("token", "")
-  val query = if (token.isBlank()) "" else "?token=${'$'}{encodeUriComponent(token)}"
-  return "/${'$'}{encodeUriComponent(catalogSystemId)}${'$'}path${'$'}query"
-}
-
-@JsFun("(value) => encodeURIComponent(value)")
-private external fun encodeUriComponent(value: String): String
-
 /** Bytes rather than text: a Remote Compose document is a binary wire format. */
 private suspend fun fetchBase64(url: String): String = suspendCancellableCoroutine { continuation ->
-  fetchBase64Promise(url)
+  fetchBase64Promise(sameOriginRequestUrl(url))
     .then { value ->
       if (continuation.isActive) continuation.resume(value.toString())
       null
@@ -1240,7 +1223,7 @@ private suspend fun fetchBase64(url: String): String = suspendCancellableCorouti
 private external fun fetchBase64Promise(url: String): Promise<JsString>
 
 private suspend fun fetchText(url: String): String = suspendCancellableCoroutine { continuation ->
-  fetchTextPromise(url)
+  fetchTextPromise(sameOriginRequestUrl(url))
     .then { value ->
       if (continuation.isActive) continuation.resume(value.toString())
       null
