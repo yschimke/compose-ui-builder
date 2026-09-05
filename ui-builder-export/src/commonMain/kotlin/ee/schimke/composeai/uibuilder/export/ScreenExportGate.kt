@@ -72,7 +72,14 @@ object ScreenExportGate {
       )
     }
     return when (val projected = ScreenDocumentProjection.project(document, tagNodes = tagNodes)) {
-      is ScreenDocumentProjection.Outcome.Refused -> Outcome.Refused(projected.reasons)
+      // Both classes, not just the one that failed first. The projection and the generator refuse
+      // for unrelated reasons — one cannot express a value, the other cannot prove a call site —
+      // and running them in sequence meant the second list was invisible until the first was
+      // empty. A design holding 29 nodes of an unrecorded component reported nothing about them
+      // while any property anywhere was unexpressible, so "119 reasons" was the cost of reaching
+      // the next list rather than the cost of fixing the export.
+      is ScreenDocumentProjection.Outcome.Refused ->
+        Outcome.Refused((projected.reasons + unprovenComponents(document, record)).distinct())
       is ScreenDocumentProjection.Outcome.Projected ->
         when (
           val generated =
@@ -82,6 +89,51 @@ object ScreenExportGate {
           is ScreenGenerator.Result.Emitted -> Outcome.Emitted(generated.source)
         }
     }
+  }
+
+  /**
+   * The components in [document] that no record proves a call site for, in the generator's own
+   * words.
+   *
+   * Only consulted when the projection already refused — on the other path the generator says this
+   * itself, and saying it twice would double every line. The wording is copied deliberately so the
+   * two paths report one sentence rather than two spellings of one fact; `ScreenGenerator`'s
+   * `ComponentIndex` is where it is authoritative, and this walks the same two lookups in the same
+   * order for the same reason its refusals do.
+   *
+   * It reports *only* the call-site question. Whether an argument would have been accepted needs
+   * the projected arguments, which do not exist on this path — so a component that resolves here
+   * may still refuse for a parameter once the projection passes. That is honest: this closes the
+   * gap where a whole class was silent, not every gap.
+   */
+  private fun unprovenComponents(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile,
+  ): List<String> {
+    val byCanonical = record.components.groupBy { it.canonicalId }
+    val byAlias =
+      record.components
+        .flatMap { component -> component.componentIds.distinct().map { it to component } }
+        .groupBy({ it.first }, { it.second })
+    // Document order, deduplicated: one line per component, not one per node. A design with 29
+    // icons in it has one icon problem.
+    return document.nodes.values
+      .map { it.componentId }
+      .distinct()
+      .mapNotNull { id ->
+        byCanonical[id]?.let { canonical ->
+          return@mapNotNull if (canonical.size == 1) null
+          else
+            "canonical id `$id` is claimed by ${canonical.size} components in this catalog, so " +
+              "it identifies none of them"
+        }
+        val aliased = byAlias[id] ?: return@mapNotNull "no component `$id` in this catalog"
+        if (aliased.size == 1) null
+        else
+          "catalog id `$id` maps to ${aliased.size} components " +
+            "(${aliased.joinToString(", ") { "`${it.canonicalId}`" }}), so it identifies none of " +
+            "them"
+      }
   }
 
   /** Why the export would refuse [document], or empty when it would succeed. */

@@ -235,8 +235,12 @@ object ScreenDocumentProjection {
       unexpressible(node)
       val arguments = mutableMapOf<String, ScreenValue>()
       for ((property, value) in node.properties) {
-        val projected = value(value, node, property) ?: continue
-        arguments[property] = projected
+        val target = PROPERTY_PARAMETERS[node.componentId]?.get(property)
+        if (target == null) {
+          arguments[property] = value(value, node, property) ?: continue
+          continue
+        }
+        arguments[target.parameter] = retarget(target, value, node, property) ?: continue
       }
       if (node.modifiers.isNotEmpty() || tagNodes) {
         modifiers(node)?.let { arguments["modifier"] = it }
@@ -416,6 +420,63 @@ object ScreenDocumentProjection {
         )
       }
 
+    /**
+     * One property whose Compose parameter is not merely spelled differently but *shaped*
+     * differently.
+     *
+     * A catalog authors what a designer sets — a corner radius in dp, a gap between children — and
+     * Compose takes what the API declares: a `Shape`, an `Arrangement.Vertical`. The number in the
+     * document is an ingredient of the argument rather than the argument, so a rename alone would
+     * hand `Surface` a `Float` where it wants a `Shape`.
+     */
+    private fun retarget(
+      target: ParameterTarget,
+      value: UiValueV1,
+      node: DesignNodeV1,
+      property: String,
+    ): ScreenValue? {
+      val where = "node `${node.id}`.`$property`"
+      if (target.kind == TargetKind.RENAME) return value(value, node, property)
+      if (target.kind == TargetKind.SHAPE_TOKEN) {
+        // Only the text spelling needs help. A `shapeToken` wrapper already resolves through the
+        // same table in `value`, and the checked-in fixtures use it — narrowing this to strings
+        // refused a document that exported before, which is the one thing a widening must not do.
+        val name = (value as? StringValueV1)?.value ?: return value(value, node, property)
+        return token(name, SHAPE_TOKENS, SHAPE, "shape", where)
+      }
+      val number =
+        when (value) {
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else -> return refuse("$where becomes `${target.parameter}`, which needs a number")
+        }
+      val dp = dp(number) ?: return refuse("$where is $number, which does not survive `Dp`")
+      return when (target.kind) {
+        TargetKind.DP -> dp
+        TargetKind.ROUNDED_CORNER_SHAPE ->
+          ScreenValue.Construct(
+            callableFqn = "androidx.compose.foundation.shape.RoundedCornerShape",
+            positional = listOf(dp),
+            // The parameter's own type, not the expression's. `RoundedCornerShape` is a `Shape`,
+            // and the generator compares this claim to `TargetParameter.typeFqn` as a string — the
+            // same reason `clip` claims `Shape` for a theme role rather than the role's own class.
+            typeFqn = SHAPE,
+          )
+        TargetKind.SPACED_BY_VERTICAL,
+        TargetKind.SPACED_BY_HORIZONTAL ->
+          ScreenValue.Construct(
+            // A member of the `Arrangement` object, which reads as an ordinary qualified call.
+            callableFqn = "androidx.compose.foundation.layout.Arrangement.spacedBy",
+            positional = listOf(dp),
+            typeFqn =
+              if (target.kind == TargetKind.SPACED_BY_VERTICAL) ARRANGEMENT_VERTICAL
+              else ARRANGEMENT_HORIZONTAL,
+          )
+        TargetKind.RENAME,
+        TargetKind.SHAPE_TOKEN -> error("handled above")
+      }
+    }
+
     /** The Kotlin value for one property, or null having said why there isn't one. */
     private fun value(value: UiValueV1, node: DesignNodeV1, property: String): ScreenValue? {
       val where = "node `${node.id}`.`$property`"
@@ -447,7 +508,7 @@ object ScreenDocumentProjection {
               typeFqn = "androidx.compose.foundation.layout.PaddingValues",
             )
         }
-        is EnumValueV1 -> enum(value.value, where)
+        is EnumValueV1 -> enum(value.value, node.componentId, property, where)
         is StateValueV1 ->
           refuse(
             "$where reads the state variable `${value.variable}`, which needs a " +
@@ -567,30 +628,55 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * Refuses, and says what is missing.
+     * The Kotlin member a catalog enum value names, or a refusal saying why there isn't one.
      *
-     * This reverses what the first version of this projection claimed. It appended the document's
-     * value to the parameter's recorded type — `TextAlign` + `Center` — and called that a claim the
-     * compile gate would check. Two things about the real documents make it not a claim but a known
-     * error. The wire values are **lower-camel**: the checked-in Confetti document stores `center`
-     * and `semiBold`, so the emitted reference was `TextAlign.center`, which does not exist. And
-     * many of them are not members of the parameter's type at all — the Jetcaster document's
-     * `accountCircle`, `moreVert` and `playCircle` sit on an `ImageVector` parameter whose entries
-     * live under `Icons`, and `expandedTwoPane`, `fab` and `uncontained` name authored layout
-     * variants with no single Kotlin type behind them.
+     * The first version of this projection appended the document's value to the parameter's
+     * recorded type — `TextAlign` + `Center` — and called that a claim the compile gate would
+     * check. It is not one, for two reasons that are both still true. The wire values are
+     * **lower-camel**, so `TextAlign.center` never compiled; and many of them are not members of
+     * the parameter's type at all — `accountCircle` and `moreVert` sit on an `ImageVector`
+     * parameter whose entries live under `Icons`, while `expandedTwoPane`, `filled` and
+     * `uncontained` name authored *component variants* with no single Kotlin member behind them.
      *
-     * Capitalising the first letter would fix the first case and leave the second emitting nonsense
-     * with no diagnostic, which is the failure mode this whole change exists to remove. So the
-     * value is refused by name, and the missing thing is named with it: the catalog's `code`
-     * capability carries a symbol per component but nothing per **enum value**, and that is where
-     * the wire-to-Kotlin mapping belongs.
+     * So the derivation stayed refused, and this reads a table instead — [ENUM_MEMBERS], keyed by
+     * component and property for the same reason [SLOT_PARAMETERS] is: which Kotlin member a
+     * catalog value means is knowledge neither side holds, and `style` means a typography role on
+     * `m3/text` and a component variant on `m3/button`.
+     *
+     * A value the table has no entry for is still refused by name. That is the half worth keeping
+     * from the previous behaviour: a variant name emitting nonsense with no diagnostic is the
+     * failure mode all of this exists to remove.
      */
-    private fun enum(entry: String, where: String): ScreenValue? =
-      refuse(
-        "$where is the enum value `$entry`, and nothing maps a catalog enum value to its Kotlin " +
-          "member — the wire spelling is lower-camel and some values name icons or authored " +
-          "variants rather than members of the parameter's own type"
+    private fun enum(
+      entry: String,
+      componentId: String,
+      property: String,
+      where: String,
+    ): ScreenValue? {
+      val mapping =
+        ENUM_MEMBERS[componentId]?.get(property)
+          ?: return refuse(
+            if (componentId to property in VARIANT_PROPERTIES) {
+              "$where is `$entry`, which names a component variant rather than a value: the " +
+                "catalog spells three Compose components as one id, and choosing between them is " +
+                "a call-site decision this projection cannot make from a parameter"
+            } else {
+              "$where is the enum value `$entry`, and nothing maps this catalog property's " +
+                "values to Kotlin members"
+            }
+          )
+      val path =
+        mapping.members[entry]
+          ?: return refuse(
+            "$where is the enum value `$entry`, which is not one of " +
+              mapping.members.keys.sorted().joinToString(", ")
+          )
+      return ScreenValue.Reference(
+        rootFqn = path.first(),
+        members = path.drop(1),
+        typeFqn = mapping.typeFqn,
       )
+    }
 
     private fun refuse(reason: String): ScreenValue? {
       reasons += reason
@@ -718,5 +804,205 @@ object ScreenDocumentProjection {
     mapOf(
       "circle" to "androidx.compose.foundation.shape.CircleShape",
       "rectangle" to "androidx.compose.ui.graphics.RectangleShape",
+    )
+
+  private const val FONT_WEIGHT = "androidx.compose.ui.text.font.FontWeight"
+  private const val FONT_STYLE = "androidx.compose.ui.text.font.FontStyle"
+  private const val TEXT_ALIGN = "androidx.compose.ui.text.style.TextAlign"
+  private const val TEXT_OVERFLOW = "androidx.compose.ui.text.style.TextOverflow"
+  private const val TEXT_DECORATION = "androidx.compose.ui.text.style.TextDecoration"
+  private const val ALIGNMENT = "androidx.compose.ui.Alignment"
+
+  /**
+   * A `$`, not a `.`, and this is the whole reason the constant exists rather than being spelled
+   * inline. `TargetParameter.typeFqn` is read off `@kotlin.Metadata`, so a nested classifier
+   * arrives JVM-spelled — `androidx.compose.ui.Alignment$Vertical` — and the generator compares the
+   * claimed type to it as a **string**. `Alignment.Vertical` is the same type and a different
+   * string, so it refuses with a mismatch that reads like a real type error.
+   */
+  private const val ALIGNMENT_VERTICAL = "androidx.compose.ui.Alignment\$Vertical"
+
+  private const val ALIGNMENT_HORIZONTAL = "androidx.compose.ui.Alignment\$Horizontal"
+  private const val ARRANGEMENT_VERTICAL =
+    "androidx.compose.foundation.layout.Arrangement\$Vertical"
+  private const val ARRANGEMENT_HORIZONTAL =
+    "androidx.compose.foundation.layout.Arrangement\$Horizontal"
+
+  private enum class TargetKind {
+    /** The parameter is the same value under another name. */
+    RENAME,
+    /** A number of dp — `tonalElevation = 3.dp`. */
+    DP,
+    /** A corner radius in dp, which Compose takes as a `Shape`. */
+    ROUNDED_CORNER_SHAPE,
+    /** A gap between children, which Compose takes as an `Arrangement`. */
+    SPACED_BY_VERTICAL,
+    SPACED_BY_HORIZONTAL,
+    /** A theme shape role named as text — `large`. */
+    SHAPE_TOKEN,
+  }
+
+  private class ParameterTarget(val parameter: String, val kind: TargetKind)
+
+  /**
+   * The Compose parameter each catalog property sets, where the two are not the same name.
+   *
+   * The third authored table, alongside [SLOT_PARAMETERS] and [ENUM_MEMBERS], and the same argument
+   * carries it: the record attests a signature and the catalog describes a design, and the fact
+   * that `containerColor` and `color` are one parameter is knowledge neither of them holds. The
+   * generator keys arguments by **source parameter name** and refuses a name the component does not
+   * declare — correctly, since dropping it would generate a screen that compiles and is not the one
+   * that was designed — so without this every builder-authored `m3/surface` refused twice over.
+   *
+   * `CapabilityComposeCodeExporter` already knew all of this. It is not on the export path, which
+   * is why the knowledge had to be restated somewhere the export can reach.
+   *
+   * Deliberately not exhaustive. `weight` is absent because `Modifier.weight` is declared on
+   * `RowScope` and `ColumnScope`, so it is legal only in the slot a node was placed in — the same
+   * scope question that keeps `matchParentSize` refused, and it wants the same answer rather than a
+   * guess. `m3/card`'s `containerColor` and `elevationDp` are absent because `CardDefaults` is not
+   * in the record's `Card` signature at all: that is a record gap, not a naming one.
+   */
+  private val PROPERTY_PARAMETERS: Map<String, Map<String, ParameterTarget>> =
+    mapOf(
+      "m3/surface" to
+        mapOf(
+          "containerColor" to ParameterTarget("color", TargetKind.RENAME),
+          "shapeDp" to ParameterTarget("shape", TargetKind.ROUNDED_CORNER_SHAPE),
+          "tonalElevationDp" to ParameterTarget("tonalElevation", TargetKind.DP),
+        ),
+      "m3/card" to mapOf("shape" to ParameterTarget("shape", TargetKind.SHAPE_TOKEN)),
+      "layout/row" to
+        mapOf(
+          "horizontalSpacingDp" to
+            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL)
+        ),
+      "layout/column" to
+        mapOf(
+          "verticalSpacingDp" to
+            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL)
+        ),
+    )
+
+  /** One catalog property's values, as the Kotlin members they name. */
+  private class EnumMembers(val typeFqn: String, val members: Map<String, List<String>>)
+
+  private fun members(typeFqn: String, root: String, vararg pairs: Pair<String, String>) =
+    EnumMembers(typeFqn, pairs.toMap().mapValues { (_, member) -> listOf(root, member) })
+
+  /**
+   * Which Kotlin member each catalog enum value names, per component and property.
+   *
+   * Keyed like [SLOT_PARAMETERS] and for the same reason. The catalog names values for designers
+   * (`semiBold`, `centerVertically`) and Kotlin names them for the compiler (`FontWeight.SemiBold`,
+   * `Alignment.CenterVertically`); which one means which is knowledge that lives in neither the
+   * record — it attests the signature, not the vocabulary — nor the document.
+   *
+   * Per **component** and not per property name, because one spelling is two vocabularies:
+   * `m3/text`.`style` is a `MaterialTheme.typography` role, and `m3/button`.`style` picks between
+   * three Compose components. Only the first is a value.
+   *
+   * `m3/text`.`style` reuses [TYPOGRAPHY_TOKENS] rather than restating those fifteen roles. A
+   * document may spell the same intent as either a `typographyToken` or an `enum` — see #339 — and
+   * two tables would be two chances to disagree about what `bodyLarge` means.
+   */
+  private val ENUM_MEMBERS: Map<String, Map<String, EnumMembers>> =
+    mapOf(
+      "m3/text" to
+        mapOf(
+          "style" to EnumMembers(TEXT_STYLE, TYPOGRAPHY_TOKENS),
+          "fontWeight" to
+            members(
+              FONT_WEIGHT,
+              FONT_WEIGHT,
+              "normal" to "Normal",
+              "medium" to "Medium",
+              "semiBold" to "SemiBold",
+              "bold" to "Bold",
+            ),
+          "fontStyle" to
+            members(FONT_STYLE, FONT_STYLE, "normal" to "Normal", "italic" to "Italic"),
+          "textAlign" to
+            members(
+              TEXT_ALIGN,
+              TEXT_ALIGN,
+              "start" to "Start",
+              "center" to "Center",
+              "end" to "End",
+              "justify" to "Justify",
+            ),
+          "overflow" to
+            members(
+              TEXT_OVERFLOW,
+              TEXT_OVERFLOW,
+              "clip" to "Clip",
+              "ellipsis" to "Ellipsis",
+              "visible" to "Visible",
+            ),
+          "textDecoration" to
+            members(
+              TEXT_DECORATION,
+              TEXT_DECORATION,
+              "none" to "None",
+              "underline" to "Underline",
+              "lineThrough" to "LineThrough",
+            ),
+        ),
+      "layout/row" to
+        mapOf(
+          "verticalAlignment" to
+            members(
+              ALIGNMENT_VERTICAL,
+              ALIGNMENT,
+              "top" to "Top",
+              "center" to "CenterVertically",
+              "bottom" to "Bottom",
+            )
+        ),
+      "layout/column" to
+        mapOf(
+          "horizontalAlignment" to
+            members(
+              ALIGNMENT_HORIZONTAL,
+              ALIGNMENT,
+              "start" to "Start",
+              "center" to "CenterHorizontally",
+              "end" to "End",
+            )
+        ),
+      "layout/box" to
+        mapOf(
+          "contentAlignment" to
+            members(
+              ALIGNMENT,
+              ALIGNMENT,
+              "topStart" to "TopStart",
+              "topCenter" to "TopCenter",
+              "topEnd" to "TopEnd",
+              "centerStart" to "CenterStart",
+              "center" to "Center",
+              "centerEnd" to "CenterEnd",
+              "bottomStart" to "BottomStart",
+              "bottomCenter" to "BottomCenter",
+              "bottomEnd" to "BottomEnd",
+            )
+        ),
+    )
+
+  /**
+   * Properties whose values pick a **component**, not an argument.
+   *
+   * `m3/card`.`variant` is `filled`, `elevated` or `outlined`, and Material 3 spells those as
+   * `Card`, `ElevatedCard` and `OutlinedCard` — three symbols, three records, one catalog id. No
+   * table of members can express that, so they stay refused; naming them separately keeps the
+   * refusal from reading like a missing table entry, which is a different piece of work.
+   */
+  private val VARIANT_PROPERTIES: Set<Pair<String, String>> =
+    setOf(
+      "m3/card" to "variant",
+      "m3/button" to "style",
+      "m3/icon-button" to "variant",
+      "layout/supporting-pane-scaffold" to "layoutMode",
+      "layout/horizontal-carousel" to "kind",
     )
 }
