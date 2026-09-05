@@ -21,8 +21,7 @@ import kotlinx.serialization.json.jsonObject
  * to take. Nothing said so, so the panel looked broken rather than strict.
  */
 class EditorLayerDragTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
