@@ -460,9 +460,18 @@ private class ComposeEmitter(
   }
 
   private fun emitColumn(node: UiBuilderNode, level: Int) {
+    // Omitted when it is Compose's own default, so a design that never touched this property
+    // generates byte-identical Kotlin to before the property was honoured. That is the check that
+    // makes this change safe to land: the regenerated Jetcaster fixture has an empty diff.
+    val horizontalAlignment =
+      when (node.string("horizontalAlignment")) {
+        "center" -> ", horizontalAlignment = Alignment.CenterHorizontally"
+        "end" -> ", horizontalAlignment = Alignment.End"
+        else -> ""
+      }
     line(
       level,
-      "Column(${node.modifierArgument()}, verticalArrangement = Arrangement.spacedBy(${node.number("verticalSpacingDp").dpLiteral()})) {",
+      "Column(${node.modifierArgument()}, verticalArrangement = ${node.verticalArrangementExpression()}$horizontalAlignment) {",
     )
     node.slot("children").forEach { emitNode(it, level + 1) }
     line(level, "}")
@@ -477,7 +486,7 @@ private class ComposeEmitter(
       }
     line(
       level,
-      "Row(${node.modifierArgument()}, horizontalArrangement = Arrangement.spacedBy(${node.number("horizontalSpacingDp").dpLiteral()}), verticalAlignment = $verticalAlignment) {",
+      "Row(${node.modifierArgument()}, horizontalArrangement = ${node.horizontalArrangementExpression()}, verticalAlignment = $verticalAlignment) {",
     )
     node.slot("children").forEach { emitNode(it, level + 1) }
     line(level, "}")
@@ -975,6 +984,48 @@ private fun UiBuilderNode.textOverflowExpression(): String =
     else -> "TextOverflow.Ellipsis"
   }
 
+/**
+ * The `Arrangement.Vertical` this Column asks for, written exactly as the renderer resolves it.
+ *
+ * Kept beside the renderer's `verticalArrangement()` in shape as well as in cases: the two used to
+ * agree only because both ignored the property, and the point of fixing it is that they agree on
+ * what it means.
+ */
+private fun UiBuilderNode.verticalArrangementExpression(): String {
+  val spacing = number("verticalSpacingDp")
+  return when (string("verticalArrangement")) {
+    "center" ->
+      if (spacing > 0f) "Arrangement.spacedBy(${spacing.dpLiteral()}, Alignment.CenterVertically)"
+      else "Arrangement.Center"
+    "bottom" ->
+      if (spacing > 0f) "Arrangement.spacedBy(${spacing.dpLiteral()}, Alignment.Bottom)"
+      else "Arrangement.Bottom"
+    "spaceBetween" -> "Arrangement.SpaceBetween"
+    "spaceAround" -> "Arrangement.SpaceAround"
+    "spaceEvenly" -> "Arrangement.SpaceEvenly"
+    // `spacedBy(space)` IS `spacedBy(space, Alignment.Top)`, so the default stays in its shorter
+    // form and an untouched design's generated source does not move.
+    else -> "Arrangement.spacedBy(${spacing.dpLiteral()})"
+  }
+}
+
+/** The Row counterpart of [verticalArrangementExpression]. */
+private fun UiBuilderNode.horizontalArrangementExpression(): String {
+  val spacing = number("horizontalSpacingDp")
+  return when (string("horizontalArrangement")) {
+    "center" ->
+      if (spacing > 0f) "Arrangement.spacedBy(${spacing.dpLiteral()}, Alignment.CenterHorizontally)"
+      else "Arrangement.Center"
+    "end" ->
+      if (spacing > 0f) "Arrangement.spacedBy(${spacing.dpLiteral()}, Alignment.End)"
+      else "Arrangement.End"
+    "spaceBetween" -> "Arrangement.SpaceBetween"
+    "spaceAround" -> "Arrangement.SpaceAround"
+    "spaceEvenly" -> "Arrangement.SpaceEvenly"
+    else -> "Arrangement.spacedBy(${spacing.dpLiteral()})"
+  }
+}
+
 private fun UiBuilderNode.linearGradientExpression(): String =
   when (string("direction")) {
     "bottomToTop" ->
@@ -1381,7 +1432,16 @@ private val HANDLED_FIELDS =
     "asset/image" to HandledFields(setOf("assetKey", "contentDescription", "contentScale")),
     "layout/box" to HandledFields(slots = setOf("children")),
     "layout/column" to
-      HandledFields(setOf("verticalSpacingDp", "weight", "alignment"), setOf("children")),
+      HandledFields(
+        setOf(
+          "verticalSpacingDp",
+          "verticalArrangement",
+          "horizontalAlignment",
+          "weight",
+          "alignment",
+        ),
+        setOf("children"),
+      ),
     "layout/horizontal-carousel" to
       HandledFields(
         setOf(
@@ -1413,7 +1473,10 @@ private val HANDLED_FIELDS =
         setOf("items"),
       ),
     "layout/row" to
-      HandledFields(setOf("horizontalSpacingDp", "verticalAlignment"), setOf("children")),
+      HandledFields(
+        setOf("horizontalSpacingDp", "horizontalArrangement", "verticalAlignment"),
+        setOf("children"),
+      ),
     "layout/scaffold" to
       HandledFields(
         setOf("containerColor", "loading", "scrollStateKey"),

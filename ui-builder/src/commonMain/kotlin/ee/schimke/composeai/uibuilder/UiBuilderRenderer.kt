@@ -561,7 +561,8 @@ private fun RenderNode(
     "layout/column" ->
       Column(
         measured,
-        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+        verticalArrangement = node.verticalArrangement(),
+        horizontalAlignment = node.horizontalAlignment(),
       ) {
         slot("children").forEach { id ->
           val item = document.nodes.getValue(id)
@@ -578,7 +579,7 @@ private fun RenderNode(
     "layout/row" ->
       Row(
         measured,
-        horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+        horizontalArrangement = node.horizontalArrangement(),
         verticalAlignment = node.verticalAlignment(),
       ) {
         slot("children").forEach { id ->
@@ -1637,6 +1638,67 @@ private fun UiBuilderNode.themeColor(name: String): Color? =
   string(name)
     .takeIf { it.startsWith("#") }
     ?.let { value -> runCatching { Color(parseArgb(value)) }.getOrNull() }
+
+/**
+ * How this Column distributes its children down the axis.
+ *
+ * The catalog has always declared `verticalArrangement`; the renderer read only `verticalSpacingDp`
+ * and the Compose exporter emitted only `Arrangement.spacedBy` of it, so a design that asked for
+ * `spaceBetween` got `Top` on the canvas AND in the generated Kotlin. Both are fixed together,
+ * because a property honoured by one and not the other is the disagreement that made the linear
+ * gradient's `direction` worth finding.
+ *
+ * Spacing composes with the three *aligned* arrangements through `spacedBy(space, alignment)` —
+ * which is also why the default path is unchanged: `spacedBy(space)` IS `spacedBy(space, Top)`, so
+ * every design authored before this renders identically. The three `space*` arrangements distribute
+ * the free space themselves and Compose has no form that also inserts a fixed gap, so there the
+ * arrangement wins and the spacing is not silently added on top of it.
+ */
+private fun UiBuilderNode.verticalArrangement(): Arrangement.Vertical {
+  val spacing = float("verticalSpacingDp")
+  return when (string("verticalArrangement")) {
+    "center" ->
+      if (spacing > 0f) Arrangement.spacedBy(spacing.dp, Alignment.CenterVertically)
+      else Arrangement.Center
+    "bottom" ->
+      if (spacing > 0f) Arrangement.spacedBy(spacing.dp, Alignment.Bottom) else Arrangement.Bottom
+    "spaceBetween" -> Arrangement.SpaceBetween
+    "spaceAround" -> Arrangement.SpaceAround
+    "spaceEvenly" -> Arrangement.SpaceEvenly
+    else -> if (spacing > 0f) Arrangement.spacedBy(spacing.dp, Alignment.Top) else Arrangement.Top
+  }
+}
+
+/**
+ * The Row counterpart of [verticalArrangement], ignored in the same way and for the same reason.
+ */
+private fun UiBuilderNode.horizontalArrangement(): Arrangement.Horizontal {
+  val spacing = float("horizontalSpacingDp")
+  return when (string("horizontalArrangement")) {
+    "center" ->
+      if (spacing > 0f) Arrangement.spacedBy(spacing.dp, Alignment.CenterHorizontally)
+      else Arrangement.Center
+    "end" -> if (spacing > 0f) Arrangement.spacedBy(spacing.dp, Alignment.End) else Arrangement.End
+    "spaceBetween" -> Arrangement.SpaceBetween
+    "spaceAround" -> Arrangement.SpaceAround
+    "spaceEvenly" -> Arrangement.SpaceEvenly
+    else ->
+      if (spacing > 0f) Arrangement.spacedBy(spacing.dp, Alignment.Start) else Arrangement.Start
+  }
+}
+
+/**
+ * How this Column aligns its children across the axis.
+ *
+ * `Start` is both Compose's default and what every design authored while this was ignored has been
+ * rendering, so the fallback is not a choice — it is the only value that leaves them unchanged.
+ */
+private fun UiBuilderNode.horizontalAlignment() =
+  when (string("horizontalAlignment")) {
+    "center" -> Alignment.CenterHorizontally
+    "end" -> Alignment.End
+    else -> Alignment.Start
+  }
 
 private fun UiBuilderNode.verticalAlignment() =
   when (string("verticalAlignment")) {

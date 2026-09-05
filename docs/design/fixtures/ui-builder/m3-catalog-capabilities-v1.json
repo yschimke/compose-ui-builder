@@ -64,9 +64,9 @@
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
-        { "name": "verticalArrangement", "jsonType": "string", "required": false },
+        { "name": "verticalArrangement", "jsonType": "string", "required": false, "allowedValues": ["top", "center", "bottom", "spaceBetween", "spaceAround", "spaceEvenly"], "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap." },
         { "name": "verticalSpacingDp", "jsonType": "number", "required": false },
-        { "name": "horizontalAlignment", "jsonType": "string", "required": false },
+        { "name": "horizontalAlignment", "jsonType": "string", "required": false, "allowedValues": ["start", "center", "end"] },
         { "name": "alignment", "jsonType": "string", "required": false, "allowedValues": ["topStart", "topCenter", "topEnd", "centerStart", "center", "centerEnd", "bottomStart", "bottomCenter", "bottomEnd"], "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible." },
         { "name": "weight", "jsonType": "number", "required": false }
       ],
@@ -165,9 +165,9 @@
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
-        { "name": "horizontalArrangement", "jsonType": "string", "required": false },
+        { "name": "horizontalArrangement", "jsonType": "string", "required": false, "allowedValues": ["start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly"], "notes": "The Row counterpart of a Column\u2019s verticalArrangement, with the same relationship to horizontalSpacingDp." },
         { "name": "horizontalSpacingDp", "jsonType": "number", "required": false },
-        { "name": "verticalAlignment", "jsonType": "string", "required": false }
+        { "name": "verticalAlignment", "jsonType": "string", "required": false, "allowedValues": ["top", "center", "bottom"] }
       ],
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
