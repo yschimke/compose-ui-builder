@@ -682,6 +682,53 @@
       "signatureKnown": true
     },
     {
+      "canonicalId": "m3-catalog/androidx.compose.material3.RadioButtonKt.RadioButton",
+      "componentIds": [
+        "m3/radio-button"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.RadioButtonKt",
+        "callable": "androidx.compose.material3.RadioButton",
+        "name": "RadioButton",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "selected",
+          "type": "Boolean",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "onClick",
+          "type": "(() -> Unit)?",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0",
+          "nullable": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "RadioButton(selected = false, onClick = null)",
+        "imports": [
+          "androidx.compose.material3.RadioButton"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
       "canonicalId": "m3-catalog/androidx.compose.material3.SwitchKt.Switch",
       "componentIds": [
         "m3/switch"

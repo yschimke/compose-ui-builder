@@ -97,6 +97,8 @@ internal object StarterContent {
       // grey pill, and a palette drop that looks like neither a checkbox nor a switch is the case
       // starter content exists for. Turning one off is a click.
       "m3/checkbox" to mapOf("checked" to starterBool(true)),
+      // One of a group is chosen, or the group is a row of empty circles.
+      "m3/radio-button" to mapOf("selected" to starterBool(true)),
       "m3/switch" to mapOf("checked" to starterBool(true)),
       // Zero is already what the catalog's neutral default writes; it is spelled out because a tab
       // row is required to carry the index and a row with none draws no indicator at all.
@@ -115,6 +117,14 @@ internal object StarterContent {
       "m3/icon-button" to mapOf("content" to listOf(icon("favorite", "Favorite"))),
       "m3/filter-chip" to mapOf("label" to listOf(text("Filter", "labelLarge"))),
       "m3/center-aligned-top-app-bar" to mapOf("title" to listOf(text("Title", "titleLarge"))),
+      // A label and a placeholder, which is the field Material's own samples draw. An empty text
+      // field is a rounded rectangle: nothing about it says what it is for, and `label` is the part
+      // a form is unreadable without.
+      "m3/text-field" to
+        mapOf(
+          "label" to listOf(text("Label", "bodyLarge")),
+          "placeholder" to listOf(text("Placeholder", "bodyLarge")),
+        ),
       // Headline over supporting text, which is the two-line list item Material draws and the shape
       // a bare headline does not suggest.
       "m3/list-item" to

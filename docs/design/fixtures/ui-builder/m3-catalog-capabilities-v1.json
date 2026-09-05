@@ -458,6 +458,21 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "m3/radio-button",
+      "displayName": "Radio button",
+      "role": "Leaf",
+      "traits": ["SelectionControl", "Action"],
+      "slots": [],
+      "properties": [
+        { "name": "selected", "jsonType": ["boolean", "string"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is what makes a group of them pick one option between them." },
+        { "name": "enabled", "jsonType": "boolean", "required": false }
+      ],
+      "modifierCapabilities": ["size", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "RadioButton", "imports": ["androidx.compose.material3.RadioButton"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
       "componentId": "m3/search-bar",
       "displayName": "Search bar",
       "role": "Container",
@@ -600,6 +615,31 @@
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Fidelity requires the pinned Jetcaster font assets and typography tokens." },
       "code": { "symbol": "Text", "imports": ["androidx.compose.material3.Text"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate." }
+    },
+    {
+      "componentId": "m3/text-field",
+      "displayName": "Text field",
+      "role": "Container",
+      "traits": ["TextInput", "FormField"],
+      "slots": [
+        { "name": "label", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] },
+        { "name": "placeholder", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] },
+        { "name": "supportingText", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] },
+        { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["IconContent", "Action"] },
+        { "name": "trailingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["IconContent", "Action"] }
+      ],
+      "properties": [
+        { "name": "variant", "jsonType": "string", "required": true, "allowedValues": ["filled", "outlined"], "notes": "Two composables, one component: `TextField` and `OutlinedTextField` differ in nothing a design authors, which is how `m3/card` already spells its three." },
+        { "name": "value", "jsonType": ["string", "object"], "required": false, "notes": "A literal, or a `state` read of a declared variable — the same shape a search input's `value` takes, and what makes typing in the canvas change the design's state rather than a field's own memory." },
+        { "name": "enabled", "jsonType": "boolean", "required": false },
+        { "name": "readOnly", "jsonType": "boolean", "required": false },
+        { "name": "singleLine", "jsonType": "boolean", "required": false },
+        { "name": "isError", "jsonType": "boolean", "required": false }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "TextField", "imports": ["androidx.compose.material3.TextField", "androidx.compose.material3.OutlinedTextField"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "m3/time-picker",

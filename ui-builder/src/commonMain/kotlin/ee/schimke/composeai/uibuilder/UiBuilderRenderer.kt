@@ -58,7 +58,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
@@ -66,6 +68,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBarDefaults
@@ -854,6 +857,74 @@ private fun RenderNode(
         modifier = measured,
         enabled = enabled,
       )
+    "m3/radio-button" ->
+      RadioButton(
+        selected = node.resolvedBool("selected", state),
+        onClick = activate,
+        modifier = measured,
+        enabled = enabled,
+      )
+    "m3/text-field" -> {
+      // The variable the field writes, not a local `remember`. A design's text field is a view of a
+      // declared state variable — that is what makes typing in the canvas change the design rather
+      // than a field's own private memory, and it is the same seam `m3/search-input-field` uses.
+      val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
+      val value = variable?.let(state::get) ?: node.string("value")
+      val label: (@Composable () -> Unit)? =
+        slot("label").takeIf(List<String>::isNotEmpty)?.let { ids ->
+          { ids.forEach { child(it, Modifier) } }
+        }
+      val placeholder: (@Composable () -> Unit)? =
+        slot("placeholder").takeIf(List<String>::isNotEmpty)?.let { ids ->
+          { ids.forEach { child(it, Modifier) } }
+        }
+      val supporting: (@Composable () -> Unit)? =
+        slot("supportingText").takeIf(List<String>::isNotEmpty)?.let { ids ->
+          { ids.forEach { child(it, Modifier) } }
+        }
+      val leading: (@Composable () -> Unit)? =
+        slot("leadingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
+          { ids.forEach { child(it, Modifier) } }
+        }
+      val trailing: (@Composable () -> Unit)? =
+        slot("trailingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
+          { ids.forEach { child(it, Modifier) } }
+        }
+      val onValueChange: (String) -> Unit = { next ->
+        if (variable != null) onState(variable, next)
+      }
+      if (node.string("variant") == "outlined") {
+        OutlinedTextField(
+          value = value,
+          onValueChange = onValueChange,
+          modifier = measured,
+          enabled = enabled,
+          readOnly = node.bool("readOnly"),
+          label = label,
+          placeholder = placeholder,
+          supportingText = supporting,
+          leadingIcon = leading,
+          trailingIcon = trailing,
+          isError = node.bool("isError"),
+          singleLine = node.bool("singleLine", true),
+        )
+      } else {
+        TextField(
+          value = value,
+          onValueChange = onValueChange,
+          modifier = measured,
+          enabled = enabled,
+          readOnly = node.bool("readOnly"),
+          label = label,
+          placeholder = placeholder,
+          supportingText = supporting,
+          leadingIcon = leading,
+          trailingIcon = trailing,
+          isError = node.bool("isError"),
+          singleLine = node.bool("singleLine", true),
+        )
+      }
+    }
     "m3/dialog" ->
       BuilderDialogSurface(
         node = node,

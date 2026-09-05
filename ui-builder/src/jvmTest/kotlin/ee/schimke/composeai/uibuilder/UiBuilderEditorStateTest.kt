@@ -31,7 +31,12 @@ class UiBuilderEditorStateTest {
     assertTrue(items.any { it.kind == EditorComponentKind.Scaffold })
     assertTrue(items.any { it.kind == EditorComponentKind.Container })
     assertTrue(items.any { it.kind == EditorComponentKind.Composable })
-    assertEquals(listOf("m3/text"), reducer.catalogItems("text").map { it.componentId })
+    // Two hits since the catalog gained a text field, and the containers sort before the leaves —
+    // which is `catalogItems`' own rule (kind, then display name), not a ranking of the query.
+    assertEquals(
+      listOf("m3/text-field", "m3/text"),
+      reducer.catalogItems("text").map { it.componentId },
+    )
     assertEquals(
       "discover-grid.items",
       reducer.dropTargetLabel(reducer.initial(document, "discover-grid")),

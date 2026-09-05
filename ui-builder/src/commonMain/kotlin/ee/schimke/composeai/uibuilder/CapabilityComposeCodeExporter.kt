@@ -367,6 +367,12 @@ private class ComposeEmitter(
       "m3/surface" -> emitSurface(node, bodyLevel)
       "m3/card" -> emitCard(node, bodyLevel)
       "m3/checkbox" -> emitToggle(node, bodyLevel, "Checkbox")
+      "m3/radio-button" ->
+        line(
+          bodyLevel,
+          "RadioButton(selected = ${node.boolExpression("selected")}, onClick = { ${node.actionExpression("click", stateKotlinTypes)} }, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
+        )
+      "m3/text-field" -> emitTextField(node, bodyLevel)
       "m3/switch" -> emitToggle(node, bodyLevel, "Switch")
       "m3/dialog" -> emitDialog(node, bodyLevel)
       "m3/date-picker" -> emitDatePicker(node, bodyLevel)
@@ -775,6 +781,45 @@ private class ComposeEmitter(
     )
     node.slot("content").forEach { emitNode(it, level + 1) }
     line(level, "}")
+  }
+
+  /**
+   * `TextField` or `OutlinedTextField`, with the state variable the design binds it to.
+   *
+   * The two Material composables take the same arguments and differ in nothing a design authors,
+   * which is why one component id carries both behind a `variant` — the same choice `m3/card`
+   * already makes for its three.
+   *
+   * `onValueChange` writes the bound variable and nothing else. A field bound to no variable emits
+   * an empty lambda rather than a local `remember`: a generated screen whose field silently kept
+   * its own state would look like it worked and would not be the design anybody drew.
+   */
+  private fun emitTextField(node: UiBuilderNode, level: Int) {
+    val symbol = if (node.string("variant") == "outlined") "OutlinedTextField" else "TextField"
+    val variable = node.obj("value").optionalString("variable")?.identifier()
+    line(level, "$symbol(")
+    line(level + 1, "value = ${variable ?: "\"${node.string("value").escape()}\""},")
+    line(level + 1, "onValueChange = { ${if (variable == null) "Unit" else "$variable = it"} },")
+    line(level + 1, "enabled = ${node.boolValue("enabled", true)},")
+    line(level + 1, "readOnly = ${node.boolValue("readOnly")},")
+    line(level + 1, "isError = ${node.boolValue("isError")},")
+    line(level + 1, "singleLine = ${node.boolValue("singleLine", true)},")
+    listOf(
+        "label" to "label",
+        "placeholder" to "placeholder",
+        "supportingText" to "supportingText",
+        "leadingIcon" to "leadingIcon",
+        "trailingIcon" to "trailingIcon",
+      )
+      .forEach { (slot, parameter) ->
+        if (node.slot(slot).isNotEmpty()) {
+          line(level + 1, "$parameter = {")
+          node.slot(slot).forEach { emitNode(it, level + 2) }
+          line(level + 1, "},")
+        }
+      }
+    line(level + 1, "${node.modifierArgument()},")
+    line(level, ")")
   }
 
   /**
@@ -1540,6 +1585,7 @@ private val EMITTER_IDS =
     "m3/icon-button",
     "m3/list-item",
     "m3/primary-tab-row",
+    "m3/radio-button",
     "m3/search-bar",
     "m3/search-input-field",
     "m3/snackbar-host",
@@ -1547,6 +1593,7 @@ private val EMITTER_IDS =
     "m3/switch",
     "m3/tab",
     "m3/text",
+    "m3/text-field",
     "m3/time-picker",
     "shape/colour-dot",
     "shape/linear-gradient",
@@ -1697,6 +1744,7 @@ private val HANDLED_FIELDS =
     "m3/list-item" to
       HandledFields(setOf("startAccentColor"), setOf("headline", "supporting", "trailing")),
     "m3/primary-tab-row" to HandledFields(setOf("selectedIndex"), setOf("tabs")),
+    "m3/radio-button" to HandledFields(setOf("selected", "enabled"), events = setOf("click")),
     "m3/search-bar" to
       HandledFields(setOf("expanded", "tonalElevationDp"), slots = setOf("inputField")),
     "m3/search-input-field" to
@@ -1713,6 +1761,12 @@ private val HANDLED_FIELDS =
       ),
     "m3/switch" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),
     "m3/tab" to HandledFields(setOf("selected"), setOf("text")),
+    "m3/text-field" to
+      HandledFields(
+        setOf("variant", "value", "enabled", "readOnly", "singleLine", "isError"),
+        setOf("label", "placeholder", "supportingText", "leadingIcon", "trailingIcon"),
+        setOf("valueChange"),
+      ),
     "m3/time-picker" to HandledFields(setOf("mode", "hour", "minute", "is24Hour")),
     "m3/text" to
       HandledFields(

@@ -108,6 +108,30 @@ the drop. What each is, and why there is no before image, are in
 
 ![A top app bar, a tab row, a list item and a colour dot](../../renders/ui-builder-advertised-components/advertised.after.png)
 
+## Text input
+
+`m3/text-field` and `m3/radio-button`. The text field is the first component whose value the
+operator *types*, which raises the question the rest of the catalog does not: where does that text
+go?
+
+It goes to a **declared state variable**, the way a search input's does. The canvas reads it through
+the live state and the export writes back to it — `value = searchQuery`,
+`onValueChange = { searchQuery = it }` — so typing in the preview changes the design's state rather
+than a field's private memory. A field bound to nothing emits an empty handler and a literal, never
+a local `remember`: a generated screen whose field kept its own text would look like it worked and
+would not be the screen anybody designed.
+
+One id carries both Material composables. `TextField` and `OutlinedTextField` take the same
+arguments and differ in nothing a design authors, so `variant` picks between them — the choice
+`m3/card` already makes for its three. The component record leaves the id uncovered for exactly that
+reason: a record names one callable.
+
+### Visual evidence
+
+Both variants and both radio states in [`renders/ui-builder-text-input/`](../../renders/ui-builder-text-input/README.md).
+
+![A filled text field, an outlined text field, a selected radio button and an unselected one](../../renders/ui-builder-text-input/text-input.after.png)
+
 ## Selection controls
 
 `m3/checkbox` and `m3/switch` are one pair rather than two changes: the same `checked`/`enabled`
