@@ -52,8 +52,18 @@ object ScreenExportGate {
     data class Refused(val reasons: List<String>) : Outcome
   }
 
-  /** What the export would produce for [document], or why it would refuse. */
-  fun export(document: DesignDocumentV1, record: ComponentRecordFile?): Outcome {
+  /**
+   * What the export would produce for [document], or why it would refuse.
+   *
+   * [tagNodes] adds `Modifier.testTag("<nodeId>")` to every node. Off for anything a person keeps —
+   * an export artifact, the editor's code pane — and on only for the native preview lane, where the
+   * tag is what ties a rendered rectangle back to the node that drew it.
+   */
+  fun export(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    tagNodes: Boolean = false,
+  ): Outcome {
     if (record == null) {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
       // from "this design is unexpressible", and only the first is fixed by configuration.
@@ -61,7 +71,7 @@ object ScreenExportGate {
         listOf("no component record is configured for this catalog, so nothing can be exported")
       )
     }
-    return when (val projected = ScreenDocumentProjection.project(document)) {
+    return when (val projected = ScreenDocumentProjection.project(document, tagNodes = tagNodes)) {
       is ScreenDocumentProjection.Outcome.Refused -> Outcome.Refused(projected.reasons)
       is ScreenDocumentProjection.Outcome.Projected ->
         when (

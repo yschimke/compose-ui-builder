@@ -136,12 +136,25 @@ object ScreenDocumentProjection {
     data class Refused(val reasons: List<String>) : Outcome
   }
 
-  fun project(document: DesignDocumentV1, screenName: String = screenNameFor(document)): Outcome {
+  fun project(
+    document: DesignDocumentV1,
+    screenName: String = screenNameFor(document),
+    /**
+     * Whether every node carries `Modifier.testTag("<nodeId>")`.
+     *
+     * Off for an export, because a test tag is not something a designer asked for and the artifact
+     * is source somebody keeps. On for the **native preview** lane, where it is the only thing that
+     * ties a rendered rectangle back to the node that drew it: the server's semantics observation
+     * already reports each authored tag with its bounds in render pixels, so tagging here is what
+     * lets a streamed Android or desktop frame carry selectable regions instead of being a picture.
+     */
+    tagNodes: Boolean = false,
+  ): Outcome {
     // No component record parameter. It was here only so an enum value could be qualified with
     // its parameter's recorded type, and `enum` refuses instead — see its KDoc. A parameter kept
     // "in case" is how a reader starts believing this projection type-checks against the record,
     // which it does not: `ScreenGenerator` does that, once, with the record it is handed.
-    val pass = Pass(document)
+    val pass = Pass(document, tagNodes)
     val roots = document.roots
     if (roots.size != 1) {
       // One root is not a limitation of the generator; it is what a `@Composable fun Screen()`
@@ -187,7 +200,7 @@ object ScreenDocumentProjection {
     }
   }
 
-  private class Pass(val document: DesignDocumentV1) {
+  private class Pass(val document: DesignDocumentV1, val tagNodes: Boolean = false) {
     val reasons = mutableListOf<String>()
     private val visiting = mutableSetOf<String>()
 
@@ -225,7 +238,7 @@ object ScreenDocumentProjection {
         val projected = value(value, node, property) ?: continue
         arguments[property] = projected
       }
-      if (node.modifiers.isNotEmpty()) {
+      if (node.modifiers.isNotEmpty() || tagNodes) {
         modifiers(node)?.let { arguments["modifier"] = it }
       }
       return arguments
@@ -267,9 +280,14 @@ object ScreenDocumentProjection {
       // *every* unexpressible thing so a document can be fixed in one pass, not one per export.
       val links = node.modifiers.map { link(it, node.id) }
       if (links.any { it == null }) return null
+      // Last in the chain, so a tagged preview and its untagged export differ by exactly one
+      // appended link and nothing about the modifiers a designer wrote moves.
+      val tag =
+        if (!tagNodes) emptyList()
+        else listOf(ChainLink(TEST_TAG, positional = listOf(ScreenValue.Text(node.id))))
       return ScreenValue.Chain(
         receiver = ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER),
-        links = links.filterNotNull(),
+        links = links.filterNotNull() + tag,
         typeFqn = MODIFIER,
       )
     }
@@ -581,6 +599,17 @@ object ScreenDocumentProjection {
   }
 
   private const val MODIFIER = "androidx.compose.ui.Modifier"
+
+  /**
+   * The tag a native preview's nodes carry.
+   *
+   * `androidx.compose.ui.platform.testTag` and not a semantics block: the server's existing
+   * annotation lane reports authored test tags with their bounds in render pixels, so this is the
+   * one modifier that makes a streamed frame addressable by design node id without a new data
+   * product. It is inside the generator's `androidx.compose` allow-list, so no widening is needed
+   * to emit it.
+   */
+  private const val TEST_TAG = "androidx.compose.ui.platform.testTag"
   private const val COLOR = "androidx.compose.ui.graphics.Color"
   private const val DP = "androidx.compose.ui.unit.Dp"
   private const val SHAPE = "androidx.compose.ui.graphics.Shape"
