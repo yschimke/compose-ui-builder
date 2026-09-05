@@ -46,6 +46,17 @@ public class CurrentM3UiBuilderCatalogExecutor(
   catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID),
   exportCapabilities: ExportCapabilitiesV1 =
     ExportCapabilitiesV1(composeCode = true, svg = false, png = false),
+  /**
+   * Whether a given catalog can export Compose, asked per catalog rather than once.
+   *
+   * `exportCapabilities` is a field of `CatalogCapabilityV1` — one per catalog on the wire — and
+   * the host used to compute a single boolean and copy it onto every enabled catalog. So a
+   * deployment serving `m3-catalog` (which has a component record) alongside `remote-m3` (which
+   * deliberately does not, Remote Compose being outside the Compose exporter) advertised no Compose
+   * export **anywhere**, and the builder withdrew the action from the catalog that could have used
+   * it. Defaults to the flat value, so a caller that does not care is unaffected.
+   */
+  composeExportFor: (String) -> Boolean = { exportCapabilities.composeCode },
 ) : UiBuilderCatalogExecutor {
   private val baseCatalog =
     json
@@ -62,9 +73,14 @@ public class CurrentM3UiBuilderCatalogExecutor(
       .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }
       .associateWith { systemId ->
         require(SAFE_SYSTEM_ID.matches(systemId)) { "invalid UI-builder catalog id: $systemId" }
-        requireNotNull(availableCatalogs[systemId]) {
-          "UI-builder catalog $systemId has no packaged adapter"
-        }
+        val catalog =
+          requireNotNull(availableCatalogs[systemId]) {
+            "UI-builder catalog $systemId has no packaged adapter"
+          }
+        catalog.copy(
+          exportCapabilities =
+            catalog.exportCapabilities.copy(composeCode = composeExportFor(systemId))
+        )
       }
   private val references = catalogs.mapValues { (_, catalog) ->
     CatalogReferenceV1(

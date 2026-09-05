@@ -59,6 +59,41 @@ other served catalogs remain preview-only until added explicitly.
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.
 
+## Compose export needs a component record
+
+The generator emits a call site only where a **discovered component record** proves one can be
+written — the component is public, top-level, importable, not an overload collision, its signature
+actually recovered — and refuses by name otherwise. A host with no record for a catalog cannot
+export it, and says so rather than guessing.
+
+The packaged deployment ships one for `m3-catalog` and installs it automatically; nothing needs to
+be set. For a host you start yourself:
+
+```text
+--ui-builder-components m3-catalog=<components.json>
+```
+
+`components.json` is a preview bundle's own discovery output. The record shipped here covers the
+component ids whose Compose mapping is unambiguous; ids it does not cover are **absent rather than
+guessed**, so they refuse by name instead of emitting Kotlin that does not compile.
+
+The capability is per catalog. `remote-m3` has no record and is not meant to — Remote Compose is
+kept out of the Compose exporter by design — so a host serving both advertises Compose export on
+`m3-catalog` and not on `remote-m3`.
+
+## Reading the code a design produces
+
+**Code** in the toolbar opens the Kotlin the export would write, under the canvas, updating on
+every edit. It is the export's own output: same generator, same record, same allow-list. A design
+the generator cannot express shows the reasons where the source would be, rather than blanking —
+those reasons are the actionable half, and they are the same list the Issues tab reports.
+
+**Native** compiles the design and renders it with real Compose on the host, beside the browser's
+canvas rather than instead of it — a difference between the two renderers is the thing worth
+seeing. It needs a host with a compile lane (`--playground-bundle`); where there is none, the
+control is absent rather than present and failing. The render is tagged with each design node id,
+so the server's annotation lane can report where every node landed in the frame.
+
 ## Property coverage
 
 | Catalog shape | Inspector | Round trip |
@@ -81,11 +116,27 @@ authoritative modifier mutation; the builder does not invent a browser-only oper
 
 ## Connect an MCP agent
 
-The MCP executable remains a thin client in `compose-ai-tools`; see its
-[MCP reference](https://github.com/yschimke/compose-ai-tools/blob/main/mcp/README.md) and the
-[UI-builder tool contract](design/UI_BUILDER_PRODUCT_SPEC.md#mcp-surface). It exposes
-`create_design`, `open_design`, `list_components`, `apply_design_operations`, `render_design`,
-`export_svg`, `export_compose`, and `get_revision_diff` over the same persistent session.
+The builder is reachable over the server's own `/mcp` endpoint — the same one the catalog tools use,
+with the same bearer. Seven tools, one per protocol request plus the native render:
+
+| Tool | Capability | What it answers |
+| --- | --- | --- |
+| `ui_builder_list_catalogs` | `ui-builder-read` | What a design's `catalogPin` may name |
+| `ui_builder_list_designs` | `ui-builder-read` | The designs on this box |
+| `ui_builder_get_design` | `ui-builder-read` | One whole document, and the revision to quote next |
+| `ui_builder_create_design` | `ui-builder-write` | A design, from a document or copied from one |
+| `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set, delete, move |
+| `ui_builder_export` | `ui-builder-export` | The generator's Kotlin, or its refusals |
+| `ui_builder_render_native` | `ui-builder-export` | A frame compiled by real Compose on the host |
+
+They are absent from `tools/list` on a box that serves no builder, and `ui_builder_render_native` is
+absent on one that cannot compile — a client reads what this server can do off the tool list rather
+than off a failed call. Replies are the released `McpResponseEnvelopeV1`, except the native render,
+which has no request type in the contract and says so in its own description.
+
+A session runs: list catalogs → create or open a design → read its revision → apply mutations →
+export. `baseRevision` is how a concurrent edit is detected, so quote the revision you read rather
+than guessing it. The command's actor is filled from the presented grant and never from the message.
 
 For a token-gated server, enable agent grants with an operator ceiling containing:
 
@@ -100,8 +151,7 @@ environment facility. Do not embed the bearer in a URL, checked-in configuration
 argument. Browser and MCP changes then converge through the same revision log; neither automates
 the other's UI.
 
-This authoring MCP is intentionally separate from the preview server's
-[catalog MCP](design/CATALOG_MCP.md). UI-builder tools use named read/write/export capabilities and
-a stateful Streamable HTTP session; catalog tools use cumulative `preview`/`live` scopes and the
-aggregate stateless `/mcp` endpoint. They share the `/agent-access` request, authenticated-user approval,
-poll, expiry, and revocation machinery, so an installation does not need a second token issuer.
+The UI-builder tools keep their own named read/write/export capabilities, while the catalog tools
+beside them use cumulative `preview`/`live` scopes; both are checked per call, off the request the
+credential arrived on. [`design/CATALOG_MCP.md`](design/CATALOG_MCP.md) carries the whole surface
+and explains why this is one endpoint rather than the sidecar the product spec planned.
