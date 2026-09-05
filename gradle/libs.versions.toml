@@ -5,7 +5,11 @@ ktfmt-cli = "0.64"
 compose-multiplatform = "1.11.1"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
-composeai-tools = "1.78.1"
+# 1.80.0 is the first release carrying `render-matrix`, which `:mcp` needs, and the daemon-core /
+# render-session-api surface the moved MCP sources compile against. The pin moved with the module
+# (compose-ai-tools#5176) rather than in a Renovate bump, because the module cannot build below it.
+# It supersedes the 1.78.1 bump on main, which is a strictly lower release.
+composeai-tools = "1.80.0"
 composeai-contracts = "2.5.0"
 # `preview-discovery` is pinned apart from the rest of compose-ai-tools because the version that
 # carries `ScreenGenerator` is newer than the plugin/renderer floor this build resolves, and
@@ -23,6 +27,14 @@ rc-players = "1.57.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
+# The Model Context Protocol Kotlin SDK, behind `:mcp`. Same version compose-ai-tools' `:mcp` was
+# on when the module moved here (compose-ai-tools#5176) — a move is not the moment to also change
+# the protocol implementation.
+mcp-kotlin-sdk = "0.15.0"
+# JUnit 4 + Truth, used only by `:mcp`'s tests, which came with the module. Converting ~1.5k lines
+# of assertions to `kotlin.test` is a separate change from moving them.
+junit = "4.13.2"
+truth = "1.4.5"
 okhttp = "5.5.0"
 okio = "3.18.2"
 classgraph = "4.8.194"
@@ -51,6 +63,10 @@ composeai-daemon-core = { module = "ee.schimke.composeai:daemon-core", version.r
 composeai-daemon-client = { module = "ee.schimke.composeai:daemon-client", version.ref = "composeai-tools" }
 composeai-render-session-api = { module = "ee.schimke.composeai:render-session-api", version.ref = "composeai-tools" }
 composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-session-subprocess", version.ref = "composeai-tools" }
+# Render-matrix axis expansion and contact-sheet composition, shared by the CLI's `render-matrix`
+# command and `:mcp`'s `render_matrix` tool. Lifted out of compose-ai-tools' `:mcp` before the
+# module moved here, precisely so the offline CLI command did not have to follow it (#5188 there).
+composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix", version.ref = "composeai-tools" }
 composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-tools" }
 composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-tools" }
 
@@ -74,6 +90,10 @@ ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
 ktor-server-compression = { module = "io.ktor:ktor-server-compression", version.ref = "ktor" }
 ktor-server-auto-head-response = { module = "io.ktor:ktor-server-auto-head-response", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
+mcp-kotlin-sdk-server = { module = "io.modelcontextprotocol:kotlin-sdk-server", version.ref = "mcp-kotlin-sdk" }
+junit = { module = "junit:junit", version.ref = "junit" }
+truth = { module = "com.google.truth:truth", version.ref = "truth" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
