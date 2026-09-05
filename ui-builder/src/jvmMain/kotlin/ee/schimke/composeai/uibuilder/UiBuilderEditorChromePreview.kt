@@ -89,6 +89,32 @@ fun UiBuilderRemoteComposePalettePreview() {
 }
 
 /**
+ * The component menu narrowed to a variant name, with everything it matched unfolded.
+ *
+ * The panel's tree has three row shapes and the other chrome previews only ever draw two of them: a
+ * family heading and a component. A **variant** row is a different row — indented under its
+ * component, with its own Add and the catalog's default one labelled — and nothing diffed it.
+ *
+ * The query does two jobs here. It draws the variant rows without anyone pressing a chevron, since
+ * a search opens every row it matched; and "filled" is not the display name of anything in this
+ * catalog, so the four components under it are here *because of their variants* — which is the
+ * other half of the claim, that what a row shows is what the field searches.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderComponentVariantsPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    // A container, for the same reason [UiBuilderRemoteComposePalettePreview] picks one: a leaf
+    // selection greys every Add in the panel and the affordance never shows.
+    initialSelectedNodeId = "discover-grid",
+    initialComponentsOpen = true,
+    initialCatalogQuery = "filled",
+  )
+}
+
+/**
  * Two families and three states, so the palette's group headings are visible rather than implied.
  */
 private val REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES =

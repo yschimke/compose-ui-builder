@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -104,8 +105,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -627,7 +630,8 @@ fun UiBuilderEditor(
         onClose = onClose,
         selectionMenu = selectionMenu,
         catalogSystemId = catalog.benchmark.catalogSystemId,
-        catalogItems = reducer.catalogItems(state.catalogQuery),
+        catalogRows = reducer.catalogRows(state),
+        totalCatalogComponents = catalog.components.size,
         layerRows = layerRows,
         collaborators = collaborators,
         dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
@@ -636,7 +640,7 @@ fun UiBuilderEditor(
           draggedComponentId = componentId
           catalogDragPosition = position
         },
-        onCatalogDrop = { componentId, position ->
+        onCatalogDrop = { componentId, variant, position ->
           // Where it was dropped, not where the selection happens to be. The palette's own legend
           // says a drag inserts the component "where it is dropped", and it did not: every drop
           // landed in the selected node's slot, so dragging onto a card put the component wherever
@@ -654,17 +658,17 @@ fun UiBuilderEditor(
               )
             } ?: reducer.dropTarget(state, componentId)
           if (canvasBounds.contains(position) && target != null) {
-            dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target))
+            dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target, variant))
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
           }
           draggedComponentId = null
           catalogDragPosition = null
         },
         canAddCatalogComponent = { reducer.dropTarget(state, it) != null },
-        onCatalogAdd = { componentId ->
+        onCatalogAdd = { componentId, variant ->
           focusEditor()
           reducer.dropTarget(state, componentId)?.let { target ->
-            dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target))
+            dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target, variant))
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
           }
         },
@@ -2459,14 +2463,15 @@ private fun EditorNavigator(
   tab: NavigatorTab,
   onClose: (() -> Unit)?,
   catalogSystemId: String,
-  catalogItems: List<EditorCatalogItem>,
+  catalogRows: List<EditorCatalogRow>,
+  totalCatalogComponents: Int,
   layerRows: List<EditorLayerRow>,
   collaborators: List<UiBuilderCollaborator>,
   dropTarget: ParentSlot?,
   onCatalogDrag: (String, Offset?) -> Unit,
-  onCatalogDrop: (String, Offset) -> Unit,
+  onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
-  onCatalogAdd: (String) -> Unit,
+  onCatalogAdd: (String, EditorCatalogVariant?) -> Unit,
   remoteComposeSources: List<RemoteComposeSource>,
   pendingRemoteComposeSource: RemoteComposeSource?,
   remoteComposeFailure: String?,
@@ -2491,7 +2496,8 @@ private fun EditorNavigator(
         NavigatorTab.Insert ->
           InsertPanel(
             state = state,
-            catalogItems = catalogItems,
+            catalogRows = catalogRows,
+            totalCatalogComponents = totalCatalogComponents,
             dropTarget = dropTarget,
             onCatalogDrag = onCatalogDrag,
             onCatalogDrop = onCatalogDrop,
@@ -2531,12 +2537,16 @@ private fun EditorNavigator(
 @Composable
 private fun InsertPanel(
   state: UiBuilderEditorState,
-  catalogItems: List<EditorCatalogItem>,
+  catalogRows: List<EditorCatalogRow>,
+  /**
+   * Every component the catalog has, which is what the All row counts — not what survived a filter.
+   */
+  totalCatalogComponents: Int,
   dropTarget: ParentSlot?,
   onCatalogDrag: (String, Offset?) -> Unit,
-  onCatalogDrop: (String, Offset) -> Unit,
+  onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
-  onCatalogAdd: (String) -> Unit,
+  onCatalogAdd: (String, EditorCatalogVariant?) -> Unit,
   remoteComposeSources: List<RemoteComposeSource>,
   pendingRemoteComposeSource: RemoteComposeSource?,
   remoteComposeFailure: String?,
@@ -2570,17 +2580,40 @@ private fun InsertPanel(
       overflow = TextOverflow.Ellipsis,
     )
     LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-      itemsIndexed(catalogItems, key = { _, item -> item.componentId }) { index, item ->
-        if (index == 0 || catalogItems[index - 1].kind != item.kind) KindHeading(item.kind)
-        CatalogRow(
-          item = item,
-          onDrag = { onCatalogDrag(item.componentId, it) },
-          onDrop = { onCatalogDrop(item.componentId, it) },
-          canAdd = canAddCatalogComponent(item.componentId),
-          onAdd = { onCatalogAdd(item.componentId) },
-        )
+      item {
+        CatalogAllRow(totalCatalogComponents) {
+          if (state.catalogQuery.isNotBlank()) dispatch(UiBuilderEditorEvent.SearchCatalog(""))
+          dispatch(UiBuilderEditorEvent.ExpandAllCatalogGroups)
+        }
       }
-      if (catalogItems.isEmpty()) {
+      items(catalogRows, key = EditorCatalogRow::catalogRowKey) { row ->
+        when (row) {
+          is EditorCatalogRow.Group ->
+            CatalogGroupRow(row) { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.name)) }
+          is EditorCatalogRow.Component ->
+            CatalogRow(
+              item = row.item,
+              expanded = row.expanded,
+              onDrag = { onCatalogDrag(row.item.componentId, it) },
+              onDrop = { onCatalogDrop(row.item.componentId, null, it) },
+              canAdd = canAddCatalogComponent(row.item.componentId),
+              onAdd = { onCatalogAdd(row.item.componentId, null) },
+              onToggleVariants = {
+                dispatch(UiBuilderEditorEvent.ToggleCatalogComponent(row.item.componentId))
+              },
+            )
+          is EditorCatalogRow.Variant ->
+            CatalogVariantRow(
+              variant = row.variant,
+              componentName = row.componentName,
+              onDrag = { onCatalogDrag(row.variant.componentId, it) },
+              onDrop = { onCatalogDrop(row.variant.componentId, row.variant, it) },
+              canAdd = canAddCatalogComponent(row.variant.componentId),
+              onAdd = { onCatalogAdd(row.variant.componentId, row.variant) },
+            )
+        }
+      }
+      if (catalogRows.isEmpty()) {
         item { EmptyPanelNote("No component matches “${state.catalogQuery}”.") }
       }
       if (remoteComposeSources.isNotEmpty()) {
@@ -3311,20 +3344,13 @@ private fun SearchField(
   }
 }
 
-@Composable
-private fun KindHeading(kind: EditorComponentKind) {
-  Text(
-    kind.label.uppercase(),
-    Modifier.fillMaxWidth()
-      .background(Color(0xff202126))
-      .padding(horizontal = 14.dp, vertical = 5.dp),
-    color = MaterialTheme.colorScheme.primary,
-    style = MaterialTheme.typography.labelSmall,
-    fontWeight = FontWeight.Bold,
-  )
-}
-
-/** [KindHeading] for a list grouped by something other than a component kind. */
+/**
+ * The heading over a run of rows grouped by something the reducer decided — the Remote Compose
+ * palette's source groups.
+ *
+ * A label rather than a control, unlike [CatalogGroupRow]: nothing collapses here, because the list
+ * it heads is short and a twisty that hides four rows is a twisty nobody presses.
+ */
 @Composable
 private fun GroupHeading(group: String) {
   Text(
@@ -3371,53 +3397,187 @@ private fun RemoteComposeSourceRow(
   }
 }
 
+/**
+ * The row above the shelves: how many components there are in total, and a way back to all of them.
+ *
+ * The catalog's tree leads with the same row for the same reason — the default view of a catalog
+ * should be the whole catalog, and once you have filtered or collapsed your way into a corner of it
+ * there has to be something to press to get back out. Pressing it clears the search and opens every
+ * shelf.
+ */
+@Composable
+private fun CatalogAllRow(total: Int, onShowAll: () -> Unit) {
+  Surface(
+    Modifier.fillMaxWidth()
+      .padding(horizontal = 12.dp, vertical = 4.dp)
+      .clip(RoundedCornerShape(20.dp))
+      .clickable(onClick = onShowAll),
+    shape = RoundedCornerShape(20.dp),
+    color = MaterialTheme.colorScheme.surfaceVariant,
+  ) {
+    Row(
+      Modifier.padding(start = 16.dp, end = 8.dp).height(40.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+        "All",
+        Modifier.weight(1f).semantics { contentDescription = "Show all $total components" },
+        style = MaterialTheme.typography.bodyLarge,
+      )
+      Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+      ) {
+        Text(
+          total.toString(),
+          Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+          color = MaterialTheme.colorScheme.onPrimaryContainer,
+          style = MaterialTheme.typography.labelMedium,
+        )
+      }
+    }
+  }
+}
+
+/**
+ * A shelf: its name, how many components are on it, and a twisty.
+ *
+ * Sentence case on a plain ground, not the small-caps label on a filled bar the kind headings used
+ * to draw. That styling belonged to a heading over a run of rows; this is a **row** — the whole
+ * width is the hit target, it opens and shuts, and it is the top of a tree whose other rows are
+ * sentence case too. An open shelf takes the accent bar and the accent colour, which is the only
+ * thing on the panel saying which branch you are inside.
+ */
+@Composable
+private fun CatalogGroupRow(row: EditorCatalogRow.Group, onToggle: () -> Unit) {
+  val accent =
+    if (row.expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+  Row(
+    Modifier.fillMaxWidth().height(40.dp).clickable(onClick = onToggle).semantics {
+      contentDescription = "${if (row.expanded) "Collapse" else "Expand"} ${row.name}"
+    },
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    // The accent bar, drawn in the gutter every child row's guide line also runs down, so the open
+    // shelf and its contents are one column rather than a coloured row above unrelated rows.
+    Box(
+      Modifier.padding(start = 8.dp)
+        .width(3.dp)
+        .height(24.dp)
+        .background(
+          if (row.expanded) MaterialTheme.colorScheme.primary else Color.Transparent,
+          RoundedCornerShape(2.dp),
+        )
+    )
+    DisclosureTriangle(row.expanded, accent, Modifier.padding(start = 5.dp))
+    Text(
+      row.name,
+      Modifier.padding(start = 2.dp).weight(1f),
+      color = accent,
+      style = MaterialTheme.typography.bodyLarge,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    RowCount(row.count, MaterialTheme.colorScheme.surfaceVariant)
+  }
+}
+
+/**
+ * The twisty a shelf or a component turns to say whether it is open.
+ *
+ * One glyph rotated rather than two, so the states cannot drift apart in weight, and a solid
+ * triangle rather than a chevron because that is what the catalog's tree draws and this panel is
+ * meant to read as the same control.
+ */
+@Composable
+private fun DisclosureTriangle(expanded: Boolean, tint: Color, modifier: Modifier = Modifier) {
+  Icon(
+    Icons.Filled.ArrowDropDown,
+    contentDescription = null,
+    modifier.size(20.dp).rotate(if (expanded) 0f else -90f),
+    tint = tint,
+  )
+}
+
+/** A placeholder the width of [DisclosureTriangle], so rows without one still line up. */
+@Composable
+private fun DisclosureSpacer() {
+  Spacer(Modifier.width(20.dp))
+}
+
+/**
+ * How many things are under a row.
+ *
+ * A shelf count sits in a pill and a component's variant count does not, which is the weighting the
+ * catalog's tree uses: the top level is how you choose where to look, and a number that far down is
+ * a detail about one row.
+ */
+@Composable
+private fun RowCount(count: Int, background: Color) {
+  Surface(
+    Modifier.padding(end = 12.dp),
+    shape = RoundedCornerShape(10.dp),
+    color = background,
+  ) {
+    Text(
+      count.toString(),
+      Modifier.padding(horizontal = 7.dp, vertical = 1.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+  }
+}
+
+/**
+ * The vertical rule that runs down a shelf's children, in the gutter its heading's accent bar is
+ * in.
+ *
+ * Without it a component row indented under a heading and a component row indented under nothing
+ * look the same, which at 280 dp — where a long display name pushes the indent out of view — is
+ * most of them.
+ */
+@Composable
+private fun IndentGuide(depth: Int) {
+  Box(Modifier.width(9.dp + 12.dp * (depth - 1)).fillMaxHeight(), Alignment.CenterStart) {
+    Box(
+      Modifier.padding(start = 9.dp)
+        .width(1.dp)
+        .fillMaxHeight()
+        .background(MaterialTheme.colorScheme.outlineVariant)
+    )
+  }
+}
+
 @Composable
 private fun CatalogRow(
   item: EditorCatalogItem,
+  expanded: Boolean,
   onDrag: (Offset?) -> Unit,
   onDrop: (Offset) -> Unit,
   canAdd: Boolean,
   onAdd: () -> Unit,
+  onToggleVariants: () -> Unit,
 ) {
-  var dragDistance by remember { mutableFloatStateOf(0f) }
-  var dragOrigin by remember { mutableStateOf(Offset.Zero) }
-  var lastPosition by remember { mutableStateOf(Offset.Zero) }
   Row(
-    Modifier.fillMaxWidth().height(42.dp).padding(horizontal = 12.dp),
+    Modifier.fillMaxWidth().height(44.dp).padding(end = 4.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Icon(
-      Icons.Filled.DragIndicator,
-      contentDescription = "Drag ${item.displayName}",
-      modifier =
-        Modifier.size(18.dp)
-          .onGloballyPositioned { dragOrigin = it.boundsInRoot().topLeft }
-          .pointerInput(item.componentId) {
-            detectDragGestures(
-              onDragStart = {
-                dragDistance = 0f
-                lastPosition = dragOrigin + it
-                onDrag(lastPosition)
-              },
-              onDragEnd = {
-                if (dragDistance > 8f) onDrop(lastPosition) else onDrag(null)
-                dragDistance = 0f
-              },
-              onDragCancel = {
-                dragDistance = 0f
-                onDrag(null)
-              },
-              onDrag = { change, amount ->
-                change.consume()
-                dragDistance += amount.getDistance()
-                lastPosition = dragOrigin + change.position
-                onDrag(lastPosition)
-              },
-            )
-          },
-      tint = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Column(Modifier.padding(start = 8.dp).weight(1f)) {
+    IndentGuide(depth = 1)
+    // Only a component that HAS variants gets a twisty, and a spacer keeps the ones that do not
+    // aligned with the ones that do — a ragged left edge on half the rows reads as a rendering
+    // fault rather than as a component with nothing behind it.
+    if (item.variants.isEmpty()) DisclosureSpacer()
+    else {
+      Box(
+        Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onToggleVariants).semantics {
+          contentDescription = "${if (expanded) "Hide" else "Show"} ${item.displayName} variants"
+        }
+      ) {
+        DisclosureTriangle(expanded, MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+    }
+    CatalogDragHandle(item.componentId, item.displayName, onDrag, onDrop)
+    Column(Modifier.padding(start = 6.dp).weight(1f)) {
       Text(item.displayName, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
       Text(
         item.componentId,
@@ -3426,17 +3586,146 @@ private fun CatalogRow(
         maxLines = 1,
       )
     }
-    TextButton(
-      onClick = onAdd,
-      enabled = canAdd,
-    ) {
+    if (item.variants.isNotEmpty()) {
       Text(
-        "Add",
-        Modifier.semantics { contentDescription = "Add ${item.displayName}" },
+        item.variants.size.toString(),
+        Modifier.padding(end = 4.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
       )
     }
+    CatalogAddButton(canAdd, onAdd, item.displayName)
   }
 }
+
+/**
+ * One variant under its component: the same row, one level further in, adding the same component
+ * with one property already chosen.
+ *
+ * It carries a drag handle for the same reason the component row does — a variant you can only Add
+ * into the selected slot is a variant that cannot be dropped where you are looking, and "drop it
+ * where you want it" is the palette's own promise.
+ */
+@Composable
+private fun CatalogVariantRow(
+  variant: EditorCatalogVariant,
+  /** The component this variant is of, for the names a screen reader and a script use. */
+  componentName: String,
+  onDrag: (Offset?) -> Unit,
+  onDrop: (Offset) -> Unit,
+  canAdd: Boolean,
+  onAdd: () -> Unit,
+) {
+  val label = variant.label
+  // "Filled tonal" is what the row shows, because the component it sits under is directly above it.
+  // What a script or a screen reader asks for has no such context and has to be unambiguous: a
+  // Button's `text` variant and the Text component would otherwise both answer to "Drag Text".
+  val qualified = "$label $componentName"
+  Row(
+    Modifier.fillMaxWidth().height(36.dp).padding(end = 4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    IndentGuide(depth = 2)
+    CatalogDragHandle("${variant.componentId}#${variant.value}", qualified, onDrag, onDrop)
+    Row(Modifier.padding(start = 6.dp).weight(1f), verticalAlignment = Alignment.CenterVertically) {
+      Text(
+        label,
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      // Which one a plain Add on the row above would have given you, said on the row rather than
+      // left to be discovered by adding one and reading the inspector.
+      if (variant.default) {
+        Text(
+          "default",
+          Modifier.padding(start = 6.dp),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+        )
+      }
+    }
+    CatalogAddButton(canAdd, onAdd, qualified)
+  }
+}
+
+/**
+ * The one verb every palette row carries, sized so two levels of indent still leave room for it.
+ */
+@Composable
+private fun CatalogAddButton(canAdd: Boolean, onAdd: () -> Unit, label: String) {
+  TextButton(
+    onClick = onAdd,
+    enabled = canAdd,
+    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+  ) {
+    Text("Add", Modifier.semantics { contentDescription = "Add $label" })
+  }
+}
+
+/**
+ * The grip a palette row is dragged onto the canvas by.
+ *
+ * Lifted out of [CatalogRow] when the variant rows arrived: the gesture is nine lines of drag
+ * bookkeeping that has nothing to do with what the row shows, and two copies of it would be two
+ * chances for a drop threshold to drift.
+ */
+@Composable
+private fun CatalogDragHandle(
+  dragKey: String,
+  label: String,
+  onDrag: (Offset?) -> Unit,
+  onDrop: (Offset) -> Unit,
+) {
+  var dragDistance by remember { mutableFloatStateOf(0f) }
+  var dragOrigin by remember { mutableStateOf(Offset.Zero) }
+  var lastPosition by remember { mutableStateOf(Offset.Zero) }
+  Icon(
+    Icons.Filled.DragIndicator,
+    contentDescription = "Drag $label",
+    modifier =
+      Modifier.size(18.dp)
+        .onGloballyPositioned { dragOrigin = it.boundsInRoot().topLeft }
+        .pointerInput(dragKey) {
+          detectDragGestures(
+            onDragStart = {
+              dragDistance = 0f
+              lastPosition = dragOrigin + it
+              onDrag(lastPosition)
+            },
+            onDragEnd = {
+              if (dragDistance > 8f) onDrop(lastPosition) else onDrag(null)
+              dragDistance = 0f
+            },
+            onDragCancel = {
+              dragDistance = 0f
+              onDrag(null)
+            },
+            onDrag = { change, amount ->
+              change.consume()
+              dragDistance += amount.getDistance()
+              lastPosition = dragOrigin + change.position
+              onDrag(lastPosition)
+            },
+          )
+        },
+    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
+}
+
+/**
+ * A stable identity per row, for the `LazyColumn`.
+ *
+ * A group and a component can share a name and a component and its variant share an id, so the row
+ * kind is part of the key — without it, expanding a group would reuse the group row's slot for the
+ * first component under it and the list would animate the wrong things.
+ */
+private fun EditorCatalogRow.catalogRowKey(): String =
+  when (this) {
+    is EditorCatalogRow.Group -> "group:$name"
+    is EditorCatalogRow.Component -> "component:${item.componentId}"
+    is EditorCatalogRow.Variant -> "variant:${variant.componentId}#${variant.value}"
+  }
 
 /**
  * Where a dragged layer would land, and what the panel draws to say so.

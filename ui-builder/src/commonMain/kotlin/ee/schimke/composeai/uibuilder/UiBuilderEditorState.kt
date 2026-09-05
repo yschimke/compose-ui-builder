@@ -106,11 +106,67 @@ enum class EditorComponentKind(val label: String) {
   Composable("Composables"),
 }
 
+/**
+ * One insertable component, and the variants it can arrive as.
+ *
+ * [kind] survives beside [group] because they answer different questions and both are still asked:
+ * the kind is what a slot will *accept* — a Scaffold cannot go in a Row — and the group is which
+ * shelf of the catalog the component sits on. The panel groups by the second and the reference
+ * inspector's picker still narrows by the first.
+ */
 data class EditorCatalogItem(
   val componentId: String,
   val displayName: String,
   val kind: EditorComponentKind,
+  /** The catalog family, or [EditorComponentKind.label] for a catalog that declares no groups. */
+  val group: String,
+  /** In catalog order. The first is what a plain Add inserts, so it is the one marked default. */
+  val variants: List<EditorCatalogVariant> = emptyList(),
 )
+
+/**
+ * One variant of a component: a value for the single property its catalog entry nominates.
+ *
+ * A variant is not a second component. `m3/card` filled, elevated and outlined are one catalog id
+ * whose `variant` property selects between three Compose callables, which is exactly the shape the
+ * published catalog draws as three cards under one component row — so the builder offers them the
+ * same way rather than pretending they are three things to insert.
+ */
+data class EditorCatalogVariant(
+  val componentId: String,
+  /** The property this variant sets — [ComponentCapability.variantProperty]. */
+  val property: String,
+  /** The value it sets, exactly as the catalog declares it. */
+  val value: String,
+  /** [value] as a person reads it: `filledTonal` → "Filled tonal". */
+  val label: String,
+  /** Whether this is what the component inserts as when nobody picks a variant. */
+  val default: Boolean,
+)
+
+/**
+ * One line of the insert panel, flattened out of the group → component → variant tree.
+ *
+ * Flat because the panel is a `LazyColumn` and a nested tree of them cannot scroll as one list. The
+ * nesting survives as [Component.indented] and as the order the rows arrive in, which is what the
+ * reducer owns and the panel merely draws.
+ */
+sealed interface EditorCatalogRow {
+  /** A catalog family — "Actions", "Selection" — and how many components are under it. */
+  data class Group(val name: String, val count: Int, val expanded: Boolean) : EditorCatalogRow
+
+  data class Component(val item: EditorCatalogItem, val expanded: Boolean) : EditorCatalogRow
+
+  /**
+   * One variant, under the component row it belongs to.
+   *
+   * [componentName] rides along because the row draws only the variant's own label — "Filled tonal"
+   * — while the *name* a screen reader or a script asks for has to stand on its own: a Button's
+   * `text` variant and the Text component would otherwise both answer to "Drag Text".
+   */
+  data class Variant(val variant: EditorCatalogVariant, val componentName: String) :
+    EditorCatalogRow
+}
 
 data class EditorTreeRow(
   val nodeId: String,
@@ -292,6 +348,23 @@ data class UiBuilderEditorState(
   val selection: List<String> = emptyList(),
   val clipboard: EditorClipboard? = null,
   val catalogQuery: String = "",
+  /**
+   * The insert panel's collapsed groups, by name.
+   *
+   * Collapsed rather than expanded, so the panel's default is every group open — which is the list
+   * this panel has always shown, now with headings you can shut. A set of what is *closed* also
+   * means a group added to the catalog arrives open rather than hidden behind a twisty nobody knows
+   * to press.
+   */
+  val collapsedCatalogGroups: Set<String> = emptySet(),
+  /**
+   * The insert panel's expanded components, by id — the ones showing their variants.
+   *
+   * The opposite default to [collapsedCatalogGroups], and deliberately: a group is a heading over
+   * rows you came to read, while a component's variants are a detail you go looking for. Opening
+   * all of them at once is the wall of rows the grouping exists to prevent.
+   */
+  val expandedCatalogComponents: Set<String> = emptySet(),
   val layerQuery: String = "",
   /**
    * Whether taps on the canvas drive the screen instead of selecting layers.
@@ -425,6 +498,20 @@ data class EditorThemeSettings(
 sealed interface UiBuilderEditorEvent {
   data class SearchCatalog(val query: String) : UiBuilderEditorEvent
 
+  /** Opens or shuts one family heading in the insert panel. */
+  data class ToggleCatalogGroup(val group: String) : UiBuilderEditorEvent
+
+  /** Shows or hides one component's variants in the insert panel. */
+  data class ToggleCatalogComponent(val componentId: String) : UiBuilderEditorEvent
+
+  /**
+   * Opens every shelf in the insert panel — the way back out of a corner of the catalog.
+   *
+   * It does not also close every component: the variants you opened are what you were looking at,
+   * and "show me everything" is a statement about the shelves.
+   */
+  data object ExpandAllCatalogGroups : UiBuilderEditorEvent
+
   data class SelectNode(val nodeId: String) : UiBuilderEditorEvent
 
   /** Narrows the layers panel. Purely a view over the document; it writes nothing. */
@@ -460,7 +547,19 @@ sealed interface UiBuilderEditorEvent {
   /** Select everything between the anchor and [nodeId] in tree order (shift-click). */
   data class ExtendSelectionTo(val nodeId: String) : UiBuilderEditorEvent
 
-  data class InsertComponent(val componentId: String, val target: ParentSlot) : UiBuilderEditorEvent
+  /**
+   * Insert a catalog component, optionally as one of its declared variants.
+   *
+   * [variant] rides this event rather than being a second insert-then-edit, because the two are not
+   * the same thing to a collaborator: an insert followed by a property write is a filled card
+   * appearing on their canvas and turning outlined a frame later, and a rejected second operation
+   * would leave the wrong one there for good. One event, one batch, one revision.
+   */
+  data class InsertComponent(
+    val componentId: String,
+    val target: ParentSlot,
+    val variant: EditorCatalogVariant? = null,
+  ) : UiBuilderEditorEvent
 
   data class MoveNode(
     val nodeId: String,
@@ -910,6 +1009,8 @@ class UiBuilderEditorReducer(
       selection = survivingSelection.ifEmpty { rebuilt.selection },
       clipboard = state.clipboard,
       catalogQuery = state.catalogQuery,
+      collapsedCatalogGroups = state.collapsedCatalogGroups,
+      expandedCatalogComponents = state.expandedCatalogComponents,
       layerQuery = state.layerQuery,
       previewMode = state.previewMode,
       codePaneVisible = state.codePaneVisible,
@@ -922,6 +1023,14 @@ class UiBuilderEditorReducer(
   fun reduce(state: UiBuilderEditorState, event: UiBuilderEditorEvent): UiBuilderEditorState =
     when (event) {
       is UiBuilderEditorEvent.SearchCatalog -> state.copy(catalogQuery = event.query)
+      is UiBuilderEditorEvent.ToggleCatalogGroup ->
+        state.copy(collapsedCatalogGroups = state.collapsedCatalogGroups.toggled(event.group))
+      is UiBuilderEditorEvent.ExpandAllCatalogGroups ->
+        state.copy(collapsedCatalogGroups = emptySet())
+      is UiBuilderEditorEvent.ToggleCatalogComponent ->
+        state.copy(
+          expandedCatalogComponents = state.expandedCatalogComponents.toggled(event.componentId)
+        )
       is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
       is UiBuilderEditorEvent.TogglePreview -> state.copy(previewMode = !state.previewMode)
       is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
@@ -930,7 +1039,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.SelectNode ->
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))
         else state
-      is UiBuilderEditorEvent.InsertComponent -> insert(state, event.componentId, event.target)
+      is UiBuilderEditorEvent.InsertComponent ->
+        insert(state, event.componentId, event.target, variant = event.variant)
       is UiBuilderEditorEvent.MoveNode -> move(state, event)
       is UiBuilderEditorEvent.MoveNodeInto -> moveInto(state, event)
       is UiBuilderEditorEvent.CommitProperty ->
@@ -1206,21 +1316,93 @@ class UiBuilderEditorReducer(
     val needle = query.trim().lowercase()
     return catalog.components
       .asSequence()
-      .map {
-        EditorCatalogItem(
-          componentId = it.componentId,
-          displayName = it.displayName,
-          kind = it.editorKind(),
-        )
-      }
-      .filter {
-        needle.isEmpty() ||
-          it.displayName.lowercase().contains(needle) ||
-          it.componentId.lowercase().contains(needle) ||
-          it.kind.label.lowercase().contains(needle)
-      }
+      .map { it.editorCatalogItem() }
+      .filter { it.matches(needle) }
       .sortedWith(compareBy(EditorCatalogItem::kind, EditorCatalogItem::displayName))
       .toList()
+  }
+
+  /**
+   * The insert panel's rows: each catalog family, the components under it, and the variants under
+   * whichever of those are open.
+   *
+   * Grouped by family rather than by [EditorComponentKind], which is what the panel used to do and
+   * what made it unreadable at 39 components: "Containers" held a scaffold's tab row, a card, a
+   * dialog and a plain Row, which is every question except the one being asked. The families come
+   * from [ComponentMenu], and are the ones the published catalog puts the same components under.
+   *
+   * A catalog [ComponentMenu] says nothing about falls back to the kind headings, which is exactly
+   * the panel this replaced — so a second catalog is unstyled rather than broken.
+   *
+   * **A search overrides every twisty.** While [UiBuilderEditorState.catalogQuery] is non-blank
+   * every surviving group is open and every surviving component shows its variants, because a
+   * filtered list that hides its matches behind collapsed rows is a list that says nothing matched.
+   * Collapsing something and then typing does not lose the collapse — it is remembered and comes
+   * back when the field is cleared.
+   */
+  fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
+    val needle = state.catalogQuery.trim().lowercase()
+    val filtering = needle.isNotEmpty()
+    val items =
+      catalog.components
+        .map { it.editorCatalogItem() }
+        .filter { it.matches(needle) }
+        .sortedBy(EditorCatalogItem::displayName)
+    // The declared shelves, then the kind labels an unshelved catalog falls back to — in *kind*
+    // order, so a catalog `ComponentMenu` says nothing about reads Scaffolds, Containers,
+    // Composables exactly as this panel always did, rather than alphabetically.
+    // `distinct` because the two lists overlap: "Scaffolds" is both a declared shelf and a kind
+    // label, and without it the later entry would win and push the shelf to the end of the panel.
+    val order =
+      (ComponentMenu.GROUP_ORDER + EditorComponentKind.entries.map(EditorComponentKind::label))
+        .distinct()
+        .withIndex()
+        .associate { (index, name) -> name to index }
+    val rows = mutableListOf<EditorCatalogRow>()
+    items
+      .groupBy(EditorCatalogItem::group)
+      .entries
+      // Declared order first, then alphabetically — a group the table forgot to order, and the
+      // kind labels a second catalog falls back to, still land somewhere a reader can predict
+      // rather than wherever the map happened to put them.
+      .sortedWith(compareBy({ order[it.key] ?: Int.MAX_VALUE }, { it.key }))
+      .forEach { (group, groupItems) ->
+        val expanded = filtering || group !in state.collapsedCatalogGroups
+        rows += EditorCatalogRow.Group(group, groupItems.size, expanded)
+        if (!expanded) return@forEach
+        groupItems.forEach { item ->
+          val open =
+            item.variants.isNotEmpty() &&
+              (filtering || item.componentId in state.expandedCatalogComponents)
+          rows += EditorCatalogRow.Component(item, open)
+          if (open) {
+            item.variants.forEach { rows += EditorCatalogRow.Variant(it, item.displayName) }
+          }
+        }
+      }
+    return rows
+  }
+
+  private fun ComponentCapability.editorCatalogItem(): EditorCatalogItem {
+    val kind = editorKind()
+    return EditorCatalogItem(
+      componentId = componentId,
+      displayName = displayName,
+      kind = kind,
+      group = ComponentMenu.groupOf(componentId) ?: kind.label,
+      variants =
+        menuVariantValues().mapIndexed { index, value ->
+          EditorCatalogVariant(
+            componentId = componentId,
+            property = ComponentMenu.variantPropertyOf(componentId).orEmpty(),
+            value = value,
+            label = variantLabel(value),
+            // The catalog's first allowed value is what `defaultEncodedValue` writes on a plain
+            // insert, so it is the default here by the same rule rather than by a second opinion.
+            default = index == 0,
+          )
+        },
+    )
   }
 
   fun treeRows(document: UiBuilderDocument): List<EditorTreeRow> {
@@ -1853,6 +2035,7 @@ class UiBuilderEditorReducer(
     componentId: String,
     target: ParentSlot,
     action: EditorStateAction? = null,
+    variant: EditorCatalogVariant? = null,
   ): UiBuilderEditorState {
     val component = catalog.componentsById[componentId] ?: return state
     val sequence = state.operationSequence + 1
@@ -1864,7 +2047,26 @@ class UiBuilderEditorReducer(
         "${component.displayName} has no compatible selected slot",
       )
     }
-    return insertAt(state, component, target, action)
+    return insertAt(state, component, target, action, component.variantProperties(variant))
+  }
+
+  /**
+   * [variant] as encoded properties to write over the component's defaults, or empty.
+   *
+   * Encoded through the same [asLiteral] the catalog's own default goes through, so a variant lands
+   * in whatever shape that property already takes — an `enum` literal here, and whatever a future
+   * property declares there — rather than in a `string` this function guessed at. A variant naming
+   * a property this component does not declare, or a value it does not allow, encodes to nothing
+   * and the insert proceeds as an ordinary one: a stale variant row must never be able to refuse an
+   * insert that would otherwise work.
+   */
+  private fun ComponentCapability.variantProperties(
+    variant: EditorCatalogVariant?
+  ): Map<String, JsonObject> {
+    if (variant == null || variant.componentId != componentId) return emptyMap()
+    val property = propertiesByName[variant.property] ?: return emptyMap()
+    val value = property.allowedValues.firstOrNull { it.contentOrNullSafe() == variant.value }
+    return value?.let { mapOf(property.name to it.asLiteral(property)) }.orEmpty()
   }
 
   /**
@@ -1882,6 +2084,8 @@ class UiBuilderEditorReducer(
     component: ComponentCapability,
     target: ParentSlot,
     action: EditorStateAction? = null,
+    /** Encoded values written over the inserted root's own defaults — see [variantProperties]. */
+    presetProperties: Map<String, JsonObject> = emptyMap(),
   ): UiBuilderEditorState {
     val componentId = component.componentId
     val sequence = state.operationSequence + 1
@@ -1895,6 +2099,7 @@ class UiBuilderEditorReducer(
         parent = target,
         afterNodeId = state.document.children(target).lastOrNull(),
         operations = operations,
+        presetProperties = presetProperties,
       )
     if (defaultError != null) {
       return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, defaultError)
@@ -2766,13 +2971,7 @@ class UiBuilderEditorReducer(
     if (children.size != targets.size) return emptyList()
     return catalog.components
       .filter { container -> wrapSlotOf(container, children, parent, state) != null }
-      .map {
-        EditorCatalogItem(
-          componentId = it.componentId,
-          displayName = it.displayName,
-          kind = it.editorKind(),
-        )
-      }
+      .map { it.editorCatalogItem() }
       .sortedWith(compareBy(EditorCatalogItem::kind, EditorCatalogItem::displayName))
   }
 
@@ -3347,6 +3546,39 @@ private fun ComponentCapability.slot(name: String): SlotCapability? =
       )
     }
 
+/**
+ * Whether this row survives the insert panel's search.
+ *
+ * Everything the row shows is matchable — the name, the catalog id, the kind and family headings it
+ * sits under, and its variant labels — because those are what a person reads off the panel and so
+ * what they type at it. "outlined" finds the Card whose outlined variant it names; "selection"
+ * finds the shelf.
+ */
+private fun EditorCatalogItem.matches(needle: String): Boolean =
+  needle.isEmpty() ||
+    displayName.lowercase().contains(needle) ||
+    componentId.lowercase().contains(needle) ||
+    kind.label.lowercase().contains(needle) ||
+    group.lowercase().contains(needle) ||
+    variants.any { it.label.lowercase().contains(needle) || it.value.lowercase().contains(needle) }
+
+/**
+ * A catalog enum value as a person reads it: `filledTonal` → "Filled tonal".
+ *
+ * Derived rather than authored. A second table of display names beside the catalog's own values is
+ * a table that goes stale silently — a renamed value keeps its old label and nothing says so —
+ * whereas splitting the camel case is wrong in the same visible way for every value or for none.
+ */
+internal fun variantLabel(value: String): String =
+  value
+    // Sentence case, not title case: "Filled tonal" beside "Filled" and "Outlined" reads as three
+    // variants of one component, where "Filled Tonal" reads as a proper noun that wandered in.
+    .replace(Regex("([a-z0-9])([A-Z])")) { "${it.groupValues[1]} ${it.groupValues[2].lowercase()}" }
+    .replaceFirstChar(Char::uppercaseChar)
+
+/** The set with [value] removed if it was there and added if it was not. */
+private fun <T> Set<T>.toggled(value: T): Set<T> = if (value in this) this - value else this + value
+
 private fun ComponentCapability.defaultNode(
   nodeId: String,
   document: UiBuilderDocument,
@@ -3448,6 +3680,10 @@ private fun PropertyCapability.defaultEncodedValue(
  * @param seedStarterContent false to fill required slots and nothing more. Wrapping a selection
  *   passes false: the container is about to be handed the real children, and starter content there
  *   is a subtree that has to be deleted again in the same batch.
+ * @param presetProperties values chosen at the moment of insertion — today, the variant picked off
+ *   the palette row. They are written over this node's starter content rather than instead of it,
+ *   so an outlined Card still arrives holding the two lines of text a Card arrives holding, and
+ *   they reach only this node: a variant is a fact about what was inserted, not about its children.
  */
 private fun ComponentCapability.appendDefaultSubtree(
   catalog: CapabilityCatalog,
@@ -3458,6 +3694,7 @@ private fun ComponentCapability.appendDefaultSubtree(
   operations: MutableList<DesignOperation>,
   starter: StarterNode? = null,
   seedStarterContent: Boolean = true,
+  presetProperties: Map<String, JsonObject> = emptyMap(),
   componentPath: Set<String> = emptySet(),
   depth: Int = 0,
 ): String? {
@@ -3469,9 +3706,11 @@ private fun ComponentCapability.appendDefaultSubtree(
   // straight from the palette takes the component's own — which is the same mechanism reaching the
   // root of the insert rather than only its children.
   val seededProperties =
-    starter
-      ?: if (seedStarterContent) StarterNode(componentId, StarterContent.propertiesFor(componentId))
-      else null
+    (starter
+        ?: if (seedStarterContent)
+          StarterNode(componentId, StarterContent.propertiesFor(componentId))
+        else null)
+      .withPresets(componentId, presetProperties)
   operations +=
     DesignOperation.InsertNode(
       defaultNode(nodeId, document).withStarterProperties(this, seededProperties),
@@ -3501,6 +3740,22 @@ private fun ComponentCapability.appendDefaultSubtree(
     }
   }
   return null
+}
+
+/**
+ * This seed with [presets] written over it, or a seed made of the presets when there was none.
+ *
+ * Over rather than under: the preset is the choice just made on the palette row, and the starter
+ * table is a default from months ago. Null in and no presets stays null, which is what keeps a
+ * plain insert on exactly the path it was on before variants existed.
+ */
+private fun StarterNode?.withPresets(
+  componentId: String,
+  presets: Map<String, JsonObject>,
+): StarterNode? {
+  if (presets.isEmpty()) return this
+  val base = this ?: StarterNode(componentId)
+  return base.copy(properties = base.properties + presets)
 }
 
 /**
@@ -3885,6 +4140,9 @@ private fun JsonElement.asLiteral(property: PropertyCapability): JsonObject {
     }
   return literal(type, primitive)
 }
+
+/** This element's string content, or null when it is not a primitive string. */
+private fun JsonElement.contentOrNullSafe(): String? = (this as? JsonPrimitive)?.contentOrNull
 
 private fun literal(type: String, value: JsonElement): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))

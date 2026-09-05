@@ -31,10 +31,12 @@ class UiBuilderEditorStateTest {
     assertTrue(items.any { it.kind == EditorComponentKind.Scaffold })
     assertTrue(items.any { it.kind == EditorComponentKind.Container })
     assertTrue(items.any { it.kind == EditorComponentKind.Composable })
-    // Two hits since the catalog gained a text field, and the containers sort before the leaves —
-    // which is `catalogItems`' own rule (kind, then display name), not a ranking of the query.
+    // Three hits, and the containers sort before the leaves — which is `catalogItems`' own rule
+    // (kind, then display name), not a ranking of the query. The Button is in the list because one
+    // of its variants is the *text* button: a variant label is part of what a row is searchable by,
+    // for the same reason its display name is — it is on the row, so it is what somebody types.
     assertEquals(
-      listOf("m3/text-field", "m3/text"),
+      listOf("m3/button", "m3/text-field", "m3/text"),
       reducer.catalogItems("text").map { it.componentId },
     )
     assertEquals(

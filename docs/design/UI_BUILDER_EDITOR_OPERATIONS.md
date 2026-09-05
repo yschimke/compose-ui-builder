@@ -79,6 +79,59 @@ builds rather than one anybody authored. Before and after, with what each frame 
 | --- | --- |
 | ![Six inserts, generic or empty](../../renders/ui-builder-starter-content/insert.before.png) | ![The same six inserts, seeded](../../renders/ui-builder-starter-content/insert.after.png) |
 
+## The component menu, and what a variant is
+
+The insert panel used to be one flat list under three headings taken from a component's **role** —
+`Scaffolds`, `Containers`, `Composables`. That is the question a *slot* asks ("what may go in here"),
+not the one a person asks ("where is the card"), which is how `Containers` came to hold a tab row, a
+card, a dialog and a plain `Row` under one word.
+
+It is now the tree the published catalog draws beside its grid, drawn the way that one is: an **All**
+pill carrying the whole count, sentence-case shelf rows with a solid twisty and an accent bar down
+the open branch, a muted count at the end of every row, and an indent rule down each shelf's
+children. The families are not invented here — they are the vocabulary
+`@file:CatalogGroup(section = …)` already uses in m3-catalog.
+
+They are carried in [`ComponentMenu`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ComponentMenu.kt),
+**not** on the capability catalog, and that is load-bearing. The catalog is a wire document whose
+shape is `CatalogCapabilityV1` in `compose-preview-contracts`, decoded by
+`CurrentM3UiBuilderCatalogExecutor` with `ignoreUnknownKeys = false` on purpose; a key invented here
+is a catalog that repository cannot read. It is also not a capability: nothing the server advertises,
+validates or exports depends on which shelf a component is displayed on. So it sits beside
+`StarterContent`, which is there for the same reason, and `CatalogMenuTest` checks it against the
+packaged catalog the way `StarterContentTest` checks that one. A catalog the table says nothing
+about — `wear-m3`, `remote-m3` — falls back to the kind headings this panel had before.
+
+One structural difference from the catalog's own tree is the data rather than the design: the catalog
+splits `Progress Linear` and `Progress Circular` into two components under a `Progress indicators`
+group, where the builder has one `m3/progress-indicator` whose `variant` property is `linear` or
+`circular`. The builder's tree is the same shape one level shallower — what the catalog spends a
+group level on, this spends a variant level on. Thumbnails are the one thing knowingly left out: the
+builder bakes no pixels per component, and a row with a missing image is worse than a row without
+one.
+
+**A variant is one property, named by the table.** `ComponentMenu.variantPropertyOf` says which
+of a component's properties enumerates its variants — `m3/card.variant`, `m3/button.style`,
+`m3/time-picker.mode` — and the rows under a component are that property's `allowedValues`, in
+declaration order, the first marked `default` because that is the one `defaultEncodedValue` already
+writes. Adding a variant is one `InsertComponent` carrying it, so a collaborator sees an outlined
+card appear rather than a filled one that changes a frame later; the variant is written over the
+component's starter content rather than instead of it, so the card still arrives holding something.
+
+Declared rather than inferred, because every heuristic for "the variant property" is wrong somewhere
+in this catalog: `m3/icon.iconKey` is an enum of forty-seven icons and no more a variant than
+`layout/row.horizontalArrangement` is, while `variant` and `style` are the same idea under two names.
+A stale declaration degrades rather than fails — an unknown property name, or one with no allowed
+values, means the component offers no variants, exactly as it did before the field existed.
+
+The search matches everything a row shows, variant labels included, and opens what it matched: a
+match hidden behind a collapsed heading reads as no match. Collapsing something and then typing does
+not spend the collapse — it comes back when the field is cleared.
+
+| Before: grouped by role | After: the catalog's families | Filtered to a variant name |
+| --- | --- | --- |
+| ![The insert panel under Scaffolds, Containers and Composables headings](../../renders/ui-builder-component-menu/menu.before.png) | ![The same panel under Scaffolds, Layout, Navigation and Actions headings, each with a count](../../renders/ui-builder-component-menu/menu.after.png) | ![The panel filtered to "filled", four components open showing their variant rows](../../renders/ui-builder-component-menu/menu.variants.after.png) |
+
 ## What the catalog advertises
 
 The capability catalog is the palette. A component the catalog does not declare cannot be inserted,
