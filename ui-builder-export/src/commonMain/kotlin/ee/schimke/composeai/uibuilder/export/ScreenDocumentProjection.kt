@@ -255,6 +255,36 @@ object ScreenDocumentProjection {
     }
 
     /**
+     * Whether a progress indicator's determinacy property was handled here, refusal included.
+     *
+     * Both Compose indicators have two overloads: an indeterminate one whose parameters all
+     * default, and a determinate one taking `progress: () -> Float`. Only the first is recorded,
+     * because **no [ScreenValue] is a lambda** — the vocabulary has references, calls and chains,
+     * and a value-returning `{ 0.4f }` is none of them. The overload the record names is chosen by
+     * the argument list, so an omitted `progress` really does resolve to the indeterminate one.
+     *
+     * So `indeterminate = true` describes the component already being emitted and is spent, while
+     * `progress`, or an explicit `indeterminate = false`, asks for the overload that cannot be
+     * written and says so. Neither is a parameter of anything, so left alone both would refuse as
+     * "`LinearProgressIndicator` has no parameter `progress`" — true, and pointing at the wrong
+     * thing.
+     */
+    private fun determinacy(property: String, value: UiValueV1, node: DesignNodeV1): Boolean {
+      val determinate =
+        "a determinate indicator takes `progress: () -> Float`, and no value in this vocabulary " +
+          "is a lambda; the indeterminate form is what exports"
+      when (property) {
+        PROGRESS -> refuse("node `${node.id}` sets `progress`, but $determinate")
+        INDETERMINATE ->
+          if ((value as? BooleanValueV1)?.value == false) {
+            refuse("node `${node.id}` is not indeterminate, and $determinate")
+          }
+        else -> return false
+      }
+      return true
+    }
+
+    /**
      * The receiver a slot's children are composed under.
      *
      * The variant answers when there is one, because it is the component actually being emitted;
@@ -321,6 +351,7 @@ object ScreenDocumentProjection {
           weightLink(value, node, scope)?.let { fromProperties += it }
           continue
         }
+        if (node.componentId == PROGRESS_INDICATOR && determinacy(property, value, node)) continue
         val link = MODIFIER_PROPERTIES[node.componentId]?.get(property)
         if (link != null) {
           modifierLink(link, value, node, property)?.let { fromProperties += it }
@@ -1304,7 +1335,13 @@ object ScreenDocumentProjection {
 
   /** The property that selects a component, per catalog id. */
   private val VARIANT_SELECTORS: Map<String, String> =
-    mapOf("m3/card" to "variant", "m3/button" to "style", "m3/icon-button" to "variant")
+    mapOf(
+      "m3/card" to "variant",
+      "m3/button" to "style",
+      "m3/icon-button" to "variant",
+      "m3/text-field" to "variant",
+      "m3/progress-indicator" to "variant",
+    )
 
   /**
    * Which component each variant value names.
@@ -1349,6 +1386,19 @@ object ScreenDocumentProjection {
           "tonal" to ComponentVariant(FILLED_TONAL_ICON_BUTTON_ID, "filledTonalIconButton"),
           "outlined" to ComponentVariant(OUTLINED_ICON_BUTTON_ID, "outlinedIconButton"),
         ),
+      "m3/text-field" to
+        mapOf(
+          "filled" to ComponentVariant(TEXT_FIELD_ID, "textField"),
+          "outlined" to ComponentVariant(OUTLINED_TEXT_FIELD_ID, "outlinedTextField"),
+        ),
+      // The two indicators, both **indeterminate**. Each name has a determinate overload taking
+      // `progress: () -> Float`, and no `ScreenValue` is a lambda, so a progress value is refused
+      // by `unexpressible` rather than recorded here — see [PROGRESS].
+      "m3/progress-indicator" to
+        mapOf(
+          "linear" to ComponentVariant(LINEAR_INDICATOR_ID, "linearProgressIndicator"),
+          "circular" to ComponentVariant(CIRCULAR_INDICATOR_ID, "circularProgressIndicator"),
+        ),
     )
 
   private const val CARD_ID = "m3-catalog/androidx.compose.material3.CardKt.Card"
@@ -1367,7 +1417,17 @@ object ScreenDocumentProjection {
     "m3-catalog/androidx.compose.material3.IconButtonKt.FilledTonalIconButton"
   private const val OUTLINED_ICON_BUTTON_ID =
     "m3-catalog/androidx.compose.material3.IconButtonKt.OutlinedIconButton"
+  private const val TEXT_FIELD_ID = "m3-catalog/androidx.compose.material3.TextFieldKt.TextField"
+  private const val OUTLINED_TEXT_FIELD_ID =
+    "m3-catalog/androidx.compose.material3.TextFieldKt.OutlinedTextField"
+  private const val LINEAR_INDICATOR_ID =
+    "m3-catalog/androidx.compose.material3.ProgressIndicatorKt.LinearProgressIndicator"
+  private const val CIRCULAR_INDICATOR_ID =
+    "m3-catalog/androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator"
 
+  private const val PROGRESS_INDICATOR = "m3/progress-indicator"
+  private const val PROGRESS = "progress"
+  private const val INDETERMINATE = "indeterminate"
   private const val WEIGHT = "weight"
   private const val ROW_SCOPE = "androidx.compose.foundation.layout.RowScope"
   private const val COLUMN_SCOPE = "androidx.compose.foundation.layout.ColumnScope"

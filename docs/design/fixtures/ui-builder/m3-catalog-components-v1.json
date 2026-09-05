@@ -1265,6 +1265,322 @@
         ]
       },
       "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.TextFieldKt.TextField",
+      "componentIds": [
+        "m3/text-field"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TextFieldKt",
+        "callable": "androidx.compose.material3.TextField",
+        "name": "TextField",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "value",
+          "type": "String",
+          "hasDefault": false,
+          "typeFqn": "kotlin.String"
+        },
+        {
+          "name": "onValueChange",
+          "type": "(String) -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function1"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "readOnly",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "label",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "placeholder",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "leadingIcon",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "trailingIcon",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "supportingText",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "isError",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "singleLine",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        }
+      ],
+      "slots": [
+        {
+          "name": "label",
+          "required": false
+        },
+        {
+          "name": "placeholder",
+          "required": false
+        },
+        {
+          "name": "leadingIcon",
+          "required": false
+        },
+        {
+          "name": "trailingIcon",
+          "required": false
+        },
+        {
+          "name": "supportingText",
+          "required": false
+        }
+      ],
+      "code": {
+        "call": "TextField(value = \"\", onValueChange = {})",
+        "imports": [
+          "androidx.compose.material3.TextField"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.TextFieldKt.OutlinedTextField",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TextFieldKt",
+        "callable": "androidx.compose.material3.OutlinedTextField",
+        "name": "OutlinedTextField",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "value",
+          "type": "String",
+          "hasDefault": false,
+          "typeFqn": "kotlin.String"
+        },
+        {
+          "name": "onValueChange",
+          "type": "(String) -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function1"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "readOnly",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "label",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "placeholder",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "leadingIcon",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "trailingIcon",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "supportingText",
+          "type": "(() -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "isError",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "singleLine",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        }
+      ],
+      "slots": [
+        {
+          "name": "label",
+          "required": false
+        },
+        {
+          "name": "placeholder",
+          "required": false
+        },
+        {
+          "name": "leadingIcon",
+          "required": false
+        },
+        {
+          "name": "trailingIcon",
+          "required": false
+        },
+        {
+          "name": "supportingText",
+          "required": false
+        }
+      ],
+      "code": {
+        "call": "OutlinedTextField(value = \"\", onValueChange = {})",
+        "imports": [
+          "androidx.compose.material3.OutlinedTextField"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.ProgressIndicatorKt.LinearProgressIndicator",
+      "componentIds": [
+        "m3/progress-indicator"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.ProgressIndicatorKt",
+        "callable": "androidx.compose.material3.LinearProgressIndicator",
+        "name": "LinearProgressIndicator",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "color",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "trackColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "LinearProgressIndicator()",
+        "imports": [
+          "androidx.compose.material3.LinearProgressIndicator"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator",
+      "componentIds": [],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.ProgressIndicatorKt",
+        "callable": "androidx.compose.material3.CircularProgressIndicator",
+        "name": "CircularProgressIndicator",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "color",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "trackColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "CircularProgressIndicator()",
+        "imports": [
+          "androidx.compose.material3.CircularProgressIndicator"
+        ]
+      },
+      "signatureKnown": true
     }
   ]
 }
