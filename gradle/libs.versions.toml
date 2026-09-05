@@ -15,6 +15,10 @@ composeai-contracts = "2.5.0"
 # split cannot produce two versions of one internal module. Collapse it back into `composeai-tools`
 # at the next Renovate bump that reaches this version.
 composeai-preview-discovery = "1.71.0"
+# `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
+# browser editor reach the same `ScreenGenerator` the server exports with. Its own ref because it
+# first exists in 1.77.0, and `composeai-tools` is pinned lower.
+composeai-screen-model = "1.77.0"
 rc-players = "1.56.1"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
@@ -34,6 +38,7 @@ composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-esca
 composeai-render-host = { module = "ee.schimke.composeai:render-host", version.ref = "composeai-tools" }
 composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api", version.ref = "composeai-tools" }
 composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery", version.ref = "composeai-preview-discovery" }
+composeai-screen-model = { module = "ee.schimke.composeai:screen-model", version.ref = "composeai-screen-model" }
 composeai-common-image-crop = { module = "ee.schimke.composeai:common-image-crop", version.ref = "composeai-tools" }
 composeai-bundle-format = { module = "ee.schimke.composeai:bundle-format", version.ref = "composeai-tools" }
 composeai-bundle-coordinates = { module = "ee.schimke.composeai:bundle-coordinates", version.ref = "composeai-tools" }

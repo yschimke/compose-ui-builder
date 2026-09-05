@@ -26,6 +26,58 @@ abstract class VerifyGeneratedSource : org.gradle.api.DefaultTask() {
   }
 }
 
+/**
+ * Embeds the component record the Compose export reads, so the editor judges a design against the
+ * same artefact the server exports against.
+ *
+ * Generated from `m3-catalog-components-v1.json` rather than copied, because a second copy of the
+ * record is the drift this module is removing. It lands as a Kotlin constant rather than a resource
+ * because resource loading differs between the JVM and wasmJs, and the panel must behave the same
+ * in both — the browser is where it actually runs.
+ */
+abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
+  @get:org.gradle.api.tasks.InputFile
+  @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  abstract val record: org.gradle.api.file.RegularFileProperty
+
+  @get:org.gradle.api.tasks.OutputFile abstract val output: org.gradle.api.file.RegularFileProperty
+
+  @org.gradle.api.tasks.TaskAction
+  fun generate() {
+    val json = record.get().asFile.readText()
+    val file = output.get().asFile
+    file.parentFile.mkdirs()
+    file.writeText(
+      buildString {
+        appendLine("package ee.schimke.composeai.uibuilder")
+        appendLine()
+        appendLine(
+          "// Generated from docs/design/fixtures/ui-builder/m3-catalog-components-v1.json"
+        )
+        appendLine("// by :ui-builder:embedComponentRecord. Do not edit.")
+        appendLine()
+        // A raw string, with every `$` escaped: `typeFqn` values carry them (a nested classifier
+        // is `Arrangement${'$'}Vertical` in a JVM name), and Kotlin would read them as template
+        // interpolation. `val` rather than `const val` for the same reason — an escaped raw string
+        // is not a compile-time constant.
+        appendLine("internal val EMBEDDED_COMPONENT_RECORD_JSON: String =")
+        val escaped = json.trimEnd().replace("$", "\${'\$'}")
+        appendLine("  \"\"\"" + escaped + "\"\"\"")
+      }
+    )
+  }
+}
+
+val embedComponentRecord =
+  tasks.register<EmbedComponentRecord>("embedComponentRecord") {
+    record.set(rootProject.file("docs/design/fixtures/ui-builder/m3-catalog-components-v1.json"))
+    output.set(
+      layout.buildDirectory.file(
+        "generated/componentRecord/ee/schimke/composeai/uibuilder/EmbeddedComponentRecord.kt"
+      )
+    )
+  }
+
 val ktfmtCli = configurations.create("ktfmtCli")
 
 dependencies { ktfmtCli(variantOf(libs.ktfmt.cli) { classifier("with-dependencies") }) }
@@ -40,6 +92,11 @@ kotlin {
   }
 
   sourceSets {
+    commonMain {
+      kotlin.srcDir(
+        embedComponentRecord.map { layout.buildDirectory.dir("generated/componentRecord") }
+      )
+    }
     commonMain.dependencies {
       @Suppress("DEPRECATION") implementation(compose.runtime)
       @Suppress("DEPRECATION") implementation(compose.foundation)
@@ -47,6 +104,10 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
       @Suppress("DEPRECATION") implementation(compose.ui)
       implementation(libs.composeai.ui.builder.protocol)
+      // The real `ScreenGenerator`, compiled for wasmJs as well as the JVM. Before this the editor
+      // had no way to ask the question the server's export answers, so it kept its own emitter.
+      implementation(libs.composeai.screen.model)
+      implementation(project(":ui-builder-export"))
       implementation(libs.composeai.rc.player.compose)
       implementation(libs.kotlinx.serialization.json)
       implementation(project(":ui-builder-artwork"))

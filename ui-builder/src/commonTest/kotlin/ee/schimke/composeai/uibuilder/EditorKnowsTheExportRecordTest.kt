@@ -1,0 +1,45 @@
+package ee.schimke.composeai.uibuilder
+
+import kotlin.test.Test
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+/**
+ * The editor's problems panel now answers with the export's own code.
+ *
+ * Before this the panel ran `CapabilityComposeCodeExporter`, which has an emitter for every catalog
+ * id, while the server's export ran the projection and the real generator against a component
+ * record covering eleven of the twenty-five. So a design holding `layout/lazy-column` looked
+ * exportable in the browser and was refused by the server — the divergence that made the two
+ * builders two builders.
+ *
+ * These assert the join rather than a message: that the record actually reached the browser, and
+ * that a component it does not back is reported before anyone presses export.
+ */
+class EditorKnowsTheExportRecordTest {
+
+  @Test
+  fun `the component record the export reads is embedded and parses`() {
+    val record = assertNotNull(embeddedComponentRecord(), "the embedded record did not parse")
+    assertTrue(record.components.isNotEmpty(), "the embedded record is empty")
+    val ids = record.components.flatMap { it.componentIds }
+    // The covered set, as the server sees it. `layout/lazy-column` is deliberately absent — its
+    // `items` slot is a `LazyListScope` DSL rather than a composable slot — and that absence is the
+    // thing the panel could not previously see.
+    assertTrue("m3/text" in ids, ids.toString())
+    assertTrue("layout/column" in ids, ids.toString())
+    assertTrue("layout/lazy-column" !in ids, ids.toString())
+  }
+
+  @Test
+  fun `the editor and the export share one expression allow-list`() {
+    // A copy on either side is a copy that can be widened without the other's review.
+    assertTrue(
+      "androidx.compose" in
+        ee.schimke.composeai.uibuilder.export.ScreenExportGate.EXPRESSION_PACKAGES
+    )
+    assertTrue(
+      ee.schimke.composeai.uibuilder.export.ScreenExportGate.PACKAGE_NAME == "generated.uibuilder"
+    )
+  }
+}

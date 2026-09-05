@@ -6,6 +6,8 @@ import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
+import ee.schimke.composeai.uibuilder.client.toProtocolDocument
+import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -1088,16 +1090,52 @@ class UiBuilderEditorReducer(
    * caller cache it against the document alone.
    */
   fun problems(document: UiBuilderDocument): List<EditorProblem> =
-    CapabilityComposeCodeExporter.diagnose(document, catalog)
-      .filter { it.severity == ComposeExportSeverity.ERROR }
-      .map { diagnostic ->
-        EditorProblem(
-          code = diagnostic.code,
-          message = diagnostic.message,
-          nodeId = diagnostic.nodeId?.takeIf(document.nodes::containsKey),
-          componentId = diagnostic.componentId,
-        )
-      }
+    (CapabilityComposeCodeExporter.diagnose(document, catalog)
+        .filter { it.severity == ComposeExportSeverity.ERROR }
+        .map { diagnostic ->
+          EditorProblem(
+            code = diagnostic.code,
+            message = diagnostic.message,
+            nodeId = diagnostic.nodeId?.takeIf(document.nodes::containsKey),
+            componentId = diagnostic.componentId,
+          )
+        } +
+        // The same refusals the server's export will produce, from the same code: the projection
+        // and the generator that the export runs, against the record the export reads. Before
+        // this the panel judged a design with `CapabilityComposeCodeExporter`, which has an
+        // emitter for every catalog id, so it stayed silent about the components the record does
+        // not back and the export refuses with `NO_COMPONENT_RECORD`.
+        //
+        // Appended rather than replacing: the capability diagnostics still answer questions the
+        // generator does not ask — catalog pin drift, a modifier the catalog disallows on a
+        // component — and dropping them to unify the source would narrow the panel's promise.
+        exportRefusals(document))
+      .distinctBy { it.code to it.message }
+
+  /**
+   * What the Compose export would refuse, as editor problems.
+   *
+   * `nodeId` is deliberately null: a refusal names the component and the reason in its text, and
+   * the generator reports against the *projected* screen rather than the document's node ids. A
+   * guessed id would offer the designer a node to select that is not the one at fault.
+   */
+  private fun exportRefusals(document: UiBuilderDocument): List<EditorProblem> =
+  // Total, because the panel's contract is to *report* rather than throw. A malformed property
+  // makes `toProtocolDocument` fail its decode, and a panel that propagated that would take the
+  // editor down over the one document whose problems a designer most needs listed. The capability
+  // diagnostics above already name that document's real fault.
+  runCatching {
+    ScreenExportGate.refusals(document.toProtocolDocument(), embeddedComponentRecord())
+  }
+    .getOrElse { emptyList() }
+    .map {
+      EditorProblem(
+        code = "COMPOSE_EXPORT_REFUSED",
+        message = it,
+        nodeId = null,
+        componentId = null,
+      )
+    }
 
   fun themeSettings(state: UiBuilderEditorState): EditorThemeSettings {
     val host = state.document.themeHost() ?: return EditorThemeSettings()

@@ -29,8 +29,26 @@ class EditorProblemsTest {
   private fun problems(document: UiBuilderDocument) = reducer.problems(document)
 
   @Test
-  fun `the checked-in fixture has nothing to report`() {
-    assertEquals(emptyList(), problems(document))
+  fun `the checked-in fixture reports what the real export would refuse`() {
+    // This asserted `emptyList()` while the panel read only `CapabilityComposeCodeExporter`, which
+    // has an emitter for every catalog id. The panel now also runs the projection and generator the
+    // **server's export** runs, and against those the flagship Jetcaster design does not export:
+    // enum values with no Kotlin member, `matchParentSize` outside a `BoxScope`, a state read and
+    // an event binding the projection has no channel for, an adaptive grid specification.
+    //
+    // Those refusals were always true — the export has always produced them — and the panel was
+    // silent about every one. Asserting the old emptiness now would be asserting that the panel
+    // keeps a promise it cannot keep.
+    val reported = problems(document)
+    assertTrue(reported.isNotEmpty(), "the export refuses this design; the panel should say so")
+    assertTrue(
+      reported.all { it.code == "COMPOSE_EXPORT_REFUSED" },
+      "the fixture is structurally sound, so every problem should come from the export gate: $reported",
+    )
+    assertTrue(
+      reported.any { it.message.contains("state variable `searchQuery`") },
+      reported.toString(),
+    )
   }
 
   @Test
@@ -96,11 +114,30 @@ class EditorProblemsTest {
             ),
       )
 
-    assertEquals(
+    // A superset now: the capability errors *plus* what the projection and generator refuse. The
+    // original claim — that the panel never invents an opinion of its own — is what this still
+    // checks, by requiring every capability error to appear.
+    assertTrue(
+      problems(broken)
+        .map { it.code to it.message }
+        .containsAll(
+          CapabilityComposeCodeExporter.diagnose(broken, catalog)
+            .filter { it.severity == ComposeExportSeverity.ERROR }
+            .map { it.code to it.message }
+        )
+    )
+    // And nothing beyond the two sources: every problem is a capability error or an export
+    // refusal, never a rule this panel invented.
+    val capability =
       CapabilityComposeCodeExporter.diagnose(broken, catalog)
         .filter { it.severity == ComposeExportSeverity.ERROR }
-        .map { it.code to it.message },
-      problems(broken).map { it.code to it.message },
+        .map { it.code to it.message }
+        .toSet()
+    assertTrue(
+      problems(broken).all {
+        (it.code to it.message) in capability || it.code == "COMPOSE_EXPORT_REFUSED"
+      },
+      problems(broken).toString(),
     )
   }
 
@@ -153,7 +190,9 @@ class EditorProblemsTest {
       "the fixture should still raise the warning this test is about: $diagnostics",
     )
 
-    assertEquals(emptyList(), problems(document))
+    // The claim is unchanged and still the point: a warning is not a blocker. What the panel does
+    // list for this fixture are the export gate's refusals, which do stop a build.
+    assertTrue(problems(document).none { it.code == "CAROUSEL_COMPATIBILITY_HELPER" })
   }
 
   @Test
