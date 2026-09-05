@@ -1312,6 +1312,153 @@ class UiBuilderEditorReducer(
     return "boolean" in (property.typeNames() - "null")
   }
 
+  /**
+   * A one-component document: what the palette's Add would put on an empty canvas.
+   *
+   * This is what the menu's thumbnails draw, and drawing it rather than a baked picture is the
+   * whole point. The document is produced by the **same** `InsertComponent` the row dispatches,
+   * through this reducer, against this catalog — so a thumbnail cannot disagree with what pressing
+   * Add does. A baked PNG can, and the moment a component's starter content or default property
+   * changes, it silently does.
+   *
+   * Null where the component cannot stand alone in the frame: a Scaffold is not something a
+   * `layout/box` accepts, and a `m3/tab` outside a tab row is not a thing. Those rows keep the
+   * plain drag handle, which is honest — a picture that could not be drawn is better absent than
+   * faked. `CatalogThumbnailTest` records which components land in that bucket, so it is a list
+   * that shrinks rather than an absence nobody notices.
+   *
+   * Cached per component and variant. It is a pure function of the catalog, the frame is fixed, and
+   * the panel asks for the same handful of them on every recomposition of a scroll.
+   */
+  fun previewDocument(
+    componentId: String,
+    variant: EditorCatalogVariant? = null,
+  ): UiBuilderDocument? =
+    previewDocuments.getOrPut(componentId to variant?.value) {
+      val state = initial(previewFrame, selectedNodeId = PREVIEW_FRAME_CELL_ID)
+      val target = dropTarget(state, componentId)
+      val inserted = target?.let {
+        reduce(state, UiBuilderEditorEvent.InsertComponent(componentId, it, variant))
+      }
+      inserted?.takeIf { it.lastOutcome is CommandOutcome.Accepted }?.document?.centeredInFrame()
+    }
+
+  /**
+   * The inserted component pushed to the middle of the frame.
+   *
+   * A `layout/box` stacks its children at the top start, and most components are far smaller than
+   * the frame — so without this a Button drew in the corner and the shrink put it in the corner of
+   * a 44 dp thumbnail, which reads as an empty box with a smudge in it. The `align` modifier is the
+   * catalog's own, applied only where the component declares it: a component that cannot be aligned
+   * keeps its corner rather than having the insert refused for a modifier it never allowed.
+   */
+  private fun UiBuilderDocument.centeredInFrame(): UiBuilderDocument {
+    val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this
+    val childId = cell.slots["children"]?.singleOrNull() ?: return this
+    val child = nodes[childId] ?: return this
+    if (
+      "align" !in (catalog.componentsById[child.componentId]?.modifierCapabilities ?: return this)
+    )
+      return this
+    val centered =
+      child.copy(
+        modifiers =
+          JsonArray(
+            listOf(
+              JsonObject(
+                mapOf(
+                  "type" to JsonPrimitive("align"),
+                  "alignment" to JsonPrimitive("center"),
+                )
+              )
+            ) + child.modifiers
+          )
+      )
+    return copy(nodes = nodes + (childId to centered))
+  }
+
+  private val previewDocuments = mutableMapOf<Pair<String, String?>, UiBuilderDocument?>()
+
+  internal fun debugPreviewFrame(): UiBuilderDocument = previewFrame
+
+  /**
+   * The empty frame a thumbnail's component is inserted into.
+   *
+   * A bare `layout/box` rather than the `m3/surface` the starter-content preview uses: the menu row
+   * paints its own ground, and a surface inside it would draw a second one a shade off the first.
+   * Sized generously and drawn at that size before being scaled down, which is what makes a
+   * thumbnail a shrunken component rather than a component asked to lay itself out at 44 dp.
+   */
+  private val previewFrame: UiBuilderDocument by lazy {
+    UiBuilderDocument(
+      schema = "compose-ui-builder-document/v1-candidate",
+      id = "catalog-thumbnail-frame",
+      title = "Catalog thumbnail",
+      revision = 0,
+      catalogPin =
+        catalog.benchmark.let { benchmark ->
+          JsonObject(
+            mapOf(
+              "systemId" to JsonPrimitive(benchmark.catalogSystemId),
+              "catalogRevision" to JsonPrimitive(benchmark.catalogRevision),
+              "capabilityDigest" to JsonPrimitive(benchmark.catalogRevision),
+              "nativeRuntimeId" to JsonPrimitive(benchmark.nativeRuntimeId),
+            )
+          )
+        },
+      environment =
+        JsonObject(
+          mapOf(
+            "widthDp" to JsonPrimitive(PREVIEW_FRAME_WIDTH_DP),
+            "heightDp" to JsonPrimitive(PREVIEW_FRAME_HEIGHT_DP),
+            // No `density` or `fontScale`, deliberately, where every other fixture pins them. Those
+            // pin a document being *rendered as the whole surface*, where 1.0 makes a dp a pixel.
+            // A thumbnail is a subtree of a panel whose own dp are the platform's, and a frame that
+            // pinned 1.0 laid its component out at a quarter size inside a box measured in real dp
+            // — a Button drawn as a four-pixel dash. `UiBuilderSurface` falls back to
+            // `LocalDensity`, which is the one the box around it was measured with.
+            "theme" to JsonPrimitive("dark"),
+            "dynamicColor" to JsonPrimitive(false),
+            "locale" to JsonPrimitive("en-US"),
+            "layoutDirection" to JsonPrimitive("ltr"),
+            "windowPosture" to JsonPrimitive("flat"),
+            "browserZoomPercent" to JsonPrimitive(100),
+            // Fixed, and no network: a thumbnail that ticked would make every scroll a diff.
+            "fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"),
+            "animations" to JsonPrimitive("settled"),
+            "networkAccess" to JsonPrimitive(false),
+          )
+        ),
+      stateVariables = JsonObject(emptyMap()),
+      roots = listOf(PREVIEW_FRAME_CELL_ID),
+      nodes =
+        mapOf(
+          PREVIEW_FRAME_CELL_ID to
+            UiBuilderNode(
+              id = PREVIEW_FRAME_CELL_ID,
+              componentId = "layout/box",
+              // No properties: `layout/box` declares no alignment of its own, and the validator
+              // refuses a property the catalog does not know — which is the whole insert refused,
+              // and every thumbnail with it.
+              properties = JsonObject(emptyMap()),
+              modifiers =
+                JsonArray(
+                  listOf(
+                    JsonObject(
+                      mapOf(
+                        "type" to JsonPrimitive("size"),
+                        "widthDp" to JsonPrimitive(PREVIEW_FRAME_WIDTH_DP),
+                        "heightDp" to JsonPrimitive(PREVIEW_FRAME_HEIGHT_DP),
+                      )
+                    )
+                  )
+                ),
+              slots = mapOf("children" to emptyList()),
+            )
+        ),
+    )
+  }
+
   fun catalogItems(query: String): List<EditorCatalogItem> {
     val needle = query.trim().lowercase()
     return catalog.components
@@ -3578,6 +3725,13 @@ internal fun variantLabel(value: String): String =
 
 /** The set with [value] removed if it was there and added if it was not. */
 private fun <T> Set<T>.toggled(value: T): Set<T> = if (value in this) this - value else this + value
+
+/** The frame a catalog thumbnail's component is inserted into, and drawn at before scaling. */
+internal const val PREVIEW_FRAME_WIDTH_DP = 176
+
+internal const val PREVIEW_FRAME_HEIGHT_DP = 128
+
+internal const val PREVIEW_FRAME_CELL_ID = "catalog-thumbnail-cell"
 
 private fun ComponentCapability.defaultNode(
   nodeId: String,

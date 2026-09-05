@@ -106,9 +106,24 @@ One structural difference from the catalog's own tree is the data rather than th
 splits `Progress Linear` and `Progress Circular` into two components under a `Progress indicators`
 group, where the builder has one `m3/progress-indicator` whose `variant` property is `linear` or
 `circular`. The builder's tree is the same shape one level shallower — what the catalog spends a
-group level on, this spends a variant level on. Thumbnails are the one thing knowingly left out: the
-builder bakes no pixels per component, and a row with a missing image is worse than a row without
-one.
+group level on, this spends a variant level on.
+
+**The thumbnails are rendered, not baked.** The catalog's tree shows a prebaked PNG per row because
+that page has the pixels on disk. The builder has something better: the renderer that is about to
+draw the component for real. So a row draws `UiBuilderEditorReducer.previewDocument` — the component
+inserted into an empty frame by the same `InsertComponent` the row's Add dispatches — shrunk with a
+`graphicsLayer` after laying out at a sensible size. A thumbnail therefore cannot disagree with what
+pressing Add does; there is no generator task to re-run when a starter default changes, no PNGs in
+the repository, and a catalog nobody has baked artwork for still gets pictures. It is also the grip:
+you drag the picture of the thing you are placing, which affords two things in the width of one.
+
+Two details are load-bearing and neither is obvious. The frame pins **no** `density` or `fontScale`,
+where every other fixture pins `1.0`: those pin a document rendered *as the whole surface*, where a
+dp is a pixel, but a thumbnail is a subtree of a panel whose dp are the platform's, and pinning 1.0
+laid a Button out at a quarter size inside a box measured in real dp — a four-pixel dash. And the
+drag gesture sits on an overlay **above** the picture, whose own semantics are cleared: a Switch
+drawn in a thumbnail is a real Switch, and it would otherwise eat the press meant to start a drag
+and publish itself to a screen reader as a control the palette does not have.
 
 **A variant is one property, named by the table.** `ComponentMenu.variantPropertyOf` says which
 of a component's properties enumerates its variants — `m3/card.variant`, `m3/button.style`,
@@ -128,9 +143,9 @@ The search matches everything a row shows, variant labels included, and opens wh
 match hidden behind a collapsed heading reads as no match. Collapsing something and then typing does
 not spend the collapse — it comes back when the field is cleared.
 
-| Before: grouped by role | After: the catalog's families | Filtered to a variant name |
+| Before: grouped by role | After: the catalog's families, each row drawing itself | Filtered to a variant name |
 | --- | --- | --- |
-| ![The insert panel under Scaffolds, Containers and Composables headings](../../renders/ui-builder-component-menu/menu.before.png) | ![The same panel under Scaffolds, Layout, Navigation and Actions headings, each with a count](../../renders/ui-builder-component-menu/menu.after.png) | ![The panel filtered to "filled", four components open showing their variant rows](../../renders/ui-builder-component-menu/menu.variants.after.png) |
+| ![The insert panel under Scaffolds, Containers and Composables headings](../../renders/ui-builder-component-menu/menu.before.png) | ![The same panel under Scaffolds, Layout, Navigation and Actions headings, each row showing a rendered thumbnail of its component](../../renders/ui-builder-component-menu/menu.thumbnails.after.png) | ![The panel filtered to "filled", four components open showing their variant rows, each variant drawing a visibly different button](../../renders/ui-builder-component-menu/menu.variants.after.png) |
 
 ## What the catalog advertises
 

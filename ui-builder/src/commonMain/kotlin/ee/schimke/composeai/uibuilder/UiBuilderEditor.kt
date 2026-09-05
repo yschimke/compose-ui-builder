@@ -105,6 +105,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
@@ -155,6 +156,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
@@ -174,6 +176,17 @@ private val INSPECTOR_WIDTH = 320.dp
 
 /** The left panel's width, named for the same reason [INSPECTOR_WIDTH] is. */
 private val NAVIGATOR_WIDTH = 280.dp
+
+/**
+ * How big a palette row's picture is.
+ *
+ * 4:3, matching the frame the component is drawn in, so the shrink is uniform and nothing is
+ * squashed. Wide enough that a Card reads as a card rather than as a grey rectangle, and small
+ * enough that a 280 dp panel still has room for a name, an id, a count and an Add.
+ */
+private val COMPONENT_THUMBNAIL_SIZE = DpSize(44.dp, 33.dp)
+
+private val VARIANT_THUMBNAIL_SIZE = DpSize(32.dp, 24.dp)
 
 /**
  * The code dock's width, wider than either side panel.
@@ -647,6 +660,7 @@ fun UiBuilderEditor(
         catalogSystemId = catalog.benchmark.catalogSystemId,
         catalogRows = reducer.catalogRows(state),
         totalCatalogComponents = catalog.components.size,
+        thumbnailOf = reducer::previewDocument,
         layerRows = layerRows,
         collaborators = collaborators,
         dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
@@ -2545,6 +2559,7 @@ private fun EditorNavigator(
   catalogSystemId: String,
   catalogRows: List<EditorCatalogRow>,
   totalCatalogComponents: Int,
+  thumbnailOf: (String, EditorCatalogVariant?) -> UiBuilderDocument?,
   layerRows: List<EditorLayerRow>,
   collaborators: List<UiBuilderCollaborator>,
   dropTarget: ParentSlot?,
@@ -2578,6 +2593,7 @@ private fun EditorNavigator(
             state = state,
             catalogRows = catalogRows,
             totalCatalogComponents = totalCatalogComponents,
+            thumbnailOf = thumbnailOf,
             dropTarget = dropTarget,
             onCatalogDrag = onCatalogDrag,
             onCatalogDrop = onCatalogDrop,
@@ -2622,6 +2638,8 @@ private fun InsertPanel(
    * Every component the catalog has, which is what the All row counts — not what survived a filter.
    */
   totalCatalogComponents: Int,
+  /** The document a row's picture draws, from the reducer that would perform the insert. */
+  thumbnailOf: (String, EditorCatalogVariant?) -> UiBuilderDocument?,
   dropTarget: ParentSlot?,
   onCatalogDrag: (String, Offset?) -> Unit,
   onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
@@ -2673,6 +2691,7 @@ private fun InsertPanel(
           is EditorCatalogRow.Component ->
             CatalogRow(
               item = row.item,
+              thumbnail = thumbnailOf(row.item.componentId, null),
               expanded = row.expanded,
               onDrag = { onCatalogDrag(row.item.componentId, it) },
               onDrop = { onCatalogDrop(row.item.componentId, null, it) },
@@ -2685,6 +2704,7 @@ private fun InsertPanel(
           is EditorCatalogRow.Variant ->
             CatalogVariantRow(
               variant = row.variant,
+              thumbnail = thumbnailOf(row.variant.componentId, row.variant),
               componentName = row.componentName,
               onDrag = { onCatalogDrag(row.variant.componentId, it) },
               onDrop = { onCatalogDrop(row.variant.componentId, row.variant, it) },
@@ -3631,6 +3651,8 @@ private fun IndentGuide(depth: Int) {
 @Composable
 private fun CatalogRow(
   item: EditorCatalogItem,
+  /** The component drawn small — see [CatalogThumbnail]. Null keeps the plain drag handle. */
+  thumbnail: UiBuilderDocument?,
   expanded: Boolean,
   onDrag: (Offset?) -> Unit,
   onDrop: (Offset) -> Unit,
@@ -3656,7 +3678,14 @@ private fun CatalogRow(
         DisclosureTriangle(expanded, MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
-    CatalogDragHandle(item.componentId, item.displayName, onDrag, onDrop)
+    CatalogThumbnail(
+      document = thumbnail,
+      dragKey = item.componentId,
+      label = item.displayName,
+      size = COMPONENT_THUMBNAIL_SIZE,
+      onDrag = onDrag,
+      onDrop = onDrop,
+    )
     Column(Modifier.padding(start = 6.dp).weight(1f)) {
       Text(item.displayName, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
       Text(
@@ -3689,6 +3718,8 @@ private fun CatalogRow(
 @Composable
 private fun CatalogVariantRow(
   variant: EditorCatalogVariant,
+  /** The variant drawn small — see [CatalogThumbnail]. Null keeps the plain drag handle. */
+  thumbnail: UiBuilderDocument?,
   /** The component this variant is of, for the names a screen reader and a script use. */
   componentName: String,
   onDrag: (Offset?) -> Unit,
@@ -3706,7 +3737,16 @@ private fun CatalogVariantRow(
     verticalAlignment = Alignment.CenterVertically,
   ) {
     IndentGuide(depth = 2)
-    CatalogDragHandle("${variant.componentId}#${variant.value}", qualified, onDrag, onDrop)
+    CatalogThumbnail(
+      document = thumbnail,
+      dragKey = "${variant.componentId}#${variant.value}",
+      label = qualified,
+      // Smaller than a component's, because a variant is a detail of the row above it and a column
+      // of equal-sized pictures loses the hierarchy the indent just established.
+      size = VARIANT_THUMBNAIL_SIZE,
+      onDrag = onDrag,
+      onDrop = onDrop,
+    )
     Row(Modifier.padding(start = 6.dp).weight(1f), verticalAlignment = Alignment.CenterVertically) {
       Text(
         label,
@@ -3744,11 +3784,72 @@ private fun CatalogAddButton(canAdd: Boolean, onAdd: () -> Unit, label: String) 
 }
 
 /**
- * The grip a palette row is dragged onto the canvas by.
+ * A palette row's picture: the component itself, inserted into an empty frame and shrunk.
  *
- * Lifted out of [CatalogRow] when the variant rows arrived: the gesture is nine lines of drag
- * bookkeeping that has nothing to do with what the row shows, and two copies of it would be two
- * chances for a drop threshold to drift.
+ * **Rendered, not baked.** The catalog's tree shows a prebaked PNG per row because that page has
+ * the pixels on disk; the builder has something better — the renderer that is about to draw the
+ * thing for real. So the row draws [UiBuilderEditorReducer.previewDocument], which is the result of
+ * the same `InsertComponent` the row's Add dispatches. A thumbnail therefore cannot disagree with
+ * what pressing Add does, no generator task has to be re-run when a default changes, no PNGs are
+ * committed, and a catalog nobody has baked artwork for still gets pictures.
+ *
+ * Drawn at [PREVIEW_FRAME_WIDTH_DP] and scaled down rather than laid out at 44 dp, which is the
+ * difference between a shrunken component and a component squeezed until its text wraps to nothing.
+ * `graphicsLayer` rather than `scale`, so the shrink is a draw-time transform over a subtree that
+ * laid itself out at a sensible size.
+ *
+ * It is also the **grip**: you drag the picture of the thing you are placing, which is both more
+ * obvious than a dot-grid handle and how the row affords two things in the width of one.
+ */
+@Composable
+private fun CatalogThumbnail(
+  document: UiBuilderDocument?,
+  dragKey: String,
+  label: String,
+  size: DpSize,
+  onDrag: (Offset?) -> Unit,
+  onDrop: (Offset) -> Unit,
+) {
+  // A component the frame could not hold keeps the handle it always had. A picture that could not
+  // be drawn is better absent than faked.
+  if (document == null) {
+    CatalogDragHandle(dragKey, label, onDrag, onDrop)
+    return
+  }
+  val scale = size.width.value / PREVIEW_FRAME_WIDTH_DP
+  Box(
+    Modifier.size(size)
+      .clip(RoundedCornerShape(4.dp))
+      .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+    contentAlignment = Alignment.Center,
+  ) {
+    Box(
+      Modifier.requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
+        .graphicsLayer {
+          scaleX = scale
+          scaleY = scale
+        }
+        // A picture of a Switch is not a Switch. Without this the row would publish every semantics
+        // node inside the thumbnail — so a screen reader would read a palette row as a switch it
+        // could toggle, and `getByRole("button", …)` would match forty pictures of buttons that are
+        // not on the canvas. The row's own name is set on the overlay below.
+        .clearAndSetSemantics {}
+    ) {
+      UiBuilderSurface(document = document, editorOverlay = false)
+    }
+    // The gesture sits ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is
+    // a real Switch and would eat the press that was meant to start a drag; a later sibling wins
+    // the hit test, so the whole tile drags however interactive the thing inside it happens to be.
+    Box(
+      Modifier.matchParentSize().catalogDrag(dragKey, onDrag, onDrop).semantics {
+        contentDescription = "Drag $label"
+      }
+    )
+  }
+}
+
+/**
+ * The grip a palette row is dragged onto the canvas by, where it has no picture to drag instead.
  */
 @Composable
 private fun CatalogDragHandle(
@@ -3757,40 +3858,59 @@ private fun CatalogDragHandle(
   onDrag: (Offset?) -> Unit,
   onDrop: (Offset) -> Unit,
 ) {
-  var dragDistance by remember { mutableFloatStateOf(0f) }
-  var dragOrigin by remember { mutableStateOf(Offset.Zero) }
-  var lastPosition by remember { mutableStateOf(Offset.Zero) }
   Icon(
     Icons.Filled.DragIndicator,
     contentDescription = "Drag $label",
-    modifier =
-      Modifier.size(18.dp)
-        .onGloballyPositioned { dragOrigin = it.boundsInRoot().topLeft }
-        .pointerInput(dragKey) {
-          detectDragGestures(
-            onDragStart = {
-              dragDistance = 0f
-              lastPosition = dragOrigin + it
-              onDrag(lastPosition)
-            },
-            onDragEnd = {
-              if (dragDistance > 8f) onDrop(lastPosition) else onDrag(null)
-              dragDistance = 0f
-            },
-            onDragCancel = {
-              dragDistance = 0f
-              onDrag(null)
-            },
-            onDrag = { change, amount ->
-              change.consume()
-              dragDistance += amount.getDistance()
-              lastPosition = dragOrigin + change.position
-              onDrag(lastPosition)
-            },
-          )
-        },
+    modifier = Modifier.size(18.dp).catalogDrag(dragKey, onDrag, onDrop),
     tint = MaterialTheme.colorScheme.onSurfaceVariant,
   )
+}
+
+/**
+ * The drag a palette row starts: report where the pointer is, and on release either drop there or
+ * withdraw.
+ *
+ * A modifier rather than a composable, because two different things carry this gesture — the
+ * thumbnail and the fallback handle — and two copies of nine lines of drag bookkeeping is two
+ * chances for a drop threshold to drift apart.
+ *
+ * The origin is captured from layout rather than taken from the drag's own coordinates: the events
+ * arrive local to this element, and the canvas needs them in the root's space to hit-test a slot.
+ */
+private fun Modifier.catalogDrag(
+  dragKey: String,
+  onDrag: (Offset?) -> Unit,
+  onDrop: (Offset) -> Unit,
+): Modifier = composed {
+  var dragDistance by remember { mutableFloatStateOf(0f) }
+  var dragOrigin by remember { mutableStateOf(Offset.Zero) }
+  var lastPosition by remember { mutableStateOf(Offset.Zero) }
+  Modifier.onGloballyPositioned { dragOrigin = it.boundsInRoot().topLeft }
+    .pointerInput(dragKey) {
+      detectDragGestures(
+        onDragStart = {
+          dragDistance = 0f
+          lastPosition = dragOrigin + it
+          onDrag(lastPosition)
+        },
+        onDragEnd = {
+          // Below the threshold it was a press, not a drag, so the insert is withdrawn rather
+          // than landed wherever the pointer happened to rest.
+          if (dragDistance > 8f) onDrop(lastPosition) else onDrag(null)
+          dragDistance = 0f
+        },
+        onDragCancel = {
+          dragDistance = 0f
+          onDrag(null)
+        },
+        onDrag = { change, amount ->
+          change.consume()
+          dragDistance += amount.getDistance()
+          lastPosition = dragOrigin + change.position
+          onDrag(lastPosition)
+        },
+      )
+    }
 }
 
 /**
