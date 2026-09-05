@@ -352,9 +352,23 @@ private data class LiveSessionConfig(
   val colorArgbHex: String,
 )
 
+/**
+ * Resolves the server's view of this caller before the session starts.
+ *
+ * The page cannot name its own actor: the server derives it from the operator token, the GitHub
+ * session or a presented agent grant, and rejects any request whose declared actor differs. So the
+ * editor asks first, and only falls back to the historical guess when the endpoint is unreachable
+ * (an older server, or a static host with no live session behind it).
+ */
 @Composable
 private fun LiveSessionApp() {
-  val config = remember { liveSessionConfig() }
+  var config by remember { mutableStateOf<LiveSessionConfig?>(null) }
+  LaunchedEffect(Unit) { config = liveSessionConfig(resolveServerActorId()) }
+  config?.let { LiveSessionApp(it) }
+}
+
+@Composable
+private fun LiveSessionApp(config: LiveSessionConfig) {
   val scope = rememberCoroutineScope()
   val http =
     remember(config) {
@@ -1013,7 +1027,7 @@ private external fun captureMode(): String
 )
 private external fun liveSessionEnabled(): Boolean
 
-private fun liveSessionConfig(): LiveSessionConfig {
+private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
   val catalogSystemId = liveConfigValue("catalog", uiBuilderCatalogFromPath())
   val defaultDesignId =
     if (catalogSystemId == "m3-catalog") "jetcaster-discover"
@@ -1021,7 +1035,7 @@ private fun liveSessionConfig(): LiveSessionConfig {
   return LiveSessionConfig(
       catalogSystemId = catalogSystemId,
       designId = liveConfigValue("designId", defaultDesignId),
-      actorId = liveConfigValue("actor", "browser-user"),
+      actorId = liveConfigValue("actor", serverActorId ?: "browser-user"),
       clientId = liveConfigValue("clientId", "browser-editor"),
       httpEndpoint = liveConfigValue("endpoint", "/api/ui-builder/v1/requests"),
       webSocketEndpoint =
@@ -1034,7 +1048,8 @@ private fun liveSessionConfig(): LiveSessionConfig {
       template = liveConfigValue("template", "jetcaster"),
       state = decodeNewDesignStates(liveConfigValue("state", "[]")),
       operationIdPrefix = "${liveConfigValue("clientId", "browser-editor")}-${livePageNonce()}",
-      displayName = liveConfigValue("displayName", "Browser user"),
+      displayName =
+        liveConfigValue("displayName", serverActorId?.substringAfterLast(':') ?: "Browser user"),
       colorArgbHex = liveConfigValue("color", "#FF6574CD"),
     )
     .also {
@@ -1081,6 +1096,31 @@ private suspend fun loadDevicePresets(): List<UiBuilderDevicePreset> =
   } catch (_: Exception) {
     emptyList()
   }
+
+/**
+ * The actor id the server authenticated this page as, or `null` when it will not say.
+ *
+ * Not fatal on its own: the caller keeps the historical default so an unauthenticated page still
+ * renders and reports the server's own error, rather than failing to mount at all.
+ */
+private suspend fun resolveServerActorId(): String? =
+  try {
+    identityJson
+      .decodeFromString(IdentityPayload.serializer(), fetchText(IDENTITY_PATH))
+      .actorId
+      .takeIf { it.isNotBlank() }
+  } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+    throw cancelled
+  } catch (_: Exception) {
+    null
+  }
+
+private const val IDENTITY_PATH = "/api/ui-builder/v1/identity"
+
+/** Tolerant for the same reason as the presets: a new identity field must not blank the actor. */
+private val identityJson = Json { ignoreUnknownKeys = true }
+
+@kotlinx.serialization.Serializable private data class IdentityPayload(val actorId: String = "")
 
 private const val DEVICE_PRESETS_PATH = "/api/ui-builder/v1/device-presets"
 
