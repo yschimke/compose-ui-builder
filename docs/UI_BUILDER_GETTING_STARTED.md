@@ -59,6 +59,35 @@ other served catalogs remain preview-only until added explicitly.
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.
 
+## Starting from a worked widget
+
+`remote-m3`'s New Widget dialog offers four templates. Two are empty host frames — **Small widget**
+(216×76dp) and **Large widget** (216×124dp) — and two are finished designs reproducing the widgets
+in [`android/wear-os-samples`' `WearWidget` sample](https://github.com/android/wear-os-samples/pull/1386):
+
+| Template | Host | What it is |
+| --- | --- | --- |
+| **Hello widget** | Small | Centred text on the theme's `primary`, matching `HelloWidgetContent`. |
+| **Weather widget** | Large | A location over a large reading on the sample's sunny blue, matching `WeatherContent`. |
+
+They exist to answer one question: can the designer express a real widget? Both are built entirely
+from ordinary catalog components — `m3/surface`, `layout/box`, `layout/column`, `m3/text` — with no
+widget-specific authoring vocabulary, so anything you can do to them you can do to your own.
+
+Note where the boundary falls. The scaffold **is** the host frame — the squircle, its 8dp padding
+and its 26dp corners come from the Wear widget host, not from the widget — so picking Small or Large
+picks a canvas you design *inside* and never edit. The widget's own background is the `m3/surface`
+filling that canvas, which is what `WearWidgetDocument(background = …)` paints on-device.
+
+| Hello widget | Weather widget |
+| --- | --- |
+| ![The Hello widget design in the Small host frame](design/evidence/ui-builder-remote-compose/hello-widget.png) | ![The Weather widget design in the Large host frame](design/evidence/ui-builder-remote-compose/weather-widget.png) |
+
+These are the builder's own renderer drawing the templates, not screenshots. They are not a compile
+of the sample: the builder draws with Compose Material 3 while the widget runs Remote Compose on a
+watch, so a template reproduces the sample's *design* and the pixel-fidelity question belongs to the
+parity lanes.
+
 ## Adding a published Remote Compose component
 
 Under the component list, a catalog that offers `remote-compose/document` also shows **Remote

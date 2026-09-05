@@ -45,6 +45,264 @@ fun wearWidgetUiBuilderDocument(
 }
 
 /**
+ * A ready-made Wear widget design, reproducing one of the widgets in
+ * [android/wear-os-samples' `WearWidget` sample](https://github.com/android/wear-os-samples/pull/1386).
+ *
+ * The sample writes each widget as `GlanceWearWidget.provideWidgetData` returning a
+ * `WearWidgetDocument` of Remote Compose composables. The host frame around it — the squircle, its
+ * padding and its corner radius — is the *host's*, not the widget's, which is exactly the split the
+ * builder already draws: the scaffold is the host frame and the content slot is the widget. So the
+ * question these two answer is whether the designer can express the widget half at all, and the
+ * answer is yes, from ordinary catalog components.
+ *
+ * What they are not: a compile of the sample. The builder draws with Compose Material 3 and the
+ * widget runs Remote Compose on a watch, so these reproduce the sample's *design* — layout,
+ * colours, type sizes, strings — as a design, and the fidelity question belongs to the parity lanes
+ * rather than to a template.
+ */
+enum class WearWidgetSample(
+  val templateId: String,
+  val size: WearWidgetScaffoldSize,
+  val label: String,
+  val supportingText: String,
+) {
+  /**
+   * `HelloWidgetContent`: centred text on the theme's primary, in the Small host.
+   *
+   * Small because that is what the content asks for — one line of 20sp text has nothing to do with
+   * the extra 48dp of the Large canvas, and a template that opens on a mostly empty widget teaches
+   * the wrong default.
+   */
+  Hello(
+    templateId = "hello-widget",
+    size = WearWidgetScaffoldSize.Small,
+    label = "Hello widget",
+    supportingText = "Centred text on the primary colour, from the Wear widget sample.",
+  ),
+  /**
+   * `WeatherContent`: location over a large reading, on the sample's sunny blue, in the Large host.
+   */
+  Weather(
+    templateId = "weather-widget",
+    size = WearWidgetScaffoldSize.Large,
+    label = "Weather widget",
+    supportingText = "Location and temperature on the sample's sunny blue.",
+  );
+
+  /** This sample as a document, ready to open in the editor. */
+  fun document(designId: String, catalogPin: JsonObject, environment: JsonObject) =
+    when (this) {
+      Hello -> helloWidgetUiBuilderDocument(designId, catalogPin, environment)
+      Weather -> weatherWidgetUiBuilderDocument(designId, catalogPin, environment)
+    }
+
+  public companion object {
+    /**
+     * The sample with this template id, or null — so an unknown template falls through as before.
+     */
+    public fun forTemplate(templateId: String): WearWidgetSample? = entries.firstOrNull {
+      it.templateId == templateId
+    }
+  }
+}
+
+/**
+ * The sample's Hello widget: `RemoteText` centred in a `RemoteBox` filling a primary background.
+ *
+ * The surface carries the background because that is where the widget's own background lives — the
+ * sample passes `WearWidgetBrush.color(colorScheme.primary)` to `WearWidgetDocument`, which paints
+ * behind the widget's content and inside the host frame, and an `m3/surface` filling the content
+ * slot is the same rectangle.
+ *
+ * Centring is the child's `alignment`, not the box's: `layout/box` aligns each child by that
+ * child's own property, so `contentAlignment` on the box would render nothing.
+ */
+fun helloWidgetUiBuilderDocument(
+  designId: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+): UiBuilderDocument =
+  wearWidgetSampleDocument(
+    designId = designId,
+    title = "Hello widget",
+    catalogPin = catalogPin,
+    environment = environment,
+    size = WearWidgetScaffoldSize.Small,
+    background = colorToken("primary"),
+    contentId = "hello-content",
+    content =
+      listOf(
+        UiBuilderNode(
+          id = "hello-content",
+          componentId = "layout/box",
+          properties = JsonObject(emptyMap()),
+          modifiers = JsonArray(listOf(modifier("fillMaxSize"))),
+          slots = mapOf("children" to listOf("hello-text")),
+        ),
+        UiBuilderNode(
+          id = "hello-text",
+          componentId = "m3/text",
+          properties =
+            JsonObject(
+              mapOf(
+                "text" to literal("string", JsonPrimitive("Hello, World!")),
+                "color" to colorToken("onPrimary"),
+                "fontSizeSp" to literal("float", JsonPrimitive(20)),
+                "alignment" to literal("enum", JsonPrimitive("center")),
+              )
+            ),
+          modifiers = JsonArray(emptyList()),
+          slots = emptyMap(),
+        ),
+      ),
+  )
+
+/**
+ * The sample's Weather widget, in its sunny state: location over the reading, on `ColorSunny`.
+ *
+ * A literal `#FF2196F3` rather than a theme token, because the sample's colour is chosen by the
+ * *weather*, not by the theme — it swaps between four hard-coded colours per condition — and naming
+ * it `primary` here would claim a relationship to the theme that the widget does not have. The
+ * sunny state is the one the sample's own previews render.
+ *
+ * Each line is `fillMaxWidth` with `textAlign = center` rather than relying on the column's
+ * `horizontalAlignment`, which the catalog declares and the renderer does not read; centring the
+ * text inside a full-width line is the same picture through a path that works. The column's own
+ * vertical centring is its `alignment` in the parent box, which does.
+ */
+fun weatherWidgetUiBuilderDocument(
+  designId: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+): UiBuilderDocument =
+  wearWidgetSampleDocument(
+    designId = designId,
+    title = "Weather widget",
+    catalogPin = catalogPin,
+    environment = environment,
+    size = WearWidgetScaffoldSize.Large,
+    background = literal("color", JsonPrimitive(WEATHER_SUNNY_ARGB)),
+    contentId = "weather-content",
+    content =
+      listOf(
+        UiBuilderNode(
+          id = "weather-content",
+          componentId = "layout/box",
+          properties = JsonObject(emptyMap()),
+          modifiers = JsonArray(listOf(modifier("fillMaxSize"))),
+          slots = mapOf("children" to listOf("weather-column")),
+        ),
+        UiBuilderNode(
+          id = "weather-column",
+          componentId = "layout/column",
+          properties =
+            JsonObject(
+              mapOf(
+                "verticalSpacingDp" to literal("float", JsonPrimitive(4)),
+                // `RemoteBox(contentAlignment = Center)` in the sample. `layout/box` aligns each
+                // child by that child's own `alignment`, so this is where centring lives.
+                "alignment" to literal("enum", JsonPrimitive("center")),
+              )
+            ),
+          modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
+          slots = mapOf("children" to listOf("weather-location", "weather-reading")),
+        ),
+        UiBuilderNode(
+          id = "weather-location",
+          componentId = "m3/text",
+          properties =
+            JsonObject(
+              mapOf(
+                "text" to literal("string", JsonPrimitive("London")),
+                "color" to literal("color", JsonPrimitive(WEATHER_ON_SUNNY_ARGB)),
+                "fontSizeSp" to literal("float", JsonPrimitive(14)),
+                "textAlign" to literal("enum", JsonPrimitive("center")),
+              )
+            ),
+          modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
+          slots = emptyMap(),
+        ),
+        UiBuilderNode(
+          id = "weather-reading",
+          componentId = "m3/text",
+          properties =
+            JsonObject(
+              mapOf(
+                "text" to literal("string", JsonPrimitive("75° ☀️")),
+                "color" to literal("color", JsonPrimitive(WEATHER_ON_SUNNY_ARGB)),
+                "fontSizeSp" to literal("float", JsonPrimitive(36)),
+                "textAlign" to literal("enum", JsonPrimitive("center")),
+              )
+            ),
+          modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
+          slots = emptyMap(),
+        ),
+      ),
+  )
+
+/** `ColorSunny` from the sample's `WeatherWidget.kt`. */
+private const val WEATHER_SUNNY_ARGB = "#FF2196F3"
+
+/** The sample's text colour for every condition but snowy, which alone flips to black. */
+private const val WEATHER_ON_SUNNY_ARGB = "#FFFFFFFF"
+
+/**
+ * A widget host scaffold whose content slot holds a filled surface wrapping [content].
+ *
+ * The surface is inserted here rather than by each sample because both need it and for the same
+ * reason: it is the widget's own background, which the host frame does not draw.
+ */
+private fun wearWidgetSampleDocument(
+  designId: String,
+  title: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+  size: WearWidgetScaffoldSize,
+  background: JsonObject,
+  contentId: String,
+  content: List<UiBuilderNode>,
+): UiBuilderDocument {
+  require(designId.isNotBlank()) { "wear widget design id must not be blank" }
+  val scaffoldId = "wear-widget-${size.name.lowercase()}"
+  val surfaceId = "widget-surface"
+  val nodes =
+    listOf(
+      UiBuilderNode(
+        id = scaffoldId,
+        componentId = size.componentId,
+        properties = JsonObject(emptyMap()),
+        modifiers = JsonArray(emptyList()),
+        slots = mapOf("content" to listOf(surfaceId)),
+      ),
+      UiBuilderNode(
+        id = surfaceId,
+        componentId = "m3/surface",
+        properties = JsonObject(mapOf("containerColor" to background)),
+        modifiers = JsonArray(listOf(modifier("fillMaxSize"))),
+        slots = mapOf("content" to listOf(contentId)),
+      ),
+    ) + content
+  return UiBuilderDocument(
+    schema = "compose-ui-builder-document/v1-candidate",
+    id = designId,
+    title = "$title · ${size.label}",
+    revision = 0,
+    catalogPin = catalogPin,
+    environment = environment,
+    stateVariables = JsonObject(emptyMap()),
+    roots = listOf(scaffoldId),
+    nodes = nodes.associateBy(UiBuilderNode::id),
+  )
+}
+
+private fun literal(type: String, value: JsonPrimitive): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))
+
+private fun colorToken(token: String): JsonObject = literal("colorToken", JsonPrimitive(token))
+
+private fun modifier(type: String): JsonObject = JsonObject(mapOf("type" to JsonPrimitive(type)))
+
+/**
  * One state variable a new design starts with.
  *
  * Declared at creation because that is the only moment a client can put state into a design: the

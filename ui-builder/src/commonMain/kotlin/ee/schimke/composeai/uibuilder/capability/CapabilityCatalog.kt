@@ -264,6 +264,10 @@ object CapabilityCatalogParser {
       "surfaceContainerHigh",
       "surfaceContainerHighest",
       "primary",
+      // Added for the Wear widget samples: a widget on a `primary` background needs the matching
+      // on-colour for its text, and the renderer, the exporter and this list are the three places
+      // that have to agree on a token before a design may hold it.
+      "onPrimary",
       "tertiary",
       "onTertiary",
       "onSurface",

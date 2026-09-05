@@ -519,8 +519,15 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
             pin["nativeRuntimeId"] =
               kotlinx.serialization.json.JsonPrimitive(selectedCatalog.benchmark.nativeRuntimeId)
           }
+        val widgetSample = WearWidgetSample.forTemplate(config.template)
         val initialDocument =
-          if (config.catalogSystemId == "remote-m3") {
+          if (config.catalogSystemId == "remote-m3" && widgetSample != null) {
+            widgetSample.document(
+              designId = config.designId,
+              catalogPin = JsonObject(catalogPin),
+              environment = fixtureDocument.environment,
+            )
+          } else if (config.catalogSystemId == "remote-m3") {
             wearWidgetUiBuilderDocument(
               designId = config.designId,
               catalogPin = JsonObject(catalogPin),
@@ -1291,10 +1298,11 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
       require(it.actorId.isNotBlank()) { "live actor must not be blank" }
       require(it.clientId.isNotBlank()) { "live clientId must not be blank" }
       require(Regex("#[0-9A-Fa-f]{8}").matches(it.colorArgbHex)) { "live color must be #AARRGGBB" }
-      require(
-        it.template in setOf("jetcaster", "blank", "wear-widget-small", "wear-widget-large")
-      ) {
-        "live template must be jetcaster, blank, wear-widget-small, or wear-widget-large"
+      val templates =
+        setOf("jetcaster", "blank", "wear-widget-small", "wear-widget-large") +
+          WearWidgetSample.entries.map(WearWidgetSample::templateId)
+      require(it.template in templates) {
+        "live template must be one of ${templates.sorted().joinToString()}"
       }
     }
 }
@@ -1422,7 +1430,17 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
               label = "Large widget",
               supportingText = "216×124dp host with a single content slot.",
             ),
-          ),
+          ) +
+            // The two worked samples, after the empty scaffolds rather than before them: a blank
+            // host is what someone starting their own widget wants, and a sample is what someone
+            // asking "can this express a real one?" wants.
+            WearWidgetSample.entries.map {
+              UiBuilderNewDesignTemplate(
+                id = it.templateId,
+                label = it.label,
+                supportingText = it.supportingText,
+              )
+            },
       )
     else -> null
   }

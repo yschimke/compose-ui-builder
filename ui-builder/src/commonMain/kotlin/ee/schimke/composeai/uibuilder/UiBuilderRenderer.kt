@@ -1519,6 +1519,7 @@ private fun UiBuilderNode.color(name: String, fallback: Color): Color {
     "surfaceContainerHigh" -> MaterialTheme.colorScheme.surfaceContainerHigh
     "surfaceContainerHighest" -> MaterialTheme.colorScheme.surfaceContainerHighest
     "primary" -> MaterialTheme.colorScheme.primary
+    "onPrimary" -> MaterialTheme.colorScheme.onPrimary
     "tertiary" -> MaterialTheme.colorScheme.tertiary
     "onTertiary" -> MaterialTheme.colorScheme.onTertiary
     "onSurface" -> MaterialTheme.colorScheme.onSurface

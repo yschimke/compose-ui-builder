@@ -1004,6 +1004,7 @@ private fun UiBuilderNode.colorExpression(name: String): String {
   if (value.startsWith("#")) return "Color(0x${value.removePrefix("#").uppercase()})"
   return when (value) {
     "primary" -> "MaterialTheme.colorScheme.primary"
+    "onPrimary" -> "MaterialTheme.colorScheme.onPrimary"
     "tertiary" -> "MaterialTheme.colorScheme.tertiary"
     "onTertiary" -> "MaterialTheme.colorScheme.onTertiary"
     "onSurface" -> "MaterialTheme.colorScheme.onSurface"
@@ -1428,7 +1429,8 @@ private val HANDLED_FIELDS =
   mapOf(
     "asset/image" to HandledFields(setOf("assetKey", "contentDescription", "contentScale")),
     "layout/box" to HandledFields(slots = setOf("children")),
-    "layout/column" to HandledFields(setOf("verticalSpacingDp", "weight"), setOf("children")),
+    "layout/column" to
+      HandledFields(setOf("verticalSpacingDp", "weight", "alignment"), setOf("children")),
     "layout/horizontal-carousel" to
       HandledFields(
         setOf(
