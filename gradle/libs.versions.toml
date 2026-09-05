@@ -5,24 +5,18 @@ ktfmt-cli = "0.64"
 compose-multiplatform = "1.11.1"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
+# One ref for every compose-ai-tools coordinate, and for the Gradle plugin id it also drives.
 # 1.80.0 is the first release carrying `render-matrix`, which `:mcp` needs, and the daemon-core /
 # render-session-api surface the moved MCP sources compile against. The pin moved with the module
 # (compose-ai-tools#5176) rather than in a Renovate bump, because the module cannot build below it.
-# It supersedes the 1.78.1 bump on main, which is a strictly lower release.
+#
+# `preview-discovery` and `screen-model` were pinned apart while the release carrying
+# `ScreenGenerator` ran ahead of the plugin/renderer floor this build resolved, so bumping the
+# shared ref would have forced a plugin and renderer bump into the same change. That floor caught
+# up at 1.80.0 — the three refs met — so the split is gone rather than left reading as a live
+# constraint. Split them again only if the floor falls behind a coordinate this build needs.
 composeai-tools = "1.80.0"
 composeai-contracts = "2.5.0"
-# `preview-discovery` is pinned apart from the rest of compose-ai-tools because the version that
-# carries `ScreenGenerator` is newer than the plugin/renderer floor this build resolves, and
-# `composeai-tools` also drives the Gradle plugin id. Bumping the shared ref would force a plugin
-# and renderer bump into the same change. The artifact shares no compose-ai-tools transitive with
-# the rest of the floor — it depends only on kotlinx-serialization, ClassGraph and ASM — so the
-# split cannot produce two versions of one internal module. Collapse it back into `composeai-tools`
-# at the next Renovate bump that reaches this version.
-composeai-preview-discovery = "1.80.0"
-# `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
-# browser editor reach the same `ScreenGenerator` the server exports with. Its own ref because it
-# first exists in 1.77.0, and `composeai-tools` is pinned lower.
-composeai-screen-model = "1.80.0"
 rc-players = "1.57.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
@@ -54,8 +48,10 @@ composeai-render-host = { module = "ee.schimke.composeai:render-host", version.r
 # yschimke/compose-preview-server#9 asked for.
 composeai-build-host-protocol = { module = "ee.schimke.composeai:build-host-protocol", version.ref = "composeai-tools" }
 composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api", version.ref = "composeai-tools" }
-composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery", version.ref = "composeai-preview-discovery" }
-composeai-screen-model = { module = "ee.schimke.composeai:screen-model", version.ref = "composeai-screen-model" }
+composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery", version.ref = "composeai-tools" }
+# `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
+# browser editor reach the same `ScreenGenerator` the server exports with.
+composeai-screen-model = { module = "ee.schimke.composeai:screen-model", version.ref = "composeai-tools" }
 composeai-common-image-crop = { module = "ee.schimke.composeai:common-image-crop", version.ref = "composeai-tools" }
 composeai-bundle-format = { module = "ee.schimke.composeai:bundle-format", version.ref = "composeai-tools" }
 composeai-bundle-coordinates = { module = "ee.schimke.composeai:bundle-coordinates", version.ref = "composeai-tools" }
