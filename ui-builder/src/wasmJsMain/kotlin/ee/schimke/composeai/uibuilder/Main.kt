@@ -505,8 +505,13 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       CapabilityCatalogParser.parse(
         Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), selectedCatalog)
       )
+    // `seed` runs only on the create path, so it is also the signal that this load is the one
+    // that brought the design into existence — which is what decides between forwarding to the
+    // permalink and quietly tidying the URL.
+    var createdHere = false
     val openResult =
       UiBuilderLiveSessionApi(config.designId, http).openOrCreate(config.createIfMissing) {
+        createdHere = true
         sessionStatus = "Creating ${config.designId} from the ${config.template} template…"
         val fixture =
           Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
@@ -557,6 +562,16 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
         val response = result.response as? SnapshotResponseV1
         if (response == null) {
           sessionStatus = "Live error · unexpected open response"
+          return@LaunchedEffect
+        }
+        // A create URL is a verb; the permalink is the noun. Now that the design exists, hand
+        // the browser the permalink and let it open it: `location.replace`, so the spent create
+        // URL leaves no history entry to go Back to. Nothing is wired up first — the fresh load
+        // does that against a design that now exists. Where the create URL *was* the permalink
+        // (opening `/ui-builder/<catalog>/<designId>` for a design that did not exist yet) there
+        // is nothing to forward to, and the snapshot in hand is the one to render.
+        if (createdHere && forwardToDesignPermalink(config.catalogSystemId, config.designId)) {
+          sessionStatus = "Created ${config.designId} · opening its permalink…"
           return@LaunchedEffect
         }
         acceptSnapshot(response)
@@ -1512,6 +1527,30 @@ private external fun assignUiBuilderDesignUrl(
   state: String,
   replace: Boolean,
 )
+
+/**
+ * Send the browser to this design's permalink, unless it is already there.
+ *
+ * Returns false when the current URL is the permalink, which is the "create by opening the
+ * permalink" case: there is nothing to forward to, and reloading it would only cost a round trip.
+ */
+@JsFun(
+  """(catalogSystemId, designId) => {
+    const current = new URL(globalThis.location.href);
+    const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
+      encodeURIComponent(designId);
+    const next = new URL(path, current.origin);
+    ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
+      .forEach((name) => {
+        const value = current.searchParams.get(name);
+        if (value !== null) next.searchParams.set(name, value);
+      });
+    if (next.toString() === current.toString()) return false;
+    globalThis.location.replace(next.toString());
+    return true;
+  }"""
+)
+private external fun forwardToDesignPermalink(catalogSystemId: String, designId: String): Boolean
 
 /**
  * Rewrite whatever URL opened this design to its canonical form, once the design is open.

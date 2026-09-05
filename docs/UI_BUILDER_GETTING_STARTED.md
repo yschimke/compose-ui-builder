@@ -32,8 +32,9 @@ A design has one URL, and it names the catalog and the design:
 Open it and the design opens; open it for a design that does not exist yet and it is created. Add
 `?template=wear-widget-small` to choose what a missing design is seeded from — that is the direct
 creation URL for automation and bookmarks. Creation never overwrites an existing design, and
-`?create=0` refuses to create one at all. The seeding query is dropped from the address bar as soon
-as the design is open, so the URL you copy out of the browser is always the plain one above.
+`?create=0` refuses to create one at all. Once the design has been created the browser forwards to
+the permalink above and the creation URL is gone, including from Back, so the URL you copy out of
+the browser is always the plain one.
 
 The older query form (`/ui-builder/remote-m3/?session=live&create=1&designId=my-remote-screen`)
 still works and redirects itself to the canonical path. The `blank`

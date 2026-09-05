@@ -22,9 +22,13 @@ minimal scaffold with an empty content box instead. See the
 [getting-started guide](../UI_BUILDER_GETTING_STARTED.md) for the complete from-scratch workflow.
 
 `template` and `state` describe how a design that does not exist yet is seeded, so they say nothing
-once it does. As soon as the design is open the browser rewrites the URL to the canonical path form
-with `history.replaceState`, dropping them along with `session`, `create` and `designId` — one
-design, one URL, whichever spelling opened it.
+once it does. A create URL is a verb; the permalink is the noun. As soon as a create succeeds the
+browser forwards to the permalink with `location.replace` — the spent create URL leaves no history
+entry to go Back to, and the fresh load opens a design that now exists. Opening the permalink
+itself for a design that does not exist yet creates it in place: there is nothing to forward to,
+and the snapshot already in hand is the one to render. A URL that merely *opened* an existing
+design is tidied without a round trip, `history.replaceState` dropping `session`, `create`,
+`designId`, `template` and `state` — one design, one URL, whichever spelling opened it.
 
 The older query form is still honoured, so existing bookmarks and automation keep working:
 
