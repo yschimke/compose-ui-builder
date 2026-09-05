@@ -24,6 +24,34 @@ live editor.
 5. Select a node and edit it in Properties. Changes are committed to the live revision
    automatically; Undo, Redo, Duplicate, and Delete use the same collaboration log.
 
+## The workspace
+
+The editor opens on the canvas, with both docks closed: the design is the thing being worked on, so
+it gets the window. Everything else is a panel behind a switch on one of the two rails.
+
+| Rail | Switch | What it opens |
+| --- | --- | --- |
+| Left | **Insert** | The catalog for this design's pinned system, and the Remote Compose palette where the catalog publishes one. Drag a row onto the canvas, or select **Add** to drop it into the slot the panel names. |
+| Left | **Layers** | The document as a tree. Filter it, ctrl/⌘-click and shift-click to build a selection, drag a row to reorder. |
+| Right | **Properties** | The selected layer's catalog properties, its state bindings and its modifiers. |
+| Right | **Theme** | The colours and typography the whole design is drawn with. |
+| Right | **Screen** | The frame, the density, the device preset and the reference picture. |
+| Right | **Issues** | What the export would refuse, counted on the rail itself. |
+| Right | **Code** | The Kotlin the Compose export would write. |
+
+Pressing a switch that is already lit closes that panel and gives the space back to the canvas.
+
+The top bar carries what is global: the design's name and catalog, undo and redo, the
+**Design / Preview** switch, which renderer draws the canvas, and who else is in the document. What
+can be done to a *selection* — duplicate, copy, cut, paste, delete, wrap, unwrap — appears in a bar
+above the canvas while there is one, and nowhere at all while there is not. Every one of those
+still has the keyboard chord it always had; **Keyboard shortcuts** in the top bar's overflow menu
+lists them.
+
+The strip under the canvas is status rather than control: the committed revision, the node count,
+the size of the selection, where a drag would land while one is in flight, the last rejection, and
+the session.
+
 A design has one URL, and it names the catalog and the design:
 
 ```text
@@ -280,7 +308,7 @@ kept out of the Compose exporter by design — so a host serving both advertises
 
 ## Reading the code a design produces
 
-**Code** in the toolbar opens the Kotlin the export would write, under the canvas, updating on
+**Code** on the right rail opens the Kotlin the export would write, beside the canvas, updating on
 every edit. It is the export's own output: same generator, same record, same allow-list. A design
 the generator cannot express shows the reasons where the source would be, rather than blanking —
 those reasons are the actionable half, and they are the same list the Issues tab reports.
@@ -293,7 +321,7 @@ so the server's annotation lane can report where every node landed in the frame.
 
 ## Build against a reference
 
-The **Screen** inspector's Reference section attaches a picture to the design and draws it over the
+The **Screen** panel's Reference section attaches a picture to the design and draws it over the
 canvas. Import a file, paste one straight onto the page (Figma's "copy as PNG" on a frame or a
 component puts it on the clipboard), or press **Snapshot** to render the design as it stands and
 build the reference from that. Whatever you attach is kept with the design and comes back the next

@@ -36,6 +36,27 @@ fun UiBuilderEditorChromePreview() {
     document = editorChromePreviewDocument,
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    // Both docks open, which is not how the editor starts: this preview exists to diff the panels,
+    // and [UiBuilderCanvasForwardPreview] is the one that diffs the default.
+    initialComponentsOpen = true,
+    initialInspectorOpen = true,
+  )
+}
+
+/**
+ * The editor as it opens: both docks closed, the canvas with the whole window.
+ *
+ * The default this repository now ships, and therefore the one that has to be diffed. Every other
+ * chrome preview asks for a panel, so without this one a change that broke the empty state would
+ * pass every render.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderCanvasForwardPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
   )
 }
 
@@ -61,6 +82,7 @@ fun UiBuilderRemoteComposePalettePreview() {
     // off the same question the insert asks, so a leaf selection would diff a palette whose every
     // row is greyed and never show the affordance working.
     initialSelectedNodeId = "discover-grid",
+    initialComponentsOpen = true,
     remoteComposeSources = REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES,
     resolveRemoteComposeDocument = { error("a preview never adds") },
   )
@@ -105,6 +127,7 @@ fun UiBuilderLayoutInspectorPreview() {
     document = editorChromePreviewDocument,
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = "discover-grid",
+    initialInspectorOpen = true,
   )
 }
 
@@ -130,6 +153,7 @@ fun UiBuilderIssuesInspectorPreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialInspectorMode = EditorInspectorMode.Issues,
+    initialInspectorOpen = true,
   )
 }
 
@@ -181,6 +205,7 @@ fun UiBuilderStateBindingPreview() {
     document = editorChromePreviewDocument,
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = "chip-crime",
+    initialInspectorOpen = true,
   )
 }
 
@@ -219,6 +244,7 @@ fun UiBuilderLayerFilterPreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialLayerQuery = "m3/filter-chip",
+    initialLayersOpen = true,
   )
 }
 
@@ -237,6 +263,7 @@ fun UiBuilderDevicePresetPhonePreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = "discover-grid",
     initialInspectorMode = EditorInspectorMode.Screen,
+    initialInspectorOpen = true,
     devicePresets = PREVIEW_DEVICE_PRESETS,
   )
 }
@@ -250,6 +277,7 @@ fun UiBuilderDevicePresetTabletPreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = "discover-grid",
     initialInspectorMode = EditorInspectorMode.Screen,
+    initialInspectorOpen = true,
     devicePresets = PREVIEW_DEVICE_PRESETS,
   )
 }
