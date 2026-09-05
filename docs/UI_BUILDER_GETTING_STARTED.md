@@ -23,13 +23,20 @@ live editor.
 5. Select a node and edit it in Properties. Changes are committed to the live revision
    automatically; Undo, Redo, Duplicate, and Delete use the same collaboration log.
 
-Direct creation URLs remain available for automation and bookmarks:
+A design has one URL, and it names the catalog and the design:
 
 ```text
-/ui-builder/remote-m3/?session=live&create=1&template=wear-widget-small&designId=my-remote-screen
+/ui-builder/remote-m3/my-remote-screen
 ```
 
-`create=1` only creates a missing design. It never overwrites an existing `designId`. The `blank`
+Open it and the design opens; open it for a design that does not exist yet and it is created. Add
+`?template=wear-widget-small` to choose what a missing design is seeded from — that is the direct
+creation URL for automation and bookmarks. Creation never overwrites an existing design, and
+`?create=0` refuses to create one at all. The seeding query is dropped from the address bar as soon
+as the design is open, so the URL you copy out of the browser is always the plain one above.
+
+The older query form (`/ui-builder/remote-m3/?session=live&create=1&designId=my-remote-screen`)
+still works and redirects itself to the canonical path. The `blank`
 template is a real, valid document: a `layout/scaffold` root with an empty `layout/box` in its
 required content slot. In `remote-m3`, creation starts with the Small Wear widget scaffold instead:
 a 216×76dp host frame with an empty content slot. Use `template=wear-widget-large` for the

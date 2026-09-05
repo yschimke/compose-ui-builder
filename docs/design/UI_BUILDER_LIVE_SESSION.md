@@ -1,18 +1,38 @@
 # UI builder live browser session
 
 The `/ui-builder/` Wasm application opens the live New design chooser when neither `mode` nor
-`session` is specified. A shared, persistent design can also be opened explicitly:
+`session` is specified. One shared, persistent design is named in the path:
 
 ```text
-/ui-builder/?session=live&designId=jetcaster-discover&actor=operator&clientId=browser-a&token=…
+/ui-builder/m3-catalog/jetcaster-discover
 ```
 
-On a fresh server, add `create=1`. The browser first attempts `OpenDesign`; only a `notFound`
-response enables the explicit create path, which seeds the requested ID from the current Jetcaster
-fixture at revision zero. An existing design is never overwritten.
+That is the canonical URL for a design, and the only thing it says is which catalog and which
+design. The identity and transport values — `actor`, `clientId`, `displayName`, `color`, `token`,
+`endpoint`, `updatesEndpoint` — remain a query, because they configure *who* is editing rather
+than *what*. The browser reads the design out of `location.pathname`; the server serves the app
+shell for a catalog-scoped segment that names no file, and redirects the trailing-slash spelling
+away, because the shell resolves `uiBuilder.mjs` relative to the document.
 
-Add `template=blank` to seed a minimal scaffold with an empty content box instead. See the
+A design named in the path is opened-or-created: the browser first attempts `OpenDesign`, and only
+a `notFound` response enables the explicit create path, which seeds the requested ID from the
+current Jetcaster fixture at revision zero. An existing design is never overwritten, so this is
+safe by construction; `create=0` still opts out of creating at all. `template=blank` seeds a
+minimal scaffold with an empty content box instead. See the
 [getting-started guide](../UI_BUILDER_GETTING_STARTED.md) for the complete from-scratch workflow.
+
+`template` and `state` describe how a design that does not exist yet is seeded, so they say nothing
+once it does. As soon as the design is open the browser rewrites the URL to the canonical path form
+with `history.replaceState`, dropping them along with `session`, `create` and `designId` — one
+design, one URL, whichever spelling opened it.
+
+The older query form is still honoured, so existing bookmarks and automation keep working:
+
+```text
+/ui-builder/?session=live&create=1&designId=jetcaster-discover&actor=operator&clientId=browser-a
+```
+
+The path wins where both name a design, and such a URL is rewritten to the path form on open.
 
 The browser opens the design through the released v1 HTTP envelope, renders the authoritative
 snapshot, and subscribes to `/api/ui-builder/v1/designs/{designId}/updates`. Editor batches, undo,

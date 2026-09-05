@@ -560,6 +560,7 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
           return@LaunchedEffect
         }
         acceptSnapshot(response)
+        canonicalizeUiBuilderUrl(config.catalogSystemId, config.designId)
         val client =
           UiBuilderProtocolUpdateClient(
             designId = config.designId,
@@ -1270,9 +1271,16 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
   val defaultDesignId =
     if (catalogSystemId == "m3-catalog") "jetcaster-discover"
     else "$catalogSystemId-jetcaster-discover"
+  // `/ui-builder/<catalog>/<designId>` is the canonical form. The `?designId=` query still works
+  // — bookmarks and automation written against it must not break — but the path wins where both
+  // are present, and a design named in the path is opened-or-created without `create=1`, because
+  // "open this design" is the whole meaning of the URL. `create=0` opts back out.
+  val pathDesignId = uiBuilderDesignFromPath()
+  val designNamedInPath = pathDesignId.isNotEmpty()
   return LiveSessionConfig(
       catalogSystemId = catalogSystemId,
-      designId = liveConfigValue("designId", defaultDesignId),
+      designId =
+        if (designNamedInPath) pathDesignId else liveConfigValue("designId", defaultDesignId),
       actorId = liveConfigValue("actor", serverActorId ?: "browser-user"),
       clientId = liveConfigValue("clientId", "browser-editor"),
       httpEndpoint = liveConfigValue("endpoint", "/api/ui-builder/v1/requests"),
@@ -1281,8 +1289,10 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
           "updatesEndpoint",
           "/api/ui-builder/v1/designs/{designId}/updates",
         ),
-      startWithNewDesign = !liveConfigPresent("designId"),
-      createIfMissing = liveConfigFlag("create"),
+      startWithNewDesign = !designNamedInPath && !liveConfigPresent("designId"),
+      createIfMissing =
+        if (designNamedInPath) liveConfigValue("create", "1").let { it == "1" || it == "true" }
+        else liveConfigFlag("create"),
       template = liveConfigValue("template", "jetcaster"),
       state = decodeNewDesignStates(liveConfigValue("state", "[]")),
       operationIdPrefix = "${liveConfigValue("clientId", "browser-editor")}-${livePageNonce()}",
@@ -1295,6 +1305,9 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
         "live catalog must be a safe catalog id"
       }
       require(it.designId.isNotBlank()) { "live designId must not be blank" }
+      require(!designNamedInPath || Regex("[A-Za-z0-9][A-Za-z0-9._-]*").matches(it.designId)) {
+        "a design named in the path must be path-safe"
+      }
       require(it.actorId.isNotBlank()) { "live actor must not be blank" }
       require(it.clientId.isNotBlank()) { "live clientId must not be blank" }
       require(Regex("#[0-9A-Fa-f]{8}").matches(it.colorArgbHex)) { "live color must be #AARRGGBB" }
@@ -1454,31 +1467,72 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
 private external fun uiBuilderCatalogFromPath(): String
 
 @JsFun(
-  """(catalogSystemId, designId, templateId, state) => {
+  """() => {
+    const parts = globalThis.location.pathname.split('/').filter(Boolean);
+    if (parts[0] !== 'ui-builder' || parts.length < 3) return '';
+    return decodeURIComponent(parts[2]);
+  }"""
+)
+private external fun uiBuilderDesignFromPath(): String
+
+/**
+ * The canonical URL for one design: `/ui-builder/<catalog>/<designId>`.
+ *
+ * Only the identity and transport values survive as a query — they configure *who* is editing, not
+ * *what*. `session`, `create`, `designId`, `template` and `state` do not: the first three are
+ * implied by the path, and the last two only ever described how a design that now exists was
+ * seeded.
+ */
+@JsFun(
+  """(catalogSystemId, designId, templateId, state, replace) => {
     const current = new URL(globalThis.location.href);
-    const path = catalogSystemId === 'm3-catalog'
-      ? '/ui-builder/'
-      : '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/';
+    const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
+      encodeURIComponent(designId);
     const next = new URL(path, current.origin);
     ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
       .forEach((name) => {
         const value = current.searchParams.get(name);
         if (value !== null) next.searchParams.set(name, value);
       });
-    next.searchParams.set('session', 'live');
-    next.searchParams.set('create', '1');
+    if (replace) {
+      if (next.toString() !== current.toString()) {
+        globalThis.history.replaceState(null, '', next.toString());
+      }
+      return;
+    }
     if (state && state !== '[]') next.searchParams.set('state', state);
-    next.searchParams.set('template', templateId);
-    next.searchParams.set('designId', designId);
+    if (templateId) next.searchParams.set('template', templateId);
     globalThis.location.assign(next.toString());
   }"""
 )
-private external fun navigateToNewDesign(
+private external fun assignUiBuilderDesignUrl(
   catalogSystemId: String,
   designId: String,
   templateId: String,
   state: String,
+  replace: Boolean,
 )
+
+/**
+ * Rewrite whatever URL opened this design to its canonical form, once the design is open.
+ *
+ * A `?session=live&create=1&template=blank&designId=x` link and a bookmarked
+ * `/ui-builder/<catalog>/x` then address the same design by the same URL — and a reload of the
+ * rewritten one re-opens the existing design rather than re-running a create that would be refused
+ * anyway.
+ */
+private fun canonicalizeUiBuilderUrl(catalogSystemId: String, designId: String) {
+  assignUiBuilderDesignUrl(catalogSystemId, designId, "", "", replace = true)
+}
+
+private fun navigateToNewDesign(
+  catalogSystemId: String,
+  designId: String,
+  templateId: String,
+  state: String,
+) {
+  assignUiBuilderDesignUrl(catalogSystemId, designId, templateId, state, replace = false)
+}
 
 @JsFun(
   """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
