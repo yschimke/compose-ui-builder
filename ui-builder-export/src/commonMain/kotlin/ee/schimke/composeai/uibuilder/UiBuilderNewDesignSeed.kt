@@ -23,6 +23,12 @@ object UiBuilderNewDesignSeed {
   /** The template a URL that names none is asking for. */
   const val DEFAULT_TEMPLATE: String = "jetcaster"
 
+  /** An empty `ScreenScaffold` over an empty `TransformingLazyColumn`. */
+  const val WEAR_SCREEN_TEMPLATE: String = "wear-screen"
+
+  /** The same shape with wear-m3-catalog's own rows in it, which is what a parity check needs. */
+  const val WEAR_LIST_TEMPLATE: String = "wear-list"
+
   /**
    * The templates [document] can seed for a catalog, which is what a caller is validated against.
    */
@@ -31,6 +37,7 @@ object UiBuilderNewDesignSeed {
       "remote-m3" ->
         setOf("wear-widget-small", "wear-widget-large") +
           WearWidgetSample.entries.map(WearWidgetSample::templateId)
+      "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       else -> setOf("blank", DEFAULT_TEMPLATE)
     }
 
@@ -70,6 +77,21 @@ object UiBuilderNewDesignSeed {
           designId = designId,
           catalogPin = catalogPin,
           environment = environment,
+        )
+      // The Wear frame, not the fixture's handset: the scaffold reads its diameter from the
+      // document, so seeding a watch design on a phone would draw the smallest watch while the
+      // Screen inspector said "Pixel".
+      catalogSystemId == "wear-m3" && templateId == WEAR_LIST_TEMPLATE ->
+        wearScreenUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = wearScreenEnvironment(environment),
+        )
+      catalogSystemId == "wear-m3" ->
+        blankWearScreenUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = wearScreenEnvironment(environment),
         )
       catalogSystemId == "remote-m3" ->
         wearWidgetUiBuilderDocument(

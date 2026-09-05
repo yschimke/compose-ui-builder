@@ -23,7 +23,7 @@ import kotlinx.serialization.json.jsonObject
  * because the question is what a Wear screen looks like in the builder, not what the builder looks
  * like around it.
  */
-@Preview(widthDp = 168, heightDp = 280)
+@Preview(widthDp = 170, heightDp = 410)
 @Composable
 fun WearScreenSamplePreview() {
   UiBuilderSurface(
@@ -47,7 +47,7 @@ fun WearScreenSamplePreview() {
  * inspector's Wear OS presets — rather than from a scaffold property, so switching size is
  * switching device.
  */
-@Preview(widthDp = 600, heightDp = 280)
+@Preview(widthDp = 580, heightDp = 410)
 @Composable
 fun WearScreenBreakpointsPreview() {
   Row(

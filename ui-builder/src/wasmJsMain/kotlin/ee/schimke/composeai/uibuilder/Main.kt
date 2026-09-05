@@ -1431,6 +1431,28 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
               )
             },
       )
+    "wear-m3" ->
+      UiBuilderNewDesignCatalog(
+        systemId = "wear-m3",
+        label = "Wear Material 3",
+        templates =
+          listOf(
+            UiBuilderNewDesignTemplate(
+              id = UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
+              label = "Wear screen",
+              supportingText =
+                "A ScreenScaffold with its clock and scroll indicator, over an empty list.",
+            ),
+            // After the empty one, for the reason the widget samples come after the empty hosts: a
+            // blank scaffold is what somebody starting their own screen wants, and the worked list
+            // is what somebody asking "does this match a real Wear render?" wants.
+            UiBuilderNewDesignTemplate(
+              id = UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
+              label = "Activity list",
+              supportingText = "Six title cards under a list header, row for row the reference's.",
+            ),
+          ),
+      )
     else -> null
   }
 

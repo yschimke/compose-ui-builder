@@ -433,8 +433,12 @@ private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
       name = "scrollIndicator",
       jsonType = JsonPrimitive("boolean"),
       notes =
-        "Whether the scaffold draws its scroll indicator on the right bezel. `ScreenScaffold` " +
-          "derives it from the scroll state, so this only says whether one is present.",
+        "Whether the generated screen gives `ScreenScaffold` a scroll indicator. The canvas draws " +
+          "none either way: an indicator shows where a viewport sits in the content, and the " +
+          "long-screenshot extent has no viewport. The real capture agrees — a `ScrollMode.LONG` " +
+          "render sets `LocalScrollCaptureInProgress` and the emitted scaffold suppresses the " +
+          "indicator while it is set, which is what keeps a stitched capture free of the dashes " +
+          "an indicator drawn per frame leaves down the edge.",
     ),
     PropertyCapabilityV1(
       name = "background",
@@ -444,6 +448,15 @@ private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
           "`background` — pure black — rather than to the editor theme's surface.",
     ),
   )
+
+/**
+ * What a `ListHeader` lets an author set, which is its label and how the label reads.
+ *
+ * Not the full `m3/text` surface it borrows its shape from: a header's colour, alignment and size
+ * are the component's, and offering them would invite a design that no longer measures 48dp — the
+ * one thing this component exists to guarantee.
+ */
+private val WEAR_LIST_HEADER_PROPERTIES = setOf("text", "maxLines", "overflow")
 
 /** `TransformingLazyColumn`'s authored parameters, minus the ones its state object carries. */
 private fun wearTransformingLazyColumnProperties(): List<PropertyCapabilityV1> =
@@ -530,7 +543,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       wasm =
         supportedWasm.copy(
           notes =
-            "Drawn as a Wear long-screenshot stadium — the document frame's width, the content's height, round caps — with a frozen curved TimeText and an optional bezel scroll indicator. It is not Wear Compose: `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link, so the round viewport's horizontal inset near the caps is not applied and a row reads wider here than on a watch."
+            "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp."
         ),
       // No Compose export from the catalog's own record: `ScreenScaffold` is a scaffold with a
       // `contentPadding` lambda and a scroll-state argument that has to agree with the list inside
@@ -544,6 +557,30 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         ),
     )
 
+  // The first content component that is Wear's rather than borrowed, and it exists because the
+  // round trip found it. `ListHeader` is a 48dp item at every screen size — measured — and the
+  // template used to fake that with a padded `m3/text`. The canvas matched; the *generated screen*
+  // did not, because a padded Text is not a ListHeader and the generator has no business emitting
+  // one as the other. Fifteen dp of header is the difference between "the two pictures agree" and
+  // "the two pictures agree except at the top", and there is no way to close it from the borrowed
+  // side.
+  val listHeader =
+    components.getValue("m3/text").let { text ->
+      text.copy(
+        componentId = "wear-m3/list-header",
+        displayName = "List header",
+        traits = text.traits + "ListItem",
+        properties = text.properties.filter { it.name in WEAR_LIST_HEADER_PROPERTIES },
+        modifierCapabilities = emptyList(),
+        wasm =
+          text.wasm.copy(
+            notes =
+              "Wear Material 3's `ListHeader`: a 48dp item whose label sits low in it, drawn on the screen's own background rather than on a surface. The height is upstream's and is what makes a generated screen's first row land where the canvas puts it."
+          ),
+        code = null,
+      )
+    }
+
   val transformingLazyColumn =
     lazyColumn.copy(
       componentId = "wear-m3/transforming-lazy-column",
@@ -555,7 +592,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       wasm =
         supportedWasm.copy(
           notes =
-            "Drawn as a plain Column at full width. The transformation that scales and fades rows toward the curved edges — `SurfaceTransformation` and `Modifier.transformedHeight` — is what a Wear list looks like and is exactly what this cannot show; the generated Kotlin emits it, and the native render lane draws it. Treat the canvas as the running order, not the picture."
+            "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it."
         ),
       code = null,
       svg =
@@ -578,16 +615,33 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "m3/icon",
       "m3/button",
       "asset/image",
+      // Every published `remote-m3` component, reachable from a Wear screen.
+      //
+      // Offering `remote-compose/document` is what lights up the builder's "Remote Compose
+      // documents" palette, which lists every preview the *serving* catalog of that name publishes
+      // an `ir/<id>.rc` for — on preview.coo.ee, the 28 Remote Compose components of
+      // wear-m3-catalog's `:remote-catalog`, in all their published states. The bytes are fetched,
+      // decoded and played in-process by the same `RcComposePlayer` the deployed player lanes use,
+      // so a row dropped into a Wear list is drawn by the renderer a watch would use rather than by
+      // a re-creation.
+      //
+      // This is the one component in the catalog that is not a stand-in for anything. It is also
+      // the one the Compose generator refuses by name: a Remote Compose document has no Wear
+      // Compose call site, so a screen holding one exports as a refusal that names the node rather
+      // than as Kotlin that does not compile.
+      "remote-compose/document",
     )
   val borrowed =
     borrowedIds.map(components::getValue).map { component ->
-      component.copy(
-        wasm =
-          component.wasm.copy(
-            notes =
-              "Drawn as the Material 3 component of the same name. Wear Compose Material 3 publishes its own, with different sizes and colour roles; this is a stand-in until `wear-m3` has content ids of its own."
-          )
-      )
+      if (component.componentId == "remote-compose/document") component
+      else
+        component.copy(
+          wasm =
+            component.wasm.copy(
+              notes =
+                "Drawn as the Material 3 component of the same name. Wear Compose Material 3 publishes its own, with different sizes and colour roles; this is a stand-in until `wear-m3` has content ids of its own."
+            )
+        )
     }
 
   return base.copy(
@@ -598,7 +652,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
         catalogRevision = "wear-screen-scaffold-v1",
       ),
-    components = listOf(scaffold, transformingLazyColumn) + borrowed,
+    components = listOf(scaffold, transformingLazyColumn, listHeader) + borrowed,
   )
 }
 

@@ -102,8 +102,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -126,6 +128,7 @@ import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWO
 import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 import kotlin.io.encoding.Base64
+import kotlin.math.PI
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -327,8 +330,16 @@ fun UiBuilderSurface(
       size?.let { UiBuilderPixelBounds(0f, 0f, it.width.toFloat(), it.height.toFloat()) },
     )
   }
+  // A Wear design gets Wear's colours, whatever the editor theme says. The screen is black, the
+  // card is `#332E3C` and a subtitle is the warm `#FFDCC2` that nobody guesses — all three sampled
+  // from wear-m3-catalog's own render. Deciding this by root component rather than by a theme host
+  // is the same call the scaffold's background makes: `wear-m3` has no `m3/surface` to hang a
+  // theme on, and a Wear screen drawn in Material 3 dark is a picture of the wrong watch.
+  val wearScreen =
+    document.roots.singleOrNull()?.let(document.nodes::get)?.componentId == WEAR_SCREEN_SCAFFOLD
   val baseColorScheme =
     when {
+      wearScreen -> WearDarkColorScheme
       dark && document.id.startsWith("fixture-jetcaster-") -> JetcasterDarkColorScheme
       dark -> darkColorScheme()
       else -> lightColorScheme()
@@ -355,7 +366,12 @@ fun UiBuilderSurface(
       onSurfaceVariant = contentColor ?: baseColorScheme.onSurfaceVariant,
     )
   val typeScale = themeHost?.float(THEME_TYPE_SCALE, 1f)?.coerceIn(0.75f, 1.5f) ?: 1f
-  val cornerRadius = themeHost?.float(THEME_CORNER_RADIUS, 16f)?.coerceIn(0f, 48f) ?: 16f
+  // 26dp on a Wear screen: measured off the reference card's corner, where the first drawn row is
+  // inset 26dp from each side and reaches full width 26dp down. Material 3's 16dp default draws a
+  // recognisably different card, and the card is most of what a Wear list is.
+  val cornerRadius =
+    themeHost?.float(THEME_CORNER_RADIUS, 16f)?.coerceIn(0f, 48f)
+      ?: if (wearScreen) WEAR_CARD_CORNER_RADIUS_DP else 16f
   CompositionLocalProvider(
     LocalDensity provides density,
     LocalLayoutDirection provides layoutDirection,
@@ -543,6 +559,22 @@ private fun RenderNode(
     // exists off Android — approximating the curve with a hand-rolled scale would draw a
     // *different*
     // wrong picture and imply it was the right one. The running order is what this shows.
+    // 48dp, and the height is the point. `ListHeader` is what a Wear list puts at the top, the
+    // generator emits one, and a design that faked it with a padded Text made the canvas agree
+    // with itself while disagreeing with the screen it generates — which the round trip found.
+    "wear-m3/list-header" ->
+      Box(
+        measured.fillMaxWidth().height(WEAR_LIST_HEADER_HEIGHT_DP.dp),
+        contentAlignment = Alignment.Center,
+      ) {
+        Text(
+          node.string("text"),
+          Modifier,
+          color = WEAR_SCREEN_ON_SURFACE,
+          fontSize = WEAR_LIST_HEADER_SP.sp,
+          maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        )
+      }
     "wear-m3/transforming-lazy-column" ->
       Column(
         modifier = measured.fillMaxWidth(),
@@ -917,20 +949,29 @@ private fun UiBuilderDocument.wearScreenWidthDp(): Int {
  *
  * ## Why a stadium and not a circle
  *
- * A watch screen is round and a Wear design is a *scrolling* thing — `ScreenScaffold` exists to
- * hold a `TransformingLazyColumn` — so the two pictures an author might want are the 192dp keyhole
- * and the whole extent. This draws the extent, which is the Wear long-screenshot convention and the
- * one you can actually build in: a keyhole shows one screenful and hides the rest of the list being
- * authored. [WEAR_VIEWPORT_OUTLINE] is drawn over the top cap so the first screenful is still
- * marked.
+ * Because that is what the real one is. `@ScrollingPreview(modes = [ScrollMode.LONG])` on
+ * wear-m3-catalog's `TransformingLazyColumn` component stitches the whole scroll into one tall PNG,
+ * and the result is a stadium: the screen's width, the content's height, a round cap at each end.
+ * This draws the same shape because the shape is not a metaphor — it is the Wear long-screenshot
+ * form, and the extent is what an author is building. A 192dp keyhole shows one screenful and hides
+ * the rest of the list behind a scroll position they have to keep re-finding.
  *
- * ## What it gets wrong, on purpose
+ * ## Every number here was measured, not chosen
  *
- * The sides are straight. On a watch the usable width narrows toward the caps, so a row near the
- * top or bottom of a screenful is inset and this draws it full-width — every row here reads wider
- * than it will be. The row transformation is missing for the same reason the list stand-in is a
- * Column. Both are stated in the catalog's `wasm` notes, and the native render lane is what answers
- * the question properly.
+ * The geometry comes from that render and from `ScreenScaffoldPaddingProbeTest` in wear-m3-catalog,
+ * which composes the real `AppScaffold` / `ScreenScaffold` / `TransformingLazyColumn` under
+ * Robolectric and reports what the scaffold hands its list. See [wearScreenContentPadding] and
+ * [WEAR_TIME_TEXT_TOP_DP]. Guessed fractions is what this used to be, and they were wrong in both
+ * axes.
+ *
+ * ## What it still gets wrong, on purpose
+ *
+ * The rows are not transformed. `SurfaceTransformation` scales and fades each row by where it sits
+ * in the viewport, and on the stitched reference that is visible as rows of *different widths* down
+ * the page — each strip carrying the scale it had in the frame it came from. A stand-in cannot have
+ * that without inventing a scroll position for a page that has none, so rows here are drawn at the
+ * one width the transformation passes through: full content width, which is what a row gets at the
+ * centre of the display.
  */
 @Composable
 private fun WearScreenScaffold(
@@ -942,14 +983,13 @@ private fun WearScreenScaffold(
   content: @Composable (Modifier) -> Unit,
 ) {
   val width = screenWidthDp.dp
-  // Wear Material 3 is dark-first and its `background` is pure black, not the editor theme's
-  // surface. Reading the theme here made the watch go white in a light editor, which is the same
-  // bug the widget container's default background comments.
-  val background = node.color("background", Color.Black)
-  val onBackground = node.color("timeTextColor", WEAR_SCREEN_ON_BACKGROUND)
+  val padding = wearScreenContentPadding(screenWidthDp)
+  // Wear Material 3 is dark-first and its `background` is pure black — measured off the reference
+  // render, not read from the editor theme, which is the bug the widget container's default
+  // background comments: reading the theme made the watch go white in a light editor.
+  val background = node.color("background", WEAR_SCREEN_BACKGROUND)
   val timeText = node.string("timeText")
-  val scrollIndicator = node.bool("scrollIndicator", true)
-  Column(
+  Box(
     modifier =
       modifier
         .width(width)
@@ -957,65 +997,126 @@ private fun WearScreenScaffold(
         .heightIn(min = width)
         .clip(RoundedCornerShape(percent = 50))
         .background(background)
-        .drawBehind {
-          // The first screenful, marked on the extent: the round viewport, and the line where it
-          // ends. Stroked rather than filled so it reads as a guide and not as chrome the design
-          // owns — but visible, because "how much of this is above the fold" is the one question
-          // the extent makes harder than a keyhole canvas does.
-          drawCircle(
-            color = WEAR_VIEWPORT_OUTLINE,
-            radius = size.width / 2f,
-            center = Offset(size.width / 2f, size.width / 2f),
-            style = Stroke(1.dp.toPx()),
-          )
-          if (size.height > size.width) {
-            drawLine(
-              color = WEAR_VIEWPORT_OUTLINE,
-              start = Offset(0f, size.width),
-              end = Offset(size.width, size.width),
-              strokeWidth = 1.dp.toPx(),
-            )
-          }
-          if (scrollIndicator) {
-            val trackHeight = size.width * 0.42f
-            val trackTop = (size.width - trackHeight) / 2f
-            drawRoundRect(
-              color = onBackground.copy(alpha = 0.35f),
-              topLeft = Offset(size.width - 6.dp.toPx(), trackTop),
-              size = Size(3.dp.toPx(), trackHeight),
-              cornerRadius = CornerRadius(1.5f.dp.toPx(), 1.5f.dp.toPx()),
-            )
-          }
-        }
+    // Nothing drawn over the design. An earlier version outlined the first screenful — a
+    // circle over the top cap and a line where it ends — to answer "how much of this is above
+    // the fold". It reads as an artifact, because it is one: the canvas paints the *design*,
+    // and a guide painted into it is editor chrome in the one layer that has to stay
+    // comparable, pixel for pixel, with a render that has no such thing. The editor overlay is
+    // where that belongs, the way the reference overlay already works.
+    //
+    // No scroll indicator either. It is a real property of the design and it reaches the
+    // generated code; what it has no meaning on is this picture. An indicator shows where a
+    // viewport sits within the content, and the extent has no viewport. The real long
+    // screenshot agrees: `ScrollMode.LONG` sets `LocalScrollCaptureInProgress`, the emitted
+    // scaffold reads it and draws none, and the stitched capture comes back clean.
   ) {
-    // `TimeText` is curved on a watch and flat here. The strip's *height* is what the content below
-    // is displaced by, and that much is right; the curve is not something Compose Multiplatform
-    // draws, and a straight line in its place is the honest version of not having it.
+    Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+    // Overlaid, not a band above the content. `TimeText` belongs to `AppScaffold` and is drawn
+    // over the screen; what makes room for it is the list's own top content padding, which is
+    // already applied above. Drawing it as a row that displaced the content — which this did —
+    // pushed every row down by the height of a clock the real screen draws on top of nothing.
     if (timeText.isNotEmpty()) {
-      Box(
-        Modifier.fillMaxWidth().height(width * WEAR_TIME_TEXT_BAND),
-        contentAlignment = Alignment.Center,
-      ) {
-        Text(
-          text = timeText,
-          color = onBackground,
-          fontSize = 14.sp,
-          fontWeight = FontWeight.Medium,
+      WearCurvedTimeText(timeText, Modifier.matchParentSize())
+    }
+    if (hasEdgeButton) {
+      // The edge button hugs the bottom curve, which on the extent is the bottom cap. Placed
+      // rather than sized: `EdgeButton` takes its shape from the screen and this cannot draw that.
+      edgeButton(
+        Modifier.align(Alignment.BottomCenter).padding(bottom = width * WEAR_EDGE_BUTTON_INSET)
+      )
+    }
+  }
+}
+
+/**
+ * What `ScreenScaffold` hands its `TransformingLazyColumn` as `contentPadding`, by screen diameter.
+ *
+ * Measured, not derived. `ScreenScaffoldPaddingProbeTest` in yschimke/wear-m3-catalog composes the
+ * real thing under Robolectric at each round size and reports the `PaddingValues`; these are its
+ * numbers for Wear Compose Material 3 1.7.0-beta02, cross-checked against the stitched
+ * `ScrollMode.LONG` render of that repository's `TransformingLazyColumn` component — bottom padding
+ * on the reference is 20dp at 192, 23dp at 225 and 24dp at 240, which is this table.
+ *
+ * Neither axis is a clean fraction of the diameter, which is why guessing failed: horizontal runs
+ * 5.21%, 5.29%, 5.42% and vertical 10.42%, 10.13%, 10.00%. Between and beyond the measured sizes
+ * this interpolates rather than extrapolating a fraction, because the three points are what is
+ * known.
+ */
+private fun wearScreenContentPadding(screenWidthDp: Int): PaddingValues {
+  val horizontal = WEAR_CONTENT_PADDING.interpolate(screenWidthDp) { it.second }
+  val vertical = WEAR_CONTENT_PADDING.interpolate(screenWidthDp) { it.third }
+  return PaddingValues(horizontal = horizontal.dp, vertical = vertical.dp)
+}
+
+/** Measured `(diameterDp, horizontalDp, verticalDp)`, ascending by diameter. */
+private val WEAR_CONTENT_PADDING =
+  listOf(Triple(192f, 10f, 20f), Triple(227f, 12f, 23f), Triple(240f, 13f, 24f))
+
+private fun List<Triple<Float, Float, Float>>.interpolate(
+  widthDp: Int,
+  select: (Triple<Float, Float, Float>) -> Float,
+): Float {
+  val width = widthDp.toFloat()
+  first().let { if (width <= it.first) return select(it) }
+  last().let { if (width >= it.first) return select(it) }
+  val upper = indexOfFirst { it.first >= width }
+  val low = this[upper - 1]
+  val high = this[upper]
+  val t = (width - low.first) / (high.first - low.first)
+  return select(low) + t * (select(high) - select(low))
+}
+
+/**
+ * The clock, drawn along the top of the round viewport the way `TimeText` draws it.
+ *
+ * ## Why bother curving it
+ *
+ * Because it is curved, and a straight `10:10` was the one piece of chrome on the canvas that was a
+ * different *shape* from the thing it stands for. Everything else here is measured against a real
+ * render; this was measured against one too, and then drawn flat, which put the glyphs in the right
+ * band and the wrong arc.
+ *
+ * ## How, without curved-text support
+ *
+ * Compose Multiplatform has no `drawTextOnPath`. It does not need one for this: each character is
+ * measured on its own, placed at the top of the viewport circle, and the whole glyph rotated about
+ * the circle's centre by the angle its position along the arc implies. Advance is the character's
+ * own measured width over the radius, so the spacing follows the face rather than a guess, and the
+ * string is centred by starting half its total angular width anticlockwise of the top.
+ *
+ * The circle is the *viewport's*, not the extent's — centre at `(width / 2, width / 2)` — which is
+ * the circle a watch actually has, whatever the extent below it is doing.
+ */
+@Composable
+private fun WearCurvedTimeText(text: String, modifier: Modifier) {
+  val measurer = rememberTextMeasurer()
+  val style =
+    LocalTextStyle.current.copy(
+      color = WEAR_SCREEN_TIME_TEXT,
+      fontSize = WEAR_TIME_TEXT_SP.sp,
+      fontWeight = FontWeight.Medium,
+    )
+  val glyphs = remember(text, style) { text.map { measurer.measure(it.toString(), style) } }
+  Canvas(modifier) {
+    val centre = Offset(size.width / 2f, size.width / 2f)
+    // The arc the glyph *centres* ride on: the viewport radius less the measured distance from the
+    // top of the screen to the middle of the reference's digits.
+    val radius = size.width / 2f - WEAR_TIME_TEXT_CENTRE_DP.dp.toPx()
+    if (radius <= 0f) return@Canvas
+    val total = glyphs.sumOf { it.size.width.toDouble() }.toFloat()
+    var travelled = -total / 2f
+    glyphs.forEach { glyph ->
+      val width = glyph.size.width.toFloat()
+      val height = glyph.size.height.toFloat()
+      // Radians along the arc to this glyph's centre, then degrees for the rotation.
+      val degrees = ((travelled + width / 2f) / radius) * 180f / PI.toFloat()
+      withTransform({ rotate(degrees = degrees, pivot = centre) }) {
+        drawText(
+          textLayoutResult = glyph,
+          topLeft = Offset(centre.x - width / 2f, centre.y - radius - height / 2f),
         )
       }
-    }
-    content(Modifier.fillMaxWidth().padding(horizontal = width * WEAR_SIDE_INSET))
-    if (hasEdgeButton) {
-      // The edge button hugs the bottom curve, which on the extent is the bottom cap. It is placed
-      // rather than sized: `EdgeButton` takes its shape from the screen and this cannot draw that.
-      Box(
-        Modifier.fillMaxWidth().height(width * WEAR_EDGE_BUTTON_BAND),
-        contentAlignment = Alignment.BottomCenter,
-      ) {
-        edgeButton(Modifier.padding(bottom = width * 0.04f))
-      }
-    } else {
-      Spacer(Modifier.height(width * WEAR_BOTTOM_INSET))
+      travelled += width
     }
   }
 }
@@ -1025,26 +1126,71 @@ private const val WEAR_SMALL_ROUND_DP = 192
 
 private const val WEAR_XL_ROUND_DP = 240
 
-/** Wear Material 3's `onBackground`: near-white, not the editor theme's. */
-private val WEAR_SCREEN_ON_BACKGROUND = Color(0xFFE3E3E3)
+/**
+ * Wear Material 3's dark scheme, as the reference render actually draws it.
+ *
+ * Sampled from wear-m3-catalog's stitched `TransformingLazyColumn` capture rather than copied from
+ * a token table: the question the canvas has to answer is what the screen looks like, and these are
+ * the pixels it has. `onSurfaceVariant` is the one nobody guesses — Wear's is a warm `#FFDCC2`, not
+ * the grey a Material 3 dark scheme puts there, and a subtitle is where it shows.
+ */
+private val WEAR_SCREEN_BACKGROUND = Color(0xFF000000)
 
-/** The first screenful's outline over the extent, faint enough to read as a guide. */
-private val WEAR_VIEWPORT_OUTLINE = Color(0x59FFFFFF)
+private val WEAR_SCREEN_TIME_TEXT = Color(0xFFC5C5C6)
+
+private val WEAR_SCREEN_SURFACE_CONTAINER = Color(0xFF332E3C)
+
+private val WEAR_SCREEN_ON_SURFACE = Color(0xFFF6EDFF)
+
+private val WEAR_SCREEN_ON_SURFACE_VARIANT = Color(0xFFFFDCC2)
+
+/** The component id the renderer keys the Wear screen's theme and geometry off. */
+private const val WEAR_SCREEN_SCAFFOLD = "wear-m3/screen-scaffold"
+
+/** Measured off the reference card: inset 26dp at its top row, full width 26dp down. */
+private const val WEAR_CARD_CORNER_RADIUS_DP = 26f
 
 /**
- * Bands as a fraction of the screen diameter, so they hold across 192, 227 and 240dp.
+ * The subset of a Material 3 scheme a Wear design actually draws through, in Wear's own values.
  *
- * These are proportions read off the shipped `ScreenScaffold` renders rather than published
- * constants — upstream derives its content padding from the screen shape at layout time, which is
- * exactly the calculation the Wasm canvas cannot run.
+ * Only the roles the borrowed components read are replaced. The rest stay Material 3's dark scheme,
+ * because a colour this catalog has never drawn is a colour nobody has measured, and inventing one
+ * would put a number in the picture that no watch produced.
  */
-private const val WEAR_TIME_TEXT_BAND = 0.14f
+private val WearDarkColorScheme =
+  darkColorScheme(
+    background = WEAR_SCREEN_BACKGROUND,
+    onBackground = WEAR_SCREEN_ON_SURFACE,
+    surface = WEAR_SCREEN_SURFACE_CONTAINER,
+    surfaceContainer = WEAR_SCREEN_SURFACE_CONTAINER,
+    surfaceContainerLow = WEAR_SCREEN_SURFACE_CONTAINER,
+    surfaceContainerHigh = WEAR_SCREEN_SURFACE_CONTAINER,
+    surfaceContainerHighest = WEAR_SCREEN_SURFACE_CONTAINER,
+    onSurface = WEAR_SCREEN_ON_SURFACE,
+    onSurfaceVariant = WEAR_SCREEN_ON_SURFACE_VARIANT,
+  )
 
-private const val WEAR_SIDE_INSET = 0.052f
+/**
+ * How far below the top of the screen the clock's glyph centres ride, measured.
+ *
+ * On the reference the digits occupy 5.5..18dp down — at 192, 225 and 240dp alike, a constant,
+ * which is the sort of thing only measuring tells you — so their centres sit 11.75dp in. The arc is
+ * the viewport radius less a dp under that: a glyph rotated about the circle rides slightly lower
+ * than its flat twin, and this is the value that lands the curved box where the reference's is.
+ */
+private const val WEAR_TIME_TEXT_CENTRE_DP = 10.75f
 
-private const val WEAR_EDGE_BUTTON_BAND = 0.22f
+/** Sized so "10:10" measures the reference's 41.5dp; Wear's clock is bigger than it looks. */
+private const val WEAR_TIME_TEXT_SP = 14.5f
 
-private const val WEAR_BOTTOM_INSET = 0.12f
+/** `ListHeader`'s item height, measured at 192, 225 and 240dp alike. */
+private const val WEAR_LIST_HEADER_HEIGHT_DP = 48f
+
+/** Sized so the label measures the reference header's 53.5dp of glyphs. */
+private const val WEAR_LIST_HEADER_SP = 14.5f
+
+/** How far the edge button floats off the bottom cap, as a fraction of the diameter. */
+private const val WEAR_EDGE_BUTTON_INSET = 0.04f
 
 /**
  * Compose UI counterpart of the stable Glance Wear widget host frame.

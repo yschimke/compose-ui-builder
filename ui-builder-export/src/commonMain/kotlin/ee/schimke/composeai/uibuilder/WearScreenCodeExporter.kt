@@ -108,14 +108,26 @@ object WearScreenCodeExporter {
           appendLine("${INDENT}AppScaffold {")
         }
         append("${INDENT}${INDENT}ScreenScaffold(scrollState = listState")
+        // The scroll indicator is transient chrome, and a long screenshot is exactly when it must
+        // not be drawn: the platform composites many frames into one tall image, and an indicator
+        // painted at a different offset and opacity in every slice lands as a column of dashes down
+        // the edge. `LocalScrollCaptureInProgress` is the platform's own signal for that —
+        // Android's
+        // system long-screenshot sets it, and so does the renderer for a `ScrollMode.LONG` capture
+        // —
+        // so reading it here is app behaviour that happens to make the parity capture clean, rather
+        // than a preview concession baked into a screen.
+        appendLine(",")
+        appendLine(
+          "${INDENT}${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
+        )
         if (edgeButton != null) {
-          appendLine(",")
           appendLine("${INDENT}${INDENT}${INDENT}edgeButton = {")
           edgeButton.forEach { appendLine(it) }
           appendLine("${INDENT}${INDENT}${INDENT}},")
-          append("${INDENT}${INDENT}")
+          appendLine("${INDENT}${INDENT}${INDENT}},")
         }
-        appendLine(") { contentPadding ->")
+        appendLine("${INDENT}${INDENT}) { contentPadding ->")
         body.forEach { appendLine(it) }
         appendLine("${INDENT}${INDENT}}")
         appendLine("${INDENT}}")
@@ -127,6 +139,21 @@ object WearScreenCodeExporter {
         appendLine("@WearPreviewDevices")
         appendLine("@Composable")
         appendLine("fun ${name}Preview() = $name()")
+        appendLine()
+        // The second preview is the one that answers "is the canvas telling the truth?".
+        //
+        // `ScrollMode.LONG` stitches the whole scroll into one tall PNG **with the row
+        // transformation off**, which is exactly what the builder's stadium draws — so this render
+        // and the design as it appeared on the canvas are the same picture, and a difference
+        // between them is a bug in one of the two. The multipreview above cannot carry it: `LONG`
+        // on five devices is five stitched captures to answer a question one answers, and the
+        // parity claim is about the small round screen a design is authored on.
+        appendLine(
+          "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)"
+        )
+        appendLine("@ScrollingPreview(modes = [ScrollMode.LONG])")
+        appendLine("@Composable")
+        appendLine("fun ${name}LongPreview() = $name()")
       }
     )
   }
@@ -143,7 +170,17 @@ object WearScreenCodeExporter {
 
   internal const val TRANSFORMING_LAZY_COLUMN = "wear-m3/transforming-lazy-column"
 
+  internal const val LIST_HEADER = "wear-m3/list-header"
+
   internal const val INDENT = "    "
+
+  /**
+   * The screen the parity capture is taken on: `wearos_small_round`, the smallest and the tightest.
+   *
+   * A list that fits at 192dp fits everywhere, and 192dp is the frame a `wear-m3` design is created
+   * on, so this is the one where the canvas and the render are the same design at the same size.
+   */
+  internal const val WEAR_PARITY_DEVICE: String = "id:wearos_small_round"
 }
 
 /**
@@ -164,6 +201,7 @@ internal class WearContentEmitter(
   private var usesBox = false
   private var usesButton = false
   private var usesCard = false
+  private var usesListHeader = false
   private var usesEdgeButton = false
   private var usesArrangement = false
   private var usesDp = false
@@ -233,6 +271,20 @@ internal class WearContentEmitter(
         } else {
           listOf("${pad}Text(text = ${text.quoted()})")
         }
+      }
+      // `ListHeader`, not a Text with padding. The canvas draws a 48dp item and so does this, which
+      // is the whole reason the component exists: the template used to fake the height with a
+      // padded `m3/text`, and the generated screen came out 31.5dp shorter than the design.
+      WearScreenCodeExporter.LIST_HEADER -> {
+        usesListHeader = true
+        usesText = true
+        listOf("${pad}ListHeader(") +
+          (if (transformed) transformationLines(pad + INDENT) else emptyList()) +
+          listOf(
+            "${pad}) {",
+            "${pad}${INDENT}Text(text = ${node.string("text").quoted()})",
+            "${pad}}",
+          )
       }
       "m3/card" -> {
         usesCard = true
@@ -367,15 +419,27 @@ internal class WearContentEmitter(
     add("androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState")
     if (timeText) add("androidx.wear.compose.material3.AppScaffold")
     if (usesButton) add("androidx.wear.compose.material3.Button")
+    add("androidx.compose.ui.platform.LocalScrollCaptureInProgress")
     add("androidx.wear.compose.material3.ScreenScaffold")
+    add("androidx.wear.compose.material3.ScrollIndicator")
     add("androidx.wear.compose.material3.SurfaceTransformation")
     if (usesText) add("androidx.wear.compose.material3.Text")
     if (timeText) add("androidx.wear.compose.material3.TimeText")
     if (timeText) add("androidx.wear.compose.material3.timeTextCurvedText")
+    if (usesListHeader) add("androidx.wear.compose.material3.ListHeader")
     if (usesCard) add("androidx.wear.compose.material3.TitleCard")
     add("androidx.wear.compose.material3.lazy.rememberTransformationSpec")
     add("androidx.wear.compose.material3.lazy.transformedHeight")
-    add("androidx.wear.tooling.preview.devices.WearPreviewDevices")
+    // `androidx.wear.compose:compose-ui-tooling`, not `androidx.wear:wear-tooling-preview`. The
+    // latter is the device-id constants (`WearDevices`); the multipreview lives with Wear Compose,
+    // and a project that renders Wear previews already has it.
+    add("androidx.wear.compose.ui.tooling.preview.WearPreviewDevices")
+    // The parity capture's own three. `Preview` is the platform annotation the device spec rides
+    // on, and the scrolling pair is compose-ai-tools' `preview-annotations`, already on the
+    // classpath of anything the compose-preview plugin renders.
+    add("androidx.compose.ui.tooling.preview.Preview")
+    add("ee.schimke.composeai.preview.ScrollMode")
+    add("ee.schimke.composeai.preview.ScrollingPreview")
     if (usesEdgeButton) add("androidx.wear.compose.material3.EdgeButton")
   }
     .distinct()
