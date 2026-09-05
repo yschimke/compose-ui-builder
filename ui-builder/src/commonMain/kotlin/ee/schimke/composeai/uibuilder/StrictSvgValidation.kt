@@ -1,5 +1,17 @@
 package ee.schimke.composeai.uibuilder
 
+/** Blockers that mean the parse itself cannot be trusted, as opposed to export policy. */
+internal val STRUCTURAL_SVG_BLOCKER_CODES =
+  setOf(
+    "SVG_XML_MALFORMED",
+    "SVG_MULTIPLE_ROOTS",
+    "SVG_ROOT_MISSING",
+    "SVG_ENTITY_REFERENCE",
+    "SVG_XML_DECLARATION_INVALID",
+    "SVG_PROCESSING_INSTRUCTION",
+    "SVG_FORBIDDEN_DECLARATION",
+  )
+
 internal val STRUCTURAL_SVG_ELEMENTS =
   setOf("g", "path", "rect", "circle", "ellipse", "text", "line", "polyline", "polygon")
 
@@ -20,8 +32,23 @@ internal data class ParsedSvgDocument(
 }
 
 internal data class StrictSvgParseResult(
+  /** Non-null only when the file is clean enough to *export*: no blocker of any kind. */
   val document: ParsedSvgDocument?,
   val blockers: List<DocumentSvgExportBlocker>,
+  /**
+   * The same tree whenever the XML itself parsed, regardless of export policy.
+   *
+   * Separate from [document] because two different questions are being asked of one parse. The
+   * export lane asks "may these bytes be published as our own artefact", and one unsafe element or
+   * one unvouched raster reference is a no. A reader that only wants the *geometry* of a file the
+   * operator supplied — [extractSvgLayoutBoxes] — asks whether the markup could be read at all, and
+   * has no business refusing a mock because its `<image>` lacks a source digest.
+   *
+   * Null when the markup is malformed, has no single `<svg>` root, or carries a construct the
+   * parser refuses to interpret (a DOCTYPE, an unknown entity) — cases where the tree that came
+   * back would not be the tree the author wrote.
+   */
+  val structure: ParsedSvgDocument? = null,
 )
 
 /**
@@ -166,11 +193,17 @@ internal fun parseStrictSvg(svg: String): StrictSvgParseResult {
   if (parsedRoot != null && parsedRoot.name == "svg") {
     validateRasterGeometry(parsedRoot, elements.filter { it.name == "image" }, blockers)
   }
+  val tree =
+    if (parsedRoot != null && parsedRoot.name == "svg") {
+      ParsedSvgDocument(parsedRoot, elements)
+    } else null
+  // Structural rejections leave a tree that is not the document the author wrote, so they withdraw
+  // it from both callers; policy rejections withdraw it only from the export lane.
+  val structural = blockers.any { it.code in STRUCTURAL_SVG_BLOCKER_CODES }
   return StrictSvgParseResult(
-    document =
-      if (blockers.isEmpty() && parsedRoot != null) ParsedSvgDocument(parsedRoot, elements)
-      else null,
+    document = if (blockers.isEmpty()) tree else null,
     blockers = blockers.distinct(),
+    structure = if (structural) null else tree,
   )
 }
 

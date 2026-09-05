@@ -101,6 +101,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
@@ -117,6 +118,15 @@ import kotlinx.serialization.json.jsonPrimitive
  * three-tab width. Four tabs share it, and the widest label has to stay legible.
  */
 private val INSPECTOR_WIDTH = 360.dp
+
+/**
+ * How many pixels a flattened reference gets per dp of frame.
+ *
+ * Two, so a mark drawn against a 400 dp screen survives being drawn back over one — a flatten at 1×
+ * loses a hairline stroke to rounding the first time it is re-fitted, and every round after that
+ * loses a little more.
+ */
+private const val FLATTEN_SCALE = 2
 
 private val EditorColors =
   darkColorScheme(
@@ -226,6 +236,45 @@ fun UiBuilderEditor(
    * leaves the raw fields, so a host that has no catalog to hand still gets a working inspector.
    */
   devicePresets: List<UiBuilderDevicePreset> = emptyList(),
+  /**
+   * A reference the host has loaded back from storage, or null while there is none.
+   *
+   * Applied through the reducer's own attach path rather than dropped into the state, so a stored
+   * SVG gets its layout boxes read by the same code a fresh import goes through. Watched by
+   * identity: the host may deliver it late (it arrives over HTTP, after the editor has mounted) and
+   * may replace it, and neither should disturb an alignment the operator is in the middle of.
+   */
+  restoredReference: RestoredReference? = null,
+  /**
+   * Asks the host for a picture, or null where it cannot supply one.
+   *
+   * Everything unportable about importing lives behind this: opening a file picker, reading a
+   * paste, sniffing the bytes, refusing what may not be attached, and minting the identity the
+   * editor caches the decode against. Null in every preview and test, where the panel then offers
+   * no import rather than an action that cannot work.
+   */
+  onPickReference: (suspend () -> ReferenceImportOutcome)? = null,
+  /**
+   * Renders the design as it stands and hands the pixels back, or null where the host cannot.
+   *
+   * The first move of the markup loop: snapshot what is there, mark up what is wrong, and build
+   * against the annotated result. A host answers this from its export lane, which is the same
+   * renderer the design's PNG export uses — so the snapshot is the design, not the editor chrome
+   * around it.
+   */
+  onSnapshotDesign: (suspend () -> ReferenceImportOutcome)? = null,
+  /**
+   * A picture the host caught on the clipboard, or null when none has arrived.
+   *
+   * Pasting is the gesture a design tool leaves you holding — Figma's "copy as PNG" puts a frame or
+   * a component straight onto the clipboard — so it lands without a menu. Where it lands depends on
+   * what is already there: with nothing attached it becomes the reference, and over an existing
+   * reference it becomes a piece to position, which is the only reading of "paste this component"
+   * that does not throw away the mock it was going to be compared against.
+   */
+  pastedReference: ReferenceImage? = null,
+  /** A sentence from the host — a refused paste, a store that would not keep it. */
+  referenceStatus: String? = null,
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
   onCreateDesign:
     ((
@@ -266,6 +315,32 @@ fun UiBuilderEditor(
       state = reducer.reconciled(state, document, initialSelectedNodeId)
     }
   }
+  // Applied once, and only over an editor that has nothing of its own: the host delivers this
+  // late (it arrives over HTTP, after the editor has mounted) and may deliver it again, and
+  // neither should overwrite marks the operator has drawn since.
+  var referenceRestored by remember(document.id) { mutableStateOf(false) }
+  LaunchedEffect(restoredReference) {
+    val restored = restoredReference ?: return@LaunchedEffect
+    if (referenceRestored || state.reference.hasContent) return@LaunchedEffect
+    referenceRestored = true
+    val attached =
+      restored.image?.let { reducer.reduce(state, UiBuilderEditorEvent.AttachReference(it)) }
+        ?: state
+    state =
+      reducer
+        .reduce(attached, UiBuilderEditorEvent.UpdateReferenceSettings(restored.settings))
+        .let {
+          it.withReference(
+            it.reference.copy(
+              pieces = restored.pieces,
+              marks = restored.marks,
+              // Past every id that came back, so a stroke drawn now cannot collide with a stroke
+              // drawn in a previous session.
+              mintedIds = restored.pieces.size + restored.marks.size,
+            )
+          )
+        }
+  }
   var catalogDragPosition by remember { mutableStateOf<Offset?>(null) }
   var draggedComponentId by remember { mutableStateOf<String?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
@@ -273,6 +348,9 @@ fun UiBuilderEditor(
   var mobilePanel by remember(document.id) { mutableStateOf(MobileEditorPanel.None) }
   var showNewDesign by remember(document.id) { mutableStateOf(false) }
   val editorFocusRequester = remember { FocusRequester() }
+  // Held here rather than inside the flatten, which is not a composable: a text mark has to be set
+  // in the same font when it is baked in as when it was drawn.
+  val flattenTextMeasurer = rememberTextMeasurer()
   val draggedTarget = draggedComponentId?.let { reducer.dropTarget(state, it) }
   val canvasDropHovered =
     catalogDragPosition?.let(canvasBounds::contains) == true && draggedTarget != null
@@ -285,6 +363,32 @@ fun UiBuilderEditor(
   fun focusEditor() {
     textInputFocused = false
     editorFocusRequester.requestFocus()
+  }
+  /**
+   * Bake the reference stack into one picture and make it the base.
+   *
+   * Sized from the *document's* frame rather than from the canvas on screen, at twice its dp, so
+   * the flattened picture does not inherit whatever zoom the window happened to be at — two people
+   * flattening the same stack on different monitors get the same bytes.
+   */
+  fun flattenCurrentReference() {
+    val environment = state.document.screenEnvironmentSettings()
+    val flattened =
+      flattenReference(
+        reference = state.reference,
+        widthPx = environment.widthDp * FLATTEN_SCALE,
+        heightPx = environment.heightDp * FLATTEN_SCALE,
+        id = "flattened-${document.id}-${state.reference.mintedIds}-${state.document.revision}",
+        textMeasurer = flattenTextMeasurer,
+      )
+    if (flattened != null) dispatch(UiBuilderEditorEvent.FlattenReference(flattened))
+  }
+  LaunchedEffect(pastedReference?.id) {
+    val pasted = pastedReference ?: return@LaunchedEffect
+    dispatch(
+      if (state.reference.attached) UiBuilderEditorEvent.PlaceReferencePiece(pasted)
+      else UiBuilderEditorEvent.AttachReference(pasted)
+    )
   }
   LaunchedEffect(state) { onStateChanged(state) }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
@@ -351,6 +455,13 @@ fun UiBuilderEditor(
       },
       dropHovered = canvasDropHovered,
       showSelectionOverlay = showSelectionOverlay && !state.previewMode,
+      reference = state.reference,
+      onMarkDrawn = { kind, points ->
+        dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
+      },
+      onPieceMoved = { pieceId, dx, dy ->
+        dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
+      },
       collaborators = collaborators,
       onInspectionSnapshot = onInspectionSnapshot,
       onInspectionInvalidated = onInspectionInvalidated,
@@ -421,6 +532,10 @@ fun UiBuilderEditor(
       problems = problems,
       themeSettings = reducer.themeSettings(state),
       devicePresets = devicePresets,
+      onPickReference = onPickReference,
+      onSnapshotDesign = onSnapshotDesign,
+      onFlatten = ::flattenCurrentReference,
+      referenceStatus = referenceStatus,
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,
@@ -978,6 +1093,16 @@ private fun EditorToolbar(
       if (onNewDesign != null) {
         EditorAction(label = "New design", shortcut = "", enabled = true, onClick = onNewDesign)
       }
+      // Only once something is attached. An always-present control for a feature most designs
+      // never use is exactly the toolbar crowding the row above is already fighting.
+      if (state.reference.attached) {
+        EditorAction(
+          label = if (state.reference.settings.visible) "Hide reference" else "Show reference",
+          shortcut = "",
+          enabled = true,
+          onClick = { dispatch(UiBuilderEditorEvent.ToggleReference) },
+        )
+      }
       EditorAction(
         label = "Undo",
         shortcut = "Ctrl/⌘+Z",
@@ -1510,6 +1635,9 @@ private fun PinnedDesignCanvas(
   onCanvasBounds: (Rect) -> Unit,
   dropHovered: Boolean,
   showSelectionOverlay: Boolean,
+  reference: ReferenceOverlayState,
+  onMarkDrawn: (ReferenceMarkupKind, List<Float>) -> Unit,
+  onPieceMoved: (String, Float, Float) -> Unit,
   collaborators: List<UiBuilderCollaborator>,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)?,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
@@ -1559,6 +1687,10 @@ private fun PinnedDesignCanvas(
           },
           onInspectionInvalidated = onInspectionInvalidated,
         )
+        // Over the document and under the collaborators: the reference is being compared against
+        // what the document draws, so it goes on top of that; another person's selection is a fact
+        // about this session and must not be hidden by a mock.
+        ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
         RemotePresenceOverlay(collaborators, inspection)
       }
     }
@@ -1872,6 +2004,10 @@ private fun PropertyInspector(
   problems: List<EditorProblem>,
   themeSettings: EditorThemeSettings,
   devicePresets: List<UiBuilderDevicePreset>,
+  onPickReference: (suspend () -> ReferenceImportOutcome)?,
+  onSnapshotDesign: (suspend () -> ReferenceImportOutcome)?,
+  onFlatten: () -> Unit,
+  referenceStatus: String?,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
@@ -1922,12 +2058,30 @@ private fun PropertyInspector(
         return@Column
       }
       if (state.inspectorMode == EditorInspectorMode.Screen) {
-        ScreenEnvironmentInspector(
-          document = state.document,
-          devicePresets = devicePresets,
-          onTextInputFocusChanged = onTextInputFocusChanged,
-          dispatch = dispatch,
-        )
+        // Scrolled, because the frame controls already filled the panel before the reference
+        // section joined them below. A tab that silently clips its last control is worse than one
+        // that scrolls.
+        Column(Modifier.verticalScroll(rememberScrollState())) {
+          ScreenEnvironmentInspector(
+            document = state.document,
+            devicePresets = devicePresets,
+            onTextInputFocusChanged = onTextInputFocusChanged,
+            dispatch = dispatch,
+          )
+          HorizontalDivider(
+            Modifier.padding(vertical = 14.dp),
+            color = MaterialTheme.colorScheme.outline,
+          )
+          ReferenceInspector(
+            reference = state.reference,
+            themeSettings = themeSettings,
+            onPickReference = onPickReference,
+            onSnapshotDesign = onSnapshotDesign,
+            onFlatten = onFlatten,
+            hostStatus = referenceStatus,
+            dispatch = dispatch,
+          )
+        }
         return@Column
       }
       if (node == null) {

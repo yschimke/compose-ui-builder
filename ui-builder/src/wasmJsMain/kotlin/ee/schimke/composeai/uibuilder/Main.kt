@@ -432,6 +432,68 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
 
   LaunchedEffect(Unit) { devicePresets = loadDevicePresets() }
 
+  // The reference overlay's browser half: the file picker, the paste listener, the snapshot and
+  // the store behind them all. Rebuilt only when the design changes, because it is addressed to
+  // one design.
+  val references = remember(config.designId) { BrowserReferenceHost(config.designId, http) }
+  var restoredReference by remember(config.designId) { mutableStateOf<RestoredReference?>(null) }
+  var referenceStatus by remember(config.designId) { mutableStateOf<String?>(null) }
+  // What was last written, so a settings drag can take the cheap route and a new picture cannot.
+  var storedReference by remember(config.designId) { mutableStateOf<ReferenceOverlayState?>(null) }
+  var pendingReference by remember(config.designId) { mutableStateOf<ReferenceOverlayState?>(null) }
+  var pastedReference by remember(config.designId) { mutableStateOf<ReferenceImage?>(null) }
+
+  // Nothing is persisted until this has finished. Without the gate, the editor's own empty
+  // starting state reaches `onStateChanged` before the stored one arrives and is written over it —
+  // which would delete a design's reference by opening the design.
+  var referenceLoaded by remember(config.designId) { mutableStateOf(false) }
+  LaunchedEffect(config.designId) {
+    installReferenceBridge()
+    restoredReference = references.load()
+    storedReference =
+      restoredReference?.let {
+        ReferenceOverlayState(
+          image = it.image,
+          settings = it.settings,
+          pieces = it.pieces,
+          marks = it.marks,
+        )
+      }
+        // An untouched editor over a design that stored nothing is not a change, so the baseline
+        // is the empty state rather than null: opening such a design sends no request at all.
+        ?: ReferenceOverlayState()
+    referenceLoaded = true
+  }
+
+  // One paste listener for the life of the design, re-armed after every catch. Pasting is the
+  // gesture Figma's own "copy as PNG" leaves you holding, so it goes straight to the base picture
+  // rather than behind a menu.
+  LaunchedEffect(config.designId) {
+    while (true) {
+      when (val outcome = references.awaitPaste()) {
+        is ReferenceImportOutcome.Imported -> {
+          pastedReference = outcome.image
+          referenceStatus = null
+        }
+        is ReferenceImportOutcome.Refused -> referenceStatus = outcome.reason
+        ReferenceImportOutcome.Cancelled -> Unit
+      }
+    }
+  }
+
+  // Debounced, because the overlay's settings change once per pointer sample while a slider is
+  // dragged and each of those would otherwise be a request. The picture itself is only re-sent
+  // when it actually changed; see `BrowserReferenceHost.save`.
+  LaunchedEffect(pendingReference) {
+    val candidate = pendingReference ?: return@LaunchedEffect
+    delay(REFERENCE_SAVE_DEBOUNCE_MILLIS)
+    val imagesChanged =
+      storedReference?.image?.id != candidate.image?.id ||
+        storedReference?.pieces?.map { it.image.id } != candidate.pieces.map { it.image.id }
+    referenceStatus = references.save(candidate, imagesChanged)
+    if (referenceStatus == null) storedReference = candidate
+  }
+
   LaunchedEffect(config) {
     val availableCatalogs = loadLiveCatalogs(http)
     newDesignCatalogs = availableCatalogs.mapNotNull(::newDesignCatalog)
@@ -700,9 +762,17 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
         navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
       },
       onHelp = ::openUiBuilderGuide,
+      restoredReference = restoredReference,
+      onPickReference = { references.pickFile() },
+      onSnapshotDesign = { references.snapshotDesign() },
+      referenceStatus = referenceStatus,
+      pastedReference = pastedReference,
       onStateChanged = {
         selectedNodeId = it.selectedNodeId
         catalogQuery = it.catalogQuery
+        // Persisted from here rather than from each control, so every route that changes the
+        // overlay — a slider, a stroke, a flatten, a paste — is stored by one path.
+        if (referenceLoaded && it.reference != storedReference) pendingReference = it.reference
         publishEditorState(it)
       },
       onCanvasMetrics = ::publishEditorCanvasMetrics,
@@ -1193,6 +1263,15 @@ private suspend fun resolveServerActorId(): String? =
   } catch (_: Exception) {
     null
   }
+
+/**
+ * How long a settings change waits before it is stored.
+ *
+ * Long enough that dragging a slider from one end to the other is one request, short enough that
+ * closing the tab straight after a nudge keeps it. The pictures do not go through this timer twice
+ * — an unchanged picture takes the settings route, which carries no bytes.
+ */
+private const val REFERENCE_SAVE_DEBOUNCE_MILLIS = 600L
 
 private const val IDENTITY_PATH = "/api/ui-builder/v1/identity"
 

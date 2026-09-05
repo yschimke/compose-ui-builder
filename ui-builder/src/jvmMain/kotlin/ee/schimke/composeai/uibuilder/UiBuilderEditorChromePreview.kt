@@ -512,10 +512,12 @@ private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
   )
 }
 
-private val editorChromePreviewCatalog: CapabilityCatalog by lazy {
+/** Shared with the reference previews next door, so both judge a design by the same catalog. */
+internal val editorChromePreviewCatalog: CapabilityCatalog by lazy {
   CapabilityCatalogParser.parse(previewResource("/jetcaster-discover-capabilities-v1.json"))
 }
 
-private fun previewResource(path: String): String =
+/** Shared with the reference previews next door, which read the same frozen fixtures. */
+internal fun previewResource(path: String): String =
   checkNotNull(UiBuilderDocument::class.java.getResource(path)) { "missing preview resource $path" }
     .readText()

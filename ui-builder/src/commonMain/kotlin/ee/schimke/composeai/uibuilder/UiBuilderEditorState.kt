@@ -248,7 +248,20 @@ data class UiBuilderEditorState(
    * editor's own canvas is the one that always exists.
    */
   val previewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
+  /**
+   * The reference picture attached to this design, and how it is being drawn.
+   *
+   * Editor state rather than document state: it is scaffolding for the person doing the work, not
+   * part of the design, so it takes no revision, submits no operation and reaches no export. It is
+   * still durable — the host loads it when the design opens and persists it when it changes, by
+   * watching this field — which is why it lives here and not in a composable's `remember`.
+   */
+  val reference: ReferenceOverlayState = ReferenceOverlayState(),
 ) {
+  /** A reference update, which never touches the document and so never becomes a submission. */
+  internal fun withReference(reference: ReferenceOverlayState): UiBuilderEditorState =
+    copy(reference = reference)
+
   /**
    * The anchor: the most recently selected node.
    *
@@ -447,6 +460,85 @@ sealed interface UiBuilderEditorEvent {
   data object Undo : UiBuilderEditorEvent
 
   data object Redo : UiBuilderEditorEvent
+
+  /**
+   * Attach an imported picture as the base reference, replacing whatever was there.
+   *
+   * Only the image crosses; the layout boxes are read out of it here, so that every path into the
+   * editor — a paste, a file, a snapshot, a design reopened from the server — gets the same boxes
+   * from the same reader rather than depending on the host to have run one.
+   */
+  data class AttachReference(val image: ReferenceImage) : UiBuilderEditorEvent
+
+  /** Detach everything: the picture, its alignment, every placed piece and every mark. */
+  data object ClearReference : UiBuilderEditorEvent
+
+  /** Re-aim the overlay: mode, opacity, nudge, scale, split. */
+  data class UpdateReferenceSettings(val settings: ReferenceOverlaySettings) : UiBuilderEditorEvent
+
+  /**
+   * Show the overlay again in the mode it was last drawn in, or hide it.
+   *
+   * A toggle rather than a mode picker because that is the gesture the work actually needs: an
+   * overlay is put up, looked through, and taken down again several times per adjustment, and
+   * re-choosing the mode each time is the friction that makes people leave it off.
+   */
+  data object ToggleReference : UiBuilderEditorEvent
+
+  /**
+   * Take the pointer for a markup tool, or hand it back to selection.
+   *
+   * Explicit, never inferred. An editor where a drag sometimes moves a node and sometimes draws on
+   * it is one nobody trusts, so the canvas only stops selecting when the operator says so.
+   */
+  data class SelectReferenceTool(val tool: ReferenceTool) : UiBuilderEditorEvent
+
+  /** The colour the next mark is drawn in. Existing marks keep the colour they were drawn in. */
+  data class SelectMarkupColor(val colorArgb: Long) : UiBuilderEditorEvent
+
+  /** The words the next text mark or image placeholder will carry. */
+  data class SetMarkupText(val text: String) : UiBuilderEditorEvent
+
+  /** One finished stroke, from the canvas. The id and the colour are assigned here. */
+  data class AddReferenceMark(val kind: ReferenceMarkupKind, val points: List<Float>) :
+    UiBuilderEditorEvent
+
+  /** Rub out one mark. Every mark is individually removable; that is what makes markup usable. */
+  data class RemoveReferenceMark(val markId: String) : UiBuilderEditorEvent
+
+  /** Rub out the most recent mark — the gesture that follows a stroke that went wrong. */
+  data object UndoReferenceMark : UiBuilderEditorEvent
+
+  data object ClearReferenceMarkup : UiBuilderEditorEvent
+
+  /**
+   * Drop a picture onto the frame as a positioned piece rather than as the base.
+   *
+   * This is "copy a component out of Figma and put it where it should go": the base reference asks
+   * whether the whole screen is right, and a piece asks whether *this* belongs *there*, which is a
+   * question nothing stretched across the frame can pose.
+   */
+  data class PlaceReferencePiece(val image: ReferenceImage) : UiBuilderEditorEvent
+
+  data class SelectReferencePiece(val pieceId: String) : UiBuilderEditorEvent
+
+  /** Drag, in fractions of the frame. Comes from the canvas, one pointer sample at a time. */
+  data class MoveReferencePiece(val pieceId: String, val dx: Float, val dy: Float) :
+    UiBuilderEditorEvent
+
+  /** Resize about the piece's own centre, so resizing does not also move it. */
+  data class ScaleReferencePiece(val pieceId: String, val factor: Float) : UiBuilderEditorEvent
+
+  data class RemoveReferencePiece(val pieceId: String) : UiBuilderEditorEvent
+
+  /**
+   * Replace the whole stack with a single picture of it — the annotated composite becomes the new
+   * base, and the pieces and marks that made it are gone.
+   *
+   * The picture arrives already composed, because composing it needs a bitmap, a frame size and a
+   * PNG encoder, none of which belong in a pure reducer.
+   */
+  data class FlattenReference(val image: ReferenceImage) : UiBuilderEditorEvent
 }
 
 /**
@@ -588,6 +680,15 @@ private fun EditorStateAction.encoded(declaration: JsonObject?): JsonObject {
   }
 }
 
+/**
+ * The ceiling on a markup label.
+ *
+ * 160 characters: a sentence about what is wrong, not a paragraph. Longer than this and the label
+ * stops fitting the box it was dragged out for, which is the point at which the annotation stops
+ * pointing at anything.
+ */
+internal const val MAX_MARKUP_TEXT: Int = 160
+
 /** Pure editor interaction reducer. Every document mutation delegates to CollaborationReducer. */
 sealed interface EditorSubmission {
   data class Batch(val command: DesignCommand) : EditorSubmission
@@ -688,6 +789,62 @@ class UiBuilderEditorReducer(
       UiBuilderEditorEvent.Paste -> paste(state)
       UiBuilderEditorEvent.Undo -> undo(state)
       UiBuilderEditorEvent.Redo -> redo(state)
+      is UiBuilderEditorEvent.AttachReference -> state.withReference(attached(state, event.image))
+      UiBuilderEditorEvent.ClearReference ->
+        state.withReference(ReferenceOverlayState(mintedIds = state.reference.mintedIds))
+      is UiBuilderEditorEvent.UpdateReferenceSettings ->
+        state.withReference(state.reference.copy(settings = event.settings.sanitized()))
+      UiBuilderEditorEvent.ToggleReference ->
+        if (!state.reference.hasContent) state
+        else
+          state.withReference(
+            state.reference.copy(
+              settings = state.reference.settings.copy(visible = !state.reference.settings.visible)
+            )
+          )
+      is UiBuilderEditorEvent.SelectReferenceTool ->
+        state.withReference(state.reference.copy(tool = event.tool))
+      is UiBuilderEditorEvent.SelectMarkupColor ->
+        state.withReference(state.reference.copy(markupColorArgb = event.colorArgb))
+      is UiBuilderEditorEvent.SetMarkupText ->
+        state.withReference(state.reference.copy(markupText = event.text.take(MAX_MARKUP_TEXT)))
+      is UiBuilderEditorEvent.AddReferenceMark -> addMark(state, event.kind, event.points)
+      is UiBuilderEditorEvent.RemoveReferenceMark ->
+        state.withReference(
+          state.reference.copy(marks = state.reference.marks.filterNot { it.id == event.markId })
+        )
+      UiBuilderEditorEvent.UndoReferenceMark ->
+        state.withReference(state.reference.copy(marks = state.reference.marks.dropLast(1)))
+      UiBuilderEditorEvent.ClearReferenceMarkup ->
+        state.withReference(state.reference.copy(marks = emptyList()))
+      is UiBuilderEditorEvent.PlaceReferencePiece -> placePiece(state, event.image)
+      is UiBuilderEditorEvent.SelectReferencePiece ->
+        state.withReference(state.reference.copy(selectedPieceId = event.pieceId))
+      is UiBuilderEditorEvent.MoveReferencePiece ->
+        state.withReference(
+          state.reference.mapPiece(event.pieceId) { it.movedBy(event.dx, event.dy) }
+        )
+      is UiBuilderEditorEvent.ScaleReferencePiece ->
+        state.withReference(state.reference.mapPiece(event.pieceId) { it.scaledBy(event.factor) })
+      is UiBuilderEditorEvent.RemoveReferencePiece ->
+        state.withReference(
+          state.reference.copy(
+            pieces = state.reference.pieces.filterNot { it.id == event.pieceId },
+            selectedPieceId = state.reference.selectedPieceId.takeIf { it != event.pieceId },
+          )
+        )
+      is UiBuilderEditorEvent.FlattenReference ->
+        state.withReference(
+          attached(state, event.image)
+            .copy(
+              // The pieces and the marks are *in* the flattened picture now. Keeping them would
+              // draw every one of them twice, and the second copy would no longer be removable.
+              pieces = emptyList(),
+              marks = emptyList(),
+              selectedPieceId = null,
+              tool = ReferenceTool.None,
+            )
+        )
     }
 
   fun acceptedSubmission(
@@ -1446,6 +1603,98 @@ class UiBuilderEditorReducer(
       .let { edited ->
         if (targets.size > 1) edited.copy(selection = targets.map(UiBuilderNode::id)) else edited
       }
+  }
+
+  /**
+   * Attach an import as the base, reading its structure once.
+   *
+   * The boxes are extracted here rather than by the caller so that every route in — a paste, a
+   * file, a snapshot, a design reopened with a reference already stored — passes through the same
+   * reader. A raster import simply has none, and the panel then does not offer the mode.
+   *
+   * Alignment is deliberately *not* carried over from the previous attachment, except for the two
+   * fields that describe how the operator is working rather than where the picture sits: a
+   * different picture is a different picture, and inheriting the last one's nudge would silently
+   * misalign it, but being thrown out of difference mode on every import is friction with no
+   * purpose.
+   */
+  private fun attached(state: UiBuilderEditorState, image: ReferenceImage): ReferenceOverlayState =
+    state.reference.copy(
+      image = image,
+      settings =
+        ReferenceOverlaySettings(
+          mode = state.reference.settings.mode,
+          visible = true,
+          alwaysShowBoxes = state.reference.settings.alwaysShowBoxes,
+        ),
+      layoutBoxes = image.svgTextOrNull()?.let(::extractSvgLayoutBoxes).orEmpty(),
+    )
+
+  private fun addMark(
+    state: UiBuilderEditorState,
+    kind: ReferenceMarkupKind,
+    points: List<Float>,
+  ): UiBuilderEditorState {
+    val minted = state.reference.mintedIds + 1
+    val mark =
+      ReferenceMark(
+        id = "mark-$minted",
+        kind = kind,
+        points = points,
+        colorArgb = state.reference.markupColorArgb,
+        // Only the kinds that draw words carry them, so rubbing out a box does not silently take a
+        // label that was never on it.
+        text =
+          state.reference.markupText.takeIf {
+            it.isNotBlank() &&
+              (kind == ReferenceMarkupKind.Text || kind == ReferenceMarkupKind.ImagePlaceholder)
+          },
+      )
+    if (!mark.drawable) return state
+    return state.withReference(
+      state.reference.copy(marks = state.reference.marks + mark, mintedIds = minted)
+    )
+  }
+
+  /**
+   * Drop a piece in the middle of the frame at a size that can be seen and grabbed.
+   *
+   * Centred at a fixed fraction rather than at the picture's natural pixel size, because the
+   * reducer has no frame in pixels to compare it against — and because a component copied out of a
+   * design tool arrives at that tool's resolution, which is rarely this frame's. Its aspect ratio
+   * is honoured where the importer knew it.
+   */
+  private fun placePiece(
+    state: UiBuilderEditorState,
+    image: ReferenceImage,
+  ): UiBuilderEditorState {
+    val minted = state.reference.mintedIds + 1
+    val aspect =
+      if (image.widthPx > 0 && image.heightPx > 0) {
+        image.heightPx.toFloat() / image.widthPx.toFloat()
+      } else 1f
+    val width = PLACED_PIECE_WIDTH_FRACTION
+    val height = (width * aspect).coerceIn(ReferencePiece.MIN_PIECE_FRACTION, 1f)
+    val piece =
+      ReferencePiece(
+        id = "piece-$minted",
+        image = image,
+        left = (1f - width) / 2f,
+        top = (1f - height) / 2f,
+        right = (1f + width) / 2f,
+        bottom = (1f + height) / 2f,
+      )
+    return state.withReference(
+      state.reference.copy(
+        pieces = state.reference.pieces + piece,
+        selectedPieceId = piece.id,
+        // In hand immediately: a component dropped in the middle of the frame is never where it
+        // belongs, and the next thing anyone does is drag it.
+        tool = ReferenceTool.MovePiece,
+        mintedIds = minted,
+        settings = state.reference.settings.copy(visible = true),
+      )
+    )
   }
 
   private fun updateEnvironment(

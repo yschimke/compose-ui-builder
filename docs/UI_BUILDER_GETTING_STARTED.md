@@ -94,6 +94,47 @@ seeing. It needs a host with a compile lane (`--playground-bundle`); where there
 control is absent rather than present and failing. The render is tagged with each design node id,
 so the server's annotation lane can report where every node landed in the frame.
 
+## Build against a reference
+
+The **Screen** inspector's Reference section attaches a picture to the design and draws it over the
+canvas. Import a file, paste one straight onto the page (Figma's "copy as PNG" on a frame or a
+component puts it on the clipboard), or press **Snapshot** to render the design as it stands and
+build the reference from that. Whatever you attach is kept with the design and comes back the next
+time it is opened, along with the alignment you left it at.
+
+Four ways to compare, because they answer different questions:
+
+| Mode | The question it answers |
+| --- | --- |
+| **Overlay** | Is this in the right place? The mock over the canvas, at an opacity you choose |
+| **Difference** | Is this *exactly* right? Matching pixels go black, so anything you can see is a difference |
+| **Split** | Does it look the same? A wipe, with the two sides not fighting for the same pixels |
+| **Boxes** | Are the boxes the right size? An SVG's own rectangles, stroked over the canvas |
+
+Scale and nudge line the picture up when the export was not taken at the frame's size.
+
+### Marking one up, and going round again
+
+Choosing a markup tool takes the pointer: while one is in hand, dragging on the canvas draws instead
+of selecting, and everything but the pen is dragged out to the size you want. Draw, box, rounded
+box, ellipse, arrow, a text label, and an image placeholder. Every mark is removable on its own.
+
+**Erase** is the one that makes a real screenshot editable. A screenshot is one flat picture — there
+is no card to delete — so painting a region in the screen's own background colour is how space gets
+cleared. The palette carries the design's `background` and `surface` colours beside the marker
+colours for exactly that. Clear the space, then build the real components into it and compare them
+against everything still standing around them.
+
+**Place image…** drops a picture on the frame where you put it rather than fitted to it — a
+component copied out of Figma, say — and drag moves it. **Flatten** bakes the picture, the pieces and
+the marks into one reference and clears them, so the next round of adjustment is measured against
+what was just agreed rather than against the mock from three rounds ago.
+
+None of this is part of the design. No node holds it, the Compose and SVG exports cannot see it, and
+nothing here reaches another collaborator's canvas — it is scaffolding for the person doing the
+work. [`design/UI_BUILDER_REFERENCE_OVERLAY.md`](design/UI_BUILDER_REFERENCE_OVERLAY.md) says why
+that line is drawn where it is, and where the one-way door between the two halves sits.
+
 ## Property coverage
 
 | Catalog shape | Inspector | Round trip |
