@@ -45,6 +45,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.DividerDefaults
@@ -54,6 +55,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
@@ -62,6 +64,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -857,6 +860,39 @@ private fun RenderNode(
         modifier = measured,
         enabled = enabled,
       )
+    "m3/slider" -> {
+      // The variable the slider writes, the same seam a text field's `value` uses. A slider with no
+      // variable still moves — Material needs a value to draw a thumb — but the movement goes
+      // nowhere, which is what an unbound control means everywhere else in this catalog.
+      val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
+      val from = node.float("valueFrom", 0f)
+      val to = node.float("valueTo", 1f).coerceAtLeast(from)
+      val bound = variable?.let { state[it]?.toFloatOrNull() }
+      Slider(
+        value = (bound ?: node.float("value")).coerceIn(from, to),
+        onValueChange = { next -> if (variable != null) onState(variable, next.toString()) },
+        modifier = measured,
+        enabled = enabled,
+        valueRange = from..to,
+        steps = node.integer("steps"),
+      )
+    }
+    "m3/progress-indicator" -> {
+      val variable = node.obj("progress")["variable"]?.jsonPrimitive?.contentOrNull
+      val fraction =
+        (variable?.let { state[it]?.toFloatOrNull() } ?: node.float("progress")).coerceIn(0f, 1f)
+      // Indeterminate is Material's other overload rather than a value, and the document
+      // environment freezes animation, so what the canvas shows is its first frame. That is the
+      // honest still of a thing that moves, and it is what makes the render diffable.
+      val indeterminate = node.bool("indeterminate")
+      if (node.string("variant") == "circular") {
+        if (indeterminate) CircularProgressIndicator(modifier = measured)
+        else CircularProgressIndicator(progress = { fraction }, modifier = measured)
+      } else {
+        if (indeterminate) LinearProgressIndicator(modifier = measured)
+        else LinearProgressIndicator(progress = { fraction }, modifier = measured)
+      }
+    }
     "m3/radio-button" ->
       RadioButton(
         selected = node.resolvedBool("selected", state),

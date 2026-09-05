@@ -29,6 +29,22 @@ class TextInputTest {
       )
       .document
 
+  /**
+   * A bindable property is still a property somebody types into.
+   *
+   * `["string", "object"]` is how the catalog spells "text, or a read of a state variable", and
+   * judging the control by the whole declaration made every such property `Unsupported` — the text
+   * a field shows could be bound but not typed. The boolean branch beside it had already learned
+   * this for `["boolean", "string"]`.
+   */
+  @Test
+  fun `the inspector can type into a value that is also bindable`() {
+    val (state, _) = insert("m3/text-field")
+    val fields = reducer.propertyFields(state).associateBy { it.name }
+
+    assertEquals(EditorPropertyControl.Text, assertNotNull(fields["value"]).control)
+  }
+
   @Test
   fun `a text field arrives labelled, with a placeholder, and valid`() {
     val (state, nodeId) = insert("m3/text-field")

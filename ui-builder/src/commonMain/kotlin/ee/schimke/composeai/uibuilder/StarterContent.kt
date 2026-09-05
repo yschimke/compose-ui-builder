@@ -99,6 +99,11 @@ internal object StarterContent {
       "m3/checkbox" to mapOf("checked" to starterBool(true)),
       // One of a group is chosen, or the group is a row of empty circles.
       "m3/radio-button" to mapOf("selected" to starterBool(true)),
+      // Something to look at. A slider at zero is a track with the thumb jammed against the left
+      // end, and a progress indicator at zero is an empty line — both read as broken rather than as
+      // new, which is the whole point of seeding a value.
+      "m3/slider" to mapOf("value" to starterFraction(0.5), "valueTo" to starterNumber(1)),
+      "m3/progress-indicator" to mapOf("progress" to starterFraction(0.6)),
       "m3/switch" to mapOf("checked" to starterBool(true)),
       // Zero is already what the catalog's neutral default writes; it is spelled out because a tab
       // row is required to carry the index and a row with none draws no indicator at all.
@@ -266,6 +271,9 @@ private fun starterLiteral(type: String, value: String): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
 
 private fun starterNumber(value: Int): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(value)))
+
+private fun starterFraction(value: Double): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(value)))
 
 private fun starterBool(value: Boolean): JsonObject =

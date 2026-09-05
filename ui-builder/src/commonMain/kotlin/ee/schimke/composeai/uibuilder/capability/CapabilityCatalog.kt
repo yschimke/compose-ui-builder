@@ -255,6 +255,15 @@ object CapabilityCatalogParser {
    */
   private const val MAXIMUM_AUTHORED_DP = 4096.0
 
+  /**
+   * The bound on a slider's own numbers, which are in the design's units rather than in dp.
+   *
+   * Wide enough for the counts and percentages a slider is actually authored against, and finite so
+   * the field still round trips: the renderer and the exporter both carry these as `Float`, and a
+   * value past that range stops being the number that was typed.
+   */
+  private const val MAXIMUM_AUTHORED_VALUE = 1_000_000.0
+
   private val MATERIAL_COLOR_TOKENS =
     listOf(
       "background",
@@ -313,6 +322,20 @@ object CapabilityCatalogParser {
       // A clock, not a dimension. The `…Dp` rule below is what gives a number its editor, so
       // without these two the hour and minute of a time picker would be `Unsupported` in the
       // inspector — a component whose whole content is two numbers, neither of them editable.
+      // A fraction, and the only value this component has. Bounded 0..1 because that is what both
+      // Material indicators take, so the control cannot author a progress the renderer clamps away.
+      ("m3/progress-indicator" to "progress") to numberEditor(0.0, 1.0, 0.05),
+      // A slider's range and its value are numbers in the design's own units — not dimensions, so
+      // the `…Dp` rule cannot reach them, and a slider whose ends nobody can set is a slider stuck
+      // between zero and one.
+      ("m3/slider" to "value") to
+        numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 0.1),
+      ("m3/slider" to "valueFrom") to
+        numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 1.0),
+      ("m3/slider" to "valueTo") to
+        numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 1.0),
+      // Material counts the stops *between* the ends, so zero is a continuous slider.
+      ("m3/slider" to "steps") to numberEditor(0.0, 100.0, 1.0),
       // A tab index is a count, not a dimension, so the `…Dp` rule below cannot reach it and the
       // control would be `Unsupported` — on the one property a tab row has.
       ("m3/primary-tab-row" to "selectedIndex") to numberEditor(0.0, 32.0, 1.0),

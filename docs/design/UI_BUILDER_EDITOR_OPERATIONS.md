@@ -108,6 +108,37 @@ the drop. What each is, and why there is no before image, are in
 
 ![A top app bar, a tab row, a list item and a colour dot](../../renders/ui-builder-advertised-components/advertised.after.png)
 
+## Slider and progress
+
+`m3/slider` and `m3/progress-indicator` are the decimal half of what the selection controls did for
+flags: a slider **writes** a declared decimal variable and an indicator **reads** one, so between
+them they cover both directions of the same seam.
+
+Two things in the pair are worth stating.
+
+An **indeterminate** indicator is not a value. It is Material's other overload — the one you call
+without a progress lambda — so the flag picks the call rather than a number, and the canvas draws it
+at its first frame because the document environment freezes animation. A render that animates is a
+render nothing can diff.
+
+And a slider's `onValueChange` **assigns** rather than dispatching an action. The document's action
+vocabulary writes declared values, and a slider's change already carries the value, so the assignment
+is the action. An unbound slider assigns nothing, exactly as an unbound text field does.
+
+Adding them also fixed a rule that had been quietly wrong since the first bindable property: a
+declaration like `["number", "object"]` — "a number, or a read of a state variable" — was judged as a
+whole and came out `Unsupported`, so a slider's entire range and a text field's `value` had no
+editor at all. The boolean branch beside it had already learned this for `["boolean", "string"]`;
+the number and text branches now read the same way, ignoring the object half that only a binding
+writes.
+
+### Visual evidence
+
+The slider and all three indicator forms in
+[`renders/ui-builder-slider-progress/`](../../renders/ui-builder-slider-progress/README.md).
+
+![A slider, a linear indicator, a circular indicator and an indeterminate one](../../renders/ui-builder-slider-progress/slider-progress.after.png)
+
 ## Text input
 
 `m3/text-field` and `m3/radio-button`. The text field is the first component whose value the

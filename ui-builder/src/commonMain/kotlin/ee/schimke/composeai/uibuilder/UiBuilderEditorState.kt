@@ -1396,9 +1396,10 @@ class UiBuilderEditorReducer(
             declaredControl == PropertyEditorControl.BOOLEAN || "boolean" in typeNames ->
               EditorPropertyControl.Boolean
             (declaredControl == PropertyEditorControl.NUMBER ||
-              typeNames == setOf("number") ||
-              typeNames == setOf("integer")) && numberBounds != null -> EditorPropertyControl.Number
-            typeNames == setOf("string") -> EditorPropertyControl.Text
+              typeNames.authoredTypes() == setOf("number") ||
+              typeNames.authoredTypes() == setOf("integer")) && numberBounds != null ->
+              EditorPropertyControl.Number
+            typeNames.authoredTypes() == setOf("string") -> EditorPropertyControl.Text
             else -> EditorPropertyControl.Unsupported
           }
         val boundVariables =
@@ -3870,15 +3871,32 @@ private fun PropertyCapability.typeNames(): Set<String> =
     else -> setOf(jsonType.jsonPrimitive.content)
   }
 
+/**
+ * The types a *person* authors, which is the declaration minus the shape a binding takes.
+ *
+ * `["number", "object"]` is how the catalog spells "a number, or a read of a state variable" —
+ * `["string", "object"]` the same for text — and the object half is written by
+ * `BindPropertyToState`, never typed into a field. Judging the control by the whole declaration
+ * made every such property `Unsupported`: a text field's `value` and a slider's whole range were
+ * uneditable for exactly the reason `["boolean", "string"]` once made `m3/filter-chip.selected`
+ * uneditable, which is the comment above the boolean branch.
+ *
+ * A property declared *only* `"object"` still has nothing to offer — `contentPadding`, a search
+ * input's `value` — and correctly falls through to `Unsupported` here, because removing the object
+ * leaves nothing behind.
+ */
+private fun Set<String>.authoredTypes(): Set<String> = this - "object"
+
 private fun PropertyCapability.numberBounds(typeNames: Set<String>): EditorNumberBounds? {
-  if (typeNames != setOf("number") && typeNames != setOf("integer")) return null
+  val authored = typeNames.authoredTypes()
+  if (authored != setOf("number") && authored != setOf("integer")) return null
   val editor = editor
   val minimum = editor?.minimum ?: return null
   val maximum = editor.maximum ?: return null
-  val step = editor.step ?: if (typeNames == setOf("integer")) 1.0 else 0.1
+  val step = editor.step ?: if (authored == setOf("integer")) 1.0 else 0.1
   if (!minimum.isFinite() || !maximum.isFinite() || !step.isFinite()) return null
   if (minimum > maximum || step <= 0.0) return null
-  return EditorNumberBounds(minimum, maximum, step, typeNames == setOf("integer"))
+  return EditorNumberBounds(minimum, maximum, step, authored == setOf("integer"))
 }
 
 private fun String.humanLabel(): String =

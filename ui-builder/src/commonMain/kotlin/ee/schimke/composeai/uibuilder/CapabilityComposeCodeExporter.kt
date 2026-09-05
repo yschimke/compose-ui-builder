@@ -373,6 +373,8 @@ private class ComposeEmitter(
           "RadioButton(selected = ${node.boolExpression("selected")}, onClick = { ${node.actionExpression("click", stateKotlinTypes)} }, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
         )
       "m3/text-field" -> emitTextField(node, bodyLevel)
+      "m3/slider" -> emitSlider(node, bodyLevel)
+      "m3/progress-indicator" -> emitProgress(node, bodyLevel)
       "m3/switch" -> emitToggle(node, bodyLevel, "Switch")
       "m3/dialog" -> emitDialog(node, bodyLevel)
       "m3/date-picker" -> emitDatePicker(node, bodyLevel)
@@ -781,6 +783,47 @@ private class ComposeEmitter(
     )
     node.slot("content").forEach { emitNode(it, level + 1) }
     line(level, "}")
+  }
+
+  /**
+   * `Slider`, writing the variable the design bound it to.
+   *
+   * `onValueChange` assigns rather than dispatching an action: a slider's change carries a value,
+   * and the document's action vocabulary writes declared values, so the assignment *is* the action.
+   * An unbound slider assigns nothing, for the reason an unbound text field does.
+   */
+  private fun emitSlider(node: UiBuilderNode, level: Int) {
+    val variable = node.obj("value").optionalString("variable")?.identifier()
+    val from = node.number("valueFrom")
+    val to = node.number("valueTo", 1f).coerceAtLeast(from)
+    line(level, "Slider(")
+    line(level + 1, "value = ${variable ?: node.number("value").floatLiteral()},")
+    line(level + 1, "onValueChange = { ${if (variable == null) "Unit" else "$variable = it"} },")
+    line(level + 1, "enabled = ${node.boolValue("enabled", true)},")
+    line(level + 1, "valueRange = ${from.floatLiteral()}..${to.floatLiteral()},")
+    line(level + 1, "steps = ${node.integer("steps")},")
+    line(level + 1, "${node.modifierArgument()},")
+    line(level, ")")
+  }
+
+  /**
+   * `LinearProgressIndicator` or `CircularProgressIndicator`, determinate or not.
+   *
+   * The two forms are two overloads rather than an argument: Material's indeterminate indicator is
+   * the one you call *without* a progress lambda, so a flag here picks the call rather than a
+   * value.
+   */
+  private fun emitProgress(node: UiBuilderNode, level: Int) {
+    val symbol =
+      if (node.string("variant") == "circular") "CircularProgressIndicator"
+      else "LinearProgressIndicator"
+    val variable = node.obj("progress").optionalString("variable")?.identifier()
+    if (node.boolValue("indeterminate")) {
+      line(level, "$symbol(${node.modifierArgument()})")
+      return
+    }
+    val fraction = variable?.let { "$it.toFloat()" } ?: node.number("progress").floatLiteral()
+    line(level, "$symbol(progress = { $fraction }, ${node.modifierArgument()})")
   }
 
   /**
@@ -1585,9 +1628,11 @@ private val EMITTER_IDS =
     "m3/icon-button",
     "m3/list-item",
     "m3/primary-tab-row",
+    "m3/progress-indicator",
     "m3/radio-button",
     "m3/search-bar",
     "m3/search-input-field",
+    "m3/slider",
     "m3/snackbar-host",
     "m3/surface",
     "m3/switch",
@@ -1744,6 +1789,7 @@ private val HANDLED_FIELDS =
     "m3/list-item" to
       HandledFields(setOf("startAccentColor"), setOf("headline", "supporting", "trailing")),
     "m3/primary-tab-row" to HandledFields(setOf("selectedIndex"), setOf("tabs")),
+    "m3/progress-indicator" to HandledFields(setOf("variant", "progress", "indeterminate")),
     "m3/radio-button" to HandledFields(setOf("selected", "enabled"), events = setOf("click")),
     "m3/search-bar" to
       HandledFields(setOf("expanded", "tonalElevationDp"), slots = setOf("inputField")),
@@ -1752,6 +1798,11 @@ private val HANDLED_FIELDS =
         setOf("enabled", "value"),
         setOf("placeholder", "leadingIcon", "trailingIcon"),
         setOf("valueChange"),
+      ),
+    "m3/slider" to
+      HandledFields(
+        setOf("value", "valueFrom", "valueTo", "steps", "enabled"),
+        events = setOf("valueChange"),
       ),
     "m3/snackbar-host" to HandledFields(setOf("visible")),
     "m3/surface" to

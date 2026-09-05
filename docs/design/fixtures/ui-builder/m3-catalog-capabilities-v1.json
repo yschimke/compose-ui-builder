@@ -458,6 +458,22 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "m3/progress-indicator",
+      "displayName": "Progress indicator",
+      "role": "Leaf",
+      "traits": ["Feedback", "Decoration"],
+      "slots": [],
+      "properties": [
+        { "name": "variant", "jsonType": "string", "required": true, "allowedValues": ["linear", "circular"], "notes": "Two Material composables that take the same arguments and differ in shape, spelled as one component the way `m3/text-field` spells its two." },
+        { "name": "progress", "jsonType": ["number", "object"], "required": false, "notes": "0..1, a literal or a `state` read. Absent means the indeterminate indicator — Material's own distinction between a progress you know and one you do not." },
+        { "name": "indeterminate", "jsonType": "boolean", "required": false, "notes": "Draws the running animation rather than a value. Pinned to its first frame on the canvas, because a render that animates is a render that cannot be diffed." }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "The indeterminate form is drawn at its first frame: the document environment freezes animation, so the canvas shows a still of it." },
+      "code": { "symbol": "LinearProgressIndicator", "imports": ["androidx.compose.material3.LinearProgressIndicator", "androidx.compose.material3.CircularProgressIndicator"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
       "componentId": "m3/radio-button",
       "displayName": "Radio button",
       "role": "Leaf",
@@ -511,6 +527,24 @@
       "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Maps to the experimental SearchBarDefaults.InputField API." },
       "code": { "symbol": "SearchBarDefaults.InputField", "imports": ["androidx.compose.material3.SearchBarDefaults"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "m3/slider",
+      "displayName": "Slider",
+      "role": "Leaf",
+      "traits": ["SelectionControl", "FormField"],
+      "slots": [],
+      "properties": [
+        { "name": "value", "jsonType": ["number", "object"], "required": true, "notes": "A literal, or a `state` read of a declared decimal variable — which is what makes dragging the canvas change the design's state rather than the slider's own memory." },
+        { "name": "valueFrom", "jsonType": "number", "required": false },
+        { "name": "valueTo", "jsonType": "number", "required": false },
+        { "name": "steps", "jsonType": "integer", "required": false, "notes": "Discrete stops between the ends, as Material counts them: 0 is a continuous slider." },
+        { "name": "enabled", "jsonType": "boolean", "required": false }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "Slider", "imports": ["androidx.compose.material3.Slider"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
