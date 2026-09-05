@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignSubmissionV1
@@ -24,6 +25,7 @@ import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetHeightDpEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetLocaleEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetModifiersMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetThemeEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetWidthDpEnvironmentChangeV1
@@ -203,6 +205,11 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
         nodeId,
         property,
         bridgeJson.decodeFromString(UiValueV1.serializer(), value.toString()),
+      )
+    is DesignOperation.SetModifiers ->
+      SetModifiersMutationV1(
+        nodeId,
+        modifiers.map { bridgeJson.decodeFromString(DesignModifierV1.serializer(), it.toString()) },
       )
     is DesignOperation.SetEnvironment ->
       UpdateEnvironmentMutationV1(

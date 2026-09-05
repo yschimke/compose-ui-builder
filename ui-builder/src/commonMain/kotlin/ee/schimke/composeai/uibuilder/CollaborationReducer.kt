@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityIssueCode
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -58,6 +59,21 @@ sealed interface DesignOperation {
   @Serializable
   @SerialName("setEnvironment")
   data class SetEnvironment(val field: String, val value: JsonElement) : DesignOperation
+
+  /**
+   * Replace every modifier on one node.
+   *
+   * Whole-list rather than per-modifier, matching `SetModifiersMutationV1` on the wire and for the
+   * reason it gives: a modifier chain is order-dependent by definition — padding then size is a
+   * different layout from size then padding — and the list has no per-element identity to address.
+   * Two authors editing a node's chain are editing one thing.
+   *
+   * An empty list clears the chain, which is a value rather than an absence: it is how a node gets
+   * its layout back.
+   */
+  @Serializable
+  @SerialName("setModifiers")
+  data class SetModifiers(val nodeId: String, val modifiers: JsonArray) : DesignOperation
 }
 
 @Serializable data class ParentSlot(val nodeId: String, val slot: String)
@@ -69,6 +85,10 @@ data class CollaborationState(
   val positions: Map<String, StableNodePosition> = emptyMap(),
   val positionSnapshots: Map<Int, Map<String, StableNodePosition>> = emptyMap(),
   val propertyVersions: Map<PropertyAddress, Int> = emptyMap(),
+  /**
+   * Which revision last wrote each node's modifier chain, keyed by node — the chain is one value.
+   */
+  val modifierVersions: Map<String, Int> = emptyMap(),
   val moveVersions: Map<String, Int> = emptyMap(),
   val structuralVersions: Map<String, Int> = emptyMap(),
   val environmentVersions: Map<String, Int> = emptyMap(),
@@ -116,6 +136,7 @@ data class AcceptedCommand(
   val committedRevision: Int,
   val canonicalDocument: String,
   val propertyChanges: List<PropertyChange> = emptyList(),
+  val modifierChanges: List<ModifierChange> = emptyList(),
   val environmentChanges: List<EnvironmentChange> = emptyList(),
   val structuralChanges: List<StructuralChange> = emptyList(),
   val compensationChanges: List<CompensationChange> = emptyList(),
@@ -145,6 +166,23 @@ data class EnvironmentChange(
   val beforeVersion: Int? = null,
 )
 
+/**
+ * One node's whole modifier chain, before and after.
+ *
+ * Node-granular rather than address-granular because the chain is one value: there is no
+ * `PropertyAddress` equivalent to hold, and two writes to the same node's modifiers are two writes
+ * to the same thing.
+ */
+data class ModifierChange(
+  val nodeId: String,
+  val before: JsonArray,
+  val after: JsonArray,
+  /**
+   * The revision that owned this node's chain before this command wrote it — see [PropertyChange].
+   */
+  val beforeVersion: Int? = null,
+)
+
 enum class StructuralChangeKind {
   INSERT,
   MOVE,
@@ -162,6 +200,8 @@ data class StructuralChange(
 
 sealed interface CompensationChange {
   data class Property(val change: PropertyChange) : CompensationChange
+
+  data class Modifiers(val change: ModifierChange) : CompensationChange
 
   data class Environment(val change: EnvironmentChange) : CompensationChange
 
@@ -519,6 +559,10 @@ object CollaborationReducer {
       trace.propertyTouches.fold(trace.state.propertyVersions) { versions, address ->
         versions + (address to committedRevision)
       }
+    val modifierVersions =
+      trace.modifierTouches.fold(trace.state.modifierVersions) { versions, nodeId ->
+        versions + (nodeId to committedRevision)
+      }
     val moveVersions =
       trace.moveTouches.fold(trace.state.moveVersions) { versions, nodeId ->
         versions + (nodeId to committedRevision)
@@ -537,6 +581,7 @@ object CollaborationReducer {
         committedRevision = committedRevision,
         canonicalDocument = canonicalDocument,
         propertyChanges = trace.propertyChanges,
+        modifierChanges = trace.modifierChanges,
         environmentChanges = trace.environmentChanges,
         structuralChanges = trace.structuralChanges,
         compensationChanges = trace.compensationChanges,
@@ -549,6 +594,7 @@ object CollaborationReducer {
         positionSnapshots =
           trace.state.positionSnapshots + (committedRevision to trace.state.positions),
         propertyVersions = propertyVersions,
+        modifierVersions = modifierVersions,
         moveVersions = moveVersions,
         structuralVersions = structuralVersions,
         environmentVersions = environmentVersions,
@@ -637,6 +683,11 @@ object CollaborationReducer {
     val scalarOnly =
       target.propertyChanges.isNotEmpty() &&
         target.command.operations.all { it is DesignOperation.SetProperty }
+    // Its own lane, beside the property one and for the same reason: a chain is a value on a node,
+    // so undoing it is a rewind of one address rather than a structural replay.
+    val modifierOnly =
+      target.modifierChanges.isNotEmpty() &&
+        target.command.operations.all { it is DesignOperation.SetModifiers }
     val environmentOnly =
       target.environmentChanges.isNotEmpty() &&
         target.command.operations.all { it is DesignOperation.SetEnvironment }
@@ -646,7 +697,16 @@ object CollaborationReducer {
           it !is DesignOperation.SetProperty && it !is DesignOperation.SetEnvironment
         }
     val mixed = target.propertyChanges.isNotEmpty() && target.structuralChanges.isNotEmpty()
-    if (!scalarOnly && !environmentOnly && !structuralOnly && !mixed) {
+    // A batch that mixes a modifier write with anything else has no lane here, and quietly
+    // compensating half of it is worse than refusing: the editor submits modifier writes on their
+    // own, so this is a client that did something else.
+    if (target.modifierChanges.isNotEmpty() && !modifierOnly) {
+      return state.rejected(
+        RejectionCode.UNSUPPORTED_COMPENSATION,
+        "a batch mixing modifiers with other writes cannot be undone",
+      )
+    }
+    if (!scalarOnly && !modifierOnly && !environmentOnly && !structuralOnly && !mixed) {
       return state.rejected(
         RejectionCode.UNSUPPORTED_COMPENSATION,
         "operation has no compensating changes",
@@ -669,6 +729,19 @@ object CollaborationReducer {
             "property changed after ${target.command.operationId} at revision $currentVersion",
             nodeId = change.address.nodeId,
             field = change.address.property,
+          )
+        }
+      }
+    } else if (modifierOnly) {
+      target.modifierChanges.asReversed().distinctBy(ModifierChange::nodeId).forEach { change ->
+        val current = state.document.nodes[change.nodeId]?.modifiers
+        val currentVersion = state.modifierVersions[change.nodeId]
+        if (current != change.after || currentVersion != target.committedRevision) {
+          return state.rejected(
+            RejectionCode.UNSAFE_COMPENSATION,
+            "modifiers changed after ${target.command.operationId} at revision $currentVersion",
+            nodeId = change.nodeId,
+            field = "modifiers",
           )
         }
       }
@@ -726,6 +799,14 @@ object CollaborationReducer {
           document.copy(
             nodes = document.nodes + (node.id to node.copy(properties = JsonObject(properties)))
           )
+      }
+      changed = changed.copy(document = document)
+    } else if (modifierOnly) {
+      var document = prepared.document
+      target.modifierChanges.asReversed().forEach { change ->
+        val node = document.nodes.getValue(change.nodeId)
+        document =
+          document.copy(nodes = document.nodes + (node.id to node.copy(modifiers = change.before)))
       }
       changed = changed.copy(document = document)
     } else if (environmentOnly) {
@@ -798,6 +879,13 @@ object CollaborationReducer {
           else versions + (change.address to change.beforeVersion)
         }
       else changed.propertyVersions
+    val modifierVersions =
+      if (target.modifierChanges.isNotEmpty())
+        target.modifierChanges.asReversed().fold(changed.modifierVersions) { versions, change ->
+          if (change.beforeVersion == null) versions - change.nodeId
+          else versions + (change.nodeId to change.beforeVersion)
+        }
+      else changed.modifierVersions
     val environmentVersions =
       if (target.environmentChanges.isNotEmpty())
         target.environmentChanges.asReversed().fold(changed.environmentVersions) { versions, change
@@ -826,6 +914,7 @@ object CollaborationReducer {
       changed.copy(
         document = document,
         propertyVersions = propertyVersions,
+        modifierVersions = modifierVersions,
         environmentVersions = environmentVersions,
         structuralVersions = structuralVersions,
         moveVersions = moveVersions,
@@ -908,9 +997,17 @@ object CollaborationReducer {
       )
     }
     val hasProperties = undo.target.propertyChanges.isNotEmpty()
+    val hasModifiers = undo.target.modifierChanges.isNotEmpty()
     val hasStructure = undo.target.structuralChanges.isNotEmpty()
     val hasEnvironment = undo.target.environmentChanges.isNotEmpty()
     val scalarOnly = hasProperties && !hasStructure
+    val modifierOnly = hasModifiers && !hasProperties && !hasStructure && !hasEnvironment
+    if (hasModifiers && !modifierOnly) {
+      return state.rejected(
+        RejectionCode.UNSUPPORTED_COMPENSATION,
+        "a batch mixing modifiers with other writes cannot be redone",
+      )
+    }
     val environmentOnly = hasEnvironment && !hasProperties && !hasStructure
     val structuralOnly = hasStructure && !hasProperties
     val mixed = hasProperties && hasStructure && !hasEnvironment
@@ -929,6 +1026,19 @@ object CollaborationReducer {
             "property changed after ${undo.command.operationId} at revision $currentVersion",
             nodeId = change.address.nodeId,
             field = change.address.property,
+          )
+        }
+      }
+    } else if (modifierOnly) {
+      undo.target.modifierChanges.distinctBy(ModifierChange::nodeId).forEach { change ->
+        val current = state.document.nodes[change.nodeId]?.modifiers
+        val currentVersion = state.modifierVersions[change.nodeId]
+        if (current != change.before || currentVersion != change.beforeVersion) {
+          return state.rejected(
+            RejectionCode.UNSAFE_COMPENSATION,
+            "modifiers changed after ${undo.command.operationId} at revision $currentVersion",
+            nodeId = change.nodeId,
+            field = "modifiers",
           )
         }
       }
@@ -1001,6 +1111,14 @@ object CollaborationReducer {
           )
       }
       changed = changed.copy(document = document)
+    } else if (modifierOnly) {
+      var document = prepared.document
+      undo.target.modifierChanges.forEach { change ->
+        val node = document.nodes.getValue(change.nodeId)
+        document =
+          document.copy(nodes = document.nodes + (node.id to node.copy(modifiers = change.after)))
+      }
+      changed = changed.copy(document = document)
     } else if (environmentOnly) {
       var environment = prepared.document.environment
       undo.target.environmentChanges.forEach { change ->
@@ -1057,6 +1175,12 @@ object CollaborationReducer {
           versions + (change.address to undo.target.committedRevision)
         }
       else changed.propertyVersions
+    val modifierVersions =
+      if (hasModifiers)
+        undo.target.modifierChanges.fold(changed.modifierVersions) { versions, change ->
+          versions + (change.nodeId to undo.target.committedRevision)
+        }
+      else changed.modifierVersions
     val environmentVersions =
       if (hasEnvironment)
         undo.target.environmentChanges.fold(changed.environmentVersions) { versions, change ->
@@ -1085,6 +1209,7 @@ object CollaborationReducer {
       changed.copy(
         document = document,
         propertyVersions = propertyVersions,
+        modifierVersions = modifierVersions,
         environmentVersions = environmentVersions,
         structuralVersions = structuralVersions,
         moveVersions = moveVersions,
@@ -1173,6 +1298,8 @@ private data class ReductionTrace(
   val conflicts: MutableList<ConflictNotice> = mutableListOf(),
   val propertyChanges: MutableList<PropertyChange> = mutableListOf(),
   val propertyTouches: MutableSet<PropertyAddress> = linkedSetOf(),
+  val modifierTouches: MutableSet<String> = linkedSetOf(),
+  val modifierChanges: MutableList<ModifierChange> = mutableListOf(),
   val environmentChanges: MutableList<EnvironmentChange> = mutableListOf(),
   val environmentTouches: MutableSet<String> = linkedSetOf(),
   val moveTouches: MutableSet<String> = linkedSetOf(),
@@ -1283,6 +1410,34 @@ private fun CollaborationState.applyOperation(
       val change = PropertyChange(address, before, operation.value, propertyVersions[address])
       trace.propertyChanges += change
       trace.compensationChanges += CompensationChange.Property(change)
+      changed
+    }
+    is DesignOperation.SetModifiers -> {
+      modifierVersions[operation.nodeId]
+        ?.takeIf { it > baseRevision }
+        ?.let { overwrittenRevision ->
+          // Reported as a stale *property* write, because that is the only conflict code the wire
+          // can carry for a node-and-field write, and `modifiers` is the field it names.
+          trace.conflicts +=
+            ConflictNotice(
+              ConflictCode.STALE_PROPERTY_WRITE,
+              operation.nodeId,
+              "modifiers",
+              overwrittenRevision,
+            )
+        }
+      val before = document.nodes[operation.nodeId]?.modifiers ?: JsonArray(emptyList())
+      val changed = setModifiers(operation)
+      trace.modifierTouches += operation.nodeId
+      val change =
+        ModifierChange(
+          operation.nodeId,
+          before,
+          operation.modifiers,
+          modifierVersions[operation.nodeId],
+        )
+      trace.modifierChanges += change
+      trace.compensationChanges += CompensationChange.Modifiers(change)
       changed
     }
     is DesignOperation.SetEnvironment -> {
@@ -1415,6 +1570,55 @@ private fun CollaborationState.restoreNode(nodeId: String): CollaborationState {
   return restored.rebuildLocation(rootPosition.parent)
 }
 
+/**
+ * Replace one node's modifier chain.
+ *
+ * Every entry has to be a modifier the renderer can actually apply: [uiBuilderModifier] is the same
+ * reading the canvas does, and it answers null for a type this build does not know and for a `size`
+ * naming neither dimension. Refusing here is the difference between a rejected write and a node
+ * that silently loses its layout at composition. Whether the *component* is allowed to carry the
+ * modifier is the catalog's question, and the document validator asks it over the whole document
+ * once the batch has been applied.
+ */
+private fun CollaborationState.setModifiers(
+  operation: DesignOperation.SetModifiers
+): CollaborationState {
+  val node = liveNode(operation.nodeId)
+  operation.modifiers.forEachIndexed { index, element ->
+    val modifier =
+      element as? JsonObject
+        ?: fail(
+          RejectionCode.MALFORMED_PROPERTY,
+          "modifier at index $index must be a typed object",
+          node.id,
+          "modifiers[$index]",
+        )
+    val type = (modifier["type"] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.contentOrNull
+    if (type.isNullOrBlank()) {
+      fail(
+        RejectionCode.MALFORMED_PROPERTY,
+        "modifier at index $index has no string type",
+        node.id,
+        "modifiers[$index]",
+      )
+    }
+    if (uiBuilderModifier(modifier) == null) {
+      fail(
+        RejectionCode.INVALID_PROPERTY,
+        "modifier $type is not one this renderer can apply",
+        node.id,
+        "modifiers[$index]",
+      )
+    }
+  }
+  return copy(
+    document =
+      document.copy(
+        nodes = document.nodes + (node.id to node.copy(modifiers = operation.modifiers))
+      )
+  )
+}
+
 private fun CollaborationState.setProperty(
   operation: DesignOperation.SetProperty,
   propertyValidator: CollaborationPropertyValidator?,
@@ -1518,6 +1722,7 @@ private fun CollaborationState.compensate(
 ): CollaborationState =
   when (change) {
     is CompensationChange.Property -> compensateProperty(change.change, undo)
+    is CompensationChange.Modifiers -> compensateModifiers(change.change, undo)
     is CompensationChange.Environment -> compensateEnvironment(change.change, undo)
     is CompensationChange.Structure -> compensateStructure(change.change, undo)
   }
@@ -1556,6 +1761,26 @@ private fun CollaborationState.compensateProperty(
       document.copy(
         nodes = document.nodes + (node.id to node.copy(properties = JsonObject(properties)))
       )
+  )
+}
+
+private fun CollaborationState.compensateModifiers(
+  change: ModifierChange,
+  undo: Boolean,
+): CollaborationState {
+  val node = liveNode(change.nodeId)
+  val expected = if (undo) change.after else change.before
+  if (node.modifiers != expected) {
+    fail(
+      RejectionCode.UNSAFE_COMPENSATION,
+      "the modifiers on ${change.nodeId} no longer have their compensable value",
+      change.nodeId,
+      "modifiers",
+    )
+  }
+  val restored = if (undo) change.before else change.after
+  return copy(
+    document = document.copy(nodes = document.nodes + (node.id to node.copy(modifiers = restored)))
   )
 }
 

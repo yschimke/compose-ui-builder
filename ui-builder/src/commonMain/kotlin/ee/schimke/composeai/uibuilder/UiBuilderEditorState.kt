@@ -14,11 +14,13 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 enum class EditorPropertyControl {
   Text,
@@ -68,6 +70,16 @@ data class EditorPropertyField(
 )
 
 data class EditorPropertyLocation(val nodeId: String, val property: String)
+
+/**
+ * One layout modifier the selection can be given, or have taken away, in one press.
+ *
+ * The chain is authored as a whole by [UiBuilderEditorEvent.ToggleModifier], so a menu row is a
+ * fact about the node — "this is filling its parent" — rather than a form to fill in. Only the
+ * modifiers the catalog declares on that component are ever offered: a row the reducer would refuse
+ * is a row that lies.
+ */
+data class EditorModifierToggle(val type: String, val label: String, val applied: Boolean)
 
 enum class EditorComponentKind(val label: String) {
   Scaffold("Scaffolds"),
@@ -475,6 +487,15 @@ sealed interface UiBuilderEditorEvent {
 
   /** Give a bound property a literal of its own again. */
   data class UnbindProperty(val nodeId: String, val property: String) : UiBuilderEditorEvent
+
+  /**
+   * Put one layout modifier on a node, or take it back off.
+   *
+   * The whole chain is rewritten either way, because [DesignOperation.SetModifiers] is whole-list:
+   * a chain is order-dependent and its elements have no identity to address. Added modifiers go on
+   * the end, which is the order somebody reading the exported Kotlin will see them in.
+   */
+  data class ToggleModifier(val nodeId: String, val type: String) : UiBuilderEditorEvent
 
   data class UpdateEnvironment(val settings: ScreenEnvironmentSettings) : UiBuilderEditorEvent
 
@@ -886,6 +907,7 @@ class UiBuilderEditorReducer(
         bindPropertyToState(state, event.nodeId, event.property, event.variable, event.equalsValue)
       is UiBuilderEditorEvent.UnbindProperty -> unbindProperty(state, event.nodeId, event.property)
       is UiBuilderEditorEvent.UpdateEnvironment -> updateEnvironment(state, event.settings)
+      is UiBuilderEditorEvent.ToggleModifier -> toggleModifier(state, event.nodeId, event.type)
       is UiBuilderEditorEvent.ShowInspector -> state.copy(inspectorMode = event.mode)
       is UiBuilderEditorEvent.ApplyTheme -> applyTheme(state, event.settings)
       UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
@@ -1412,6 +1434,60 @@ class UiBuilderEditorReducer(
           )
           .let(::listOf)
       }
+  }
+
+  /**
+   * The layout modifiers a menu can offer the selection, and whether it already has them.
+   *
+   * Single selection only: a chain is one value on one node, and six nodes have six of them —
+   * "toggle this on all of them" would mean six different results from one press. Restricted here
+   * rather than in the menu so the reducer and the UI cannot disagree about what is offered.
+   *
+   * Empty for a component whose catalog entry declares none of them, which is how a text inside a
+   * row is stopped from being offered a fill it cannot carry.
+   */
+  fun modifierToggles(state: UiBuilderEditorState): List<EditorModifierToggle> {
+    val nodeId = state.selection.singleOrNull() ?: return emptyList()
+    val node = state.document.nodes[nodeId] ?: return emptyList()
+    val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty().toSet()
+    val present = node.modifierTypes()
+    return MENU_MODIFIERS.filter { it.type in declared }
+      .map { EditorModifierToggle(it.type, it.label, it.type in present) }
+  }
+
+  /**
+   * Add or remove one modifier and submit the chain that results.
+   *
+   * Refused rather than committed where the catalog does not declare the modifier on that
+   * component: the document validator would reject the batch a moment later, and a rejection that
+   * names the modifier is more use than one that names the document.
+   */
+  private fun toggleModifier(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    type: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val node = state.document.nodes[nodeId] ?: return state
+    val menuModifier = MENU_MODIFIERS.firstOrNull { it.type == type } ?: return state
+    val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty()
+    if (type !in declared) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "Modifier $type is not declared by ${node.componentId}",
+        nodeId,
+        "modifiers",
+      )
+    }
+    val kept = node.modifiers.filter { (it as? JsonObject)?.optionalStringValue("type") != type }
+    val chain =
+      if (type in node.modifierTypes()) JsonArray(kept) else JsonArray(kept + menuModifier.build())
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.SetModifiers(nodeId, chain)),
+      selectionAfter = nodeId,
+    )
   }
 
   /**
@@ -3849,3 +3925,46 @@ private fun UiBuilderDocument.subtreeOf(nodeId: String): Set<String> {
 
 private fun UiBuilderDocument.children(parent: ParentSlot?): List<String> =
   if (parent == null) roots else nodes.getValue(parent.nodeId).slots[parent.slot].orEmpty()
+
+/**
+ * The layout modifiers worth a menu row, in the order they are offered.
+ *
+ * A deliberate subset of what the wire carries: these are the ones whose whole value is their
+ * presence, so a press says everything there is to say. `size` and `clip` need a number and a
+ * shape, which is a form rather than a row, and `padding` is offered at one typical value the
+ * inspector can then change — the same bargain the catalog's default content makes.
+ */
+private val MENU_MODIFIERS: List<MenuModifier> =
+  listOf(
+    MenuModifier("fillMaxSize", "Fill the parent") {
+      buildJsonObject { put("type", "fillMaxSize") }
+    },
+    MenuModifier("fillMaxWidth", "Fill the width") {
+      buildJsonObject { put("type", "fillMaxWidth") }
+    },
+    MenuModifier("matchParentSize", "Match the parent's size") {
+      buildJsonObject { put("type", "matchParentSize") }
+    },
+    MenuModifier("padding", "Pad by 16") {
+      buildJsonObject {
+        put("type", "padding")
+        put("startDp", 16)
+        put("topDp", 16)
+        put("endDp", 16)
+        put("bottomDp", 16)
+      }
+    },
+  )
+
+private class MenuModifier(
+  val type: String,
+  val label: String,
+  val build: () -> JsonObject,
+)
+
+/** The types on a node's chain, for asking whether it already carries one. */
+private fun UiBuilderNode.modifierTypes(): Set<String> =
+  modifiers.mapNotNull { (it as? JsonObject)?.optionalStringValue("type") }.toSet()
+
+private fun JsonObject.optionalStringValue(key: String): String? =
+  (this[key] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.contentOrNull

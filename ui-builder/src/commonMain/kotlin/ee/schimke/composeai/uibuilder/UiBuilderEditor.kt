@@ -583,6 +583,11 @@ fun UiBuilderEditor(
    */
   val selectionMenu: @Composable (() -> Unit) -> Unit = { close ->
     EditorSelectionMenuItems(
+      modifierToggles = reducer.modifierToggles(state),
+      onToggleModifier = { type ->
+        focusEditor()
+        state.selectedNodeId?.let { dispatch(UiBuilderEditorEvent.ToggleModifier(it, type)) }
+      },
       canDuplicate = reducer.canDuplicateSelected(state),
       canCopy = reducer.canCopySelected(state),
       canCut = reducer.canCutSelected(state),
@@ -982,14 +987,7 @@ fun UiBuilderEditor(
                           inspectorOpen = true
                         }
                       },
-                    canDelete = reducer.canDeleteSelected(state),
-                    canDuplicate = reducer.canDuplicateSelected(state),
-                    canCopy = reducer.canCopySelected(state),
-                    canCut = reducer.canCutSelected(state),
-                    canPaste = reducer.canPaste(state),
-                    wrapCandidates = reducer.wrapCandidates(state),
-                    canUnwrap = reducer.canUnwrapSelected(state),
-                    dispatch = ::dispatch,
+                    selectionMenu = selectionMenu,
                   )
                 }
                 Row(Modifier.fillMaxWidth().weight(1f)) {
@@ -1783,6 +1781,9 @@ private fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Mod
  */
 @Composable
 private fun EditorSelectionMenuItems(
+  /** The layout modifiers this selection can be given or have taken away; empty for many nodes. */
+  modifierToggles: List<EditorModifierToggle>,
+  onToggleModifier: (String) -> Unit,
   canDuplicate: Boolean,
   canCopy: Boolean,
   canCut: Boolean,
@@ -1844,6 +1845,30 @@ private fun EditorSelectionMenuItems(
     trailingIcon = { MenuShortcut("Delete") },
     onClick = { act(UiBuilderEditorEvent.DeleteSelected) },
   )
+  // Layout before the container verbs, because it is what a right-click on a laid-out node is
+  // usually for: the chain is the node's own business, and wrapping is its parent's.
+  if (modifierToggles.isNotEmpty()) {
+    HorizontalDivider()
+    modifierToggles.forEach { toggle ->
+      DropdownMenuItem(
+        text = { Text(toggle.label) },
+        leadingIcon = {
+          // The tick says what is already true. A menu of layout verbs with no state is one people
+          // press twice to find out what it did.
+          if (toggle.applied) Icon(Icons.Filled.Check, contentDescription = null)
+        },
+        modifier =
+          Modifier.semantics {
+            contentDescription =
+              if (toggle.applied) "Remove ${toggle.label}" else "Apply ${toggle.label}"
+          },
+        onClick = {
+          onDismiss()
+          onToggleModifier(toggle.type)
+        },
+      )
+    }
+  }
   if (wrapCandidates.isNotEmpty() || canUnwrap) HorizontalDivider()
   // Behind one row rather than inline: the containers a selection can be wrapped in run to thirty
   // on this catalog, and a menu whose last verb is thirty rows below the first is not a menu.
@@ -1904,14 +1929,8 @@ private fun MenuShortcut(chord: String) {
 private fun SelectionActionBar(
   selectionLabel: String,
   onOpenProperties: (() -> Unit)?,
-  canDelete: Boolean,
-  canDuplicate: Boolean,
-  canCopy: Boolean,
-  canCut: Boolean,
-  canPaste: Boolean,
-  wrapCandidates: List<EditorCatalogItem>,
-  canUnwrap: Boolean,
-  dispatch: (UiBuilderEditorEvent) -> Unit,
+  /** The same rows the context menus carry; the bar holds no second copy of the verbs. */
+  selectionMenu: @Composable (() -> Unit) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   var menuOpen by remember { mutableStateOf(false) }
@@ -1950,18 +1969,7 @@ private fun SelectionActionBar(
       Box {
         ToolbarIconAction("Selection actions", "", Icons.Filled.MoreVert, true) { menuOpen = true }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-          EditorSelectionMenuItems(
-            canDuplicate = canDuplicate,
-            canCopy = canCopy,
-            canCut = canCut,
-            canPaste = canPaste,
-            canDelete = canDelete,
-            wrapCandidates = wrapCandidates,
-            canUnwrap = canUnwrap,
-            onOpenProperties = null,
-            onDismiss = { menuOpen = false },
-            dispatch = dispatch,
-          )
+          selectionMenu { menuOpen = false }
         }
       }
     }
