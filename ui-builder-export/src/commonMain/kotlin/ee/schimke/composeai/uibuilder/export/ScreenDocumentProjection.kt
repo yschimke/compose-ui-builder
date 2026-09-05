@@ -4,6 +4,7 @@ import ee.schimke.composeai.discovery.ChainLink
 import ee.schimke.composeai.discovery.ScreenDocument
 import ee.schimke.composeai.discovery.ScreenNode
 import ee.schimke.composeai.discovery.ScreenValue
+import ee.schimke.composeai.discovery.SlotItem
 import ee.schimke.composeai.uibuilder.protocol.AdaptiveGridValueV1
 import ee.schimke.composeai.uibuilder.protocol.AlignHorizontalModifierV1
 import ee.schimke.composeai.uibuilder.protocol.AlignModifierV1
@@ -87,6 +88,11 @@ private val SLOT_PARAMETERS: Map<String, Map<String, String>> =
     "layout/box" to mapOf("children" to "content"),
     "layout/column" to mapOf("children" to "content"),
     "layout/row" to mapOf("children" to "content"),
+    // The lazy family names its slot `items`, which reads as a list of children and is a
+    // `content` lambda on every one of the three Compose signatures.
+    "layout/lazy-column" to mapOf("items" to "content"),
+    "layout/lazy-row" to mapOf("items" to "content"),
+    "layout/lazy-grid" to mapOf("items" to "content"),
   )
 
 private fun parameterForSlot(componentId: String, slot: String): String =
@@ -274,6 +280,14 @@ object ScreenDocumentProjection {
               parameterForSlot(node.componentId, slot) to
                 children.mapNotNull { child -> node(child, childScope) }
             },
+          slotItems =
+            node.slots.keys
+              .mapNotNull { slot ->
+                SLOT_ITEMS[node.componentId]?.get(slot)?.let {
+                  parameterForSlot(node.componentId, slot) to it
+                }
+              }
+              .toMap(),
         )
       } finally {
         visiting.remove(id)
@@ -311,6 +325,28 @@ object ScreenDocumentProjection {
     }
 
     /**
+     * Whether this property asks for something about the node's **placement in its parent** that no
+     * argument to the node itself could carry — refusing by name if so.
+     *
+     * `span` is the case, and it is worth refusing loudly rather than dropping. A child of a lazy
+     * grid with `span = full` is a row that crosses every column, and the old exporter wrote it as
+     * `item(span = { GridItemSpan(maxLineSpan) })` — an argument to the **wrapper**, computed from
+     * a lambda whose receiver supplies `maxLineSpan`. Two separate things put that out of reach: a
+     * [SlotItem] is one wrapper for a whole slot rather than one per child, and no [ScreenValue] is
+     * a lambda. Dropped instead, a full-width row would silently export as a single cell — a
+     * different design that compiles, which is the failure this projection exists to prevent.
+     */
+    private fun unplaceable(property: String, node: DesignNodeV1): Boolean {
+      if (property != SPAN) return false
+      refuse(
+        "node `${node.id}`.`$property` is the span this node takes in its parent grid, which is " +
+          "`item(span = { GridItemSpan(…) })` on the wrapper around it — an argument to another " +
+          "node, computed by a lambda, and this vocabulary has neither"
+      )
+      return true
+    }
+
+    /**
      * The receiver a slot's children are composed under.
      *
      * The variant answers when there is one, because it is the component actually being emitted;
@@ -318,7 +354,14 @@ object ScreenDocumentProjection {
      * the `RowScope` that `m3/button`'s other three values have.
      */
     private fun slotScope(componentId: String, variant: ComponentVariant?, slot: String): String? =
-      if (variant != null) variant.slotScopes[slot] else SLOT_SCOPES[componentId]?.get(slot)
+      when {
+        // A DSL slot's children are not composed under the slot's own receiver — they sit inside
+        // the wrapper, whose receiver (`LazyItemScope`) nothing in the record attests. So they get
+        // none, and a `weight` inside a lazy list refuses by name exactly as one at the root does.
+        SLOT_ITEMS[componentId]?.containsKey(slot) == true -> null
+        variant != null -> variant.slotScopes[slot]
+        else -> SLOT_SCOPES[componentId]?.get(slot)
+      }
 
     /**
      * The component a node's variant property selects, or null when it selects nothing.
@@ -378,6 +421,10 @@ object ScreenDocumentProjection {
           continue
         }
         if (node.componentId == PROGRESS_INDICATOR && determinacy(property, value, node)) continue
+        // Recomposition identity rather than design. Spent, like a variant selector is, and for a
+        // reason that is written down: see [IDENTITY_PROPERTIES].
+        if (property in IDENTITY_PROPERTIES) continue
+        if (unplaceable(property, node)) continue
         val link = MODIFIER_PROPERTIES[node.componentId]?.get(property)
         if (link != null) {
           modifierLink(link, value, node, property)?.let { fromProperties += it }
@@ -1068,8 +1115,26 @@ object ScreenDocumentProjection {
         is ResourceValueV1 ->
           refuse("$where is a resource reference, which needs an Android resource context")
         is AssetKeyValueV1 -> refuse("$where is an asset key, which needs an artwork adapter")
-        is AdaptiveGridValueV1 ->
-          refuse("$where is an adaptive grid specification, which is a layout rather than a value")
+        is AdaptiveGridValueV1 -> {
+          // `LazyVerticalGrid(columns = …)` takes exactly this as a value, so the refusal this
+          // replaces was true only while no grid had a record to be an argument of. A cell width
+          // that is absent or does not survive `Dp` still refuses, through the same `JsonElement`
+          // narrowing every other dimension in this file goes through.
+          val minimum =
+            dp(value.minimumCellWidthDp)
+              ?: return refuse(
+                "$where has a minimum cell width of `${value.minimumCellWidthDp}`, which is not " +
+                  "a number that survives `Dp`"
+              )
+          ScreenValue.Construct(
+            callableFqn = "androidx.compose.foundation.lazy.grid.GridCells.Adaptive",
+            positional = listOf(minimum),
+            // The parameter's own type, not the expression's: `GridCells.Adaptive` is a
+            // `GridCells`, and the generator compares this claim to `TargetParameter.typeFqn` as a
+            // string.
+            typeFqn = "androidx.compose.foundation.lazy.grid.GridCells",
+          )
+        }
         else -> refuse("$where is a ${value::class.simpleName}, which is not projected")
       }
     }
@@ -1537,6 +1602,27 @@ object ScreenDocumentProjection {
           "verticalSpacingDp" to
             ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL)
         ),
+      // The lazy three spell spacing the way their non-lazy counterparts do, and reach the same
+      // `Arrangement.spacedBy` this table already builds for `layout/row` and `layout/column`.
+      // `contentPadding` and `reverseLayout` are parameters under their own names and need no
+      // entry.
+      "layout/lazy-column" to
+        mapOf(
+          "verticalSpacingDp" to
+            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL)
+        ),
+      "layout/lazy-row" to
+        mapOf(
+          "horizontalSpacingDp" to
+            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL)
+        ),
+      "layout/lazy-grid" to
+        mapOf(
+          "verticalSpacingDp" to
+            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL),
+          "horizontalSpacingDp" to
+            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL),
+        ),
     )
 
   /** One catalog property's values, as the Kotlin members they name. */
@@ -1785,6 +1871,36 @@ object ScreenDocumentProjection {
   private const val CIRCULAR_INDICATOR_ID =
     "m3-catalog/androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator"
 
+  /**
+   * Properties that name a node's **identity to the builder**, not a value in the design.
+   *
+   * `scrollStateKey` says which scroll position the canvas restores when it re-renders a design —
+   * the catalog's own note is "independent pane scroll requires distinct stable scrollStateKey
+   * values" — and `stableKey` is the same idea for a child in a list. Neither is a parameter of
+   * anything, and neither describes what the screen looks like.
+   *
+   * Spent rather than refused, which is the one place this file drops something on purpose, so the
+   * reason is written here. Refusing would be the safer reflex and the wrong answer:
+   * `scrollStateKey` is **required** on `layout/lazy-column` and `layout/lazy-grid`, so every real
+   * lazy container carries one and a refusal would make covering them worth nothing. Dropping is
+   * safe only because what is lost is not in the design: `CapabilityComposeCodeExporter` spent
+   * these on a `key("…") { }` wrapper around the node, which changes recomposition identity and
+   * changes no pixel.
+   *
+   * Keyed by property name rather than by component, because the meaning does not vary: the two are
+   * catalog-wide bookkeeping wherever they appear. That reaches one **already covered** id,
+   * `layout/scaffold`, which declares `scrollStateKey` too — deliberately. Before this it refused
+   * as "`Scaffold` has no parameter `scrollStateKey`", so a scaffold carrying one could not export
+   * at all; the widening fixes that rather than causing it.
+   *
+   * That argument is exactly why `span` is **not** here — see `unplaceable`. It reads like another
+   * bookkeeping string and is a layout instruction, and dropping it would export a full-width row
+   * as one cell.
+   */
+  private val IDENTITY_PROPERTIES: Set<String> = setOf("scrollStateKey", "stableKey")
+
+  private const val SPAN = "span"
+
   private const val PROGRESS_INDICATOR = "m3/progress-indicator"
   private const val PROGRESS = "progress"
   private const val INDETERMINATE = "indeterminate"
@@ -1805,6 +1921,45 @@ object ScreenDocumentProjection {
    * drifting. A slot with no entry composes its children under no receiver, which is correct for
    * `m3/surface`'s `content` and every `layout/scaffold` slot, and is why a `weight` there refuses.
    */
+  /**
+   * The receiver member each of a DSL slot's children is wrapped in.
+   *
+   * The sixth authored table, and the one that made a list exportable at all. A lazy container's
+   * `content` is not a composable slot: `LazyColumn` takes a `LazyListScope.() -> Unit`, and its
+   * children are **declared** with `item { … }` rather than composed into it. Emitting them
+   * directly produces `LazyColumn(content = { Text(…) })`, which satisfies the lambda's type and
+   * does not compile, because `Text` is not a member of `LazyListScope` — which is why all three
+   * lazy ids had no component record at all rather than a wrong one (#394).
+   *
+   * `ScreenNode.slotItems` is the shape that expresses it, and `ScreenGenerator` **checks** the
+   * scope named here against the record's own `TargetParameter.scopeDslReceiver` rather than
+   * trusting it — the same bargain `ChainLink.receiverScopeFqn` makes one level in. So a wrong
+   * entry here is a refusal naming both scopes, not a file that fails to compile in someone else's
+   * project.
+   *
+   * Keyed by the catalog's slot name (`items`), like [SLOT_PARAMETERS], because that is what the
+   * document holds.
+   *
+   * **No `key`, deliberately.** `CapabilityComposeCodeExporter` emits `item(key = "…")` from each
+   * *child's* `stableKey`, and a [SlotItem] is one wrapper for the whole slot — so a per-child key
+   * is not expressible here. An unkeyed `item` is correct Kotlin and correct layout; what it costs
+   * is list-item identity across a reorder, which a generated static screen does not do. Stated
+   * rather than discovered, and the narrowing worth revisiting first if `slotItems` ever becomes
+   * per-child.
+   *
+   * Public for the same reason [SLOT_SCOPES] is: `M3CatalogSlotScopeTest` walks it against the
+   * shipped record so the two halves of one claim cannot drift apart silently.
+   */
+  val SLOT_ITEMS: Map<String, Map<String, SlotItem>> =
+    mapOf(
+      "layout/lazy-column" to mapOf("items" to SlotItem("item", LAZY_LIST_SCOPE)),
+      "layout/lazy-row" to mapOf("items" to SlotItem("item", LAZY_LIST_SCOPE)),
+      "layout/lazy-grid" to mapOf("items" to SlotItem("item", LAZY_GRID_SCOPE)),
+    )
+
+  private const val LAZY_LIST_SCOPE = "androidx.compose.foundation.lazy.LazyListScope"
+  private const val LAZY_GRID_SCOPE = "androidx.compose.foundation.lazy.grid.LazyGridScope"
+
   val SLOT_SCOPES: Map<String, Map<String, String>> =
     mapOf(
       "layout/column" to mapOf("children" to COLUMN_SCOPE),

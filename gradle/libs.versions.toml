@@ -41,7 +41,7 @@ maven-publish = "0.37.0"
 # 1.82.0 is a floor rather than a bump: `ScreenDocumentProjection` emits `ChainLink
 # .receiverScopeFqn` and `ScreenValue.Fractional32`, which is how a layout weight became
 # expressible (compose-ai-tools#5212), and neither exists below it.
-composeai-tools = "1.82.0"
+composeai-tools = "1.83.0"
 composeai-contracts = "2.8.0"
 rc-players = "1.57.0"
 kotlinx-coroutines = "1.11.0"

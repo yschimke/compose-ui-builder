@@ -1581,6 +1581,201 @@
         ]
       },
       "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.foundation.lazy.LazyDslKt.LazyColumn",
+      "componentIds": [
+        "layout/lazy-column"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.foundation.lazy.LazyDslKt",
+        "callable": "androidx.compose.foundation.lazy.LazyColumn",
+        "name": "LazyColumn",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "contentPadding",
+          "type": "PaddingValues",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.PaddingValues"
+        },
+        {
+          "name": "reverseLayout",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "verticalArrangement",
+          "type": "Arrangement.Vertical",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.Arrangement$Vertical"
+        },
+        {
+          "name": "horizontalAlignment",
+          "type": "Alignment.Horizontal",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Alignment$Horizontal"
+        },
+        {
+          "name": "content",
+          "type": "LazyListScope.() -> Unit",
+          "hasDefault": false,
+          "scopeDslReceiver": "androidx.compose.foundation.lazy.LazyListScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "LazyColumn()",
+        "imports": [
+          "androidx.compose.foundation.lazy.LazyColumn"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.foundation.lazy.LazyDslKt.LazyRow",
+      "componentIds": [
+        "layout/lazy-row"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.foundation.lazy.LazyDslKt",
+        "callable": "androidx.compose.foundation.lazy.LazyRow",
+        "name": "LazyRow",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "contentPadding",
+          "type": "PaddingValues",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.PaddingValues"
+        },
+        {
+          "name": "reverseLayout",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "horizontalArrangement",
+          "type": "Arrangement.Horizontal",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.Arrangement$Horizontal"
+        },
+        {
+          "name": "verticalAlignment",
+          "type": "Alignment.Vertical",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Alignment$Vertical"
+        },
+        {
+          "name": "content",
+          "type": "LazyListScope.() -> Unit",
+          "hasDefault": false,
+          "scopeDslReceiver": "androidx.compose.foundation.lazy.LazyListScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "LazyRow()",
+        "imports": [
+          "androidx.compose.foundation.lazy.LazyRow"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.foundation.lazy.grid.LazyGridDslKt.LazyVerticalGrid",
+      "componentIds": [
+        "layout/lazy-grid"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.foundation.lazy.grid.LazyGridDslKt",
+        "callable": "androidx.compose.foundation.lazy.grid.LazyVerticalGrid",
+        "name": "LazyVerticalGrid",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "columns",
+          "type": "GridCells",
+          "hasDefault": false,
+          "typeFqn": "androidx.compose.foundation.lazy.grid.GridCells"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "contentPadding",
+          "type": "PaddingValues",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.PaddingValues"
+        },
+        {
+          "name": "reverseLayout",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "verticalArrangement",
+          "type": "Arrangement.Vertical",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.Arrangement$Vertical"
+        },
+        {
+          "name": "horizontalArrangement",
+          "type": "Arrangement.Horizontal",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.Arrangement$Horizontal"
+        },
+        {
+          "name": "content",
+          "type": "LazyGridScope.() -> Unit",
+          "hasDefault": false,
+          "scopeDslReceiver": "androidx.compose.foundation.lazy.grid.LazyGridScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "LazyVerticalGrid(columns = TODO())",
+        "imports": [
+          "androidx.compose.foundation.lazy.grid.LazyVerticalGrid"
+        ]
+      },
+      "signatureKnown": true
     }
   ]
 }

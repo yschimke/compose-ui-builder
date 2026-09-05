@@ -9,9 +9,8 @@ import kotlin.test.assertTrue
  *
  * Before this the panel ran `CapabilityComposeCodeExporter`, which has an emitter for every catalog
  * id, while the server's export ran the projection and the real generator against a component
- * record covering eleven of the twenty-five. So a design holding `layout/lazy-column` looked
- * exportable in the browser and was refused by the server — the divergence that made the two
- * builders two builders.
+ * record covering eleven of the twenty-five. So a design holding `m3/icon` looked exportable in the
+ * browser and was refused by the server — the divergence that made the two builders two builders.
  *
  * These assert the join rather than a message: that the record actually reached the browser, and
  * that a component it does not back is reported before anyone presses export.
@@ -23,12 +22,13 @@ class EditorKnowsTheExportRecordTest {
     val record = assertNotNull(embeddedComponentRecord(), "the embedded record did not parse")
     assertTrue(record.components.isNotEmpty(), "the embedded record is empty")
     val ids = record.components.flatMap { it.componentIds }
-    // The covered set, as the server sees it. `layout/lazy-column` is deliberately absent — its
-    // `items` slot is a `LazyListScope` DSL rather than a composable slot — and that absence is the
-    // thing the panel could not previously see.
+    // The covered set, as the server sees it. `layout/lazy-column` was the example of an absence
+    // here until the record grew to carry it (#394); `layout/horizontal-carousel` is the absence
+    // now, and an absence is the thing the panel could not previously see at all.
     assertTrue("m3/text" in ids, ids.toString())
     assertTrue("layout/column" in ids, ids.toString())
-    assertTrue("layout/lazy-column" !in ids, ids.toString())
+    assertTrue("layout/lazy-column" in ids, ids.toString())
+    assertTrue("layout/horizontal-carousel" !in ids, ids.toString())
   }
 
   @Test
