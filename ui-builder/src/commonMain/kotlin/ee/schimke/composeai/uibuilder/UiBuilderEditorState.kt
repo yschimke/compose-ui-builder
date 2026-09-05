@@ -49,6 +49,16 @@ data class EditorPropertyField(
   val name: String,
   val label: String,
   val required: Boolean,
+  /**
+   * True when the selection actually carries this property.
+   *
+   * The difference between "this component may have a `color`" and "this text has a `color`", which
+   * is exactly the difference between the catalog and the exported Kotlin: the generator writes the
+   * properties a node holds and nothing else. The inspector opens on these, and offers the rest
+   * behind a search, because a panel that lists every declaration a component allows is a panel
+   * where the two values somebody actually set are lost among thirty they did not.
+   */
+  val written: Boolean = false,
   val control: EditorPropertyControl,
   val value: String,
   val choices: List<String> = emptyList(),
@@ -1390,6 +1400,7 @@ class UiBuilderEditorReducer(
             name = property.name,
             label = property.name.humanLabel(),
             required = property.required,
+            written = nodes.any { property.name in it.properties },
             control = control,
             value = if (mixed) "" else value?.primitiveOrNull()?.content ?: "",
             choices =
@@ -1439,6 +1450,9 @@ class UiBuilderEditorReducer(
       label = "${property.name.humanLabel()} · ${edge.label}",
       // An edge is never required on its own: the value is required or absent as a whole.
       required = false,
+      // Written as a whole, too: the edges of a padding nobody set are not four properties the
+      // export writes, they are one it does not.
+      written = nodes.any { property.name in it.properties },
       control = EditorPropertyControl.Number,
       value = if (mixed) "" else values.singleOrNull() ?: edge.minimum.format(),
       numberBounds = EditorNumberBounds(edge.minimum, edge.maximum, 1.0, integer = false),

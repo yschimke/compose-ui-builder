@@ -49,13 +49,29 @@ canvas selection overlay and property inspector all mutate the document through
 also exposes an accessible Add action for the same compatible target and preserves selection,
 search, inspector mode, and operation numbering when live authoritative snapshots arrive. The editor
 measures the design at its pinned 1280×800dp viewport and applies a sibling visual transform to fit
-the workspace, so the side panels cannot silently trigger a compact layout. Explicit `?mode=…`
-URLs retain the frozen local fixtures; `?mode=jetcaster-builder` remains the clean harness surface
-and does not compose editor controls or transforms.
+the workspace, so the side panels cannot silently trigger a compact layout. That transform now
+*frames* the design rather than stopping at 1:1 — a design smaller than the window is scaled up to
+fill it — and a zoom control in the corner of the canvas steps a ladder of fixed scales, pins 100%,
+or hands the frame back to the fit. Zooming past the workspace scrolls it. `?mode=interactive-editor-clean`
+is the exception and opens pinned at 1:1, because that lane exists to compare the editor's pixels
+against the clean harness's. Explicit `?mode=…` URLs retain the frozen local fixtures;
+`?mode=jetcaster-builder` remains the clean harness surface and does not compose editor controls or
+transforms.
+
+A right-click on a layer — in the tree or on the design, which is hit-tested against the boxes the
+renderer already reports — selects it and offers the verbs that act on it: properties, duplicate,
+copy, cut, paste, delete, wrap and unwrap. Those verbs left the bar above the canvas, which now
+carries the selection's name, the way to its properties, and one overflow holding the same menu.
 
 On viewports narrower than 840dp, the interactive editor starts with only the scaled design and a
 compact toolbar visible. Persistent bottom tabs open collapsible component and property docks;
 desktop widths retain the three-column workspace.
+
+The property inspector opens on what the node actually carries — the properties the Compose export
+would write, plus anything required, bound or in error — rather than every declaration the catalog
+allows on that component. A search box filters those and reaches the rest: a property the node does
+not have yet is added from the same field, which reveals its control without writing anything to the
+document until the control is used.
 
 The inspector's top-level Theme mode edits the design-wide Material colour scheme, type scale, and
 shape radius. Theme metadata is stored as capability-declared properties on the root Material

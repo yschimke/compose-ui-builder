@@ -101,6 +101,20 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.skia.Image
 
+/**
+ * Let the editor own the right button.
+ *
+ * The editor answers a right-click on a layer with its own menu, and the browser answers the same
+ * press with the page menu drawn on top of it. Only one of them can be the one that opens.
+ */
+@JsFun(
+  """() => {
+  const host = document.getElementById('composeApp');
+  if (host) host.addEventListener('contextmenu', (event) => event.preventDefault());
+}"""
+)
+private external fun suppressBrowserContextMenu()
+
 fun main() {
   val rendererRuntimeId = sandboxRendererRuntimeId()
   if (rendererRuntimeId.isNotEmpty()) {
@@ -126,6 +140,7 @@ fun main() {
     }
     return
   }
+  suppressBrowserContextMenu()
   ComposeViewport(viewportContainerId = "composeApp") {
     if (liveSessionEnabled()) LiveSessionApp() else VisualFixtureApp(captureMode())
   }
@@ -924,6 +939,10 @@ private fun VisualFixtureApp(mode: String) {
             publishInspection(inspectionJson.encodeToString(snapshot))
           },
           showSelectionOverlay = mode != "interactive-editor-clean",
+          // The clean lane exists to prove the editor draws the design the same as the harness
+          // does, pixel for pixel. Framing it would compare a resample, so that one mode opens
+          // pinned at 1:1 while every editing surface opens framed.
+          initialCanvasZoom = if (mode == "interactive-editor-clean") 1f else null,
           onHelp = ::openUiBuilderGuide,
         )
       }

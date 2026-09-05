@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
@@ -55,12 +57,14 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
@@ -124,8 +128,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -142,6 +149,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
@@ -282,6 +290,14 @@ fun UiBuilderEditor(
   initialComponentsOpen: Boolean = false,
   initialLayersOpen: Boolean = false,
   initialInspectorOpen: Boolean = false,
+  /**
+   * The scale the canvas opens at, or null to frame the design in the workspace.
+   *
+   * Null everywhere a person is editing: framing is what a design tool does with a window. A host
+   * that is *capturing* the canvas — comparing the editor's pixels against the same design drawn by
+   * the clean harness — pins 1f instead, because a resampled frame is not the same picture.
+   */
+  initialCanvasZoom: Float? = null,
   /**
    * Asks the host to compile and render this design with real Compose, or null where it cannot.
    *
@@ -446,6 +462,11 @@ fun UiBuilderEditor(
   // The factor between the frame's own pixels and the pane it is drawn in, kept so a drop landing
   // at a window coordinate can be asked about in the space the renderer reports its slots in.
   var canvasScale by remember { mutableFloatStateOf(1f) }
+  // The scale the design is pinned at, or null while it is framed to the workspace. Local rather
+  // than in [UiBuilderEditorState] for the same reason the open panels are: how far somebody has
+  // zoomed in is a fact about their window, not about the design, and an authoritative snapshot
+  // that reset it would be worse than one that remembers nothing.
+  var canvasZoom by remember(document.id) { mutableStateOf(initialCanvasZoom) }
   var textInputFocused by remember { mutableStateOf(false) }
   var mobilePanel by remember(document.id) { mutableStateOf(MobileEditorPanel.None) }
   // Which panels are open. Local rather than in [UiBuilderEditorState] on purpose: what a
@@ -553,12 +574,40 @@ fun UiBuilderEditor(
         else "${row?.row?.label ?: selectedNode.componentId} · ${selectedNode.componentId}"
       }
     }
+  /**
+   * The selection's verbs, as menu rows, for whoever opens a menu under the pointer.
+   *
+   * Built here rather than at each call site because every question it asks — can this be pasted
+   * into, is there anything to unwrap — is the reducer's, and the answers change with every edit.
+   * The lambda takes the dismiss the menu owns, so the rows can close the menu they are in.
+   */
+  val selectionMenu: @Composable (() -> Unit) -> Unit = { close ->
+    EditorSelectionMenuItems(
+      canDuplicate = reducer.canDuplicateSelected(state),
+      canCopy = reducer.canCopySelected(state),
+      canCut = reducer.canCutSelected(state),
+      canPaste = reducer.canPaste(state),
+      canDelete = reducer.canDeleteSelected(state),
+      wrapCandidates = reducer.wrapCandidates(state),
+      canUnwrap = reducer.canUnwrapSelected(state),
+      onOpenProperties = {
+        focusEditor()
+        if (state.codePaneVisible) dispatch(UiBuilderEditorEvent.ToggleCodePane)
+        dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Properties))
+        inspectorOpen = true
+        mobilePanel = MobileEditorPanel.Properties
+      },
+      onDismiss = close,
+      dispatch = ::dispatch,
+    )
+  }
   val navigator: @Composable (Modifier, NavigatorTab, Boolean, (() -> Unit)?) -> Unit =
     { modifier, navigatorTab, closeAfterDrop, onClose ->
       EditorNavigator(
         state = state,
         tab = navigatorTab,
         onClose = onClose,
+        selectionMenu = selectionMenu,
         catalogSystemId = catalog.benchmark.catalogSystemId,
         catalogItems = reducer.catalogItems(state.catalogQuery),
         layerRows = layerRows,
@@ -654,6 +703,12 @@ fun UiBuilderEditor(
         onInspectionSnapshot?.invoke(snapshot)
       },
       onInspectionInvalidated = onInspectionInvalidated,
+      selectionMenu = selectionMenu,
+      zoom = canvasZoom,
+      onZoomChanged = {
+        focusEditor()
+        canvasZoom = it
+      },
       contentAlignment = alignment,
       modifier = modifier,
     )
@@ -1698,6 +1753,143 @@ private fun PresenceRow(collaborators: List<UiBuilderCollaborator>) {
 }
 
 /**
+ * A right-click, and where in this element it landed.
+ *
+ * Compose has no context-click gesture in common code, so this reads the pointer stream directly.
+ * It watches the [PointerEventPass.Initial] pass and consumes the press, so a right-click on a
+ * layer row does not also start the drag the same row listens for with the left button.
+ */
+private fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Modifier =
+  pointerInput(key) {
+    awaitPointerEventScope {
+      while (true) {
+        val event = awaitPointerEvent(PointerEventPass.Initial)
+        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+          val position = event.changes.firstOrNull()?.position ?: Offset.Zero
+          event.changes.forEach { it.consume() }
+          onClick(position)
+        }
+      }
+    }
+  }
+
+/**
+ * Everything that can be done to the current selection, as menu rows.
+ *
+ * One list, three places: the layers tree's context menu, the canvas's, and the overflow beside the
+ * selection label. The verbs used to exist only as a row of icon buttons above the canvas — always
+ * present, mostly greyed, and nowhere near the layer they act on. A context menu puts them under
+ * the pointer that is already on the thing, which is where every other design tool keeps them.
+ */
+@Composable
+private fun EditorSelectionMenuItems(
+  canDuplicate: Boolean,
+  canCopy: Boolean,
+  canCut: Boolean,
+  canPaste: Boolean,
+  canDelete: Boolean,
+  wrapCandidates: List<EditorCatalogItem>,
+  canUnwrap: Boolean,
+  onOpenProperties: (() -> Unit)?,
+  onDismiss: () -> Unit,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  fun act(event: UiBuilderEditorEvent) {
+    onDismiss()
+    dispatch(event)
+  }
+  if (onOpenProperties != null) {
+    DropdownMenuItem(
+      text = { Text("Properties") },
+      leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null) },
+      onClick = {
+        onDismiss()
+        onOpenProperties()
+      },
+    )
+    HorizontalDivider()
+  }
+  DropdownMenuItem(
+    text = { Text("Duplicate") },
+    enabled = canDuplicate,
+    leadingIcon = { Icon(Icons.Filled.LibraryAdd, contentDescription = null) },
+    trailingIcon = { MenuShortcut("Ctrl/\u2318+D") },
+    onClick = { act(UiBuilderEditorEvent.DuplicateSelected) },
+  )
+  DropdownMenuItem(
+    text = { Text("Copy") },
+    enabled = canCopy,
+    leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+    trailingIcon = { MenuShortcut("Ctrl/\u2318+C") },
+    onClick = { act(UiBuilderEditorEvent.CopySelected) },
+  )
+  DropdownMenuItem(
+    text = { Text("Cut") },
+    enabled = canCut,
+    leadingIcon = { Icon(Icons.Filled.ContentCut, contentDescription = null) },
+    trailingIcon = { MenuShortcut("Ctrl/\u2318+X") },
+    onClick = { act(UiBuilderEditorEvent.CutSelected) },
+  )
+  DropdownMenuItem(
+    text = { Text("Paste") },
+    enabled = canPaste,
+    leadingIcon = { Icon(Icons.Filled.ContentPaste, contentDescription = null) },
+    trailingIcon = { MenuShortcut("Ctrl/\u2318+V") },
+    onClick = { act(UiBuilderEditorEvent.Paste) },
+  )
+  DropdownMenuItem(
+    text = { Text("Delete") },
+    enabled = canDelete,
+    leadingIcon = { Icon(Icons.Filled.DeleteOutline, contentDescription = null) },
+    trailingIcon = { MenuShortcut("Delete") },
+    onClick = { act(UiBuilderEditorEvent.DeleteSelected) },
+  )
+  if (wrapCandidates.isNotEmpty() || canUnwrap) HorizontalDivider()
+  // Behind one row rather than inline: the containers a selection can be wrapped in run to thirty
+  // on this catalog, and a menu whose last verb is thirty rows below the first is not a menu.
+  if (wrapCandidates.isNotEmpty()) {
+    var wrapOpen by remember { mutableStateOf(false) }
+    Box {
+      DropdownMenuItem(
+        text = { Text("Wrap in…") },
+        leadingIcon = { Icon(Icons.Filled.Widgets, contentDescription = null) },
+        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
+        onClick = { wrapOpen = true },
+      )
+      // Only what will work: the candidates are computed from both ends, so every row here is a
+      // promise rather than a guess.
+      DropdownMenu(expanded = wrapOpen, onDismissRequest = { wrapOpen = false }) {
+        wrapCandidates.forEach { candidate ->
+          DropdownMenuItem(
+            text = { Text(candidate.displayName) },
+            onClick = {
+              wrapOpen = false
+              act(UiBuilderEditorEvent.WrapSelection(candidate.componentId))
+            },
+          )
+        }
+      }
+    }
+  }
+  if (canUnwrap) {
+    DropdownMenuItem(
+      text = { Text("Unwrap") },
+      onClick = { act(UiBuilderEditorEvent.UnwrapSelection) },
+    )
+  }
+}
+
+/** The chord beside a menu row, in the quiet the rest of this editor spells shortcuts in. */
+@Composable
+private fun MenuShortcut(chord: String) {
+  Text(
+    chord,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+  )
+}
+
+/**
  * What can be done to the selection, beside the selection, only while there is one.
  *
  * These seven verbs used to live in the top bar, where they were greyed out for the whole of every
@@ -1722,7 +1914,7 @@ private fun SelectionActionBar(
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  var wrapOpen by remember { mutableStateOf(false) }
+  var menuOpen by remember { mutableStateOf(false) }
   Surface(
     modifier.fillMaxWidth(),
     color = MaterialTheme.colorScheme.surface,
@@ -1752,56 +1944,25 @@ private fun SelectionActionBar(
           Text("Properties")
         }
       }
-      ToolbarIconAction("Duplicate", "Ctrl/⌘+D", Icons.Filled.LibraryAdd, canDuplicate) {
-        dispatch(UiBuilderEditorEvent.DuplicateSelected)
-      }
-      ToolbarIconAction("Copy", "Ctrl/⌘+C", Icons.Filled.ContentCopy, canCopy) {
-        dispatch(UiBuilderEditorEvent.CopySelected)
-      }
-      ToolbarIconAction("Cut", "Ctrl/⌘+X", Icons.Filled.ContentCut, canCut) {
-        dispatch(UiBuilderEditorEvent.CutSelected)
-      }
-      ToolbarIconAction("Paste", "Ctrl/⌘+V", Icons.Filled.ContentPaste, canPaste) {
-        dispatch(UiBuilderEditorEvent.Paste)
-      }
-      ToolbarIconAction("Delete", "Delete/Backspace", Icons.Filled.DeleteOutline, canDelete) {
-        dispatch(UiBuilderEditorEvent.DeleteSelected)
-      }
-      if (wrapCandidates.isNotEmpty()) {
-        Box {
-          TextButton(
-            onClick = { wrapOpen = true },
-            modifier = Modifier.semantics { contentDescription = "Wrap ()" },
-          ) {
-            Text("Wrap")
-            Icon(
-              Icons.Filled.ArrowDropDown,
-              contentDescription = null,
-              modifier = Modifier.size(18.dp),
-            )
-          }
-          DropdownMenu(expanded = wrapOpen, onDismissRequest = { wrapOpen = false }) {
-            // Only what will work. The list is computed from both ends — the parent slot has to
-            // accept the container and the container needs a slot that accepts every selected
-            // node — so this menu is a promise rather than a guess.
-            wrapCandidates.forEach { candidate ->
-              DropdownMenuItem(
-                text = { Text(candidate.displayName) },
-                onClick = {
-                  wrapOpen = false
-                  dispatch(UiBuilderEditorEvent.WrapSelection(candidate.componentId))
-                },
-              )
-            }
-          }
+      // One control where seven icons were. Everything they did is now a right-click away on the
+      // layer itself, in the tree or on the canvas; this is the same menu for anyone who reaches
+      // for a button instead, and it is where the chords are written down.
+      Box {
+        ToolbarIconAction("Selection actions", "", Icons.Filled.MoreVert, true) { menuOpen = true }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+          EditorSelectionMenuItems(
+            canDuplicate = canDuplicate,
+            canCopy = canCopy,
+            canCut = canCut,
+            canPaste = canPaste,
+            canDelete = canDelete,
+            wrapCandidates = wrapCandidates,
+            canUnwrap = canUnwrap,
+            onOpenProperties = null,
+            onDismiss = { menuOpen = false },
+            dispatch = dispatch,
+          )
         }
-      }
-      TextButton(
-        onClick = { dispatch(UiBuilderEditorEvent.UnwrapSelection) },
-        enabled = canUnwrap,
-        modifier = Modifier.semantics { contentDescription = "Unwrap ()" },
-      ) {
-        Text("Unwrap")
       }
     }
   }
@@ -2239,6 +2400,8 @@ private enum class NavigatorTab(val label: String) {
 @Composable
 private fun EditorNavigator(
   state: UiBuilderEditorState,
+  /** The verbs a layer answers to, for the tree's context menu. */
+  selectionMenu: @Composable (() -> Unit) -> Unit,
   tab: NavigatorTab,
   onClose: (() -> Unit)?,
   catalogSystemId: String,
@@ -2291,6 +2454,7 @@ private fun EditorNavigator(
           LayersPanel(
             state = state,
             layerRows = layerRows,
+            selectionMenu = selectionMenu,
             collaborators = collaborators,
             dropTarget = dropTarget,
             moveRefusal = moveRefusal,
@@ -2399,6 +2563,7 @@ private fun InsertPanel(
 private fun LayersPanel(
   state: UiBuilderEditorState,
   layerRows: List<EditorLayerRow>,
+  selectionMenu: @Composable (() -> Unit) -> Unit,
   collaborators: List<UiBuilderCollaborator>,
   dropTarget: ParentSlot?,
   moveRefusal: (String, ParentSlot) -> EditorMoveRefusal?,
@@ -2476,6 +2641,7 @@ private fun LayersPanel(
               row = row.row,
               indent = row.indent,
               modifier = recordBounds,
+              selectionMenu = selectionMenu,
               // Every selected node is highlighted, not just the anchor — a selection you cannot
               // see is one you cannot trust before pressing Delete.
               selected = row.nodeId in state.selection,
@@ -2718,6 +2884,11 @@ private fun PinnedDesignCanvas(
   onCommentThreadSelected: (String) -> Unit,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)?,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
+  /** The verbs a layer answers to, for the canvas's own context menu. */
+  selectionMenu: @Composable (() -> Unit) -> Unit,
+  /** The scale the design is drawn at, or null to frame it in whatever room the workspace has. */
+  zoom: Float?,
+  onZoomChanged: (Float?) -> Unit,
   contentAlignment: Alignment = Alignment.TopStart,
   modifier: Modifier = Modifier,
 ) {
@@ -2729,55 +2900,224 @@ private fun PinnedDesignCanvas(
   var inspection by
     remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
   BoxWithConstraints(modifier.clipToBounds(), contentAlignment = contentAlignment) {
-    val scale = minOf(maxWidth.value / sourceWidth, maxHeight.value / sourceHeight).coerceAtMost(1f)
-    Surface(
-      Modifier.align(contentAlignment)
-        .wrapContentSize(Alignment.TopStart, unbounded = true)
-        .requiredSize(sourceWidth.dp, sourceHeight.dp)
-        .onSizeChanged { size ->
-          val measuredWidth = with(density) { size.width.toDp().value.roundToInt() }
-          val measuredHeight = with(density) { size.height.toDp().value.roundToInt() }
-          onCanvasMetrics(measuredWidth, measuredHeight, scale)
-        }
-        .graphicsLayer {
-          scaleX = scale
-          scaleY = scale
-          transformOrigin = TransformOrigin(0f, 0f)
-          compositingStrategy = CompositingStrategy.Offscreen
-        }
-        .onGloballyPositioned { onCanvasBounds(it.boundsInRoot()) }
-        .then(
-          if (dropHovered) Modifier.border(4.dp, MaterialTheme.colorScheme.primary) else Modifier
-        ),
-      shape = RoundedCornerShape(0.dp),
-      shadowElevation = 0.dp,
+    // What "fit" means: the largest scale at which the whole frame is on screen. It is no longer
+    // capped at 1:1, which is the whole of "autozoom": a 411 x 891 dp phone opened in a desktop
+    // workspace was drawn as a stamp in the middle of an empty page, and a 1280 x 800 dp design in
+    // a narrow window was drawn shrunk with room to spare beside it. Neither is the design framed.
+    // Named, because the scrolling box below is a different receiver and cannot see the
+    // constraints scope these come from.
+    val workspaceWidth = maxWidth
+    val workspaceHeight = maxHeight
+    val fitScale =
+      minOf(workspaceWidth.value / sourceWidth, workspaceHeight.value / sourceHeight)
+        .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
+    val scale = zoom ?: fitScale
+    // In dp, because that is what the metrics callback reports and what the frame is measured in.
+    var measuredDp by remember(document.id) { mutableStateOf(0 to 0) }
+    // Reported on every change of either, not just on a resize: the frame's own size does not move
+    // when somebody zooms, and the drop hit-test reads this scale.
+    LaunchedEffect(measuredDp, scale) {
+      if (measuredDp != 0 to 0) onCanvasMetrics(measuredDp.first, measuredDp.second, scale)
+    }
+    // The frame's own rectangle in the window, kept because the inspection answers in that space
+    // and a press on the canvas arrives in the frame's.
+    var frameBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+    val horizontalScrollState = rememberScrollState()
+    val verticalScrollState = rememberScrollState()
+    Box(
+      Modifier.fillMaxSize()
+        .horizontalScroll(horizontalScrollState)
+        .verticalScroll(verticalScrollState)
     ) {
-      Box(Modifier.fillMaxSize()) {
-        UiBuilderSurface(
-          document = document,
-          editorOverlay = showSelectionOverlay,
-          selectedNodeId = selectedNodeId,
-          onNodeSelected = onNodeSelected,
-          onInspectionSnapshot = { snapshot ->
-            inspection = snapshot
-            onInspectionSnapshot?.invoke(snapshot)
-          },
-          onInspectionInvalidated = onInspectionInvalidated,
-        )
-        // Over the document and under the collaborators: the reference is being compared against
-        // what the document draws, so it goes on top of that; another person's selection is a fact
-        // about this session and must not be hidden by a mock.
-        ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
-        RemotePresenceOverlay(collaborators, inspection)
-        // Above everything, because a pin is the one thing on this canvas a person clicks that is
-        // not part of the design: it must not end up under a mock somebody just turned up the
-        // opacity of, and it must not be what a selection outline is drawn over.
-        CommentPinOverlay(
-          threads = commentThreads,
-          marks = reference.marks,
-          selectedThreadId = selectedThreadId,
-          onSelect = onCommentThreadSelected,
-        )
+      // The scaled frame takes the room it is drawn in — the graphicsLayer below scales the
+      // painting, not the layout — so that zooming past the workspace scrolls rather than clips,
+      // and a frame smaller than the workspace still sits where [contentAlignment] says.
+      Box(
+        Modifier.widthIn(min = workspaceWidth).heightIn(min = workspaceHeight),
+        contentAlignment = contentAlignment,
+      ) {
+        Box(Modifier.size((sourceWidth * scale).dp, (sourceHeight * scale).dp)) {
+          Surface(
+            Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
+              .requiredSize(sourceWidth.dp, sourceHeight.dp)
+              .onSizeChanged { size ->
+                measuredDp =
+                  with(density) {
+                    size.width.toDp().value.roundToInt() to size.height.toDp().value.roundToInt()
+                  }
+              }
+              .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                transformOrigin = TransformOrigin(0f, 0f)
+                compositingStrategy = CompositingStrategy.Offscreen
+              }
+              .onGloballyPositioned {
+                frameBounds = it.boundsInRoot()
+                onCanvasBounds(frameBounds)
+              }
+              .then(
+                if (dropHovered) Modifier.border(4.dp, MaterialTheme.colorScheme.primary)
+                else Modifier
+              ),
+            shape = RoundedCornerShape(0.dp),
+            shadowElevation = 0.dp,
+          ) {
+            // Where a right-click landed on the design, in the frame's own pixels, and null
+            // while no menu is open.
+            var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
+            Box(
+              Modifier.fillMaxSize().onSecondaryClick(document.id) { position ->
+                if (!showSelectionOverlay) return@onSecondaryClick
+                // The inspection reports each box in root pixels, which is the space this press
+                // has to be asked in: the frame is offset in the workspace and drawn at [scale].
+                val point =
+                  Offset(
+                    frameBounds.left + position.x * scale,
+                    frameBounds.top + position.y * scale,
+                  )
+                // The design already reports every node's box, which is what the presence
+                // overlay and the catalog drop both hit-test against. Smallest box wins: the
+                // deepest node containing the point is the one under the pointer.
+                val hit =
+                  inspection
+                    ?.nodes
+                    .orEmpty()
+                    .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                    .filter { (_, bounds) ->
+                      point.x >= bounds.x &&
+                        point.x <= bounds.x + bounds.width &&
+                        point.y >= bounds.y &&
+                        point.y <= bounds.y + bounds.height
+                    }
+                    .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                    ?.first
+                if (hit != null) {
+                  if (hit != selectedNodeId) onNodeSelected(hit)
+                  menuAt = position
+                }
+              }
+            ) {
+              Box {
+                DropdownMenu(
+                  expanded = menuAt != null,
+                  onDismissRequest = { menuAt = null },
+                  offset =
+                    with(density) {
+                      DpOffset(
+                        ((menuAt?.x ?: 0f) * scale).toDp(),
+                        ((menuAt?.y ?: 0f) * scale).toDp(),
+                      )
+                    },
+                ) {
+                  selectionMenu { menuAt = null }
+                }
+              }
+              UiBuilderSurface(
+                document = document,
+                editorOverlay = showSelectionOverlay,
+                selectedNodeId = selectedNodeId,
+                onNodeSelected = onNodeSelected,
+                onInspectionSnapshot = { snapshot ->
+                  inspection = snapshot
+                  onInspectionSnapshot?.invoke(snapshot)
+                },
+                onInspectionInvalidated = onInspectionInvalidated,
+              )
+              // Over the document and under the collaborators: the reference is being compared
+              // against
+              // what the document draws, so it goes on top of that; another person's selection is a
+              // fact
+              // about this session and must not be hidden by a mock.
+              ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
+              RemotePresenceOverlay(collaborators, inspection)
+              // Above everything, because a pin is the one thing on this canvas a person clicks
+              // that is
+              // not part of the design: it must not end up under a mock somebody just turned up the
+              // opacity of, and it must not be what a selection outline is drawn over.
+              CommentPinOverlay(
+                threads = commentThreads,
+                marks = reference.marks,
+                selectedThreadId = selectedThreadId,
+                onSelect = onCommentThreadSelected,
+              )
+            }
+          }
+        }
+      }
+    }
+    // Over the workspace rather than in the status bar, where every canvas tool puts it, and
+    // outside the scrolling box so it stays put while the design under it moves.
+    CanvasZoomControls(
+      scale = scale,
+      fitting = zoom == null,
+      onZoomChanged = onZoomChanged,
+      modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+    )
+  }
+}
+
+/** The zoom ladder the two step controls walk, in the order a designer expects to land on. */
+private val CANVAS_ZOOM_STOPS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 3f, 4f)
+
+internal const val MIN_CANVAS_ZOOM = 0.1f
+
+internal const val MAX_CANVAS_ZOOM = 4f
+
+/**
+ * The next stop above or below [from].
+ *
+ * Stepped from whatever the canvas is *currently drawn at* rather than from the last button press,
+ * so the first zoom out of a design framed at 62% goes to 50% and not to some remembered 100%.
+ */
+internal fun canvasZoomStep(from: Float, zoomIn: Boolean): Float =
+  if (zoomIn) CANVAS_ZOOM_STOPS.firstOrNull { it > from + 0.001f } ?: MAX_CANVAS_ZOOM
+  else CANVAS_ZOOM_STOPS.lastOrNull { it < from - 0.001f } ?: MIN_CANVAS_ZOOM
+
+/** How the design is scaled, said out loud: `Fit · 62%`, or `125%` once somebody has pinned one. */
+internal fun canvasZoomLabel(scale: Float, fitting: Boolean): String {
+  val percent = "${(scale * 100).roundToInt()}%"
+  return if (fitting) "Fit · $percent" else percent
+}
+
+/**
+ * Zoom out, the current scale, zoom in, and back to framing the design.
+ *
+ * The percentage is a button as well as a readout: pressing it pins 100%, which is the one scale
+ * worth a control of its own, and the fit toggle is how you get back from it.
+ */
+@Composable
+private fun CanvasZoomControls(
+  scale: Float,
+  fitting: Boolean,
+  onZoomChanged: (Float?) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  Surface(
+    modifier,
+    shape = RoundedCornerShape(20.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 3.dp,
+  ) {
+    Row(
+      Modifier.padding(horizontal = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+      ToolbarIconAction("Zoom out", "", Icons.Filled.Remove, scale > MIN_CANVAS_ZOOM) {
+        onZoomChanged(canvasZoomStep(scale, zoomIn = false))
+      }
+      TextButton(
+        onClick = { onZoomChanged(1f) },
+        modifier = Modifier.semantics { contentDescription = "Zoom to 100%" },
+      ) {
+        Text(canvasZoomLabel(scale, fitting), style = MaterialTheme.typography.labelLarge)
+      }
+      ToolbarIconAction("Zoom in", "", Icons.Filled.Add, scale < MAX_CANVAS_ZOOM) {
+        onZoomChanged(canvasZoomStep(scale, zoomIn = true))
+      }
+      ToolbarToggleAction("Fit to window", Icons.Filled.FitScreen, fitting) {
+        onZoomChanged(if (fitting) scale else null)
       }
     }
   }
@@ -2827,6 +3167,8 @@ private fun PanelHeading(title: String, supporting: String) {
 private fun SearchField(
   value: String,
   placeholder: String,
+  /** What the accessibility tree — and every script that drives this editor — calls the box. */
+  searchLabel: String = "Component catalog search",
   onFocusChanged: (Boolean) -> Unit,
   onValueChange: (String) -> Unit,
 ) {
@@ -2855,7 +3197,7 @@ private fun SearchField(
           modifier =
             Modifier.fillMaxWidth()
               .onFocusChanged { onFocusChanged(it.isFocused) }
-              .semantics { contentDescription = "Component catalog search" },
+              .semantics { contentDescription = searchLabel },
           textStyle =
             MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
           singleLine = true,
@@ -3137,6 +3479,7 @@ private fun LayerRow(
   dragged: Boolean,
   landing: LayerLanding?,
   collaborators: List<UiBuilderCollaborator>,
+  selectionMenu: @Composable (() -> Unit) -> Unit,
   onSelect: (LayerSelectionGesture) -> Unit,
   onDragTo: (Float) -> Unit,
   onDrop: () -> Unit,
@@ -3147,6 +3490,9 @@ private fun LayerRow(
   // one coordinate the whole panel shares. A drag leaves the handle immediately, and every row it
   // then passes over reports its own bounds in that same space.
   var handleOrigin by remember { mutableStateOf(Offset.Zero) }
+  // Where the right-click landed inside this row, and null while no menu is open.
+  var menuAt by remember(row.nodeId) { mutableStateOf<Offset?>(null) }
+  val density = LocalDensity.current
   val background =
     when {
       dragged -> Color(0xff3b4468)
@@ -3171,9 +3517,25 @@ private fun LayerRow(
           size = Size(size.width, 3f),
         )
       }
+      .onSecondaryClick(row.nodeId) { position ->
+        // Selecting first, and only when it is not already part of the selection: a right-click on
+        // one of six selected layers must not collapse the selection it is about to act on.
+        if (!selected) onSelect(LayerSelectionGesture.Replace)
+        menuAt = position
+      }
       .padding(start = (8 + indent * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
+    // A zero-size anchor, so the menu opens where the pointer is rather than off the row's start.
+    Box {
+      DropdownMenu(
+        expanded = menuAt != null,
+        onDismissRequest = { menuAt = null },
+        offset = DpOffset(with(density) { (menuAt?.x ?: 0f).toDp() }, 0.dp),
+      ) {
+        selectionMenu { menuAt = null }
+      }
+    }
     // A 16dp icon in a 26dp target. The icon is the affordance; the box is what a pointer actually
     // has to hit, and the difference is most of why the drag read as broken.
     Box(
@@ -3492,8 +3854,62 @@ private fun InspectorBody(
       Modifier.padding(vertical = 14.dp),
       color = MaterialTheme.colorScheme.outline,
     )
+    // Which properties this node has been given since it was selected. Local and per node: adding
+    // one here means "show me the control", not "write a value" — nothing reaches the document
+    // until the control is used, so a property revealed and left alone changes neither the design
+    // nor the exported Kotlin.
+    var revealed by remember(node.id) { mutableStateOf(emptySet<String>()) }
+    var propertyQuery by remember(node.id) { mutableStateOf("") }
+    var addingProperty by remember(node.id) { mutableStateOf(false) }
+    // What the export would write, plus what it would refuse without: the panel opens on the node
+    // as the code has it. A bound property counts as written, and so does one being complained
+    // about, because hiding the field an error names is how an error becomes unfixable.
+    val shownFields = fields.filter {
+      it.written ||
+        it.required ||
+        it.boundVariable != null ||
+        it.error != null ||
+        it.name in revealed
+    }
+    val shownNames = shownFields.map { it.name }.toSet()
+    fun matches(field: EditorPropertyField): Boolean =
+      propertyQuery.isBlank() ||
+        field.label.contains(propertyQuery, ignoreCase = true) ||
+        field.name.contains(propertyQuery, ignoreCase = true)
+    val visibleFields = shownFields.filter(::matches)
+    // Everything the component allows and this node has not been given. Offered, never listed: a
+    // search reaches it in one word, and until then it is thirty controls nobody asked for.
+    val addableFields = fields.filterNot { it.name in shownNames }.filter(::matches)
+    // Open the drawer whenever a search is running, so typing a property's name finds it whether
+    // or not the node already has one.
+    val addOpen = addingProperty || propertyQuery.isNotBlank()
+    if (fields.isNotEmpty()) {
+      Row(
+        Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Box(Modifier.weight(1f)) {
+          SearchField(
+            value = propertyQuery,
+            placeholder = "Search properties",
+            searchLabel = "Property search",
+            onFocusChanged = onTextInputFocusChanged,
+            onValueChange = { propertyQuery = it },
+          )
+        }
+        ToolbarIconAction(
+          label = if (addOpen) "Close add property" else "Add property",
+          shortcut = "",
+          icon = if (addOpen) Icons.Filled.Close else Icons.Filled.Add,
+          enabled = true,
+        ) {
+          addingProperty = !addOpen
+          if (!addingProperty) propertyQuery = ""
+        }
+      }
+    }
     LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-      itemsIndexed(fields, key = { _, field -> field.name }) { _, field ->
+      itemsIndexed(visibleFields, key = { _, field -> field.name }) { _, field ->
         PropertyControl(
           field = field,
           stateVariables = if (field.name in bindableProperties) stateVariables else emptyList(),
@@ -3523,6 +3939,46 @@ private fun InspectorBody(
             style = MaterialTheme.typography.bodySmall,
           )
         }
+      } else if (visibleFields.isEmpty() && !addOpen) {
+        item {
+          Text(
+            "Nothing is set on this layer. Add a property to give it one.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
+      }
+      if (addOpen) {
+        item {
+          HorizontalDivider(Modifier.padding(vertical = 12.dp))
+          Text(
+            if (propertyQuery.isBlank()) "Add a property"
+            else "Add a property · ${addableFields.size} match",
+            style = MaterialTheme.typography.labelLarge,
+          )
+          Text(
+            "The catalog allows these. Adding one shows its control; the export writes it once it has a value.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall,
+          )
+        }
+        itemsIndexed(addableFields, key = { _, field -> "add:${field.name}" }) { _, field ->
+          AddPropertyRow(field) {
+            revealed = revealed + field.name
+            addingProperty = false
+            propertyQuery = ""
+          }
+        }
+        if (addableFields.isEmpty()) {
+          item {
+            Text(
+              "Every property this component declares is already here.",
+              Modifier.padding(top = 6.dp),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
+        }
       }
       if (node.modifiers.isNotEmpty()) {
         item {
@@ -3546,6 +4002,25 @@ private fun InspectorBody(
         }
       }
     }
+  }
+}
+
+/** One property the node does not have yet, and the press that puts its control on the panel. */
+@Composable
+private fun AddPropertyRow(field: EditorPropertyField, onAdd: () -> Unit) {
+  TextButton(
+    onClick = onAdd,
+    modifier =
+      Modifier.fillMaxWidth().semantics { contentDescription = "Add ${field.label} property" },
+  ) {
+    Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(16.dp))
+    Spacer(Modifier.width(8.dp))
+    Text(field.label, Modifier.weight(1f))
+    Text(
+      field.control.name.lowercase(),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
   }
 }
 
