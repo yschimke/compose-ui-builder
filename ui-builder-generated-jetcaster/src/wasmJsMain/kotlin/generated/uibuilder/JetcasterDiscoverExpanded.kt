@@ -1,4 +1,4 @@
-// Generator content SHA-256: d362577e8dcd6785f6c81c237261c47f4d3cd7d0fb3a5c1793a640d4b8b3dd15
+// Generator content SHA-256: 28580b8613867308278a51436c32ce68d10a3409e30050bb848354fa24880afb
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset

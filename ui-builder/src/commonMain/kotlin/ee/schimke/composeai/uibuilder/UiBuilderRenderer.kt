@@ -2593,6 +2593,18 @@ private val JetcasterDarkColorScheme =
  * used to *be* `m3/text` and friends, and a Wear design holding a component named after the mobile
  * Material library claimed something no watch screen can mean. The drawing is borrowed; the
  * identity is not.
+ *
+ * ## Do not add a fourth
+ *
+ * Each of these three is a *rename* of a Material 3 component this canvas was already drawing. That
+ * is the only reason a lookalike is acceptable here. A Wear component with no Material 3
+ * counterpart — `CheckboxButton`, `Slider`, `DatePicker` — cannot be added by extending this table:
+ * it would have to be hand-assembled out of Material pieces at sizes read off a screenshot,
+ * producing an impression of upstream that nothing in this build can check and that is wrong
+ * silently in the one surface an author trusts. A `wear-m3` design gets its fidelity from the
+ * streaming preview lane, which compiles the generated Wear Kotlin against a real classpath, not
+ * from a replica maintained here. The decision and what it costs are in
+ * `docs/design/UI_BUILDER_WEAR_SCREEN.md`; the cap is pinned by `WearCanvasStandInTest`.
  */
 internal fun String.wearScreenStandIn(): String =
   when (this) {

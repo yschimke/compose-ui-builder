@@ -64,7 +64,9 @@ The rule now:
 - **Anything Material is Wear's own id.** `wear-m3/text`, `wear-m3/card` and `wear-m3/button` join
   `wear-m3/list-header` and the two containers. The canvas still draws the Material 3 lookalike —
   [it has no Wear Compose to draw with](#the-hard-constraint-the-canvas-has-no-wear-compose) — but
-  the id, the notes and the generated Kotlin all name the Wear composable.
+  the id, the notes and the generated Kotlin all name the Wear composable. Those three are also
+  where the lookalikes stop: renaming a borrow the canvas already drew is not the same act as
+  [assembling a component it never had](#the-line-a-component-is-never-faked-so-it-can-run-in-wasm).
 - **`m3/surface` and `m3/icon` are gone rather than renamed.** Wear publishes no `Surface`, and an
   icon key resolves to a vector through a table the export module cannot reach, so `wear-m3/icon`
   would be a palette entry that refuses on export — which is what the borrowed `m3/icon` already
@@ -76,6 +78,58 @@ somebody writes down rather than something that drifts in behind a convenient `m
 The rename changes no pixels: `WearScreenSamplePreview` renders byte-identically before and after
 ([`renders/ui-builder-wear-borrow/`](../../renders/ui-builder-wear-borrow/README.md)). It changes
 what the design says it holds.
+
+## The line: a component is never faked so it can run in Wasm
+
+The three ids above are the last of their kind. `wear-m3/checkbox-button`, `wear-m3/switch-button`
+and `wear-m3/radio-button` were built, reviewed and
+[closed unmerged](https://github.com/yschimke/compose-preview-server/pull/395), and the reason is the
+rule this section states:
+
+**Do not fabricate a component in the Wasm canvas to stand in for a library the canvas cannot link.**
+
+Renaming a borrow is cheap and honest. `m3/card` was already being drawn; the change was to stop
+calling it Material's. Building `CheckboxButton` is neither. Wear publishes no such shape to Wasm, so
+the canvas has to *assemble* one — a Material 3 `Checkbox` inside a row, at a width, a corner radius,
+a fill and a label baseline read off a screenshot — and what comes out is an impression of a
+component with nothing in this build to check it against. Everything that impression gets wrong is
+wrong silently, in the one surface an author trusts, and the next id starts the same work over. A few
+components in, the catalog is a hand-drawn replica of Wear Material 3, maintained here, against an
+upstream nobody in this repository compiles.
+
+So the canvas is not the fidelity surface for `wear-m3`, and it is not going to become one.
+
+### Where a Wear design gets looked at instead
+
+The **streaming preview** — the native render lane,
+[`ServeUiBuilderNativePreview`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderNativePreview.kt)
+— compiles a design's generated Kotlin and streams the frames it renders back to the browser. That
+lane runs real Compose against a real classpath, which is precisely what the Wasm canvas cannot do,
+and the Wear source it would be handed is [already the honest half](#what-the-design-generates) of
+this adapter: the generated screen names `ScreenScaffold`, `TitleCard` and Wear's `Text`, and always
+has.
+
+One refusal stands between here and there. `ScreenGeneratorComposeExportExecutor.generate` turns a
+record-free design away before it reaches the compile lane — *"a Wear screen is Wear Compose … the
+native preview lane compiles against the catalog bundle, which carries neither; export it instead,
+and preview it on the canvas"* — and that last clause is the sentence this decision retires. A
+Wear-Compose bundle for that lane is the work. It is a real piece of work, and it is the right one,
+because it draws every component Wear publishes rather than the subset somebody found time to
+hand-build.
+
+Until it exists, `wear-m3` authors against a canvas that is deliberately approximate and says so in
+every capability note, and the fidelity question is answered outside the browser — by
+`samples/design-catalog-wear-m3` in compose-ai-tools, which already compiles the generator's own
+output and renders it for real ([the round trip](#the-round-trip-closes)).
+
+### What this leaves the three ids that are already drawn that way
+
+`wear-m3/text`, `wear-m3/card` and `wear-m3/button` keep their lookalikes. Each is a rename of a
+borrow the canvas was drawing anyway, the whole mapping is three lines of one function
+(`wearScreenStandIn` in [`UiBuilderRenderer.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt)),
+and taking them out would leave a palette of containers with nothing to put in them. The cap is the
+point: `WearCanvasStandInTest` pins that mapping to exactly those three, so a fourth is a test
+somebody has to edit, in a change that has to argue with this section first.
 
 ## The stadium is the scroll extent, and it is the real one
 
@@ -220,6 +274,23 @@ reference nor the canvas shows that, and neither claims to: `LONG` turns it off 
 and the canvas has no Wear Compose to turn on. A single-frame render - `ScrollMode.TOP` or `END` in
 that repository, or the builder's own native lane - is what answers *that* question.
 
+`SurfaceTransformation(spec)` is worth being exact about, because the emitted code's shape follows
+from the API's. Upstream declares it on a **receiver**, not as a free function:
+
+```kotlin
+@Stable
+public fun TransformingLazyColumnItemScope.SurfaceTransformation(
+    spec: TransformationSpec
+): SurfaceTransformation
+```
+
+So a `transformation` argument can only be written inside an `item { }` / `items { }` lambda of a
+`TransformingLazyColumn`, which is exactly where `WearScreenCodeExporter` writes it and the only
+place it could. A component that sits outside the list — the `EdgeButton`, anything in the scaffold's
+own content — takes no transformation because there is no scope to build one in, not because the
+generator forgot. This is also the answer to the question this repository could not check for itself
+while it carried no compiled Wear dependency.
+
 The content components are still Material 3's, borrowed. The type sizes and the card shape are set
 by the template to Wear's measured values, which is what makes this design match; another design
 built from the same components starts from the mobile defaults again. Real Wear content ids are the
@@ -254,13 +325,19 @@ it as, so the generator names the node and stops rather than emitting Kotlin tha
   watch — but each is still *drawn* as its Material 3 lookalike, and the template still makes up the
   difference with type sizes and padding measured off the reference. What is left is the sizes, not
   the naming.
-- **No Wear controls yet.** Wear Material 3 publishes `CheckboxButton`, `SwitchButton`,
-  `RadioButton`, `Slider`, `Stepper`, `DatePicker`, `TimePicker` and its own `AlertDialog`, and none
-  of them has an id here. They are not borrowable — a Wear `CheckboxButton` is a full-width row with
-  a label, not the mobile checkbox — so each needs a `wear-m3/…` id and an emitter branch of its
-  own.
+- **No Wear controls, and none are coming on the canvas.** Wear Material 3 publishes
+  `CheckboxButton`, `SwitchButton`, `RadioButton`, `Slider`, `Stepper`, `DatePicker`, `TimePicker`
+  and its own `AlertDialog`, and none of them has an id here. They are not borrowable — a Wear
+  `CheckboxButton` is a full-width labelled row, not the mobile 20dp square — and the version of
+  this that hand-assembles each one for Wasm is
+  [the thing this document rules out](#the-line-a-component-is-never-faked-so-it-can-run-in-wasm).
+  They arrive with the streaming preview or they do not arrive.
 - **`EdgeButton` is placed, not shaped.** The slot generates a real `EdgeButton`; the canvas draws
   the borrowed flat button at the bottom cap, because the shape comes from the screen. The parity
   template carries none for that reason.
-- **No native-render evidence.** The builder's own native lane would answer the single-frame
-  question without leaving the server; standing an Android compile lane up is its own change.
+- **The streaming preview does not take a Wear design yet, and that is now the blocking one.**
+  `ScreenGeneratorComposeExportExecutor.generate` refuses a record-free design because the lane
+  compiles against the catalog bundle and no bundle here carries Wear Compose. Every question this
+  adapter defers — the single frame, `SurfaceTransformation` against the bezel, a control that is
+  not a rename of a borrow — is downstream of that one bundle
+  ([why it is the work rather than more lookalikes](#where-a-wear-design-gets-looked-at-instead)).
