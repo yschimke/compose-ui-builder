@@ -105,6 +105,71 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a theme typeface is set, reset and undone like any other environment field`() {
+    val storage = MemoryStorage()
+    val service = service(storage = storage)
+    create(service)
+    val original = currentDocument(service)
+    assertNull(original.environment.typeface, "a new document names no face")
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "set-typeface",
+            0,
+            UpdateEnvironmentMutationV1(listOf(SetTypefaceEnvironmentChangeV1("Space Grotesk"))),
+          )
+        ),
+      )
+    )
+    assertEquals("Space Grotesk", currentDocument(service).environment.typeface)
+
+    // Reset is the way back to the default face, and it has to reach null rather than "".
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "reset-typeface",
+            1,
+            UpdateEnvironmentMutationV1(listOf(ResetTypefaceEnvironmentChangeV1)),
+          )
+        ),
+      )
+    )
+    assertNull(currentDocument(service).environment.typeface)
+  }
+
+  @Test
+  fun `a blank typeface is rejected rather than stored as a face called nothing`() {
+    // Blank is not "the default" — reset is. A stored blank would be indistinguishable, at the
+    // renderer, from a family it looked up and failed to find.
+    val service = service()
+    create(service)
+
+    val outcome =
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "blank-typeface",
+            0,
+            UpdateEnvironmentMutationV1(listOf(SetTypefaceEnvironmentChangeV1("   "))),
+          )
+        ),
+      )
+
+    val rejection = rejected(outcome)
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, rejection.code)
+    assertNull(currentDocument(service).environment.typeface, "nothing may be committed")
+  }
+
+  @Test
   fun `environment update rejects duplicate and invalid fields without a partial commit`() {
     val service = service()
     create(service)

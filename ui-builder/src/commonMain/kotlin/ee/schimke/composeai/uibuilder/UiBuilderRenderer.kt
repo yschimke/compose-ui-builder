@@ -344,6 +344,15 @@ fun UiBuilderSurface(
   // from wear-m3-catalog's own render. Deciding this by root component rather than by a theme host
   // is the same call the scaffold's background makes: `wear-m3` has no `m3/surface` to hang a
   // theme on, and a Wear screen drawn in Material 3 dark is a picture of the wrong watch.
+  // The document names a family; [LocalUiBuilderFontFamilies] is what the host managed to load.
+  // A name with nothing behind it falls back to the platform default rather than failing the
+  // render — a design is still readable in the wrong face, and is not readable at all if the
+  // surface refuses to draw.
+  val typeface =
+    document.environment["typeface"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+  val fontFamily = typeface?.let(LocalUiBuilderFontFamilies.current::get)
+  val typography =
+    MaterialTheme.typography.let { base -> fontFamily?.let(base::withFontFamily) ?: base }
   val wearScreen =
     document.roots.singleOrNull()?.let(document.nodes::get)?.componentId == WEAR_SCREEN_SCAFFOLD
   val baseColorScheme =
@@ -387,7 +396,7 @@ fun UiBuilderSurface(
     LocalUiBuilderTypeScale provides typeScale,
     LocalUiBuilderCornerRadius provides cornerRadius,
   ) {
-    MaterialTheme(colorScheme = colorScheme) {
+    MaterialTheme(colorScheme = colorScheme, typography = typography) {
       Box(
         Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
           surfaceCoordinates = coordinates

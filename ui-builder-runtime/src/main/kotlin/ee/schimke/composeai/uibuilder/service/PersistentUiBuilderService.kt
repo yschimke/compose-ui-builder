@@ -1593,6 +1593,25 @@ public class PersistentUiBuilderService(
             "catalog upgrades require the preview/apply service path",
             operationIndex = index,
           )
+        // The four document mutations contracts 2.6.0 published (compose-preview-contracts#40):
+        // state variables, event bindings and the modifier chain. This reducer does not implement
+        // them yet, and they arrived here as a side effect of bumping the contract for `typeface`
+        // rather than as work anybody chose to do.
+        //
+        // Rejected EXPLICITLY, one branch each, rather than behind an `else`. An `else` would also
+        // swallow the next mutation the contract adds, and losing that compile error is how this
+        // gap would go unnoticed a second time — it is exactly the exhaustiveness check that
+        // surfaced these four. `UNKNOWN_OPERATION` is the honest code: the shape is understood, the
+        // behaviour is absent. Tracked in #379.
+        is SetStateVariableMutationV1,
+        is RemoveStateVariableMutationV1,
+        is SetEventBindingMutationV1,
+        is SetModifiersMutationV1 ->
+          fail(
+            RejectionCodeV1.UNKNOWN_OPERATION,
+            "this server does not implement ${mutation::class.simpleName} yet",
+            operationIndex = index,
+          )
       }
     } catch (failure: ReductionFailure) {
       MutationResult(error = failure.rejection(command.operationId, working.document.revision))
@@ -2648,6 +2667,7 @@ private fun validateEnvironment(environment: DesignEnvironmentV1): EnvironmentVa
   with(environment) {
     val zoom = browserZoomPercent
     val time = fixedTime
+    val face = typeface
     when {
       environment.widthDp <= 0 ->
         EnvironmentValidationIssue(
@@ -2684,6 +2704,14 @@ private fun validateEnvironment(environment: DesignEnvironmentV1): EnvironmentVa
           EnvironmentFieldV1.FIXED_TIME,
           "environment.fixedTime must not be blank when set",
         )
+      // A blank family is not "the default" — reset is. Letting one through would store a document
+      // whose typeface is set to nothing, which the renderer cannot distinguish from a family it
+      // failed to resolve.
+      face != null && face.isBlank() ->
+        EnvironmentValidationIssue(
+          EnvironmentFieldV1.TYPEFACE,
+          "environment.typeface must not be blank when set",
+        )
       else -> null
     }
   }
@@ -2711,6 +2739,8 @@ private fun DesignEnvironmentV1.applyChange(change: EnvironmentChangeV1): Design
     ResetNetworkAccessEnvironmentChangeV1 -> copy(networkAccess = null)
     is SetBackgroundEnvironmentChangeV1 -> copy(background = change.value)
     ResetBackgroundEnvironmentChangeV1 -> copy(background = null)
+    is SetTypefaceEnvironmentChangeV1 -> copy(typeface = change.value)
+    ResetTypefaceEnvironmentChangeV1 -> copy(typeface = null)
   }
 
 private fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
@@ -2729,6 +2759,7 @@ private fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
     EnvironmentFieldV1.ANIMATIONS -> animations
     EnvironmentFieldV1.NETWORK_ACCESS -> networkAccess
     EnvironmentFieldV1.BACKGROUND -> background
+    EnvironmentFieldV1.TYPEFACE -> typeface
   }
 
 private fun DesignEnvironmentV1.copyFieldsFrom(
@@ -2753,6 +2784,7 @@ private fun DesignEnvironmentV1.copyFieldsFrom(
       EnvironmentFieldV1.ANIMATIONS -> environment.copy(animations = source.animations)
       EnvironmentFieldV1.NETWORK_ACCESS -> environment.copy(networkAccess = source.networkAccess)
       EnvironmentFieldV1.BACKGROUND -> environment.copy(background = source.background)
+      EnvironmentFieldV1.TYPEFACE -> environment.copy(typeface = source.typeface)
     }
   }
 
