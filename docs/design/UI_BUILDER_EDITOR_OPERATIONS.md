@@ -92,15 +92,26 @@ the open branch, a muted count at the end of every row, and an indent rule down 
 children. The families are not invented here — they are the vocabulary
 `@file:CatalogGroup(section = …)` already uses in m3-catalog.
 
-They are carried in [`ComponentMenu`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ComponentMenu.kt),
-**not** on the capability catalog, and that is load-bearing. The catalog is a wire document whose
-shape is `CatalogCapabilityV1` in `compose-preview-contracts`, decoded by
-`CurrentM3UiBuilderCatalogExecutor` with `ignoreUnknownKeys = false` on purpose; a key invented here
-is a catalog that repository cannot read. It is also not a capability: nothing the server advertises,
-validates or exports depends on which shelf a component is displayed on. So it sits beside
-`StarterContent`, which is there for the same reason, and `CatalogMenuTest` checks it against the
-packaged catalog the way `StarterContentTest` checks that one. A catalog the table says nothing
-about — `wear-m3`, `remote-m3` — falls back to the kind headings this panel had before.
+**The catalog declares its own shelves.** The obvious home — a field on `ComponentCapability` — is
+not available: the wire shape is `CatalogCapabilityV1` in `compose-preview-contracts`, decoded by
+`CurrentM3UiBuilderCatalogExecutor` with `ignoreUnknownKeys = false` on purpose, so a key invented
+here is a catalog that repository cannot read. The first pass answered that with a hardcoded table
+in `:ui-builder`; `UiBuilderPreviewSurfaces` answered the same question better, and the menu now
+follows it into `statusSemantics` under `componentMenu`, read back by
+[`ComponentMenu.from`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ComponentMenu.kt).
+
+The difference is not tidiness. A table in `:ui-builder` can only describe catalogs whose component
+ids *this* repository knows, so `wear-m3` and `remote-m3` fell back to the role headings however
+well-organised their components were. `wear-m3` now declares Wear's own families — a watch app is a
+screen holding a list, so those lead, and `Text inputs` does not exist there at all — plus the nine
+of its components that carry variants. A catalog that declares nothing still gets the role headings,
+which is what every catalog had before any of this.
+
+Everything falls back, per entry: an undeclared component takes its kind label, a `variantProperty`
+naming a property the component does not declare means no variants, an unreadable declaration means
+the plain menu. A menu is presentation, and a wrong one must never be the reason a component cannot
+be inserted. `CatalogMenuTest` and `WearM3ScreenCatalogTest` hold each declaration against the
+components beside it.
 
 One structural difference from the catalog's own tree is the data rather than the design: the catalog
 splits `Progress Linear` and `Progress Circular` into two components under a `Progress indicators`
@@ -125,7 +136,7 @@ drag gesture sits on an overlay **above** the picture, whose own semantics are c
 drawn in a thumbnail is a real Switch, and it would otherwise eat the press meant to start a drag
 and publish itself to a screen reader as a control the palette does not have.
 
-**A variant is one property, named by the table.** `ComponentMenu.variantPropertyOf` says which
+**A variant is one property, named by the declaration.** `ComponentMenu.variantPropertyOf` says which
 of a component's properties enumerates its variants — `m3/card.variant`, `m3/button.style`,
 `m3/time-picker.mode` — and the rows under a component are that property's `allowedValues`, in
 declaration order, the first marked `default` because that is the one `defaultEncodedValue` already

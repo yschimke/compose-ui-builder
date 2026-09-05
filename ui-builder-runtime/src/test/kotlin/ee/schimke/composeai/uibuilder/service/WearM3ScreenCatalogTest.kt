@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -29,6 +30,48 @@ class WearM3ScreenCatalogTest {
     executor.listCatalogs().single {
       it.benchmark.catalogSystemId == CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID
     }
+
+  @Test
+  fun `the wear catalog shelves its own components for the builder's menu`() {
+    // The declaration replaces the base catalog's rather than merging with it. A merge would leave
+    // every wear component unshelved — the m3 entries are keyed by `m3/…` ids this catalog does
+    // not have — while carrying thirty-nine entries for components that are gone.
+    val menu = wear.statusSemantics["componentMenu"]?.jsonObject
+    val shelved = menu?.get("components")?.jsonObject?.keys.orEmpty()
+
+    assertEquals(wear.components.map { it.componentId }.toSet(), shelved)
+    assertEquals(
+      listOf(
+        "Screens",
+        "Layout",
+        "Lists",
+        "Actions",
+        "Selection",
+        "Containment",
+        "Communication",
+        "Content",
+        "Embedded",
+      ),
+      menu?.get("groupOrder")?.jsonArray?.map { it.jsonPrimitive.content },
+    )
+    // Every variant property it names is an enum on the component naming it — the same check
+    // `CatalogMenuTest` runs against the M3 declaration, run here because this one is authored in
+    // Kotlin beside a component list that #407 grew from six entries to twenty-eight.
+    val components = wear.components.associateBy { it.componentId }
+    menu?.get("components")?.jsonObject?.forEach { (componentId, entry) ->
+      val property = entry.jsonObject["variantProperty"]?.jsonPrimitive?.content ?: return@forEach
+      val declared =
+        components.getValue(componentId).properties.singleOrNull { it.name == property }
+      assertNotNull(declared, "$componentId declares no property $property")
+      assertTrue(
+        declared.allowedValues.isNotEmpty(),
+        "$componentId.$property is not an enum, so it enumerates no variants",
+      )
+    }
+    // And it still says the other thing it says about itself; one declaration did not evict the
+    // other from the map they share.
+    assertTrue("previewSurfaces" in wear.statusSemantics)
+  }
 
   @Test
   fun `the wear catalog publishes the screen scaffold and the transforming lazy column`() {

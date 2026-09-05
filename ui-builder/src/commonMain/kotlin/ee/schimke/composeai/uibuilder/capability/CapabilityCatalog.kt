@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.capability
 
 import ee.schimke.composeai.uibuilder.COMPOSE_EMITTED_DP_PROPERTIES
+import ee.schimke.composeai.uibuilder.ComponentMenu
 import ee.schimke.composeai.uibuilder.UiBuilderPreviewSurfaces
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -34,6 +35,16 @@ data class CapabilityCatalog(
   val previewSurfaces: UiBuilderPreviewSurfaces by lazy {
     UiBuilderPreviewSurfaces.from(statusSemantics)
   }
+
+  /**
+   * How the builder's insert panel shelves this catalog's components.
+   *
+   * Read out of [statusSemantics] for the same reason [previewSurfaces] is, and documented once in
+   * [ComponentMenu]: the wire type is published from another repository. A catalog that says
+   * nothing lands on [ComponentMenu.EMPTY], and the panel groups by component kind exactly as it
+   * did before any catalog declared a shelf.
+   */
+  val componentMenu: ComponentMenu by lazy { ComponentMenu.from(statusSemantics) }
 }
 
 @Serializable

@@ -31,6 +31,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -40,6 +41,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /**
@@ -336,6 +338,88 @@ private fun widgetContainerProperties(): List<PropertyCapabilityV1> =
           "this radius behind the content rather than clipping to it.",
     ),
   )
+
+/**
+ * How the builder's insert panel shelves `wear-m3`, and which property carries a component's
+ * variants.
+ *
+ * Wear's own families rather than Material's: a watch app is a **screen** holding a **list**, so
+ * those lead, and `Text inputs` — a whole shelf on the phone catalog — does not exist here at all.
+ * `wear-m3/edge-button`'s `size` is a variant rather than a dimension: an edge button comes in four
+ * sizes the way a card comes in four kinds, and picking one is choosing which button, not nudging a
+ * number.
+ *
+ * Deliberately absent: `transformation` on the lazy column and `segmented` on the slider are
+ * behaviours a design turns on, not kinds of component; `iconKey` is forty-six icons; and
+ * `wear-m3/text.style` is fifteen type scales, which is a property of a text rather than a kind of
+ * Text. The same three calls the M3 declaration makes, for the same reasons.
+ */
+private fun wearComponentMenu(): JsonObject {
+  val shelves =
+    listOf(
+      "Screens" to listOf("wear-m3/screen-scaffold"),
+      "Layout" to listOf("layout/box", "layout/column", "layout/row"),
+      "Lists" to
+        listOf(
+          "wear-m3/transforming-lazy-column",
+          "wear-m3/list-header",
+          "wear-m3/list-sub-header",
+        ),
+      "Actions" to
+        listOf(
+          "wear-m3/button",
+          "wear-m3/text-button",
+          "wear-m3/icon-button",
+          "wear-m3/edge-button",
+          "wear-m3/button-group",
+        ),
+      "Selection" to
+        listOf(
+          "wear-m3/checkbox-button",
+          "wear-m3/switch-button",
+          "wear-m3/radio-button",
+          "wear-m3/slider",
+          "wear-m3/stepper",
+          "wear-m3/date-picker",
+          "wear-m3/time-picker",
+        ),
+      "Containment" to
+        listOf(
+          "wear-m3/card",
+          "wear-m3/alert-dialog",
+          "wear-m3/confirmation-dialog",
+          "wear-m3/open-on-phone-dialog",
+        ),
+      "Communication" to listOf("wear-m3/progress-indicator"),
+      "Content" to listOf("wear-m3/text", "wear-m3/icon", "asset/image"),
+      "Embedded" to listOf("remote-compose/document"),
+    )
+  val variantProperties =
+    mapOf(
+      "wear-m3/card" to "variant",
+      "wear-m3/button" to "variant",
+      "wear-m3/text-button" to "variant",
+      "wear-m3/icon-button" to "variant",
+      "wear-m3/edge-button" to "size",
+      "wear-m3/progress-indicator" to "variant",
+      "wear-m3/confirmation-dialog" to "variant",
+      "wear-m3/date-picker" to "type",
+      "wear-m3/time-picker" to "type",
+    )
+  return buildJsonObject {
+    putJsonArray("groupOrder") { shelves.forEach { (name, _) -> add(JsonPrimitive(name)) } }
+    putJsonObject("components") {
+      shelves.forEach { (name, componentIds) ->
+        componentIds.forEach { componentId ->
+          putJsonObject(componentId) {
+            put("group", JsonPrimitive(name))
+            variantProperties[componentId]?.let { put("variantProperty", JsonPrimitive(it)) }
+          }
+        }
+      }
+    }
+  }
+}
 
 private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }
@@ -1272,7 +1356,21 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                 put("fidelity", JsonPrimitive("authoritative"))
                 put("backend", JsonPrimitive("android"))
               }
-            })
+            }) +
+          // The other thing a catalog says about itself that is not a component: how the builder's
+          // insert panel shelves it. Until a catalog could declare this, the shelves were a table
+          // in `:ui-builder` keyed by m3-catalog's ids, so `wear-m3` fell back to
+          // Scaffolds/Containers/Composables — a statement about what each component may *hold*
+          // rather than about what any of them is for. Same mechanism, and the same reason, as
+          // `previewSurfaces` above; read back by `ComponentMenu.from`.
+          //
+          // It REPLACES the base catalog's declaration rather than merging with it: that one is
+          // keyed by `m3/…` ids this catalog does not have, so a merge would leave every Wear
+          // component unshelved while carrying entries for thirty-nine components that are gone.
+          // The key as a literal, like `previewSurfaces` above: `ComponentMenu` lives in
+          // `:ui-builder`, which this module must never depend on — `checkUiBuilderRuntimeBoundary`
+          // enforces the arrow, and the editor is above the runtime, not beside it.
+          ("componentMenu" to wearComponentMenu())
       ),
     benchmark =
       base.benchmark.copy(

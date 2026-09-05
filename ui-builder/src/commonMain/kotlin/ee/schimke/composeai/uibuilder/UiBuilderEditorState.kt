@@ -1501,7 +1501,8 @@ class UiBuilderEditorReducer(
     // `distinct` because the two lists overlap: "Scaffolds" is both a declared shelf and a kind
     // label, and without it the later entry would win and push the shelf to the end of the panel.
     val order =
-      (ComponentMenu.GROUP_ORDER + EditorComponentKind.entries.map(EditorComponentKind::label))
+      (catalog.componentMenu.groupOrder +
+          EditorComponentKind.entries.map(EditorComponentKind::label))
         .distinct()
         .withIndex()
         .associate { (index, name) -> name to index }
@@ -1536,12 +1537,12 @@ class UiBuilderEditorReducer(
       componentId = componentId,
       displayName = displayName,
       kind = kind,
-      group = ComponentMenu.groupOf(componentId) ?: kind.label,
+      group = catalog.componentMenu.groupOf(componentId) ?: kind.label,
       variants =
-        menuVariantValues().mapIndexed { index, value ->
+        menuVariantValues(catalog.componentMenu).mapIndexed { index, value ->
           EditorCatalogVariant(
             componentId = componentId,
-            property = ComponentMenu.variantPropertyOf(componentId).orEmpty(),
+            property = catalog.componentMenu.variantPropertyOf(componentId).orEmpty(),
             value = value,
             label = variantLabel(value),
             // The catalog's first allowed value is what `defaultEncodedValue` writes on a plain

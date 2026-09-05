@@ -7,6 +7,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.jsonPrimitive
 class CatalogMenuTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
+  private val menu = catalog.componentMenu
   private val document =
     UiBuilderReducer.replay(
         Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
@@ -31,28 +33,26 @@ class CatalogMenuTest {
   private val state = reducer.initial(document, selectedNodeId = "discover-grid")
 
   @Test
-  fun `the menu table covers this catalog and nothing else`() {
-    // The `StarterContent` bargain, for the same reason: a table beside the catalog rather than a
-    // field on it (see `ComponentMenu`) only stays true if something checks. A component that
-    // arrives in the catalog with no shelf falls back to its kind heading in the product, which is
-    // a quiet regression to the panel this replaced — so it fails here instead.
+  fun `the menu declaration covers this catalog and nothing else`() {
+    // The declaration rides in the catalog's own `statusSemantics` (see `ComponentMenu`), which
+    // means it can go stale against the components beside it in the same file. A component that
+    // arrives with no shelf falls back to its kind heading in the product — a quiet regression to
+    // the panel this replaced — so it fails here instead.
     val known = catalog.components.map { it.componentId }.toSet()
 
     assertEquals(
       emptyList(),
-      known.filter { ComponentMenu.groupOf(it) == null }.sorted(),
+      known.filter { menu.groupOf(it) == null }.sorted(),
       "components with no shelf",
     )
     assertEquals(
       emptyList(),
-      (ComponentMenu.componentIds - known).sorted(),
+      (menu.componentIds - known).sorted(),
       "shelved components the catalog no longer has",
     )
     assertEquals(
       emptyList(),
-      known.mapNotNull(ComponentMenu::groupOf).distinct().filterNot {
-        it in ComponentMenu.GROUP_ORDER
-      },
+      known.mapNotNull(menu::groupOf).distinct().filterNot { it in menu.groupOrder },
       "shelves missing from GROUP_ORDER",
     )
   }
@@ -60,7 +60,7 @@ class CatalogMenuTest {
   @Test
   fun `every declared variant property is an enum on the component that names it`() {
     catalog.components.forEach { component ->
-      val name = ComponentMenu.variantPropertyOf(component.componentId) ?: return@forEach
+      val name = menu.variantPropertyOf(component.componentId) ?: return@forEach
       val property = component.propertiesByName[name]
       assertNotNull(property, "${component.componentId} declares no property $name")
       assertTrue(
@@ -69,7 +69,7 @@ class CatalogMenuTest {
       )
       assertEquals(
         property.allowedValues.mapNotNull { it.jsonPrimitive.contentOrNull },
-        component.menuVariantValues(),
+        component.menuVariantValues(menu),
         component.componentId,
       )
     }
@@ -104,7 +104,7 @@ class CatalogMenuTest {
 
     // Not alphabetical, and not the id order the fixture is written in: `GROUP_ORDER` is what says
     // a scaffold is the first thing you reach for and a gradient is not.
-    assertEquals(ComponentMenu.GROUP_ORDER.filter { it in groups }, groups)
+    assertEquals(menu.groupOrder.filter { it in groups }, groups)
     // The count on a heading is the components under it, so heading and rows cannot disagree.
     rows.filterIsInstance<EditorCatalogRow.Group>().forEach { group ->
       val under =
@@ -212,7 +212,7 @@ class CatalogMenuTest {
       inserted(explicit).properties.getValue("variant").jsonObject["value"]?.jsonPrimitive?.content,
     )
     assertEquals(
-      catalog.componentsById.getValue("m3/card").menuVariantValues().first(),
+      catalog.componentsById.getValue("m3/card").menuVariantValues(menu).first(),
       component(rows(state), "m3/card").item.variants.single { it.default }.value,
     )
   }
@@ -238,9 +238,10 @@ class CatalogMenuTest {
   }
 
   @Test
-  fun `a component the table does not know joins the shelf its kind names`() {
-    // `remote-m3`'s real shape: the two `remote-m3/widget-container-*` scaffolds this table says
-    // nothing about, beside the m3 components it does. Their kind label is "Scaffolds", which is
+  fun `a component the declaration does not know joins the shelf its kind names`() {
+    // `remote-m3`'s real shape: the two `remote-m3/widget-container-*` scaffolds the m3
+    // declaration says nothing about, beside the m3 components it does. Their kind label is
+    // "Scaffolds", which is
     // also a declared shelf — so they join it rather than opening a second heading beside it, and
     // the panel for that catalog reads as one tree. Nothing arranges that; it falls out of the
     // fallback, which is exactly why it is worth a test.
@@ -266,10 +267,56 @@ class CatalogMenuTest {
         .map { it.name }
         .filter {
           it in EditorComponentKind.entries.map(EditorComponentKind::label) &&
-            it !in ComponentMenu.GROUP_ORDER
+            it !in menu.groupOrder
         },
       "an unshelved component opened a kind heading beside the real shelves",
     )
+  }
+
+  @Test
+  fun `a second catalog declares its own shelves and gets them`() {
+    // The point of the declaration living in the catalog rather than in a table here. A table in
+    // `:ui-builder` can only describe catalogs whose component ids this repository knows, so a
+    // second catalog was stuck with Scaffolds/Containers/Composables however well-organised it was.
+    // This is `wear-m3`'s shape — its own ids, its own shelves, its own order — built the way
+    // `wearM3Catalog` builds it.
+    val wear =
+      catalog.copy(
+        statusSemantics =
+          JsonObject(
+            catalog.statusSemantics +
+              (ComponentMenu.KEY to
+                Json.parseToJsonElement(
+                    """
+                    {
+                      "groupOrder": ["Screens", "Lists", "Content"],
+                      "components": {
+                        "wear-m3/screen-scaffold": { "group": "Screens" },
+                        "wear-m3/transforming-lazy-column": { "group": "Lists" },
+                        "wear-m3/text": { "group": "Content" }
+                      }
+                    }
+                    """
+                      .trimIndent()
+                  )
+                  .jsonObject)
+          ),
+        components =
+          listOf("wear-m3/screen-scaffold", "wear-m3/transforming-lazy-column", "wear-m3/text")
+            .mapIndexed { index, id ->
+              catalog.components[index].copy(componentId = id, displayName = id.substringAfter('/'))
+            },
+      )
+
+    val groups =
+      UiBuilderEditorReducer(wear)
+        // `catalogRows` reads the query and the open/closed sets off the state and nothing else,
+        // so the design in it is irrelevant to what the shelves are.
+        .catalogRows(state)
+        .filterIsInstance<EditorCatalogRow.Group>()
+        .map { it.name }
+
+    assertEquals(listOf("Screens", "Lists", "Content"), groups)
   }
 
   @Test
@@ -279,7 +326,7 @@ class CatalogMenuTest {
     // exactly that second match, which is why the variant rows qualify their names with the
     // component. Every query anyone might type is checked, not just that one — the collision is a
     // property of the panel, not of one string in one spec.
-    val queries = catalog.components.flatMap { listOf(it.displayName) + it.menuVariantValues() }
+    val queries = catalog.components.flatMap { listOf(it.displayName) + it.menuVariantValues(menu) }
     queries.forEach { query ->
       val filtered = reducer.reduce(state, UiBuilderEditorEvent.SearchCatalog(query))
       val names =
