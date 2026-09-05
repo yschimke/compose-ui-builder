@@ -276,6 +276,17 @@ object CapabilityCatalogParser {
       "transparent",
     )
 
+  /**
+   * The Wear widget host frames, which declare `WearWidgetContainer`'s parameters.
+   *
+   * Listed rather than matched by prefix because an override table keyed by exact id is what makes
+   * an unrecognised component fall through to the type rules instead of silently inheriting a
+   * neighbour's editor. Declared above [EDITOR_OVERRIDES] because that map reads it while this
+   * object initialises.
+   */
+  private val WEAR_WIDGET_CONTAINER_IDS =
+    listOf("remote-m3/widget-container-small", "remote-m3/widget-container-large")
+
   private val EDITOR_OVERRIDES =
     mapOf(
       ("layout/supporting-pane-scaffold" to "mainPanePreferredWidthDp") to
@@ -299,6 +310,28 @@ object CapabilityCatalogParser {
       ("layout/lazy-row" to "contentPadding") to objectEditor("padding"),
       ("m3/horizontal-floating-toolbar" to "contentPadding") to objectEditor("padding"),
       ("layout/lazy-grid" to "columns") to objectEditor("adaptiveGrid"),
+    ) + WEAR_WIDGET_CONTAINER_IDS.flatMap(::widgetContainerEditors)
+
+  /**
+   * Editors for the four container parameters, none of which the type rules can supply.
+   *
+   * `background` is declared `"string"`, so it fell through to a plain text field — you could type
+   * `#FF2196F3` into it and nothing would tell you that was the shape it wanted, or that a token
+   * like `primary` was also legal. The three dimensions are worse: the `…Dp` rule only offers a
+   * number editor for a property the **Compose exporter** emits, and Remote Compose is deliberately
+   * outside that exporter, so padding and corner radius arrived uneditable. A property the catalog
+   * declares and the renderer reads but the inspector will not show is the same as not having it.
+   *
+   * `cornerRadiusDp` deliberately reaches 999: that is the value `RoundWidgetPreviewParams` uses
+   * for a fully round container, and a bound that stopped short of it would make the round shape
+   * unauthorable.
+   */
+  private fun widgetContainerEditors(componentId: String) =
+    listOf(
+      (componentId to "background") to colorEditor(),
+      (componentId to "horizontalPaddingDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
+      (componentId to "verticalPaddingDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
+      (componentId to "cornerRadiusDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
     )
 
   private fun objectEditor(kind: String) = PropertyEditorCapability(objectKind = kind)

@@ -338,13 +338,29 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         name = "content",
         cardinality = box.slots.single().cardinality.copy(min = 0, max = 1),
       )
+  // `WearWidgetBrush` is a CHAIN of drawing elements, and `WearWidgetContainer` folds over it,
+  // drawing a round rect per element before the content. A slot is an ordered list of nodes, so the
+  // chain models exactly as one — which is why gradients and images are a slot rather than more
+  // properties: `background` covers the one-element solid-colour case that a string can carry, and
+  // anything the wire cannot say in a string goes in here as a node that already knows how to draw
+  // itself.
+  //
+  // Narrowed to the two traits that ARE brushes. `AnyContent` would let a Text be dropped in as a
+  // "background", which upstream has no way to express.
+  val backgroundSlot =
+    contentSlot.copy(
+      name = "background",
+      cardinality = contentSlot.cardinality.copy(min = 0, max = null),
+      acceptedRoles = listOf("Leaf"),
+      acceptedTraits = listOf("DrawLayer", "ImageContent"),
+    )
   fun widget(componentId: String, displayName: String) =
     box.copy(
       componentId = componentId,
       displayName = displayName,
       role = "Scaffold",
       traits = listOf("ScreenContent", "WearWidgetHost", "RemoteContentHost"),
-      slots = listOf(contentSlot),
+      slots = listOf(backgroundSlot, contentSlot),
       // `WearWidgetContainer`'s own parameters, and only those. The container composable takes
       // (horizontalPadding, verticalPadding, cornerRadius, background); the content size comes from
       // `WearWidgetParams` and is what picks Small over Large, so it stays the component id rather
@@ -354,7 +370,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       wasm =
         supportedWasm.copy(
           notes =
-            "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content."
+            "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains."
         ),
       code = null,
       svg =

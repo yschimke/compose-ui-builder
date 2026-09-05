@@ -502,6 +502,8 @@ private fun RenderNode(
         modifier = measured,
         contentWidthDp = 200,
         contentHeightDp = 60,
+        brushes = { next -> slot("background").forEach { child(it, next) } },
+        hasBrushes = slot("background").isNotEmpty(),
       ) {
         slot("content").forEach { child(it, Modifier.fillMaxSize()) }
       }
@@ -511,6 +513,8 @@ private fun RenderNode(
         modifier = measured,
         contentWidthDp = 200,
         contentHeightDp = 108,
+        brushes = { next -> slot("background").forEach { child(it, next) } },
+        hasBrushes = slot("background").isNotEmpty(),
       ) {
         slot("content").forEach { child(it, Modifier.fillMaxSize()) }
       }
@@ -799,17 +803,7 @@ private fun RenderNode(
         onTextLayout = { onTextLayout(node.id, it) },
       )
     "asset/image" -> AssetPlaceholder(node, measured)
-    "shape/linear-gradient" ->
-      Box(
-        measured.background(
-          Brush.verticalGradient(
-            listOf(
-              node.color("startColor", Color.Transparent),
-              node.color("endColor", Color.Transparent),
-            )
-          )
-        )
-      )
+    "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
     "shape/radial-gradient" -> {
       val inner =
         node
@@ -840,9 +834,32 @@ private fun RenderNode(
 }
 
 /**
- * Compose UI counterpart of the stable Glance Wear widget preview frame. The fixed outer canvas
- * includes the host's 8dp padding around its 200dp-wide content area; the 26dp squircle and default
- * surfaceContainerLow fill are host chrome rather than authored widget content.
+ * The brush this gradient layer paints, on the axis its `direction` names.
+ *
+ * The renderer used to draw every linear gradient top-to-bottom while the Compose exporter read
+ * `direction` and emitted all four — so a design with `leftToRight` looked vertical on the canvas
+ * and generated horizontal Kotlin. The exporter was right; this now matches it case for case.
+ * `WearWidgetBrush` distinguishes the same two axes (`verticalGradient` / `horizontalGradient`),
+ * which is what makes the difference reachable from a widget background.
+ */
+@Composable
+private fun UiBuilderNode.linearGradientBrush(): Brush {
+  val start = color("startColor", Color.Transparent)
+  val end = color("endColor", Color.Transparent)
+  return when (string("direction")) {
+    "bottomToTop" -> Brush.verticalGradient(listOf(end, start))
+    "leftToRight" -> Brush.horizontalGradient(listOf(start, end))
+    "rightToLeft" -> Brush.horizontalGradient(listOf(end, start))
+    else -> Brush.verticalGradient(listOf(start, end))
+  }
+}
+
+/**
+ * Compose UI counterpart of the stable Glance Wear widget host frame.
+ *
+ * The outer canvas is the host's padding around the container's content area; the squircle radius
+ * and the default fill are host chrome rather than authored widget content, and [brushes] is the
+ * widget's own `WearWidgetBrush` chain drawn into that same rounded rect.
  */
 @Composable
 private fun WearWidgetContainerScaffold(
@@ -850,12 +867,22 @@ private fun WearWidgetContainerScaffold(
   modifier: Modifier,
   contentWidthDp: Int,
   contentHeightDp: Int,
+  brushes: @Composable (Modifier) -> Unit,
+  hasBrushes: Boolean,
   content: @Composable () -> Unit,
 ) {
   val horizontalPadding = node.float("horizontalPaddingDp", WEAR_WIDGET_PADDING_DP)
   val verticalPadding = node.float("verticalPaddingDp", WEAR_WIDGET_PADDING_DP)
   val cornerRadius = node.float("cornerRadiusDp", WEAR_WIDGET_CORNER_RADIUS_DP)
-  val background = node.color("background", WEAR_WIDGET_DEFAULT_BACKGROUND)
+  val shape = RoundedCornerShape(cornerRadius.dp)
+  // The default applies only when the chain is EMPTY, which is what `WearWidgetBrush.isEmpty()`
+  // asks upstream. A widget that declares a gradient or an image and no colour has a one-element
+  // chain, not an empty one, so painting `#272430` underneath it would add a fill the widget never
+  // asked for — visible wherever an image's `Decal` tiling leaves the surface uncovered.
+  val declaredColor = node.string("background").isNotEmpty()
+  val base =
+    if (declaredColor) node.color("background", WEAR_WIDGET_DEFAULT_BACKGROUND)
+    else if (hasBrushes) Color.Transparent else WEAR_WIDGET_DEFAULT_BACKGROUND
   Box(
     modifier =
       modifier
@@ -871,13 +898,19 @@ private fun WearWidgetContainerScaffold(
         // clipped would hide exactly the overflow an author needs to see.
         .drawBehind {
           drawRoundRect(
-            color = background,
+            color = base,
             cornerRadius = CornerRadius(cornerRadius.dp.toPx(), cornerRadius.dp.toPx()),
           )
         }
-        .padding(horizontal = horizontalPadding.dp, vertical = verticalPadding.dp)
   ) {
-    content()
+    // Each brush element over the whole frame, in chain order, before the content — `foldIn` walks
+    // outermost to innermost and every element draws the same round rect. Clipped rather than
+    // drawn behind, because a gradient or a bitmap has no radius of its own the way a solid fill
+    // does; the round rect IS the shape upstream draws them into.
+    brushes(Modifier.matchParentSize().clip(shape))
+    Box(Modifier.padding(horizontal = horizontalPadding.dp, vertical = verticalPadding.dp)) {
+      content()
+    }
   }
 }
 

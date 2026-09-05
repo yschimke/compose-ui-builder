@@ -95,6 +95,28 @@ not what any widget looks like.
 The radius is drawn behind the content rather than clipped, exactly as upstream does it, so content
 that overflows a corner is visible instead of silently cut off.
 
+### Gradients and images
+
+`WearWidgetBrush` has four factories — `color`, `verticalGradient`, `horizontalGradient` and
+`image` — and it is a **chain**: the container folds over every element, drawing each into the same
+rounded rect before the content. The `background` property is the solid-colour element, the one a
+string can carry. The other three are authored in the container's **`background` slot**, which is
+that chain: drop a **Linear gradient layer** or an **Image asset** into it and it paints across the
+whole frame, clipped to the corner radius, under the padded content. The slot accepts draw layers
+and images only — a Text is not a brush, and upstream has no way to express one as a background.
+
+A gradient layer's `direction` picks the axis, matching `verticalGradient` against
+`horizontalGradient`. The default fill applies only when the chain is *entirely* empty, which is
+what `WearWidgetBrush.isEmpty()` asks: a widget declaring a gradient and no colour gets the
+gradient, not the gradient over `#272430`.
+
+![The four widget background brushes: default, colour, gradient and image](design/evidence/ui-builder-remote-compose/widget-background-brushes.png)
+
+The image tile shows the brush slot composing and clipping a bitmap to the frame. Whether arbitrary
+widget artwork resolves in the browser is the builder's asset-registry question, not this
+scaffold's: `asset/image` currently draws real pixels for the project-owned artwork keys and a
+placeholder otherwise.
+
 A blank widget declares none of this, so both empty templates open on the default frame:
 
 ![The empty Small and Large host frames on the default background](design/evidence/ui-builder-remote-compose/empty-widget-containers.png)
