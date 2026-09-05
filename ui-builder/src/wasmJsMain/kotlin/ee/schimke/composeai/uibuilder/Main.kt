@@ -70,7 +70,6 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderLiveSessionApi
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolUpdateClient
 import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
-import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
@@ -347,10 +346,6 @@ private data class LiveSessionConfig(
   val httpEndpoint: String,
   val webSocketEndpoint: String,
   val startWithNewDesign: Boolean,
-  val createIfMissing: Boolean,
-  val template: String,
-  /** Declared at creation because no released mutation reaches `stateVariables` afterwards. */
-  val state: List<NewDesignState>,
   val operationIdPrefix: String,
   val displayName: String,
   val colorArgbHex: String,
@@ -505,73 +500,12 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       CapabilityCatalogParser.parse(
         Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), selectedCatalog)
       )
-    // `seed` runs only on the create path, so it is also the signal that this load is the one
-    // that brought the design into existence — which is what decides between forwarding to the
-    // permalink and quietly tidying the URL.
-    var createdHere = false
-    val openResult =
-      UiBuilderLiveSessionApi(config.designId, http).openOrCreate(config.createIfMissing) {
-        createdHere = true
-        sessionStatus = "Creating ${config.designId} from the ${config.template} template…"
-        val fixture =
-          Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
-        val fixtureDocument = UiBuilderReducer.replay(fixture).document
-        val catalogPin =
-          fixtureDocument.catalogPin.toMutableMap().also { pin ->
-            pin["systemId"] = kotlinx.serialization.json.JsonPrimitive(config.catalogSystemId)
-            pin["catalogRevision"] =
-              kotlinx.serialization.json.JsonPrimitive(selectedCatalog.benchmark.catalogRevision)
-            pin["nativeRuntimeId"] =
-              kotlinx.serialization.json.JsonPrimitive(selectedCatalog.benchmark.nativeRuntimeId)
-          }
-        val widgetSample = WearWidgetSample.forTemplate(config.template)
-        val initialDocument =
-          if (config.catalogSystemId == "remote-m3" && widgetSample != null) {
-            widgetSample.document(
-              designId = config.designId,
-              catalogPin = JsonObject(catalogPin),
-              environment = fixtureDocument.environment,
-            )
-          } else if (config.catalogSystemId == "remote-m3") {
-            wearWidgetUiBuilderDocument(
-              designId = config.designId,
-              catalogPin = JsonObject(catalogPin),
-              environment = fixtureDocument.environment,
-              size =
-                if (config.template == "wear-widget-large") WearWidgetScaffoldSize.Large
-                else WearWidgetScaffoldSize.Small,
-            )
-          } else if (config.template == "blank") {
-            blankUiBuilderDocument(
-              designId = config.designId,
-              catalogPin = JsonObject(catalogPin),
-              environment = fixtureDocument.environment,
-              state = config.state,
-            )
-          } else {
-            fixtureDocument.copy(
-              id = config.designId,
-              revision = 0,
-              catalogPin = JsonObject(catalogPin),
-            )
-          }
-        initialDocument.toProtocolDocument()
-      }
+    val openResult = UiBuilderLiveSessionApi(config.designId, http).open()
     when (val result = openResult) {
       is UiBuilderHttpResult.Response -> {
         val response = result.response as? SnapshotResponseV1
         if (response == null) {
           sessionStatus = "Live error · unexpected open response"
-          return@LaunchedEffect
-        }
-        // A create URL is a verb; the permalink is the noun. Now that the design exists, hand
-        // the browser the permalink and let it open it: `location.replace`, so the spent create
-        // URL leaves no history entry to go Back to. Nothing is wired up first — the fresh load
-        // does that against a design that now exists. Where the create URL *was* the permalink
-        // (opening `/ui-builder/<catalog>/<designId>` for a design that did not exist yet) there
-        // is nothing to forward to, and the snapshot in hand is the one to render.
-        if (createdHere && forwardToDesignPermalink(config.catalogSystemId, config.designId)) {
-          sessionStatus = "Created ${config.designId} · opening its permalink…"
           return@LaunchedEffect
         }
         acceptSnapshot(response)
@@ -1287,9 +1221,9 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
     if (catalogSystemId == "m3-catalog") "jetcaster-discover"
     else "$catalogSystemId-jetcaster-discover"
   // `/ui-builder/<catalog>/<designId>` is the canonical form. The `?designId=` query still works
-  // — bookmarks and automation written against it must not break — but the path wins where both
-  // are present, and a design named in the path is opened-or-created without `create=1`, because
-  // "open this design" is the whole meaning of the URL. `create=0` opts back out.
+  // — bookmarks and automation written against it must not break — and the path wins where both
+  // are present. Neither creates anything: a GET opens a design, and bringing one into existence
+  // is the `POST` the New design form submits, or a `PUT` of the design's own API resource.
   val pathDesignId = uiBuilderDesignFromPath()
   val designNamedInPath = pathDesignId.isNotEmpty()
   return LiveSessionConfig(
@@ -1305,11 +1239,6 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
           "/api/ui-builder/v1/designs/{designId}/updates",
         ),
       startWithNewDesign = !designNamedInPath && !liveConfigPresent("designId"),
-      createIfMissing =
-        if (designNamedInPath) liveConfigValue("create", "1").let { it == "1" || it == "true" }
-        else liveConfigFlag("create"),
-      template = liveConfigValue("template", "jetcaster"),
-      state = decodeNewDesignStates(liveConfigValue("state", "[]")),
       operationIdPrefix = "${liveConfigValue("clientId", "browser-editor")}-${livePageNonce()}",
       displayName =
         liveConfigValue("displayName", serverActorId?.substringAfterLast(':') ?: "Browser user"),
@@ -1326,12 +1255,6 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
       require(it.actorId.isNotBlank()) { "live actor must not be blank" }
       require(it.clientId.isNotBlank()) { "live clientId must not be blank" }
       require(Regex("#[0-9A-Fa-f]{8}").matches(it.colorArgbHex)) { "live color must be #AARRGGBB" }
-      val templates =
-        setOf("jetcaster", "blank", "wear-widget-small", "wear-widget-large") +
-          WearWidgetSample.entries.map(WearWidgetSample::templateId)
-      require(it.template in templates) {
-        "live template must be one of ${templates.sorted().joinToString()}"
-      }
     }
 }
 
@@ -1499,42 +1422,6 @@ private external fun uiBuilderDesignFromPath(): String
  * seeded.
  */
 @JsFun(
-  """(catalogSystemId, designId, templateId, state, replace) => {
-    const current = new URL(globalThis.location.href);
-    const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
-      encodeURIComponent(designId);
-    const next = new URL(path, current.origin);
-    ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
-      .forEach((name) => {
-        const value = current.searchParams.get(name);
-        if (value !== null) next.searchParams.set(name, value);
-      });
-    if (replace) {
-      if (next.toString() !== current.toString()) {
-        globalThis.history.replaceState(null, '', next.toString());
-      }
-      return;
-    }
-    if (state && state !== '[]') next.searchParams.set('state', state);
-    if (templateId) next.searchParams.set('template', templateId);
-    globalThis.location.assign(next.toString());
-  }"""
-)
-private external fun assignUiBuilderDesignUrl(
-  catalogSystemId: String,
-  designId: String,
-  templateId: String,
-  state: String,
-  replace: Boolean,
-)
-
-/**
- * Send the browser to this design's permalink, unless it is already there.
- *
- * Returns false when the current URL is the permalink, which is the "create by opening the
- * permalink" case: there is nothing to forward to, and reloading it would only cost a round trip.
- */
-@JsFun(
   """(catalogSystemId, designId) => {
     const current = new URL(globalThis.location.href);
     const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
@@ -1545,33 +1432,56 @@ private external fun assignUiBuilderDesignUrl(
         const value = current.searchParams.get(name);
         if (value !== null) next.searchParams.set(name, value);
       });
-    if (next.toString() === current.toString()) return false;
-    globalThis.location.replace(next.toString());
-    return true;
+    if (next.toString() !== current.toString()) {
+      globalThis.history.replaceState(null, '', next.toString());
+    }
   }"""
 )
-private external fun forwardToDesignPermalink(catalogSystemId: String, designId: String): Boolean
+private external fun canonicalizeUiBuilderUrl(catalogSystemId: String, designId: String)
 
 /**
- * Rewrite whatever URL opened this design to its canonical form, once the design is open.
+ * Submit the New design form: a real `POST`, whose `303` the browser follows to the permalink.
  *
- * A `?session=live&create=1&template=blank&designId=x` link and a bookmarked
- * `/ui-builder/<catalog>/x` then address the same design by the same URL — and a reload of the
- * rewritten one re-opens the existing design rather than re-running a create that would be refused
- * anyway.
+ * A form rather than `fetch`, because only a form submission makes the redirect a navigation —
+ * `fetch` would follow the `303` itself and hand back the editor's HTML, leaving the page on the
+ * URL the creation was requested from. The identity query rides on the action URL, where the server
+ * reads it to authenticate the write and to carry it into the permalink it redirects to.
  */
-private fun canonicalizeUiBuilderUrl(catalogSystemId: String, designId: String) {
-  assignUiBuilderDesignUrl(catalogSystemId, designId, "", "", replace = true)
-}
-
-private fun navigateToNewDesign(
+@JsFun(
+  """(catalogSystemId, designId, templateId, state) => {
+    const current = new URL(globalThis.location.href);
+    const action = new URL(
+      '/ui-builder/' + encodeURIComponent(catalogSystemId),
+      current.origin,
+    );
+    ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
+      .forEach((name) => {
+        const value = current.searchParams.get(name);
+        if (value !== null) action.searchParams.set(name, value);
+      });
+    const form = globalThis.document.createElement('form');
+    form.method = 'post';
+    form.action = action.toString();
+    const field = (name, value) => {
+      const input = globalThis.document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    };
+    field('designId', designId);
+    field('template', templateId);
+    if (state && state !== '[]') field('state', state);
+    globalThis.document.body.appendChild(form);
+    form.submit();
+  }"""
+)
+private external fun navigateToNewDesign(
   catalogSystemId: String,
   designId: String,
   templateId: String,
   state: String,
-) {
-  assignUiBuilderDesignUrl(catalogSystemId, designId, templateId, state, replace = false)
-}
+)
 
 @JsFun(
   """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""

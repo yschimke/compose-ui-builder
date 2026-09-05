@@ -14,29 +14,41 @@ than *what*. The browser reads the design out of `location.pathname`; the server
 shell for a catalog-scoped segment that names no file, and redirects the trailing-slash spelling
 away, because the shell resolves `uiBuilder.mjs` relative to the document.
 
-A design named in the path is opened-or-created: the browser first attempts `OpenDesign`, and only
-a `notFound` response enables the explicit create path, which seeds the requested ID from the
-current Jetcaster fixture at revision zero. An existing design is never overwritten, so this is
-safe by construction; `create=0` still opts out of creating at all. `template=blank` seeds a
-minimal scaffold with an empty content box instead. See the
-[getting-started guide](../UI_BUILDER_GETTING_STARTED.md) for the complete from-scratch workflow.
+Opening a design is a `GET`, and a `GET` never creates one. A design that does not exist is
+reported as missing, not brought into existence by somebody following a link. Creating is its own
+request, in two shapes.
 
-`template` and `state` describe how a design that does not exist yet is seeded, so they say nothing
-once it does. A create URL is a verb; the permalink is the noun. As soon as a create succeeds the
-browser forwards to the permalink with `location.replace` — the spent create URL leaves no history
-entry to go Back to, and the fresh load opens a design that now exists. Opening the permalink
-itself for a design that does not exist yet creates it in place: there is nothing to forward to,
-and the snapshot already in hand is the one to render. A URL that merely *opened* an existing
-design is tidied without a round trip, `history.replaceState` dropping `session`, `create`,
-`designId`, `template` and `state` — one design, one URL, whichever spelling opened it.
+**The New design form: `POST /ui-builder/<catalog>`.** Fields are `designId`, `template` and an
+optional `state`; the answer is `303 See Other` to the design's permalink. An ordinary HTML form,
+which matters: the browser submits it and follows the redirect itself, so the URL left in the
+address bar and in history is the design's, and reloading it re-opens rather than re-creates. 303
+rather than 302 because the method that follows must be `GET`. The server seeds the document —
+[`UiBuilderNewDesignSeed`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderNewDesignSeed.kt),
+shared with the browser so a template means one thing on both sides — pinned to the catalog
+revision this server actually serves. It is refused unless the request is same-origin
+(`Sec-Fetch-Site`, else `Origin` against `Host`): a form `POST` is the one shape a hostile page can
+aim at this server with the reader's credentials attached.
 
-The older query form is still honoured, so existing bookmarks and automation keep working:
+**The design resource: `PUT /api/ui-builder/v1/designs/{designId}`**, with `If-None-Match: *` and a
+`DesignDocumentV1` body. For a caller that has a document rather than an intent. The precondition
+is required, not assumed: this route creates and never replaces, so a `PUT` without it is answered
+`428 Precondition Required` rather than being quietly treated as a create. `201` carries `Location`
+— the editor permalink, because the useful answer to "I made a design" is where a person can open
+it — and a design that already exists fails its precondition with `412`.
+
+Neither route overwrites. The form answers an id that already exists with the same `303` it would
+have given a fresh one, which is what "open or create" meant when this was a navigation, minus the
+mutation on a `GET`.
+
+The older query form still opens a design, so existing bookmarks keep working:
 
 ```text
-/ui-builder/?session=live&create=1&designId=jetcaster-discover&actor=operator&clientId=browser-a
+/ui-builder/?session=live&designId=jetcaster-discover&actor=operator&clientId=browser-a
 ```
 
-The path wins where both name a design, and such a URL is rewritten to the path form on open.
+The path wins where both name a design, and such a URL is rewritten to the path form —
+`history.replaceState`, no round trip — as soon as the design is open. `create=1` in such a URL no
+longer creates anything; that is what the two routes above are for.
 
 The browser opens the design through the released v1 HTTP envelope, renders the authoritative
 snapshot, and subscribes to `/api/ui-builder/v1/designs/{designId}/updates`. Editor batches, undo,

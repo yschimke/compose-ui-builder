@@ -14,8 +14,9 @@ live editor.
 
 1. Choose **Material 3** for a blank Compose screen, or **Remote Material 3** for a Wear widget.
 2. For a widget, choose **Small widget** (216×76dp) or **Large widget** (216×124dp).
-3. Enter a path-safe design ID and select **Create**. The website retains the current operator
-   token and collaboration identity while it opens the catalog-scoped design.
+3. Enter a path-safe design ID and select **Create**. The dialog submits it as a form `POST`, and
+   the redirect it is answered with lands you on the new design's own URL. The current operator
+   token and collaboration identity ride along and are carried into that URL.
 4. For a widget, search for a Column, Row, Box, or Surface and select **Add** (or drag it) to place
    it in the scaffold's single `content` slot. The inserted container stays selected; search for
    Text or other content and select **Add** again to fill its children slot. This container-first
@@ -29,22 +30,34 @@ A design has one URL, and it names the catalog and the design:
 /ui-builder/remote-m3/my-remote-screen
 ```
 
-Open it and the design opens; open it for a design that does not exist yet and it is created. Add
-`?template=wear-widget-small` to choose what a missing design is seeded from — that is the direct
-creation URL for automation and bookmarks. Creation never overwrites an existing design, and
-`?create=0` refuses to create one at all. Once the design has been created the browser forwards to
-the permalink above and the creation URL is gone, including from Back, so the URL you copy out of
-the browser is always the plain one.
+Opening it opens the design. It does not create one: a `GET` never writes, so a mistyped link
+reports a design that is not there rather than quietly making it.
 
-The older query form (`/ui-builder/remote-m3/?session=live&create=1&designId=my-remote-screen`)
-still works and redirects itself to the canonical path. The `blank`
-template is a real, valid document: a `layout/scaffold` root with an empty `layout/box` in its
-required content slot. In `remote-m3`, creation starts with the Small Wear widget scaffold instead:
+Creating is a `POST`. The New design dialog submits an ordinary form to
+`/ui-builder/<catalog>` with the id, the template and any state variables, and the server answers
+`303 See Other` with the design's permalink — which the browser follows, so the URL you end up on,
+bookmark and share is the plain one above, and reloading it re-opens rather than re-creates. A
+design id that already exists is not an error and is not overwritten: you land on the design that
+is already there.
+
+Automation that already holds a document uses the design's own API resource instead:
+
+```shell
+curl -X PUT --header 'If-None-Match: *' --data @design.json \
+  https://<server>/api/ui-builder/v1/designs/my-remote-screen
+```
+
+`If-None-Match: *` is required, because that route creates and never replaces: without it the
+answer is `428`, and against a design that already exists it is `412`. A successful `201` carries
+the editor permalink in `Location`. Credentials are intentionally absent from these examples:
+supply them through the server and client credential facilities, never in a shared URL, shell
+history, or process arguments.
+
+The `blank` template is a real, valid document: a `layout/scaffold` root with an empty
+`layout/box` in its required content slot. In `remote-m3`, creation starts with the Small Wear widget scaffold instead:
 a 216×76dp host frame with an empty content slot. Use `template=wear-widget-large` for the
 216×124dp form. These copy the stable 240dp-screen preview contract—200×60dp or 200×108dp content,
-8dp host padding, and 26dp corners—without depending on preview-only Glance code. Authentication
-credentials are intentionally absent from this example: supply them through the server and client
-credential facilities, never in a shared URL, shell history, or process arguments.
+8dp host padding, and 26dp corners—without depending on preview-only Glance code.
 
 Catalog Add actions and drops resolve the concrete compatible slot before submitting the insert.
 The selected node, catalog search, inspector mode, and generated operation sequence survive each

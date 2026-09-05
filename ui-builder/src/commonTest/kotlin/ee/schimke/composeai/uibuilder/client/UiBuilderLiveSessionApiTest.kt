@@ -4,19 +4,14 @@ import ee.schimke.composeai.uibuilder.DesignCommand
 import ee.schimke.composeai.uibuilder.DesignOperation
 import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
-import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.CreateDesignRequestV1
-import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
-import ee.schimke.composeai.uibuilder.protocol.DesignEnvironmentV1
 import ee.schimke.composeai.uibuilder.protocol.ErrorResponseV1
 import ee.schimke.composeai.uibuilder.protocol.HttpRequestEnvelopeV1
 import ee.schimke.composeai.uibuilder.protocol.HttpResponseEnvelopeV1
-import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorV1
-import ee.schimke.composeai.uibuilder.protocol.ThemeV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRequestV1
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.EmptyCoroutineContext
@@ -29,7 +24,11 @@ import kotlinx.serialization.json.buildJsonObject
 
 class UiBuilderLiveSessionApiTest {
   @Test
-  fun `fresh session creates once after not found and subsequent refresh opens`() = runImmediate {
+  fun `opening a design never creates one, however many times the page is loaded`() = runImmediate {
+    // The browser used to seed and create a design whose open came back `notFound`, which made
+    // loading a URL a mutation. Creating is a `POST` to the New design form's route or a `PUT` of
+    // the design resource now; what the page does is open. A missing design is reported as
+    // missing, and nothing on this path can write.
     val requests = mutableListOf<UiBuilderRequestV1>()
     var exists = false
     val transport = UiBuilderHttpTransport { request ->
@@ -40,10 +39,7 @@ class UiBuilderLiveSessionApiTest {
           is OpenDesignRequestV1 ->
             if (exists) CatalogsResponseV1(emptyList())
             else ErrorResponseV1(ServiceErrorV1(ServiceErrorCodeV1.NOT_FOUND, "missing"))
-          is CreateDesignRequestV1 -> {
-            exists = true
-            CatalogsResponseV1(emptyList())
-          }
+          is CreateDesignRequestV1 -> error("opening a design must never create one")
           is ApplyOperationRequestV1 -> CatalogsResponseV1(emptyList())
           else -> error("unexpected request")
         }
@@ -64,7 +60,13 @@ class UiBuilderLiveSessionApiTest {
       )
     val api = UiBuilderLiveSessionApi("fresh", http)
 
-    assertIs<UiBuilderHttpResult.Response>(api.openOrCreate(true) { seed("fresh") })
+    val missing = assertIs<UiBuilderHttpResult.ServiceError>(api.open())
+    assertEquals(ServiceErrorCodeV1.NOT_FOUND, missing.error.code)
+
+    // The design comes into existence the way it now does — somewhere else entirely — and the
+    // same page load opens it without ever asking to create it.
+    exists = true
+    assertIs<UiBuilderHttpResult.Response>(api.open())
     val localEdit =
       EditorSubmission.Batch(
         DesignCommand(
@@ -93,41 +95,18 @@ class UiBuilderLiveSessionApiTest {
         )
       )
     )
-    assertIs<UiBuilderHttpResult.Response>(api.openOrCreate(true) { error("must not reseed") })
+    assertIs<UiBuilderHttpResult.Response>(api.open())
 
     assertEquals(
       listOf(
         OpenDesignRequestV1::class,
-        CreateDesignRequestV1::class,
+        OpenDesignRequestV1::class,
         ApplyOperationRequestV1::class,
         OpenDesignRequestV1::class,
       ),
       requests.map { it::class },
     )
-    assertEquals("fresh", assertIs<CreateDesignRequestV1>(requests[1]).document.id)
   }
-
-  private fun seed(id: String): DesignDocumentV1 =
-    DesignDocumentV1(
-      schema = "compose-ui-builder/v1",
-      id = id,
-      title = "Seed",
-      revision = 0,
-      catalogPin = CatalogReferenceV1("m3", "revision", "digest", "runtime"),
-      environment =
-        DesignEnvironmentV1(
-          widthDp = 1280,
-          heightDp = 800,
-          density = 1.0,
-          theme = ThemeV1.DARK,
-          locale = "en-GB",
-          fontScale = 1.0,
-          layoutDirection = LayoutDirectionV1.LTR,
-        ),
-      stateVariables = emptyMap(),
-      roots = emptyList(),
-      nodes = emptyMap(),
-    )
 
   private fun <T> runImmediate(block: suspend () -> T): T {
     var completed: Result<T>? = null

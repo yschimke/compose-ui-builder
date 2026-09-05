@@ -1294,62 +1294,13 @@ private fun shapeDp(value: String?): Float =
   }
 
 /**
- * The Kotlin identifier this exporter will write for a state variable of this name.
- *
- * Exposed so the authoring side can refuse a name before it becomes a declaration nobody can
- * compile, rather than discovering it at export. The normalisation is lossy on purpose — it drops
- * separators — which is exactly why two distinct names can arrive at one identifier.
- */
-internal fun exportedStateIdentifier(name: String): String = name.identifier()
-
-/**
  * Kotlin's hard keywords: reserved wherever an identifier is expected, and not escapable by this
  * generator, which writes `var $name` bare.
  */
-internal val KOTLIN_HARD_KEYWORDS: Set<String> =
-  setOf(
-    "as",
-    "break",
-    "class",
-    "continue",
-    "do",
-    "else",
-    "false",
-    "for",
-    "fun",
-    "if",
-    "in",
-    "interface",
-    "is",
-    "null",
-    "object",
-    "package",
-    "return",
-    "super",
-    "this",
-    "throw",
-    "true",
-    "try",
-    "typealias",
-    "typeof",
-    "val",
-    "var",
-    "when",
-    "while",
-  )
 
-private fun String.identifier(): String {
-  val words = split(Regex("[^A-Za-z0-9]+")).filter(String::isNotEmpty)
-  val joined =
-    words
-      .mapIndexed { index, word ->
-        if (index == 0) word.replaceFirstChar { it.lowercase() }
-        else word.replaceFirstChar { it.uppercase() }
-      }
-      .joinToString("")
-  val candidate = joined.ifEmpty { "generatedValue" }
-  return if (candidate.first().isDigit()) "generated$candidate" else candidate
-}
+// The emitter and design creation must agree about what a name becomes, so there is one
+// implementation of it, in `:ui-builder-export` beside the export projection.
+private fun String.identifier(): String = exportedStateIdentifier(this)
 
 private fun String.escape(): String =
   replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")

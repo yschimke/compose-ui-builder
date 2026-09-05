@@ -137,15 +137,21 @@ private fun MutableList<String>.insertAfter(value: String, anchor: String?, labe
   add(index + 1, value)
 }
 
-internal fun JsonObject.requiredString(name: String): String =
+/**
+ * The candidate wire accessors, public because the document shape now has two readers.
+ *
+ * They were `internal` while the document, its reducer and everything that read them lived in one
+ * module. The templates and the reducer moved here so the server can seed a design the same way the
+ * browser does, and the browser's own exporters still parse the same candidate shapes on the other
+ * side of the module boundary — one definition, read from both, beats two that can drift.
+ */
+fun JsonObject.requiredString(name: String): String =
   requireNotNull(this[name]?.jsonPrimitive?.contentOrNull) { "$name must be non-empty text" }
     .also { require(it.isNotEmpty()) { "$name must be non-empty text" } }
 
-internal fun JsonObject.optionalString(name: String): String? =
+fun JsonObject.optionalString(name: String): String? =
   this[name]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull
 
-internal fun JsonObject.obj(name: String): JsonObject =
-  this[name]?.jsonObject ?: JsonObject(emptyMap())
+fun JsonObject.obj(name: String): JsonObject = this[name]?.jsonObject ?: JsonObject(emptyMap())
 
-internal fun JsonObject.array(name: String): JsonArray =
-  this[name]?.jsonArray ?: JsonArray(emptyList())
+fun JsonObject.array(name: String): JsonArray = this[name]?.jsonArray ?: JsonArray(emptyList())

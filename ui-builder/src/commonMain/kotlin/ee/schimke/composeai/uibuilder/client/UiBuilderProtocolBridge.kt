@@ -32,6 +32,7 @@ import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
 import ee.schimke.composeai.uibuilder.sha256Hex
+import ee.schimke.composeai.uibuilder.toDesignDocumentV1
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -57,9 +58,13 @@ fun DesignDocumentV1.toRendererDocument(): UiBuilderDocument {
   return bridgeJson.decodeFromString(bridgeJson.encodeToString(this))
 }
 
-/** Creates a v1 service document from the renderer model used by deterministic fixture replay. */
-fun UiBuilderDocument.toProtocolDocument(): DesignDocumentV1 =
-  bridgeJson.decodeFromString(bridgeJson.encodeToString(this))
+/**
+ * Creates a v1 service document from the renderer model used by deterministic fixture replay.
+ *
+ * Delegated to the shared conversion the seeding module owns, so the browser and the server turn a
+ * candidate document into a service document by exactly one piece of code.
+ */
+fun UiBuilderDocument.toProtocolDocument(): DesignDocumentV1 = toDesignDocumentV1()
 
 /**
  * Applies the authoritative pushed fast path used by live property editing.
