@@ -90,8 +90,114 @@ class UiBuilderModifierPlanTest {
   fun `a modifier this build does not know costs one node's layout, not the screen`() {
     // The document is fed by other clients and by later versions of this one. Losing a rounded
     // corner beats losing every part of the screen that does work.
-    assertNull(uiBuilderModifier(modifier("""{"type":"rotate","degrees":90}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"shimmer","period":90}""")))
     assertNull(uiBuilderModifier(modifier("""{"degrees":90}""")))
     assertNull(uiBuilderModifier(modifier("{}")))
+  }
+
+  @Test
+  fun `the vocabulary contracts 2_8_0 added is read too`() {
+    assertEquals(
+      UiBuilderModifierPlan.FillMaxHeight,
+      uiBuilderModifier(modifier("""{"type":"fillMaxHeight"}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Width(160f),
+      uiBuilderModifier(modifier("""{"type":"width","widthDp":160}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Height(48f),
+      uiBuilderModifier(modifier("""{"type":"height","heightDp":48}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.WidthIn(240f, 480f),
+      uiBuilderModifier(modifier("""{"type":"widthIn","minDp":240,"maxDp":480}""")),
+    )
+    // One edge is a bound; the wire allows either to be absent.
+    assertEquals(
+      UiBuilderModifierPlan.HeightIn(56f, null),
+      uiBuilderModifier(modifier("""{"type":"heightIn","minDp":56}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.AspectRatio(1.5f),
+      uiBuilderModifier(modifier("""{"type":"aspectRatio","ratio":1.5}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.WrapContentSize("center"),
+      uiBuilderModifier(modifier("""{"type":"wrapContentSize","alignment":"center"}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Offset(4f, -2f),
+      uiBuilderModifier(modifier("""{"type":"offset","xDp":4,"yDp":-2}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.ZIndex(2f),
+      uiBuilderModifier(modifier("""{"type":"zIndex","zIndex":2}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Background("surfaceContainerHigh", "medium"),
+      uiBuilderModifier(
+        modifier(
+          """{"type":"background","color":{"type":"colorToken","value":"surfaceContainerHigh"},"shape":"medium"}"""
+        )
+      ),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Border(1f, "#FF335577", null),
+      uiBuilderModifier(
+        modifier("""{"type":"border","widthDp":1,"color":{"type":"color","value":"#FF335577"}}""")
+      ),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Alpha(0.8f),
+      uiBuilderModifier(modifier("""{"type":"alpha","alpha":0.8}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Shadow(6f, "large", true),
+      uiBuilderModifier(
+        modifier("""{"type":"shadow","elevationDp":6,"shape":"large","clip":true}""")
+      ),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Rotate(90f),
+      uiBuilderModifier(modifier("""{"type":"rotate","degrees":90}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Scale(1.25f, 0.75f),
+      uiBuilderModifier(modifier("""{"type":"scale","scaleX":1.25,"scaleY":0.75}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.VerticalScroll,
+      uiBuilderModifier(modifier("""{"type":"verticalScroll"}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.HorizontalScroll,
+      uiBuilderModifier(modifier("""{"type":"horizontalScroll"}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.TestTag("hero-card"),
+      uiBuilderModifier(modifier("""{"type":"testTag","tag":"hero-card"}""")),
+    )
+  }
+
+  @Test
+  fun `a value the renderer would throw on is refused before it is applied`() {
+    // Same rule as `size` naming neither dimension: the layout pass is not the place to find out.
+    assertNull(uiBuilderModifier(modifier("""{"type":"aspectRatio","ratio":0}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"widthIn"}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"scale","scaleX":2}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"testTag","tag":""}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"wrapContentSize","alignment":"sideways"}""")))
+    // A colour the theme cannot resolve, which used to be an `error()` inside the composition.
+    assertNull(
+      uiBuilderModifier(
+        modifier("""{"type":"background","color":{"type":"colorToken","value":"chartreuse"}}""")
+      )
+    )
+    assertNull(
+      uiBuilderModifier(
+        modifier("""{"type":"border","color":{"type":"color","value":"#FF000000"}}""")
+      )
+    )
   }
 }

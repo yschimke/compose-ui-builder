@@ -8,6 +8,8 @@ import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -80,6 +82,21 @@ data class EditorPropertyLocation(val nodeId: String, val property: String)
  * is a row that lies.
  */
 data class EditorModifierToggle(val type: String, val label: String, val applied: Boolean)
+
+/**
+ * One editable number inside the selected node's modifier chain.
+ *
+ * The chain is authored whole, so this is not a second way to write it: the field names a modifier
+ * and one of its numbers, and [UiBuilderEditorEvent.SetModifierValue] rewrites the chain around it.
+ * Only numbers, because they are the values worth nudging while looking at the design — a shape or
+ * a colour is a choice, and choices belong in the panel with room for them.
+ */
+data class EditorModifierField(
+  val type: String,
+  val field: String,
+  val label: String,
+  val value: String,
+)
 
 enum class EditorComponentKind(val label: String) {
   Scaffold("Scaffolds"),
@@ -497,6 +514,19 @@ sealed interface UiBuilderEditorEvent {
    */
   data class ToggleModifier(val nodeId: String, val type: String) : UiBuilderEditorEvent
 
+  /**
+   * Give one number inside one modifier a new value.
+   *
+   * The whole chain is rewritten, because that is the only shape the wire has; everything else on
+   * the node — including the rest of that modifier — is carried through untouched.
+   */
+  data class SetModifierValue(
+    val nodeId: String,
+    val type: String,
+    val field: String,
+    val draft: String,
+  ) : UiBuilderEditorEvent
+
   data class UpdateEnvironment(val settings: ScreenEnvironmentSettings) : UiBuilderEditorEvent
 
   data class ShowInspector(val mode: EditorInspectorMode) : UiBuilderEditorEvent
@@ -908,6 +938,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.UnbindProperty -> unbindProperty(state, event.nodeId, event.property)
       is UiBuilderEditorEvent.UpdateEnvironment -> updateEnvironment(state, event.settings)
       is UiBuilderEditorEvent.ToggleModifier -> toggleModifier(state, event.nodeId, event.type)
+      is UiBuilderEditorEvent.SetModifierValue ->
+        setModifierValue(state, event.nodeId, event.type, event.field, event.draft)
       is UiBuilderEditorEvent.ShowInspector -> state.copy(inspectorMode = event.mode)
       is UiBuilderEditorEvent.ApplyTheme -> applyTheme(state, event.settings)
       UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
@@ -1484,6 +1516,79 @@ class UiBuilderEditorReducer(
     val kept = node.modifiers.filter { (it as? JsonObject)?.optionalStringValue("type") != type }
     val chain =
       if (type in node.modifierTypes()) JsonArray(kept) else JsonArray(kept + menuModifier.build())
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.SetModifiers(nodeId, chain)),
+      selectionAfter = nodeId,
+    )
+  }
+
+  /**
+   * The numbers inside the selected node's modifier chain, in the order the chain applies them.
+   *
+   * Single selection, like [modifierToggles] and for the same reason. Only the numeric fields of
+   * modifiers this build knows: a chain entry a newer client wrote is left alone rather than shown
+   * as something this editor could edit and would in fact rewrite away.
+   */
+  fun modifierFields(state: UiBuilderEditorState): List<EditorModifierField> {
+    val nodeId = state.selection.singleOrNull() ?: return emptyList()
+    val node = state.document.nodes[nodeId] ?: return emptyList()
+    return node.modifiers.flatMapIndexed { _, element ->
+      val modifier = element as? JsonObject ?: return@flatMapIndexed emptyList()
+      val type = modifier.optionalStringValue("type") ?: return@flatMapIndexed emptyList()
+      MODIFIER_NUMBER_FIELDS[type].orEmpty().map { field ->
+        EditorModifierField(
+          type = type,
+          field = field.name,
+          label = field.label,
+          value = modifier[field.name]?.primitiveOrNull()?.content.orEmpty(),
+        )
+      }
+    }
+  }
+
+  /**
+   * Write one number into one modifier.
+   *
+   * Refused rather than committed on a draft that is not a number: the reducer would take a string
+   * where the renderer expects a dimension, and a chain that no longer applies is worse than a
+   * rejected keystroke.
+   */
+  private fun setModifierValue(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    type: String,
+    field: String,
+    draft: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val node = state.document.nodes[nodeId] ?: return state
+    val number =
+      draft.trim().toDoubleOrNull()
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "${field.humanLabel()} must be a number",
+          nodeId,
+          "modifiers",
+        )
+    var written = false
+    val chain =
+      JsonArray(
+        node.modifiers.map { element ->
+          val modifier = element as? JsonObject ?: return@map element
+          if (written || modifier.optionalStringValue("type") != type) return@map element
+          written = true
+          // Whole numbers stay whole. A padding typed as 24 that reads back as 24.0 is the same
+          // layout and a different document, and every diff of it says something changed.
+          val encoded =
+            if (number == floor(number) && abs(number) < Long.MAX_VALUE.toDouble())
+              JsonPrimitive(number.toLong())
+            else JsonPrimitive(number)
+          JsonObject(modifier + (field to encoded))
+        }
+      )
+    if (!written) return state
     return state.apply(
       sequence,
       listOf(DesignOperation.SetModifiers(nodeId, chain)),
@@ -3960,10 +4065,19 @@ private val MENU_MODIFIERS: List<MenuModifier> =
     MenuModifier("fillMaxWidth", "Fill the width") {
       buildJsonObject { put("type", "fillMaxWidth") }
     },
+    MenuModifier("fillMaxHeight", "Fill the height") {
+      buildJsonObject { put("type", "fillMaxHeight") }
+    },
     MenuModifier("matchParentSize", "Match the parent's size") {
       buildJsonObject { put("type", "matchParentSize") }
     },
-    MenuModifier("padding", "Pad by 16") {
+    MenuModifier("verticalScroll", "Scroll vertically") {
+      buildJsonObject { put("type", "verticalScroll") }
+    },
+    MenuModifier("horizontalScroll", "Scroll horizontally") {
+      buildJsonObject { put("type", "horizontalScroll") }
+    },
+    MenuModifier("padding", "Add padding") {
       buildJsonObject {
         put("type", "padding")
         put("startDp", 16)
@@ -3973,6 +4087,46 @@ private val MENU_MODIFIERS: List<MenuModifier> =
       }
     },
   )
+
+/**
+ * The numbers each modifier carries, and what to call them.
+ *
+ * Closed, like [EDITOR_OBJECT_VALUE_EDGES] and for the same reason: a modifier whose value is a
+ * shape, a colour or an alignment has no honest number field, and offering an empty one is worse
+ * than offering none.
+ */
+private val MODIFIER_NUMBER_FIELDS: Map<String, List<ModifierNumberField>> =
+  mapOf(
+    "padding" to
+      listOf(
+        ModifierNumberField("startDp", "Start"),
+        ModifierNumberField("topDp", "Top"),
+        ModifierNumberField("endDp", "End"),
+        ModifierNumberField("bottomDp", "Bottom"),
+      ),
+    "size" to
+      listOf(ModifierNumberField("widthDp", "Width"), ModifierNumberField("heightDp", "Height")),
+    "width" to listOf(ModifierNumberField("widthDp", "Width")),
+    "height" to listOf(ModifierNumberField("heightDp", "Height")),
+    "widthIn" to
+      listOf(ModifierNumberField("minDp", "Min width"), ModifierNumberField("maxDp", "Max width")),
+    "heightIn" to
+      listOf(
+        ModifierNumberField("minDp", "Min height"),
+        ModifierNumberField("maxDp", "Max height"),
+      ),
+    "aspectRatio" to listOf(ModifierNumberField("ratio", "Ratio")),
+    "offset" to listOf(ModifierNumberField("xDp", "X"), ModifierNumberField("yDp", "Y")),
+    "zIndex" to listOf(ModifierNumberField("zIndex", "Z")),
+    "border" to listOf(ModifierNumberField("widthDp", "Border")),
+    "alpha" to listOf(ModifierNumberField("alpha", "Alpha")),
+    "shadow" to listOf(ModifierNumberField("elevationDp", "Elevation")),
+    "rotate" to listOf(ModifierNumberField("degrees", "Degrees")),
+    "scale" to
+      listOf(ModifierNumberField("scaleX", "Scale X"), ModifierNumberField("scaleY", "Scale Y")),
+  )
+
+private class ModifierNumberField(val name: String, val label: String)
 
 private class MenuModifier(
   val type: String,

@@ -5,8 +5,10 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,14 +20,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -36,9 +42,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -92,8 +100,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -102,6 +114,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -114,6 +127,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -1809,10 +1823,12 @@ private fun UnsupportedComponentDiagnostic(componentId: String, modifier: Modifi
   }
 }
 
+@Composable
 private fun Modifier.applyModifier(value: JsonObject, themeCornerRadius: Float): Modifier =
   when (val plan = uiBuilderModifier(value)) {
     UiBuilderModifierPlan.FillMaxSize -> fillMaxSize()
     UiBuilderModifierPlan.FillMaxWidth -> fillMaxWidth()
+    UiBuilderModifierPlan.FillMaxHeight -> fillMaxHeight()
     // Applied by the owning BoxScope so it does not contribute to the parent's measurement.
     UiBuilderModifierPlan.MatchParentSize -> this
     is UiBuilderModifierPlan.Padding ->
@@ -1825,6 +1841,44 @@ private fun Modifier.applyModifier(value: JsonObject, themeCornerRadius: Float):
       }
     is UiBuilderModifierPlan.Clip ->
       clip(shapeFor(plan.shape, themeCornerRadius = themeCornerRadius))
+    is UiBuilderModifierPlan.Width -> width(plan.dp.dp)
+    is UiBuilderModifierPlan.Height -> height(plan.dp.dp)
+    is UiBuilderModifierPlan.WidthIn ->
+      widthIn(plan.minDp?.dp ?: Dp.Unspecified, plan.maxDp?.dp ?: Dp.Unspecified)
+    is UiBuilderModifierPlan.HeightIn ->
+      heightIn(plan.minDp?.dp ?: Dp.Unspecified, plan.maxDp?.dp ?: Dp.Unspecified)
+    is UiBuilderModifierPlan.AspectRatio -> aspectRatio(plan.ratio)
+    is UiBuilderModifierPlan.WrapContentSize -> wrapContentSize(alignmentFor(plan.alignment))
+    is UiBuilderModifierPlan.Offset -> offset(plan.xDp.dp, plan.yDp.dp)
+    is UiBuilderModifierPlan.ZIndex -> zIndex(plan.value)
+    is UiBuilderModifierPlan.Background ->
+      background(
+        uiBuilderColor(plan.color),
+        if (plan.shape == null) RectangleShape
+        else shapeFor(plan.shape, themeCornerRadius = themeCornerRadius),
+      )
+    is UiBuilderModifierPlan.Border ->
+      border(
+        plan.widthDp.dp,
+        uiBuilderColor(plan.color),
+        if (plan.shape == null) RectangleShape
+        else shapeFor(plan.shape, themeCornerRadius = themeCornerRadius),
+      )
+    is UiBuilderModifierPlan.Alpha -> alpha(plan.alpha)
+    is UiBuilderModifierPlan.Shadow ->
+      shadow(
+        plan.elevationDp.dp,
+        if (plan.shape == null) RectangleShape
+        else shapeFor(plan.shape, themeCornerRadius = themeCornerRadius),
+        clip = plan.clip ?: (plan.elevationDp > 0f),
+      )
+    is UiBuilderModifierPlan.Rotate -> rotate(plan.degrees)
+    is UiBuilderModifierPlan.Scale -> scale(plan.scaleX, plan.scaleY)
+    // The position is the renderer's, not the document's: two people looking at one design scroll
+    // independently, so the state is remembered per composition and never persisted.
+    UiBuilderModifierPlan.VerticalScroll -> verticalScroll(rememberScrollState())
+    UiBuilderModifierPlan.HorizontalScroll -> horizontalScroll(rememberScrollState())
+    is UiBuilderModifierPlan.TestTag -> testTag(plan.tag)
     // Not an error, for the reason `uiBuilderStateWrite` gives: one unusable modifier costs one
     // node its layout, and throwing costs the whole screen.
     null -> this
@@ -1858,6 +1912,46 @@ internal sealed interface UiBuilderModifierPlan {
   data class Size(val widthDp: Float?, val heightDp: Float?) : UiBuilderModifierPlan
 
   data class Clip(val shape: String?) : UiBuilderModifierPlan
+
+  data object FillMaxHeight : UiBuilderModifierPlan
+
+  data class Width(val dp: Float) : UiBuilderModifierPlan
+
+  data class Height(val dp: Float) : UiBuilderModifierPlan
+
+  /** At least one edge is usable; a bound constraining neither end is not a bound. */
+  data class WidthIn(val minDp: Float?, val maxDp: Float?) : UiBuilderModifierPlan
+
+  data class HeightIn(val minDp: Float?, val maxDp: Float?) : UiBuilderModifierPlan
+
+  data class AspectRatio(val ratio: Float) : UiBuilderModifierPlan
+
+  data class WrapContentSize(val alignment: String?) : UiBuilderModifierPlan
+
+  data class Offset(val xDp: Float, val yDp: Float) : UiBuilderModifierPlan
+
+  data class ZIndex(val value: Float) : UiBuilderModifierPlan
+
+  /** The colour is kept as its authored token or literal; resolving one needs the theme. */
+  data class Background(val color: String, val shape: String?) : UiBuilderModifierPlan
+
+  data class Border(val widthDp: Float, val color: String, val shape: String?) :
+    UiBuilderModifierPlan
+
+  data class Alpha(val alpha: Float) : UiBuilderModifierPlan
+
+  data class Shadow(val elevationDp: Float, val shape: String?, val clip: Boolean?) :
+    UiBuilderModifierPlan
+
+  data class Rotate(val degrees: Float) : UiBuilderModifierPlan
+
+  data class Scale(val scaleX: Float, val scaleY: Float) : UiBuilderModifierPlan
+
+  data object VerticalScroll : UiBuilderModifierPlan
+
+  data object HorizontalScroll : UiBuilderModifierPlan
+
+  data class TestTag(val tag: String) : UiBuilderModifierPlan
 }
 
 internal fun uiBuilderModifier(value: JsonObject): UiBuilderModifierPlan? =
@@ -1886,8 +1980,83 @@ internal fun uiBuilderModifier(value: JsonObject): UiBuilderModifierPlan? =
       value.optionalString("shape").let { shape ->
         if (isResolvableShape(shape)) UiBuilderModifierPlan.Clip(shape) else null
       }
+    "fillMaxHeight" -> UiBuilderModifierPlan.FillMaxHeight
+    "width" -> value.numberOrNull("widthDp")?.let(UiBuilderModifierPlan::Width)
+    "height" -> value.numberOrNull("heightDp")?.let(UiBuilderModifierPlan::Height)
+    // A bound constraining neither end is not a bound, the same reading `size` gets.
+    "widthIn" -> {
+      val min = value.numberOrNull("minDp")
+      val max = value.numberOrNull("maxDp")
+      if (min == null && max == null) null else UiBuilderModifierPlan.WidthIn(min, max)
+    }
+    "heightIn" -> {
+      val min = value.numberOrNull("minDp")
+      val max = value.numberOrNull("maxDp")
+      if (min == null && max == null) null else UiBuilderModifierPlan.HeightIn(min, max)
+    }
+    // Zero and negative ratios are a divide by nothing in the layout pass, which is a crash rather
+    // than a bad layout.
+    "aspectRatio" ->
+      value.numberOrNull("ratio")?.takeIf { it > 0f }?.let(UiBuilderModifierPlan::AspectRatio)
+    "wrapContentSize" ->
+      value.optionalString("alignment").let { alignment ->
+        if (alignment == null || isResolvableAlignment(alignment))
+          UiBuilderModifierPlan.WrapContentSize(alignment)
+        else null
+      }
+    "offset" -> UiBuilderModifierPlan.Offset(value.number("xDp"), value.number("yDp"))
+    "zIndex" -> value.numberOrNull("zIndex")?.let(UiBuilderModifierPlan::ZIndex)
+    // The colour is read here and resolved at application, where the theme is: an unresolvable
+    // token is refused now rather than throwing mid-composition.
+    "background" ->
+      uiBuilderColorValue(value["color"])?.let { color ->
+        val shape = value.optionalString("shape")
+        if (shape == null || isResolvableShape(shape)) {
+          UiBuilderModifierPlan.Background(color, shape)
+        } else null
+      }
+    "border" ->
+      uiBuilderColorValue(value["color"])?.let { color ->
+        val width = value.numberOrNull("widthDp") ?: return@let null
+        val shape = value.optionalString("shape")
+        if (shape == null || isResolvableShape(shape)) {
+          UiBuilderModifierPlan.Border(width, color, shape)
+        } else null
+      }
+    "alpha" -> value.numberOrNull("alpha")?.let(UiBuilderModifierPlan::Alpha)
+    "shadow" ->
+      value.numberOrNull("elevationDp")?.let { elevation ->
+        val shape = value.optionalString("shape")
+        if (shape == null || isResolvableShape(shape)) {
+          UiBuilderModifierPlan.Shadow(elevation, shape, value["clip"]?.booleanOrNull())
+        } else null
+      }
+    "rotate" -> value.numberOrNull("degrees")?.let(UiBuilderModifierPlan::Rotate)
+    "scale" -> {
+      val x = value.numberOrNull("scaleX")
+      val y = value.numberOrNull("scaleY")
+      if (x == null || y == null) null else UiBuilderModifierPlan.Scale(x, y)
+    }
+    "verticalScroll" -> UiBuilderModifierPlan.VerticalScroll
+    "horizontalScroll" -> UiBuilderModifierPlan.HorizontalScroll
+    "testTag" ->
+      value.optionalString("tag")?.takeIf(String::isNotBlank)?.let(UiBuilderModifierPlan::TestTag)
     else -> null
   }
+
+/**
+ * The authored colour inside a modifier, as the token or literal the theme resolves.
+ *
+ * A `UiValueV1` on the wire — `{"type": "colorToken", "value": "primary"}` or a `#AARRGGBB` literal
+ * — read here so an unresolvable spelling is a refused write rather than a composition that throws.
+ * The same rule `clip` follows for shapes.
+ */
+private fun uiBuilderColorValue(element: JsonElement?): String? {
+  val value = (element as? JsonObject)?.optionalString("value") ?: return null
+  return value.takeIf { isResolvableColor(it) }
+}
+
+private fun JsonElement.booleanOrNull(): Boolean? = (this as? JsonPrimitive)?.booleanOrNull
 
 private fun isResolvableShape(value: String?): Boolean =
   value.isNullOrEmpty() || value in NAMED_SHAPES || value.toFloatOrNull() != null
@@ -1902,6 +2071,35 @@ private fun UiBuilderNode.actionModifier(
   else Modifier.clickable(enabled = enabled, onClick = activate)
 
 private fun UiBuilderSemanticActionEntry?.orEmpty() = this ?: UiBuilderSemanticActionEntry()
+
+/** The nine alignments a document may name, for `wrapContentSize` and the child alignment below. */
+private fun alignmentFor(value: String?): Alignment =
+  when (value) {
+    "topStart" -> Alignment.TopStart
+    "topCenter" -> Alignment.TopCenter
+    "topEnd" -> Alignment.TopEnd
+    "centerStart" -> Alignment.CenterStart
+    "centerEnd" -> Alignment.CenterEnd
+    "bottomStart" -> Alignment.BottomStart
+    "bottomCenter" -> Alignment.BottomCenter
+    "bottomEnd" -> Alignment.BottomEnd
+    else -> Alignment.Center
+  }
+
+private fun isResolvableAlignment(value: String): Boolean = value in RESOLVABLE_ALIGNMENTS
+
+private val RESOLVABLE_ALIGNMENTS =
+  setOf(
+    "topStart",
+    "topCenter",
+    "topEnd",
+    "centerStart",
+    "center",
+    "centerEnd",
+    "bottomStart",
+    "bottomCenter",
+    "bottomEnd",
+  )
 
 private fun UiBuilderNode.childAlignment(): Alignment =
   when (string("alignment")) {
@@ -2085,6 +2283,60 @@ private fun UiBuilderNode.textDecoration() =
     "lineThrough" -> TextDecoration.LineThrough
     else -> null
   }
+
+/**
+ * The colours a document may name, in one place.
+ *
+ * Read by [UiBuilderNode.color] for a property and by [uiBuilderColor] for a modifier, so the two
+ * cannot drift into accepting different spellings of the same design token.
+ */
+@Composable
+private fun colorTokenOrNull(value: String): Color? =
+  when (value) {
+    "background" -> MaterialTheme.colorScheme.background
+    "surface" -> MaterialTheme.colorScheme.surface
+    "surfaceContainer" -> MaterialTheme.colorScheme.surfaceContainer
+    "surfaceContainerLow" -> MaterialTheme.colorScheme.surfaceContainerLow
+    "surfaceContainerHigh" -> MaterialTheme.colorScheme.surfaceContainerHigh
+    "surfaceContainerHighest" -> MaterialTheme.colorScheme.surfaceContainerHighest
+    "primary" -> MaterialTheme.colorScheme.primary
+    "onPrimary" -> MaterialTheme.colorScheme.onPrimary
+    "tertiary" -> MaterialTheme.colorScheme.tertiary
+    "onTertiary" -> MaterialTheme.colorScheme.onTertiary
+    "onSurface" -> MaterialTheme.colorScheme.onSurface
+    "onSurfaceVariant" -> MaterialTheme.colorScheme.onSurfaceVariant
+    "outlineVariant" -> MaterialTheme.colorScheme.outlineVariant
+    "transparent" -> Color.Transparent
+    else -> null
+  }
+
+/** Whether [colorTokenOrNull] or a literal can resolve this, asked without a theme in hand. */
+private fun isResolvableColor(value: String): Boolean =
+  value.startsWith("#") || value in RESOLVABLE_COLOR_TOKENS
+
+private val RESOLVABLE_COLOR_TOKENS =
+  setOf(
+    "background",
+    "surface",
+    "surfaceContainer",
+    "surfaceContainerLow",
+    "surfaceContainerHigh",
+    "surfaceContainerHighest",
+    "primary",
+    "onPrimary",
+    "tertiary",
+    "onTertiary",
+    "onSurface",
+    "onSurfaceVariant",
+    "outlineVariant",
+    "transparent",
+  )
+
+/** A modifier's authored colour, resolved. Refused already if it were not resolvable. */
+@Composable
+private fun uiBuilderColor(value: String): Color =
+  if (value.startsWith("#")) Color(parseArgb(value))
+  else colorTokenOrNull(value) ?: Color.Unspecified
 
 @Composable
 private fun UiBuilderNode.color(name: String, fallback: Color): Color {

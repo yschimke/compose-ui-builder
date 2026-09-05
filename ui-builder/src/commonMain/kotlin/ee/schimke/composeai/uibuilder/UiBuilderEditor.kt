@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -114,6 +115,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -467,6 +469,9 @@ fun UiBuilderEditor(
   // zoomed in is a fact about their window, not about the design, and an authoritative snapshot
   // that reset it would be worse than one that remembers nothing.
   var canvasZoom by remember(document.id) { mutableStateOf(initialCanvasZoom) }
+  // Which control the hover editor should put the caret in, set by an action that just created the
+  // value being edited and cleared the moment it lands.
+  var hoverFocusTarget by remember(document.id) { mutableStateOf<String?>(null) }
   var textInputFocused by remember { mutableStateOf(false) }
   var mobilePanel by remember(document.id) { mutableStateOf(MobileEditorPanel.None) }
   // Which panels are open. Local rather than in [UiBuilderEditorState] on purpose: what a
@@ -586,7 +591,15 @@ fun UiBuilderEditor(
       modifierToggles = reducer.modifierToggles(state),
       onToggleModifier = { type ->
         focusEditor()
-        state.selectedNodeId?.let { dispatch(UiBuilderEditorEvent.ToggleModifier(it, type)) }
+        state.selectedNodeId?.let { nodeId ->
+          val adding =
+            reducer.modifierToggles(state).firstOrNull { it.type == type }?.applied != true
+          dispatch(UiBuilderEditorEvent.ToggleModifier(nodeId, type))
+          // A modifier with a number worth choosing is added *and* handed the caret: the value the
+          // menu picks is a starting point, not a decision.
+          hoverFocusTarget =
+            if (adding) MODIFIER_FOCUS_FIELDS[type]?.let { "modifier:$type.$it" } else null
+        }
       },
       canDuplicate = reducer.canDuplicateSelected(state),
       canCopy = reducer.canCopySelected(state),
@@ -709,6 +722,39 @@ fun UiBuilderEditor(
       },
       onInspectionInvalidated = onInspectionInvalidated,
       selectionMenu = selectionMenu,
+      hoverEditor =
+        if (state.previewMode || state.selection.size != 1) null
+        else {
+          {
+            SelectionHoverEditor(
+              label = selectionLabel,
+              // The same rule the panel opens on: what the node carries, which is what the export
+              // would write. A hovering card is the last place to list what a component *could*
+              // have.
+              fields =
+                reducer.propertyFields(state).filter { field ->
+                  field.written ||
+                    field.required ||
+                    field.boundVariable != null ||
+                    field.error != null
+                },
+              modifierFields = reducer.modifierFields(state),
+              focusTarget = hoverFocusTarget,
+              onFocusHandled = { hoverFocusTarget = null },
+              onCommitProperty = { name, value ->
+                state.selectedNodeId?.let {
+                  dispatch(UiBuilderEditorEvent.CommitProperty(it, name, value))
+                }
+              },
+              onCommitModifier = { type, field, value ->
+                state.selectedNodeId?.let {
+                  dispatch(UiBuilderEditorEvent.SetModifierValue(it, type, field, value))
+                }
+              },
+              onTextInputFocusChanged = { textInputFocused = it },
+            )
+          }
+        },
       zoom = canvasZoom,
       onZoomChanged = {
         focusEditor()
@@ -2894,6 +2940,11 @@ private fun PinnedDesignCanvas(
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
   /** The verbs a layer answers to, for the canvas's own context menu. */
   selectionMenu: @Composable (() -> Unit) -> Unit,
+  /**
+   * The tight editor that follows the selection over the design, or null where there is nothing to
+   * follow. Positioned here, because only the canvas knows where the selected node is drawn.
+   */
+  hoverEditor: (@Composable () -> Unit)?,
   /** The scale the design is drawn at, or null to frame it in whatever room the workspace has. */
   zoom: Float?,
   onZoomChanged: (Float?) -> Unit,
@@ -2930,10 +2981,14 @@ private fun PinnedDesignCanvas(
     // The frame's own rectangle in the window, kept because the inspection answers in that space
     // and a press on the canvas arrives in the frame's.
     var frameBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+    // The workspace's own rectangle, so a node's root-space box can be turned into an offset in
+    // this box — which is where the hover editor is placed.
+    var workspaceBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
     Box(
       Modifier.fillMaxSize()
+        .onGloballyPositioned { workspaceBounds = it.boundsInRoot() }
         .horizontalScroll(horizontalScrollState)
         .verticalScroll(verticalScrollState)
     ) {
@@ -3054,6 +3109,32 @@ private fun PinnedDesignCanvas(
         }
       }
     }
+    // Beside the selected node rather than over it, and outside the scaled frame so the type stays
+    // the size it was designed at however far the design is zoomed out.
+    val selectedBounds = selectedNodeId?.let { id ->
+      inspection?.nodes?.firstOrNull { it.nodeId == id }?.bounds
+    }
+    if (hoverEditor != null && showSelectionOverlay && selectedBounds != null) {
+      val left = (selectedBounds.x - workspaceBounds.left).coerceAtLeast(0f)
+      val below = selectedBounds.y + selectedBounds.height - workspaceBounds.top + 8f
+      val above = selectedBounds.y - workspaceBounds.top - 8f
+      val roomBelow = with(density) { (workspaceBounds.height - below).toDp() } > HOVER_EDITOR_ROOM
+      Box(
+        Modifier.align(Alignment.TopStart)
+          .offset(
+            x =
+              with(density) { left.toDp() }
+                .coerceIn(0.dp, (workspaceWidth - HOVER_EDITOR_WIDTH).coerceAtLeast(0.dp)),
+            y =
+              with(density) { (if (roomBelow) below else above).toDp() }
+                .coerceIn(0.dp, workspaceHeight)
+                .let { if (roomBelow) it else (it - HOVER_EDITOR_ROOM).coerceAtLeast(0.dp) },
+          )
+          .width(HOVER_EDITOR_WIDTH)
+      ) {
+        hoverEditor()
+      }
+    }
     // Over the workspace rather than in the status bar, where every canvas tool puts it, and
     // outside the scrolling box so it stays put while the design under it moves.
     CanvasZoomControls(
@@ -3064,6 +3145,20 @@ private fun PinnedDesignCanvas(
     )
   }
 }
+
+/** How wide the editor that follows the selection is, and how much room it needs under a node. */
+private val HOVER_EDITOR_WIDTH = 268.dp
+
+private val HOVER_EDITOR_ROOM = 148.dp
+
+/**
+ * The number a just-added modifier hands the caret to.
+ *
+ * Only the ones whose menu row picks a value on the author's behalf: `padding` starts at 16 because
+ * something has to be typed in the box, and the box is where the real number is chosen. A fill has
+ * no number and takes no caret.
+ */
+private val MODIFIER_FOCUS_FIELDS = mapOf("padding" to "startDp")
 
 /** The zoom ladder the two step controls walk, in the order a designer expects to land on. */
 private val CANVAS_ZOOM_STOPS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 3f, 4f)
@@ -3663,6 +3758,241 @@ private fun String.toPresenceColor(): Color {
   val argb = hex.takeIf { it.length == 8 }?.toULongOrNull(16) ?: return Color(0xff7788aa)
   return Color(argb.toInt())
 }
+
+/**
+ * The selection's values, beside the selection.
+ *
+ * Deliberately the smallest thing that can be an editor: the properties this node actually carries
+ * and the numbers inside its modifiers, each one row, each committed where it is typed. No adding,
+ * no removing, no binding and no wrapping — those change what the node *is*, they belong in the
+ * panel that has room to say so, and a card floating over the design is the wrong place to be
+ * offered them. What is left is the thing people do most while looking at a design: change a number
+ * and watch it move.
+ */
+@Composable
+private fun SelectionHoverEditor(
+  label: String,
+  fields: List<EditorPropertyField>,
+  modifierFields: List<EditorModifierField>,
+  /**
+   * `property:<name>` or `modifier:<type>.<field>`, for the control a just-run action should land
+   * in.
+   */
+  focusTarget: String?,
+  onFocusHandled: () -> Unit,
+  onCommitProperty: (String, String) -> Unit,
+  onCommitModifier: (String, String, String) -> Unit,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+) {
+  Surface(
+    shape = RoundedCornerShape(12.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 4.dp,
+    shadowElevation = 8.dp,
+    modifier = Modifier.semantics { contentDescription = "Selection editor" },
+  ) {
+    Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+      Text(
+        label,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
+        fields.forEach { field ->
+          HoverEditorRow(
+            label = field.label,
+            value = field.value,
+            control = field.control,
+            choices = field.choices,
+            focused = focusTarget == "property:${field.name}",
+            onFocusHandled = onFocusHandled,
+            onTextInputFocusChanged = onTextInputFocusChanged,
+          ) {
+            onCommitProperty(field.name, it)
+          }
+        }
+        modifierFields.forEach { field ->
+          HoverEditorRow(
+            label = field.label,
+            value = field.value,
+            control = EditorPropertyControl.Number,
+            choices = emptyList(),
+            focused = focusTarget == "modifier:${field.type}.${field.field}",
+            onFocusHandled = onFocusHandled,
+            onTextInputFocusChanged = onTextInputFocusChanged,
+          ) {
+            onCommitModifier(field.type, field.field, it)
+          }
+        }
+        if (fields.isEmpty() && modifierFields.isEmpty()) {
+          Text(
+            "Nothing is set on this layer.",
+            Modifier.padding(vertical = 6.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
+      }
+    }
+  }
+}
+
+/** One row of the hover editor: what it is called, and the smallest control that can change it. */
+@Composable
+private fun HoverEditorRow(
+  label: String,
+  value: String,
+  control: EditorPropertyControl,
+  choices: List<String>,
+  focused: Boolean,
+  onFocusHandled: () -> Unit,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  onCommit: (String) -> Unit,
+) {
+  Row(
+    Modifier.fillMaxWidth().padding(vertical = 3.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    Text(
+      label,
+      Modifier.width(86.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Box(Modifier.weight(1f)) {
+      when (control) {
+        // Committed on the press rather than on a later Apply: a switch that needs confirming is a
+        // switch nobody believes.
+        EditorPropertyControl.Boolean ->
+          Switch(
+            checked = value == "true",
+            onCheckedChange = { onCommit(it.toString()) },
+            modifier = Modifier.semantics { contentDescription = "$label value" },
+          )
+        EditorPropertyControl.Enum ->
+          HoverEnumControl(label = label, value = value, choices = choices, onCommit = onCommit)
+        else ->
+          HoverTextControl(
+            label = label,
+            value = value,
+            focused = focused,
+            onFocusHandled = onFocusHandled,
+            onTextInputFocusChanged = onTextInputFocusChanged,
+            onCommit = onCommit,
+          )
+      }
+    }
+  }
+}
+
+/**
+ * A one-line field that commits what was typed when the caret leaves it, or on Enter.
+ *
+ * No Apply button, which the panel has room for and this does not: the rule here is that leaving
+ * the field is the commit, and Enter is the way to say so without moving the pointer.
+ */
+@Composable
+private fun HoverTextControl(
+  label: String,
+  value: String,
+  focused: Boolean,
+  onFocusHandled: () -> Unit,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  onCommit: (String) -> Unit,
+) {
+  var draft by remember(value) { mutableStateOf(value) }
+  // What this field has already sent. Enter commits, and so does losing focus — including the
+  // focus loss that *disposal* is, when the commit's own document change rebuilds this card.
+  // Without remembering it, one press of Enter wrote the same value twice: two revisions, two
+  // undo steps and two rounds to every collaborator for one edit.
+  var sent by remember(value) { mutableStateOf(value) }
+  val requester = remember { FocusRequester() }
+  // A modifier the menu just added lands the caret in its first number, so "add padding" is one
+  // press and then a number rather than a press and a hunt for where it went.
+  LaunchedEffect(focused) {
+    if (focused) {
+      requester.requestFocus()
+      onFocusHandled()
+    }
+  }
+  Surface(
+    shape = RoundedCornerShape(6.dp),
+    color = MaterialTheme.colorScheme.surfaceVariant,
+  ) {
+    BasicTextField(
+      value = draft,
+      onValueChange = { draft = it },
+      singleLine = true,
+      textStyle =
+        MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
+      cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+      modifier =
+        Modifier.fillMaxWidth()
+          .padding(horizontal = 8.dp, vertical = 6.dp)
+          .focusRequester(requester)
+          .onFocusChanged { state ->
+            onTextInputFocusChanged(state.isFocused)
+            if (!state.isFocused && draft != sent) {
+              sent = draft
+              onCommit(draft)
+            }
+          }
+          .onPreviewKeyEvent { event ->
+            if (event.type == KeyEventType.KeyDown && event.key in ENTER_KEYS) {
+              if (draft != sent) {
+                sent = draft
+                onCommit(draft)
+              }
+              true
+            } else false
+          }
+          .semantics { contentDescription = "$label value" },
+    )
+  }
+}
+
+/** The same row for a property whose values the catalog names. */
+@Composable
+private fun HoverEnumControl(
+  label: String,
+  value: String,
+  choices: List<String>,
+  onCommit: (String) -> Unit,
+) {
+  var open by remember(label) { mutableStateOf(false) }
+  Box {
+    TextButton(
+      onClick = { open = true },
+      contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+      modifier = Modifier.semantics { contentDescription = "$label value" },
+    ) {
+      Text(
+        value.ifEmpty { "Choose…" },
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+      choices.forEach { choice ->
+        DropdownMenuItem(
+          text = { Text(choice) },
+          onClick = {
+            open = false
+            onCommit(choice)
+          },
+        )
+      }
+    }
+  }
+}
+
+private val ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)
 
 @Composable
 private fun PropertyInspector(

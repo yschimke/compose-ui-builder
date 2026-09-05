@@ -29,7 +29,15 @@ class EditorModifierMenuTest {
   fun `only the modifiers the component declares are offered`() {
     val box = reducer.modifierToggles(reducer.initial(document, selectedNodeId = "main-background"))
     assertEquals(
-      listOf("fillMaxSize", "fillMaxWidth", "matchParentSize", "padding"),
+      listOf(
+        "fillMaxSize",
+        "fillMaxWidth",
+        "fillMaxHeight",
+        "matchParentSize",
+        "verticalScroll",
+        "horizontalScroll",
+        "padding",
+      ),
       box.map { it.type },
     )
 
@@ -93,6 +101,55 @@ class EditorModifierMenuTest {
     assertEquals("detail-podcast-title", outcome.nodeId)
     assertEquals("modifiers", outcome.field)
     assertEquals(document, refused.document)
+  }
+
+  @Test
+  fun `the numbers inside a chain are listed and edited one at a time`() {
+    val padded =
+      reducer.reduce(
+        reducer.initial(document, selectedNodeId = "main-background"),
+        UiBuilderEditorEvent.ToggleModifier("main-background", "padding"),
+      )
+
+    assertEquals(
+      listOf("Start" to "16", "Top" to "16", "End" to "16", "Bottom" to "16"),
+      reducer.modifierFields(padded).filter { it.type == "padding" }.map { it.label to it.value },
+    )
+
+    val edited =
+      reducer.reduce(
+        padded,
+        UiBuilderEditorEvent.SetModifierValue("main-background", "padding", "topDp", "24"),
+      )
+    // One number moves and the rest of the chain is carried through: the wire writes the chain
+    // whole, so everything not being edited has to survive being rewritten.
+    assertEquals(
+      listOf("16", "24", "16", "16"),
+      reducer.modifierFields(edited).filter { it.type == "padding" }.map { it.value },
+    )
+    assertEquals(
+      padded.document.nodes.getValue("main-background").modifiers.size,
+      edited.document.nodes.getValue("main-background").modifiers.size,
+    )
+  }
+
+  @Test
+  fun `a draft that is not a number is refused rather than written`() {
+    val padded =
+      reducer.reduce(
+        reducer.initial(document, selectedNodeId = "main-background"),
+        UiBuilderEditorEvent.ToggleModifier("main-background", "padding"),
+      )
+    val refused =
+      reducer.reduce(
+        padded,
+        UiBuilderEditorEvent.SetModifierValue("main-background", "padding", "topDp", "a bit"),
+      )
+
+    val outcome = refused.lastOutcome
+    assertTrue(outcome is CommandOutcome.Rejected, outcome.toString())
+    assertEquals("modifiers", outcome.field)
+    assertEquals(padded.document, refused.document)
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()

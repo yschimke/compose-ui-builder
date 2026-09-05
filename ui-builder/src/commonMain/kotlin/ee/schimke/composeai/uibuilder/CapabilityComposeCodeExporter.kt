@@ -1173,6 +1173,32 @@ private fun UiBuilderNode.modifierExpression(): String {
           ".size(width = ${modifier.number("widthDp").dpLiteral()}, height = ${modifier.number("heightDp").dpLiteral()})"
         "clip" ->
           ".clip(RoundedCornerShape(${shapeDp(modifier.optionalString("shape")).dpLiteral()}))"
+        "fillMaxHeight" -> ".fillMaxHeight()"
+        "width" -> ".width(${modifier.number("widthDp").dpLiteral()})"
+        "height" -> ".height(${modifier.number("heightDp").dpLiteral()})"
+        "widthIn" -> ".widthIn(${modifier.boundsArguments()})"
+        "heightIn" -> ".heightIn(${modifier.boundsArguments()})"
+        "aspectRatio" -> ".aspectRatio(${modifier.number("ratio", 1f).floatLiteral()})"
+        "wrapContentSize" ->
+          ".wrapContentSize(${alignmentExpression(modifier.optionalString("alignment"))})"
+        "offset" ->
+          ".offset(x = ${modifier.number("xDp").dpLiteral()}, y = ${modifier.number("yDp").dpLiteral()})"
+        "zIndex" -> ".zIndex(${modifier.number("zIndex").floatLiteral()})"
+        "background" ->
+          ".background(${modifier.modifierColorExpression()}${modifier.shapeArgument()})"
+        "border" ->
+          ".border(${modifier.number("widthDp", 1f).dpLiteral()}, ${modifier.modifierColorExpression()}${modifier.shapeArgument()})"
+        "alpha" -> ".alpha(${modifier.number("alpha", 1f).floatLiteral()})"
+        "shadow" ->
+          ".shadow(${modifier.number("elevationDp").dpLiteral()}${modifier.shapeArgument()})"
+        "rotate" -> ".rotate(${modifier.number("degrees").floatLiteral()})"
+        "scale" ->
+          ".scale(${modifier.number("scaleX", 1f).floatLiteral()}, ${modifier.number("scaleY", 1f).floatLiteral()})"
+        // The scroll position belongs to the screen being run, not to the design: a generated
+        // screen remembers its own, exactly as a hand-written one would.
+        "verticalScroll" -> ".verticalScroll(rememberScrollState())"
+        "horizontalScroll" -> ".horizontalScroll(rememberScrollState())"
+        "testTag" -> ".testTag(\"${modifier.optionalString("tag").orEmpty().escape()}\")"
         else -> error("unsupported modifier $type on $id")
       }
   }
@@ -1291,8 +1317,43 @@ private fun UiBuilderNode.scrollBehaviorExpression(): String? =
     else -> null
   }
 
-private fun UiBuilderNode.colorExpression(name: String): String {
-  val value = string(name)
+/** The bounds a `widthIn`/`heightIn` names, printed as only the edges it actually constrains. */
+private fun JsonObject.boundsArguments(): String =
+  listOfNotNull(
+      this["minDp"]?.jsonPrimitive?.floatOrNull?.let { "min = ${it.dpLiteral()}" },
+      this["maxDp"]?.jsonPrimitive?.floatOrNull?.let { "max = ${it.dpLiteral()}" },
+    )
+    .joinToString()
+
+/** A modifier's optional shape, as a trailing argument or nothing at all. */
+private fun JsonObject.shapeArgument(): String =
+  optionalString("shape")?.let { ", RoundedCornerShape(${shapeDp(it).dpLiteral()})" }.orEmpty()
+
+/**
+ * The colour inside a modifier, which is a `UiValueV1` rather than a node property.
+ *
+ * Same tokens, same literals and the same fallback as [colorExpression] — read through one shape so
+ * a background and a `containerColor` cannot resolve the same token differently.
+ */
+private fun JsonObject.modifierColorExpression(): String =
+  colorExpressionFor((this["color"] as? JsonObject)?.optionalString("value").orEmpty())
+
+private fun alignmentExpression(value: String?): String =
+  when (value) {
+    "topStart" -> "Alignment.TopStart"
+    "topCenter" -> "Alignment.TopCenter"
+    "topEnd" -> "Alignment.TopEnd"
+    "centerStart" -> "Alignment.CenterStart"
+    "centerEnd" -> "Alignment.CenterEnd"
+    "bottomStart" -> "Alignment.BottomStart"
+    "bottomCenter" -> "Alignment.BottomCenter"
+    "bottomEnd" -> "Alignment.BottomEnd"
+    else -> "Alignment.Center"
+  }
+
+private fun UiBuilderNode.colorExpression(name: String): String = colorExpressionFor(string(name))
+
+private fun colorExpressionFor(value: String): String {
   if (value.startsWith("#")) return "Color(0x${value.removePrefix("#").uppercase()})"
   return when (value) {
     "primary" -> "MaterialTheme.colorScheme.primary"
@@ -1646,7 +1707,35 @@ private val EMITTER_IDS =
   )
 
 private val SUPPORTED_MODIFIERS =
-  setOf("clip", "fillMaxSize", "fillMaxWidth", "matchParentSize", "padding", "size")
+  setOf(
+    "clip",
+    "fillMaxSize",
+    "fillMaxWidth",
+    "matchParentSize",
+    "padding",
+    "size",
+    // The vocabulary contracts 2.8.0 added, less the three scope-bearing ones: `align` and
+    // `weight` are printed from the properties of the same name today, and printing them from a
+    // modifier as well would be two ways to say one layout that could disagree.
+    "fillMaxHeight",
+    "width",
+    "height",
+    "widthIn",
+    "heightIn",
+    "aspectRatio",
+    "wrapContentSize",
+    "offset",
+    "zIndex",
+    "background",
+    "border",
+    "alpha",
+    "shadow",
+    "rotate",
+    "scale",
+    "verticalScroll",
+    "horizontalScroll",
+    "testTag",
+  )
 
 private val SUPPORTED_ACTIONS = setOf("select", "selectOrClear", "setText", "set", "toggle")
 
@@ -1849,6 +1938,10 @@ private val HANDLED_FIELDS =
 private val GENERATED_IMPORTS =
   listOf(
       "androidx.compose.foundation.background",
+      "androidx.compose.foundation.border",
+      "androidx.compose.foundation.horizontalScroll",
+      "androidx.compose.foundation.rememberScrollState",
+      "androidx.compose.foundation.verticalScroll",
       "androidx.compose.foundation.Canvas",
       "androidx.compose.foundation.layout.*",
       "androidx.compose.foundation.lazy.*",
@@ -1864,7 +1957,11 @@ private val GENERATED_IMPORTS =
       "androidx.compose.runtime.*",
       "androidx.compose.ui.Alignment",
       "androidx.compose.ui.Modifier",
+      "androidx.compose.ui.draw.alpha",
       "androidx.compose.ui.draw.clip",
+      "androidx.compose.ui.draw.rotate",
+      "androidx.compose.ui.draw.scale",
+      "androidx.compose.ui.draw.shadow",
       "androidx.compose.ui.draw.drawBehind",
       "androidx.compose.ui.geometry.Offset",
       "androidx.compose.ui.geometry.Size",
@@ -1880,6 +1977,8 @@ private val GENERATED_IMPORTS =
       "androidx.compose.ui.semantics.stateDescription",
       "androidx.compose.ui.text.style.TextOverflow",
       "androidx.compose.ui.unit.Dp",
+      "androidx.compose.ui.platform.testTag",
       "androidx.compose.ui.unit.dp",
+      "androidx.compose.ui.zIndex",
     )
     .sorted()
