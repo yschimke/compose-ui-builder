@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,7 @@ import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderSocketState
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderWebSocketTransport
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
 import ee.schimke.composeai.uibuilder.client.UiBuilderClientUpdate
+import ee.schimke.composeai.uibuilder.client.UiBuilderHttpRequest
 import ee.schimke.composeai.uibuilder.client.UiBuilderHttpResult
 import ee.schimke.composeai.uibuilder.client.UiBuilderLiveSessionApi
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
@@ -83,6 +85,7 @@ import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.io.encoding.Base64
 import kotlin.js.Promise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -97,6 +100,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.jetbrains.skia.Image
 
 fun main() {
   val rendererRuntimeId = sandboxRendererRuntimeId()
@@ -707,10 +711,66 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       onInspectionInvalidated = { collector ->
         inspectionPublisher.offer(collector, loadedDocument.revision)
       },
+      onRequestNativeRender = { requestNativeRender(config.designId) },
     )
     LaunchedEffect(loadedDocument.revision) { markReady() }
   }
 }
+
+/**
+ * One native render of a design: the host compiles it and draws it with real Compose.
+ *
+ * Decoding happens here rather than in the editor because `wasmJs` and the JVM decode differently
+ * and neither belongs in an editor composable — the editor takes an [ImageBitmap] and knows nothing
+ * about base64 or HTTP.
+ *
+ * The three outcomes are kept apart on purpose. A 422 is the generator refusing the design and its
+ * reasons are actionable; any other non-200 is this host failing, which is a different sentence;
+ * and a 200 with no frame means the compile lane answered without one, which the editor says
+ * plainly rather than showing an empty box.
+ */
+private suspend fun requestNativeRender(designId: String): UiBuilderNativeRender {
+  val response =
+    BrowserUiBuilderHttpTransport()
+      .post(
+        UiBuilderHttpRequest(
+          endpoint = "/api/ui-builder/v1/designs/$designId/native-preview",
+          contentType = "application/json",
+          body = "{}",
+        )
+      )
+  if (response.statusCode == 422) {
+    val refusal =
+      nativePreviewJson.decodeFromString(NativePreviewRefusal.serializer(), response.body)
+    return UiBuilderNativeRender(refusals = refusal.reasons)
+  }
+  if (response.statusCode != 200) {
+    return UiBuilderNativeRender(
+      failure = "the host answered ${response.statusCode} to a native render request"
+    )
+  }
+  val result = nativePreviewJson.decodeFromString(NativePreviewResult.serializer(), response.body)
+  result.compileError?.let {
+    return UiBuilderNativeRender(failure = it)
+  }
+  val encoded = result.imageBase64 ?: return UiBuilderNativeRender()
+  return UiBuilderNativeRender(
+    image = Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
+  )
+}
+
+/** Tolerant: a field added to the native-render payload must not blank the pane. */
+private val nativePreviewJson = Json { ignoreUnknownKeys = true }
+
+@kotlinx.serialization.Serializable
+private data class NativePreviewResult(
+  val imageBase64: String? = null,
+  val taggedNodeIds: List<String> = emptyList(),
+  val compileError: String? = null,
+)
+
+@kotlinx.serialization.Serializable
+private data class NativePreviewRefusal(val reasons: List<String> = emptyList())
 
 @Composable
 private fun VisualFixtureApp(mode: String) {

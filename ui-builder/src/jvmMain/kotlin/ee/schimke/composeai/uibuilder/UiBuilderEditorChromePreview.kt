@@ -355,6 +355,37 @@ private fun previewStringValue(value: String): JsonObject = previewTypedValue("s
 private fun previewTypedValue(type: String, value: String): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
 
+/**
+ * The native render pane, beside the canvas that the browser drew.
+ *
+ * Two renderers at once is the point: the Wasm canvas is immediate and cannot say what a screen
+ * looks like on Android, and one pane replacing the other would hide the difference that matters.
+ *
+ * What it shows here is the **refusal** state, and that is not a placeholder — it is what this
+ * fixture actually produces. The reasons are read from the same reducer the problems panel and the
+ * code pane read, so this render cannot drift from them. A frame-bearing state is deliberately not
+ * previewed: a preview cannot compile Kotlin, and standing a real render in for one the host would
+ * have produced would be a picture that claims something untrue.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderNativeRenderPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialNativeRender = nativeRenderPreviewRefusal,
+    onRequestNativeRender = { nativeRenderPreviewRefusal },
+  )
+}
+
+/** The fixture's own refusals, taken from the reducer rather than transcribed. */
+private val nativeRenderPreviewRefusal: UiBuilderNativeRender by lazy {
+  val code =
+    UiBuilderEditorReducer(editorChromePreviewCatalog).generatedCode(editorChromePreviewDocument)
+  UiBuilderNativeRender(refusals = (code as? EditorGeneratedCode.Refused)?.reasons ?: emptyList())
+}
+
 private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
   val document = editorChromePreviewDocument
   val placeholder = document.nodes.getValue(EDITOR_CHROME_PREVIEW_SELECTION)

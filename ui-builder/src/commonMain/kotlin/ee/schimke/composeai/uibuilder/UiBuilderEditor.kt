@@ -3,6 +3,7 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -68,6 +69,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -84,6 +86,7 @@ import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -141,6 +144,21 @@ data class UiBuilderNewDesignCatalog(
   val templates: List<UiBuilderNewDesignTemplate>,
 )
 
+/**
+ * One render of the current design by real Compose on the host, as the editor needs it.
+ *
+ * An [ImageBitmap] rather than the bytes the route returns: decoding is the host's job, because
+ * `wasmJs` and the JVM decode differently and neither belongs in an editor. [refusals] is not an
+ * error state — a design the generator cannot express has no native render and the reasons are the
+ * actionable half, exactly as in the code pane. [failure] is the transport failing, which is a
+ * different sentence: try again versus fix the design.
+ */
+data class UiBuilderNativeRender(
+  val image: ImageBitmap? = null,
+  val refusals: List<String> = emptyList(),
+  val failure: String? = null,
+)
+
 @Composable
 fun UiBuilderEditor(
   document: UiBuilderDocument,
@@ -165,6 +183,15 @@ fun UiBuilderEditor(
   initialInspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
   initialPreviewMode: Boolean = false,
   initialCodePaneVisible: Boolean = false,
+  /**
+   * Asks the host to compile and render this design with real Compose, or null where it cannot.
+   *
+   * Null on a box with no compile lane, and in every preview and test — so the control is absent
+   * rather than present and failing, which is the same rule the server applies to the route.
+   */
+  onRequestNativeRender: (suspend () -> UiBuilderNativeRender)? = null,
+  /** A render already in hand, for the previews that draw this pane without a host. */
+  initialNativeRender: UiBuilderNativeRender? = null,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   /**
    * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
@@ -311,6 +338,25 @@ fun UiBuilderEditor(
   // Cached the same way and for the same reason, and only while the pane is open: generating is a
   // projection plus a full generator run, which nobody should pay for on every recomposition — or
   // at all, with the pane closed.
+  var nativeRender by remember(document.id) { mutableStateOf(initialNativeRender) }
+  var nativeRequested by remember(document.id) { mutableStateOf(initialNativeRender != null) }
+  var nativePending by remember(document.id) { mutableStateOf(false) }
+  // Keyed on the revision as well as the request, so asking again after an edit re-renders rather
+  // than showing the frame the design used to have — a stale native render beside a live canvas is
+  // the exact disagreement this pane exists to expose.
+  LaunchedEffect(nativeRequested, state.document.revision) {
+    if (!nativeRequested || onRequestNativeRender == null) return@LaunchedEffect
+    nativePending = true
+    nativeRender =
+      try {
+        onRequestNativeRender()
+      } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+        throw cancelled
+      } catch (failure: Throwable) {
+        UiBuilderNativeRender(failure = failure.message ?: "the native render request failed")
+      }
+    nativePending = false
+  }
   val generatedCode =
     if (state.codePaneVisible || mobilePanel == MobileEditorPanel.Code) {
       remember(reducer, state.document) { reducer.generatedCode(state.document) }
@@ -407,6 +453,12 @@ fun UiBuilderEditor(
               } else null,
             onReconnect = onReconnect,
             onHelp = onHelp,
+            onNativeRender =
+              if (onRequestNativeRender == null) null
+              else {
+                { nativeRequested = !nativeRequested }
+              },
+            nativeRenderShown = nativeRequested,
             dispatch = ::dispatch,
           )
         }
@@ -415,10 +467,25 @@ fun UiBuilderEditor(
             Row(Modifier.fillMaxSize()) {
               navigator(Modifier.width(300.dp).fillMaxHeight(), false)
               Column(Modifier.weight(1f).fillMaxHeight()) {
-                canvas(
-                  Modifier.fillMaxWidth().weight(1f).background(Color(0xff0d0e11)).padding(20.dp),
-                  Alignment.TopStart,
-                )
+                Row(Modifier.fillMaxWidth().weight(1f)) {
+                  canvas(
+                    Modifier.weight(1f)
+                      .fillMaxHeight()
+                      .background(Color(0xff0d0e11))
+                      .padding(20.dp),
+                    Alignment.TopStart,
+                  )
+                  // Beside the canvas rather than instead of it: a difference between the two
+                  // renderers is the thing worth seeing, and one that replaced the other would
+                  // hide exactly that.
+                  if (nativeRequested) {
+                    NativeRenderPane(
+                      nativeRender,
+                      nativePending,
+                      Modifier.weight(1f).fillMaxHeight(),
+                    )
+                  }
+                }
                 // Under the canvas rather than beside it: generated Kotlin is long lines and the
                 // canvas is a phone-shaped thing, so height is what the code has to spare and
                 // width is what the canvas cannot.
@@ -826,6 +893,11 @@ private fun EditorToolbar(
   onNewDesign: (() -> Unit)?,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
+  /**
+   * Null where the host cannot compile, so the control is absent rather than present and failing.
+   */
+  onNativeRender: (() -> Unit)? = null,
+  nativeRenderShown: Boolean = false,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var showShortcuts by remember { mutableStateOf(false) }
@@ -958,6 +1030,16 @@ private fun EditorToolbar(
         enabled = true,
         onClick = { dispatch(UiBuilderEditorEvent.ToggleCodePane) },
       )
+      if (onNativeRender != null) {
+        // "Native", not "Android": the compile lane renders whatever the host's catalog targets,
+        // and a label naming one platform would be wrong on a desktop-only box.
+        EditorAction(
+          label = if (nativeRenderShown) "Native · hide" else "Native",
+          shortcut = "",
+          enabled = true,
+          onClick = onNativeRender,
+        )
+      }
       EditorAction(
         label = "Shortcuts",
         shortcut = "",
@@ -2258,6 +2340,94 @@ private fun GeneratedCodePane(code: EditorGeneratedCode, modifier: Modifier = Mo
             }
           }
         }
+      }
+    }
+  }
+}
+
+/**
+ * The same design, drawn by real Compose on the host instead of by this browser.
+ *
+ * ## Why the editor shows two renderers at once
+ *
+ * The Wasm canvas is immediate and costs the server nothing, and it cannot answer "what does this
+ * look like on Android" — platform text metrics, the device frames the render lane knows, the
+ * Robolectric-backed lane. Side by side is deliberate rather than a toggle: a difference between
+ * the two renderers is a thing a designer needs to *see*, and one that replaced the other would
+ * hide exactly that.
+ *
+ * ## Refusals, again, in the same place
+ *
+ * A design the generator cannot express has no native render, and the reasons are the actionable
+ * half — the same rule the code pane follows, and the same list, because it is the same gate. A
+ * transport failure says something different and says it separately: try again, versus fix the
+ * design.
+ */
+@Composable
+private fun NativeRenderPane(
+  render: UiBuilderNativeRender?,
+  pending: Boolean,
+  modifier: Modifier = Modifier,
+) {
+  Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
+    Column(Modifier.fillMaxSize().padding(12.dp)) {
+      Text(
+        "Native render · compiled on the host",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+      when {
+        pending && render == null ->
+          Text(
+            "Compiling this design…",
+            Modifier.padding(top = 12.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        render == null ->
+          Text(
+            "Not rendered yet.",
+            Modifier.padding(top = 12.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        render.failure != null ->
+          Text(
+            render.failure,
+            Modifier.padding(top = 12.dp),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+          )
+        render.refusals.isNotEmpty() -> {
+          Text(
+            "No native render · the generator refuses this design",
+            Modifier.padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelSmall,
+          )
+          LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
+            itemsIndexed(render.refusals) { _, reason ->
+              Text(
+                reason,
+                Modifier.padding(bottom = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+              )
+            }
+          }
+        }
+        render.image != null ->
+          Image(
+            bitmap = render.image,
+            contentDescription = "Native render of this design",
+            modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.TopStart,
+          )
+        else ->
+          Text(
+            "The host compiled this design and returned no frame.",
+            Modifier.padding(top = 12.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+          )
       }
     }
   }
