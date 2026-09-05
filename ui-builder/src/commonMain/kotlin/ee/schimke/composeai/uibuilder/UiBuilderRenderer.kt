@@ -44,6 +44,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.DividerDefaults
@@ -61,6 +62,7 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -835,6 +837,23 @@ private fun RenderNode(
           }
         }
       }
+    // `onCheckedChange` rather than the clickable modifier every node gets: a control that reports
+    // its own change is what makes the box tickable in the live playground, and Material draws the
+    // ripple and the state layer for it.
+    "m3/checkbox" ->
+      Checkbox(
+        checked = node.resolvedBool("checked", state),
+        onCheckedChange = { activate() },
+        modifier = measured,
+        enabled = enabled,
+      )
+    "m3/switch" ->
+      Switch(
+        checked = node.resolvedBool("checked", state),
+        onCheckedChange = { activate() },
+        modifier = measured,
+        enabled = enabled,
+      )
     "m3/dialog" ->
       BuilderDialogSurface(
         node = node,

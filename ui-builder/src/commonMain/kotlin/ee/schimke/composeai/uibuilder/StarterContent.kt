@@ -93,6 +93,11 @@ internal object StarterContent {
     mapOf(
       "shape/colour-dot" to
         mapOf("color" to starterLiteral("color", "#FF6750A4"), "diameterDp" to starterNumber(8)),
+      // Ticked and on. Material draws an unchecked box as an empty square and an off switch as a
+      // grey pill, and a palette drop that looks like neither a checkbox nor a switch is the case
+      // starter content exists for. Turning one off is a click.
+      "m3/checkbox" to mapOf("checked" to starterBool(true)),
+      "m3/switch" to mapOf("checked" to starterBool(true)),
       // Zero is already what the catalog's neutral default writes; it is spelled out because a tab
       // row is required to carry the index and a row with none draws no indicator at all.
       "m3/primary-tab-row" to mapOf("selectedIndex" to starterNumber(0)),

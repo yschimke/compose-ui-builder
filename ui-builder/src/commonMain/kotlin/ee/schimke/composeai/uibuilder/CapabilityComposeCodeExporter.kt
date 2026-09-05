@@ -366,6 +366,8 @@ private class ComposeEmitter(
         line(bodyLevel, "BuilderSnackbarHost(visible = ${node.boolExpression("visible")})")
       "m3/surface" -> emitSurface(node, bodyLevel)
       "m3/card" -> emitCard(node, bodyLevel)
+      "m3/checkbox" -> emitToggle(node, bodyLevel, "Checkbox")
+      "m3/switch" -> emitToggle(node, bodyLevel, "Switch")
       "m3/dialog" -> emitDialog(node, bodyLevel)
       "m3/date-picker" -> emitDatePicker(node, bodyLevel)
       "m3/time-picker" -> emitTimePicker(node, bodyLevel)
@@ -773,6 +775,19 @@ private class ComposeEmitter(
     )
     node.slot("content").forEach { emitNode(it, level + 1) }
     line(level, "}")
+  }
+
+  /**
+   * `Checkbox` and `Switch`, which differ only in the symbol.
+   *
+   * One emitter for both because their signatures are the same three arguments, and a second copy
+   * would be a second place for the `checked` binding to drift from the renderer's.
+   */
+  private fun emitToggle(node: UiBuilderNode, level: Int, symbol: String) {
+    line(
+      level,
+      "$symbol(checked = ${node.boolExpression("checked")}, onCheckedChange = { ${node.actionExpression("click", stateKotlinTypes)} }, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
+    )
   }
 
   /**
@@ -1515,6 +1530,7 @@ private val EMITTER_IDS =
     "m3/button",
     "m3/card",
     "m3/center-aligned-top-app-bar",
+    "m3/checkbox",
     "m3/date-picker",
     "m3/dialog",
     "m3/filter-chip",
@@ -1528,6 +1544,7 @@ private val EMITTER_IDS =
     "m3/search-input-field",
     "m3/snackbar-host",
     "m3/surface",
+    "m3/switch",
     "m3/tab",
     "m3/text",
     "m3/time-picker",
@@ -1652,6 +1669,7 @@ private val HANDLED_FIELDS =
         setOf("containerColor", "scrolledContainerColor", "scrollBehavior"),
         setOf("title"),
       ),
+    "m3/checkbox" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),
     "m3/date-picker" to HandledFields(setOf("mode", "selectedDate", "showModeToggle")),
     "m3/dialog" to
       HandledFields(
@@ -1693,6 +1711,7 @@ private val HANDLED_FIELDS =
         setOf("containerColor", "shape", "shapeDp", "tonalElevationDp"),
         setOf("content"),
       ),
+    "m3/switch" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),
     "m3/tab" to HandledFields(setOf("selected"), setOf("text")),
     "m3/time-picker" to HandledFields(setOf("mode", "hour", "minute", "is24Hour")),
     "m3/text" to

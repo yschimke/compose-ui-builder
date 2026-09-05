@@ -108,6 +108,30 @@ the drop. What each is, and why there is no before image, are in
 
 ![A top app bar, a tab row, a list item and a colour dot](../../renders/ui-builder-advertised-components/advertised.after.png)
 
+## Selection controls
+
+`m3/checkbox` and `m3/switch` are one pair rather than two changes: the same `checked`/`enabled`
+properties, the same `onCheckedChange`, the same binding to a declared state variable, and the same
+risk — that the renderer and the exporter read that binding differently.
+
+Both bind `checked` to a flag through `stateEquals`, exactly as `m3/filter-chip`'s `selected` does,
+and both take a `click` action, so a checkbox wired to a state variable ticks on the canvas *and*
+generates `onCheckedChange = { notify = !notify }`. That is the difference between a control and a
+picture of one, and it is asserted on one document in `SelectionControlTest` so the two projections
+cannot drift apart.
+
+They are also the first pair whose **component record** is authored rather than deferred: Material
+declares `onCheckedChange` as `((Boolean) -> Unit)?`, so a call site can write `null` for it, which
+is the case `ComponentSnippets` documents as the reason `Checkbox`, `RadioButton` and `Switch` get
+through. The record is exercised end to end in `M3CatalogComponentRecordTest` rather than trusted —
+a record nothing generates against is a table nobody has checked.
+
+### Visual evidence
+
+Both, on and off, in [`renders/ui-builder-selection-controls/`](../../renders/ui-builder-selection-controls/README.md).
+
+![A checked checkbox, an unchecked checkbox, a switch on and a switch off](../../renders/ui-builder-selection-controls/selection-controls.after.png)
+
 ## The dialog and the pickers
 
 Three components the catalog did not carry: `m3/dialog`, `m3/date-picker` and `m3/time-picker`.

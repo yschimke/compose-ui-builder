@@ -278,6 +278,21 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "m3/checkbox",
+      "displayName": "Checkbox",
+      "role": "Leaf",
+      "traits": ["SelectionControl", "Action"],
+      "slots": [],
+      "properties": [
+        { "name": "checked", "jsonType": ["boolean", "string"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shape a filter chip's `selected` takes." },
+        { "name": "enabled", "jsonType": "boolean", "required": false }
+      ],
+      "modifierCapabilities": ["size", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "Checkbox", "imports": ["androidx.compose.material3.Checkbox"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
       "componentId": "m3/date-picker",
       "displayName": "Date picker",
       "role": "Leaf",
@@ -524,6 +539,21 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Surface", "imports": ["androidx.compose.material3.Surface"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "m3/switch",
+      "displayName": "Switch",
+      "role": "Leaf",
+      "traits": ["SelectionControl", "Action"],
+      "slots": [],
+      "properties": [
+        { "name": "checked", "jsonType": ["boolean", "string"], "required": false },
+        { "name": "enabled", "jsonType": "boolean", "required": false }
+      ],
+      "modifierCapabilities": ["size", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "Switch", "imports": ["androidx.compose.material3.Switch"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
