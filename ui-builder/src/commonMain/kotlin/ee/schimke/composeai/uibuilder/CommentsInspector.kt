@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -200,12 +201,14 @@ internal fun CommentsInspector(
     }
   }
   hostStatus?.let {
-    Text(
-      it,
-      Modifier.padding(top = 6.dp),
-      color = MaterialTheme.colorScheme.error,
-      style = MaterialTheme.typography.labelSmall,
-    )
+    SelectionContainer {
+      Text(
+        it,
+        Modifier.padding(top = 6.dp),
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
   }
 
   HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
@@ -309,7 +312,9 @@ private fun CommentThreadCard(
             )
           }
         }
-        Text(comment.body, style = MaterialTheme.typography.bodySmall)
+        // The one piece of prose in this editor somebody else wrote, so it is the one that most
+        // wants copying out — into a commit message, a reply, an issue.
+        SelectionContainer { Text(comment.body, style = MaterialTheme.typography.bodySmall) }
       }
     }
     Row(

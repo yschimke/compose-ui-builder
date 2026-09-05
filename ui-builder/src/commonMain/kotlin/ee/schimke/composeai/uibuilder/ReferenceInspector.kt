@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -541,12 +542,17 @@ private fun ReferenceSectionHeading(label: String) {
 
 @Composable
 private fun ReferenceStatusText(message: String) {
-  Text(
-    message,
-    Modifier.padding(top = 6.dp),
-    color = MaterialTheme.colorScheme.error,
-    style = MaterialTheme.typography.bodySmall,
-  )
+  // Every refusal this panel shows — a paste the browser would not decode, a store that would not
+  // keep the image — comes through here, so this is the one place that has to be selectable for
+  // any of them to be quotable.
+  SelectionContainer {
+    Text(
+      message,
+      Modifier.padding(top = 6.dp),
+      color = MaterialTheme.colorScheme.error,
+      style = MaterialTheme.typography.bodySmall,
+    )
+  }
 }
 
 @Composable

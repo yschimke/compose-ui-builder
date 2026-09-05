@@ -1571,22 +1571,26 @@ private fun DocumentIdentity(state: UiBuilderEditorState, modifier: Modifier = M
         )
       }
     }
-    Column(Modifier.padding(start = 10.dp)) {
-      Text(
-        state.document.title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-      Text(
-        if (catalogSystemId.isEmpty()) "Compose UI Builder"
-        else "Compose UI Builder · $catalogSystemId",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
+    // The design's title and the catalog it is pinned to, selectable: they are the two strings
+    // anyone naming this design elsewhere has to reproduce exactly.
+    SelectionContainer {
+      Column(Modifier.padding(start = 10.dp)) {
+        Text(
+          state.document.title,
+          style = MaterialTheme.typography.titleSmall,
+          fontWeight = FontWeight.Bold,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+          if (catalogSystemId.isEmpty()) "Compose UI Builder"
+          else "Compose UI Builder · $catalogSystemId",
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
     }
   }
 }
@@ -1823,32 +1827,36 @@ private fun CanvasStatusBar(
     color = MaterialTheme.colorScheme.surface,
     tonalElevation = 2.dp,
   ) {
-    Row(
-      Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 16.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-      StatusText("Revision ${state.document.revision}")
-      StatusText("${state.document.nodes.size} nodes")
-      if (state.selection.size > 1) StatusText("${state.selection.size} selected")
-      // Only while something is being dragged. The drop target is the answer to a question nobody
-      // is asking with both hands still: it read "No compatible slot" at rest, which is a warning
-      // about nothing.
-      if (dragging) {
-        StatusText("Drop target: $dropTargetLabel", color = MaterialTheme.colorScheme.primary)
-      }
-      Spacer(Modifier.weight(1f))
-      val outcome = state.lastOutcome
-      if (outcome is CommandOutcome.Rejected) {
-        StatusText("${outcome.code}: ${outcome.message}", color = MaterialTheme.colorScheme.error)
-      }
-      Surface(shape = RoundedCornerShape(10.dp), color = Color(0xff214c37)) {
-        Text(
-          sessionLabel,
-          Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-          color = Color(0xffa8f2c6),
-          style = MaterialTheme.typography.labelSmall,
-        )
+    // Selectable, because the bar is where a rejection and the live-session status land, and both
+    // are sentences a person needs in a bug report rather than retyped off a screenshot.
+    SelectionContainer {
+      Row(
+        Modifier.fillMaxWidth().height(30.dp).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+      ) {
+        StatusText("Revision ${state.document.revision}")
+        StatusText("${state.document.nodes.size} nodes")
+        if (state.selection.size > 1) StatusText("${state.selection.size} selected")
+        // Only while something is being dragged. The drop target is the answer to a question nobody
+        // is asking with both hands still: it read "No compatible slot" at rest, which is a warning
+        // about nothing.
+        if (dragging) {
+          StatusText("Drop target: $dropTargetLabel", color = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.weight(1f))
+        val outcome = state.lastOutcome
+        if (outcome is CommandOutcome.Rejected) {
+          StatusText("${outcome.code}: ${outcome.message}", color = MaterialTheme.colorScheme.error)
+        }
+        Surface(shape = RoundedCornerShape(10.dp), color = Color(0xff214c37)) {
+          Text(
+            sessionLabel,
+            Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+            color = Color(0xffa8f2c6),
+            style = MaterialTheme.typography.labelSmall,
+          )
+        }
       }
     }
   }
@@ -3613,12 +3621,14 @@ private fun PropertyControl(
       )
     }
     field.error?.let {
-      Text(
-        it,
-        Modifier.semantics { contentDescription = "${field.label} validation error" },
-        color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.labelSmall,
-      )
+      SelectionContainer {
+        Text(
+          it,
+          Modifier.semantics { contentDescription = "${field.label} validation error" },
+          color = MaterialTheme.colorScheme.error,
+          style = MaterialTheme.typography.labelSmall,
+        )
+      }
     }
   }
 }
@@ -3843,29 +3853,34 @@ private fun ProblemsInspector(
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.labelSmall,
   )
-  LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-    itemsIndexed(problems) { _, problem ->
-      Column(
-        Modifier.fillMaxWidth().padding(bottom = 12.dp).let { base ->
-          problem.nodeId?.let { id ->
-            base.clickable { dispatch(UiBuilderEditorEvent.SelectNode(id)) }
-          } ?: base
-        }
-      ) {
-        Text(
-          problem.code,
-          color = MaterialTheme.colorScheme.error,
-          style = MaterialTheme.typography.labelMedium,
-        )
-        Text(problem.message, style = MaterialTheme.typography.bodySmall)
-        val where =
-          listOfNotNull(problem.nodeId, problem.componentId).joinToString(" · ").ifEmpty { null }
-        if (where != null) {
+  // A refusal is something a person quotes — into an issue, into a chat, into a search — so the
+  // list is selectable. A tap still selects the node: [SelectionContainer] claims the long press
+  // and the drag, not the click underneath it.
+  SelectionContainer {
+    LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+      itemsIndexed(problems) { _, problem ->
+        Column(
+          Modifier.fillMaxWidth().padding(bottom = 12.dp).let { base ->
+            problem.nodeId?.let { id ->
+              base.clickable { dispatch(UiBuilderEditorEvent.SelectNode(id)) }
+            } ?: base
+          }
+        ) {
           Text(
-            where,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
+            problem.code,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelMedium,
           )
+          Text(problem.message, style = MaterialTheme.typography.bodySmall)
+          val where =
+            listOfNotNull(problem.nodeId, problem.componentId).joinToString(" · ").ifEmpty { null }
+          if (where != null) {
+            Text(
+              where,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelSmall,
+            )
+          }
         }
       }
     }
@@ -3942,13 +3957,17 @@ private fun GeneratedCodePane(
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.labelSmall,
           )
-          LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
-            itemsIndexed(code.reasons) { _, reason ->
-              Text(
-                reason,
-                Modifier.padding(bottom = 8.dp),
-                style = MaterialTheme.typography.bodySmall,
-              )
+          // Selectable for the same reason the source is: a refusal is the pane's other answer,
+          // and it is no more quotable than the Kotlin if it can only be read.
+          SelectionContainer {
+            LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
+              itemsIndexed(code.reasons) { _, reason ->
+                Text(
+                  reason,
+                  Modifier.padding(bottom = 8.dp),
+                  style = MaterialTheme.typography.bodySmall,
+                )
+              }
             }
           }
         }
@@ -4003,13 +4022,17 @@ private fun NativeRenderPane(
             Modifier.padding(top = 12.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
+        // The host's own words about why it could not draw this, so they are selectable: what a
+        // compile failure says is the whole content of the report somebody is about to file.
         render.failure != null ->
-          Text(
-            render.failure,
-            Modifier.padding(top = 12.dp),
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
-          )
+          SelectionContainer {
+            Text(
+              render.failure,
+              Modifier.padding(top = 12.dp),
+              color = MaterialTheme.colorScheme.error,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
         render.refusals.isNotEmpty() -> {
           Text(
             "No native render · the generator refuses this design",
@@ -4017,13 +4040,15 @@ private fun NativeRenderPane(
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.labelSmall,
           )
-          LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
-            itemsIndexed(render.refusals) { _, reason ->
-              Text(
-                reason,
-                Modifier.padding(bottom = 8.dp),
-                style = MaterialTheme.typography.bodySmall,
-              )
+          SelectionContainer {
+            LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
+              itemsIndexed(render.refusals) { _, reason ->
+                Text(
+                  reason,
+                  Modifier.padding(bottom = 8.dp),
+                  style = MaterialTheme.typography.bodySmall,
+                )
+              }
             }
           }
         }
@@ -4248,11 +4273,13 @@ private fun ScreenEnvironmentInspector(
     }
   }
   validationError?.let {
-    Text(
-      it,
-      color = MaterialTheme.colorScheme.error,
-      style = MaterialTheme.typography.bodySmall,
-    )
+    SelectionContainer {
+      Text(
+        it,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
   }
   Button(
     onClick = {
