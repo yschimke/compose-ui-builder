@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -78,6 +80,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -376,11 +379,15 @@ fun UiBuilderSurface(
       ) {
         document.roots.forEach { root ->
           val rootModifier =
-            if (
-              document.nodes[root]?.componentId?.startsWith("remote-m3/widget-container-") == true
-            )
-              Modifier.align(Alignment.Center)
-            else Modifier
+            when {
+              document.nodes[root]?.componentId?.startsWith("remote-m3/widget-container-") ==
+                true -> Modifier.align(Alignment.Center)
+              // A screen is taller than its frame by design — the stadium IS the scroll extent —
+              // so it is pinned to the top and centred across, the way a long screenshot reads.
+              document.nodes[root]?.componentId == "wear-m3/screen-scaffold" ->
+                Modifier.align(Alignment.TopCenter)
+              else -> Modifier
+            }
           RenderNode(
             document = document,
             nodeId = root,
@@ -517,6 +524,38 @@ private fun RenderNode(
         hasBrushes = slot("background").isNotEmpty(),
       ) {
         slot("content").forEach { child(it, Modifier.fillMaxSize()) }
+      }
+    // The Wear screen. Unlike the widget container above, this stand-in is EMITTED rather than
+    // erased: `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter` names
+    // it. What is faked is only the drawing — the canvas has no Wear Compose to draw with.
+    "wear-m3/screen-scaffold" ->
+      WearScreenScaffold(
+        node = node,
+        modifier = measured,
+        screenWidthDp = document.wearScreenWidthDp(),
+        edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
+        hasEdgeButton = slot("edgeButton").isNotEmpty(),
+      ) { next ->
+        slot("content").forEach { child(it, next) }
+      }
+    // A plain Column, deliberately. `TransformingLazyColumn` scales and fades its rows against the
+    // round display through `SurfaceTransformation` and `Modifier.transformedHeight`, and neither
+    // exists off Android — approximating the curve with a hand-rolled scale would draw a
+    // *different*
+    // wrong picture and imply it was the right one. The running order is what this shows.
+    "wear-m3/transforming-lazy-column" ->
+      Column(
+        modifier = measured.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp", 4f).dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        // `IntrinsicSize.Min`, because a Wear list row has to wrap. `m3/card` — which is what a
+        // borrowed row is — draws its content slot in a `Box(Modifier.fillMaxSize())`, and inside a
+        // Column with a bounded parent that makes the first card eat every remaining pixel and the
+        // rest of the list vanish. The real `TransformingLazyColumn` measures each item's own
+        // height too, through `Modifier.transformedHeight`; this is the same question asked with
+        // the tool the canvas has.
+        slot("items").forEach { child(it, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) }
       }
     "layout/supporting-pane-scaffold" ->
       DeterministicSupportingPaneScaffold(
@@ -854,6 +893,158 @@ private fun UiBuilderNode.linearGradientBrush(): Brush {
     else -> Brush.verticalGradient(listOf(start, end))
   }
 }
+
+/**
+ * The screen diameter a Wear design is authored against, in dp.
+ *
+ * Read from the document's own frame rather than from a scaffold property, because the Screen
+ * inspector already carries it: `DeviceDimensions` publishes `wearos_small_round` (192dp),
+ * `wearos_large_round` (227dp) and `wearos_xl_round` (240dp), and the server serves them to the
+ * frame menu. A fifth scaffold property would be a second answer to a question already answered,
+ * and the two would disagree the first time somebody changed one.
+ *
+ * The fallback is the small round size rather than the frame's raw width: a design opened on a
+ * phone frame is a design somebody has not picked a watch for yet, and drawing a 411dp-wide watch
+ * is a worse answer than drawing the smallest real one.
+ */
+private fun UiBuilderDocument.wearScreenWidthDp(): Int {
+  val width = environment["widthDp"]?.jsonPrimitive?.intOrNull ?: return WEAR_SMALL_ROUND_DP
+  return if (width in WEAR_SMALL_ROUND_DP..WEAR_XL_ROUND_DP) width else WEAR_SMALL_ROUND_DP
+}
+
+/**
+ * The Wear screen as a long screenshot: the frame's width, the content's height, round caps.
+ *
+ * ## Why a stadium and not a circle
+ *
+ * A watch screen is round and a Wear design is a *scrolling* thing — `ScreenScaffold` exists to
+ * hold a `TransformingLazyColumn` — so the two pictures an author might want are the 192dp keyhole
+ * and the whole extent. This draws the extent, which is the Wear long-screenshot convention and the
+ * one you can actually build in: a keyhole shows one screenful and hides the rest of the list being
+ * authored. [WEAR_VIEWPORT_OUTLINE] is drawn over the top cap so the first screenful is still
+ * marked.
+ *
+ * ## What it gets wrong, on purpose
+ *
+ * The sides are straight. On a watch the usable width narrows toward the caps, so a row near the
+ * top or bottom of a screenful is inset and this draws it full-width — every row here reads wider
+ * than it will be. The row transformation is missing for the same reason the list stand-in is a
+ * Column. Both are stated in the catalog's `wasm` notes, and the native render lane is what answers
+ * the question properly.
+ */
+@Composable
+private fun WearScreenScaffold(
+  node: UiBuilderNode,
+  modifier: Modifier,
+  screenWidthDp: Int,
+  edgeButton: @Composable (Modifier) -> Unit,
+  hasEdgeButton: Boolean,
+  content: @Composable (Modifier) -> Unit,
+) {
+  val width = screenWidthDp.dp
+  // Wear Material 3 is dark-first and its `background` is pure black, not the editor theme's
+  // surface. Reading the theme here made the watch go white in a light editor, which is the same
+  // bug the widget container's default background comments.
+  val background = node.color("background", Color.Black)
+  val onBackground = node.color("timeTextColor", WEAR_SCREEN_ON_BACKGROUND)
+  val timeText = node.string("timeText")
+  val scrollIndicator = node.bool("scrollIndicator", true)
+  Column(
+    modifier =
+      modifier
+        .width(width)
+        // At least one screenful, so an empty scaffold is a watch face rather than a sliver.
+        .heightIn(min = width)
+        .clip(RoundedCornerShape(percent = 50))
+        .background(background)
+        .drawBehind {
+          // The first screenful, marked on the extent: the round viewport, and the line where it
+          // ends. Stroked rather than filled so it reads as a guide and not as chrome the design
+          // owns — but visible, because "how much of this is above the fold" is the one question
+          // the extent makes harder than a keyhole canvas does.
+          drawCircle(
+            color = WEAR_VIEWPORT_OUTLINE,
+            radius = size.width / 2f,
+            center = Offset(size.width / 2f, size.width / 2f),
+            style = Stroke(1.dp.toPx()),
+          )
+          if (size.height > size.width) {
+            drawLine(
+              color = WEAR_VIEWPORT_OUTLINE,
+              start = Offset(0f, size.width),
+              end = Offset(size.width, size.width),
+              strokeWidth = 1.dp.toPx(),
+            )
+          }
+          if (scrollIndicator) {
+            val trackHeight = size.width * 0.42f
+            val trackTop = (size.width - trackHeight) / 2f
+            drawRoundRect(
+              color = onBackground.copy(alpha = 0.35f),
+              topLeft = Offset(size.width - 6.dp.toPx(), trackTop),
+              size = Size(3.dp.toPx(), trackHeight),
+              cornerRadius = CornerRadius(1.5f.dp.toPx(), 1.5f.dp.toPx()),
+            )
+          }
+        }
+  ) {
+    // `TimeText` is curved on a watch and flat here. The strip's *height* is what the content below
+    // is displaced by, and that much is right; the curve is not something Compose Multiplatform
+    // draws, and a straight line in its place is the honest version of not having it.
+    if (timeText.isNotEmpty()) {
+      Box(
+        Modifier.fillMaxWidth().height(width * WEAR_TIME_TEXT_BAND),
+        contentAlignment = Alignment.Center,
+      ) {
+        Text(
+          text = timeText,
+          color = onBackground,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Medium,
+        )
+      }
+    }
+    content(Modifier.fillMaxWidth().padding(horizontal = width * WEAR_SIDE_INSET))
+    if (hasEdgeButton) {
+      // The edge button hugs the bottom curve, which on the extent is the bottom cap. It is placed
+      // rather than sized: `EdgeButton` takes its shape from the screen and this cannot draw that.
+      Box(
+        Modifier.fillMaxWidth().height(width * WEAR_EDGE_BUTTON_BAND),
+        contentAlignment = Alignment.BottomCenter,
+      ) {
+        edgeButton(Modifier.padding(bottom = width * 0.04f))
+      }
+    } else {
+      Spacer(Modifier.height(width * WEAR_BOTTOM_INSET))
+    }
+  }
+}
+
+/** `wearos_small_round` and `wearos_xl_round` from `DeviceDimensions`, as the accepted range. */
+private const val WEAR_SMALL_ROUND_DP = 192
+
+private const val WEAR_XL_ROUND_DP = 240
+
+/** Wear Material 3's `onBackground`: near-white, not the editor theme's. */
+private val WEAR_SCREEN_ON_BACKGROUND = Color(0xFFE3E3E3)
+
+/** The first screenful's outline over the extent, faint enough to read as a guide. */
+private val WEAR_VIEWPORT_OUTLINE = Color(0x59FFFFFF)
+
+/**
+ * Bands as a fraction of the screen diameter, so they hold across 192, 227 and 240dp.
+ *
+ * These are proportions read off the shipped `ScreenScaffold` renders rather than published
+ * constants — upstream derives its content padding from the screen shape at layout time, which is
+ * exactly the calculation the Wasm canvas cannot run.
+ */
+private const val WEAR_TIME_TEXT_BAND = 0.14f
+
+private const val WEAR_SIDE_INSET = 0.052f
+
+private const val WEAR_EDGE_BUTTON_BAND = 0.22f
+
+private const val WEAR_BOTTOM_INSET = 0.12f
 
 /**
  * Compose UI counterpart of the stable Glance Wear widget host frame.

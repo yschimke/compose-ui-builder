@@ -485,3 +485,138 @@ private fun NewDesignState.declaration(): JsonObject =
       "persistence" to JsonPrimitive("preview"),
     )
   )
+
+/** The rows the Wear screen template opens on, matching the wear-m3 catalog's own list sticker. */
+private val WEAR_SCREEN_ROWS =
+  listOf(
+    "Morning run" to "5.2 km · 28 min",
+    "Heart rate" to "72 bpm",
+    "Sleep" to "7h 14m",
+    "Steps" to "6,482",
+    "Calories" to "412 kcal",
+    "Cycle" to "18 km · 41 min",
+  )
+
+/**
+ * The Wear list screen a `wear-m3` design opens on: a `ScreenScaffold` over a
+ * `TransformingLazyColumn` of title cards, under a frozen curved status strip.
+ *
+ * It reproduces `Template/TimeText` from compose-ai-tools' `samples/design-catalog-wear-m3` — the
+ * base Wear screen, and the shape well over half of Wear Material 3's surface area takes — for the
+ * same reason the widget templates reproduce the `WearWidget` sample: the question a first template
+ * has to answer is whether the designer can express a real screen, and a blank scaffold does not
+ * answer it.
+ *
+ * The clock is frozen at `10:10` rather than live, exactly as that catalog freezes its own: a
+ * status strip that moved would churn every render diff, and dropping the strip instead would
+ * under-report the top margin the content lays out around.
+ */
+fun wearScreenUiBuilderDocument(
+  designId: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+  title: String = "Activity",
+  edgeButtonLabel: String? = "Done",
+): UiBuilderDocument {
+  require(designId.isNotBlank()) { "wear screen design id must not be blank" }
+  val rowNodes = WEAR_SCREEN_ROWS.flatMapIndexed { index, (rowTitle, subtitle) ->
+    listOf(
+      UiBuilderNode(
+        id = "row-$index",
+        componentId = "m3/card",
+        properties = JsonObject(mapOf("variant" to literal("enum", JsonPrimitive("filled")))),
+        modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
+        // One column, not two texts. `m3/card` draws its content slot in a `Box`, so two
+        // children would be stacked on top of each other and the card would take the whole
+        // remaining height — which is exactly what the first render of this template did.
+        slots = mapOf("content" to listOf("row-$index-lines")),
+      ),
+      UiBuilderNode(
+        id = "row-$index-lines",
+        componentId = "layout/column",
+        properties =
+          JsonObject(mapOf("horizontalAlignment" to literal("enum", JsonPrimitive("start")))),
+        modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
+        slots = mapOf("children" to listOf("row-$index-title", "row-$index-subtitle")),
+      ),
+      wearScreenText("row-$index-title", rowTitle, "titleMedium", "onSurface", "start"),
+      wearScreenText("row-$index-subtitle", subtitle, "bodySmall", "onSurfaceVariant", "start"),
+    )
+  }
+  val edgeButtonNodes =
+    edgeButtonLabel?.let {
+      listOf(
+        UiBuilderNode(
+          id = "edge-button",
+          componentId = "m3/button",
+          properties = JsonObject(mapOf("style" to literal("enum", JsonPrimitive("filled")))),
+          modifiers = JsonArray(emptyList()),
+          slots = mapOf("content" to listOf("edge-button-label")),
+        ),
+        wearScreenText("edge-button-label", it, "labelLarge", "onPrimary"),
+      )
+    } ?: emptyList()
+  val nodes =
+    listOf(
+      UiBuilderNode(
+        id = "wear-screen",
+        componentId = "wear-m3/screen-scaffold",
+        properties =
+          JsonObject(
+            mapOf(
+              "timeText" to literal("string", JsonPrimitive("10:10")),
+              "scrollIndicator" to literal("bool", JsonPrimitive(true)),
+            )
+          ),
+        modifiers = JsonArray(emptyList()),
+        slots =
+          mapOf(
+            "content" to listOf("wear-list"),
+            "edgeButton" to edgeButtonNodes.take(1).map(UiBuilderNode::id),
+          ),
+      ),
+      UiBuilderNode(
+        id = "wear-list",
+        componentId = "wear-m3/transforming-lazy-column",
+        properties = JsonObject(mapOf("verticalSpacingDp" to literal("float", JsonPrimitive(4)))),
+        modifiers = JsonArray(emptyList()),
+        slots =
+          mapOf("items" to listOf("list-header") + WEAR_SCREEN_ROWS.indices.map { "row-$it" }),
+      ),
+      wearScreenText("list-header", title, "titleSmall", "onSurfaceVariant"),
+    ) + rowNodes + edgeButtonNodes
+  return UiBuilderDocument(
+    schema = "compose-ui-builder-document/v1-candidate",
+    id = designId,
+    title = "$title · Wear screen",
+    revision = 0,
+    catalogPin = catalogPin,
+    environment = environment,
+    stateVariables = JsonObject(emptyMap()),
+    roots = listOf("wear-screen"),
+    nodes = nodes.associateBy(UiBuilderNode::id),
+  )
+}
+
+private fun wearScreenText(
+  id: String,
+  text: String,
+  style: String,
+  color: String,
+  textAlign: String = "center",
+): UiBuilderNode =
+  UiBuilderNode(
+    id = id,
+    componentId = "m3/text",
+    properties =
+      JsonObject(
+        mapOf(
+          "text" to literal("string", JsonPrimitive(text)),
+          "style" to literal("typographyToken", JsonPrimitive(style)),
+          "color" to colorToken(color),
+          "textAlign" to literal("enum", JsonPrimitive(textAlign)),
+        )
+      ),
+    modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
+    slots = emptyMap(),
+  )

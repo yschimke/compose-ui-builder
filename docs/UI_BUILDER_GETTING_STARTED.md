@@ -103,7 +103,9 @@ unsupported. Inspect capability notes before treating a design as portable to an
 
 Operators select the reviewed adapters with
 `--ui-builder-catalogs m3-catalog,remote-m3`. The packaged deployment uses exactly that allowlist;
-other served catalogs remain preview-only until added explicitly.
+other served catalogs remain preview-only until added explicitly. `wear-m3` is a third packaged
+adapter and is **not** in that default — add it explicitly (`--ui-builder-catalogs
+m3-catalog,remote-m3,wear-m3`) while it is a prototype.
 `remote-m3` is a deliberately small adapter: Small and Large Wear widget scaffolds plus Box, Row,
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.
@@ -259,6 +261,46 @@ Refusals work the way the Compose exporter's do: a node with no Remote Compose c
 rather than approximated. An image background is the one to expect — `WearWidgetBrush.image` takes a
 `RemoteImageBitmap`, which generated source cannot name from an asset key, so the refusal says to
 supply the bitmap in `provideWidgetData` and add the call by hand.
+
+## Authoring a Wear screen
+
+`wear-m3` is the third adapter, and it answers the screen half of the question `remote-m3` answered
+for widgets. Two components are its own — `wear-m3/screen-scaffold` and
+`wear-m3/transforming-lazy-column` — and everything else in it is `m3-catalog`'s, borrowed for the
+canvas while Wear content ids do not exist yet.
+
+The canvas draws the scaffold as a **long-screenshot stadium**: the frame's width, the content's
+height, round caps, with the first screenful outlined over the top cap and a line where it ends.
+That is the whole scrolling extent rather than a 192dp keyhole onto it, because the extent is what
+you are building.
+
+![The Wear list screen drawn as a long-screenshot stadium](design/evidence/ui-builder-wear-screen/wear-screen-stadium.png)
+
+The screen's diameter comes from the **document's own frame**, so picking a watch in the Screen
+inspector's Wear OS presets is what changes it, and comparing where a list wraps at 192, 227 and
+240dp is three columns rather than three scroll positions:
+
+![The same design at the three round screen sizes](design/evidence/ui-builder-wear-screen/wear-screen-breakpoints.png)
+
+**The canvas is not Wear Compose, and says so on every component.**
+`androidx.wear.compose:compose-material3` is an Android AAR that a Compose/Wasm canvas cannot link,
+so nothing here draws the real component. The two that matter: rows are **not** transformed — the
+scaling and fading `SurfaceTransformation` gives a `TransformingLazyColumn` is what a Wear list
+looks like and is exactly what a plain Column cannot show — and the stadium's straight sides do not
+narrow toward the caps, so every row reads at least as wide as it will be. **Native** is where that
+question gets answered properly.
+
+**Code** shows the real thing, which is the point of the stand-in. Unlike the widget container, the
+screen scaffold is *emitted* rather than erased: `ScreenScaffold` is a composable you call, so the
+generated Kotlin names it, wraps it in the `AppScaffold` that actually owns `TimeText`, and carries
+`Modifier.transformedHeight(this, spec)` and `SurfaceTransformation(spec)` on every row.
+
+![The Code pane on a Wear screen design](design/evidence/ui-builder-wear-screen/wear-screen-code-pane.png)
+
+A borrowed component with no Wear Compose counterpart is refused **by node** rather than
+approximated — the canvas will draw an `m3/filter-chip` and there is nothing on a watch to write it
+as. [`design/UI_BUILDER_WEAR_SCREEN.md`](design/UI_BUILDER_WEAR_SCREEN.md) has the whole design, the
+full list of what the canvas is knowingly wrong about, and what is not built yet.
 
 ## Adding a published Remote Compose component
 

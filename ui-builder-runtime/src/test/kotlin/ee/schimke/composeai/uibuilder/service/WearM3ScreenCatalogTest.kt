@@ -1,0 +1,86 @@
+package ee.schimke.composeai.uibuilder.service
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+/**
+ * The `wear-m3` authoring surface: what it admits, and what it says when asked for something else.
+ *
+ * The catalog is synthesised from the packaged M3 one rather than shipped as its own resource, the
+ * way `remote-m3`'s widget scaffolds are. That is a statement about how much of it is real: two
+ * components are Wear's and every other component in it is Material 3 borrowed for the canvas.
+ */
+class WearM3ScreenCatalogTest {
+  private val executor =
+    CurrentM3UiBuilderCatalogExecutor(
+      catalogSystemIds =
+        setOf(
+          CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
+          CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+        )
+    )
+
+  private val wear =
+    executor.listCatalogs().single {
+      it.benchmark.catalogSystemId == CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID
+    }
+
+  @Test
+  fun `the wear catalog publishes the screen scaffold and the transforming lazy column`() {
+    val ids = wear.components.map { it.componentId }
+
+    assertTrue("wear-m3/screen-scaffold" in ids, ids.toString())
+    assertTrue("wear-m3/transforming-lazy-column" in ids, ids.toString())
+    assertEquals("wear-screen-scaffold-v1", wear.benchmark.catalogRevision)
+  }
+
+  /**
+   * The scaffold carries the screen's furniture and NOT its size.
+   *
+   * The diameter is the document's frame — the Screen inspector's Wear OS presets — and a scaffold
+   * property for it would be a second answer to the same question. This is the assertion that
+   * notices if somebody adds one.
+   */
+  @Test
+  fun `the screen scaffold takes no size property`() {
+    val scaffold = wear.components.single { it.componentId == "wear-m3/screen-scaffold" }
+
+    assertEquals(
+      listOf("timeText", "scrollIndicator", "background"),
+      scaffold.properties.map { it.name },
+    )
+    assertEquals(listOf("content", "edgeButton"), scaffold.slots.map { it.name })
+    assertEquals("Scaffold", scaffold.role)
+  }
+
+  /**
+   * Every component says, in its own capability note, that the canvas is not Wear Compose.
+   *
+   * `androidx.wear.compose:compose-material3` is an Android AAR and the canvas is Compose
+   * Multiplatform for Wasm, so nothing in this catalog draws the real component. A note is how an
+   * adapter states that rather than implying parity, and an unannotated component would be a claim
+   * nobody made on purpose.
+   */
+  @Test
+  fun `no component claims to draw the real Wear component`() {
+    wear.components.forEach { component ->
+      assertNotNull(component.wasm.notes, component.componentId)
+      assertTrue(component.wasm.notes!!.isNotBlank(), component.componentId)
+    }
+  }
+
+  /** An id with no packaged adapter is refused by name rather than served as something else. */
+  @Test
+  fun `a catalog with no adapter is refused`() {
+    val failure =
+      assertFailsWith<IllegalArgumentException> {
+        CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("wear-m3-catalog"))
+      }
+
+    assertTrue("wear-m3-catalog" in failure.message.orEmpty(), failure.message.orEmpty())
+    assertTrue("no packaged adapter" in failure.message.orEmpty(), failure.message.orEmpty())
+  }
+}

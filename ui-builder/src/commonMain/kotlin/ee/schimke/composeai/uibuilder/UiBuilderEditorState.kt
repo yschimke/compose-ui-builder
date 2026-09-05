@@ -1515,6 +1515,16 @@ class UiBuilderEditorReducer(
         is WearWidgetCodeExporter.Result.Refused -> EditorGeneratedCode.Refused(widget.reasons)
       }
     }
+    // A Wear screen is not a widget and not a Material 3 screen either. It has no component record
+    // — `ScreenScaffold` takes a scroll state that has to agree with the list inside its content
+    // lambda, which a call-site emitter cannot write from a record — so the gate below could only
+    // refuse it, and asking first is the same "one answer to one question" rule the widget takes.
+    if (document.isWearScreen()) {
+      return@runCatching when (val screen = WearScreenCodeExporter.export(document)) {
+        is WearScreenCodeExporter.Result.Emitted -> EditorGeneratedCode.Source(screen.source)
+        is WearScreenCodeExporter.Result.Refused -> EditorGeneratedCode.Refused(screen.reasons)
+      }
+    }
     when (
       val outcome =
         ScreenExportGate.export(document.toProtocolDocument(), embeddedComponentRecord())
@@ -3035,6 +3045,12 @@ private val THEME_PROPERTIES =
 internal fun UiBuilderDocument.isWearWidget(): Boolean {
   val root = roots.singleOrNull()?.let(nodes::get) ?: return false
   return WearWidgetScaffoldSize.entries.any { it.componentId == root.componentId }
+}
+
+/** A design whose root is the Wear screen scaffold, which `WearScreenCodeExporter` writes. */
+internal fun UiBuilderDocument.isWearScreen(): Boolean {
+  val root = roots.singleOrNull()?.let(nodes::get) ?: return false
+  return root.componentId == WearScreenCodeExporter.SCAFFOLD
 }
 
 private fun UiBuilderDocument.themeHost(): UiBuilderNode? =

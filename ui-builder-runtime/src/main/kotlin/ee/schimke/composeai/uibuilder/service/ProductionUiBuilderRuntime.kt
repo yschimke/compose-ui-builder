@@ -68,6 +68,7 @@ public class CurrentM3UiBuilderCatalogExecutor(
     mapOf(
       DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
       REMOTE_M3_CATALOG_SYSTEM_ID to remoteM3Catalog(baseCatalog),
+      WEAR_M3_CATALOG_SYSTEM_ID to wearM3Catalog(baseCatalog),
     )
   private val catalogs =
     catalogSystemIds
@@ -265,6 +266,7 @@ public class CurrentM3UiBuilderCatalogExecutor(
     public const val CURRENT_CAPABILITY_DIGEST: String = "candidate"
     public const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
     public const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"
+    public const val WEAR_M3_CATALOG_SYSTEM_ID: String = "wear-m3"
     private val SAFE_SYSTEM_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
     private fun packagedM3CatalogSource(): String =
@@ -400,6 +402,202 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
         widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
       ) + authoringIds.map(components::getValue),
+  )
+}
+
+/**
+ * The Wear screen host's authored parameters.
+ *
+ * `androidx.wear.compose.material3.ScreenScaffold` is NOT the widget container's kind of stand-in.
+ * The widget frame is drawn by the launcher, so `WearWidgetCodeExporter` erases it;
+ * `ScreenScaffold` is a composable the author calls, so this scaffold is *emitted* rather than
+ * erased. What it fakes is only the drawing: the browser has no Wear Compose to draw with, so the
+ * canvas approximates the frame and the generated Kotlin names the real one.
+ *
+ * The screen's diameter is deliberately absent. It is the document's own frame — the Screen
+ * inspector's Wear OS device presets already carry 192/227/240dp at the right density — and a fifth
+ * property would be a second answer to a question the environment already answers.
+ */
+private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
+  listOf(
+    PropertyCapabilityV1(
+      name = "timeText",
+      jsonType = JsonPrimitive("string"),
+      notes =
+        "The curved status strip's text. Frozen rather than live: a design whose render changed " +
+          "every minute could not be diffed. Empty draws no strip, which is `ScreenScaffold` " +
+          "without a `timeText` argument.",
+    ),
+    PropertyCapabilityV1(
+      name = "scrollIndicator",
+      jsonType = JsonPrimitive("boolean"),
+      notes =
+        "Whether the scaffold draws its scroll indicator on the right bezel. `ScreenScaffold` " +
+          "derives it from the scroll state, so this only says whether one is present.",
+    ),
+    PropertyCapabilityV1(
+      name = "background",
+      jsonType = JsonPrimitive("string"),
+      notes =
+        "The screen's background. Wear is dark-first, so it defaults to the Wear Material 3 " +
+          "`background` — pure black — rather than to the editor theme's surface.",
+    ),
+  )
+
+/** `TransformingLazyColumn`'s authored parameters, minus the ones its state object carries. */
+private fun wearTransformingLazyColumnProperties(): List<PropertyCapabilityV1> =
+  listOf(
+    PropertyCapabilityV1(
+      name = "verticalSpacingDp",
+      jsonType = JsonPrimitive("number"),
+      notes = "`Arrangement.spacedBy` between items; 4dp is the Wear list default.",
+    ),
+    PropertyCapabilityV1(
+      name = "transformation",
+      jsonType = JsonPrimitive("string"),
+      allowedValues = listOf(JsonPrimitive("spec"), JsonPrimitive("none")),
+      notes =
+        "Whether each item carries `SurfaceTransformation(spec)` and `transformedHeight`. The " +
+          "canvas cannot draw either — see the wasm note — so this says what the generated " +
+          "Kotlin emits, not what you are looking at.",
+    ),
+  )
+
+/**
+ * `wear-m3`: the Wear Compose Material 3 screen, as an authoring surface.
+ *
+ * ## Why this is a re-creation and not the library
+ *
+ * `androidx.wear.compose:compose-material3` is an Android AAR. The builder's canvas is Compose
+ * Multiplatform for Wasm, which cannot link an AAR at all, so there is no version of this adapter
+ * that draws with the real components — unlike `m3-catalog`, where the canvas draws the same
+ * Material 3 the export names. Every capability note below says so rather than implying parity.
+ *
+ * ## The two components that are this catalog's whole point
+ *
+ * `wear-m3/screen-scaffold` and `wear-m3/transforming-lazy-column`. A Wear screen is a
+ * `ScreenScaffold` wrapping a `TransformingLazyColumn` in something over ninety per cent of the
+ * Wear Material 3 surface area, and neither has a Compose Multiplatform counterpart: the scaffold
+ * owns the curved `TimeText` and the bezel scroll indicator, and the list scales and fades its rows
+ * against the round display through `SurfaceTransformation`.
+ *
+ * The canvas draws the scaffold as a **stadium** — the screen's width, the content's height, round
+ * caps — which is the Wear long-screenshot convention rather than a device. That is a deliberate
+ * choice about what an author is building: the whole scrolling extent at once, not a 192dp keyhole
+ * onto it. What it costs is stated in the wasm notes and again in
+ * `docs/design/UI_BUILDER_WEAR_SCREEN.md`: straight sides overstate the width a row actually gets
+ * near the curve, and the row transformation is not drawn.
+ *
+ * ## The rest is borrowed, and that is a limitation rather than a design
+ *
+ * The content components are `m3-catalog`'s. A Wear `Button` is not a Material 3 `Button` — it is a
+ * pill 52dp tall with its own colour roles — and `TitleCard`, `ListHeader` and `EdgeButton` have no
+ * mobile counterpart at all. They are borrowed here because the alternative was shipping a scaffold
+ * with nothing to put in it, and every one of them is a wasm note saying "drawn as its mobile
+ * counterpart". Real Wear content ids under `wear-m3` are the next change, not a missing detail of
+ * this one.
+ */
+private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
+  val components = base.components.associateBy { it.componentId }
+  val box = components.getValue("layout/box")
+  val lazyColumn = components.getValue("layout/lazy-column")
+  val supportedWasm = components.getValue("m3/text").wasm
+  val blockedSvg = components.getValue("remote-compose/document").svg
+  val boxSlot = box.slots.single()
+
+  val contentSlot =
+    boxSlot.copy(name = "content", cardinality = boxSlot.cardinality.copy(min = 0, max = 1))
+  // `ScreenScaffold(edgeButton = …)` takes one composable, and upstream's own samples put an
+  // `EdgeButton` in it and nothing else. Narrowed to `Action` so a Text cannot be dropped into a
+  // slot whose whole job is to hug the bottom curve with a button in it.
+  val edgeButtonSlot =
+    contentSlot.copy(
+      name = "edgeButton",
+      acceptedRoles = emptyList(),
+      acceptedTraits = listOf("Action"),
+    )
+
+  val scaffold =
+    box.copy(
+      componentId = "wear-m3/screen-scaffold",
+      displayName = "Wear screen · ScreenScaffold",
+      role = "Scaffold",
+      traits = listOf("ScreenContent", "WearScreenHost"),
+      slots = listOf(contentSlot, edgeButtonSlot),
+      properties = wearScreenScaffoldProperties(),
+      modifierCapabilities = emptyList(),
+      wasm =
+        supportedWasm.copy(
+          notes =
+            "Drawn as a Wear long-screenshot stadium — the document frame's width, the content's height, round caps — with a frozen curved TimeText and an optional bezel scroll indicator. It is not Wear Compose: `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link, so the round viewport's horizontal inset near the caps is not applied and a row reads wider here than on a watch."
+        ),
+      // No Compose export from the catalog's own record: `ScreenScaffold` is a scaffold with a
+      // `contentPadding` lambda and a scroll-state argument that has to agree with the list inside
+      // it, which is a shape `ScreenGenerator`'s call-site emitter cannot write from a record.
+      // `WearScreenCodeExporter` writes the whole screen instead, the way
+      // `WearWidgetCodeExporter` writes the whole widget.
+      code = null,
+      svg =
+        blockedSvg?.copy(
+          notes = "The stadium screen frame has not been through structured SVG parity."
+        ),
+    )
+
+  val transformingLazyColumn =
+    lazyColumn.copy(
+      componentId = "wear-m3/transforming-lazy-column",
+      displayName = "Transforming lazy column",
+      traits = lazyColumn.traits + "WearListContent",
+      slots =
+        listOf(lazyColumn.slots.single().copy(cardinality = lazyColumn.slots.single().cardinality)),
+      properties = wearTransformingLazyColumnProperties(),
+      wasm =
+        supportedWasm.copy(
+          notes =
+            "Drawn as a plain Column at full width. The transformation that scales and fades rows toward the curved edges — `SurfaceTransformation` and `Modifier.transformedHeight` — is what a Wear list looks like and is exactly what this cannot show; the generated Kotlin emits it, and the native render lane draws it. Treat the canvas as the running order, not the picture."
+        ),
+      code = null,
+      svg =
+        blockedSvg?.copy(
+          notes =
+            "An untransformed stand-in must not claim structured SVG parity with the real list."
+        ),
+    )
+
+  // Borrowed content, and the borrowing is visible: every one of these draws as its Material 3
+  // self, which is the wrong shape for a watch in most cases and the right one in none of them.
+  val borrowedIds =
+    listOf(
+      "layout/box",
+      "layout/column",
+      "layout/row",
+      "m3/surface",
+      "m3/card",
+      "m3/text",
+      "m3/icon",
+      "m3/button",
+      "asset/image",
+    )
+  val borrowed =
+    borrowedIds.map(components::getValue).map { component ->
+      component.copy(
+        wasm =
+          component.wasm.copy(
+            notes =
+              "Drawn as the Material 3 component of the same name. Wear Compose Material 3 publishes its own, with different sizes and colour roles; this is a stand-in until `wear-m3` has content ids of its own."
+          )
+      )
+    }
+
+  return base.copy(
+    benchmark =
+      base.benchmark.copy(
+        id = "wear-m3-screen-scaffold",
+        sourceRevision = "compose-ai-tools:samples/design-catalog-wear-m3",
+        catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+        catalogRevision = "wear-screen-scaffold-v1",
+      ),
+    components = listOf(scaffold, transformingLazyColumn) + borrowed,
   )
 }
 
