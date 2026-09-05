@@ -3007,10 +3007,19 @@ private fun GeneratedCodePane(
           )
           val vertical = rememberScrollState()
           val horizontal = rememberScrollState()
+          val syntaxTheme = rememberCodePaneSyntaxTheme()
+          // Tokenizing is keyed on the source, so an edit elsewhere on the canvas — a selection, a
+          // scroll, a drag over the drop target — recomposes this pane without re-running it.
+          val highlighted =
+            remember(code.kotlin, syntaxTheme) { highlightKotlin(code.kotlin, syntaxTheme) }
           SelectionContainer(Modifier.padding(top = 8.dp)) {
             Text(
-              code.kotlin,
+              highlighted,
               Modifier.fillMaxSize().verticalScroll(vertical).horizontalScroll(horizontal),
+              // The palette's own foreground rather than `onSurface`: whatever the highlighter did
+              // not claim is still code, and two sources for the one colour would show up as the
+              // unstyled runs sitting a shade off the styled ones.
+              color = syntaxTheme.codeColor(),
               // Generated Kotlin is aligned by column, so a proportional face would misreport the
               // indentation the export actually writes.
               fontFamily = FontFamily.Monospace,

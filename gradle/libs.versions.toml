@@ -33,6 +33,16 @@ okhttp = "5.5.0"
 okio = "3.18.2"
 classgraph = "4.8.194"
 jmdns = "3.6.3"
+# The UI builder's Kotlin syntax highlighter, behind the Code pane. Pure Kotlin with a published
+# wasmJs variant, which is the whole reason it is this library: the pane is a Compose `Text` on a
+# canvas, so a JS/DOM highlighter (the playground's vendored CodeMirror) cannot reach it.
+#
+# Held at 1.0.0 deliberately. 1.1.0's JVM artifact is compiled for Java 21 (class file 65) and this
+# build's JVM target is 17, so it loads in the browser and throws `UnsupportedClassVersionError` in
+# `:ui-builder:jvmTest` and in the JVM chrome preview the render evidence comes from. 1.0.0 targets
+# Java 8, publishes the same wasmJs variant and the same `Highlights`/`SyntaxThemes` API. Renovate
+# will offer 1.1.0: take it only once this build's JVM target reaches 21.
+snipme-highlights = "1.0.0"
 
 [libraries]
 composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping", version.ref = "composeai-tools" }
@@ -93,6 +103,7 @@ truth = { module = "com.google.truth:truth", version.ref = "truth" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
+snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-highlights" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
