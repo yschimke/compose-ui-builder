@@ -76,7 +76,27 @@ internal object StarterContent {
    * Every component the table seeds. Exists for the test that checks the table against a catalog.
    */
   val componentIds: Set<String>
-    get() = TABLE.keys
+    get() = TABLE.keys + PROPERTY_TABLE.keys
+
+  /**
+   * Values to set on [componentId] itself when it is inserted, over the catalog's own defaults.
+   *
+   * Most components need none: their defaults are already sensible, or the property is required and
+   * the catalog's first allowed value answers it. This exists for the ones whose default is not a
+   * value anybody wants to look at — `shape/colour-dot` forced it, because a dot with no colour and
+   * no diameter is a dot you cannot see.
+   */
+  fun propertiesFor(componentId: String): Map<String, JsonObject> =
+    PROPERTY_TABLE[componentId].orEmpty()
+
+  private val PROPERTY_TABLE: Map<String, Map<String, JsonObject>> =
+    mapOf(
+      "shape/colour-dot" to
+        mapOf("color" to starterLiteral("color", "#FF6750A4"), "diameterDp" to starterNumber(8)),
+      // Zero is already what the catalog's neutral default writes; it is spelled out because a tab
+      // row is required to carry the index and a row with none draws no indicator at all.
+      "m3/primary-tab-row" to mapOf("selectedIndex" to starterNumber(0)),
+    )
 
   private val TABLE: Map<String, Map<String, List<StarterNode>>> =
     mapOf(
@@ -89,6 +109,19 @@ internal object StarterContent {
       // entry (`accessTime`) reads as a clock somebody forgot to change.
       "m3/icon-button" to mapOf("content" to listOf(icon("favorite", "Favorite"))),
       "m3/filter-chip" to mapOf("label" to listOf(text("Filter", "labelLarge"))),
+      "m3/center-aligned-top-app-bar" to mapOf("title" to listOf(text("Title", "titleLarge"))),
+      // Headline over supporting text, which is the two-line list item Material draws and the shape
+      // a bare headline does not suggest.
+      "m3/list-item" to
+        mapOf(
+          "headline" to listOf(text("List item", "bodyLarge")),
+          "supporting" to listOf(text("Supporting text", "bodyMedium")),
+        ),
+      // Three tabs with the first selected: one tab is not a tab row, and a row where none is
+      // selected draws no indicator at all.
+      "m3/primary-tab-row" to
+        mapOf("tabs" to listOf(tab("Tab 1", selected = true), tab("Tab 2"), tab("Tab 3"))),
+      "m3/tab" to mapOf("text" to listOf(text("Tab", "titleSmall"))),
       // The example the goal named: a dialog that arrives saying something and offering the two
       // answers every dialog offers. `confirmButton` has a minimum of one, so without this entry
       // the required fill would put an empty `layout/box` where the OK button belongs — a dialog
@@ -179,6 +212,13 @@ private fun icon(iconKey: String, contentDescription: String): StarterNode =
 private fun column(vararg children: StarterNode): StarterNode =
   StarterNode(componentId = "layout/column", slots = mapOf("children" to children.toList()))
 
+private fun tab(label: String, selected: Boolean = false): StarterNode =
+  StarterNode(
+    componentId = "m3/tab",
+    properties = mapOf("selected" to starterBool(selected)),
+    slots = mapOf("text" to listOf(text(label, "titleSmall"))),
+  )
+
 private fun textButton(label: String): StarterNode =
   StarterNode(
     componentId = "m3/button",
@@ -209,3 +249,9 @@ private fun itemCards(vararg labels: String): List<StarterNode> = labels.map { l
 
 private fun starterLiteral(type: String, value: String): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
+
+private fun starterNumber(value: Int): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(value)))
+
+private fun starterBool(value: Boolean): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(value)))

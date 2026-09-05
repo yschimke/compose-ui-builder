@@ -260,6 +260,24 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "m3/center-aligned-top-app-bar",
+      "displayName": "Top app bar",
+      "role": "Container",
+      "traits": ["TopBar", "ScreenContent"],
+      "slots": [
+        { "name": "title", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] }
+      ],
+      "properties": [
+        { "name": "containerColor", "jsonType": "string", "required": false },
+        { "name": "scrolledContainerColor", "jsonType": "string", "required": false },
+        { "name": "scrollBehavior", "jsonType": "string", "required": false, "allowedValues": ["pinned", "enterAlways", "exitUntilCollapsed"], "notes": "Reaches the generated Kotlin as the matching TopAppBarDefaults behavior. The canvas draws the bar pinned whatever this says: a scroll behavior is driven by a nested-scroll connection the document has no scaffold to carry." }
+      ],
+      "modifierCapabilities": ["fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "CenterAlignedTopAppBar", "imports": ["androidx.compose.material3.CenterAlignedTopAppBar"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
       "componentId": "m3/date-picker",
       "displayName": "Date picker",
       "role": "Leaf",
@@ -391,6 +409,40 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "m3/list-item",
+      "displayName": "List item",
+      "role": "Container",
+      "traits": ["ListItem", "GridItem"],
+      "slots": [
+        { "name": "headline", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] },
+        { "name": "supporting", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] },
+        { "name": "trailing", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
+      ],
+      "properties": [
+        { "name": "startAccentColor", "jsonType": "string", "required": false, "notes": "A 3dp bar down the leading edge, drawn behind the item. Empty draws none." }
+      ],
+      "modifierCapabilities": ["fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "ListItem", "imports": ["androidx.compose.material3.ListItem"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "m3/primary-tab-row",
+      "displayName": "Tab row",
+      "role": "Container",
+      "traits": ["TabBar", "OrderedContent"],
+      "slots": [
+        { "name": "tabs", "cardinality": { "min": 1, "max": null }, "ordered": true, "acceptedRoles": ["Container"], "acceptedTraits": ["TabItem"] }
+      ],
+      "properties": [
+        { "name": "selectedIndex", "jsonType": "integer", "required": true }
+      ],
+      "modifierCapabilities": ["fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "PrimaryTabRow", "imports": ["androidx.compose.material3.PrimaryTabRow"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
       "componentId": "m3/search-bar",
       "displayName": "Search bar",
       "role": "Container",
@@ -475,6 +527,22 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "m3/tab",
+      "displayName": "Tab",
+      "role": "Container",
+      "traits": ["TabItem", "SelectionControl"],
+      "slots": [
+        { "name": "text", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] }
+      ],
+      "properties": [
+        { "name": "selected", "jsonType": "boolean", "required": true }
+      ],
+      "modifierCapabilities": ["padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "Tab", "imports": ["androidx.compose.material3.Tab"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
       "componentId": "m3/text",
       "displayName": "Text",
       "role": "Leaf",
@@ -535,6 +603,21 @@
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config." },
       "code": { "symbol": "RcComposePlayer", "imports": ["ee.schimke.composeai.rcplayer.compose.RcComposePlayer"] },
       "svg": { "status": "unsupported", "fallback": "none", "blocksExport": true, "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation." }
+    },
+    {
+      "componentId": "shape/colour-dot",
+      "displayName": "Colour dot",
+      "role": "Leaf",
+      "traits": ["Decoration", "DrawLayer"],
+      "slots": [],
+      "properties": [
+        { "name": "color", "jsonType": "string", "required": true },
+        { "name": "diameterDp", "jsonType": "number", "required": false }
+      ],
+      "modifierCapabilities": ["padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "Box", "imports": ["androidx.compose.foundation.background", "androidx.compose.foundation.layout.Box"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "shape/linear-gradient",

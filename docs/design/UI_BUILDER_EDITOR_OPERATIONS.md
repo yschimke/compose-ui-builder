@@ -79,6 +79,35 @@ builds rather than one anybody authored. Before and after, with what each frame 
 | --- | --- |
 | ![Six inserts, generic or empty](../../renders/ui-builder-starter-content/insert.before.png) | ![The same six inserts, seeded](../../renders/ui-builder-starter-content/insert.after.png) |
 
+## What the catalog advertises
+
+The capability catalog is the palette. A component the catalog does not declare cannot be inserted,
+has no inspector, and is `UNKNOWN_COMPONENT` to the validator wherever it appears — however complete
+its renderer and exporter support happens to be.
+
+Five components were in exactly that state: `m3/center-aligned-top-app-bar`, `m3/list-item`,
+`m3/primary-tab-row`, `m3/tab` and `shape/colour-dot`, each with a renderer branch, a Compose emitter
+and an entry in the exporter's field table, and none of them declared anywhere. The checked-in
+Confetti design pins `m3-catalog` and uses all five, so a whole shipped screen was a document its own
+catalog could say nothing about.
+
+Declaring them turned up the thing that always hides behind an unadvertised component: **properties
+the canvas drew and the export discarded**. A top app bar's `containerColor` and
+`scrolledContainerColor`, a list item's `startAccentColor`, and a tab row's `selectedIndex` — which
+the exporter hard-coded to zero — were all read by the renderer and dropped on the way to Kotlin.
+Nobody could insert the components, so nobody found out. All four now reach the generated source, and
+`scrollBehavior` joins them: the canvas cannot draw a scroll behavior, because one is driven by a
+nested-scroll connection a document has no scaffold to carry, so the catalog says so on the property
+and the generated screen gets the real thing.
+
+### Visual evidence
+
+`CatalogUnadvertisedComponentsPreview` inserts four of the five into a column, with no editing after
+the drop. What each is, and why there is no before image, are in
+[`renders/ui-builder-advertised-components/`](../../renders/ui-builder-advertised-components/README.md).
+
+![A top app bar, a tab row, a list item and a colour dot](../../renders/ui-builder-advertised-components/advertised.after.png)
+
 ## The dialog and the pickers
 
 Three components the catalog did not carry: `m3/dialog`, `m3/date-picker` and `m3/time-picker`.

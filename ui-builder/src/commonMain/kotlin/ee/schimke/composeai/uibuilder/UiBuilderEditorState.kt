@@ -3249,9 +3249,16 @@ private fun ComponentCapability.appendDefaultSubtree(
   if (componentId in componentPath) {
     return "required-slot default cycle: ${(componentPath + componentId).joinToString(" -> ")}"
   }
+  // A seeded node takes the authored values when it came from the table, and a node inserted
+  // straight from the palette takes the component's own — which is the same mechanism reaching the
+  // root of the insert rather than only its children.
+  val seededProperties =
+    starter
+      ?: if (seedStarterContent) StarterNode(componentId, StarterContent.propertiesFor(componentId))
+      else null
   operations +=
     DesignOperation.InsertNode(
-      defaultNode(nodeId, document).withStarterProperties(this, starter),
+      defaultNode(nodeId, document).withStarterProperties(this, seededProperties),
       parent,
       afterNodeId,
     )

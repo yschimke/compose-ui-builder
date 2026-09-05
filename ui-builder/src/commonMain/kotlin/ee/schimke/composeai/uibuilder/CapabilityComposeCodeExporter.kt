@@ -385,8 +385,16 @@ private class ComposeEmitter(
       "shape/radial-gradient" -> emitGradient(node, bodyLevel, radial = true)
       // Confetti baseline components remain supported by the generic projection.
       "m3/center-aligned-top-app-bar" -> emitTopAppBar(node, bodyLevel)
+      // The design's own index, not zero. The renderer has always read `selectedIndex`, so a tab
+      // row with the second tab selected drew that way and generated a screen with the first.
       "m3/primary-tab-row" ->
-        emitSimpleContainer(node, bodyLevel, "PrimaryTabRow", "tabs", "selectedTabIndex = 0")
+        emitSimpleContainer(
+          node,
+          bodyLevel,
+          "PrimaryTabRow",
+          "tabs",
+          "selectedTabIndex = ${node.integer("selectedIndex")}",
+        )
       "m3/tab" ->
         emitSimpleContainer(
           node,
@@ -673,10 +681,28 @@ private class ComposeEmitter(
     }
   }
 
+  /**
+   * `CenterAlignedTopAppBar`, with the two colours the canvas draws and the scroll behavior it
+   * cannot.
+   *
+   * The colours were read by the renderer and dropped here, which is the "authored, stored,
+   * discarded" shape this file keeps calling out elsewhere — a transparent bar on the canvas
+   * generated an opaque one. `scrollBehavior` is the opposite case and the reason the catalog notes
+   * it: the generated screen gets the real behavior, and the canvas cannot draw one because a
+   * behavior is driven by a nested-scroll connection a document has no scaffold to carry.
+   */
   private fun emitTopAppBar(node: UiBuilderNode, level: Int) {
-    line(level, "CenterAlignedTopAppBar(title = {")
-    node.slot("title").forEach { emitNode(it, level + 1) }
-    line(level, "}, ${node.modifierArgument()})")
+    line(level, "CenterAlignedTopAppBar(")
+    line(level + 1, "title = {")
+    node.slot("title").forEach { emitNode(it, level + 2) }
+    line(level + 1, "},")
+    line(
+      level + 1,
+      "colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = ${node.colorExpression("containerColor")}, scrolledContainerColor = ${node.colorExpression("scrolledContainerColor")}),",
+    )
+    node.scrollBehaviorExpression()?.let { line(level + 1, "scrollBehavior = $it,") }
+    line(level + 1, "${node.modifierArgument()},")
+    line(level, ")")
   }
 
   private fun emitListItem(node: UiBuilderNode, level: Int) {
@@ -686,7 +712,15 @@ private class ComposeEmitter(
       node.slot(slot).forEach { emitNode(it, level + 2) }
       line(level + 1, "},")
     }
-    line(level + 1, "${node.modifierArgument()},")
+    // The leading accent bar the canvas draws. It is a `drawBehind` rather than a parameter because
+    // `ListItem` has no such thing, and it was the one part of this component the export left out —
+    // a schedule whose track colours are the entire point generated as a plain list.
+    val accent = node.string("startAccentColor")
+    val modifier =
+      if (accent.isEmpty()) node.modifierExpression()
+      else
+        "${node.modifierExpression()}.drawBehind { drawRect(${node.colorExpression("startAccentColor")}, size = Size(3.dp.toPx(), size.height)) }"
+    line(level + 1, "modifier = $modifier,")
     line(level, ")")
   }
 
@@ -1138,6 +1172,21 @@ private fun UiBuilderNode.gradientCenterExpression(): String =
 
 private fun JsonObject.paddingValuesExpression(): String =
   "PaddingValues(start = ${number("startDp").dpLiteral()}, top = ${number("topDp").dpLiteral()}, end = ${number("endDp").dpLiteral()}, bottom = ${number("bottomDp").dpLiteral()})"
+
+/**
+ * `TopAppBarDefaults.…ScrollBehavior()` for the declared behavior, or null when none is declared.
+ *
+ * Null rather than a default, because `CenterAlignedTopAppBar`'s own default is no behavior at all,
+ * and passing `pinnedScrollBehavior()` where the design asked for nothing would connect the bar to
+ * a scroll it never asked to follow.
+ */
+private fun UiBuilderNode.scrollBehaviorExpression(): String? =
+  when (string("scrollBehavior")) {
+    "pinned" -> "TopAppBarDefaults.pinnedScrollBehavior()"
+    "enterAlways" -> "TopAppBarDefaults.enterAlwaysScrollBehavior()"
+    "exitUntilCollapsed" -> "TopAppBarDefaults.exitUntilCollapsedScrollBehavior()"
+    else -> null
+  }
 
 private fun UiBuilderNode.colorExpression(name: String): String {
   val value = string(name)
@@ -1598,7 +1647,11 @@ private val HANDLED_FIELDS =
       ),
     "m3/card" to
       HandledFields(setOf("containerColor", "elevationDp", "shape", "stableKey"), setOf("content")),
-    "m3/center-aligned-top-app-bar" to HandledFields(slots = setOf("title")),
+    "m3/center-aligned-top-app-bar" to
+      HandledFields(
+        setOf("containerColor", "scrolledContainerColor", "scrollBehavior"),
+        setOf("title"),
+      ),
     "m3/date-picker" to HandledFields(setOf("mode", "selectedDate", "showModeToggle")),
     "m3/dialog" to
       HandledFields(
@@ -1623,8 +1676,9 @@ private val HANDLED_FIELDS =
         setOf("alignment", "contentDescription", "selected", "sizeDp"),
         slots = setOf("content"),
       ),
-    "m3/list-item" to HandledFields(slots = setOf("headline", "supporting", "trailing")),
-    "m3/primary-tab-row" to HandledFields(slots = setOf("tabs")),
+    "m3/list-item" to
+      HandledFields(setOf("startAccentColor"), setOf("headline", "supporting", "trailing")),
+    "m3/primary-tab-row" to HandledFields(setOf("selectedIndex"), setOf("tabs")),
     "m3/search-bar" to
       HandledFields(setOf("expanded", "tonalElevationDp"), slots = setOf("inputField")),
     "m3/search-input-field" to

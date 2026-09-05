@@ -313,6 +313,9 @@ object CapabilityCatalogParser {
       // A clock, not a dimension. The `…Dp` rule below is what gives a number its editor, so
       // without these two the hour and minute of a time picker would be `Unsupported` in the
       // inspector — a component whose whole content is two numbers, neither of them editable.
+      // A tab index is a count, not a dimension, so the `…Dp` rule below cannot reach it and the
+      // control would be `Unsupported` — on the one property a tab row has.
+      ("m3/primary-tab-row" to "selectedIndex") to numberEditor(0.0, 32.0, 1.0),
       ("m3/time-picker" to "hour") to numberEditor(0.0, 23.0, 1.0),
       ("m3/time-picker" to "minute") to numberEditor(0.0, 59.0, 1.0),
     ) + WEAR_WIDGET_CONTAINER_IDS.flatMap(::widgetContainerEditors)
