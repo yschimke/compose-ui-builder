@@ -5,8 +5,16 @@ import ee.schimke.composeai.discovery.ScreenDocument
 import ee.schimke.composeai.discovery.ScreenNode
 import ee.schimke.composeai.discovery.ScreenValue
 import ee.schimke.composeai.uibuilder.protocol.AdaptiveGridValueV1
+import ee.schimke.composeai.uibuilder.protocol.AlignHorizontalModifierV1
+import ee.schimke.composeai.uibuilder.protocol.AlignModifierV1
+import ee.schimke.composeai.uibuilder.protocol.AlignVerticalModifierV1
+import ee.schimke.composeai.uibuilder.protocol.AlignmentV1
+import ee.schimke.composeai.uibuilder.protocol.AlphaModifierV1
+import ee.schimke.composeai.uibuilder.protocol.AspectRatioModifierV1
 import ee.schimke.composeai.uibuilder.protocol.AssetKeyValueV1
+import ee.schimke.composeai.uibuilder.protocol.BackgroundModifierV1
 import ee.schimke.composeai.uibuilder.protocol.BooleanValueV1
+import ee.schimke.composeai.uibuilder.protocol.BorderModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ClipModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ColorTokenValueV1
 import ee.schimke.composeai.uibuilder.protocol.ColorValueV1
@@ -17,24 +25,41 @@ import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DimensionUnitV1
 import ee.schimke.composeai.uibuilder.protocol.DimensionValueV1
 import ee.schimke.composeai.uibuilder.protocol.EnumValueV1
+import ee.schimke.composeai.uibuilder.protocol.FillMaxHeightModifierV1
 import ee.schimke.composeai.uibuilder.protocol.FillMaxSizeModifierV1
 import ee.schimke.composeai.uibuilder.protocol.FillMaxWidthModifierV1
+import ee.schimke.composeai.uibuilder.protocol.HeightInModifierV1
+import ee.schimke.composeai.uibuilder.protocol.HeightModifierV1
+import ee.schimke.composeai.uibuilder.protocol.HorizontalAlignmentV1
+import ee.schimke.composeai.uibuilder.protocol.HorizontalScrollModifierV1
 import ee.schimke.composeai.uibuilder.protocol.InsetsValueV1
 import ee.schimke.composeai.uibuilder.protocol.IntegerValueV1
 import ee.schimke.composeai.uibuilder.protocol.ListValueV1
 import ee.schimke.composeai.uibuilder.protocol.MatchParentSizeModifierV1
 import ee.schimke.composeai.uibuilder.protocol.NullValueV1
 import ee.schimke.composeai.uibuilder.protocol.ObjectValueV1
+import ee.schimke.composeai.uibuilder.protocol.OffsetModifierV1
 import ee.schimke.composeai.uibuilder.protocol.PaddingModifierV1
 import ee.schimke.composeai.uibuilder.protocol.PaddingValueV1
 import ee.schimke.composeai.uibuilder.protocol.ResourceValueV1
+import ee.schimke.composeai.uibuilder.protocol.RotateModifierV1
+import ee.schimke.composeai.uibuilder.protocol.ScaleModifierV1
+import ee.schimke.composeai.uibuilder.protocol.ShadowModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ShapeTokenValueV1
 import ee.schimke.composeai.uibuilder.protocol.SizeModifierV1
 import ee.schimke.composeai.uibuilder.protocol.StateEqualsValueV1
 import ee.schimke.composeai.uibuilder.protocol.StateValueV1
 import ee.schimke.composeai.uibuilder.protocol.StringValueV1
+import ee.schimke.composeai.uibuilder.protocol.TestTagModifierV1
 import ee.schimke.composeai.uibuilder.protocol.TypographyTokenValueV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
+import ee.schimke.composeai.uibuilder.protocol.VerticalAlignmentV1
+import ee.schimke.composeai.uibuilder.protocol.VerticalScrollModifierV1
+import ee.schimke.composeai.uibuilder.protocol.WeightModifierV1
+import ee.schimke.composeai.uibuilder.protocol.WidthInModifierV1
+import ee.schimke.composeai.uibuilder.protocol.WidthModifierV1
+import ee.schimke.composeai.uibuilder.protocol.WrapContentSizeModifierV1
+import ee.schimke.composeai.uibuilder.protocol.ZIndexModifierV1
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
@@ -386,14 +411,6 @@ object ScreenDocumentProjection {
      */
     private fun weightLink(value: UiValueV1, node: DesignNodeV1, scope: String?): ChainLink? {
       val where = "node `${node.id}`.`weight`"
-      if (scope != ROW_SCOPE && scope != COLUMN_SCOPE) {
-        refuse(
-          "$where is a layout weight, which `Modifier.weight` supplies from a row's or column's " +
-            "scope; this node sits " +
-            (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
-        )
-        return null
-      }
       val number =
         when (value) {
           is DecimalValueV1 -> value.value
@@ -403,6 +420,37 @@ object ScreenDocumentProjection {
             return null
           }
         }
+      return weightLink(number, fill = null, where = where, scope = scope)
+    }
+
+    /**
+     * The same link, for a `weight` authored as a **modifier** rather than as a property.
+     *
+     * Both spellings reach the builder — the catalog declares `weight` in `modifierCapabilities`
+     * and m3-catalog components also carry it as a property — and they mean one thing, so they
+     * produce one link rather than two nearly-identical ones that could disagree about the
+     * narrowing rule or about which scopes are legal. `fill` exists only on the modifier form;
+     * omitted, Compose's own default of `true` stands, which is what the property form has always
+     * meant.
+     */
+    private fun weightLink(
+      number: Double?,
+      fill: Boolean?,
+      where: String,
+      scope: String?,
+    ): ChainLink? {
+      if (scope != ROW_SCOPE && scope != COLUMN_SCOPE) {
+        refuse(
+          "$where is a layout weight, which `Modifier.weight` supplies from a row's or column's " +
+            "scope; this node sits " +
+            (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
+        )
+        return null
+      }
+      if (number == null) {
+        refuse("$where becomes `Modifier.weight`, which needs a number")
+        return null
+      }
       val weight = number.toFloat()
       // The same narrowing rule `Dp` gets: a weight that does not survive `Float` would be emitted
       // as `Infinity` or collapse to zero, which is a number the design never contained.
@@ -413,6 +461,7 @@ object ScreenDocumentProjection {
       return ChainLink(
         "$scope.weight",
         positional = listOf(ScreenValue.Fractional32(weight)),
+        named = fill?.let { mapOf("fill" to ScreenValue.Bool(it)) } ?: emptyMap(),
         receiverScopeFqn = scope,
       )
     }
@@ -499,10 +548,27 @@ object ScreenDocumentProjection {
       )
     }
 
-    private fun link(modifier: DesignModifierV1, nodeId: String, scope: String?): ChainLink? =
-      when (modifier) {
-        FillMaxWidthModifierV1 -> ChainLink("androidx.compose.foundation.layout.fillMaxWidth")
-        FillMaxSizeModifierV1 -> ChainLink("androidx.compose.foundation.layout.fillMaxSize")
+    /**
+     * The chain link one authored modifier becomes, or null having said why there isn't one.
+     *
+     * Every subtype of `DesignModifierV1` is answered here — twenty-eight of them — because the
+     * catalog admits a modifier onto a component by *type*, so anything this `when` does not name
+     * refuses a document the builder was happy to author. That was the state this replaces: six
+     * kinds were expressible and the other twenty-two came back as "which this projection has no
+     * expression for", including `background`, `border`, `width` and `align`, which the m3-catalog
+     * palette offers on almost every component.
+     *
+     * Two are refused **deliberately** and stay refused: `verticalScroll` and `horizontalScroll`
+     * take a `ScrollState` from `rememberScrollState()`, and no [ScreenValue] is a remembered
+     * value. The `else` branch below is therefore not a list of things left undone; it is what a
+     * *newer* `ui-builder-protocol` than the one this compiled against would fall into, and it
+     * keeps that arriving as a named refusal rather than as a silently dropped modifier.
+     */
+    private fun link(modifier: DesignModifierV1, nodeId: String, scope: String?): ChainLink? {
+      return when (modifier) {
+        FillMaxWidthModifierV1 -> ChainLink("$LAYOUT.fillMaxWidth")
+        FillMaxHeightModifierV1 -> ChainLink("$LAYOUT.fillMaxHeight")
+        FillMaxSizeModifierV1 -> ChainLink("$LAYOUT.fillMaxSize")
         is PaddingModifierV1 -> {
           val axes = buildMap {
             dp(modifier.startDp)?.let { put("start", it) }
@@ -518,7 +584,7 @@ object ScreenDocumentProjection {
             reasons += "node `$nodeId` pads with no axis that is a number"
             null
           } else {
-            ChainLink("androidx.compose.foundation.layout.padding", named = axes)
+            ChainLink("$LAYOUT.padding", named = axes)
           }
         }
         is SizeModifierV1 -> {
@@ -530,38 +596,139 @@ object ScreenDocumentProjection {
           val height = dp(modifier.heightDp)
           when {
             width != null && height != null ->
-              ChainLink(
-                "androidx.compose.foundation.layout.size",
-                named = mapOf("width" to width, "height" to height),
-              )
-            width != null ->
-              ChainLink("androidx.compose.foundation.layout.width", positional = listOf(width))
-            height != null ->
-              ChainLink("androidx.compose.foundation.layout.height", positional = listOf(height))
+              ChainLink("$LAYOUT.size", named = mapOf("width" to width, "height" to height))
+            width != null -> ChainLink("$LAYOUT.width", positional = listOf(width))
+            height != null -> ChainLink("$LAYOUT.height", positional = listOf(height))
             else -> {
               reasons += "node `$nodeId` sizes to neither a width nor a height"
               null
             }
           }
         }
-        is ClipModifierV1 -> {
+        is WidthModifierV1 -> dpLink("$LAYOUT.width", modifier.widthDp, nodeId, "width")
+        is HeightModifierV1 -> dpLink("$LAYOUT.height", modifier.heightDp, nodeId, "height")
+        is WidthInModifierV1 ->
+          boundsLink("$LAYOUT.widthIn", modifier.minDp, modifier.maxDp, nodeId, "widthIn")
+        is HeightInModifierV1 ->
+          boundsLink("$LAYOUT.heightIn", modifier.minDp, modifier.maxDp, nodeId, "heightIn")
+        is OffsetModifierV1 -> {
+          // Both axes default, so `offset()` compiles — as a no-op, which is not what a document
+          // holding two unusable numbers meant. Refused for the reason `padding` is.
+          val axes = buildMap {
+            dp(modifier.xDp)?.let { put("x", it) }
+            dp(modifier.yDp)?.let { put("y", it) }
+          }
+          if (axes.isEmpty()) {
+            reasons += "node `$nodeId` offsets by neither an x nor a y that is a number"
+            null
+          } else {
+            ChainLink("$LAYOUT.offset", named = axes)
+          }
+        }
+        is AspectRatioModifierV1 ->
+          floatLink("$LAYOUT.aspectRatio", modifier.ratio, nodeId, "aspectRatio")
+        is WrapContentSizeModifierV1 ->
+          // Positional, because the parameter is named `align` while every other alignment in this
+          // file is called `alignment` — a name worth not restating from memory. An unset
+          // alignment writes no argument at all rather than an invented `Center`, which is what
+          // Compose's own default already is.
+          ChainLink(
+            "$LAYOUT.wrapContentSize",
+            positional = modifier.alignment?.let { listOf(alignment(it)) } ?: emptyList(),
+          )
+        is AlphaModifierV1 -> floatLink("$DRAW.alpha", modifier.alpha, nodeId, "alpha")
+        is RotateModifierV1 -> floatLink("$DRAW.rotate", modifier.degrees, nodeId, "rotate")
+        is ScaleModifierV1 -> {
+          // Both axes or neither. `scale(scaleX, scaleY)` is the two-axis overload and there is a
+          // one-argument `scale(scale: Float)` that means both at once — naming one axis of the
+          // pair would silently scale the other by its default of 1, which the document did not
+          // say.
+          val x = float(modifier.scaleX, nodeId, "scaleX")
+          val y = float(modifier.scaleY, nodeId, "scaleY")
+          if (x == null || y == null) null
+          else ChainLink("$DRAW.scale", named = mapOf("scaleX" to x, "scaleY" to y))
+        }
+        is ZIndexModifierV1 ->
+          floatLink("androidx.compose.ui.zIndex", modifier.zIndex, nodeId, "zIndex")
+        is TestTagModifierV1 ->
+          ChainLink(TEST_TAG, positional = listOf(ScreenValue.Text(modifier.tag)))
+        is ClipModifierV1 ->
           // A theme shape first, then the two constants. `medium` and `large` are what real
           // documents clip to and they are `MaterialTheme.shapes` roles, not constants — refusing
           // them lost a clip the previous exporter rendered correctly.
-          val shape =
-            SHAPE_TOKENS[modifier.shape]?.let { path ->
-              ScreenValue.Reference(path.first(), path.drop(1), typeFqn = SHAPE)
-            } ?: SHAPE_CONSTANTS[modifier.shape]?.let { ScreenValue.Reference(it, typeFqn = SHAPE) }
-          if (shape == null) {
-            reasons +=
-              "node `$nodeId` clips to shape `${modifier.shape}`, which is neither a theme shape " +
-                "(${SHAPE_TOKENS.keys.sorted().joinToString(", ")}) nor one of " +
-                SHAPE_CONSTANTS.keys.sorted().joinToString(", ")
-            null
-          } else {
-            ChainLink("androidx.compose.ui.draw.clip", positional = listOf(shape))
-          }
+          shapeOf(modifier.shape)?.let { ChainLink("$DRAW.clip", positional = listOf(it)) }
+            ?: refuseShape(nodeId, "clips to", modifier.shape)
+        is BackgroundModifierV1 -> {
+          val color = colour(modifier.color, "node `$nodeId`'s `background`") ?: return null
+          ChainLink(
+            "androidx.compose.foundation.background",
+            named =
+              buildMap {
+                put("color", color)
+                modifier.shape?.let {
+                  put("shape", shapeOf(it) ?: return refuseShape(nodeId, "fills with", it))
+                }
+              },
+          )
         }
+        is BorderModifierV1 -> {
+          val width =
+            dp(modifier.widthDp)
+              ?: run {
+                reasons += "node `$nodeId` borders itself with a width that is not a number"
+                return null
+              }
+          val color = colour(modifier.color, "node `$nodeId`'s `border`") ?: return null
+          ChainLink(
+            "androidx.compose.foundation.border",
+            named =
+              buildMap {
+                put("width", width)
+                put("color", color)
+                modifier.shape?.let {
+                  put("shape", shapeOf(it) ?: return refuseShape(nodeId, "borders with", it))
+                }
+              },
+          )
+        }
+        is ShadowModifierV1 -> {
+          val elevation =
+            dp(modifier.elevationDp)
+              ?: run {
+                reasons += "node `$nodeId` casts a shadow at an elevation that is not a number"
+                return null
+              }
+          ChainLink(
+            "$DRAW.shadow",
+            named =
+              buildMap {
+                put("elevation", elevation)
+                modifier.shape?.let {
+                  put("shape", shapeOf(it) ?: return refuseShape(nodeId, "shadows with", it))
+                }
+                // `clip` defaults to `elevation > 0.dp`, so it is written only when the document
+                // said something — an explicit `false` on a raised node is the case that matters.
+                modifier.clip?.let { put("clip", ScreenValue.Bool(it)) }
+              },
+          )
+        }
+        is WeightModifierV1 ->
+          weightLink(
+            (modifier.weight as? JsonPrimitive)?.doubleOrNull,
+            modifier.fill,
+            "node `$nodeId`'s `weight` modifier",
+            scope,
+          )
+        // The three `align`s and `matchParentSize` are the same fact four times: each is declared
+        // on a slot's receiver, so which one compiles is decided by where the node sits and by
+        // nothing about the node itself. A `Column` child aligns horizontally, a `Row` child
+        // vertically, and only a `Box` child names a two-axis `Alignment`.
+        is AlignModifierV1 ->
+          alignLink(nodeId, scope, BOX_SCOPE, "box", alignment(modifier.alignment))
+        is AlignHorizontalModifierV1 ->
+          alignLink(nodeId, scope, COLUMN_SCOPE, "column", horizontal(modifier.alignment))
+        is AlignVerticalModifierV1 ->
+          alignLink(nodeId, scope, ROW_SCOPE, "row", vertical(modifier.alignment))
         // `matchParentSize` is declared on `BoxScope`, so it compiles inside a `Box` slot and
         // nowhere else. This projection now knows which slot a node was placed in, so the answer
         // is a lookup rather than the refusal it used to be — and outside a `Box` it is still a
@@ -576,6 +743,8 @@ object ScreenDocumentProjection {
                   "scope only inside a `layout/box` slot; this node sits " +
                   (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
             }
+        VerticalScrollModifierV1 -> scrolls(nodeId, "verticalScroll")
+        HorizontalScrollModifierV1 -> scrolls(nodeId, "horizontalScroll")
         else ->
           null.also {
             reasons +=
@@ -583,6 +752,134 @@ object ScreenDocumentProjection {
                 "projection has no expression for"
           }
       }
+    }
+
+    /** A modifier link taking one `Dp`, or null having said why the number does not survive one. */
+    private fun dpLink(
+      callableFqn: String,
+      value: JsonElement?,
+      nodeId: String,
+      name: String,
+    ): ChainLink? {
+      val dp = dp(value)
+      if (dp == null) {
+        reasons += "node `$nodeId` sets `$name` to something that is not a number surviving `Dp`"
+        return null
+      }
+      return ChainLink(callableFqn, positional = listOf(dp))
+    }
+
+    /** `widthIn` / `heightIn`, whose two bounds are each optional and not both absent. */
+    private fun boundsLink(
+      callableFqn: String,
+      minDp: JsonElement?,
+      maxDp: JsonElement?,
+      nodeId: String,
+      name: String,
+    ): ChainLink? {
+      val bounds = buildMap {
+        dp(minDp)?.let { put("min", it) }
+        dp(maxDp)?.let { put("max", it) }
+      }
+      if (bounds.isEmpty()) {
+        reasons += "node `$nodeId` constrains `$name` with neither a min nor a max that is a number"
+        return null
+      }
+      return ChainLink(callableFqn, named = bounds)
+    }
+
+    private fun floatLink(
+      callableFqn: String,
+      value: JsonElement?,
+      nodeId: String,
+      name: String,
+    ): ChainLink? =
+      float(value, nodeId, name)?.let { ChainLink(callableFqn, positional = listOf(it)) }
+
+    /**
+     * A `Float` for a JSON number, or null having said why there isn't one.
+     *
+     * The narrowing rule `Dp` gets, for the same reason and with the same answer. `alpha`,
+     * `rotate`, `scale`, `zIndex` and `aspectRatio` all take a `Float`, and a `Double` that does
+     * not survive the narrowing would be emitted as `Infinity` or collapse to zero — a number the
+     * design never contained, returned as a success.
+     */
+    private fun float(value: JsonElement?, nodeId: String, name: String): ScreenValue? {
+      val number = (value as? JsonPrimitive)?.doubleOrNull
+      if (number == null) {
+        reasons += "node `$nodeId` sets `$name` to something that is not a number"
+        return null
+      }
+      val narrowed = number.toFloat()
+      if (!narrowed.isFinite() || (narrowed == 0f && number != 0.0)) {
+        reasons += "node `$nodeId` sets `$name` to $number, which does not survive `Float`"
+        return null
+      }
+      return ScreenValue.Fractional32(narrowed)
+    }
+
+    /** The colour a modifier paints with — a literal or a theme role, and nothing else. */
+    private fun colour(value: UiValueV1, where: String): ScreenValue? =
+      when (value) {
+        is ColorValueV1 -> color(value.value, where)
+        is ColorTokenValueV1 -> token(value.value, COLOR_TOKENS, COLOR, "colour", where)
+        else ->
+          refuse(
+            "$where is a colour, which is written as a `#RRGGBB` literal or as a theme role and " +
+              "not as ${value::class.simpleName}"
+          )
+      }
+
+    /** The `Shape` a shape name resolves to — theme role first, then the two constants. */
+    private fun shapeOf(name: String): ScreenValue? =
+      SHAPE_TOKENS[name]?.let { path ->
+        ScreenValue.Reference(path.first(), path.drop(1), typeFqn = SHAPE)
+      } ?: SHAPE_CONSTANTS[name]?.let { ScreenValue.Reference(it, typeFqn = SHAPE) }
+
+    /** Records a shape nothing resolves, naming both sets a document may choose from. */
+    private fun refuseShape(nodeId: String, verb: String, name: String): ChainLink? {
+      reasons +=
+        "node `$nodeId` $verb shape `$name`, which is neither a theme shape " +
+          "(${SHAPE_TOKENS.keys.sorted().joinToString(", ")}) nor one of " +
+          SHAPE_CONSTANTS.keys.sorted().joinToString(", ")
+      return null
+    }
+
+    private fun scrolls(nodeId: String, name: String): ChainLink? {
+      reasons +=
+        "node `$nodeId` uses `$name`, which takes a `ScrollState` from " +
+          "`rememberScrollState()` — a `remember { … }` preamble this projection does not emit"
+      return null
+    }
+
+    /**
+     * A `<Scope>.align(…)`, or null having said where the node actually is.
+     *
+     * `align` is three different members with three different parameter types, one per scope, and a
+     * document names which by the modifier it authored. Emitting the wrong one is not a wrong
+     * picture but an unresolved reference, so the scope is checked here as well as by the generator
+     * against the record — see [ChainLink.receiverScopeFqn].
+     */
+    private fun alignLink(
+      nodeId: String,
+      scope: String?,
+      required: String,
+      container: String,
+      alignment: ScreenValue,
+    ): ChainLink? {
+      if (scope != required) {
+        reasons +=
+          "node `$nodeId` aligns itself, which `Modifier.align` supplies from a $container's " +
+            "scope; this node sits " +
+            (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
+        return null
+      }
+      return ChainLink(
+        "$required.align",
+        positional = listOf(alignment),
+        receiverScopeFqn = required,
+      )
+    }
 
     /**
      * The receiver for a `.dp` or `.sp` chain, or null when no receiver expresses this number.
@@ -970,6 +1267,19 @@ object ScreenDocumentProjection {
   private const val MODIFIER = "androidx.compose.ui.Modifier"
 
   /**
+   * The two packages the authored modifiers come from, named once.
+   *
+   * Layout modifiers (`padding`, `size`, `offset`, `aspectRatio`, `wrapContentSize`) are
+   * `foundation.layout` extensions; the draw ones (`clip`, `alpha`, `rotate`, `scale`, `shadow`)
+   * are `ui.draw`. Which package a modifier lives in is not guessable from its name — `zIndex` is
+   * in neither and `background` and `border` are in `foundation` itself — so the three that sit
+   * outside these two are spelled in full at their branch.
+   */
+  private const val LAYOUT = "androidx.compose.foundation.layout"
+
+  private const val DRAW = "androidx.compose.ui.draw"
+
+  /**
    * The tag a native preview's nodes carry.
    *
    * `androidx.compose.ui.platform.testTag` and not a semantics block: the server's existing
@@ -1110,6 +1420,60 @@ object ScreenDocumentProjection {
     "androidx.compose.foundation.layout.Arrangement\$Vertical"
   private const val ARRANGEMENT_HORIZONTAL =
     "androidx.compose.foundation.layout.Arrangement\$Horizontal"
+
+  /**
+   * The `Alignment` member a protocol alignment names, per axis.
+   *
+   * Exhaustive `when`s rather than maps, deliberately: an alignment added to `ui-builder-protocol`
+   * then fails this module's compile rather than becoming a modifier that silently refuses. These
+   * are the same members [ENUM_MEMBERS] maps `layout/box`'s `contentAlignment` onto — restated
+   * because that table is keyed by the catalog's own value spellings (`topStart`) and these are
+   * keyed by the protocol enum, and neither can be derived from the other.
+   */
+  private fun alignment(value: AlignmentV1): ScreenValue =
+    ScreenValue.Reference(
+      ALIGNMENT,
+      listOf(
+        when (value) {
+          AlignmentV1.TOP_START -> "TopStart"
+          AlignmentV1.TOP_CENTER -> "TopCenter"
+          AlignmentV1.TOP_END -> "TopEnd"
+          AlignmentV1.CENTER_START -> "CenterStart"
+          AlignmentV1.CENTER -> "Center"
+          AlignmentV1.CENTER_END -> "CenterEnd"
+          AlignmentV1.BOTTOM_START -> "BottomStart"
+          AlignmentV1.BOTTOM_CENTER -> "BottomCenter"
+          AlignmentV1.BOTTOM_END -> "BottomEnd"
+        }
+      ),
+      typeFqn = ALIGNMENT,
+    )
+
+  private fun horizontal(value: HorizontalAlignmentV1): ScreenValue =
+    ScreenValue.Reference(
+      ALIGNMENT,
+      listOf(
+        when (value) {
+          HorizontalAlignmentV1.START -> "Start"
+          HorizontalAlignmentV1.CENTER_HORIZONTALLY -> "CenterHorizontally"
+          HorizontalAlignmentV1.END -> "End"
+        }
+      ),
+      typeFqn = ALIGNMENT_HORIZONTAL,
+    )
+
+  private fun vertical(value: VerticalAlignmentV1): ScreenValue =
+    ScreenValue.Reference(
+      ALIGNMENT,
+      listOf(
+        when (value) {
+          VerticalAlignmentV1.TOP -> "Top"
+          VerticalAlignmentV1.CENTER_VERTICALLY -> "CenterVertically"
+          VerticalAlignmentV1.BOTTOM -> "Bottom"
+        }
+      ),
+      typeFqn = ALIGNMENT_VERTICAL,
+    )
 
   private enum class TargetKind {
     /** The parameter is the same value under another name. */
@@ -1298,8 +1662,8 @@ object ScreenDocumentProjection {
    */
   private val MODIFIER_PROPERTIES: Map<String, Map<String, String>> =
     mapOf(
-      "m3/icon" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"),
-      "m3/icon-button" to mapOf("sizeDp" to "androidx.compose.foundation.layout.size"),
+      "m3/icon" to mapOf("sizeDp" to "$LAYOUT.size"),
+      "m3/icon-button" to mapOf("sizeDp" to "$LAYOUT.size"),
     )
 
   private const val CARD_DEFAULTS = "androidx.compose.material3.CardDefaults"
