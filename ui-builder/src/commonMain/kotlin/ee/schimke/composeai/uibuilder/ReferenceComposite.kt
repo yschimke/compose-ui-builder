@@ -6,6 +6,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import kotlin.io.encoding.Base64
 
@@ -83,3 +85,30 @@ internal fun flattenReference(
  * refusal after the work rather than before it.
  */
 private const val MAX_FLATTEN_PX = 4096
+
+/**
+ * A sub-rectangle of [this], as its own bitmap.
+ *
+ * Drawn rather than copied pixel by pixel: the draw path is the one the platform has accelerated,
+ * and a hand-rolled row copy would have to know the bitmap's configuration to be correct. Used by
+ * the component capture, which composes into a generous frame and then trims what it did not fill.
+ */
+internal fun ImageBitmap.cropped(left: Int, top: Int, width: Int, height: Int): ImageBitmap {
+  if (width <= 0 || height <= 0) return this
+  val target = ImageBitmap(width, height)
+  CanvasDrawScope().draw(
+    Density(1f),
+    LayoutDirection.Ltr,
+    Canvas(target),
+    Size(width.toFloat(), height.toFloat()),
+  ) {
+    drawImage(
+      image = this@cropped,
+      srcOffset = IntOffset(left, top),
+      srcSize = IntSize(width, height),
+      dstOffset = IntOffset.Zero,
+      dstSize = IntSize(width, height),
+    )
+  }
+  return target
+}

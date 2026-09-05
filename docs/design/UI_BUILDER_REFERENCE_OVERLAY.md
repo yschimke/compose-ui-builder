@@ -35,18 +35,40 @@ So the reference is **not** in the design document, for three reasons in order o
    upgrades and pushed to every subscriber on every edit. A multi-megabyte PNG would ride through
    all of that, every time, to be drawn by one person's editor.
 
-### The door between them is one-way, cheap in one direction and deliberate in the other
+### The door between them is one-way, and both directions are built
 
-- **Design → reference: rasterise.** Snapshot renders the design through its own PNG export and
-  attaches the pixels. A live preview dropped onto the reference becomes an image *at the moment of
-  the drop*; no live component ever lives in the reference layer.
-- **Reference → design: build it.** Turning a reference into structure is real work — real nodes,
-  validated against the catalog — done by a person or by an agent asked to do it. It never happens
-  as a side effect.
+**Design → reference: rasterise.** Two routes, one rule — nothing live ever enters the reference
+layer.
 
-[`ReferencePiece.componentId`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderReference.kt)
-is the hinge that keeps the second direction possible: a piece rasterised out of a live preview
-records what it was a picture of, so "build this for real" is a lookup rather than a guess.
+- **Snapshot** renders the whole design through its own PNG export and attaches the pixels.
+- **Component…** composes one catalog component through the *same renderer that draws the document*
+  — same catalog defaults, same theme, same density — captures it to a graphics layer, trims the
+  transparent margins, and places the result as a piece.
+  ([`ReferenceComponentCapture`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ReferenceComponentCapture.kt).)
+
+The specimen is built by running the editor's *own insertion path* on a throwaway one-box document,
+rather than by assembling nodes by hand. That is load-bearing: a picture of something the editor
+could not actually insert would be a lie the operator only discovers when they try to build it.
+
+**Reference → design: build it, and no agent is needed for the case that matters.**
+[`PromoteReferencePiece`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderEditorState.kt)
+turns a captured piece into the real component:
+
+1. The piece names a catalog component — [`ReferencePiece.componentId`], recorded at capture.
+2. The slot comes from a **hit test against the layout the canvas actually produced**: the deepest
+   slot in the inspection snapshot that contains the piece's centre *and* whose owning component
+   accepts this one. Position rather than selection, because the piece's whole claim is where it is.
+3. The insertion is then the ordinary one — the same `insertAt` a catalog drag performs, catalog
+   defaults and required slots and all — after which the picture is removed, because the real thing
+   is standing where it was.
+
+Deterministic end to end. **An agent is only needed for a piece with no provenance** — a screenshot
+region, a Figma export — where "which component is this?" is a genuine judgement. The reducer
+refuses that case rather than guessing, and the panel offers no button for it.
+
+The consequence worth stating: the moment a piece's *properties* become editable, the piece must
+record them too, or promoting will silently rebuild the defaults. Today a specimen is captured from
+defaults and nothing edits it, so the id alone is lossless.
 
 ## The loop it exists for
 
@@ -56,8 +78,9 @@ records what it was a picture of, so "build this for real" is a lookup rather th
    SVG's own layout boxes.
 3. **Mark up** — draw, box, rounded box, ellipse, arrow, a label, an image placeholder, and the
    **erase** brush, which paints in the screen's own background colour.
-4. **Place** a picture where it should go, and drag it into position.
-5. **Flatten** — bake the picture, the pieces and the marks into one reference, and go round again.
+4. **Place** a picture, or **capture a component**, where it should go, and drag it into position.
+5. **Build for real** — a captured component becomes a real node in the slot under it.
+6. **Flatten** — bake the picture, the pieces and the marks into one reference, and go round again.
 
 The erase brush is what makes a *shipped* screen editable. A screenshot is one flat picture: there
 is no card to delete. Painting a region in the colour the screen already is removes it, and the hole
@@ -133,3 +156,4 @@ Two questions, one parse, separate answers.
 - [`ReferenceImportTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceImportTest.kt) — what may be attached.
 - [`ReferenceOverlayStateTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceOverlayStateTest.kt) — the reducer, and **every case asserts the document did not move**. That is the invariant this feature lives or dies by.
 - [`ServeUiBuilderReferenceStoreTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderReferenceStoreTest.kt) — storage, refusals, clamping, and that a design id never becomes a path.
+- [`ReferencePiecePromotionTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferencePiecePromotionTest.kt) — the crossing back: a captured piece builds the node a catalog insertion would, a piece with no provenance is refused rather than guessed at, and the deepest accepting slot under the point wins.

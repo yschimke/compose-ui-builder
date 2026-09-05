@@ -56,6 +56,58 @@ fun UiBuilderReferenceDifferencePreview() {
   )
 }
 
+/**
+ * A component captured onto the reference, ready to be built for real.
+ *
+ * The piece here is a specimen of `m3/text` in the shape the capture path produces, so this render
+ * is where a regression in the piece's own drawing or in the panel's promote control would show up
+ * — the half a state test cannot see.
+ */
+// Taller than its siblings on purpose: the controls this render exists to diff — the component
+// menu and the promote button — sit below the frame controls in a panel that scrolls, and a
+// 900 dp render would prove only that the panel still has a heading.
+@Preview(widthDp = 1600, heightDp = 1500)
+@Composable
+fun UiBuilderReferenceComponentPiecePreview() {
+  UiBuilderEditor(
+    document = referencePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "discover-grid",
+    initialInspectorMode = EditorInspectorMode.Screen,
+    restoredReference =
+      RestoredReference(
+        settings = ReferenceOverlaySettings(mode = ReferenceDiffMode.Overlay),
+        pieces =
+          listOf(
+            ReferencePiece(
+              id = "piece-component",
+              image =
+                ReferenceImage(
+                  id = "preview-component-piece",
+                  name = "m3/text",
+                  mediaType = ReferenceImage.SVG_MEDIA_TYPE,
+                  base64 = Base64.Default.encode(COMPONENT_PIECE_SVG.encodeToByteArray()),
+                  widthPx = 200,
+                  heightPx = 40,
+                ),
+              left = 0.3f,
+              top = 0.42f,
+              right = 0.7f,
+              bottom = 0.5f,
+              componentId = "m3/text",
+            )
+          ),
+      ),
+  )
+}
+
+/** A stand-in for a captured `m3/text` specimen: a label on the surface it would be drawn on. */
+private const val COMPONENT_PIECE_SVG =
+  "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 40\">" +
+    "<rect width=\"200\" height=\"40\" rx=\"8\" fill=\"#2b3040\"/>" +
+    "<rect x=\"12\" y=\"14\" width=\"120\" height=\"12\" rx=\"6\" fill=\"#b9c3ff\"/>" +
+    "</svg>"
+
 private val referencePreviewDocument: UiBuilderDocument by lazy {
   UiBuilderReducer.replay(
       Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject

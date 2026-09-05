@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -79,6 +81,13 @@ internal fun ReferenceInspector(
   onPickReference: (suspend () -> ReferenceImportOutcome)?,
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)?,
   onFlatten: () -> Unit,
+  /** The catalog, for the component picker: a piece can be a picture of any of these. */
+  catalogItems: List<EditorCatalogItem>,
+  /** Capture a component and place the picture. The capture itself happens in the editor. */
+  onPlaceComponent: (String) -> Unit,
+  /** Build a piece's component for real, where the layout under it accepts one. */
+  onPromotePiece: (ReferencePiece) -> Unit,
+  canPromotePiece: (ReferencePiece) -> Boolean,
   /** A sentence the host wants shown — a refused paste, a store that would not keep it. */
   hostStatus: String?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -249,6 +258,10 @@ internal fun ReferenceInspector(
     reference = reference,
     themeSettings = themeSettings,
     busy = busy,
+    catalogItems = catalogItems,
+    onPlaceComponent = onPlaceComponent,
+    onPromotePiece = onPromotePiece,
+    canPromotePiece = canPromotePiece,
     onPlacePiece = {
       import(onPickReference) { dispatch(UiBuilderEditorEvent.PlaceReferencePiece(it)) }
     },
@@ -282,6 +295,10 @@ private fun ReferenceMarkupControls(
   reference: ReferenceOverlayState,
   themeSettings: EditorThemeSettings,
   busy: Boolean,
+  catalogItems: List<EditorCatalogItem>,
+  onPlaceComponent: (String) -> Unit,
+  onPromotePiece: (ReferencePiece) -> Unit,
+  canPromotePiece: (ReferencePiece) -> Boolean,
   onPlacePiece: () -> Unit,
   onFlatten: () -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -357,28 +374,32 @@ private fun ReferenceMarkupControls(
     )
   }
 
-  Row(
+  // Wrapped and unweighted: three equal thirds of a 360 dp panel is not enough for "Component…"
+  // to stay on one line, and a button whose label breaks mid-word reads as a rendering fault.
+  FlowRow(
     Modifier.fillMaxWidth().padding(top = 6.dp),
     horizontalArrangement = Arrangement.spacedBy(6.dp),
   ) {
     OutlinedButton(
       onClick = onPlacePiece,
       enabled = !busy,
-      modifier = Modifier.weight(1f).semantics { contentDescription = "Place a piece" },
+      modifier = Modifier.semantics { contentDescription = "Place a piece" },
     ) {
-      Text("Place image…")
+      Text("Image…", maxLines = 1)
     }
+    ReferenceComponentMenu(catalogItems = catalogItems, onPick = onPlaceComponent)
     OutlinedButton(
       onClick = onFlatten,
       enabled = reference.hasContent,
-      modifier = Modifier.weight(1f).semantics { contentDescription = "Flatten reference" },
+      modifier = Modifier.semantics { contentDescription = "Flatten reference" },
     ) {
-      Text("Flatten")
+      Text("Flatten", maxLines = 1)
     }
   }
   Text(
-    "Place drops a picture on the frame where you put it — a component copied out of Figma, say. " +
-      "Flatten bakes the picture, the pieces and the marks into one reference and clears them.",
+    "Image drops a picture on the frame where you put it — one copied out of Figma, say. " +
+      "Component captures one from this catalog as a picture, which can be built for real once " +
+      "it is where it belongs. Flatten bakes everything into one reference and clears it.",
     Modifier.padding(top = 4.dp),
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.labelSmall,
@@ -419,6 +440,28 @@ private fun ReferenceMarkupControls(
         modifier = Modifier.semantics { contentDescription = "Remove ${piece.image.name}" },
       ) {
         Text("×", color = MaterialTheme.colorScheme.error)
+      }
+    }
+    if (piece.componentId != null) {
+      // Only for a piece that knows what it is. A picture with no provenance has no honest button
+      // here — deciding which component a screenshot region *is* is a judgement, and this panel
+      // does not make judgements; that is the case an agent is for.
+      val promotable = canPromotePiece(piece)
+      Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+          if (promotable) "Ready to build where it sits"
+          else "Nothing under it accepts ${piece.componentId}",
+          Modifier.weight(1f),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+        )
+        TextButton(
+          onClick = { onPromotePiece(piece) },
+          enabled = promotable,
+          modifier = Modifier.semantics { contentDescription = "Build ${piece.componentId}" },
+        ) {
+          Text("Build for real")
+        }
       }
     }
   }
@@ -595,5 +638,40 @@ private fun String.markupArgbOrNull(): Long? {
     8 -> parsed
     6 -> 0xFF000000L or parsed
     else -> null
+  }
+}
+
+/**
+ * The catalog, as a menu, for capturing a component onto the reference.
+ *
+ * A menu rather than a second component list: the panel beside this one already *is* the catalog,
+ * and duplicating it here would be two lists to keep in step. This one exists because the catalog
+ * panel's own gesture inserts a real node, which is precisely what placing a piece is not.
+ */
+@Composable
+private fun ReferenceComponentMenu(
+  catalogItems: List<EditorCatalogItem>,
+  onPick: (String) -> Unit,
+) {
+  var open by remember { mutableStateOf(false) }
+  Box {
+    OutlinedButton(
+      onClick = { open = true },
+      enabled = catalogItems.isNotEmpty(),
+      modifier = Modifier.semantics { contentDescription = "Place a component" },
+    ) {
+      Text("Component…", maxLines = 1)
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+      catalogItems.forEach { item ->
+        DropdownMenuItem(
+          text = { Text(item.displayName, style = MaterialTheme.typography.labelSmall) },
+          onClick = {
+            open = false
+            onPick(item.componentId)
+          },
+        )
+      }
+    }
   }
 }

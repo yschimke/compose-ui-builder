@@ -377,6 +377,14 @@ fun UiBuilderEditor(
   // Held here rather than inside the flatten, which is not a composable: a text mark has to be set
   // in the same font when it is baked in as when it was drawn.
   val flattenTextMeasurer = rememberTextMeasurer()
+  // The canvas's own layout, kept here as well as handed to the host: promoting a piece asks which
+  // slot is under it, and that question is answered by the layout the renderer actually produced
+  // rather than by anything the document says.
+  var canvasInspection by
+    remember(document.id) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
+  var captureRequest by remember(document.id) { mutableStateOf<ReferenceCaptureRequest?>(null) }
+  var captureSequence by remember(document.id) { mutableStateOf(0) }
+  var captureFailure by remember(document.id) { mutableStateOf<String?>(null) }
   val draggedTarget = draggedComponentId?.let { reducer.dropTarget(state, it) }
   val canvasDropHovered =
     catalogDragPosition?.let(canvasBounds::contains) == true && draggedTarget != null
@@ -498,7 +506,10 @@ fun UiBuilderEditor(
         dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
       },
       collaborators = collaborators,
-      onInspectionSnapshot = onInspectionSnapshot,
+      onInspectionSnapshot = { snapshot ->
+        canvasInspection = snapshot
+        onInspectionSnapshot?.invoke(snapshot)
+      },
       onInspectionInvalidated = onInspectionInvalidated,
       contentAlignment = alignment,
       modifier = modifier,
@@ -509,6 +520,25 @@ fun UiBuilderEditor(
   // Called inline it would run all of that on every recomposition of the inspector — which is
   // every keystroke in a property field and every frame of a drag.
   val problems = remember(reducer, state.document) { reducer.problems(state.document) }
+  /**
+   * The slot a piece would be built into, hit-tested at its own centre.
+   *
+   * Fractions become render pixels here rather than in the reducer, because the conversion needs
+   * the frame and the density — two facts about how this editor is drawing right now, and neither
+   * of them the reducer's business.
+   */
+  fun promotionTargetFor(piece: ReferencePiece): ParentSlot? {
+    val componentId = piece.componentId ?: return null
+    val environment = state.document.screenEnvironmentSettings()
+    val scale = environment.density.toFloat()
+    return reducer.promotionTarget(
+      state = state,
+      componentId = componentId,
+      slots = canvasInspection?.slots.orEmpty(),
+      pointX = (piece.left + piece.right) / 2f * environment.widthDp * scale,
+      pointY = (piece.top + piece.bottom) / 2f * environment.heightDp * scale,
+    )
+  }
   // Cached the same way and for the same reason, and only while the pane is open: generating is a
   // projection plus a full generator run, which nobody should pay for on every recomposition — or
   // at all, with the pane closed.
@@ -595,12 +625,45 @@ fun UiBuilderEditor(
       onPickReference = onPickReference,
       onSnapshotDesign = onSnapshotDesign,
       onFlatten = ::flattenCurrentReference,
-      referenceStatus = referenceStatus,
+      catalogItems = reducer.catalogItems(""),
+      onPlaceComponent = { componentId ->
+        captureSequence += 1
+        captureRequest = ReferenceCaptureRequest(componentId, captureSequence)
+      },
+      onPromotePiece = { piece ->
+        promotionTargetFor(piece)?.let {
+          dispatch(UiBuilderEditorEvent.PromoteReferencePiece(piece.id, it))
+        }
+      },
+      canPromotePiece = { piece -> promotionTargetFor(piece) != null },
+      referenceStatus = captureFailure ?: referenceStatus,
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,
     )
   }
+
+  // Composed but never shown: it photographs a component and hands back the pixels. Mounted here
+  // rather than inside the panel so that a capture survives the inspector switching tabs.
+  val pendingCapture = captureRequest
+  ReferenceComponentCapture(
+    request = pendingCapture,
+    catalog = catalog,
+    document = state.document,
+    onCaptured = { captured ->
+      captureRequest = null
+      captureFailure =
+        if (captured == null) "That component could not be captured from this catalog." else null
+      if (captured != null && pendingCapture != null) {
+        dispatch(
+          UiBuilderEditorEvent.PlaceReferencePiece(
+            captured,
+            componentId = pendingCapture.componentId,
+          )
+        )
+      }
+    },
+  )
 
   MaterialTheme(colorScheme = EditorColors) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -1153,9 +1216,10 @@ private fun EditorToolbar(
       if (onNewDesign != null) {
         EditorAction(label = "New design", shortcut = "", enabled = true, onClick = onNewDesign)
       }
-      // Only once something is attached. An always-present control for a feature most designs
-      // never use is exactly the toolbar crowding the row above is already fighting.
-      if (state.reference.attached) {
+      // Only once there is something to hide — a picture, a placed piece or a mark. An
+      // always-present control for a feature most designs never use is exactly the toolbar
+      // crowding the row above is already fighting.
+      if (state.reference.hasContent) {
         EditorAction(
           label = if (state.reference.settings.visible) "Hide reference" else "Show reference",
           shortcut = "",
@@ -2150,6 +2214,10 @@ private fun PropertyInspector(
   onPickReference: (suspend () -> ReferenceImportOutcome)?,
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)?,
   onFlatten: () -> Unit,
+  catalogItems: List<EditorCatalogItem>,
+  onPlaceComponent: (String) -> Unit,
+  onPromotePiece: (ReferencePiece) -> Unit,
+  canPromotePiece: (ReferencePiece) -> Boolean,
   referenceStatus: String?,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -2221,6 +2289,10 @@ private fun PropertyInspector(
             onPickReference = onPickReference,
             onSnapshotDesign = onSnapshotDesign,
             onFlatten = onFlatten,
+            catalogItems = catalogItems,
+            onPlaceComponent = onPlaceComponent,
+            onPromotePiece = onPromotePiece,
+            canPromotePiece = canPromotePiece,
             hostStatus = referenceStatus,
             dispatch = dispatch,
           )

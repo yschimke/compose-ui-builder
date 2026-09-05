@@ -535,7 +535,16 @@ sealed interface UiBuilderEditorEvent {
    * whether the whole screen is right, and a piece asks whether *this* belongs *there*, which is a
    * question nothing stretched across the frame can pose.
    */
-  data class PlaceReferencePiece(val image: ReferenceImage) : UiBuilderEditorEvent
+  data class PlaceReferencePiece(
+    val image: ReferenceImage,
+    /**
+     * The catalog component this picture is *of*, when it is a picture of one.
+     *
+     * Set by the capture path and null for an imported or pasted file. It is what makes the piece
+     * promotable later, and the reason a captured piece is not simply another image.
+     */
+    val componentId: String? = null,
+  ) : UiBuilderEditorEvent
 
   data class SelectReferencePiece(val pieceId: String) : UiBuilderEditorEvent
 
@@ -547,6 +556,22 @@ sealed interface UiBuilderEditorEvent {
   data class ScaleReferencePiece(val pieceId: String, val factor: Float) : UiBuilderEditorEvent
 
   data class RemoveReferencePiece(val pieceId: String) : UiBuilderEditorEvent
+
+  /**
+   * Turn a placed piece into the component it is a picture of.
+   *
+   * The one crossing from the reference half back into the design, and the reason a captured piece
+   * records what it was a picture of. It needs no agent and makes no guess: the piece names a
+   * catalog component, [target] is the slot the caller hit-tested under it, and the result is the
+   * same insertion a drag from the catalog performs — after which the picture is removed, because
+   * the real thing is now standing where it was.
+   *
+   * A piece with no provenance — a screenshot region, a Figma export — is refused here rather than
+   * approximated. Deciding which component *that* is, is a judgement, and this reducer does not
+   * make judgements.
+   */
+  data class PromoteReferencePiece(val pieceId: String, val target: ParentSlot) :
+    UiBuilderEditorEvent
 
   /**
    * Replace the whole stack with a single picture of it — the annotated composite becomes the new
@@ -706,6 +731,15 @@ private fun EditorStateAction.encoded(declaration: JsonObject?): JsonObject {
  */
 internal const val MAX_MARKUP_TEXT: Int = 160
 
+/** A target slot in the shape the acceptance check reads, so one function answers both callers. */
+private fun ParentSlot.asInspectionSlot(): UiBuilderSlotInspection =
+  UiBuilderSlotInspection(
+    parentNodeId = nodeId,
+    slotName = slot,
+    childNodeIds = emptyList(),
+    measuredChildNodeIds = emptyList(),
+  )
+
 /** Pure editor interaction reducer. Every document mutation delegates to CollaborationReducer. */
 sealed interface EditorSubmission {
   data class Batch(val command: DesignCommand) : EditorSubmission
@@ -836,7 +870,8 @@ class UiBuilderEditorReducer(
         state.withReference(state.reference.copy(marks = state.reference.marks.dropLast(1)))
       UiBuilderEditorEvent.ClearReferenceMarkup ->
         state.withReference(state.reference.copy(marks = emptyList()))
-      is UiBuilderEditorEvent.PlaceReferencePiece -> placePiece(state, event.image)
+      is UiBuilderEditorEvent.PlaceReferencePiece ->
+        placePiece(state, event.image, event.componentId)
       is UiBuilderEditorEvent.SelectReferencePiece ->
         state.withReference(state.reference.copy(selectedPieceId = event.pieceId))
       is UiBuilderEditorEvent.MoveReferencePiece ->
@@ -845,6 +880,8 @@ class UiBuilderEditorReducer(
         )
       is UiBuilderEditorEvent.ScaleReferencePiece ->
         state.withReference(state.reference.mapPiece(event.pieceId) { it.scaledBy(event.factor) })
+      is UiBuilderEditorEvent.PromoteReferencePiece ->
+        promotePiece(state, event.pieceId, event.target)
       is UiBuilderEditorEvent.RemoveReferencePiece ->
         state.withReference(
           state.reference.copy(
@@ -1454,6 +1491,27 @@ class UiBuilderEditorReducer(
         "${component.displayName} has no compatible selected slot",
       )
     }
+    return insertAt(state, component, target, action)
+  }
+
+  /**
+   * Insert [component] into [target], with no opinion about the selection.
+   *
+   * Split out of [insert] because the selection check there is a guard on one *route in* rather
+   * than a rule about insertion: a drag from the catalog lands where the selection implies, and a
+   * client asking for any other slot is asking for something the editor never offered. A promoted
+   * reference piece arrives by a different route — its slot comes from a hit test this reducer ran
+   * against the catalog itself — and re-deriving it from the selection would refuse a slot that is
+   * demonstrably legal, because the selection is wherever the operator last clicked.
+   */
+  private fun insertAt(
+    state: UiBuilderEditorState,
+    component: ComponentCapability,
+    target: ParentSlot,
+    action: EditorStateAction? = null,
+  ): UiBuilderEditorState {
+    val componentId = component.componentId
+    val sequence = state.operationSequence + 1
     val nodeId = "editor-${componentId.replace('/', '-')}-${sequence.toString().padStart(3, '0')}"
     val operations = mutableListOf<DesignOperation>()
     val defaultError =
@@ -1759,6 +1817,7 @@ class UiBuilderEditorReducer(
   private fun placePiece(
     state: UiBuilderEditorState,
     image: ReferenceImage,
+    componentId: String? = null,
   ): UiBuilderEditorState {
     val minted = state.reference.mintedIds + 1
     val aspect =
@@ -1775,6 +1834,7 @@ class UiBuilderEditorReducer(
         top = (1f - height) / 2f,
         right = (1f + width) / 2f,
         bottom = (1f + height) / 2f,
+        componentId = componentId,
       )
     return state.withReference(
       state.reference.copy(
@@ -1785,6 +1845,100 @@ class UiBuilderEditorReducer(
         tool = ReferenceTool.MovePiece,
         mintedIds = minted,
         settings = state.reference.settings.copy(visible = true),
+      )
+    )
+  }
+
+  /**
+   * The slot a piece would be built into, from the layout the canvas actually produced.
+   *
+   * Position rather than selection, because a piece's whole claim is *where it is*: it was dragged
+   * over the row it belongs in, and the selection is wherever the operator last clicked. The
+   * deepest accepting slot under [point] wins — deepest because a slot inside another slot is the
+   * more specific answer, and the outer one is still reachable by moving the piece somewhere the
+   * inner one does not cover.
+   *
+   * Falls back to [dropTarget] when nothing under the point accepts the component, so promoting
+   * still does something sensible for a piece parked over empty canvas.
+   */
+  fun promotionTarget(
+    state: UiBuilderEditorState,
+    componentId: String,
+    slots: List<UiBuilderSlotInspection>,
+    pointX: Float,
+    pointY: Float,
+  ): ParentSlot? {
+    val component = catalog.componentsById[componentId] ?: return null
+    val hit =
+      slots
+        .filter { slot ->
+          val bounds = slot.bounds ?: return@filter false
+          pointX >= bounds.x &&
+            pointX <= bounds.right &&
+            pointY >= bounds.y &&
+            pointY <= bounds.bottom
+        }
+        .filter { slot -> acceptsComponent(state.document, slot, component) }
+        .minByOrNull { slot -> slot.bounds!!.width * slot.bounds!!.height }
+    return hit?.let { ParentSlot(it.parentNodeId, it.slotName) }
+      ?: findDestination(state.document, state.selectedNodeId, component)
+  }
+
+  /** Whether the node owning [slot] declares it, accepts [component] there, and has room. */
+  private fun acceptsComponent(
+    document: UiBuilderDocument,
+    slot: UiBuilderSlotInspection,
+    component: ComponentCapability,
+  ): Boolean {
+    val parent = document.nodes[slot.parentNodeId] ?: return false
+    val capability = catalog.componentsById[parent.componentId] ?: return false
+    val declared = capability.slot(slot.slotName) ?: return false
+    return declared.accepts(component) &&
+      declared.hasRoom(parent.slots[slot.slotName].orEmpty().size)
+  }
+
+  private fun promotePiece(
+    state: UiBuilderEditorState,
+    pieceId: String,
+    target: ParentSlot,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val piece =
+      state.reference.pieces.firstOrNull { it.id == pieceId }
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_LOCATION,
+          "no such reference piece",
+        )
+    val componentId =
+      piece.componentId
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_LOCATION,
+          "This piece is a picture, not a component — nothing here says what to build.",
+        )
+    val component =
+      catalog.componentsById[componentId]
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_LOCATION,
+          "This catalog no longer offers $componentId",
+        )
+    if (!acceptsComponent(state.document, target.asInspectionSlot(), component)) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_LOCATION,
+        "${component.displayName} does not belong in ${target.nodeId}.${target.slot}",
+      )
+    }
+    val inserted = insertAt(state, component, target)
+    // Only when the insertion was actually accepted: a refused promote must leave the piece where
+    // it is, or the operator loses the picture *and* gets no component.
+    if (inserted.lastOutcome !is CommandOutcome.Accepted) return inserted
+    return inserted.withReference(
+      inserted.reference.copy(
+        pieces = inserted.reference.pieces.filterNot { it.id == pieceId },
+        selectedPieceId = inserted.reference.selectedPieceId.takeIf { it != pieceId },
       )
     )
   }

@@ -149,10 +149,24 @@ cleared. The palette carries the design's `background` and `surface` colours bes
 colours for exactly that. Clear the space, then build the real components into it and compare them
 against everything still standing around them.
 
-**Place image…** drops a picture on the frame where you put it rather than fitted to it — a
-component copied out of Figma, say — and drag moves it. **Flatten** bakes the picture, the pieces and
-the marks into one reference and clears them, so the next round of adjustment is measured against
-what was just agreed rather than against the mock from three rounds ago.
+**Image…** drops a picture on the frame where you put it rather than fitted to it — one copied out
+of Figma, say — and drag moves it. **Component…** does the same with a component from this catalog:
+it is composed by the renderer that draws the canvas, photographed, trimmed to its own edges, and
+placed as a picture. **Flatten** bakes the picture, the pieces and the marks into one reference and
+clears them, so the next round of adjustment is measured against what was just agreed rather than
+against the mock from three rounds ago.
+
+### Building a placed component for real
+
+A piece captured from the catalog remembers what it is a picture of, so once it is where it belongs,
+**Build for real** turns it into an actual node: the slot is the deepest one under the piece that
+accepts that component, and the insertion is the same one a drag from the catalog performs. The
+picture then disappears, because the real thing is standing where it was. It is an ordinary document
+edit — it undoes, and every collaborator sees it.
+
+Nothing guesses. A piece with no provenance — a screenshot region, a picture pasted from Figma — has
+no Build button, because deciding which component *that* is, is a judgement rather than a lookup;
+that is the case to hand to an agent.
 
 None of this is part of the design. No node holds it, the Compose and SVG exports cannot see it, and
 nothing here reaches another collaborator's canvas — it is scaffolding for the person doing the
