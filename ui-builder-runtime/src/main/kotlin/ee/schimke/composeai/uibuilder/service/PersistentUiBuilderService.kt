@@ -1593,20 +1593,59 @@ public class PersistentUiBuilderService(
             "catalog upgrades require the preview/apply service path",
             operationIndex = index,
           )
-        // The four document mutations contracts 2.6.0 published (compose-preview-contracts#40):
-        // state variables, event bindings and the modifier chain. This reducer does not implement
-        // them yet, and they arrived here as a side effect of bumping the contract for `typeface`
-        // rather than as work anybody chose to do.
+        is SetModifiersMutationV1 -> {
+          val node =
+            working.document.nodes[mutation.nodeId]
+              ?: fail(RejectionCodeV1.UNKNOWN_NODE, "unknown node", index, mutation.nodeId)
+          val before = node.modifiers
+          val document =
+            working.document.copy(
+              nodes =
+                working.document.nodes + (node.id to node.copy(modifiers = mutation.modifiers))
+            )
+          // The same staleness question the property lane asks, one field over: another actor
+          // rewriting this node's chain since the base revision is a conflict rather than a
+          // refusal, because the chain is a value and the last writer wins.
+          val conflicts =
+            if (
+              command.baseRevision < original.document.revision &&
+                original.acceptedOperations.values.any {
+                  it.committedRevision > command.baseRevision &&
+                    it.changes.any { change ->
+                      change is ModifierChangeV1 && change.nodeId == mutation.nodeId
+                    }
+                }
+            )
+              listOf(
+                CommandConflictV1(
+                  // `STALE_PROPERTY_WRITE` because the wire has no modifier-specific code, and
+                  // `modifiers` is the field it names — the same reading the browser reducer
+                  // reports its own stale chain writes under.
+                  ConflictCodeV1.STALE_PROPERTY_WRITE,
+                  mutation.nodeId,
+                  MODIFIERS_FIELD,
+                  original.document.revision,
+                )
+              )
+            else emptyList()
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            ModifierChangeV1(mutation.nodeId, before, mutation.modifiers),
+            conflicts,
+          )
+        }
+        // The three document mutations contracts 2.6.0 published that this reducer still does not
+        // implement: state variables and event bindings. They arrived here as a side effect of
+        // bumping the contract for `typeface` rather than as work anybody chose to do.
         //
         // Rejected EXPLICITLY, one branch each, rather than behind an `else`. An `else` would also
         // swallow the next mutation the contract adds, and losing that compile error is how this
         // gap would go unnoticed a second time — it is exactly the exhaustiveness check that
-        // surfaced these four. `UNKNOWN_OPERATION` is the honest code: the shape is understood, the
+        // surfaced them. `UNKNOWN_OPERATION` is the honest code: the shape is understood, the
         // behaviour is absent. Tracked in #379.
         is SetStateVariableMutationV1,
         is RemoveStateVariableMutationV1,
-        is SetEventBindingMutationV1,
-        is SetModifiersMutationV1 ->
+        is SetEventBindingMutationV1 ->
           fail(
             RejectionCodeV1.UNKNOWN_OPERATION,
             "this server does not implement ${mutation::class.simpleName} yet",
@@ -1658,6 +1697,34 @@ public class PersistentUiBuilderService(
                 document =
                   working.document.copy(
                     nodes = working.document.nodes + (node.id to node.copy(properties = properties))
+                  )
+              )
+          }
+          is ModifierChangeV1 -> {
+            val node =
+              working.document.nodes[change.nodeId]
+                ?: fail(
+                  RejectionCodeV1.UNSAFE_COMPENSATION,
+                  "modifier node no longer exists",
+                  nodeId = change.nodeId,
+                )
+            val expected = if (undo) change.after else change.before
+            if (node.modifiers != expected) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "modifiers changed after the target operation",
+                nodeId = change.nodeId,
+                field = MODIFIERS_FIELD,
+              )
+            }
+            working =
+              working.copy(
+                document =
+                  working.document.copy(
+                    nodes =
+                      working.document.nodes +
+                        (node.id to
+                          node.copy(modifiers = if (undo) change.before else change.after))
                   )
               )
           }
@@ -2176,6 +2243,21 @@ private data class PropertyChangeV1(
   val after: UiValueV1,
 ) : ChangeRecordV1
 
+/**
+ * One node's whole modifier chain, before and after.
+ *
+ * Node-granular rather than field-granular, because the chain is one value:
+ * `SetModifiersMutationV1` writes it whole, its elements are order-dependent and have no identity
+ * to address, and two writers editing it are editing the same thing.
+ */
+@Serializable
+@SerialName("modifiers")
+private data class ModifierChangeV1(
+  val nodeId: String,
+  val before: List<DesignModifierV1>,
+  val after: List<DesignModifierV1>,
+) : ChangeRecordV1
+
 @Serializable
 @SerialName("environment")
 private data class EnvironmentChangeRecordV1(
@@ -2549,6 +2631,9 @@ private fun DesignDocumentV1.rebuildLocation(
         (parentNode.id to parentNode.copy(slots = parentNode.slots + (parent.slot to children)))
   )
 }
+
+/** What a conflict and a compensation failure call the chain, since the wire has no name for it. */
+private const val MODIFIERS_FIELD = "modifiers"
 
 private const val POSITION_STEP = 1_024
 private const val POSITION_MIDPOINT = 512

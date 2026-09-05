@@ -145,6 +145,132 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a modifier chain is written whole, undone and redone`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+        ),
+      )
+    )
+    assertEquals(emptyList<DesignModifierV1>(), currentNode(service, "node").modifiers)
+
+    val padded =
+      listOf(
+        PaddingModifierV1(
+          JsonPrimitive(16),
+          JsonPrimitive(16),
+          JsonPrimitive(16),
+          JsonPrimitive(16),
+        ),
+        FillMaxWidthModifierV1,
+      )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("pad", 1, SetModifiersMutationV1("node", padded))
+        ),
+      )
+    )
+    // Order is the contract: padding then fill is a different layout from fill then padding.
+    assertEquals(padded, currentNode(service, "node").modifiers)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-pad", "browser", 2, "pad")
+        ),
+      )
+    )
+    assertEquals(emptyList<DesignModifierV1>(), currentNode(service, "node").modifiers)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Redo("design", "redo-pad", "browser", 3, "undo-pad")
+        ),
+      )
+    )
+    assertEquals(padded, currentNode(service, "node").modifiers)
+
+    // An empty list is a value — "this node has no modifiers any more" — not an absence.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("clear", 4, SetModifiersMutationV1("node", emptyList()))
+        ),
+      )
+    )
+    assertEquals(emptyList<DesignModifierV1>(), currentNode(service, "node").modifiers)
+  }
+
+  @Test
+  fun `a chain written on an unknown node is refused, and a stale chain write conflicts`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+        ),
+      )
+    )
+
+    val unknown =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("missing", 1, SetModifiersMutationV1("absent", listOf(FillMaxSizeModifierV1)))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.UNKNOWN_NODE, unknown.code)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("first", 1, SetModifiersMutationV1("node", listOf(FillMaxWidthModifierV1)))
+        ),
+      )
+    )
+    // Written from a base revision that predates the first write: accepted, because the chain is a
+    // value and the last writer wins, but the other actor is told their read was stale.
+    val stale =
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("second", 1, SetModifiersMutationV1("node", listOf(FillMaxSizeModifierV1)))
+          ),
+        )
+      )
+    val conflict = stale.conflicts.single()
+    assertEquals(ConflictCodeV1.STALE_PROPERTY_WRITE, conflict.code)
+    assertEquals("node", conflict.nodeId)
+    assertEquals("modifiers", conflict.field)
+    assertEquals(listOf(FillMaxSizeModifierV1), currentNode(service, "node").modifiers)
+  }
+
+  @Test
   fun `a blank typeface is rejected rather than stored as a face called nothing`() {
     // Blank is not "the default" — reset is. A stored blank would be indistinguishable, at the
     // renderer, from a family it looked up and failed to find.
