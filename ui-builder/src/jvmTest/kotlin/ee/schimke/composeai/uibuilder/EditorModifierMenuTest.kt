@@ -42,10 +42,114 @@ class EditorModifierMenuTest {
     )
 
     // A text declares two of them and not the other two, so its menu is shorter by exactly those:
-    // filling a parent and matching its size are container verbs and are never offered here.
+    // filling a parent and matching its size are container verbs and are never offered here. The
+    // two that follow are not the text's own: it sits in a column, and a column is what makes an
+    // alignment across the cross axis and a weight along the main one mean anything.
     val text =
       reducer.modifierToggles(reducer.initial(document, selectedNodeId = "detail-podcast-title"))
-    assertEquals(listOf("fillMaxWidth", "padding"), text.map { it.type })
+    assertEquals(
+      listOf("fillMaxWidth", "padding", "alignHorizontal", "weight"),
+      text.map { it.type },
+    )
+  }
+
+  @Test
+  fun `the scoped modifiers are the parent's answer, not the child's`() {
+    // `Modifier.align` and `Modifier.weight` are receivers a parent supplies. The catalog declares
+    // them on every component because any component can be a child; which one is offered — and
+    // whether any is — comes from what the node is a child of.
+    fun scoped(nodeId: String) =
+      reducer
+        .modifierToggles(reducer.initial(document, selectedNodeId = nodeId))
+        .map { it.type }
+        .filter { it in setOf("align", "alignHorizontal", "alignVertical", "weight") }
+
+    // A root has no parent, so neither means anything and neither is offered.
+    assertEquals(emptyList(), scoped("main-background"))
+    // A box's child aligns in two dimensions at once and has no main axis to weight.
+    assertEquals(listOf("align"), scoped("discover-grid"))
+    // A row's child aligns vertically; a column's, horizontally. Both weight.
+    assertEquals(listOf("alignVertical", "weight"), scoped("main-episode-meta"))
+    assertEquals(listOf("alignHorizontal", "weight"), scoped("detail-podcast-title"))
+  }
+
+  @Test
+  fun `a scoped modifier is refused where nothing supplies the scope`() {
+    // The catalog declares `weight` on a box, because a box in a row can carry one. This box is a
+    // root, and a chain the renderer has no receiver for is code the exporter could not emit.
+    val state = reducer.initial(document, selectedNodeId = "main-background")
+    val refused =
+      reducer.reduce(state, UiBuilderEditorEvent.ToggleModifier("main-background", "weight"))
+
+    val outcome = refused.lastOutcome
+    assertTrue(outcome is CommandOutcome.Rejected, outcome.toString())
+    assertEquals(RejectionCode.INVALID_PROPERTY, outcome.code)
+    assertEquals("modifiers", outcome.field)
+    assertEquals(document, refused.document)
+  }
+
+  @Test
+  fun `an alignment is chosen from the values its scope defines`() {
+    val state = reducer.initial(document, selectedNodeId = "detail-podcast-title")
+    val aligned =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.ToggleModifier("detail-podcast-title", "alignHorizontal"),
+      )
+
+    val field = reducer.modifierFields(aligned).single { it.type == "alignHorizontal" }
+    assertEquals("centerHorizontally", field.value)
+    assertEquals(listOf("start", "centerHorizontally", "end"), field.choices)
+
+    val moved =
+      reducer.reduce(
+        aligned,
+        UiBuilderEditorEvent.SetModifierValue(
+          "detail-podcast-title",
+          "alignHorizontal",
+          "alignment",
+          "end",
+        ),
+      )
+    assertEquals(
+      "end",
+      reducer.modifierFields(moved).single { it.type == "alignHorizontal" }.value,
+    )
+
+    // A column offers three of the nine, and the six a box would offer are refused here rather
+    // than written: `Alignment.CenterEnd` is not an `Alignment.Horizontal` and never applies.
+    val refused =
+      reducer.reduce(
+        moved,
+        UiBuilderEditorEvent.SetModifierValue(
+          "detail-podcast-title",
+          "alignHorizontal",
+          "alignment",
+          "centerEnd",
+        ),
+      )
+    val outcome = refused.lastOutcome
+    assertTrue(outcome is CommandOutcome.Rejected, outcome.toString())
+    assertEquals("modifiers", outcome.field)
+    assertEquals(moved.document, refused.document)
+  }
+
+  @Test
+  fun `a weight is a number the menu starts at one and the field then moves`() {
+    val state = reducer.initial(document, selectedNodeId = "detail-podcast-title")
+    val weighted =
+      reducer.reduce(state, UiBuilderEditorEvent.ToggleModifier("detail-podcast-title", "weight"))
+
+    val field = reducer.modifierFields(weighted).single { it.type == "weight" }
+    assertEquals("Weight" to "1", field.label to field.value)
+    assertTrue(field.choices.isEmpty(), "a weight is typed, not picked")
+
+    val heavier =
+      reducer.reduce(
+        weighted,
+        UiBuilderEditorEvent.SetModifierValue("detail-podcast-title", "weight", "weight", "2"),
+      )
+    assertEquals("2", reducer.modifierFields(heavier).single { it.type == "weight" }.value)
   }
 
   @Test

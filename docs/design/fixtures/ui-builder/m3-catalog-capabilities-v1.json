@@ -33,7 +33,7 @@
         { "name": "contentScale", "jsonType": "string", "required": false, "allowedValues": ["crop", "fit", "fillBounds", "inside"] },
         { "name": "alignment", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Requires the pinned, hash-checked builder asset registry and deterministic loading state." },
       "code": { "symbol": "Image", "imports": ["androidx.compose.foundation.Image", "androidx.compose.ui.layout.ContentScale"] },
       "svg": { "status": "raster-fallback-required", "fallback": "embedded-raster", "blocksExport": false, "notes": "The current recorder embeds deterministic generated placeholder bytes with source and payload provenance; production asset bytes remain a release gate and external URLs are forbidden." }
@@ -50,7 +50,7 @@
         { "name": "contentAlignment", "jsonType": "string", "required": false },
         { "name": "propagateMinConstraints", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "verticalScroll", "horizontalScroll"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "verticalScroll", "horizontalScroll", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "Box", "imports": ["androidx.compose.foundation.layout.Box"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -70,7 +70,7 @@
         { "name": "alignment", "jsonType": "string", "required": false, "allowedValues": ["topStart", "topCenter", "topEnd", "centerStart", "center", "centerEnd", "bottomStart", "bottomCenter", "bottomEnd"], "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible." },
         { "name": "weight", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "verticalScroll"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "verticalScroll", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Column", "imports": ["androidx.compose.foundation.layout.Column"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -91,7 +91,7 @@
         { "name": "kind", "jsonType": "string", "required": false },
         { "name": "span", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 carousel API; masking and stable item keys require conformance tests." },
       "code": { "symbol": "HorizontalUncontainedCarousel", "imports": ["androidx.compose.material3.carousel.HorizontalUncontainedCarousel", "androidx.compose.material3.carousel.rememberCarouselState"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "Verified only for the pinned settled viewport; off-screen items are not flattened into view." }
@@ -110,7 +110,7 @@
         { "name": "scrollStateKey", "jsonType": "string", "required": true },
         { "name": "reverseLayout", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Independent pane scroll requires distinct stable scrollStateKey values." },
       "code": { "symbol": "LazyColumn", "imports": ["androidx.compose.foundation.lazy.LazyColumn"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -131,7 +131,7 @@
         { "name": "scrollStateKey", "jsonType": "string", "required": true },
         { "name": "itemSpans", "jsonType": "object", "required": false, "notes": "Map stable child id to 'single' or 'full'." }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must prove adaptive 362dp cells and full-span rows at the pinned viewport." },
       "code": { "symbol": "LazyVerticalGrid", "imports": ["androidx.compose.foundation.lazy.grid.GridCells", "androidx.compose.foundation.lazy.grid.GridItemSpan", "androidx.compose.foundation.lazy.grid.LazyVerticalGrid"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -151,7 +151,7 @@
         { "name": "span", "jsonType": "string", "required": false },
         { "name": "stableKey", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "LazyRow", "imports": ["androidx.compose.foundation.lazy.LazyRow"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -169,7 +169,7 @@
         { "name": "horizontalSpacingDp", "jsonType": "number", "required": false },
         { "name": "verticalAlignment", "jsonType": "string", "required": false, "allowedValues": ["top", "center", "bottom"] }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "horizontalScroll"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "horizontalScroll", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Row", "imports": ["androidx.compose.foundation.layout.Row"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -190,7 +190,7 @@
         { "name": "loading", "jsonType": "boolean", "required": false },
         { "name": "scrollStateKey", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Scaffold", "imports": ["androidx.compose.material3.Scaffold"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -212,7 +212,7 @@
         { "name": "mainPaneVisible", "jsonType": "boolean", "required": true },
         { "name": "supportingPaneVisible", "jsonType": "boolean", "required": true }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize"],
+      "modifierCapabilities": ["size", "fillMaxSize", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": "unverified", "adapterStatus": "unsupported", "notes": "The repository has no Material 3 adaptive dependency or verified Wasm adapter yet; this blocks the expanded benchmark." },
       "code": { "symbol": "SupportingPaneScaffold", "imports": ["androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "Verified for the deterministic expanded two-pane adapter used by this frozen benchmark, not the unavailable general adaptive Material API." }
@@ -233,7 +233,7 @@
         { "name": "containerColor", "jsonType": "string", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "Button", "imports": ["androidx.compose.material3.Button", "androidx.compose.material3.OutlinedButton", "androidx.compose.material3.TextButton"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -254,7 +254,7 @@
         { "name": "elevationDp", "jsonType": "number", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "clip", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "background", "border", "shadow", "wrapContentSize"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "clip", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Material card previews exist, but the builder adapter must expose arbitrary semantic content." },
       "code": { "symbol": "Card", "imports": ["androidx.compose.material3.Card", "androidx.compose.material3.ElevatedCard", "androidx.compose.material3.OutlinedCard"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -272,7 +272,7 @@
         { "name": "scrolledContainerColor", "jsonType": "string", "required": false },
         { "name": "scrollBehavior", "jsonType": "string", "required": false, "allowedValues": ["pinned", "enterAlways", "exitUntilCollapsed"], "notes": "Reaches the generated Kotlin as the matching TopAppBarDefaults behavior. The canvas draws the bar pinned whatever this says: a scroll behavior is driven by a nested-scroll connection the document has no scaffold to carry." }
       ],
-      "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "CenterAlignedTopAppBar", "imports": ["androidx.compose.material3.CenterAlignedTopAppBar"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -287,7 +287,7 @@
         { "name": "checked", "jsonType": ["boolean", "string"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shape a filter chip's `selected` takes." },
         { "name": "enabled", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "padding"],
+      "modifierCapabilities": ["size", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Checkbox", "imports": ["androidx.compose.material3.Checkbox"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -303,7 +303,7 @@
         { "name": "selectedDate", "jsonType": "string", "required": true, "notes": "ISO-8601 `YYYY-MM-DD`. Pinned rather than read from the clock so a render is the same picture on every day." },
         { "name": "showModeToggle", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Material's own DatePicker, with its state pinned to `selectedDate` so the displayed month never depends on today's date." },
       "code": { "symbol": "DatePicker", "imports": ["androidx.compose.material3.DatePicker", "androidx.compose.material3.rememberDatePickerState"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -325,7 +325,7 @@
         { "name": "tonalElevationDp", "jsonType": "number", "required": false },
         { "name": "shapeDp", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "background", "border", "shadow", "wrapContentSize"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Drawn inline where it sits, with AlertDialog's own surface, spacing and button row. A real Dialog is a window: it would leave the canvas, and its onDismissRequest has nothing to write, because a design declares no way to close one." },
       "code": { "symbol": "AlertDialog", "imports": ["androidx.compose.material3.AlertDialog"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -345,7 +345,7 @@
         { "name": "shape", "jsonType": "string", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "FilterChip", "imports": ["androidx.compose.material3.FilterChip"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -360,7 +360,7 @@
         { "name": "thicknessDp", "jsonType": "number", "required": false },
         { "name": "color", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "HorizontalDivider", "imports": ["androidx.compose.material3.HorizontalDivider"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -379,7 +379,7 @@
         { "name": "contentPadding", "jsonType": "object", "required": false },
         { "name": "alignment", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 API and selected-button appearance require pinned-version tests." },
       "code": { "symbol": "HorizontalFloatingToolbar", "imports": ["androidx.compose.material3.HorizontalFloatingToolbar"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -396,7 +396,7 @@
         { "name": "sizeDp", "jsonType": "number", "required": false },
         { "name": "color", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Only explicitly registered, license-compatible vector keys are valid." },
       "code": { "symbol": "Icon", "imports": ["androidx.compose.material3.Icon"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "Icon paths are selected by the authored iconKey and emitted without Skia tint-filter rasterization." }
@@ -418,7 +418,7 @@
         { "name": "sizeDp", "jsonType": "number", "required": false },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },
       "code": { "symbol": "IconButton", "imports": ["androidx.compose.material3.FilledIconButton", "androidx.compose.material3.IconButton"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -436,7 +436,7 @@
       "properties": [
         { "name": "startAccentColor", "jsonType": "string", "required": false, "notes": "A 3dp bar down the leading edge, drawn behind the item. Empty draws none." }
       ],
-      "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "ListItem", "imports": ["androidx.compose.material3.ListItem"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -452,7 +452,7 @@
       "properties": [
         { "name": "selectedIndex", "jsonType": "integer", "required": true }
       ],
-      "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "PrimaryTabRow", "imports": ["androidx.compose.material3.PrimaryTabRow"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -468,7 +468,7 @@
         { "name": "progress", "jsonType": ["number", "object"], "required": false, "notes": "0..1, a literal or a `state` read. Absent means the indeterminate indicator — Material's own distinction between a progress you know and one you do not." },
         { "name": "indeterminate", "jsonType": "boolean", "required": false, "notes": "Draws the running animation rather than a value. Pinned to its first frame on the canvas, because a render that animates is a render that cannot be diffed." }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "The indeterminate form is drawn at its first frame: the document environment freezes animation, so the canvas shows a still of it." },
       "code": { "symbol": "LinearProgressIndicator", "imports": ["androidx.compose.material3.LinearProgressIndicator", "androidx.compose.material3.CircularProgressIndicator"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -483,7 +483,7 @@
         { "name": "selected", "jsonType": ["boolean", "string"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is what makes a group of them pick one option between them." },
         { "name": "enabled", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "padding"],
+      "modifierCapabilities": ["size", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "RadioButton", "imports": ["androidx.compose.material3.RadioButton"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -502,7 +502,7 @@
         { "name": "shapeDp", "jsonType": "number", "required": false },
         { "name": "tonalElevationDp", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Experimental Material 3 API; the fixed benchmark keeps expanded false." },
       "code": { "symbol": "SearchBar", "imports": ["androidx.compose.material3.SearchBar"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -524,7 +524,7 @@
         { "name": "onQueryChangeAction", "jsonType": ["object", "null"], "required": false },
         { "name": "onSearchAction", "jsonType": ["object", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Maps to the experimental SearchBarDefaults.InputField API." },
       "code": { "symbol": "SearchBarDefaults.InputField", "imports": ["androidx.compose.material3.SearchBarDefaults"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -542,7 +542,7 @@
         { "name": "steps", "jsonType": "integer", "required": false, "notes": "Discrete stops between the ends, as Material counts them: 0 is a continuous slider." },
         { "name": "enabled", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Slider", "imports": ["androidx.compose.material3.Slider"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -560,7 +560,7 @@
         { "name": "message", "jsonType": "string", "required": false },
         { "name": "actionLabel", "jsonType": ["string", "null"], "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "The fixed benchmark keeps the host hidden but retains the scaffold slot identity." },
       "code": { "symbol": "SnackbarHost", "imports": ["androidx.compose.material3.SnackbarHost", "androidx.compose.material3.rememberSnackbarHostState"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -585,7 +585,7 @@
         { "name": "themeTypeScale", "jsonType": "number", "required": false },
         { "name": "themeCornerRadiusDp", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Surface", "imports": ["androidx.compose.material3.Surface"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -600,7 +600,7 @@
         { "name": "checked", "jsonType": ["boolean", "string"], "required": false },
         { "name": "enabled", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "padding"],
+      "modifierCapabilities": ["size", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Switch", "imports": ["androidx.compose.material3.Switch"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -616,7 +616,7 @@
       "properties": [
         { "name": "selected", "jsonType": "boolean", "required": true }
       ],
-      "modifierCapabilities": ["padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Tab", "imports": ["androidx.compose.material3.Tab"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -645,7 +645,7 @@
         { "name": "alignment", "jsonType": "string", "required": false, "allowedValues": ["topStart", "topCenter", "topEnd", "centerStart", "center", "centerEnd", "bottomStart", "bottomCenter", "bottomEnd"] },
         { "name": "weight", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Fidelity requires the pinned Jetcaster font assets and typography tokens." },
       "code": { "symbol": "Text", "imports": ["androidx.compose.material3.Text"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate." }
@@ -670,7 +670,7 @@
         { "name": "singleLine", "jsonType": "boolean", "required": false },
         { "name": "isError", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "TextField", "imports": ["androidx.compose.material3.TextField", "androidx.compose.material3.OutlinedTextField"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -687,7 +687,7 @@
         { "name": "minute", "jsonType": "integer", "required": true },
         { "name": "is24Hour", "jsonType": "boolean", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Material's own TimePicker and TimeInput, with hour and minute pinned by the document rather than taken from the clock." },
       "code": { "symbol": "TimePicker", "imports": ["androidx.compose.material3.TimePicker", "androidx.compose.material3.TimeInput", "androidx.compose.material3.rememberTimePickerState"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -703,7 +703,7 @@
         { "name": "theme", "jsonType": "string", "required": false, "allowedValues": ["inherit", "light", "dark", "system"] },
         { "name": "namedValues", "jsonType": "object", "required": false, "notes": "Typed host values keyed by the Remote Compose named-variable name." }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config." },
       "code": { "symbol": "RcComposePlayer", "imports": ["ee.schimke.composeai.rcplayer.compose.RcComposePlayer"] },
       "svg": { "status": "unsupported", "fallback": "none", "blocksExport": true, "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation." }
@@ -718,7 +718,7 @@
         { "name": "color", "jsonType": "string", "required": true },
         { "name": "diameterDp", "jsonType": "number", "required": false }
       ],
-      "modifierCapabilities": ["padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio"],
+      "modifierCapabilities": ["padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Box", "imports": ["androidx.compose.foundation.background", "androidx.compose.foundation.layout.Box"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
@@ -734,7 +734,7 @@
         { "name": "endColor", "jsonType": "string", "required": true },
         { "name": "direction", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must remain a semantic brush layer, not persisted pixel geometry." },
       "code": { "symbol": "Modifier.background(Brush.linearGradient)", "imports": ["androidx.compose.foundation.background", "androidx.compose.ui.Modifier", "androidx.compose.ui.graphics.Brush"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The frozen benchmark usage records as vector gradient output." }
@@ -751,7 +751,7 @@
         { "name": "innerAlpha", "jsonType": "number", "required": false },
         { "name": "center", "jsonType": "string", "required": false }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight"],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Must remain a semantic brush layer, not persisted pixel geometry." },
       "code": { "symbol": "Modifier.background(Brush.radialGradient)", "imports": ["androidx.compose.foundation.background", "androidx.compose.ui.Modifier", "androidx.compose.ui.graphics.Brush"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The frozen benchmark usage records as vector gradient output." }

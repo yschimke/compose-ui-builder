@@ -96,6 +96,8 @@ data class EditorModifierField(
   val field: String,
   val label: String,
   val value: String,
+  /** The values this field may take, or empty when it is a number. */
+  val choices: List<String> = emptyList(),
 )
 
 enum class EditorComponentKind(val label: String) {
@@ -1484,7 +1486,8 @@ class UiBuilderEditorReducer(
     val node = state.document.nodes[nodeId] ?: return emptyList()
     val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty().toSet()
     val present = node.modifierTypes()
-    return MENU_MODIFIERS.filter { it.type in declared }
+    val scope = state.document.scopeOf(nodeId)
+    return MENU_MODIFIERS.filter { it.type in declared && it.offeredIn(scope) }
       .map { EditorModifierToggle(it.type, it.label, it.type in present) }
   }
 
@@ -1513,6 +1516,18 @@ class UiBuilderEditorReducer(
         "modifiers",
       )
     }
+    // The catalog says the component can carry it; the parent says whether the modifier means
+    // anything. `weight` outside a row or a column is a chain the renderer has no scope to apply
+    // and the exporter would emit as code that does not compile.
+    if (!menuModifier.offeredIn(state.document.scopeOf(nodeId))) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "Modifier $type needs a parent that provides its scope",
+        nodeId,
+        "modifiers",
+      )
+    }
     val kept = node.modifiers.filter { (it as? JsonObject)?.optionalStringValue("type") != type }
     val chain =
       if (type in node.modifierTypes()) JsonArray(kept) else JsonArray(kept + menuModifier.build())
@@ -1536,23 +1551,26 @@ class UiBuilderEditorReducer(
     return node.modifiers.flatMapIndexed { _, element ->
       val modifier = element as? JsonObject ?: return@flatMapIndexed emptyList()
       val type = modifier.optionalStringValue("type") ?: return@flatMapIndexed emptyList()
-      MODIFIER_NUMBER_FIELDS[type].orEmpty().map { field ->
+      MODIFIER_FIELDS[type].orEmpty().map { field ->
         EditorModifierField(
           type = type,
           field = field.name,
           label = field.label,
           value = modifier[field.name]?.primitiveOrNull()?.content.orEmpty(),
+          choices = field.choices,
         )
       }
     }
   }
 
   /**
-   * Write one number into one modifier.
+   * Write one value into one modifier.
    *
-   * Refused rather than committed on a draft that is not a number: the reducer would take a string
-   * where the renderer expects a dimension, and a chain that no longer applies is worse than a
-   * rejected keystroke.
+   * Refused rather than committed on a draft the field cannot hold: the reducer would take a string
+   * where the renderer expects a dimension, or an alignment no scope defines, and a chain that no
+   * longer applies is worse than a rejected keystroke. Which of the two a field is comes from
+   * [MODIFIER_FIELDS] — the same table the inspector draws from, so the control offered and the
+   * value accepted cannot disagree.
    */
   private fun setModifierValue(
     state: UiBuilderEditorState,
@@ -1563,15 +1581,37 @@ class UiBuilderEditorReducer(
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val node = state.document.nodes[nodeId] ?: return state
-    val number =
-      draft.trim().toDoubleOrNull()
-        ?: return state.rejected(
-          sequence,
-          RejectionCode.INVALID_PROPERTY,
-          "${field.humanLabel()} must be a number",
-          nodeId,
-          "modifiers",
-        )
+    val choices =
+      MODIFIER_FIELDS[type].orEmpty().firstOrNull { it.name == field }?.choices.orEmpty()
+    val value =
+      if (choices.isEmpty()) {
+        val number =
+          draft.trim().toDoubleOrNull()
+            ?: return state.rejected(
+              sequence,
+              RejectionCode.INVALID_PROPERTY,
+              "${field.humanLabel()} must be a number",
+              nodeId,
+              "modifiers",
+            )
+        // Whole numbers stay whole. A padding typed as 24 that reads back as 24.0 is the same
+        // layout and a different document, and every diff of it says something changed.
+        if (number == floor(number) && abs(number) < Long.MAX_VALUE.toDouble())
+          JsonPrimitive(number.toLong())
+        else JsonPrimitive(number)
+      } else {
+        val choice = draft.trim()
+        if (choice !in choices) {
+          return state.rejected(
+            sequence,
+            RejectionCode.INVALID_PROPERTY,
+            "${field.humanLabel()} must be one of ${choices.joinToString(", ")}",
+            nodeId,
+            "modifiers",
+          )
+        }
+        JsonPrimitive(choice)
+      }
     var written = false
     val chain =
       JsonArray(
@@ -1579,13 +1619,7 @@ class UiBuilderEditorReducer(
           val modifier = element as? JsonObject ?: return@map element
           if (written || modifier.optionalStringValue("type") != type) return@map element
           written = true
-          // Whole numbers stay whole. A padding typed as 24 that reads back as 24.0 is the same
-          // layout and a different document, and every diff of it says something changed.
-          val encoded =
-            if (number == floor(number) && abs(number) < Long.MAX_VALUE.toDouble())
-              JsonPrimitive(number.toLong())
-            else JsonPrimitive(number)
-          JsonObject(modifier + (field to encoded))
+          JsonObject(modifier + (field to value))
         }
       )
     if (!written) return state
@@ -4086,53 +4120,139 @@ private val MENU_MODIFIERS: List<MenuModifier> =
         put("bottomDp", 16)
       }
     },
+    MenuModifier("align", "Align in the box", EditorLayoutScope.Box) {
+      buildJsonObject {
+        put("type", "align")
+        put("alignment", "center")
+      }
+    },
+    MenuModifier("alignHorizontal", "Align across the column", EditorLayoutScope.Column) {
+      buildJsonObject {
+        put("type", "alignHorizontal")
+        put("alignment", "centerHorizontally")
+      }
+    },
+    MenuModifier("alignVertical", "Align across the row", EditorLayoutScope.Row) {
+      buildJsonObject {
+        put("type", "alignVertical")
+        put("alignment", "centerVertically")
+      }
+    },
+    MenuModifier(
+      "weight",
+      "Take the leftover space",
+      EditorLayoutScope.Column,
+      EditorLayoutScope.Row,
+    ) {
+      buildJsonObject {
+        put("type", "weight")
+        put("weight", 1)
+      }
+    },
   )
 
 /**
- * The numbers each modifier carries, and what to call them.
+ * The scope a node's parent puts it in, which is what decides whether an alignment or a weight
+ * means anything.
+ *
+ * `Modifier.align` and `Modifier.weight` are not properties of the child: they are receivers the
+ * parent supplies, and Compose refuses them at compile time outside one. The renderer applies them
+ * from the parent's call site for exactly that reason, so the menu has to read the parent too —
+ * otherwise it offers a row a weight that nothing would ever apply.
+ */
+private enum class EditorLayoutScope {
+  Box,
+  Column,
+  Row,
+}
+
+/** The containers whose children the renderer composes inside a scope, and which one. */
+private val EDITOR_LAYOUT_SCOPES: Map<String, EditorLayoutScope> =
+  mapOf(
+    "layout/box" to EditorLayoutScope.Box,
+    // A card's content slot is a `Box` in the renderer, so its children align like a box's.
+    "m3/card" to EditorLayoutScope.Box,
+    "layout/column" to EditorLayoutScope.Column,
+    "layout/row" to EditorLayoutScope.Row,
+  )
+
+private fun UiBuilderDocument.scopeOf(nodeId: String): EditorLayoutScope? {
+  val parent = location(nodeId)?.nodeId ?: return null
+  return EDITOR_LAYOUT_SCOPES[nodes[parent]?.componentId]
+}
+
+/** The nine a `Box` child may sit at, and the three each axis of a row or a column allows. */
+private val BOX_ALIGNMENTS =
+  listOf(
+    "topStart",
+    "topCenter",
+    "topEnd",
+    "centerStart",
+    "center",
+    "centerEnd",
+    "bottomStart",
+    "bottomCenter",
+    "bottomEnd",
+  )
+
+private val COLUMN_ALIGNMENTS = listOf("start", "centerHorizontally", "end")
+
+private val ROW_ALIGNMENTS = listOf("top", "centerVertically", "bottom")
+
+/**
+ * The values each modifier carries, and what to call them.
  *
  * Closed, like [EDITOR_OBJECT_VALUE_EDGES] and for the same reason: a modifier whose value is a
- * shape, a colour or an alignment has no honest number field, and offering an empty one is worse
- * than offering none.
+ * shape or a colour has no honest one-line control, and offering an empty one is worse than
+ * offering none. An alignment does — it is a closed list — so it is here as a choice.
  */
-private val MODIFIER_NUMBER_FIELDS: Map<String, List<ModifierNumberField>> =
+private val MODIFIER_FIELDS: Map<String, List<ModifierField>> =
   mapOf(
     "padding" to
       listOf(
-        ModifierNumberField("startDp", "Start"),
-        ModifierNumberField("topDp", "Top"),
-        ModifierNumberField("endDp", "End"),
-        ModifierNumberField("bottomDp", "Bottom"),
+        ModifierField("startDp", "Start"),
+        ModifierField("topDp", "Top"),
+        ModifierField("endDp", "End"),
+        ModifierField("bottomDp", "Bottom"),
       ),
-    "size" to
-      listOf(ModifierNumberField("widthDp", "Width"), ModifierNumberField("heightDp", "Height")),
-    "width" to listOf(ModifierNumberField("widthDp", "Width")),
-    "height" to listOf(ModifierNumberField("heightDp", "Height")),
-    "widthIn" to
-      listOf(ModifierNumberField("minDp", "Min width"), ModifierNumberField("maxDp", "Max width")),
+    "size" to listOf(ModifierField("widthDp", "Width"), ModifierField("heightDp", "Height")),
+    "width" to listOf(ModifierField("widthDp", "Width")),
+    "height" to listOf(ModifierField("heightDp", "Height")),
+    "widthIn" to listOf(ModifierField("minDp", "Min width"), ModifierField("maxDp", "Max width")),
     "heightIn" to
       listOf(
-        ModifierNumberField("minDp", "Min height"),
-        ModifierNumberField("maxDp", "Max height"),
+        ModifierField("minDp", "Min height"),
+        ModifierField("maxDp", "Max height"),
       ),
-    "aspectRatio" to listOf(ModifierNumberField("ratio", "Ratio")),
-    "offset" to listOf(ModifierNumberField("xDp", "X"), ModifierNumberField("yDp", "Y")),
-    "zIndex" to listOf(ModifierNumberField("zIndex", "Z")),
-    "border" to listOf(ModifierNumberField("widthDp", "Border")),
-    "alpha" to listOf(ModifierNumberField("alpha", "Alpha")),
-    "shadow" to listOf(ModifierNumberField("elevationDp", "Elevation")),
-    "rotate" to listOf(ModifierNumberField("degrees", "Degrees")),
-    "scale" to
-      listOf(ModifierNumberField("scaleX", "Scale X"), ModifierNumberField("scaleY", "Scale Y")),
+    "aspectRatio" to listOf(ModifierField("ratio", "Ratio")),
+    "offset" to listOf(ModifierField("xDp", "X"), ModifierField("yDp", "Y")),
+    "zIndex" to listOf(ModifierField("zIndex", "Z")),
+    "border" to listOf(ModifierField("widthDp", "Border")),
+    "alpha" to listOf(ModifierField("alpha", "Alpha")),
+    "shadow" to listOf(ModifierField("elevationDp", "Elevation")),
+    "rotate" to listOf(ModifierField("degrees", "Degrees")),
+    "scale" to listOf(ModifierField("scaleX", "Scale X"), ModifierField("scaleY", "Scale Y")),
+    "weight" to listOf(ModifierField("weight", "Weight")),
+    "align" to listOf(ModifierField("alignment", "Align", BOX_ALIGNMENTS)),
+    "alignHorizontal" to listOf(ModifierField("alignment", "Align", COLUMN_ALIGNMENTS)),
+    "alignVertical" to listOf(ModifierField("alignment", "Align", ROW_ALIGNMENTS)),
   )
 
-private class ModifierNumberField(val name: String, val label: String)
+private class ModifierField(
+  val name: String,
+  val label: String,
+  val choices: List<String> = emptyList(),
+)
 
 private class MenuModifier(
   val type: String,
   val label: String,
+  /** The scopes this modifier is offered in, or none where any parent will do. */
+  vararg val scopes: EditorLayoutScope,
   val build: () -> JsonObject,
-)
+) {
+  fun offeredIn(scope: EditorLayoutScope?): Boolean = scopes.isEmpty() || scope in scopes
+}
 
 /** The types on a node's chain, for asking whether it already carries one. */
 private fun UiBuilderNode.modifierTypes(): Set<String> =

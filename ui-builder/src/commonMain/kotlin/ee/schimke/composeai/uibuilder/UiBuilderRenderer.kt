@@ -665,7 +665,7 @@ private fun RenderNode(
             if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
           child(
             id,
-            parentSizing.align(item.childAlignment()).zIndex(item.float("zIndex")),
+            parentSizing.align(alignmentFor(item.boxAlignment())).zIndex(item.float("zIndex")),
           )
         }
       }
@@ -677,14 +677,18 @@ private fun RenderNode(
       ) {
         slot("children").forEach { id ->
           val item = document.nodes.getValue(id)
-          val weight = item.float("weight")
-          val next =
+          val weight = item.layoutWeight()
+          val sized =
             when {
-              weight > 0f -> Modifier.weight(weight)
+              weight != null -> Modifier.weight(weight.weight, weight.fill ?: true)
+              // A lazy column with no weight of its own would measure its children unbounded and
+              // fail; taking what is left is the only sane reading of "put a list here".
               item.componentId == "layout/lazy-column" -> Modifier.fillMaxWidth().weight(1f)
               else -> Modifier
             }
-          child(id, next)
+          val aligned =
+            item.crossAxisAlignment()?.let { sized.align(horizontalAlignmentFor(it)) } ?: sized
+          child(id, aligned)
         }
       }
     "layout/row" ->
@@ -694,8 +698,13 @@ private fun RenderNode(
         verticalAlignment = node.verticalAlignment(),
       ) {
         slot("children").forEach { id ->
-          val weight = document.nodes.getValue(id).float("weight")
-          child(id, if (weight > 0f) Modifier.weight(weight) else Modifier)
+          val item = document.nodes.getValue(id)
+          val weight = item.layoutWeight()
+          val sized =
+            if (weight == null) Modifier else Modifier.weight(weight.weight, weight.fill ?: true)
+          val aligned =
+            item.crossAxisAlignment()?.let { sized.align(verticalAlignmentFor(it)) } ?: sized
+          child(id, aligned)
         }
       }
     "layout/lazy-row" -> {
@@ -852,7 +861,7 @@ private fun RenderNode(
               if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
             child(
               id,
-              parentSizing.align(item.childAlignment()).zIndex(item.float("zIndex")),
+              parentSizing.align(alignmentFor(item.boxAlignment())).zIndex(item.float("zIndex")),
             )
           }
         }
@@ -1831,6 +1840,11 @@ private fun Modifier.applyModifier(value: JsonObject, themeCornerRadius: Float):
     UiBuilderModifierPlan.FillMaxHeight -> fillMaxHeight()
     // Applied by the owning BoxScope so it does not contribute to the parent's measurement.
     UiBuilderModifierPlan.MatchParentSize -> this
+    // Applied by the parent composing this child, which is the only place their scope exists.
+    is UiBuilderModifierPlan.Align -> this
+    is UiBuilderModifierPlan.AlignHorizontal -> this
+    is UiBuilderModifierPlan.AlignVertical -> this
+    is UiBuilderModifierPlan.Weight -> this
     is UiBuilderModifierPlan.Padding ->
       padding(plan.startDp.dp, plan.topDp.dp, plan.endDp.dp, plan.bottomDp.dp)
     is UiBuilderModifierPlan.Size ->
@@ -1952,6 +1966,21 @@ internal sealed interface UiBuilderModifierPlan {
   data object HorizontalScroll : UiBuilderModifierPlan
 
   data class TestTag(val tag: String) : UiBuilderModifierPlan
+
+  /**
+   * The four only a parent can apply.
+   *
+   * Read here so the write is accepted and the chain is legible, and applied by the `Box`, `Row` or
+   * `Column` composing the child: a scope receiver cannot cross the call that renders it, which is
+   * the same reason `matchParentSize` has always been applied one level up.
+   */
+  data class Align(val alignment: String) : UiBuilderModifierPlan
+
+  data class AlignHorizontal(val alignment: String) : UiBuilderModifierPlan
+
+  data class AlignVertical(val alignment: String) : UiBuilderModifierPlan
+
+  data class Weight(val weight: Float, val fill: Boolean?) : UiBuilderModifierPlan
 }
 
 internal fun uiBuilderModifier(value: JsonObject): UiBuilderModifierPlan? =
@@ -2037,6 +2066,27 @@ internal fun uiBuilderModifier(value: JsonObject): UiBuilderModifierPlan? =
       val y = value.numberOrNull("scaleY")
       if (x == null || y == null) null else UiBuilderModifierPlan.Scale(x, y)
     }
+    "align" ->
+      value
+        .optionalString("alignment")
+        ?.takeIf(::isResolvableAlignment)
+        ?.let(UiBuilderModifierPlan::Align)
+    "alignHorizontal" ->
+      value
+        .optionalString("alignment")
+        ?.takeIf { it in HORIZONTAL_ALIGNMENTS }
+        ?.let(UiBuilderModifierPlan::AlignHorizontal)
+    "alignVertical" ->
+      value
+        .optionalString("alignment")
+        ?.takeIf { it in VERTICAL_ALIGNMENTS }
+        ?.let(UiBuilderModifierPlan::AlignVertical)
+    // A weight of zero or less is not a share of anything, and Compose throws on one.
+    "weight" ->
+      value
+        .numberOrNull("weight")
+        ?.takeIf { it > 0f }
+        ?.let { UiBuilderModifierPlan.Weight(it, value["fill"]?.booleanOrNull()) }
     "verticalScroll" -> UiBuilderModifierPlan.VerticalScroll
     "horizontalScroll" -> UiBuilderModifierPlan.HorizontalScroll
     "testTag" ->
@@ -2088,6 +2138,10 @@ private fun alignmentFor(value: String?): Alignment =
 
 private fun isResolvableAlignment(value: String): Boolean = value in RESOLVABLE_ALIGNMENTS
 
+private val HORIZONTAL_ALIGNMENTS = setOf("start", "centerHorizontally", "end")
+
+private val VERTICAL_ALIGNMENTS = setOf("top", "centerVertically", "bottom")
+
 private val RESOLVABLE_ALIGNMENTS =
   setOf(
     "topStart",
@@ -2101,17 +2155,50 @@ private val RESOLVABLE_ALIGNMENTS =
     "bottomEnd",
   )
 
-private fun UiBuilderNode.childAlignment(): Alignment =
-  when (string("alignment")) {
-    "topCenter" -> Alignment.TopCenter
-    "topEnd" -> Alignment.TopEnd
-    "centerStart" -> Alignment.CenterStart
-    "center" -> Alignment.Center
-    "centerEnd" -> Alignment.CenterEnd
-    "bottomStart" -> Alignment.BottomStart
-    "bottomCenter" -> Alignment.BottomCenter
-    "bottomEnd" -> Alignment.BottomEnd
-    else -> Alignment.TopStart
+/**
+ * Where a `Box` child sits, from its chain and then from the property that used to say it.
+ *
+ * The modifier is the authored form now; `alignment` as a *property* is what documents written
+ * before the vocabulary existed carry, and they keep rendering. Modifier first, so a design that
+ * has both says what its chain says — the chain is the thing an author can see and reorder.
+ */
+private fun UiBuilderNode.boxAlignment(): String =
+  modifierPlans().filterIsInstance<UiBuilderModifierPlan.Align>().firstOrNull()?.alignment
+    // A spelling neither form resolves stays where the box has always put an unaligned child.
+    ?: string("alignment").takeIf(::isResolvableAlignment)
+    ?: "topStart"
+
+/** What a `Row` or `Column` child asks of its cross axis, or null for the parent's own default. */
+private fun UiBuilderNode.crossAxisAlignment(): String? =
+  modifierPlans().firstNotNullOfOrNull { plan ->
+    when (plan) {
+      is UiBuilderModifierPlan.AlignHorizontal -> plan.alignment
+      is UiBuilderModifierPlan.AlignVertical -> plan.alignment
+      else -> null
+    }
+  }
+
+/** The share of the main axis this child claims, from its chain and then from the old property. */
+private fun UiBuilderNode.layoutWeight(): UiBuilderModifierPlan.Weight? =
+  modifierPlans().filterIsInstance<UiBuilderModifierPlan.Weight>().firstOrNull()
+    ?: float("weight").takeIf { it > 0f }?.let { UiBuilderModifierPlan.Weight(it, null) }
+
+private fun UiBuilderNode.modifierPlans(): List<UiBuilderModifierPlan> = modifiers.mapNotNull {
+  (it as? JsonObject)?.let(::uiBuilderModifier)
+}
+
+private fun horizontalAlignmentFor(value: String): Alignment.Horizontal =
+  when (value) {
+    "centerHorizontally" -> Alignment.CenterHorizontally
+    "end" -> Alignment.End
+    else -> Alignment.Start
+  }
+
+private fun verticalAlignmentFor(value: String): Alignment.Vertical =
+  when (value) {
+    "centerVertically" -> Alignment.CenterVertically
+    "bottom" -> Alignment.Bottom
+    else -> Alignment.Top
   }
 
 private fun UiBuilderNode.dispatch(

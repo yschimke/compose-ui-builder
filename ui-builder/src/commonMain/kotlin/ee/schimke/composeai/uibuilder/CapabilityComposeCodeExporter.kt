@@ -1199,23 +1199,32 @@ private fun UiBuilderNode.modifierExpression(): String {
         "verticalScroll" -> ".verticalScroll(rememberScrollState())"
         "horizontalScroll" -> ".horizontalScroll(rememberScrollState())"
         "testTag" -> ".testTag(\"${modifier.optionalString("tag").orEmpty().escape()}\")"
+        // Scoped: legal only inside the Row, Column or Box this node is a child of, which is what
+        // the catalog's parent-slot rules and the reducer's own gate already decide.
+        "align" -> ".align(${alignmentExpression(modifier.optionalString("alignment"))})"
+        "alignHorizontal" ->
+          ".align(${horizontalAlignmentExpression(modifier.optionalString("alignment"))})"
+        "alignVertical" ->
+          ".align(${verticalAlignmentExpression(modifier.optionalString("alignment"))})"
+        "weight" ->
+          ".weight(${modifier.number("weight", 1f).floatLiteral()}${modifier.fillArgument()})"
         else -> error("unsupported modifier $type on $id")
       }
   }
-  if ("weight" in properties) expression += ".weight(${number("weight", 1f).floatLiteral()})"
+  // The properties that said this before the vocabulary existed. Printed only when the chain does
+  // not, so a document carrying both — one written by an older client, one by this one — is aligned
+  // and weighted once rather than twice, and the chain is what wins.
+  val scoped = modifierTypes()
+  if ("weight" in properties && "weight" !in scoped) {
+    expression += ".weight(${number("weight", 1f).floatLiteral()})"
+  }
   expression +=
-    when (string("alignment")) {
-      "topStart" -> ".align(Alignment.TopStart)"
-      "topCenter" -> ".align(Alignment.TopCenter)"
-      "topEnd" -> ".align(Alignment.TopEnd)"
-      "centerStart" -> ".align(Alignment.CenterStart)"
-      "bottomStart" -> ".align(Alignment.BottomStart)"
-      "bottomCenter" -> ".align(Alignment.BottomCenter)"
-      "bottomEnd" -> ".align(Alignment.BottomEnd)"
-      "center" -> ".align(Alignment.Center)"
-      "centerEnd" -> ".align(Alignment.CenterEnd)"
-      else -> ""
-    }
+    if (scoped.any { it in SCOPED_ALIGNMENT_MODIFIERS }) ""
+    else
+      when (val alignment = string("alignment")) {
+        "" -> ""
+        else -> ".align(${alignmentExpression(alignment)})"
+      }
   if ("sizeDp" in properties) expression += ".size(${number("sizeDp").dpLiteral()})"
   val description = string("contentDescription")
   if (description.isNotEmpty()) {
@@ -1337,6 +1346,34 @@ private fun JsonObject.shapeArgument(): String =
  */
 private fun JsonObject.modifierColorExpression(): String =
   colorExpressionFor((this["color"] as? JsonObject)?.optionalString("value").orEmpty())
+
+/** The two scoped modifiers that replace the `alignment` property, whichever axis they name. */
+private val SCOPED_ALIGNMENT_MODIFIERS = setOf("align", "alignHorizontal", "alignVertical")
+
+private fun UiBuilderNode.modifierTypes(): Set<String> =
+  modifiers.mapNotNull { (it as? JsonObject)?.optionalString("type") }.toSet()
+
+/** `fill` is Compose's second argument, and only worth printing when it is not the default. */
+private fun JsonObject.fillArgument(): String =
+  when (this["fill"]?.jsonPrimitive?.booleanOrNull) {
+    null,
+    true -> ""
+    false -> ", fill = false"
+  }
+
+private fun horizontalAlignmentExpression(value: String?): String =
+  when (value) {
+    "centerHorizontally" -> "Alignment.CenterHorizontally"
+    "end" -> "Alignment.End"
+    else -> "Alignment.Start"
+  }
+
+private fun verticalAlignmentExpression(value: String?): String =
+  when (value) {
+    "centerVertically" -> "Alignment.CenterVertically"
+    "bottom" -> "Alignment.Bottom"
+    else -> "Alignment.Top"
+  }
 
 private fun alignmentExpression(value: String?): String =
   when (value) {
@@ -1735,6 +1772,10 @@ private val SUPPORTED_MODIFIERS =
     "verticalScroll",
     "horizontalScroll",
     "testTag",
+    "align",
+    "alignHorizontal",
+    "alignVertical",
+    "weight",
   )
 
 private val SUPPORTED_ACTIONS = setOf("select", "selectOrClear", "setText", "set", "toggle")

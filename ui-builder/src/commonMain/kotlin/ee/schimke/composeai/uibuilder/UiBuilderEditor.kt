@@ -3154,11 +3154,12 @@ private val HOVER_EDITOR_ROOM = 148.dp
 /**
  * The number a just-added modifier hands the caret to.
  *
- * Only the ones whose menu row picks a value on the author's behalf: `padding` starts at 16 because
- * something has to be typed in the box, and the box is where the real number is chosen. A fill has
- * no number and takes no caret.
+ * Only the ones whose menu row picks a value on the author's behalf: `padding` starts at 16 and
+ * `weight` at 1 because something has to be typed in the box, and the box is where the real number
+ * is chosen. A fill has no number and takes no caret, and an alignment is a list to pick from
+ * rather than a value to type.
  */
-private val MODIFIER_FOCUS_FIELDS = mapOf("padding" to "startDp")
+private val MODIFIER_FOCUS_FIELDS = mapOf("padding" to "startDp", "weight" to "weight")
 
 /** The zoom ladder the two step controls walk, in the order a designer expects to land on. */
 private val CANVAS_ZOOM_STOPS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 3f, 4f)
@@ -3817,8 +3818,10 @@ private fun SelectionHoverEditor(
           HoverEditorRow(
             label = field.label,
             value = field.value,
-            control = EditorPropertyControl.Number,
-            choices = emptyList(),
+            control =
+              if (field.choices.isEmpty()) EditorPropertyControl.Number
+              else EditorPropertyControl.Enum,
+            choices = field.choices,
             focused = focusTarget == "modifier:${field.type}.${field.field}",
             onFocusHandled = onFocusHandled,
             onTextInputFocusChanged = onTextInputFocusChanged,

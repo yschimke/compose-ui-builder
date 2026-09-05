@@ -176,6 +176,53 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
+  fun `the scoped modifiers are exported from the chain, and the chain outranks the properties`() {
+    // The node is a text inside a column, so `alignHorizontal` and `weight` are both in scope. It
+    // also carries the property spelling of an alignment, which is what documents written before
+    // the vocabulary existed say. Exporting both would emit `.align` twice and not compile.
+    val title = document.nodes.getValue("detail-podcast-title")
+    val edited =
+      document.copy(
+        nodes =
+          document.nodes +
+            (title.id to
+              title.copy(
+                properties =
+                  JsonObject(
+                    title.properties +
+                      mapOf(
+                        "alignment" to property("enum", JsonPrimitive("topCenter")),
+                        "weight" to property("float", JsonPrimitive(3.0)),
+                      )
+                  ),
+                modifiers =
+                  JsonArray(
+                    title.modifiers +
+                      listOf(
+                        buildModifier("alignHorizontal", "alignment" to JsonPrimitive("end")),
+                        buildModifier(
+                          "weight",
+                          "weight" to JsonPrimitive(2.0),
+                          "fill" to JsonPrimitive(false),
+                        ),
+                      )
+                  ),
+              ))
+      )
+
+    val source =
+      CapabilityComposeCodeExporter.export(edited, catalog, artworkAdapter).requireSource()
+
+    assertTrue(source.contains(".align(Alignment.End)"), source)
+    assertTrue(source.contains(".weight(2f, fill = false)"), source)
+    assertFalse(source.contains(".align(Alignment.TopCenter)"))
+    assertFalse(source.contains(".weight(3f)"))
+  }
+
+  private fun buildModifier(type: String, vararg values: Pair<String, JsonPrimitive>): JsonObject =
+    JsonObject(mapOf("type" to JsonPrimitive(type)) + values)
+
+  @Test
   fun `unbound assets use a visible declared placeholder with located diagnostics`() {
     val result = ComposeCodeExporter.export(document, catalog)
     val source = assertNotNull(result.source)

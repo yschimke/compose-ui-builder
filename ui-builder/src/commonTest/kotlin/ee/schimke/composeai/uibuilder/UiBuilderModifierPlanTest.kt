@@ -181,6 +181,46 @@ class UiBuilderModifierPlanTest {
   }
 
   @Test
+  fun `the scoped modifiers name an alignment their axis defines, or nothing`() {
+    assertEquals(
+      UiBuilderModifierPlan.Align("bottomEnd"),
+      uiBuilderModifier(modifier("""{"type":"align","alignment":"bottomEnd"}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.AlignHorizontal("end"),
+      uiBuilderModifier(modifier("""{"type":"alignHorizontal","alignment":"end"}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.AlignVertical("centerVertically"),
+      uiBuilderModifier(modifier("""{"type":"alignVertical","alignment":"centerVertically"}""")),
+    )
+    // A box's nine and an axis's three are different vocabularies, and the wire is one string for
+    // all three modifiers. `Alignment.CenterEnd` is not an `Alignment.Horizontal`.
+    assertNull(
+      uiBuilderModifier(modifier("""{"type":"alignHorizontal","alignment":"centerEnd"}"""))
+    )
+    assertNull(uiBuilderModifier(modifier("""{"type":"alignVertical","alignment":"start"}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"align","alignment":"sideways"}""")))
+  }
+
+  @Test
+  fun `a weight is positive, and fill is only what the document says`() {
+    assertEquals(
+      UiBuilderModifierPlan.Weight(2f, null),
+      uiBuilderModifier(modifier("""{"type":"weight","weight":2}""")),
+    )
+    assertEquals(
+      UiBuilderModifierPlan.Weight(1f, false),
+      uiBuilderModifier(modifier("""{"type":"weight","weight":1,"fill":false}""")),
+    )
+    // `Modifier.weight` requires a positive weight and throws on anything else, from inside the
+    // layout pass where nothing can say which node caused it.
+    assertNull(uiBuilderModifier(modifier("""{"type":"weight","weight":0}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"weight","weight":-1}""")))
+    assertNull(uiBuilderModifier(modifier("""{"type":"weight"}""")))
+  }
+
+  @Test
   fun `a value the renderer would throw on is refused before it is applied`() {
     // Same rule as `size` naming neither dimension: the layout pass is not the place to find out.
     assertNull(uiBuilderModifier(modifier("""{"type":"aspectRatio","ratio":0}""")))
