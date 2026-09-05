@@ -18,6 +18,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.Base64
+import java.util.Properties
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -699,6 +700,30 @@ public object PackagedUiBuilderRenderBundle {
   public const val PREVIEW_ID: String =
     "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
   public const val DOCUMENT_OVERRIDE_KEY: String = "uiBuilder.document.v1"
+
+  /**
+   * The bundle's own statement of the Java feature version its classes need, beside the bundle.
+   *
+   * Written by `:ui-builder-render-bundle` from the same catalog entry `:ui-builder`'s toolchain
+   * reads. A caller comparing it against the JVM it is about to render on turns a wrong-JVM launch
+   * from an `UnsupportedClassVersionError` inside a spawned daemon into one sentence naming both
+   * versions (yschimke/compose-preview-server#344).
+   */
+  public const val MANIFEST_RESOURCE: String =
+    "/ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.properties"
+
+  /** The Java feature version [copyTo]'s bundle needs, read from [MANIFEST_RESOURCE]. */
+  public fun requiredJavaFeatureVersion(): Int {
+    val properties =
+      checkNotNull(javaClass.getResourceAsStream(MANIFEST_RESOURCE)) {
+          "packaged UI-builder renderer bundle manifest is missing"
+        }
+        .use { Properties().apply { load(it) } }
+    val javaMin = properties.getProperty("javaMin")
+    return checkNotNull(javaMin?.trim()?.toIntOrNull()) {
+      "packaged UI-builder renderer bundle manifest has no numeric javaMin: $javaMin"
+    }
+  }
 
   public fun copyTo(root: Path): Path {
     val bytes =

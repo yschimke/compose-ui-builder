@@ -49,9 +49,11 @@ public final class ee/schimke/composeai/uibuilder/service/FileUiBuilderStateStor
 public final class ee/schimke/composeai/uibuilder/service/PackagedUiBuilderRenderBundle {
 	public static final field DOCUMENT_OVERRIDE_KEY Ljava/lang/String;
 	public static final field INSTANCE Lee/schimke/composeai/uibuilder/service/PackagedUiBuilderRenderBundle;
+	public static final field MANIFEST_RESOURCE Ljava/lang/String;
 	public static final field PREVIEW_ID Ljava/lang/String;
 	public static final field RESOURCE Ljava/lang/String;
 	public final fun copyTo (Ljava/nio/file/Path;)Ljava/nio/file/Path;
+	public final fun requiredJavaFeatureVersion ()I
 }
 
 public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService : ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnosticsSource, ee/schimke/composeai/uibuilder/service/UiBuilderServicePort {

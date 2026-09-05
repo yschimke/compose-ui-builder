@@ -6,6 +6,18 @@ The UI builder is a separate Compose/Wasm authoring surface. `/ui-builder/` rema
 Each design remains pinned to one catalog while the service can host a small operator-selected set.
 Publishing a preview catalog never enables authoring for it automatically.
 
+## Before you start: Java 21
+
+The UI builder's PNG and SVG export needs the server to be running on **Java 21 or newer**, even
+though the server distribution itself targets Java 17. The design is rasterized by a Compose preview
+compiled for 21 and unpacked into a daemon that runs on the server's own JVM, so the JVM you launch
+the server with is the one that has to load it.
+
+On an older JVM everything in this guide still works except PNG/SVG export, and the server says so
+on startup — one line naming the version it found and the version it needs. Point `JAVA_HOME` at a
+Java 21 JDK and restart to get the export back. `README.md` has the full picture, including why the
+rest of the distribution stays on 17.
+
 ## Create a design in the website
 
 Start the server with UI-builder persistence and open `/ui-builder/`. The website opens its New

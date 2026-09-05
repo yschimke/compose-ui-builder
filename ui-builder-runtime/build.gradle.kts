@@ -13,7 +13,7 @@ group = "ee.schimke.composeai"
 val publishedArtifactId = "compose-preview-ui-builder-runtime"
 
 kotlin {
-  jvmToolchain(17)
+  jvmToolchain(libs.versions.java.server.get().toInt())
 
   // Published as `ee.schimke.composeai:compose-preview-ui-builder-runtime` and consumed across a
   // repository boundary, so every declaration states its visibility and every public one its

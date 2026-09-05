@@ -49,6 +49,14 @@ base { archivesName.set(publishedArtifactId) }
 ktfmt { googleStyle() }
 
 kotlin {
+  // Pinned to `java-server`, and pinned *explicitly*. This module had no toolchain at all, so its
+  // published JVM jar took whatever JVM happened to run Gradle — 17 on CI today, and silently
+  // whatever a contributor's `JAVA_HOME` says. That is a published artifact on `compose-ai-tools`'
+  // `:cli` compile classpath: the one place in this build where a drifting class-file version is
+  // someone else's red build rather than ours. It is stated here so it cannot drift, and so that a
+  // reader comparing this file with `:ui-builder`'s sees the line between the two floors.
+  jvmToolchain(libs.versions.java.server.get().toInt())
+
   jvm()
 
   @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class) wasmJs { browser() }

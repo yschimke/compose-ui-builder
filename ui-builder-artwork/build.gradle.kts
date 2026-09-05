@@ -8,6 +8,12 @@ plugins {
 ktfmt { googleStyle() }
 
 kotlin {
+  // `java-ui-builder`, for the same reason `:ui-builder` is: this module's JVM classes exist only
+  // to be compiled into that module's preview and packed into the render bundle. Left at the
+  // default they would be whatever JVM ran Gradle, which is the drift the two floors exist to
+  // remove — and a 17 half of a 21 lane reads like a constraint when it is an accident.
+  jvmToolchain(libs.versions.java.ui.builder.get().toInt())
+
   jvm()
   @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class) wasmJs { browser() }
 

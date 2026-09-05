@@ -82,7 +82,20 @@ val ktfmtCli = configurations.create("ktfmtCli")
 
 dependencies { ktfmtCli(variantOf(libs.ktfmt.cli) { classifier("with-dependencies") }) }
 
+// The frontend JVM lane's floor, read from the catalog rather than written twice. Every task in
+// this file that *runs* this module's classes has to launch on it, because `jvmToolchain` sets the
+// compile and `Test` toolchains but leaves `JavaExec` on the Gradle JVM.
+val uiBuilderJava = JavaLanguageVersion.of(libs.versions.java.ui.builder.get().toInt())
+
+val uiBuilderLauncher = javaToolchains.launcherFor { languageVersion.set(uiBuilderJava) }
+
 kotlin {
+  // `java-ui-builder`, above the rest of this build. This module's JVM classes are published to
+  // nobody: they leave the build only inside `:ui-builder-render-bundle`'s polyglot PNG, which
+  // `:ui-builder-runtime` reaches as a coordinate and never as classes on anyone's classpath. The
+  // catalog entry for the two floors has the full argument, including the runtime cost.
+  jvmToolchain(uiBuilderJava.asInt())
+
   jvm()
   @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
   wasmJs {
@@ -155,6 +168,7 @@ tasks.register<JavaExec>("generateJetcasterComposeFixture") {
     configurations.getByName("jvmRuntimeClasspath"),
   )
   mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterComposeFixture")
+  javaLauncher.set(uiBuilderLauncher)
   args(
     rootProject.layout.projectDirectory
       .file(
@@ -175,6 +189,7 @@ tasks.register<JavaExec>("generateJetcasterSvgFixture") {
     configurations.getByName("jvmRuntimeClasspath"),
   )
   mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterSvgFixture")
+  javaLauncher.set(uiBuilderLauncher)
   args(layout.buildDirectory.file("figma-gate/jetcaster-discover.svg").get().asFile.absolutePath)
   outputs.file(layout.buildDirectory.file("figma-gate/jetcaster-discover.svg"))
 }
@@ -193,6 +208,7 @@ val generateJetcasterComposeFixtureForCheck =
       configurations.getByName("jvmRuntimeClasspath"),
     )
     mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterComposeFixture")
+    javaLauncher.set(uiBuilderLauncher)
     args(generatedJetcasterCheckFile.get().asFile.absolutePath)
     outputs.file(generatedJetcasterCheckFile)
   }
