@@ -17,8 +17,7 @@ import kotlinx.serialization.json.jsonObject
  * replayed and pushed to every collaborator, which is the one thing it must never be.
  */
 class ReferenceOverlayStateTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(

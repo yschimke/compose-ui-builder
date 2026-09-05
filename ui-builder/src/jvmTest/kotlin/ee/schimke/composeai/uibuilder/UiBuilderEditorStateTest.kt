@@ -16,8 +16,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class UiBuilderEditorStateTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(

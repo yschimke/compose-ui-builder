@@ -21,8 +21,7 @@ import kotlinx.serialization.json.jsonObject
  * for a builder whose whole claim is that what you see is the Compose you get.
  */
 class ComposeExportActionTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val fixture =
     UiBuilderReducer.replay(
         Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject

@@ -18,7 +18,7 @@ class CapabilityComposeCodeExporterTest {
     UiBuilderReducer.replay(resourceJson("/jetcaster-discover-operations-v1.json")).document
   }
   private val catalog by lazy {
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+    CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   }
   private val artworkAdapter =
     ComposeAssetAdapter(

@@ -28,8 +28,7 @@ import kotlinx.serialization.json.jsonObject
  */
 class EditorCodePaneTest {
 
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
 
   private val jetcaster =

@@ -916,7 +916,7 @@ private fun VisualFixtureApp(mode: String) {
     val fixture = Json.parseToJsonElement(fetchText(fixtureName)).jsonObject
     val replayed = UiBuilderReducer.replay(fixture).document
     if (isJetcaster) {
-      val catalogSource = fetchText("jetcaster-discover-capabilities-v1.json")
+      val catalogSource = fetchText("m3-catalog-capabilities-v1.json")
       val validation =
         validateCapabilities(
           replayed,

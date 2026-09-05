@@ -21,8 +21,7 @@ class PersistentArtifactDeterminismTest {
     val storeRoot = java.nio.file.Files.createTempDirectory("ui-builder-restart-artifacts")
     val initial =
       UiBuilderReducer.replay(resourceJson("/jetcaster-discover-operations-v1.json")).document
-    val catalog =
-      CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+    val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
     val validators = DesignValidationProvider {
       DesignValidators(property = CapabilityPropertyWriteValidator(CapabilityValidator(catalog)))
     }

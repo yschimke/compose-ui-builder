@@ -19,8 +19,7 @@ import kotlinx.serialization.json.jsonObject
  * keeps "build this for real" from being a guess.
  */
 class ReferencePiecePromotionTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(

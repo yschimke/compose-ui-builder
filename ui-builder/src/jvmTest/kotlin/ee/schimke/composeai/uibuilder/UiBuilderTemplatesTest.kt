@@ -17,8 +17,7 @@ class UiBuilderTemplatesTest {
     val fixture =
       Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
     val reference = UiBuilderReducer.replay(fixture).document
-    val catalog =
-      CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+    val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
 
     val blank = blankUiBuilderDocument("from-scratch", reference.catalogPin, reference.environment)
 

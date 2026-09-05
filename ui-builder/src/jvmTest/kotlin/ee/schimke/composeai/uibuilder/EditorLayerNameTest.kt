@@ -16,8 +16,7 @@ import kotlinx.serialization.json.jsonObject
  * so the panel offered an asset key, a scroll key and a base64 blob as layer names.
  */
 class EditorLayerNameTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(

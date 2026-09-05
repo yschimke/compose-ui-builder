@@ -17,8 +17,7 @@ import kotlinx.serialization.json.jsonObject
  * a whole, and the first anyone knew of a broken one was the export refusing.
  */
 class EditorProblemsTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(

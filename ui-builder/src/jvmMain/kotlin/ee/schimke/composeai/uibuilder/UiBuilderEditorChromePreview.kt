@@ -556,7 +556,7 @@ private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
 
 /** Shared with the reference previews next door, so both judge a design by the same catalog. */
 internal val editorChromePreviewCatalog: CapabilityCatalog by lazy {
-  CapabilityCatalogParser.parse(previewResource("/jetcaster-discover-capabilities-v1.json"))
+  CapabilityCatalogParser.parse(previewResource("/m3-catalog-capabilities-v1.json"))
 }
 
 /** Shared with the reference previews next door, which read the same frozen fixtures. */

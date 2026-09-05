@@ -20,8 +20,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * nothing. The question this pins is the one the menu asks before drawing itself.
  */
 class EditorStateBindingUiTest {
-  private val catalog =
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(

@@ -20,7 +20,7 @@ path.
 The builder describes one catalog and renders another.
 
 * **One capability catalog, hand-transcribed.**
-  `docs/design/fixtures/ui-builder/jetcaster-discover-capabilities-v1.json` is 25
+  `docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json` is 25
   components transcribed by hand from a single screen of
   `android/compose-samples`. `ui-builder-runtime/build.gradle.kts` copies it into
   a resource named `m3-catalog-v1.json`. It has no relationship to

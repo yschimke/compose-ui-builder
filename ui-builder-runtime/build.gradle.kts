@@ -60,9 +60,7 @@ dependencies {
 // persistence lifecycle. The frontend is only a build-time producer: no project dependency enters
 // this module's runtime classpath or published POM.
 tasks.processResources {
-  from(
-    rootProject.file("docs/design/fixtures/ui-builder/jetcaster-discover-capabilities-v1.json")
-  ) {
+  from(rootProject.file("docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json")) {
     into("ee/schimke/composeai/uibuilder/catalogs")
     rename { "m3-catalog-v1.json" }
   }

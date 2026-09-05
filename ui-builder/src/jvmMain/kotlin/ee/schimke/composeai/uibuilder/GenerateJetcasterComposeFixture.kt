@@ -22,7 +22,7 @@ object GenerateJetcasterComposeFixture {
         .jsonObject
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(loader.getResource("/jetcaster-discover-capabilities-v1.json")).readText()
+        checkNotNull(loader.getResource("/m3-catalog-capabilities-v1.json")).readText()
       )
     val result =
       CapabilityComposeCodeExporter.export(

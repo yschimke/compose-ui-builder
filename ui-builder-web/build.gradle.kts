@@ -115,7 +115,7 @@ abstract class VerifyUiBuilderWebPublication : DefaultTask() {
           "uiBuilder.wasm",
           "skiko.mjs",
           "skiko.wasm",
-          "jetcaster-discover-capabilities-v1.json",
+          "m3-catalog-capabilities-v1.json",
           "jetcaster-discover-operations-v1.json",
           "fonts/fonts.json",
         )

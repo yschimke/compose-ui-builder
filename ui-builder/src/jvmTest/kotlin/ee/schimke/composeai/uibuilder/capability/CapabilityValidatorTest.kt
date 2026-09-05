@@ -17,7 +17,7 @@ import kotlinx.serialization.json.put
 
 class CapabilityValidatorTest {
   private val catalog by lazy {
-    CapabilityCatalogParser.parse(resource("/jetcaster-discover-capabilities-v1.json"))
+    CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   }
   private val jetcasterDocument by lazy {
     val fixture =
@@ -47,7 +47,7 @@ class CapabilityValidatorTest {
     val result =
       validateCapabilities(
         jetcasterDocument,
-        resource("/jetcaster-discover-capabilities-v1.json"),
+        resource("/m3-catalog-capabilities-v1.json"),
       )
 
     assertTrue(result.structurallyValid, result.issues.joinToString("\n") { it.message })

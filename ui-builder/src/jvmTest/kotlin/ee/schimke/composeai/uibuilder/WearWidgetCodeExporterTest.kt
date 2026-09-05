@@ -69,7 +69,7 @@ class WearWidgetCodeExporterTest {
   fun `the editor's code pane generates the widget, not a compose refusal`() {
     val catalog =
       ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/jetcaster-discover-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
       )
     val reducer = UiBuilderEditorReducer(catalog)
 

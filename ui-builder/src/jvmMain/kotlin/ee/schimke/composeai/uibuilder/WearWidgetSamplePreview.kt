@@ -131,9 +131,7 @@ fun WearWidgetCodePanePreview() {
  */
 private val wearWidgetPreviewCatalog by lazy {
   CapabilityCatalogParser.parse(
-    checkNotNull(
-        WearWidgetScaffoldSize::class.java.getResource("/jetcaster-discover-capabilities-v1.json")
-      )
+    checkNotNull(WearWidgetScaffoldSize::class.java.getResource("/m3-catalog-capabilities-v1.json"))
       .readText()
   )
 }

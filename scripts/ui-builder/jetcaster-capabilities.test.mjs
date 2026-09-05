@@ -5,7 +5,7 @@ import test from "node:test";
 import { replayCandidateOperations } from "./replay-candidate.mjs";
 
 const capabilityUrl = new URL(
-  "../../docs/design/fixtures/ui-builder/jetcaster-discover-capabilities-v1.json",
+  "../../docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json",
   import.meta.url,
 );
 const operationsUrl = new URL(
