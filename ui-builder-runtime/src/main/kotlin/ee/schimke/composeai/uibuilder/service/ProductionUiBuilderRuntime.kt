@@ -602,18 +602,71 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         ),
     )
 
-  // Borrowed content, and the borrowing is visible: every one of these draws as its Material 3
-  // self, which is the wrong shape for a watch in most cases and the right one in none of them.
+  /**
+   * A Wear component of this catalog's own, drawn on the canvas by its Material 3 lookalike.
+   *
+   * The rename is the point. `wear-m3` used to *borrow* `m3/text`, `m3/card`, `m3/button`,
+   * `m3/icon` and `m3/surface` outright, and a borrowed Material id is a claim nobody should make
+   * on a watch: **you do not use Material 3 and Wear Material 3 together.** They are different
+   * libraries with different theme systems, sizes and colour roles, and a palette that offers
+   * `m3/card` on a Wear screen says the design holds a `androidx.compose.material3.Card` when
+   * `WearScreenCodeExporter` has always written it out as a `TitleCard`.
+   *
+   * So the id is Wear's and the drawing is borrowed, which is the same trade
+   * [wear-m3/screen-scaffold][wearM3Catalog] and `wear-m3/list-header` already make: the Wasm
+   * canvas cannot link `androidx.wear.compose:compose-material3` — it is an Android AAR — so it
+   * draws the nearest Material 3 shape and says so in `wasm.notes`, while the generated Kotlin
+   * names the real Wear composable.
+   *
+   * What is *actually* borrowed after this is foundation only: `layout/box`, `layout/column`,
+   * `layout/row` and `asset/image` are `androidx.compose.foundation` and `androidx.compose.ui`,
+   * which both platforms share, so borrowing them claims nothing about Material at all.
+   */
+  fun wearOwn(
+    borrowedFrom: String,
+    componentId: String,
+    displayName: String,
+    drawnAs: String,
+    generatesAs: String,
+  ) =
+    components.getValue(borrowedFrom).let { source ->
+      source.copy(
+        componentId = componentId,
+        displayName = displayName,
+        wasm =
+          source.wasm.copy(
+            notes =
+              "Wear Material 3's $generatesAs. Drawn on the canvas as $drawnAs, because the Wasm " +
+                "canvas cannot link `androidx.wear.compose:compose-material3`; the generated " +
+                "screen names the Wear composable."
+          ),
+        // The Compose call site comes from `WearScreenCodeExporter`, which writes the whole screen,
+        // rather than from a per-component record: a Wear component's arguments are not the
+        // Material
+        // 3 component's, and a record naming the mobile callable is the mistake this rename undoes.
+        code = null,
+      )
+    }
+
+  val wearText = wearOwn("m3/text", "wear-m3/text", "Text", "a Material 3 Text", "`Text`")
+  val wearCard =
+    wearOwn("m3/card", "wear-m3/card", "Title card", "a Material 3 Card", "`TitleCard`")
+  val wearButton =
+    wearOwn("m3/button", "wear-m3/button", "Button", "a Material 3 Button", "`Button`")
+
+  // Foundation only. Every one of these is `androidx.compose.foundation` or `androidx.compose.ui`,
+  // shared by both platforms, so borrowing it claims nothing about which Material library a Wear
+  // screen is built from — which is exactly what borrowing a Material component did claim.
+  //
+  // `m3/icon` left with the Material ones and has no Wear id yet: the icon key resolves to a vector
+  // through a table this export module cannot reach, so `wear-m3/icon` would be a palette entry
+  // that
+  // refuses on export — which is what `m3/icon` already was here.
   val borrowedIds =
     listOf(
       "layout/box",
       "layout/column",
       "layout/row",
-      "m3/surface",
-      "m3/card",
-      "m3/text",
-      "m3/icon",
-      "m3/button",
       "asset/image",
       // Every published `remote-m3` component, reachable from a Wear screen.
       //
@@ -633,13 +686,22 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
     )
   val borrowed =
     borrowedIds.map(components::getValue).map { component ->
+      // The note every borrowed component carries, and it now says the opposite of what it used to.
+      // A borrowed Material component was a stand-in — "drawn as the Material 3 component of the
+      // same name" — because Wear publishes its own and this drew the wrong one. A borrowed
+      // foundation component is not a stand-in for anything: `Box`, `Column`, `Row` and `Image` are
+      // the same declarations on both platforms, which is the whole reason these are the only ones
+      // left.
       if (component.componentId == "remote-compose/document") component
       else
         component.copy(
           wasm =
             component.wasm.copy(
               notes =
-                "Drawn as the Material 3 component of the same name. Wear Compose Material 3 publishes its own, with different sizes and colour roles; this is a stand-in until `wear-m3` has content ids of its own."
+                "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +
+                  "and `androidx.compose.ui` publish one of these, not two. It is the real " +
+                  "component rather than a stand-in, which is why `wear-m3` borrows it and borrows " +
+                  "no Material component at all."
             )
         )
     }
@@ -652,7 +714,9 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
         catalogRevision = "wear-screen-scaffold-v1",
       ),
-    components = listOf(scaffold, transformingLazyColumn, listHeader) + borrowed,
+    components =
+      listOf(scaffold, transformingLazyColumn, listHeader, wearText, wearCard, wearButton) +
+        borrowed,
   )
 }
 

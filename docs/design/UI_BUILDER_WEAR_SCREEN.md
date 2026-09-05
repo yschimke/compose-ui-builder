@@ -42,6 +42,41 @@ compiles the design against the catalog's own bundle and renders it with real Co
 `ServeUiBuilderNativePreview` exists for, and whose own KDoc names Android as the thing the Wasm
 canvas cannot answer.
 
+## What may be borrowed: foundation, and nothing Material
+
+**Material 3 and Wear Material 3 are not used together.** They are different libraries with
+different theme systems, sizes and colour roles, and no app mixes them — so a `wear-m3` design
+holding a component called `m3/card` claimed something no watch screen can mean.
+
+It claimed it for a while. The catalog borrowed `m3/text`, `m3/icon`, `m3/button`, `m3/card` and
+`m3/surface` outright, and [`WearScreenCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearScreenCodeExporter.kt)
+quietly translated each one on the way out — `m3/card` became a `TitleCard`, `m3/text` became Wear's
+`Text`. The **export was right and the palette was lying**, which is the failure mode this whole
+document is about: a stand-in that does not say it is one.
+
+The rule now:
+
+- **Foundation is borrowed.** `layout/box`, `layout/column`, `layout/row` and `asset/image` are
+  `androidx.compose.foundation` and `androidx.compose.ui` — one declaration shared by both platforms
+  — so borrowing one claims nothing about Material at all. Their capability notes say exactly that,
+  where the Material borrows' notes used to say "drawn as the Material 3 component of the same
+  name".
+- **Anything Material is Wear's own id.** `wear-m3/text`, `wear-m3/card` and `wear-m3/button` join
+  `wear-m3/list-header` and the two containers. The canvas still draws the Material 3 lookalike —
+  [it has no Wear Compose to draw with](#the-hard-constraint-the-canvas-has-no-wear-compose) — but
+  the id, the notes and the generated Kotlin all name the Wear composable.
+- **`m3/surface` and `m3/icon` are gone rather than renamed.** Wear publishes no `Surface`, and an
+  icon key resolves to a vector through a table the export module cannot reach, so `wear-m3/icon`
+  would be a palette entry that refuses on export — which is what the borrowed `m3/icon` already
+  was.
+
+`WearM3ScreenCatalogTest` asserts the borrow list as a literal set, so adding one is a decision
+somebody writes down rather than something that drifts in behind a convenient `m3/` id.
+
+The rename changes no pixels: `WearScreenSamplePreview` renders byte-identically before and after
+([`renders/ui-builder-wear-borrow/`](../../renders/ui-builder-wear-borrow/README.md)). It changes
+what the design says it holds.
+
 ## The stadium is the scroll extent, and it is the real one
 
 The canvas draws the scaffold as the frame's **width**, the content's **height**, and round caps.
@@ -214,11 +249,16 @@ it as, so the generator names the node and stops rather than emitting Kotlin tha
   `ScreenScaffold` takes a scroll state that has to agree with the list inside its content lambda,
   which `ScreenGenerator`'s call-site emitter cannot write from a record, so the whole-screen
   generator writes it instead.
-- **Most content is still borrowed.** `wear-m3/list-header` is the only content id that is Wear's;
-  the rest are `m3-catalog`'s, and the template makes up the difference with type sizes and padding
-  measured off the reference. Another design built from the same components starts from the mobile
-  defaults again. Real Wear ids for the card, the button and the text are the change that fixes it,
-  and the round trip is what will say when each one is needed.
+- **The content ids are Wear's, and the drawing is still borrowed.** `wear-m3/text`, `wear-m3/card`
+  and `wear-m3/button` now exist beside `wear-m3/list-header`, so no Material id is offered on a
+  watch — but each is still *drawn* as its Material 3 lookalike, and the template still makes up the
+  difference with type sizes and padding measured off the reference. What is left is the sizes, not
+  the naming.
+- **No Wear controls yet.** Wear Material 3 publishes `CheckboxButton`, `SwitchButton`,
+  `RadioButton`, `Slider`, `Stepper`, `DatePicker`, `TimePicker` and its own `AlertDialog`, and none
+  of them has an id here. They are not borrowable — a Wear `CheckboxButton` is a full-width row with
+  a label, not the mobile checkbox — so each needs a `wear-m3/…` id and an emitter branch of its
+  own.
 - **`EdgeButton` is placed, not shaped.** The slot generates a real `EdgeButton`; the canvas draws
   the borrowed flat button at the bottom cap, because the shape comes from the screen. The parity
   template carries none for that reason.

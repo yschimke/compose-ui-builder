@@ -172,6 +172,22 @@ object WearScreenCodeExporter {
 
   internal const val LIST_HEADER = "wear-m3/list-header"
 
+  /**
+   * The Wear content ids this generator writes.
+   *
+   * They used to be `m3/text`, `m3/card` and `m3/button` — borrowed mobile Material ids that this
+   * emitter quietly translated into `Text`, `TitleCard` and `Button` from
+   * `androidx.wear.compose.material3`. The translation was right and the naming was not: **Material
+   * 3 and Wear Material 3 are not used together**, so a Wear design holding a component called
+   * `m3/card` claimed something no watch screen can mean. The ids are Wear's now; the canvas still
+   * draws the Material 3 lookalike, because it has no Wear Compose to draw with.
+   */
+  internal const val TEXT = "wear-m3/text"
+
+  internal const val CARD = "wear-m3/card"
+
+  internal const val BUTTON = "wear-m3/button"
+
   internal const val INDENT = "    "
 
   /**
@@ -254,7 +270,7 @@ internal class WearContentEmitter(
     val node = document.nodes[nodeId] ?: return refused("node `$nodeId` is missing")
     val pad = indent(depth)
     return when (node.componentId) {
-      "m3/text" -> {
+      WearScreenCodeExporter.TEXT -> {
         usesText = true
         val text = node.string("text")
         if (transformed) {
@@ -286,7 +302,7 @@ internal class WearContentEmitter(
             "${pad}}",
           )
       }
-      "m3/card" -> {
+      WearScreenCodeExporter.CARD -> {
         usesCard = true
         val content = node.slots["content"].orEmpty()
         // `TitleCard` takes `title` and `subtitle` as separate slots, and a two-line row is what a
@@ -312,7 +328,7 @@ internal class WearContentEmitter(
           (if (transformed) transformationLines(pad + INDENT) else emptyList()) +
           listOf("${pad})")
       }
-      "m3/button" -> {
+      WearScreenCodeExporter.BUTTON -> {
         usesButton = true
         val content = node.slots["content"].orEmpty()
         listOf("${pad}Button(", "${pad}${INDENT}onClick = {},") +
@@ -345,7 +361,8 @@ internal class WearContentEmitter(
       else ->
         refused(
           "`${node.componentId}` (node `$nodeId`) has no Wear Compose Material 3 counterpart this " +
-            "generator can write; `wear-m3` borrows it from m3-catalog for the canvas only"
+            "generator can write; `wear-m3` borrows only foundation components from m3-catalog, " +
+            "and a Material 3 component is not a Wear one"
         )
     }
   }
@@ -360,7 +377,7 @@ internal class WearContentEmitter(
    */
   fun emitEdgeButton(nodeId: String, depth: Int): List<String> {
     val node = document.nodes[nodeId] ?: return refused("the edge button node `$nodeId` is missing")
-    if (node.componentId != "m3/button") {
+    if (node.componentId != WearScreenCodeExporter.BUTTON) {
       return refused(
         "`${node.componentId}` (node `$nodeId`) is in the scaffold's edgeButton slot; that slot " +
           "generates an `EdgeButton`, which only a button can be"
@@ -379,7 +396,7 @@ internal class WearContentEmitter(
     if (node.componentId != "layout/column") return null
     val children = node.slots["children"].orEmpty()
     if (children.size != 2) return null
-    if (children.any { document.nodes[it]?.componentId != "m3/text" }) return null
+    if (children.any { document.nodes[it]?.componentId != WearScreenCodeExporter.TEXT }) return null
     return children[0] to children[1]
   }
 

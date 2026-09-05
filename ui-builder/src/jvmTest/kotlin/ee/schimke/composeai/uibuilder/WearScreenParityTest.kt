@@ -64,7 +64,7 @@ class WearScreenParityTest {
   }
 
   /**
-   * Wear's type scale is not Material 3's, and the borrowed `m3/text` reads Material 3's.
+   * Wear's type scale is not Material 3's, and `wear-m3/text` is drawn by a Material 3 Text.
    *
    * Sizing each label explicitly is what makes "Session 1" measure the reference's 66dp rather than
    * 75.5dp. Dropping these puts the mobile scale back and the canvas silently stops matching.
@@ -97,8 +97,8 @@ class WearScreenParityTest {
    * 64dp rows, made up by the design's own padding, because a borrowed card has none of Wear's.
    *
    * The header is not here any more, and that is the fix rather than an omission: it used to be a
-   * padded `m3/text` faking `ListHeader`'s 48dp, which made the canvas right and the generated
-   * screen 31.5dp short. It is `wear-m3/list-header` now, which carries the height on both sides.
+   * padded text faking `ListHeader`'s 48dp, which made the canvas right and the generated screen
+   * 31.5dp short. It is `wear-m3/list-header` now, which carries the height on both sides.
    */
   @Test
   fun `the row padding is the measured one, and the header needs none`() {

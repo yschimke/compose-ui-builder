@@ -540,7 +540,7 @@ private fun RenderNode(
     )
   }
 
-  when (node.componentId) {
+  when (node.componentId.wearScreenStandIn()) {
     // The two container types on a 240dp screen: `CONTAINER_TYPE_SMALL` is 200x60dp of content and
     // `CONTAINER_TYPE_LARGE` 200x108dp, per `SquircleSmallWidgetPreviewParams` /
     // `SquircleLargeWidgetPreviewParams`. The scaffold adds the padding, so these are the content
@@ -2327,6 +2327,28 @@ private val JetcasterDarkColorScheme =
     surfaceContainerHigh = Color(0xFF282A30),
     surfaceContainerHighest = Color(0xFF33353B),
   )
+
+/**
+ * The Material 3 component a Wear content id is drawn as, or the id itself.
+ *
+ * `wear-m3/text`, `wear-m3/card` and `wear-m3/button` are Wear Material 3 components — the
+ * generated screen names `Text`, `TitleCard` and `Button` from `androidx.wear.compose.material3` —
+ * and this canvas cannot draw them, because that library is an Android AAR the Wasm build cannot
+ * link. So it draws the nearest Material 3 shape, which is what the `wear-m3` catalog's
+ * `wasm.notes` say it does.
+ *
+ * One mapping rather than three duplicated branches, and a mapping rather than a borrow: the ids
+ * used to *be* `m3/text` and friends, and a Wear design holding a component named after the mobile
+ * Material library claimed something no watch screen can mean. The drawing is borrowed; the
+ * identity is not.
+ */
+internal fun String.wearScreenStandIn(): String =
+  when (this) {
+    "wear-m3/text" -> "m3/text"
+    "wear-m3/card" -> "m3/card"
+    "wear-m3/button" -> "m3/button"
+    else -> this
+  }
 
 /**
  * A dialog drawn where it sits, with `AlertDialog`'s own surface, spacing and button row.

@@ -620,7 +620,7 @@ fun wearScreenUiBuilderDocument(
     listOf(
       UiBuilderNode(
         id = "row-$index",
-        componentId = "m3/card",
+        componentId = "wear-m3/card",
         // `shape = "large"` is what reaches the theme's corner radius — a card with no shape
         // property draws `RoundedCornerShape(0.dp)`. Under the Wear screen scaffold that radius is
         // 26dp, which is the reference card's.
@@ -677,7 +677,7 @@ fun wearScreenUiBuilderDocument(
       listOf(
         UiBuilderNode(
           id = "edge-button",
-          componentId = "m3/button",
+          componentId = "wear-m3/button",
           properties = JsonObject(mapOf("style" to literal("enum", JsonPrimitive("filled")))),
           modifiers = JsonArray(emptyList()),
           slots = mapOf("content" to listOf("edge-button-label")),
@@ -794,7 +794,7 @@ private fun wearScreenText(
 ): UiBuilderNode =
   UiBuilderNode(
     id = id,
-    componentId = "m3/text",
+    componentId = "wear-m3/text",
     properties =
       JsonObject(
         mapOf(
