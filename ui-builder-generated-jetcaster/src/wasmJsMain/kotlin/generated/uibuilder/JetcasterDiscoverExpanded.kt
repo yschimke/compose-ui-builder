@@ -1,4 +1,4 @@
-// Generator content SHA-256: f8cf1eb454ba4d8e4fb2a2f391977a1c9093de7bf7eb2d25eeb9f48a942cfda6
+// Generator content SHA-256: d362577e8dcd6785f6c81c237261c47f4d3cd7d0fb3a5c1793a640d4b8b3dd15
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -1324,6 +1324,50 @@ private fun BuilderSearchInputField(
 @Composable
 private fun BuilderSnackbarHost(visible: Boolean) {
   if (visible) Snackbar { Text("Snackbar") }
+}
+
+@Composable
+private fun BuilderDialogSurface(
+  containerColor: Color,
+  tonalElevation: Dp,
+  cornerRadius: Dp,
+  hasIcon: Boolean,
+  hasTitle: Boolean,
+  hasText: Boolean,
+  modifier: Modifier = Modifier,
+  icon: @Composable () -> Unit,
+  title: @Composable () -> Unit,
+  text: @Composable () -> Unit,
+  buttons: @Composable RowScope.() -> Unit,
+) {
+  Surface(
+    modifier.widthIn(min = 280.dp, max = 560.dp),
+    shape = RoundedCornerShape(cornerRadius),
+    color =
+      if (containerColor == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh
+      else containerColor,
+    contentColor = MaterialTheme.colorScheme.onSurface,
+    tonalElevation = tonalElevation,
+  ) {
+    Column(
+      Modifier.padding(24.dp),
+      verticalArrangement = Arrangement.spacedBy(16.dp),
+      horizontalAlignment = if (hasIcon) Alignment.CenterHorizontally else Alignment.Start,
+    ) {
+      if (hasIcon) icon()
+      if (hasTitle) title()
+      if (hasText)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+          text()
+        }
+      Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        verticalAlignment = Alignment.CenterVertically,
+        content = buttons,
+      )
+    }
+  }
 }
 
 @Composable

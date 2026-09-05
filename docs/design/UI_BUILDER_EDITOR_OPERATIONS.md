@@ -79,6 +79,58 @@ builds rather than one anybody authored. Before and after, with what each frame 
 | --- | --- |
 | ![Six inserts, generic or empty](../../renders/ui-builder-starter-content/insert.before.png) | ![The same six inserts, seeded](../../renders/ui-builder-starter-content/insert.after.png) |
 
+## The dialog and the pickers
+
+Three components the catalog did not carry: `m3/dialog`, `m3/date-picker` and `m3/time-picker`.
+Each raises a question the rest of the catalog does not, and the answers are here because they are
+decisions rather than implementation detail.
+
+### A dialog is drawn inline, and exported that way too
+
+The canvas draws `m3/dialog` where it sits, with `AlertDialog`'s own surface, spacing and button row
+— a 28dp corner, `surfaceContainerHigh`, 6dp tonal elevation, 24dp padding, 280..560dp wide, and the
+dismissing action before the confirming one. It is not a real `Dialog`, for two reasons:
+
+- a `Dialog` is a **window**. It leaves the layout, centres itself over the screen and scrims what is
+  behind it, so it would draw outside the canvas being arranged, could not be hit-tested as a node,
+  and would export as a picture of a scrim; and
+- `AlertDialog` requires `onDismissRequest`, and **a design has nothing to write into it**. The
+  document's actions are `toggle`, `set`, `select` and `selectOrClear` over declared state variables;
+  there is no "close this dialog", because a dialog is not bound to a visibility state. The real API
+  would generate a modal nobody can dismiss.
+
+So the Compose export emits `BuilderDialogSurface`, a compatibility helper that matches the canvas,
+under the same banner every other helper carries — an export diagnostic, not a claim of API parity.
+The component record leaves the id uncovered for the same reason, in its own words.
+
+Its slots are `AlertDialog`'s parameters by name — `icon`, `title`, `text`, `dismissButton`,
+`confirmButton` — and `confirmButton` is the only one with a minimum, because a dialog with no way
+to say yes is not a dialog. [Starter content](#starter-content) fills all four, so an inserted dialog
+reads "Dialog title", explains itself, and offers Cancel beside OK.
+
+### A picker must not read the clock
+
+`DatePicker` opens on the current month and rings today's cell; `rememberTimePickerState` starts at
+the current time. Left alone, both make a design whose render changes overnight — which breaks the
+committed renders, the visual diff and the SVG lane at once, and breaks them silently.
+
+So the state is pinned by the document. `m3/date-picker` carries `selectedDate` as an ISO
+`YYYY-MM-DD` — used for the selection **and** for the month the calendar opens on — and
+`m3/time-picker` carries `hour` and `minute`. An insert arrives on a fixed day and time rather than
+on today, the Compose export writes the same values as literals, and the picker preview below is the
+check with a picture attached.
+
+`input` is not a second component in either case: it is Material's `DisplayMode.Input` and its
+`TimeInput`, reached through a `mode` property, which is why two ids cover four faces.
+
+### Visual evidence
+
+`CatalogDialogAndPickersPreview` renders all five from a document the reducer builds. What each cell
+is, and why there is no before image, are in
+[`renders/ui-builder-dialog-pickers/`](../../renders/ui-builder-dialog-pickers/README.md).
+
+![A dialog, a calendar, a date input, a 24-hour dial and a 12-hour time input](../../renders/ui-builder-dialog-pickers/dialog-and-pickers.after.png)
+
 ## Property and Google icon editing
 
 The property inspector is driven by the selected component's capability schema. It exposes text,

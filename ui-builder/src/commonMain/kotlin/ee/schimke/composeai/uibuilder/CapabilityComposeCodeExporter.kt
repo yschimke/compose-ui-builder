@@ -366,6 +366,9 @@ private class ComposeEmitter(
         line(bodyLevel, "BuilderSnackbarHost(visible = ${node.boolExpression("visible")})")
       "m3/surface" -> emitSurface(node, bodyLevel)
       "m3/card" -> emitCard(node, bodyLevel)
+      "m3/dialog" -> emitDialog(node, bodyLevel)
+      "m3/date-picker" -> emitDatePicker(node, bodyLevel)
+      "m3/time-picker" -> emitTimePicker(node, bodyLevel)
       "m3/filter-chip" -> emitFilterChip(node, bodyLevel)
       "m3/icon-button" -> emitIconButton(node, bodyLevel)
       "m3/button" -> emitButton(node, bodyLevel)
@@ -738,6 +741,86 @@ private class ComposeEmitter(
     line(level, "}")
   }
 
+  /**
+   * A dialog, as the inline surface the canvas draws rather than as a real `AlertDialog`.
+   *
+   * The reasoning is `BuilderDialogSurface`'s in the renderer and is not repeated here, but the
+   * short version is the part that binds this emitter: `AlertDialog` takes `onDismissRequest`, and
+   * a design has no way to say "close this dialog" — its actions write declared state variables and
+   * nothing else. Emitting the real API would produce a modal that covers the exported screen and
+   * cannot be dismissed. So this emits the helper, which is what the canvas shows, and the helper
+   * is labelled an export diagnostic like every other one.
+   */
+  private fun emitDialog(node: UiBuilderNode, level: Int) {
+    line(level, "BuilderDialogSurface(")
+    line(level + 1, "containerColor = ${node.colorExpression("containerColor")},")
+    line(
+      level + 1,
+      "tonalElevation = ${node.number("tonalElevationDp", DIALOG_TONAL_ELEVATION_DP).dpLiteral()},",
+    )
+    line(
+      level + 1,
+      "cornerRadius = ${node.number("shapeDp", DIALOG_CORNER_DP).dpLiteral()},",
+    )
+    line(level + 1, "hasIcon = ${node.slot("icon").isNotEmpty()},")
+    line(level + 1, "hasTitle = ${node.slot("title").isNotEmpty()},")
+    line(level + 1, "hasText = ${node.slot("text").isNotEmpty()},")
+    line(level + 1, "${node.modifierArgument()},")
+    line(level + 1, "icon = {")
+    node.slot("icon").forEach { emitNode(it, level + 2) }
+    line(level + 1, "},")
+    line(level + 1, "title = {")
+    node.slot("title").forEach { emitNode(it, level + 2) }
+    line(level + 1, "},")
+    line(level + 1, "text = {")
+    node.slot("text").forEach { emitNode(it, level + 2) }
+    line(level + 1, "},")
+    line(level + 1, ") {")
+    // The dismissing action first, then the confirming one: Material's order, and the order the
+    // canvas draws, so a screenshot and its generated source cannot disagree about which button is
+    // on the end.
+    node.slot("dismissButton").forEach { emitNode(it, level + 2) }
+    node.slot("confirmButton").forEach { emitNode(it, level + 2) }
+    line(level, "}")
+  }
+
+  /**
+   * `DatePicker`, with the state the document pins rather than the one Material takes from today.
+   *
+   * The real API, not a helper: `DatePicker(state = …)` is exactly what the canvas draws, and the
+   * only thing this has to be careful about is the state — `rememberDatePickerState()` with no
+   * arguments opens on the current month, so generated source would drift from the design's own
+   * render the day the month changed.
+   */
+  private fun emitDatePicker(node: UiBuilderNode, level: Int) {
+    val millis =
+      isoDateToEpochMillis(node.string("selectedDate"))
+        ?: isoDateToEpochMillis(DEFAULT_SELECTED_DATE)
+    val mode = if (node.string("mode") == "input") "DisplayMode.Input" else "DisplayMode.Picker"
+    line(level, "DatePicker(")
+    line(
+      level + 1,
+      "state = rememberDatePickerState(initialSelectedDateMillis = ${millis}L, initialDisplayedMonthMillis = ${millis}L, initialDisplayMode = $mode),",
+    )
+    line(level + 1, "showModeToggle = ${node.boolValue("showModeToggle")},")
+    line(level + 1, "${node.modifierArgument()},")
+    line(level, ")")
+  }
+
+  /** `TimePicker`, or `TimeInput` for the typed mode, both off one pinned state. */
+  private fun emitTimePicker(node: UiBuilderNode, level: Int) {
+    val hour = node.integer("hour", DEFAULT_PICKED_HOUR).coerceIn(0, 23)
+    val minute = node.integer("minute", DEFAULT_PICKED_MINUTE).coerceIn(0, 59)
+    val symbol = if (node.string("mode") == "input") "TimeInput" else "TimePicker"
+    line(level, "$symbol(")
+    line(
+      level + 1,
+      "state = rememberTimePickerState(initialHour = $hour, initialMinute = $minute, is24Hour = ${node.boolValue("is24Hour", true)}),",
+    )
+    line(level + 1, "${node.modifierArgument()},")
+    line(level, ")")
+  }
+
   private fun emitCompatibilityHelpers() {
     appendLine(
       "// Compatibility helpers are explicit export diagnostics, not claims of API parity."
@@ -763,6 +846,12 @@ private class ComposeEmitter(
     )
     appendLine(
       "@Composable private fun BuilderSnackbarHost(visible: Boolean) { if (visible) Snackbar { Text(\"Snackbar\") } }"
+    )
+    appendLine(
+      "@Composable private fun BuilderDialogSurface(containerColor: Color, tonalElevation: Dp, cornerRadius: Dp, hasIcon: Boolean, hasTitle: Boolean, hasText: Boolean, modifier: Modifier = Modifier, icon: @Composable () -> Unit, title: @Composable () -> Unit, text: @Composable () -> Unit, buttons: @Composable RowScope.() -> Unit) { Surface(modifier.widthIn(min = 280.dp, max = 560.dp), shape = RoundedCornerShape(cornerRadius), color = if (containerColor == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh else containerColor, contentColor = MaterialTheme.colorScheme.onSurface, tonalElevation = tonalElevation) {"
+    )
+    appendLine(
+      "  Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = if (hasIcon) Alignment.CenterHorizontally else Alignment.Start) { if (hasIcon) icon(); if (hasTitle) title(); if (hasText) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) { text() }; Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically, content = buttons) } } }"
     )
     appendLine(
       "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, contentPadding: PaddingValues, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, tonalElevation = 6.dp, shadowElevation = 8.dp) { Row(Modifier.padding(contentPadding), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
@@ -1063,6 +1152,10 @@ private fun UiBuilderNode.colorExpression(name: String): String {
     "surface" -> "MaterialTheme.colorScheme.surface"
     "surfaceContainer" -> "MaterialTheme.colorScheme.surfaceContainer"
     "surfaceContainerLow" -> "MaterialTheme.colorScheme.surfaceContainerLow"
+    // Offered by the inspector's colour picker since the token list was written, and mapped
+    // nowhere: a surface set to it exported as `Color.Unspecified`. It is the dialog's own default
+    // container colour, which is how the gap surfaced.
+    "surfaceContainerHigh" -> "MaterialTheme.colorScheme.surfaceContainerHigh"
     "surfaceContainerHighest" -> "MaterialTheme.colorScheme.surfaceContainerHighest"
     "background" -> "MaterialTheme.colorScheme.background"
     "outlineVariant" -> "MaterialTheme.colorScheme.outlineVariant"
@@ -1373,6 +1466,8 @@ private val EMITTER_IDS =
     "m3/button",
     "m3/card",
     "m3/center-aligned-top-app-bar",
+    "m3/date-picker",
+    "m3/dialog",
     "m3/filter-chip",
     "m3/horizontal-divider",
     "m3/horizontal-floating-toolbar",
@@ -1386,6 +1481,7 @@ private val EMITTER_IDS =
     "m3/surface",
     "m3/tab",
     "m3/text",
+    "m3/time-picker",
     "shape/colour-dot",
     "shape/linear-gradient",
     "shape/radial-gradient",
@@ -1503,6 +1599,12 @@ private val HANDLED_FIELDS =
     "m3/card" to
       HandledFields(setOf("containerColor", "elevationDp", "shape", "stableKey"), setOf("content")),
     "m3/center-aligned-top-app-bar" to HandledFields(slots = setOf("title")),
+    "m3/date-picker" to HandledFields(setOf("mode", "selectedDate", "showModeToggle")),
+    "m3/dialog" to
+      HandledFields(
+        setOf("containerColor", "shapeDp", "tonalElevationDp"),
+        setOf("icon", "title", "text", "dismissButton", "confirmButton"),
+      ),
     "m3/filter-chip" to
       HandledFields(
         setOf("selected", "enabled", "shape"),
@@ -1538,6 +1640,7 @@ private val HANDLED_FIELDS =
         setOf("content"),
       ),
     "m3/tab" to HandledFields(setOf("selected"), setOf("text")),
+    "m3/time-picker" to HandledFields(setOf("mode", "hour", "minute", "is24Hour")),
     "m3/text" to
       HandledFields(
         setOf(

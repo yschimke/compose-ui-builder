@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -42,6 +44,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
@@ -60,13 +64,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -817,6 +826,23 @@ private fun RenderNode(
           }
         }
       }
+    "m3/dialog" ->
+      BuilderDialogSurface(
+        node = node,
+        modifier = measured,
+        icon = { next -> slot("icon").forEach { child(it, next) } },
+        title = { next -> slot("title").forEach { child(it, next) } },
+        text = { next -> slot("text").forEach { child(it, next) } },
+        hasIcon = slot("icon").isNotEmpty(),
+        hasTitle = slot("title").isNotEmpty(),
+        hasText = slot("text").isNotEmpty(),
+        buttons = { next ->
+          slot("dismissButton").forEach { child(it, next) }
+          slot("confirmButton").forEach { child(it, next) }
+        },
+      )
+    "m3/date-picker" -> BuilderDatePicker(node, measured)
+    "m3/time-picker" -> BuilderTimePicker(node, measured)
     "m3/icon-button" ->
       IconButton(
         onClick = activate,
@@ -2166,3 +2192,191 @@ private val JetcasterDarkColorScheme =
     surfaceContainerHigh = Color(0xFF282A30),
     surfaceContainerHighest = Color(0xFF33353B),
   )
+
+/**
+ * A dialog drawn where it sits, with `AlertDialog`'s own surface, spacing and button row.
+ *
+ * ## Why not a real `Dialog`
+ *
+ * Two reasons, and the second is the one that decides it.
+ *
+ * A real `Dialog` is a **window**. It leaves the composition's layout, centres itself over the
+ * whole screen and scrims everything behind it — so it would draw outside the canvas the operator
+ * is arranging, would not be hit-testable as a node, and would export as a picture of a scrim. The
+ * canvas is a place to lay a screen out; a window is not a thing that can be laid out in it.
+ *
+ * And `AlertDialog` requires `onDismissRequest`, which a design has nothing to write into. The
+ * document's action vocabulary is `toggle`, `set`, `select` and `selectOrClear` over declared state
+ * variables — there is no "close this dialog", because there is no visibility state a dialog is
+ * bound to. A real dialog emitted from here would be one nobody could close, which is worse than a
+ * panel that admits what it is.
+ *
+ * So this is the same trade `m3/search-bar` makes, and it is written down in the same place: the
+ * component's `wasm.notes` in the catalog say the dialog is drawn inline, and the Compose export
+ * emits a matching compatibility helper rather than claiming API parity.
+ *
+ * ## The geometry is Material's, not invented
+ *
+ * `AlertDialogDefaults` and the Material 3 dialog spec: a 28dp corner — Material's own,
+ * deliberately not the theme's `themeCornerRadius`, which every other surface reads —
+ * `surfaceContainerHigh`, 6dp tonal elevation, 24dp padding, 280..560dp wide, and the buttons on
+ * one end-aligned row with the dismissing action before the confirming one. An icon, when there is
+ * one, is centred and takes the title centre with it — which is Material's rule, not a preference.
+ */
+@Composable
+private fun BuilderDialogSurface(
+  node: UiBuilderNode,
+  modifier: Modifier,
+  icon: @Composable (Modifier) -> Unit,
+  title: @Composable (Modifier) -> Unit,
+  text: @Composable (Modifier) -> Unit,
+  hasIcon: Boolean,
+  hasTitle: Boolean,
+  hasText: Boolean,
+  buttons: @Composable RowScope.(Modifier) -> Unit,
+) {
+  val corner = node.dimension("shapeDp") ?: DIALOG_CORNER_DP.dp
+  Surface(
+    modifier = modifier.widthIn(min = DIALOG_MINIMUM_WIDTH_DP.dp, max = DIALOG_MAXIMUM_WIDTH_DP.dp),
+    shape = RoundedCornerShape(corner),
+    color = node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHigh),
+    contentColor = MaterialTheme.colorScheme.onSurface,
+    tonalElevation = node.dimension("tonalElevationDp") ?: DIALOG_TONAL_ELEVATION_DP.dp,
+  ) {
+    Column(
+      Modifier.padding(DIALOG_PADDING_DP.dp),
+      verticalArrangement = Arrangement.spacedBy(DIALOG_ITEM_SPACING_DP.dp),
+      // An icon centres the header. Without one the header is start-aligned, which is what every
+      // dialog in the Material spec that has no icon looks like.
+      horizontalAlignment = if (hasIcon) Alignment.CenterHorizontally else Alignment.Start,
+    ) {
+      if (hasIcon) icon(Modifier)
+      if (hasTitle) title(Modifier)
+      if (hasText) {
+        // The supporting text is the one part that stays start-aligned under a centred icon:
+        // centred body copy is not what Material draws, and a paragraph reads worse for it.
+        Column(
+          Modifier.fillMaxWidth(),
+          verticalArrangement = Arrangement.spacedBy(DIALOG_ITEM_SPACING_DP.dp),
+          horizontalAlignment = Alignment.Start,
+        ) {
+          text(Modifier)
+        }
+      }
+      Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(DIALOG_BUTTON_SPACING_DP.dp, Alignment.End),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        buttons(Modifier)
+      }
+    }
+  }
+}
+
+/**
+ * Material's own `DatePicker`, with every source of today's date taken out of it.
+ *
+ * A picker that reads the clock is a picker whose render changes overnight: the calendar opens on
+ * the current month and rings today's cell, so the same document would produce a different PNG on
+ * the first of every month and a different one again the day the ring moved. Both are pinned here —
+ * the selection and the displayed month come from `selectedDate`, which is an ISO date the document
+ * carries — so a render is a function of the design and nothing else, which is what the golden
+ * lanes and the visual diff both assume.
+ *
+ * `input` is not a second component. It is `DisplayMode.Input`, the typed date field Material calls
+ * the date input, reached from the same state — which is why the catalog spends a `mode` property
+ * here rather than a second id.
+ */
+@Composable
+private fun BuilderDatePicker(node: UiBuilderNode, modifier: Modifier) {
+  val selectedDate = node.string("selectedDate").ifEmpty { DEFAULT_SELECTED_DATE }
+  val selectedMillis =
+    isoDateToEpochMillis(selectedDate) ?: isoDateToEpochMillis(DEFAULT_SELECTED_DATE)
+  val input = node.string("mode") == "input"
+  val state =
+    key(selectedMillis, input) {
+      rememberDatePickerState(
+        initialSelectedDateMillis = selectedMillis,
+        // The month the calendar opens on. Left to Material it is *this* month, read from the
+        // system clock, which is the whole nondeterminism this component had to avoid.
+        initialDisplayedMonthMillis = selectedMillis,
+        initialDisplayMode = if (input) DisplayMode.Input else DisplayMode.Picker,
+      )
+    }
+  DatePicker(state = state, modifier = modifier, showModeToggle = node.bool("showModeToggle"))
+}
+
+/**
+ * Material's own `TimePicker`, or its `TimeInput`, with the hour and minute the document holds.
+ *
+ * Same rule as [BuilderDatePicker] and for the same reason: `rememberTimePickerState` defaults to
+ * the current time, so an unpinned clock face would draw a different picture every minute.
+ */
+@Composable
+private fun BuilderTimePicker(node: UiBuilderNode, modifier: Modifier) {
+  val hour = node.integer("hour", DEFAULT_PICKED_HOUR).coerceIn(0, 23)
+  val minute = node.integer("minute", DEFAULT_PICKED_MINUTE).coerceIn(0, 59)
+  val is24Hour = node.bool("is24Hour", true)
+  val state =
+    key(hour, minute, is24Hour) {
+      rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = is24Hour)
+    }
+  if (node.string("mode") == "input") TimeInput(state = state, modifier = modifier)
+  else TimePicker(state = state, modifier = modifier)
+}
+
+/**
+ * `YYYY-MM-DD` as UTC epoch milliseconds, or null when it is not a date.
+ *
+ * Written out rather than taken from a date library because this module has none on its floor and a
+ * dependency for one civil-date conversion is a poor trade. The algorithm is the standard
+ * days-from-civil one: shift the year so March starts it, which makes the leap day the last day of
+ * the year and removes every special case from the month arithmetic.
+ *
+ * Null rather than a substituted date on bad input: the caller decides what an unparseable date
+ * falls back to, and silently drawing January 1970 would look like a rendering bug rather than a
+ * typo in a property.
+ */
+internal fun isoDateToEpochMillis(value: String): Long? {
+  val parts = value.split('-')
+  if (parts.size != 3) return null
+  val year = parts[0].toIntOrNull() ?: return null
+  val month = parts[1].toIntOrNull() ?: return null
+  val day = parts[2].toIntOrNull() ?: return null
+  if (month !in 1..12 || day !in 1..31) return null
+  val shiftedYear = if (month <= 2) year - 1 else year
+  val era = (if (shiftedYear >= 0) shiftedYear else shiftedYear - 399) / 400
+  val yearOfEra = shiftedYear - era * 400
+  val dayOfYear = (153 * (if (month > 2) month - 3 else month + 9) + 2) / 5 + day - 1
+  val dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear
+  val epochDay = era * 146_097L + dayOfEra - 719_468L
+  return epochDay * 86_400_000L
+}
+
+/** Material 3 dialog geometry, from `AlertDialogDefaults` and the dialog spec. */
+internal const val DIALOG_CORNER_DP = 28f
+
+internal const val DIALOG_TONAL_ELEVATION_DP = 6f
+
+private const val DIALOG_PADDING_DP = 24
+
+private const val DIALOG_ITEM_SPACING_DP = 16
+
+private const val DIALOG_BUTTON_SPACING_DP = 8
+
+private const val DIALOG_MINIMUM_WIDTH_DP = 280
+
+private const val DIALOG_MAXIMUM_WIDTH_DP = 560
+
+/**
+ * The date a picker shows when the design names none.
+ *
+ * A fixed day rather than today, for the determinism [BuilderDatePicker] exists to keep, and this
+ * particular day because it is the one the frozen fixtures already pin their `fixedTime` to.
+ */
+internal const val DEFAULT_SELECTED_DATE = "2024-05-16"
+
+internal const val DEFAULT_PICKED_HOUR = 10
+
+internal const val DEFAULT_PICKED_MINUTE = 30

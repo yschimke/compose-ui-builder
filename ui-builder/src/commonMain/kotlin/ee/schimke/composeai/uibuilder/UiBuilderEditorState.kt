@@ -3181,6 +3181,14 @@ private fun PropertyCapability.defaultEncodedValue(
     "expanded",
     "selected",
     "visible" -> literal("bool", JsonPrimitive(false))
+    // A picker inserted with no date is a picker showing epoch zero or, worse, today — and "today"
+    // is a render that changes overnight. The same fixed day the renderer falls back to, so the
+    // node carries the value the canvas draws rather than leaving the inspector empty and the two
+    // to agree by accident.
+    "selectedDate" -> literal("string", JsonPrimitive(DEFAULT_SELECTED_DATE))
+    "hour" -> literal("float", JsonPrimitive(DEFAULT_PICKED_HOUR))
+    "minute" -> literal("float", JsonPrimitive(DEFAULT_PICKED_MINUTE))
+    "is24Hour" -> literal("bool", JsonPrimitive(true))
     "value" ->
       JsonObject(
         mapOf(

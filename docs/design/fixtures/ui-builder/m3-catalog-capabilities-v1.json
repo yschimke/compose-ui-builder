@@ -260,6 +260,44 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "m3/date-picker",
+      "displayName": "Date picker",
+      "role": "Leaf",
+      "traits": ["PickerContent", "DateContent"],
+      "slots": [],
+      "properties": [
+        { "name": "mode", "jsonType": "string", "required": true, "allowedValues": ["picker", "input"], "notes": "Material's own DisplayMode: the calendar, or the typed date field." },
+        { "name": "selectedDate", "jsonType": "string", "required": true, "notes": "ISO-8601 `YYYY-MM-DD`. Pinned rather than read from the clock so a render is the same picture on every day." },
+        { "name": "showModeToggle", "jsonType": "boolean", "required": false }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Material's own DatePicker, with its state pinned to `selectedDate` so the displayed month never depends on today's date." },
+      "code": { "symbol": "DatePicker", "imports": ["androidx.compose.material3.DatePicker", "androidx.compose.material3.rememberDatePickerState"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "m3/dialog",
+      "displayName": "Dialog",
+      "role": "Container",
+      "traits": ["DialogContent", "OverlayContent"],
+      "slots": [
+        { "name": "icon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] },
+        { "name": "title", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] },
+        { "name": "text", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] },
+        { "name": "dismissButton", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["Action"] },
+        { "name": "confirmButton", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["Action"] }
+      ],
+      "properties": [
+        { "name": "containerColor", "jsonType": "string", "required": false },
+        { "name": "tonalElevationDp", "jsonType": "number", "required": false },
+        { "name": "shapeDp", "jsonType": "number", "required": false }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Drawn inline where it sits, with AlertDialog's own surface, spacing and button row. A real Dialog is a window: it would leave the canvas, and its onDismissRequest has nothing to write, because a design declares no way to close one." },
+      "code": { "symbol": "AlertDialog", "imports": ["androidx.compose.material3.AlertDialog"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
       "componentId": "m3/filter-chip",
       "displayName": "Filter chip",
       "role": "Container",
@@ -464,6 +502,23 @@
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Fidelity requires the pinned Jetcaster font assets and typography tokens." },
       "code": { "symbol": "Text", "imports": ["androidx.compose.material3.Text"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate." }
+    },
+    {
+      "componentId": "m3/time-picker",
+      "displayName": "Time picker",
+      "role": "Leaf",
+      "traits": ["PickerContent", "TimeContent"],
+      "slots": [],
+      "properties": [
+        { "name": "mode", "jsonType": "string", "required": true, "allowedValues": ["dial", "input"], "notes": "The clock face, or the two typed fields Material calls TimeInput." },
+        { "name": "hour", "jsonType": "integer", "required": true, "notes": "0..23, whatever `is24Hour` says: the state holds a 24-hour clock and renders it in the chosen one." },
+        { "name": "minute", "jsonType": "integer", "required": true },
+        { "name": "is24Hour", "jsonType": "boolean", "required": false }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Material's own TimePicker and TimeInput, with hour and minute pinned by the document rather than taken from the clock." },
+      "code": { "symbol": "TimePicker", "imports": ["androidx.compose.material3.TimePicker", "androidx.compose.material3.TimeInput", "androidx.compose.material3.rememberTimePickerState"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
       "componentId": "remote-compose/document",

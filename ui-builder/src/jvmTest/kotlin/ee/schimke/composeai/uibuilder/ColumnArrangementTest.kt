@@ -110,9 +110,14 @@ class ColumnArrangementTest {
           catalog,
         )
         .requireSource()
+    // The screen, without the compatibility helpers appended after it. This asserts what the
+    // *column emitter* wrote, and every generated file also carries the same helper block whatever
+    // it contains — one of those helpers lays a dialog out and names `horizontalAlignment`, which
+    // an assertion over the whole file would read as the column having emitted one.
+    val screen = source.substringBefore("// Compatibility helpers are")
 
-    assertTrue("verticalArrangement = Arrangement.spacedBy(0.dp)" in source, source)
-    assertTrue("horizontalAlignment" !in source, source)
+    assertTrue("verticalArrangement = Arrangement.spacedBy(0.dp)" in screen, screen)
+    assertTrue("horizontalAlignment" !in screen, screen)
   }
 
   private fun document(

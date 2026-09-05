@@ -89,6 +89,19 @@ internal object StarterContent {
       // entry (`accessTime`) reads as a clock somebody forgot to change.
       "m3/icon-button" to mapOf("content" to listOf(icon("favorite", "Favorite"))),
       "m3/filter-chip" to mapOf("label" to listOf(text("Filter", "labelLarge"))),
+      // The example the goal named: a dialog that arrives saying something and offering the two
+      // answers every dialog offers. `confirmButton` has a minimum of one, so without this entry
+      // the required fill would put an empty `layout/box` where the OK button belongs — a dialog
+      // with a blank rectangle for its primary action.
+      "m3/dialog" to
+        mapOf(
+          "title" to listOf(text("Dialog title", "headlineSmall")),
+          "text" to
+            listOf(text("Supporting text explaining what this dialog is asking.", "bodyMedium")),
+          // Material's dialog actions are text buttons, and the dismissing one comes first.
+          "dismissButton" to listOf(textButton("Cancel")),
+          "confirmButton" to listOf(textButton("OK")),
+        ),
       // Title over supporting text: the shape every Material card sample has, and the shape a card
       // holding one line of "New text" does not.
       "m3/card" to
@@ -165,6 +178,13 @@ private fun icon(iconKey: String, contentDescription: String): StarterNode =
 
 private fun column(vararg children: StarterNode): StarterNode =
   StarterNode(componentId = "layout/column", slots = mapOf("children" to children.toList()))
+
+private fun textButton(label: String): StarterNode =
+  StarterNode(
+    componentId = "m3/button",
+    properties = mapOf("style" to starterLiteral("enum", "text")),
+    slots = mapOf("content" to listOf(text(label, "labelLarge"))),
+  )
 
 private fun iconButton(iconKey: String, contentDescription: String): StarterNode =
   StarterNode(

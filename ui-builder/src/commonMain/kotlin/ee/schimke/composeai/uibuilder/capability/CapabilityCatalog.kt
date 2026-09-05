@@ -310,6 +310,11 @@ object CapabilityCatalogParser {
       ("layout/lazy-row" to "contentPadding") to objectEditor("padding"),
       ("m3/horizontal-floating-toolbar" to "contentPadding") to objectEditor("padding"),
       ("layout/lazy-grid" to "columns") to objectEditor("adaptiveGrid"),
+      // A clock, not a dimension. The `…Dp` rule below is what gives a number its editor, so
+      // without these two the hour and minute of a time picker would be `Unsupported` in the
+      // inspector — a component whose whole content is two numbers, neither of them editable.
+      ("m3/time-picker" to "hour") to numberEditor(0.0, 23.0, 1.0),
+      ("m3/time-picker" to "minute") to numberEditor(0.0, 59.0, 1.0),
     ) + WEAR_WIDGET_CONTAINER_IDS.flatMap(::widgetContainerEditors)
 
   /**
