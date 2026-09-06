@@ -8,6 +8,7 @@ import java.security.MessageDigest
 import java.time.Clock
 import java.util.Base64
 import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.Semaphore
@@ -316,6 +317,11 @@ public class PersistentUiBuilderService(
    * nobody asks for costs nothing, the rest of the store works, and `diagnostics()` counts them so
    * this is visible without opening one.
    *
+   * What it must not become is a one-way door. A quarantined design is still the operator's
+   * content, and the rule that invalidated it is as likely to be wrong as the document; so
+   * `adminDesignDocument` reads the stored document out regardless of whether it can be served, and
+   * retiring it with `adminDeleteDesign` is a choice rather than the only move left.
+   *
    * The line this does **not** cross is integrity. A state file whose checksum does not match, that
    * is truncated, or that declares a format this build cannot read is still refused by the storage
    * layer before any of this runs, and `restoreBackup` is the recovery. Trusting a file that failed
@@ -323,10 +329,26 @@ public class PersistentUiBuilderService(
    */
   private data class UnusableDesign(val code: ServiceErrorCodeV1, val reason: String)
 
-  private val unusableDesigns: Map<String, UnusableDesign> =
-    persisted.designs
-      .mapNotNull { (designId, design) -> unusableReason(designId, design)?.let { designId to it } }
-      .toMap()
+  /**
+   * Computed once at load and then maintained, rather than fixed for the life of the process.
+   *
+   * A frozen set would make quarantine a one-way door: a design repaired through
+   * [adminRepairDesign] would go on being refused until a restart, and a *deleted* one would leave
+   * its entry behind — so its id would answer with a stale catalog error instead of "not found",
+   * and re-creating a design under that id could never be served. Both are the same mistake this
+   * whole mechanism exists to undo, one scope smaller.
+   *
+   * Written under [lock] with every other state change; concurrent because [execute] reads it
+   * before taking the lock, and export runs outside it entirely.
+   */
+  private val unusableDesigns: MutableMap<String, UnusableDesign> =
+    ConcurrentHashMap(
+      persisted.designs
+        .mapNotNull { (designId, design) ->
+          unusableReason(designId, design)?.let { designId to it }
+        }
+        .toMap()
+    )
 
   private fun unusableReason(designId: String, design: PersistedDesignV1): UnusableDesign? {
     fun internal(reason: String) = UnusableDesign(ServiceErrorCodeV1.INTERNAL, reason)
@@ -2183,12 +2205,104 @@ public class PersistentUiBuilderService(
       unusable.reason
     }
 
+  /**
+   * The stored document, read straight out of the loaded state and rendered as JSON.
+   *
+   * Pretty-printed rather than canonical on purpose: the caller is a person about to edit it, not a
+   * checksum. Nothing here consults [catalogs] or [limits], which is the whole point — a design
+   * held back because one of those changed is the design most likely to need copying out.
+   */
+  override fun adminDesignDocument(designId: String): String? = lock.withLock {
+    val document = persisted.designs[designId]?.document ?: return null
+    PersistentUiBuilderServiceAdminJson.json.encodeToString(DesignDocumentV1.serializer(), document)
+  }
+
+  /**
+   * Replace a quarantined design's document with a repaired one, or say why the repair is not one.
+   *
+   * The other half of [adminDesignDocument] and the whole point of holding a design back rather
+   * than refusing to start: a rule changed under a stored document, so the operator edits the
+   * document to satisfy the rule and puts it back. The candidate is checked against exactly the
+   * conditions that quarantined the original, so a repair that does not repair is refused with the
+   * remaining reason instead of being stored and quarantined again.
+   *
+   * Deliberately restricted to a design that is currently unusable. A design the host serves has
+   * live editors, a revision history and subscribers reading a sequence, and replacing its document
+   * underneath them is a mutation — [UiBuilderServiceRequest.ApplyOperation] is how that is done,
+   * with authorization and a sequence. A quarantined design has none of those by construction: it
+   * refuses every request that names it, so nothing is watching and its history describes a
+   * document this build could not load anyway. That history is therefore replaced rather than
+   * extended, and the sequence continues upward so no client can mistake the repaired design for
+   * the old one.
+   */
+  override fun adminRepairDesign(designId: String, documentJson: String): UiBuilderAdminRepair =
+    lock.withLock {
+      val existing = persisted.designs[designId] ?: return UiBuilderAdminRepair.NotFound(designId)
+      val unusable =
+        unusableDesigns[designId]
+          ?: return UiBuilderAdminRepair.Rejected(
+            "design $designId is served normally; repair is only for a design this host cannot serve"
+          )
+      val candidate =
+        try {
+          PersistentUiBuilderServiceAdminJson.json.decodeFromString(
+            DesignDocumentV1.serializer(),
+            documentJson,
+          )
+        } catch (failure: Exception) {
+          return UiBuilderAdminRepair.Rejected(
+            "repaired document is not a readable design: ${failure.message}"
+          )
+        }
+      if (candidate.id != designId) {
+        return UiBuilderAdminRepair.Rejected("repaired document is ${candidate.id}, not $designId")
+      }
+      validateEnvironment(candidate.environment)?.let {
+        return UiBuilderAdminRepair.Rejected(it.message)
+      }
+      val now = clock.millis()
+      val sequence = existing.lastSequence + 1
+      val document =
+        candidate.copy(
+          revision = existing.document.revision + 1,
+          createdAtEpochMillis = existing.document.createdAtEpochMillis,
+          updatedAtEpochMillis = now,
+        )
+      // The same question the original failed, asked of the replacement. Answering it here is what
+      // keeps the store's invariant — everything loaded is either servable or named as not — true
+      // after a write as well as after a load.
+      unusableReason(designId, existing.copy(document = document))?.let {
+        return UiBuilderAdminRepair.Rejected(it.reason)
+      }
+      val positions = derivePositions(document)
+      val repaired =
+        existing.copy(
+          document = document,
+          lastSequence = sequence,
+          history = emptyList(),
+          revisionSnapshots = listOf(RevisionStateV1(document, sequence)),
+          operationOutcomes = emptyMap(),
+          acceptedOperations = emptyMap(),
+          tombstones = emptyMap(),
+          positions = positions,
+          positionSnapshots = listOf(PositionStateV1(document.revision, positions)),
+          updatedAtEpochMillis = now,
+        )
+      commitPersisted(persisted.copy(designs = persisted.designs + (designId to repaired)))
+      unusableDesigns.remove(designId)
+      runtime.getOrPut(designId) { RuntimeDesign() }
+      UiBuilderAdminRepair.Repaired(designId, document.revision, unusable.reason)
+    }
+
   override fun adminDeleteDesign(designId: String): Boolean {
     val closed: List<SubscriberMailbox> = lock.withLock {
       if (designId !in persisted.designs) return false
       // Durable first: a subscriber whose stream closes has lost the design, not merely the
       // connection, and must not observe that before the removal is on disk.
       commitPersisted(persisted.copy(designs = persisted.designs - designId))
+      // The design is gone, so its quarantine goes with it: leaving the entry would answer this id
+      // with a catalog error rather than "not found", and would follow a re-created design here.
+      unusableDesigns.remove(designId)
       val removed = runtime.remove(designId)
       mutationBuckets.keys.removeIf { (_, bucketDesignId) -> bucketDesignId == designId }
       removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
@@ -3380,6 +3494,16 @@ private fun artifactDigest(artifact: ExportArtifactV1): String =
 
 private object PersistentUiBuilderServiceJson {
   val json: Json = Json { encodeDefaults = true }
+}
+
+/**
+ * For what an operator reads, not for what is stored: indented, and never used to compute bytes.
+ */
+private object PersistentUiBuilderServiceAdminJson {
+  val json: Json = Json {
+    encodeDefaults = true
+    prettyPrint = true
+  }
 }
 
 private fun sha256(bytes: ByteArray): String =

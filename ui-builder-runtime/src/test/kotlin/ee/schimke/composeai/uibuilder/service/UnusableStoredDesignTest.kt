@@ -10,7 +10,10 @@ import kotlin.coroutines.startCoroutine
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
 
 /**
  * A stored design the current catalog or limits cannot serve does not stop the service starting.
@@ -141,6 +144,134 @@ class UnusableStoredDesignTest {
     val rejected = assertIs<UiBuilderSubscriptionRejectedException>(rejection)
     assertEquals(ServiceErrorCodeV1.CATALOG_UNAVAILABLE, rejected.error.code)
   }
+
+  @Test
+  fun `an unusable design can still be copied out, so retiring it is not the only move`() {
+    val storage = MemoryStorage()
+    create(service(storage, PinnedCatalogs(resolves = true)), "orphaned")
+    val reopened = service(storage, PinnedCatalogs(resolves = false))
+
+    // The ordinary export runs through the catalog, so the design held back *because* its catalog
+    // is gone is precisely the one it cannot reach. Reading the stored document does not.
+    assertEquals(setOf("orphaned"), reopened.adminUnusableDesigns().keys)
+    val document = assertNotNull(reopened.adminDesignDocument("orphaned"))
+    assertEquals("orphaned", Json.decodeFromString(DesignDocumentV1.serializer(), document).id)
+    assertTrue(document.contains("orphaned-node-1"), document)
+
+    // Deleting is still available, and after it there is nothing left to copy — which is the whole
+    // reason the copy has to come first.
+    assertTrue(reopened.adminDeleteDesign("orphaned"))
+    assertNull(reopened.adminDesignDocument("orphaned"))
+  }
+
+  @Test
+  fun `a repaired document puts the design back in service, without a restart`() {
+    val storage = MemoryStorage()
+    create(service(storage, PinnedCatalogs(resolves = true)), "outgrown", nodes = 3)
+
+    // A tightened per-design node limit. The design is held back; nothing else about it changed.
+    val reopened =
+      service(
+        storage,
+        PinnedCatalogs(resolves = true),
+        limits = UiBuilderServiceLimits(maximumNodesPerDesign = 2),
+      )
+    assertEquals(setOf("outgrown"), reopened.adminUnusableDesigns().keys)
+
+    val stored =
+      Json.decodeFromString(
+        DesignDocumentV1.serializer(),
+        assertNotNull(reopened.adminDesignDocument("outgrown")),
+      )
+
+    // A candidate that does not actually satisfy the rule is refused with what is still wrong,
+    // rather than replacing the stored one and being quarantined all over again.
+    val stillTooBig = encode(stored.copy(title = "renamed, not repaired"))
+    val rejected =
+      assertIs<UiBuilderAdminRepair.Rejected>(reopened.adminRepairDesign("outgrown", stillTooBig))
+    assertTrue(rejected.reason.contains("node count"), rejected.reason)
+    assertEquals(setOf("outgrown"), reopened.adminUnusableDesigns().keys, "nothing was written")
+
+    // The repair: within the limit the deployment now enforces.
+    val kept = stored.roots.take(2)
+    val repaired =
+      assertIs<UiBuilderAdminRepair.Repaired>(
+        reopened.adminRepairDesign(
+          "outgrown",
+          encode(stored.copy(roots = kept, nodes = stored.nodes.filterKeys { it in kept })),
+        )
+      )
+    assertEquals(stored.revision + 1, repaired.revision)
+    assertTrue(repaired.previousReason.contains("node count"), repaired.previousReason)
+
+    // Served again, in this process. Needing a restart here would put back a smaller version of the
+    // trap the whole mechanism removes.
+    assertEquals(emptyMap(), reopened.adminUnusableDesigns())
+    assertEquals(0, reopened.diagnostics().unusableDesigns)
+    val snapshot = assertIs<UiBuilderServiceResponse.Snapshot>(open(reopened, "outgrown"))
+    assertEquals("outgrown", snapshot.snapshot.designId)
+
+    // And durable: a fresh service over the same bytes loads it as an ordinary design.
+    val restarted =
+      service(
+        storage,
+        PinnedCatalogs(resolves = true),
+        limits = UiBuilderServiceLimits(maximumNodesPerDesign = 2),
+      )
+    assertEquals(emptyMap(), restarted.adminUnusableDesigns())
+  }
+
+  @Test
+  fun `repair refuses what is not a repair, and does not touch a design the host serves`() {
+    val storage = MemoryStorage()
+    val stocked = service(storage, PinnedCatalogs(resolves = true))
+    create(stocked, "served")
+
+    // A servable design is edited through the service, with an actor and a sequence. This door is
+    // only open because that one is closed to a design the host will not load.
+    val refused =
+      assertIs<UiBuilderAdminRepair.Rejected>(
+        stocked.adminRepairDesign("served", assertNotNull(stocked.adminDesignDocument("served")))
+      )
+    assertTrue(refused.reason.contains("served normally"), refused.reason)
+
+    val reopened = service(storage, PinnedCatalogs(resolves = false))
+    assertIs<UiBuilderAdminRepair.NotFound>(reopened.adminRepairDesign("absent", "{}"))
+    assertIs<UiBuilderAdminRepair.Rejected>(reopened.adminRepairDesign("served", "not json"))
+    val wrongDesign =
+      assertIs<UiBuilderAdminRepair.Rejected>(
+        reopened.adminRepairDesign(
+          "served",
+          encode(
+            Json.decodeFromString(
+                DesignDocumentV1.serializer(),
+                assertNotNull(reopened.adminDesignDocument("served")),
+              )
+              .copy(id = "somebody-else")
+          ),
+        )
+      )
+    assertTrue(wrongDesign.reason.contains("somebody-else"), wrongDesign.reason)
+    assertEquals(setOf("served"), reopened.adminUnusableDesigns().keys, "still held back")
+  }
+
+  @Test
+  fun `deleting an unusable design does not leave its quarantine behind`() {
+    val storage = MemoryStorage()
+    create(service(storage, PinnedCatalogs(resolves = true)), "orphaned")
+    val reopened = service(storage, PinnedCatalogs(resolves = false))
+    assertTrue(reopened.adminDeleteDesign("orphaned"))
+
+    // A stale entry would answer this id with a catalog error rather than "not found", and would
+    // then follow a design re-created under it — quarantining a document nothing was wrong with.
+    assertEquals(emptyMap(), reopened.adminUnusableDesigns())
+    assertEquals(0, reopened.diagnostics().unusableDesigns)
+    val error = assertIs<UiBuilderServiceResponse.Error>(open(reopened, "orphaned"))
+    assertEquals(ServiceErrorCodeV1.NOT_FOUND, error.error.code)
+  }
+
+  private fun encode(document: DesignDocumentV1) =
+    Json.encodeToString(DesignDocumentV1.serializer(), document)
 
   private fun open(service: PersistentUiBuilderService, designId: String) =
     execute(service, OWNER, UiBuilderServiceRequest.OpenDesign(designId))

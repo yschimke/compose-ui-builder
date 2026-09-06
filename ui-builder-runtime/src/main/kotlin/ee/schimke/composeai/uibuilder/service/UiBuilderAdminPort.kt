@@ -56,4 +56,60 @@ public interface UiBuilderAdminPort {
    * for a consumer compiled against an earlier release. A defaulted method is additive.
    */
   public fun adminUnusableDesigns(): Map<String, String> = emptyMap()
+
+  /**
+   * The stored design document as JSON, or null when no design has this id.
+   *
+   * The recovery path for a design [adminUnusableDesigns] names, and the reason it is here rather
+   * than on [UiBuilderServicePort]: the ordinary export renders through the catalog, so a design
+   * held back *because* its catalog cannot serve it is exactly the one that export cannot reach.
+   * Without this an operator's only move on a quarantined design is [adminDeleteDesign], which
+   * loses the document — and a design is generally quarantined by a rule that changed under it, not
+   * by being worthless. So: take a copy, repair it against the current rules, create it again.
+   *
+   * Deliberately the document alone, and deliberately not gated on the design being servable. It
+   * reads what is already on disk and interprets none of it, which is what makes it usable in the
+   * state it exists for. Access grants, history and presence are not included: they are the
+   * service's bookkeeping rather than the operator's content, and the owner of the repaired copy is
+   * whoever creates it.
+   */
+  public fun adminDesignDocument(designId: String): String? = null
+
+  /**
+   * Put a repaired document back in place of a quarantined one.
+   *
+   * The other half of [adminDesignDocument], and what turns quarantine into a workflow rather than
+   * a waiting room: copy the design out, edit it to satisfy the rule that changed under it, put it
+   * back, and the host serves it again without a restart and without anything else on the host
+   * being touched. The candidate is checked against the same conditions that held the original
+   * back, so a repair that does not repair is refused with what is still wrong rather than stored.
+   *
+   * Only a design [adminUnusableDesigns] names may be repaired this way. A design the host serves
+   * is edited through the service, with an actor, authorization and a sequence; this is the door
+   * that exists because that one is closed.
+   */
+  public fun adminRepairDesign(designId: String, documentJson: String): UiBuilderAdminRepair =
+    UiBuilderAdminRepair.Rejected("design repair is not supported by this runtime")
+}
+
+/** What [UiBuilderAdminPort.adminRepairDesign] did, or why it did nothing. */
+public sealed interface UiBuilderAdminRepair {
+  /**
+   * The design is stored and servable again, at [revision]. [previousReason] is what had held it
+   * back, kept so the operator's log says what was repaired and not merely that something was.
+   */
+  public data class Repaired(
+    val designId: String,
+    val revision: Long,
+    val previousReason: String,
+  ) : UiBuilderAdminRepair
+
+  /** No design on this host has this id. */
+  public data class NotFound(val designId: String) : UiBuilderAdminRepair
+
+  /**
+   * Nothing was written. Either the candidate is not a readable design, or it is one the host still
+   * cannot serve — [reason] is the remaining failure, in the same words the quarantine uses.
+   */
+  public data class Rejected(val reason: String) : UiBuilderAdminRepair
 }

@@ -173,7 +173,51 @@ with the reason and **every request naming it is answered with that reason** —
 when its pin no longer resolves, `INTERNAL` otherwise — including subscribing, which is the other
 door in. It still appears in the design list, because a design nobody can open is bad and one nobody
 can see is worse. `diagnostics().unusableDesigns` counts them, so an operator learns they exist
-without opening one. `UnusableStoredDesignTest` in `:ui-builder-runtime` holds all of that.
+without opening one, and `adminUnusableDesigns()` names them — behind the count, on the admin
+screen, and in a line the runner logs at startup for each one. `UnusableStoredDesignTest` in
+`:ui-builder-runtime` holds all of that.
+
+### Quarantine is a workflow, not a waiting room
+
+Holding a design back is only half an answer. A design nobody can open, that an operator can only
+delete, is a document destroyed by a rule change — and the rule is at least as likely to be wrong as
+the document. So the operator's surface carries the whole loop, on the admin token alone:
+
+| | |
+|---|---|
+| `GET /admin/ui-builder/designs` | lists every design; a held-back one carries `unusableReason` |
+| `GET /admin/ui-builder/designs/{id}/document` | the stored document, as JSON |
+| `PUT /admin/ui-builder/designs/{id}/document` | a repaired document, put back |
+| `DELETE /admin/ui-builder/designs/{id}` | retire it |
+
+Download, edit until it satisfies the rule that changed, put it back. `adminDesignDocument` reads
+what is on disk and consults neither the catalog nor the limits, which is what makes it work on the
+design that needs it most; the ordinary export renders **through** the catalog, so it cannot reach a
+design held back because of one. `adminRepairDesign` then asks the candidate exactly the question
+the original failed, so a file that does not repair the design comes back with what is still wrong
+rather than being stored and quarantined again. On success the design is served in that process —
+needing a restart here would put back a smaller version of the trap this all exists to remove — and
+the quarantine set is maintained rather than frozen, which also means a deleted design does not
+leave a stale entry answering its id with a catalog error.
+
+Repair is deliberately closed to a design the host serves normally. That one has live editors, a
+revision history and subscribers reading a sequence, and it is edited through `ApplyOperation` with
+an actor and authorization. A quarantined design has none of those by construction — it refuses
+every request that names it — so its history describes a document this build could not load, and is
+replaced rather than extended, with the sequence continuing upward so no client can mistake the
+repaired design for the old one.
+
+**Should a rule change carry a migration instead?** Sometimes, and the test is whether the repair is
+mechanical. A rule that renames a field, or splits one into two, knows exactly what the old document
+meant and should rewrite it on load — quarantining there is a worse answer than migrating, because
+every operator would perform the identical edit. A rule that *narrows* what is allowed, as
+withdrawing `topBar`'s acceptance of a lazy grid did, does not: there is no correct rewrite, only a
+choice between moving the node, replacing it, and deciding the rule went too far. That is a
+judgement, and quarantine is how a judgement gets routed to a person instead of being guessed at by
+a migration. Filing the judgement as an issue or a PR from the host itself was considered and is not
+worth it: it needs credentials the host should not hold, and it would publish a user's document into
+a public tracker to ask a question the admin screen already asks in front of the person who can
+answer it.
 
 **Integrity is the line this does not cross.** A state file whose checksum does not match, that is
 truncated, or that declares a persistence format this build cannot read is still refused outright by
