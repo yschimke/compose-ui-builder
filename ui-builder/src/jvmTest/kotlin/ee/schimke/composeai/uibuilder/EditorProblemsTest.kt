@@ -51,6 +51,30 @@ class EditorProblemsTest {
     )
   }
 
+  /**
+   * The one problem that is not a refusal: the export runs, and the picture is right, but a root
+   * surface's `containerColor` is not the ground its author took it for (#485). The served export
+   * says the same thing on its diagnostics; the panel says it where the person is.
+   */
+  @Test
+  fun `a coloured root surface that does not fill the frame is a problem, and names the root`() {
+    val root = document.nodes.getValue("root-surface")
+    assertTrue(root.properties.containsKey("containerColor"), "the fixture's root is coloured")
+    assertTrue(
+      problems(document).none { it.code == RootSurfaceGround.CODE },
+      "the fixture's root fills the frame, so there is nothing to say",
+    )
+
+    val wrapping =
+      document.copy(
+        nodes = document.nodes + ("root-surface" to root.copy(modifiers = JsonArray(emptyList())))
+      )
+    val reported = problems(wrapping).single { it.code == RootSurfaceGround.CODE }
+    assertEquals("root-surface", reported.nodeId)
+    assertEquals("m3/surface", reported.componentId)
+    assertTrue("environment.theme" in reported.message, reported.message)
+  }
+
   @Test
   fun `a wear widget is judged by the emitter that writes it, not by the record-driven gate`() {
     // Reported live on the deployed builder: the Weather sample showed two COMPOSE_EXPORT_REFUSED

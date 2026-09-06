@@ -782,7 +782,17 @@ private class ComposeEmitter(
       level,
       "Card(${node.modifierArgument()}, shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}), elevation = CardDefaults.cardElevation(defaultElevation = ${node.number("elevationDp").dpLiteral()}), colors = builderCardColors(${node.colorExpression("containerColor")})) {",
     )
-    line(level + 1, "Box(Modifier.fillMaxSize()) {")
+    // The same decision the canvas makes — see [cardContentFill] — so the generated screen wraps
+    // an unsized card exactly where the picture did.
+    val fill = node.cardContentFill()
+    val box =
+      when {
+        fill.width && fill.height -> "Box(Modifier.fillMaxSize()) {"
+        fill.width -> "Box(Modifier.fillMaxWidth()) {"
+        fill.height -> "Box(Modifier.fillMaxHeight()) {"
+        else -> "Box {"
+      }
+    line(level + 1, box)
     node.slot("content").forEach { emitNode(it, level + 2) }
     line(level + 1, "}")
     line(level, "}")
@@ -1425,7 +1435,13 @@ private fun alignmentExpression(value: String?): String =
 private fun UiBuilderNode.colorExpression(name: String): String = colorExpressionFor(string(name))
 
 private fun colorExpressionFor(value: String): String {
-  if (value.startsWith("#")) return "Color(0x${value.removePrefix("#").uppercase()})"
+  if (value.startsWith("#")) {
+    val digits = value.removePrefix("#").uppercase()
+    // `#RRGGBB` is opaque everywhere else the document is read — the canvas ORs the alpha in — and
+    // `Color(0xRRGGBB)` is not: its top byte is the alpha, so a six-digit literal compiled to a
+    // fully transparent colour. A surface set to `#313338` exported as one that painted nothing.
+    return "Color(0x${if (digits.length == 6) "FF$digits" else digits})"
+  }
   return when (value) {
     "primary" -> "MaterialTheme.colorScheme.primary"
     "onPrimary" -> "MaterialTheme.colorScheme.onPrimary"

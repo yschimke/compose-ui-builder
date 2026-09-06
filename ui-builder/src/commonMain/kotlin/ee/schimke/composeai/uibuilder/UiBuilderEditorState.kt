@@ -2113,7 +2113,19 @@ class UiBuilderEditorReducer(
         // Appended rather than replacing: the capability diagnostics still answer questions the
         // generator does not ask — catalog pin drift, a modifier the catalog disallows on a
         // component — and dropping them to unify the source would narrow the panel's promise.
-        exportRefusals(document))
+        exportRefusals(document) +
+        // Not a refusal — the export runs — but the one property a whole design is judged by that
+        // commits and changes nothing visible (#485). The same notice the served export attaches.
+        listOfNotNull(
+          RootSurfaceGround.diagnose(document)?.let { notice ->
+            EditorProblem(
+              code = RootSurfaceGround.CODE,
+              message = notice.message,
+              nodeId = notice.nodeId,
+              componentId = "m3/surface",
+            )
+          }
+        ))
       .distinctBy { it.code to it.message }
 
   /**

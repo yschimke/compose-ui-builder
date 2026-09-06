@@ -691,11 +691,12 @@ private fun RenderNode(
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
         // `IntrinsicSize.Min`, because a Wear list row has to wrap. `m3/card` — which is what a
-        // borrowed row is — draws its content slot in a `Box(Modifier.fillMaxSize())`, and inside a
-        // Column with a bounded parent that makes the first card eat every remaining pixel and the
-        // rest of the list vanish. The real `TransformingLazyColumn` measures each item's own
-        // height too, through `Modifier.transformedHeight`; this is the same question asked with
-        // the tool the canvas has.
+        // borrowed row is — used to draw its content slot in a `Box(Modifier.fillMaxSize())`, and
+        // inside a Column with a bounded parent that made the first card eat every remaining pixel
+        // and the rest of the list vanish; the card wraps its content now (#483, `cardContentFill`)
+        // and this stays as the list's own statement of it. The real `TransformingLazyColumn`
+        // measures each item's own height too, through `Modifier.transformedHeight`; this is the
+        // same question asked with the tool the canvas has.
         slot("items").forEach { child(it, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) }
       }
     "layout/supporting-pane-scaffold" ->
@@ -1008,7 +1009,13 @@ private fun RenderNode(
             node.color("containerColor", MaterialTheme.colorScheme.surfaceContainer)
           ),
       ) {
-        Box(Modifier.fillMaxSize()) {
+        // Filled only along the axes the card was given a size on — see [cardContentFill] for why
+        // `fillMaxSize` here made a card with no height swallow its column (#483).
+        val fill = node.cardContentFill()
+        Box(
+          Modifier.then(if (fill.width) Modifier.fillMaxWidth() else Modifier)
+            .then(if (fill.height) Modifier.fillMaxHeight() else Modifier)
+        ) {
           slot("content").forEach { id ->
             val item = document.nodes.getValue(id)
             val parentSizing =

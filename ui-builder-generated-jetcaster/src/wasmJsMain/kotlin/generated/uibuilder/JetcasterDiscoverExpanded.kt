@@ -1,4 +1,4 @@
-// Generator content SHA-256: 28580b8613867308278a51436c32ce68d10a3409e30050bb848354fa24880afb
+// Generator content SHA-256: 2d2f4ef4e39f6357702900523761f19bc1ea53e8273d9a35a1d275a63ac39b95
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -454,7 +454,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                           elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                           colors = builderCardColors(MaterialTheme.colorScheme.surfaceContainer),
                         ) {
-                          Box(Modifier.fillMaxSize()) {
+                          Box(Modifier.fillMaxWidth()) {
                             // node:main-episode-column component:layout/column symbol:Column
                             // typed-properties:{"verticalSpacingDp":{"type":"float","value":8}}
                             Column(
@@ -768,7 +768,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         colors = builderCardColors(MaterialTheme.colorScheme.surfaceContainerLow),
                       ) {
-                        Box(Modifier.fillMaxSize()) {
+                        Box {
                           // node:detail-hero-row component:layout/row symbol:Row
                           // typed-properties:{"horizontalSpacingDp":{"type":"float","value":20},"verticalAlignment":{"type":"enum","value":"center"}}
                           Row(
@@ -937,7 +937,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         colors = builderCardColors(MaterialTheme.colorScheme.surfaceContainer),
                       ) {
-                        Box(Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxWidth()) {
                           // node:detail-episode-140-column component:layout/column symbol:Column
                           // typed-properties:{"verticalSpacingDp":{"type":"float","value":0}}
                           Column(
@@ -1080,7 +1080,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         colors = builderCardColors(MaterialTheme.colorScheme.surfaceContainer),
                       ) {
-                        Box(Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxWidth()) {
                           // node:detail-episode-139-column component:layout/column symbol:Column
                           // typed-properties:{"verticalSpacingDp":{"type":"float","value":0}}
                           Column(

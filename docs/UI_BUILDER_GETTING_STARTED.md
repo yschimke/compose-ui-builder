@@ -156,6 +156,22 @@ browser is authoritative and the native lane is the second opinion rather than t
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.
 
+### The frame's ground is the theme's, unless the root fills the frame
+
+Every renderer paints the pixels no node reaches in the theme's `background` — the canvas from
+`environment.theme`, the native lane from the preview's own backdrop. A node paints its
+`containerColor` across the area it is measured to and no further, and that includes the root: an
+`m3/surface` with no size modifier wraps its content, exactly as `Surface` does, so its colour is
+a patch behind the content and the rest of the frame stays the theme's. A dark chat mock whose
+root carries `containerColor: #313338` and no `fillMaxSize` renders on the light theme's ground,
+with nothing refused and nothing to search for.
+
+Two ways to make the two agree. Give the root `fillMaxSize`, and its `containerColor` *is* the
+ground. Or set `environment.theme` to `dark`, and the ground is the dark theme's. The export
+attaches `ROOT_SURFACE_DOES_NOT_FILL_FRAME` to every artifact of a design whose coloured root does
+neither, and the **Issues** panel shows the same line, so the fact is stated where an agent and a
+person each look rather than inferred from a picture.
+
 ## Starting from a worked widget
 
 `remote-m3`'s New Widget dialog offers four templates. Two are empty host frames — **Small widget**
