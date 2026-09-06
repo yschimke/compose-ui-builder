@@ -40,6 +40,42 @@
       "signatureKnown": true
     },
     {
+      "canonicalId": "test-catalog/androidx.compose.foundation.layout.BoxKt.Box",
+      "componentIds": ["layout/box"],
+      "symbol": {
+        "jvmOwner": "androidx.compose.foundation.layout.BoxKt",
+        "callable": "androidx.compose.foundation.layout.Box",
+        "name": "Box",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "typeFqn": "androidx.compose.ui.Modifier",
+          "hasDefault": true
+        },
+        {
+          "name": "content",
+          "type": "BoxScope.() -> Unit",
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.BoxScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.BoxScope"
+        }
+      ],
+      "code": {
+        "call": "Box(content = {})",
+        "imports": ["androidx.compose.foundation.layout.Box"]
+      },
+      "signatureKnown": true
+    },
+    {
       "canonicalId": "test-catalog/androidx.compose.material3.SurfaceKt.Surface",
       "componentIds": ["m3/surface"],
       "symbol": {

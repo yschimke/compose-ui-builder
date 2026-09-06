@@ -72,6 +72,21 @@ class CardWrapsContentTest {
     assertEquals(DOT.toFloat(), card.height, "the card is exactly its one child tall")
   }
 
+  /**
+   * A card's content is a box: two children with no alignment land on top of each other at the
+   * card's origin, not one under the other. The record-driven export composes them in a `Box` for
+   * the same reason (`ScreenDocumentProjection.cardContentBox`), so the native render agrees.
+   */
+  @Test
+  fun `two children of a card overlap, as a box's children do`() {
+    val bounds = measure(document(secondChildInCardA = true))
+
+    val first = bounds.getValue("text-a")
+    val second = bounds.getValue("text-a2")
+    assertEquals(first.y, second.y, "both children start at the card's top: $first, $second")
+    assertEquals(first.x, second.x, "and at its start edge")
+  }
+
   /** The generated Kotlin has to wrap the same card the canvas wraps. */
   @Test
   fun `the exporter fills the card's box only along the axes the document sized`() {
@@ -111,7 +126,11 @@ class CardWrapsContentTest {
    * line each, and a text after them. [cardHeightDp] pins card A the way the workaround did;
    * [dotAlignment] swaps card A's text for an 8dp dot aligned inside it.
    */
-  private fun document(cardHeightDp: Float? = null, dotAlignment: String? = null) =
+  private fun document(
+    cardHeightDp: Float? = null,
+    dotAlignment: String? = null,
+    secondChildInCardA: Boolean = false,
+  ) =
     UiBuilderDocument(
       schema = "compose-ui-builder-document/v1-candidate",
       id = "delegation-check",
@@ -166,7 +185,10 @@ class CardWrapsContentTest {
                     },
                   )
                 ),
-              slots = mapOf("content" to listOf("text-a")),
+              slots =
+                mapOf(
+                  "content" to listOfNotNull("text-a", "text-a2".takeIf { secondChildInCardA })
+                ),
             ),
           "card-b" to
             UiBuilderNode(
@@ -178,7 +200,10 @@ class CardWrapsContentTest {
           "text-a" to (dotAlignment?.let { dot("text-a", it) } ?: text("text-a", "Card A")),
           "text-b" to text("text-b", "Card B"),
           "tail" to text("tail", "tail"),
-        ),
+        ) +
+          // Only when placed: the exporter refuses a node no slot reaches, and it is right to.
+          (if (secondChildInCardA) mapOf("text-a2" to text("text-a2", "Card A, second child"))
+          else emptyMap()),
     )
 
   private fun text(id: String, text: String) =

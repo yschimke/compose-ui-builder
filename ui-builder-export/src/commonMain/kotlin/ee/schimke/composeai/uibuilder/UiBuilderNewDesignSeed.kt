@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -144,4 +145,12 @@ fun UiBuilderDocument.toDesignDocumentV1(): DesignDocumentV1 =
  * disagree with the first.
  */
 fun DesignDocumentV1.toUiBuilderDocument(): UiBuilderDocument =
+  seedJson.decodeFromString(seedJson.encodeToString(this))
+
+/**
+ * One node of the released document as the candidate node — [toUiBuilderDocument] for a node, so a
+ * rule written once against [UiBuilderNode] (see `cardContentFill`) can be asked of a wire node
+ * without a second copy of it.
+ */
+fun DesignNodeV1.toUiBuilderNode(): UiBuilderNode =
   seedJson.decodeFromString(seedJson.encodeToString(this))

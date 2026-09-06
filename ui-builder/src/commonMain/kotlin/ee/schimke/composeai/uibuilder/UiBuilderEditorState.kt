@@ -4796,7 +4796,8 @@ private enum class EditorLayoutScope {
 private val EDITOR_LAYOUT_SCOPES: Map<String, EditorLayoutScope> =
   mapOf(
     "layout/box" to EditorLayoutScope.Box,
-    // A card's content slot is a `Box` in the renderer, so its children align like a box's.
+    // A card's content slot is a `Box` — in the renderer, in the capability exporter and in the
+    // record-driven projection alike — so its children align like a box's.
     "m3/card" to EditorLayoutScope.Box,
     "layout/column" to EditorLayoutScope.Column,
     "layout/row" to EditorLayoutScope.Row,

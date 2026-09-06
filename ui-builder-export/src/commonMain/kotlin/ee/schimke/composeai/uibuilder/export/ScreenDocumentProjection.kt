@@ -5,6 +5,7 @@ import ee.schimke.composeai.discovery.ScreenDocument
 import ee.schimke.composeai.discovery.ScreenNode
 import ee.schimke.composeai.discovery.ScreenValue
 import ee.schimke.composeai.discovery.SlotItem
+import ee.schimke.composeai.uibuilder.cardContentFill
 import ee.schimke.composeai.uibuilder.protocol.AdaptiveGridValueV1
 import ee.schimke.composeai.uibuilder.protocol.AlignHorizontalModifierV1
 import ee.schimke.composeai.uibuilder.protocol.AlignModifierV1
@@ -61,6 +62,7 @@ import ee.schimke.composeai.uibuilder.protocol.WidthInModifierV1
 import ee.schimke.composeai.uibuilder.protocol.WidthModifierV1
 import ee.schimke.composeai.uibuilder.protocol.WrapContentSizeModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ZIndexModifierV1
+import ee.schimke.composeai.uibuilder.toUiBuilderNode
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
@@ -314,7 +316,9 @@ object ScreenDocumentProjection {
             node.slots.entries.associate { (slot, children) ->
               val childScope = slotScope(node.componentId, variant, slot)
               parameterForSlot(node.componentId, slot) to
-                children.mapNotNull { child -> node(child, childScope) }
+                if (node.componentId == CARD_CATALOG_ID && slot == CARD_CONTENT_SLOT)
+                  listOf(cardContentBox(node, children))
+                else children.mapNotNull { child -> node(child, childScope) }
             },
           slotItems =
             node.slots.keys
@@ -328,6 +332,53 @@ object ScreenDocumentProjection {
       } finally {
         visiting.remove(id)
       }
+    }
+
+    /**
+     * A card's content, inside the `Box` this catalog says a card's content is.
+     *
+     * The canvas stacks a card's children with box alignments, the editor offers a card child
+     * exactly what a `layout/box` child gets, and the capability exporter writes `Card { Box { … }
+     * }` — so a card's children live in a `BoxScope`, and a design that lays an image, a gradient
+     * and an aligned title over each other in one card (the Jetcaster podcast cards do) means
+     * exactly that. This projection used to compose them straight under `Card`'s own `ColumnScope`,
+     * which stacked the same children top to bottom and refused every `matchParentSize` among them:
+     * the one lane whose whole claim is fidelity drew a different card from the two it exists to
+     * check.
+     *
+     * The box is emitted as the catalog's `layout/box`, which the record attests like any other
+     * node, and sized by [cardContentFill] — the rule the canvas and the capability exporter read —
+     * so a card with no height wraps here exactly as it does there (#483).
+     */
+    private fun cardContentBox(card: DesignNodeV1, children: List<String>): ScreenNode {
+      val fill = card.toUiBuilderNode().cardContentFill()
+      val links =
+        when {
+          fill.width && fill.height -> listOf(ChainLink("$LAYOUT.fillMaxSize"))
+          fill.width -> listOf(ChainLink("$LAYOUT.fillMaxWidth"))
+          fill.height -> listOf(ChainLink("$LAYOUT.fillMaxHeight"))
+          else -> emptyList()
+        }
+      val arguments =
+        if (links.isEmpty()) emptyMap()
+        else
+          mapOf(
+            "modifier" to
+              ScreenValue.Chain(
+                receiver = ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER),
+                links = links,
+                typeFqn = MODIFIER,
+              )
+          )
+      return ScreenNode(
+        componentId = BOX_CATALOG_ID,
+        arguments = arguments,
+        slots =
+          mapOf(
+            parameterForSlot(BOX_CATALOG_ID, BOX_CHILDREN_SLOT) to
+              children.mapNotNull { child -> node(child, BOX_SCOPE) }
+          ),
+      )
     }
 
     /**
@@ -2548,6 +2599,12 @@ object ScreenDocumentProjection {
   private const val INDETERMINATE = "indeterminate"
   private const val WEIGHT = "weight"
   private const val ROW_SCOPE = "androidx.compose.foundation.layout.RowScope"
+  /** The card whose content is a box (see `cardContentBox`), and the box it becomes. */
+  private const val CARD_CATALOG_ID = "m3/card"
+  private const val CARD_CONTENT_SLOT = "content"
+  private const val BOX_CATALOG_ID = "layout/box"
+  private const val BOX_CHILDREN_SLOT = "children"
+
   private const val COLUMN_SCOPE = "androidx.compose.foundation.layout.ColumnScope"
   private const val BOX_SCOPE = "androidx.compose.foundation.layout.BoxScope"
 
@@ -2612,6 +2669,9 @@ object ScreenDocumentProjection {
       // no slot at all — nothing ever fills this, and the claim exists so the drift check that
       // compares this table with the record stays exact.
       COLOUR_DOT to mapOf("content" to BOX_SCOPE),
+      // `Card`'s own slot, which the record attests as a `ColumnScope` — and what sits in it is
+      // the one `layout/box` `cardContentBox` emits, never a design's node. A card's children are
+      // composed inside that box, under `BoxScope`, which is why this row is not what they get.
       "m3/card" to mapOf("content" to COLUMN_SCOPE),
       "m3/button" to mapOf("content" to ROW_SCOPE),
     )

@@ -156,6 +156,16 @@ browser is authoritative and the native lane is the second opinion rather than t
 Column, Surface, Text, and nested Remote Compose document. It is not an alias for every M3
 capability.
 
+### A card's content is a box, in every lane
+
+`m3/card` stacks its children the way `layout/box` does: two children with no alignment sit on top
+of each other at the card's origin, `matchParentSize` fills the card, and `align` places a child at
+one of the nine box positions. That is what the canvas draws and what the Properties panel offers a
+card's child, and it is also what the export writes — `Card { Box { … } }` — whether the code comes
+from the code pane or from the record-driven generator the native render compiles, so a card that
+lays a gradient under a title renders the same in all three. A card whose children should read top
+to bottom holds one `layout/column`, which is what the card starter content already does.
+
 ### The frame's ground is the theme's, unless the root fills the frame
 
 Every renderer paints the pixels no node reaches in the theme's `background` — the canvas from
