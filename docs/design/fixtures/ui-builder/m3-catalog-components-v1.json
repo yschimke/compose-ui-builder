@@ -1535,6 +1535,13 @@
       },
       "parameters": [
         {
+          "name": "progress",
+          "type": "() -> Float",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Function0",
+          "lambdaReturnTypeFqn": "kotlin.Float"
+        },
+        {
           "name": "modifier",
           "type": "Modifier",
           "hasDefault": true,
@@ -1572,6 +1579,13 @@
         "origin": "LIBRARY"
       },
       "parameters": [
+        {
+          "name": "progress",
+          "type": "() -> Float",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Function0",
+          "lambdaReturnTypeFqn": "kotlin.Float"
+        },
         {
           "name": "modifier",
           "type": "Modifier",

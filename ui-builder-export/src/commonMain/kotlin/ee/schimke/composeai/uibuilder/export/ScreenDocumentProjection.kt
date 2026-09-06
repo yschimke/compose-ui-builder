@@ -295,31 +295,32 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * Whether a progress indicator's determinacy property was handled here, refusal included.
+     * Whether a progress indicator's `indeterminate` property was handled here, refusal included.
      *
-     * Both Compose indicators have two overloads: an indeterminate one whose parameters all
-     * default, and a determinate one taking `progress: () -> Float`. Only the first is recorded,
-     * because **no [ScreenValue] is a lambda** — the vocabulary has references, calls and chains,
-     * and a value-returning `{ 0.4f }` is none of them. The overload the record names is chosen by
-     * the argument list, so an omitted `progress` really does resolve to the indeterminate one.
+     * Both Compose indicators have two overloads — an indeterminate one whose parameters all
+     * default, and a determinate one taking `progress: () -> Float` — and the argument list is what
+     * picks between them. The catalog says the same thing in its own words: "absent means the
+     * indeterminate indicator, Material's own distinction between a progress you know and one you
+     * do not". So `progress` is now an ordinary argument (see [PROPERTY_PARAMETERS]) and this is
+     * left with the boolean that restates the choice rather than making it.
      *
-     * So `indeterminate = true` describes the component already being emitted and is spent, while
-     * `progress`, or an explicit `indeterminate = false`, asks for the overload that cannot be
-     * written and says so. Neither is a parameter of anything, so left alone both would refuse as
-     * "`LinearProgressIndicator` has no parameter `progress`" — true, and pointing at the wrong
-     * thing.
+     * It used to refuse both. `progress` was unwritable while no [ScreenValue] was a lambda, and
+     * that reason was true of the vocabulary rather than of the component — `ScreenValue.Lambda`
+     * (compose-ai-tools#5219) is the narrow kind that ended it.
+     *
+     * `indeterminate` is **spent either way**, because it never adds anything the argument list has
+     * not already said: `true` describes the overload an absent `progress` selects, and `false`
+     * describes the one a present `progress` selects. The single case worth a refusal is the
+     * contradiction — not indeterminate, and no progress to be determinate with — which asks for
+     * the determinate overload without the one argument it requires.
      */
     private fun determinacy(property: String, value: UiValueV1, node: DesignNodeV1): Boolean {
-      val determinate =
-        "a determinate indicator takes `progress: () -> Float`, and no value in this vocabulary " +
-          "is a lambda; the indeterminate form is what exports"
-      when (property) {
-        PROGRESS -> refuse("node `${node.id}` sets `progress`, but $determinate")
-        INDETERMINATE ->
-          if ((value as? BooleanValueV1)?.value == false) {
-            refuse("node `${node.id}` is not indeterminate, and $determinate")
-          }
-        else -> return false
+      if (property != INDETERMINATE) return false
+      if ((value as? BooleanValueV1)?.value == false && PROGRESS !in node.properties) {
+        refuse(
+          "node `${node.id}` is not indeterminate and sets no `progress`; the determinate " +
+            "indicator is chosen by passing one, and there is nothing here to pass"
+        )
       }
       return true
     }
@@ -332,16 +333,18 @@ object ScreenDocumentProjection {
      * grid with `span = full` is a row that crosses every column, and the old exporter wrote it as
      * `item(span = { GridItemSpan(maxLineSpan) })` — an argument to the **wrapper**, computed from
      * a lambda whose receiver supplies `maxLineSpan`. Two separate things put that out of reach: a
-     * [SlotItem] is one wrapper for a whole slot rather than one per child, and no [ScreenValue] is
-     * a lambda. Dropped instead, a full-width row would silently export as a single cell — a
-     * different design that compiles, which is the failure this projection exists to prevent.
+     * [SlotItem] is one wrapper for a whole slot rather than one per child, and
+     * `ScreenValue.Lambda` returns a value the document already holds — it cannot read a receiver,
+     * which is the whole of what `maxLineSpan` is. Dropped instead, a full-width row would silently
+     * export as a single cell — a different design that compiles, which is the failure this
+     * projection exists to prevent.
      */
     private fun unplaceable(property: String, node: DesignNodeV1): Boolean {
       if (property != SPAN) return false
       refuse(
         "node `${node.id}`.`$property` is the span this node takes in its parent grid, which is " +
           "`item(span = { GridItemSpan(…) })` on the wrapper around it — an argument to another " +
-          "node, computed by a lambda, and this vocabulary has neither"
+          "node, computed from the grid's own scope, and this vocabulary has neither"
       )
       return true
     }
@@ -1024,6 +1027,25 @@ object ScreenDocumentProjection {
           typeFqn = "androidx.compose.material3.ButtonColors",
         )
       }
+      if (target.kind == TargetKind.FLOAT_LAMBDA) {
+        val fraction =
+          when (value) {
+            is DecimalValueV1 -> value.value
+            is IntegerValueV1 -> value.value.toDouble()
+            // A `state` read is the catalog's other spelling for `progress`, and it refuses under
+            // its own name rather than this one: the lambda is expressible now, and the state
+            // variable inside it still needs the `remember` preamble this projection does not emit.
+            else -> return value(value, node, property)
+          }
+        val narrowed = fraction.toFloat()
+        // The same narrowing every other number here gets. A value past `Float` becomes `Infinity`
+        // and one below it collapses to zero, and a progress bar drawn from either is not the one
+        // anybody designed.
+        if (!narrowed.isFinite() || (narrowed == 0f && fraction != 0.0)) {
+          return refuse("$where is $fraction, which does not survive `Float`")
+        }
+        return ScreenValue.Lambda(ScreenValue.Fractional32(narrowed))
+      }
       if (target.kind == TargetKind.SHAPE_TOKEN) {
         // Only the text spelling needs help. A `shapeToken` wrapper already resolves through the
         // same table in `value`, and the checked-in fixtures use it — narrowing this to strings
@@ -1068,6 +1090,7 @@ object ScreenDocumentProjection {
         TargetKind.RENAME,
         TargetKind.CARD_COLORS,
         TargetKind.BUTTON_COLORS,
+        TargetKind.FLOAT_LAMBDA,
         TargetKind.SHAPE_TOKEN -> error("handled above")
       }
     }
@@ -1572,6 +1595,8 @@ object ScreenDocumentProjection {
     CARD_COLORS,
     /** The same, for the buttons whose colours live in a `ButtonColors` bundle. */
     BUTTON_COLORS,
+    /** A number the component takes as a lambda returning a `Float` — `progress = { 0.4f }`. */
+    FLOAT_LAMBDA,
     /** A resting elevation in dp, which `Card` takes as a `CardElevation` bundle. */
     CARD_ELEVATION,
   }
@@ -1617,6 +1642,10 @@ object ScreenDocumentProjection {
       // Three of the four styles; `fab` overrides this in `COMPONENT_VARIANTS` because it takes a
       // bare `Color` on a different parameter.
       "m3/button" to mapOf("containerColor" to ParameterTarget("colors", TargetKind.BUTTON_COLORS)),
+      // Same name on both sides, so this entry exists for the KIND rather than for a rename: the
+      // catalog carries a number and Compose takes `() -> Float`.
+      "m3/progress-indicator" to
+        mapOf("progress" to ParameterTarget("progress", TargetKind.FLOAT_LAMBDA)),
       "layout/row" to
         mapOf(
           "horizontalSpacingDp" to
@@ -1886,9 +1915,10 @@ object ScreenDocumentProjection {
           "filled" to ComponentVariant(TEXT_FIELD_ID, "textField"),
           "outlined" to ComponentVariant(OUTLINED_TEXT_FIELD_ID, "outlinedTextField"),
         ),
-      // The two indicators, both **indeterminate**. Each name has a determinate overload taking
-      // `progress: () -> Float`, and no `ScreenValue` is a lambda, so a progress value is refused
-      // by `unexpressible` rather than recorded here — see [PROGRESS].
+      // The two indicators. Each name is TWO Compose overloads — a determinate one taking
+      // `progress: () -> Float` and an indeterminate one whose parameters all default — and the
+      // argument list picks between them, so both live under one record and one entry here. Which
+      // one a design gets is decided by whether it sets `progress`; see `determinacy`.
       "m3/progress-indicator" to
         mapOf(
           "linear" to ComponentVariant(LINEAR_INDICATOR_ID, "linearProgressIndicator"),
