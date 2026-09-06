@@ -6,7 +6,9 @@ which carries the root-cause analysis, the record's shape, the override format
 and the conformance ladder. This document covers only what this repository owns:
 where the builder's catalog comes from, how a node renders, how an export is
 proven, and what has to change in `:ui-builder`, `:ui-builder-runtime`,
-`:render-host` and `:server`.
+`:render-host` and `:server`. What a catalog tells the builder *besides* its components — its
+platform, frame, templates and how its screens are written — is the subject of the successor plan,
+[`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md).
 
 **Module placement is not incidental here.** AGENTS.md puts what *renders* in
 `:render-host` and keeps it free of a web server, with `:server` holding the HTTP
