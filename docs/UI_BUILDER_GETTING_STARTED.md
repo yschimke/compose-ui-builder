@@ -286,7 +286,7 @@ class HelloWidget : GlanceWearWidget() {
     }
 }
 
-@Preview(name = "Squircle Preview", device = "spec:width=1000dp,height=1000dp,dpi=320")
+@Preview(name = "Squircle Preview")
 @Composable
 fun HelloWidgetSquirclePreview(
     @PreviewParameter(SquircleSmallWidgetPreviewParams::class) params: WearWidgetParams
@@ -300,6 +300,12 @@ stand-in for `WearWidgetContainer`, and on-device the launcher draws that around
 checked against the shipped spec rather than emitted — a widget cannot choose them, and a design
 that moved them is refused by name rather than generating a preview that draws a frame it does not
 have.
+
+The `@Preview` carries **no `device`**, and that is deliberate rather than an omission. A widget's
+canvas is its `WearWidgetParams` — the provider yields every footprint the platform ships for that
+container size, so one preview function already fans out over them. A screen spec beside it says
+nothing the params do not, and a renderer that honours it draws the widget across a phone-sized
+canvas instead of the 216×124dp frame the design was authored in.
 
 ![The Code pane showing a widget's generated Kotlin](design/evidence/ui-builder-remote-compose/widget-code-pane.png)
 

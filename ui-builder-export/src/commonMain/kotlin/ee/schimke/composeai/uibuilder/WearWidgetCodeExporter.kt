@@ -74,13 +74,29 @@ object WearWidgetCodeExporter {
           "the Round provider this generator does not select yet"
     }
 
+    val contentIds = root.slots["content"].orEmpty()
+    // How deep the body sits, which the emitter needs *before* it writes a line: it wraps a call at
+    // its own column budget, and a theme wrapper moves every line of the body one level right. The
+    // wrapper is only wanted once a colour or type token has been written, though, which is
+    // something an emitter learns by emitting — so a throwaway pass asks the question and its
+    // refusals are dropped, the real emitter below being the one that reports them.
+    val depth =
+      if (
+        RemoteContentEmitter(document, mutableListOf()).let { probe ->
+          probe.background(root)
+          contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
+          probe.usesTheme
+        }
+      )
+        2
+      else 1
+
     val emitter = RemoteContentEmitter(document, refusals)
     val background = emitter.background(root)
-    val contentIds = root.slots["content"].orEmpty()
     val body =
       when (contentIds.size) {
-        0 -> listOf("${INDENT}RemoteBox(modifier = RemoteModifier.fillMaxSize())")
-        1 -> emitter.emit(contentIds.single(), depth = 1)
+        0 -> listOf("${INDENT.repeat(depth)}RemoteBox(modifier = RemoteModifier.fillMaxSize())")
+        1 -> emitter.emit(contentIds.single(), depth = depth)
         else -> {
           refusals += "the widget container holds one body; this design has ${contentIds.size}"
           emptyList()
@@ -105,7 +121,7 @@ object WearWidgetCodeExporter {
         appendLine("fun ${name}Content() {")
         if (emitter.usesTheme) {
           appendLine("${INDENT}RemoteMaterialTheme {")
-          body.forEach { appendLine("$INDENT$it") }
+          body.forEach(::appendLine)
           appendLine("$INDENT}")
         } else {
           body.forEach(::appendLine)
@@ -118,17 +134,13 @@ object WearWidgetCodeExporter {
         appendLine("$INDENT${INDENT}params: WearWidgetParams,")
         appendLine("$INDENT): WearWidgetData {")
         background.locals.forEach { appendLine("$INDENT$INDENT$it") }
-        appendLine(
-          "$INDENT${INDENT}return WearWidgetDocument(background = ${background.expression}) {"
-        )
+        documentReturn(background.expression).forEach(::appendLine)
         appendLine("$INDENT$INDENT${INDENT}${name}Content()")
         appendLine("$INDENT$INDENT}")
         appendLine("$INDENT}")
         appendLine("}")
         appendLine()
-        appendLine(
-          "@Preview(name = \"Squircle Preview\", device = \"$WEAR_WIDGET_PREVIEW_DEVICE_SPEC\")"
-        )
+        appendLine("@Preview(name = \"Squircle Preview\")")
         appendLine("@Composable")
         appendLine("fun ${name}SquirclePreview(")
         appendLine(
@@ -136,6 +148,25 @@ object WearWidgetCodeExporter {
         )
         appendLine(") = WearWidgetPreview($name(), params)")
       }
+    )
+  }
+
+  /**
+   * `return WearWidgetDocument(background = <brush>) {`, wrapped when it would run long.
+   *
+   * The brush chain is the one part of this file whose length the design controls — two literal
+   * gradient stops already spend 84 columns — so the single line the samples show is emitted only
+   * when it fits the [MAX_LINE] budget the rest of the generator keeps. Past that the brush is
+   * hoisted into a local, which is the shape `background.locals` already puts above it.
+   */
+  private fun documentReturn(expression: String): List<String> {
+    val body = "$INDENT${INDENT}return WearWidgetDocument(background = "
+    val single = "$body$expression) {"
+    if (single.length <= MAX_LINE) return listOf(single)
+    return listOf(
+      "$INDENT${INDENT}val background =",
+      "$INDENT$INDENT$INDENT$expression",
+      "$INDENT${INDENT}return WearWidgetDocument(background = background) {",
     )
   }
 
@@ -160,8 +191,8 @@ object WearWidgetCodeExporter {
 
   private const val INDENT = "    "
 
-  /** `WidgetPreviewParams`' own device spec, as both sample widgets declare it. */
-  private const val WEAR_WIDGET_PREVIEW_DEVICE_SPEC = "spec:width=1000dp,height=1000dp,dpi=320"
+  /** ktfmt's own default, as [RemoteContentEmitter] keeps for the body. */
+  private const val MAX_LINE = 100
 
   internal const val WEAR_WIDGET_SPEC_PADDING_DP = 8f
 

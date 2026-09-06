@@ -69,13 +69,12 @@ internal class RemoteContentEmitter(
           usesColorLiteral = true
           val stops = "listOf(${start.argbLiteral()}.rc, ${end.argbLiteral()}.rc)"
           val reversed = "listOf(${end.argbLiteral()}.rc, ${start.argbLiteral()}.rc)"
-          usesGradient = true
           elements +=
             when (node.properties["direction"]?.stringOrNull()) {
-              "leftToRight" -> "horizontalGradient($stops)"
-              "rightToLeft" -> "horizontalGradient($reversed)"
-              "bottomToTop" -> "verticalGradient($reversed)"
-              else -> "verticalGradient($stops)"
+              "leftToRight" -> horizontal("horizontalGradient($stops)")
+              "rightToLeft" -> horizontal("horizontalGradient($reversed)")
+              "bottomToTop" -> vertical("verticalGradient($reversed)")
+              else -> vertical("verticalGradient($stops)")
             }
         }
         // `WearWidgetBrush.image` takes a `RemoteImageBitmap`, which is a bitmap this generator has
@@ -137,7 +136,11 @@ internal class RemoteContentEmitter(
         "\n"
       )
     }
-    val head = if (arguments.isEmpty()) "$symbol {" else "${call(symbol, arguments, pad)} {"
+    val head =
+      if (arguments.isEmpty()) "$symbol {"
+      // `call` measures the call alone; the ` {` this appends is two more columns, and without
+      // counting them a call landing on 99 or 100 columns is emitted one or two over the budget.
+      else "${call(symbol, arguments, pad, trailing = OPENING_BRACE.length)}$OPENING_BRACE"
     return (pad + head).split("\n") + children.flatMap { emit(it, depth + 1) } + listOf("$pad}")
   }
 
@@ -196,9 +199,14 @@ internal class RemoteContentEmitter(
    * Generated or not, this is source somebody reads and pastes into a file their formatter will
    * check. A 150-column call is a diff nobody wants on their first commit after using the builder.
    */
-  private fun call(symbol: String, arguments: List<String>, pad: String = ""): String {
+  private fun call(
+    symbol: String,
+    arguments: List<String>,
+    pad: String = "",
+    trailing: Int = 0,
+  ): String {
     val single = "$symbol(${arguments.joinToString(", ")})"
-    if (pad.length + single.length <= MAX_LINE) return single
+    if (pad.length + single.length + trailing <= MAX_LINE) return single
     return buildString {
       appendLine("$symbol(")
       arguments.forEach { appendLine("$pad$INDENT$it,") }
@@ -282,10 +290,8 @@ internal class RemoteContentEmitter(
     imports += "androidx.glance.wear.WearWidgetData"
     imports += "androidx.glance.wear.WearWidgetDocument"
     if (usesBrushColor) imports += "androidx.glance.wear.color"
-    if (usesGradient) {
-      imports += "androidx.glance.wear.horizontalGradient"
-      imports += "androidx.glance.wear.verticalGradient"
-    }
+    if (usesHorizontalGradient) imports += "androidx.glance.wear.horizontalGradient"
+    if (usesVerticalGradient) imports += "androidx.glance.wear.verticalGradient"
     imports += "androidx.glance.wear.core.WearWidgetParams"
     imports += "androidx.glance.wear.tooling.preview.$previewParamsProvider"
     imports += "androidx.glance.wear.tooling.preview.WearWidgetPreview"
@@ -297,9 +303,21 @@ internal class RemoteContentEmitter(
     return imports.sorted()
   }
 
+  /**
+   * A gradient call, recorded so [imports] names the direction it actually wrote.
+   *
+   * `horizontalGradient` and `verticalGradient` are separate top-level functions, and importing
+   * both because a gradient exists hands the reader an unused import on their first paste — the
+   * thing every other import here is gated to avoid.
+   */
+  private fun horizontal(call: String): String = call.also { usesHorizontalGradient = true }
+
+  private fun vertical(call: String): String = call.also { usesVerticalGradient = true }
+
   private var usesModifier = false
   private var usesSp = false
-  private var usesGradient = false
+  private var usesHorizontalGradient = false
+  private var usesVerticalGradient = false
   private val usedModifierImports = mutableSetOf<String>()
 
   private fun UiBuilderNode.modifierExpression(): String? {
@@ -349,6 +367,9 @@ internal class RemoteContentEmitter(
 
     /** ktfmt's own default, so pasted output survives the formatter unchanged. */
     const val MAX_LINE = 100
+
+    /** What [container] appends after a call that takes children. */
+    const val OPENING_BRACE = " {"
   }
 }
 
