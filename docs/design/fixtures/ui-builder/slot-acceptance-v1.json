@@ -376,9 +376,6 @@
                 "shape/linear-gradient",
                 "shape/radial-gradient"
             ],
-            "m3/button.leadingIcon": [
-                "m3/icon"
-            ],
             "m3/card.content": [
                 "asset/image",
                 "layout/box",
@@ -971,9 +968,6 @@
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
                 "wear-m3/transforming-lazy-column"
-            ],
-            "wear-m3/button.leadingIcon": [
-                "wear-m3/icon"
             ],
             "wear-m3/card.content": [
                 "asset/image",

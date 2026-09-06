@@ -281,8 +281,7 @@
       "role": "Container",
       "traits": ["Action", "ToolbarItem"],
       "slots": [
-        { "name": "content", "cardinality": { "min": 1, "max": null }, "ordered": true, "acceptedRoles": ["Leaf", "Container"], "acceptedTraits": ["AnyContent"] },
-        { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
+        { "name": "content", "cardinality": { "min": 1, "max": null }, "ordered": true, "acceptedRoles": ["Leaf", "Container"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "style", "jsonType": "string", "required": true, "allowedValues": ["filled", "filledTonal", "text", "fab"] },

@@ -227,9 +227,17 @@ public class CurrentM3UiBuilderCatalogExecutor(
       val acceptsDynamicSlots = "DynamicSlots" in component.traits
       val slots = node.objectOrEmpty("slots")
       for ((name, childrenElement) in slots) {
+        val children = childrenElement.jsonArray.map { it.jsonPrimitive.content }
         val slot =
           declaredSlots[name]
-            ?: if (acceptsDynamicSlots) null
+            // An entry with no children says nothing is in that slot, which is what leaving the key
+            // out says, so withdrawing a slot from the catalog does not invalidate every stored
+            // document that never used it — and the editor writes a key for every slot declared at
+            // the moment of the insert, so those keys outlive the declaration.
+            // `CapabilityValidator`
+            // in `:ui-builder` carries the same rule; a child in an undeclared slot is still
+            // refused, because that child would be silently dropped.
+            ?: if (acceptsDynamicSlots || children.isEmpty()) null
             else
               return issue(
                 "UNKNOWN_SLOT",
@@ -237,7 +245,6 @@ public class CurrentM3UiBuilderCatalogExecutor(
                 nodeId,
                 name,
               )
-        val children = childrenElement.jsonArray.map { it.jsonPrimitive.content }
         val maximum = slot?.cardinality?.max
         if (
           slot != null &&
@@ -1423,16 +1430,10 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // The same treatment, and the same reason. Wear's four are `Button`, `FilledTonalButton`,
       // `OutlinedButton` and `ChildButton`; the mobile `style` list this borrowed carried `fab` and
       // `elevated`, which no watch publishes, so the property is replaced rather than filtered.
+      // `m3/button` used to carry a `leadingIcon` slot, which this borrowed and had to re-point at
+      // `wear-m3/icon`'s trait. The slot is gone from both: Wear's `Button` takes one content
+      // lambda and an icon goes inside it, exactly as Material's does.
       button.copy(
-        // The borrowed `leadingIcon` slot asks for `IconContent`, which is `m3/icon`'s trait, and
-        // `m3/icon` did not come along; `wear-m3/icon` is an `Adornment`, the trait every other
-        // Wear icon slot names. Left as borrowed the slot is one nothing in this catalog fits —
-        // which the old slot rule hid, since any `Leaf` passed on its role alone.
-        slots =
-          button.slots.map { slot ->
-            if (slot.name == "leadingIcon") slot.copy(acceptedTraits = listOf("Adornment"))
-            else slot
-          },
         properties =
           button.properties.filterNot { it.name == "variant" || it.name == "style" } +
             PropertyCapabilityV1(
@@ -1444,7 +1445,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                 "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or " +
                   "`ChildButton`. There is no `fab` — a watch has no floating action button, " +
                   "which is one of the things a borrowed `m3/button` was quietly offering.",
-            ),
+            )
       )
     }
   val nativeOnly =

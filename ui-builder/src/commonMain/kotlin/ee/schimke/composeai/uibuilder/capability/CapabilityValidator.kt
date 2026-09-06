@@ -274,13 +274,23 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     node.slots.forEach { (name, children) ->
       val slot = capability.slot(name)
       if (slot == null) {
-        issues +=
-          issue(
-            CapabilityIssueCode.UNKNOWN_SLOT,
-            node,
-            "slot $name is not declared by ${node.componentId}",
-            name,
-          )
+        // An entry with no children says nothing is in that slot, which is exactly what leaving the
+        // key out says — so it is not a finding, and a catalog that drops a slot does not
+        // invalidate
+        // every stored document that never used it. The editor writes an entry for every slot the
+        // catalog declares at the moment of the insert, so those keys outlive the declaration: when
+        // `m3/button.leadingIcon` was withdrawn, every button ever inserted was still carrying an
+        // empty one. A child in an undeclared slot is still refused below, because that child would
+        // be silently dropped.
+        if (children.isNotEmpty()) {
+          issues +=
+            issue(
+              CapabilityIssueCode.UNKNOWN_SLOT,
+              node,
+              "slot $name is not declared by ${node.componentId}",
+              name,
+            )
+        }
       } else {
         validateCardinality(node, slot, children.size, issues)
         children.forEach { childId -> validateSlotChild(document, node, slot, childId, issues) }
