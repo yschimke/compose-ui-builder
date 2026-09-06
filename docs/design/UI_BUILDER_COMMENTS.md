@@ -65,6 +65,9 @@ request for any of this.
 | `POST` | `…/designs/{id}/comments` | a comment: a reply into `threadId`, or a new thread where `anchor` says |
 | `POST` | `…/designs/{id}/comments/{threadId}/resolution` | close a thread, or reopen it |
 | `DELETE` | `…/designs/{id}/comments/{threadId}` | remove a thread and everything said in it |
+| `POST` | `…/designs/{id}/comments/acknowledgement` | mark the whole discussion as read, for this actor |
+| `POST` | `…/designs/{id}/comments/{threadId}/acknowledgement` | mark one thread as read, for this actor |
+| `POST` | `…/designs/{id}/comments/{threadId}/{commentId}/reactions` | add an emoji to one comment, or take it back with `on: false` |
 | `GET` | `…/designs/{id}/comments/watch?afterSequence=&waitSeconds=` | long poll; `204` when nothing was said in time |
 | `WS` | `…/designs/{id}/comments/updates` | the board on connect, and again on every change |
 
@@ -80,15 +83,94 @@ only way an author reaches the store is the parameter the route fills in. `autho
 because the host cannot tell a designer's browser from an agent's MCP session by the credential
 alone.
 
+## Seen, worked on, settled — three different claims
+
+Resolution used to be the only thing an actor could say about a thread, and it says the question is
+*answered*. That left an agent that had read a bug report but not yet fixed it with two bad options:
+stay silent, and be invisible, or resolve, and lie. A person reading the panel could not tell
+"nobody has looked at this" from "somebody is on it".
+
+So there are three acts, and they are deliberately not the same one:
+
+| act | what it claims | where it is stored |
+| --- | --- | --- |
+| **react** | "noticed" — 👀 on a comment picked up, 👍 on a fix | `StoredComment.reactions`, emoji → the actors who left it |
+| **acknowledge** | "I have read this" — nothing about the question | `StoredCommentThread.acknowledgedBy`, actor → the sequence they read it at |
+| **resolve** | "this is settled" | `StoredCommentThread.resolved` |
+
+Acknowledgement is **per actor**: a thread the agent has read is still waiting for the second
+designer, and the board says so for each of them separately. It is compared against
+`StoredCommentThread.updatedAtSequence` — the board sequence the thread was last *spoken* at — so a
+reply after an acknowledgement is unacknowledged again, exactly as it should be. The wall clock next
+to it is for the panel; a millisecond comparison would silently swallow a reply that landed in the
+same millisecond as the acknowledgement.
+
+Three rules keep the set honest:
+
+- **Writing into a thread acknowledges it for the writer.** Posting, resolving and reacting all do,
+  so nobody is ever told to catch up with their own words.
+- **A reaction acknowledges, and resolves nothing.** That is the decision the issue left open: a
+  reaction is engagement with the comment, and it is the lightest possible acknowledgement — 👀 on
+  receipt, a reply when there is something to say, resolve when it is actually done.
+- **Acknowledging and reacting never move `updatedAtSequence`.** One actor catching up is not news
+  the others have to catch up with; an agent's 👀 must not read to a designer as new activity. Both
+  still bump the board's own `sequence`, so an open page learns the agent has seen the comment at
+  the moment it does.
+
+A thread written before these fields existed carries `updatedAtSequence: 0`, which is below every
+acknowledgement and so reads as unacknowledged. That is the safe direction: an old thread resurfaces
+once rather than being marked as seen by somebody who never saw it.
+
+## The unacknowledged block, on replies nobody asked to carry it
+
+A designer left "The play icon looks like a cross" on a design an agent was mid-way through editing.
+The agent applied several more mutations and exported twice without seeing it, and only found the
+comment because the person eventually asked whether it had. The tools to find it existed; the
+problem was that noticing was **opt-in** — an agent mid-edit has no reason to poll a discussion it
+does not know has moved, and `ui_builder_await_comments` blocks, which is the wrong shape for
+something in the middle of a different job.
+
+So the discussion is delivered where the agent is already looking. `ui_builder_get_design`,
+`ui_builder_apply`, `ui_builder_export`, `ui_builder_render_native`, `ui_builder_put_asset` and
+`ui_builder_await_design` carry a `comments` block whenever this actor has a thread waiting on them:
+
+```json
+"comments": {
+  "unacknowledged": 1,
+  "sequence": 4,
+  "threads": [
+    {"id": "t-…", "author": "Yuri", "excerpt": "The play icon looks like a cross.", "nodeId": "play-button", "comments": 1, "resolved": false}
+  ],
+  "hint": "… acknowledging is not resolving, and this block stays until you do one of them."
+}
+```
+
+- **The excerpt is the load-bearing part.** A bare count is one number among the fields of an apply
+  outcome and is easy to skip past; a quoted sentence naming a node the agent has its hands on is
+  not. It is never dropped to save bytes.
+- **Bounded.** A count, the cursor, and at most three threads, newest first, each excerpt trimmed to
+  160 characters. A busy design must not turn every apply outcome into a transcript, and
+  `ui_builder_list_comments` is one call away for the rest.
+- **Absent rather than zero.** An agent that reads `"unacknowledged": 0` on every call learns to
+  skip the key, which is how a notice stops being noticed.
+- **Cheap, and never in the way.** One board read per reply, skipped entirely on a host that keeps
+  no discussions; the reply is only re-parsed when there is something to add, and a discussion this
+  host cannot read costs the agent nothing rather than costing it the answer it asked for.
+
+The comment tools themselves do not carry the block — they answer with the board, so it would be the
+same news twice.
+
 ## The MCP tools
 
-Four, present only where the host keeps a discussion — absent from `tools/list` rather than present
+Six, present only where the host keeps a discussion — absent from `tools/list` rather than present
 and failing, the rule the whole surface follows.
 
 | tool | what it is for |
 | --- | --- |
-| `ui_builder_list_comments` | read the discussion and its `sequence` |
+| `ui_builder_list_comments` | read the discussion, its `sequence`, and each thread's `acknowledgedBy` |
 | `ui_builder_post_comment` | reply, or start a thread pinned to `markId` / `nodeId` / `x`,`y` |
+| `ui_builder_acknowledge_comment` | say you have read one thread, or the whole discussion |
+| `ui_builder_react_to_comment` | an emoji on one comment, or `on: false` to take it back |
 | `ui_builder_resolve_comment_thread` | close a thread once it is answered, or reopen it |
 | `ui_builder_await_comments` | **wait** for the discussion to move past a cursor |
 
@@ -111,6 +193,11 @@ The panel holds no cache. Everything it draws comes from the board the host last
 comment is not shown until the server has stored it and told everybody — the same rule the editor
 already applies to a design edit, and what stops the panel showing a reply an agent never received.
 
+The panel does not yet draw reactions or the acknowledgement state — the routes exist and the board
+carries both, so a chip row and a "seen by" line are a rendering change rather than a protocol one.
+Until it does, the browser is on the human side of the feature the same way it always was: a person
+posts and resolves, and what an agent has seen is visible in the board it reads.
+
 Pins are drawn by `CommentPinOverlay`, above the reference overlay and the presence outlines: a pin
 is the one thing on that canvas a person clicks that is not part of the design, so it must not end
 up under a mock somebody has just turned the opacity up on.
@@ -119,6 +206,8 @@ up under a mock somebody has just turned the opacity up on.
 
 `UiBuilderCommentsPanelPreview` and `UiBuilderCommentPinsOverMarkupPreview` render the panel and the
 pins, so the next change to either is diffed without anyone remembering to.
-`ServeUiBuilderCommentStoreTest` pins the store's rules; `ServeUiBuilderCommentsIntegrationTest`
-starts the real server and plays both parts — a browser posting while an agent waits, and an agent
-replying while a page is open.
+`ServeUiBuilderCommentStoreTest` pins the store's rules — acknowledgement per actor, a reply after
+one, a reaction as the lightest acknowledgement, and the notice's shape and bounds.
+`ServeUiBuilderCommentsIntegrationTest` starts the real server and plays both parts — a browser
+posting while an agent waits, an agent replying while a page is open, and a comment from somebody
+else riding along on the reply the agent was already reading until it acknowledges or reacts.

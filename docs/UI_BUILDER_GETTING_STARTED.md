@@ -715,6 +715,8 @@ with the same bearer. One tool per protocol request, plus the ones the contract 
 | `ui_builder_list_comments` | `ui-builder-read` | The discussion on a design, and the cursor to wait from |
 | `ui_builder_await_comments` | `ui-builder-read` | Waits for the next thing anybody says about the design |
 | `ui_builder_post_comment` | `ui-builder-write` | A reply, or a new thread pinned to a mark, a node or a point |
+| `ui_builder_acknowledge_comment` | `ui-builder-write` | Says you have **read** a thread, or the whole discussion — not that it is settled |
+| `ui_builder_react_to_comment` | `ui-builder-write` | An emoji on one comment, or `on: false` to take it back; the lightest acknowledgement |
 | `ui_builder_resolve_comment_thread` | `ui-builder-write` | Closes a thread once it is answered, or reopens one |
 
 They are absent from `tools/list` on a box that serves no builder, and `ui_builder_render_native` is
