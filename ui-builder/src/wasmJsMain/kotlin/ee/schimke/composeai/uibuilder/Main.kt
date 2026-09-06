@@ -407,6 +407,10 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
   var selectedNodeId by remember { mutableStateOf<String?>(null) }
   var catalogQuery by remember { mutableStateOf("") }
+  // Which component packs are on, remembered per catalog in this browser. A setting rather than
+  // document state: the same design opened by a collaborator shows their palette, not yours.
+  var enabledPacks by
+    remember(config.catalogSystemId) { mutableStateOf(readEnabledPacks(config.catalogSystemId)) }
   var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
   var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
   // Which snapshot may be shown, and which revision the next command claims as its base. See
@@ -875,6 +879,7 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       authoritativeGeneration = authoritativeGeneration,
       initialSelectedNodeId = selectedNodeId,
       initialCatalogQuery = catalogQuery,
+      initialEnabledPacks = enabledPacks,
       collaborators = collaborators,
       devicePresets = devicePresets,
       newDesignCatalogs = newDesignCatalogs,
@@ -899,6 +904,10 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       onStateChanged = {
         selectedNodeId = it.selectedNodeId
         catalogQuery = it.catalogQuery
+        if (it.enabledPacks != enabledPacks) {
+          enabledPacks = it.enabledPacks
+          writeEnabledPacks(config.catalogSystemId, it.enabledPacks)
+        }
         // Persisted from here rather than from each control, so every route that changes the
         // overlay — a slider, a stroke, a flatten, a paste — is stored by one path.
         if (referenceLoaded && it.reference != storedReference) pendingReference = it.reference
@@ -1513,6 +1522,7 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
       UiBuilderNewDesignCatalog(
         systemId = "m3-catalog",
         label = "Mobile",
+        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
           listOf(
             UiBuilderNewDesignTemplate(
@@ -1526,6 +1536,7 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
       UiBuilderNewDesignCatalog(
         systemId = "remote-m3",
         label = "RemoteCompose",
+        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
           listOf(
             UiBuilderNewDesignTemplate(
@@ -1554,6 +1565,7 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
       UiBuilderNewDesignCatalog(
         systemId = "wear-m3",
         label = "Wear",
+        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
           listOf(
             UiBuilderNewDesignTemplate(
@@ -1572,7 +1584,27 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
             ),
           ),
       )
-    else -> null
+    // A catalog this build has no templates for — one an operator enabled that the chooser has
+    // never heard of. It still gets a card, named after itself, with the blank starting point the
+    // server's seed gives every unknown catalog, rather than silently missing from the chooser.
+    else ->
+      UiBuilderNewDesignCatalog(
+        systemId = catalog.benchmark.catalogSystemId,
+        label =
+          catalog.benchmark.catalogSystemId
+            .split('-', '_', '.')
+            .filter(String::isNotEmpty)
+            .joinToString(" ") { word -> word.replaceFirstChar(Char::uppercaseChar) },
+        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
+        templates =
+          listOf(
+            UiBuilderNewDesignTemplate(
+              id = "blank",
+              label = "Blank screen",
+              supportingText = "An empty starting point for this catalog.",
+            )
+          ),
+      )
   }
 
 @JsFun(
@@ -2009,3 +2041,44 @@ private external fun publishEditorCanvasBoundsValues(
   }"""
 )
 private external fun publishEditorDropTarget(hovered: Boolean, label: String)
+
+/**
+ * The component packs remembered as on for [catalogSystemId], from this browser's storage.
+ *
+ * A browser setting rather than a server one, and per catalog rather than per design: which shelves
+ * a palette shows is a preference of the person at the keyboard, not a fact about the document, and
+ * it is the same answer for every design of one catalog. Storage can be absent or refuse — a
+ * private window, a blocked origin — and either reads as "nothing remembered".
+ */
+private fun readEnabledPacks(catalogSystemId: String): Set<String> =
+  readBrowserSetting(enabledPacksKey(catalogSystemId))
+    .split(',')
+    .map(String::trim)
+    .filterTo(mutableSetOf(), String::isNotEmpty)
+
+private fun writeEnabledPacks(catalogSystemId: String, packs: Set<String>) {
+  writeBrowserSetting(enabledPacksKey(catalogSystemId), packs.sorted().joinToString(","))
+}
+
+private fun enabledPacksKey(catalogSystemId: String): String = "ui-builder.packs.$catalogSystemId"
+
+@JsFun(
+  """(key) => {
+    try {
+      return globalThis.localStorage?.getItem(key) ?? '';
+    } catch (e) {
+      return '';
+    }
+  }"""
+)
+private external fun readBrowserSetting(key: String): String
+
+@JsFun(
+  """(key, value) => {
+    try {
+      if (value === '') globalThis.localStorage?.removeItem(key);
+      else globalThis.localStorage?.setItem(key, value);
+    } catch (e) {}
+  }"""
+)
+private external fun writeBrowserSetting(key: String, value: String)

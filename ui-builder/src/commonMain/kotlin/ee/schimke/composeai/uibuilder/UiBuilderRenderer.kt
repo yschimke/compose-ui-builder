@@ -191,6 +191,16 @@ internal val LocalUiBuilderExportStructuredIcons = staticCompositionLocalOf { fa
 private val LocalUiBuilderTypeScale = staticCompositionLocalOf { 1f }
 private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
 
+/**
+ * Component ids the catalog declares and this canvas draws as named placeholders — a pack's.
+ *
+ * Provided by the editor from the catalog rather than compiled in like [WEAR_NATIVE_ONLY], because
+ * a pack's components arrive at run time and this renderer cannot know them: they are whatever
+ * another catalog's record proved a call site for. Empty by default, so every other host of this
+ * surface — the previews, the renderer bundle — is unchanged.
+ */
+internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
+
 fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
   else listOf(UiBuilderLayer.Design)
@@ -301,6 +311,12 @@ fun UiBuilderSurface(
   renderSessionId: String = "",
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
+  /**
+   * Components the catalog declares that this canvas cannot draw as themselves, drawn as named
+   * placeholders instead of as errors. See [LocalUiBuilderNativeOnly]. Inherited from an enclosing
+   * provider by default, so an editor that provides it once covers its canvas and every thumbnail.
+   */
+  nativeOnlyComponentIds: Set<String> = LocalUiBuilderNativeOnly.current,
 ) {
   val bounds =
     remember(document.id, document.revision, renderSessionId) { mutableStateMapOf<String, Rect>() }
@@ -419,6 +435,7 @@ fun UiBuilderSurface(
     LocalLayoutDirection provides layoutDirection,
     LocalUiBuilderTypeScale provides typeScale,
     LocalUiBuilderCornerRadius provides cornerRadius,
+    LocalUiBuilderNativeOnly provides nativeOnlyComponentIds,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
       Box(
@@ -534,6 +551,7 @@ private fun RenderNode(
     semanticActions[node.id] = UiBuilderSemanticActionEntry(enabled = enabled, activate = activate)
   }
   val themeCornerRadius = LocalUiBuilderCornerRadius.current
+  val nativeOnly = LocalUiBuilderNativeOnly.current
   val measured =
     node.modifiers
       .fold(modifier.onGloballyPositioned { onBounds(node.id, it) }) { result, value ->
@@ -1088,14 +1106,22 @@ private fun RenderNode(
           .background(Color(parseArgb(node.string("color"))))
       )
     // A Wear component with no Material 3 counterpart, drawn as a named placeholder and not as a
-    // lookalike. See [WearNativeOnlyPlaceholder] for why this is the honest shape rather than a
+    // lookalike. See [NativeOnlyPlaceholder] for why this is the honest shape rather than a
     // gap in the implementation.
     in WEAR_NATIVE_ONLY ->
-      WearNativeOnlyPlaceholder(node, measured) {
+      NativeOnlyPlaceholder(node, measured) {
         // Every slot's children, flattened. A placeholder cannot lay a child out the way the real
         // component would — that is what makes it a placeholder — but dropping the children would
         // hide whole subtrees from the layers panel's counterpart on the canvas, and an icon
         // inside an icon button is the thing an author is looking for.
+        node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+      }
+    // A pack's component: declared by the catalog, proven by another catalog's record, and drawn
+    // here as its name and place for the reason the Wear ones are — the browser cannot link the
+    // classes that draw it. The caption says whose it is, because a `Session Card` on a Material
+    // 3 palette is a thing worth being told came from Confetti.
+    in nativeOnly ->
+      NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
         node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
       }
     else -> UnsupportedComponentDiagnostic(node.componentId, measured)
@@ -1865,9 +1891,11 @@ private val WEAR_NATIVE_ONLY: Set<String> = WearScreenCodeExporter.NATIVE_ONLY_C
  * is wrong. The component is in the catalog, it exports, and it renders — just not here.
  */
 @Composable
-private fun WearNativeOnlyPlaceholder(
+private fun NativeOnlyPlaceholder(
   node: UiBuilderNode,
   modifier: Modifier,
+  /** Whose component this is, where that is not obvious from the palette — a pack's id. */
+  caption: String? = null,
   content: @Composable ColumnScope.() -> Unit,
 ) {
   val outline = MaterialTheme.colorScheme.outline
@@ -1889,7 +1917,7 @@ private fun WearNativeOnlyPlaceholder(
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
     Text(
-      node.componentId.substringAfter('/').replace('-', ' '),
+      node.componentId.substringAfter('/').replace('-', ' ') + (caption?.let { " · $it" } ?: ""),
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       style = MaterialTheme.typography.labelMedium,
     )

@@ -328,50 +328,57 @@ class ProductionUiBuilderRuntimeTest {
       format = ExportFormatV1.COMPOSE,
     )
 
-  private fun document(): DesignDocumentV1 =
-    DesignDocumentV1(
-      schema = "compose-ui-builder-document/v1-candidate",
-      id = "production-design",
-      title = "Production design",
-      revision = 0,
-      catalogPin =
-        CatalogReferenceV1(
-          systemId = "m3-catalog",
-          catalogRevision = "candidate",
-          capabilityDigest = CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST,
-          nativeRuntimeId = "candidate",
-        ),
-      environment =
-        DesignEnvironmentV1(
-          widthDp = 400,
-          heightDp = 800,
-          density = 1.0,
-          theme = ThemeV1.DARK,
-          locale = "en-US",
-          fontScale = 1.0,
-          layoutDirection = LayoutDirectionV1.LTR,
-          windowPosture = WindowPostureV1.FLAT,
-          animations = AnimationStateV1.SETTLED,
-          networkAccess = false,
-        ),
-      roots = listOf("surface"),
-      nodes =
-        linkedMapOf(
-          "surface" to
-            DesignNodeV1(
-              id = "surface",
-              componentId = "m3/surface",
-              slots = mapOf("content" to listOf("text")),
-            ),
-          "text" to
-            DesignNodeV1(
-              id = "text",
-              componentId = "m3/text",
-              properties = mapOf("text" to StringValueV1("Hello from the saved design")),
-            ),
-        ),
-    )
+  private fun document(): DesignDocumentV1 = Companion.document()
+
+  internal companion object {
+    /** The two-node m3 design every test here starts from; shared with the pack tests. */
+    fun document(): DesignDocumentV1 = productionDocument()
+  }
 }
+
+private fun productionDocument(): DesignDocumentV1 =
+  DesignDocumentV1(
+    schema = "compose-ui-builder-document/v1-candidate",
+    id = "production-design",
+    title = "Production design",
+    revision = 0,
+    catalogPin =
+      CatalogReferenceV1(
+        systemId = "m3-catalog",
+        catalogRevision = "candidate",
+        capabilityDigest = CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST,
+        nativeRuntimeId = "candidate",
+      ),
+    environment =
+      DesignEnvironmentV1(
+        widthDp = 400,
+        heightDp = 800,
+        density = 1.0,
+        theme = ThemeV1.DARK,
+        locale = "en-US",
+        fontScale = 1.0,
+        layoutDirection = LayoutDirectionV1.LTR,
+        windowPosture = WindowPostureV1.FLAT,
+        animations = AnimationStateV1.SETTLED,
+        networkAccess = false,
+      ),
+    roots = listOf("surface"),
+    nodes =
+      linkedMapOf(
+        "surface" to
+          DesignNodeV1(
+            id = "surface",
+            componentId = "m3/surface",
+            slots = mapOf("content" to listOf("text")),
+          ),
+        "text" to
+          DesignNodeV1(
+            id = "text",
+            componentId = "m3/text",
+            properties = mapOf("text" to StringValueV1("Hello from the saved design")),
+          ),
+      ),
+  )
 
 private object PersistentUiBuilderServiceJsonForTest {
   private val json = kotlinx.serialization.json.Json { encodeDefaults = true }

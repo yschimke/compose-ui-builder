@@ -123,6 +123,8 @@ data class EditorCatalogItem(
   val group: String,
   /** In catalog order. The first is what a plain Add inserts, so it is the one marked default. */
   val variants: List<EditorCatalogVariant> = emptyList(),
+  /** The pack this component came from, or null for one of the catalog's own. */
+  val pack: String? = null,
 )
 
 /**
@@ -366,6 +368,16 @@ data class UiBuilderEditorState(
    * all of them at once is the wall of rows the grouping exists to prevent.
    */
   val expandedCatalogComponents: Set<String> = emptySet(),
+  /**
+   * The component packs whose shelves the insert panel shows, by pack id.
+   *
+   * Off by default, and a set of what is *on*: a pack is another catalog's components offered
+   * beside this one's, and a Material 3 screen that opens with a conference app's forty composables
+   * on its palette is a palette nobody asked for. Switching one on is a settings decision the host
+   * remembers per catalog; the components of a pack that is off are still in the catalog, so a
+   * design that already holds one keeps validating and rendering it.
+   */
+  val enabledPacks: Set<String> = emptySet(),
   val layerQuery: String = "",
   /**
    * Whether taps on the canvas drive the screen instead of selecting layers.
@@ -512,6 +524,12 @@ sealed interface UiBuilderEditorEvent {
    * and "show me everything" is a statement about the shelves.
    */
   data object ExpandAllCatalogGroups : UiBuilderEditorEvent
+
+  /** Show or hide one component pack's shelf in the insert panel. */
+  data class TogglePack(val packId: String) : UiBuilderEditorEvent
+
+  /** The packs the host remembered as on, applied when the design opens. */
+  data class SetEnabledPacks(val packIds: Set<String>) : UiBuilderEditorEvent
 
   data class SelectNode(val nodeId: String) : UiBuilderEditorEvent
 
@@ -971,6 +989,12 @@ class UiBuilderEditorReducer(
   private val operationIdPrefix: String = clientId,
 ) {
   private val capabilityValidator = CapabilityValidator(catalog)
+
+  /**
+   * The record the code pane and the problems panel generate from: the embedded one, plus this
+   * catalog's pack components projected back into record shape. See [packComponentRecords].
+   */
+  private val exportRecord by lazy { catalog.exportRecord(embeddedComponentRecord()) }
   private val validator = CapabilityPropertyWriteValidator(capabilityValidator)
   private val documentValidator = CapabilityDocumentWriteValidator(capabilityValidator)
 
@@ -1012,6 +1036,7 @@ class UiBuilderEditorReducer(
       catalogQuery = state.catalogQuery,
       collapsedCatalogGroups = state.collapsedCatalogGroups,
       expandedCatalogComponents = state.expandedCatalogComponents,
+      enabledPacks = state.enabledPacks,
       layerQuery = state.layerQuery,
       previewMode = state.previewMode,
       codePaneVisible = state.codePaneVisible,
@@ -1028,6 +1053,14 @@ class UiBuilderEditorReducer(
         state.copy(collapsedCatalogGroups = state.collapsedCatalogGroups.toggled(event.group))
       is UiBuilderEditorEvent.ExpandAllCatalogGroups ->
         state.copy(collapsedCatalogGroups = emptySet())
+      is UiBuilderEditorEvent.TogglePack ->
+        if (catalog.componentPacks[event.packId] == null) state
+        else state.copy(enabledPacks = state.enabledPacks.toggled(event.packId))
+      is UiBuilderEditorEvent.SetEnabledPacks ->
+        state.copy(
+          enabledPacks =
+            event.packIds.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null }
+        )
       is UiBuilderEditorEvent.ToggleCatalogComponent ->
         state.copy(
           expandedCatalogComponents = state.expandedCatalogComponents.toggled(event.componentId)
@@ -1494,6 +1527,10 @@ class UiBuilderEditorReducer(
     val items =
       catalog.components
         .map { it.editorCatalogItem() }
+        // A pack that is off is not on the palette, and not found by search either: the shelf is
+        // the whole point of the switch, and a search that surfaced what the switch hides would
+        // make the switch a lie.
+        .filter { it.pack == null || it.pack in state.enabledPacks }
         .filter { it.matches(needle) }
         .sortedBy(EditorCatalogItem::displayName)
     // The declared shelves, then the kind labels an unshelved catalog falls back to — in *kind*
@@ -1539,6 +1576,7 @@ class UiBuilderEditorReducer(
       displayName = displayName,
       kind = kind,
       group = catalog.componentMenu.groupOf(componentId) ?: kind.label,
+      pack = catalog.componentPacks.packOf(componentId)?.id,
       variants =
         menuVariantValues(catalog.componentMenu).mapIndexed { index, value ->
           EditorCatalogVariant(
@@ -2081,10 +2119,7 @@ class UiBuilderEditorReducer(
         is RecordFreeExport.Generated.Refused -> EditorGeneratedCode.Refused(recordFree.reasons)
       }
     }
-    when (
-      val outcome =
-        ScreenExportGate.export(document.toProtocolDocument(), embeddedComponentRecord())
-    ) {
+    when (val outcome = ScreenExportGate.export(document.toProtocolDocument(), exportRecord)) {
       is ScreenExportGate.Outcome.Emitted -> EditorGeneratedCode.Source(outcome.source)
       is ScreenExportGate.Outcome.Refused -> EditorGeneratedCode.Refused(outcome.reasons)
     }
@@ -2125,7 +2160,7 @@ class UiBuilderEditorReducer(
       // It generates. The gate below would still refuse it — that is the whole reason these
       // designs have their own emitter — so asking it anything here is asking the wrong question.
       is RecordFreeExport.Generated.Emitted -> emptyList()
-      null -> ScreenExportGate.refusals(document.toProtocolDocument(), embeddedComponentRecord())
+      null -> ScreenExportGate.refusals(document.toProtocolDocument(), exportRecord)
     }
   }
     .getOrElse { emptyList() }

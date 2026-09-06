@@ -25,6 +25,8 @@ design chooser when no design is named. The same chooser is available from **New
 live editor.
 
 1. Choose **Material 3** for a blank Compose screen, or **Remote Material 3** for a Wear widget.
+   The chooser groups catalogs by platform — Mobile, Wear, Remote Compose — once the host enables
+   more than one kind.
 2. For a widget, choose **Small widget** (216×76dp) or **Large widget** (216×124dp).
 3. Enter a path-safe design ID and select **Create**. The dialog submits it as a form `POST`, and
    the redirect it is answered with lands you on the new design's own URL. The current operator
@@ -433,6 +435,34 @@ be set. For a host you start yourself:
 `components.json` is a preview bundle's own discovery output. The record shipped here covers the
 component ids whose Compose mapping is unambiguous; ids it does not cover are **absent rather than
 guessed**, so they refuse by name instead of emitting Kotlin that does not compile.
+
+## Component packs: another catalog's components on your palette
+
+A host can offer a served catalog's own composables inside the builder's catalogs as a **component
+pack** — Confetti's `SessionCard` beside `m3/card` in a Material 3 screen. A pack is scoped to a
+platform, so a mobile pack appears in `m3-catalog` designs and never in a Wear widget, which could
+not call it. The operator admits one:
+
+```text
+--ui-builder-packs confetti-mobile=mobile
+--ui-builder-components m3-catalog=<components.json>,confetti-mobile=<confetti components.json>
+```
+
+The pack's components are projected from that catalog's own discovered component record — every
+composable of the project's own the producer proved a call site for, with its literal parameters as
+properties and its `@Composable` lambdas as slots — so nothing is transcribed by hand. Admitting a
+pack only makes it available. In the editor, **Component packs…** in the toolbar overflow (or
+**Packs…** at the top of the Insert panel) lists the packs the host admitted with a switch each;
+switch one on and its components appear on a shelf named for the pack. The choice is remembered per
+catalog in your browser, not in the design.
+
+A pack component is drawn on the canvas as a named, captioned placeholder — the browser cannot link
+another application's classes, for the reason it cannot link Wear Compose — and rendered as itself
+by **Preview**, which compiles the design against the pack's own served bundle. A design drawing on
+two packs has no bundle that carries both and the native preview says so. Export and the code pane
+write the real call site from the pack's record.
+[`design/UI_BUILDER_COMPONENT_PACKS.md`](design/UI_BUILDER_COMPONENT_PACKS.md) has the model and
+the projection rules.
 
 ### The export's one classpath requirement
 

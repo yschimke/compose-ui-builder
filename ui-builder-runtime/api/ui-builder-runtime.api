@@ -13,15 +13,18 @@ public final class ee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilder
 }
 
 public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor : ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {
+	public static final field COMPONENT_PACKS_KEY Ljava/lang/String;
 	public static final field CURRENT_CAPABILITY_DIGEST Ljava/lang/String;
 	public static final field Companion Lee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor$Companion;
 	public static final field DEFAULT_CATALOG_SYSTEM_ID Ljava/lang/String;
+	public static final field DEFAULT_PLATFORM Ljava/lang/String;
+	public static final field PLATFORM_KEY Ljava/lang/String;
 	public static final field REMOTE_M3_CATALOG_SYSTEM_ID Ljava/lang/String;
 	public static final field RESOURCE Ljava/lang/String;
 	public static final field WEAR_M3_CATALOG_SYSTEM_ID Ljava/lang/String;
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun listCatalogs ()Ljava/util/List;
 	public fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
 	public fun validate (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
@@ -187,6 +190,28 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue 
 	public final fun getField ()Ljava/lang/String;
 	public final fun getMessage ()Ljava/lang/String;
 	public final fun getNodeId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderComponentPackSource {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/util/List;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderComponentPackSource;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderComponentPackSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderComponentPackSource;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponents ()Ljava/util/List;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getLabel ()Ljava/lang/String;
+	public final fun getNativeCatalog ()Ljava/lang/String;
+	public final fun getNotes ()Ljava/lang/String;
+	public final fun getPlatform ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

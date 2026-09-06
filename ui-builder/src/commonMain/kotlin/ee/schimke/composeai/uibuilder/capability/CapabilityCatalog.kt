@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder.capability
 
 import ee.schimke.composeai.uibuilder.COMPOSE_EMITTED_DP_PROPERTIES
 import ee.schimke.composeai.uibuilder.ComponentMenu
+import ee.schimke.composeai.uibuilder.UiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.UiBuilderPreviewSurfaces
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -45,6 +47,25 @@ data class CapabilityCatalog(
    * did before any catalog declared a shelf.
    */
   val componentMenu: ComponentMenu by lazy { ComponentMenu.from(statusSemantics) }
+
+  /**
+   * Which kind of screen this catalog authors — a phone, a watch, a Remote Compose widget.
+   *
+   * Read out of [statusSemantics] for the same reason [previewSurfaces] is. A catalog that says
+   * nothing is a mobile one, which is what every catalog was before there was another kind.
+   */
+  val platform: UiBuilderCatalogPlatform by lazy { UiBuilderCatalogPlatform.from(statusSemantics) }
+
+  /**
+   * The component packs the runtime merged into this catalog — another catalog's components,
+   * shelved under their own name and switched on from the editor's settings.
+   *
+   * Read out of [statusSemantics] for the same reason [previewSurfaces] is; see
+   * [UiBuilderComponentPacks] for what a pack is. A catalog that says nothing has none.
+   */
+  val componentPacks: UiBuilderComponentPacks by lazy {
+    UiBuilderComponentPacks.from(statusSemantics)
+  }
 }
 
 @Serializable

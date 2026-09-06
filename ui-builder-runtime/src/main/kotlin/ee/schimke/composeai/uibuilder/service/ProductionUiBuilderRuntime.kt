@@ -69,6 +69,23 @@ public class CurrentM3UiBuilderCatalogExecutor(
    * it. Defaults to the flat value, so a caller that does not care is unaffected.
    */
   composeExportFor: (String) -> Boolean = { exportCapabilities.composeCode },
+  /**
+   * Component packs admitted by the host, merged into every enabled catalog of the same platform.
+   *
+   * A pack is another catalog's components — a served application catalog such as
+   * `confetti-mobile`, projected from its published component record — offered inside the authoring
+   * catalogs it is compatible with. Merged here rather than served as catalogs of their own because
+   * a design is pinned to one catalog and a pack is not a thing to pin to: it has no scaffold, no
+   * templates and no canvas adapter of its own. What it has is components, and a Material 3 phone
+   * screen that can hold a `SessionCard` beside its `m3/card` is the whole point.
+   *
+   * Which catalogs a pack reaches is decided by platform, never by name. A mobile pack lands in
+   * `m3-catalog`; it does not land in `remote-m3`, whose widget body is `@RemoteComposable` and
+   * cannot call it, nor in `wear-m3`, which is not Material 3. The catalog declares what it carried
+   * under `statusSemantics.componentPacks` so the editor can shelve the pack under its own name and
+   * let an author switch it on and off.
+   */
+  packs: List<UiBuilderComponentPackSource> = emptyList(),
 ) : UiBuilderCatalogExecutor {
   private val baseCatalog =
     json
@@ -84,16 +101,29 @@ public class CurrentM3UiBuilderCatalogExecutor(
   private val catalogs =
     catalogSystemIds
       .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }
+      .also { enabled ->
+        packs.forEach { pack ->
+          require(SAFE_SYSTEM_ID.matches(pack.id)) { "invalid UI-builder pack id: ${pack.id}" }
+          require(pack.id !in enabled) {
+            "UI-builder pack ${pack.id} is also an enabled catalog; a catalog cannot be its own pack"
+          }
+        }
+        require(packs.map { it.id }.distinct().size == packs.size) {
+          "UI-builder packs must have distinct ids"
+        }
+      }
       .associateWith { systemId ->
         require(SAFE_SYSTEM_ID.matches(systemId)) { "invalid UI-builder catalog id: $systemId" }
         val catalog =
           requireNotNull(availableCatalogs[systemId]) {
             "UI-builder catalog $systemId has no packaged adapter"
           }
-        catalog.copy(
-          exportCapabilities =
-            catalog.exportCapabilities.copy(composeCode = composeExportFor(systemId))
-        )
+        catalog
+          .copy(
+            exportCapabilities =
+              catalog.exportCapabilities.copy(composeCode = composeExportFor(systemId))
+          )
+          .withPacks(packs.filter { it.platform == catalog.platform })
       }
   private val references = catalogs.mapValues { (_, catalog) ->
     CatalogReferenceV1(
@@ -269,6 +299,16 @@ public class CurrentM3UiBuilderCatalogExecutor(
     public const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
     public const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"
     public const val WEAR_M3_CATALOG_SYSTEM_ID: String = "wear-m3"
+
+    /** The `statusSemantics` key a catalog declares its platform under. */
+    public const val PLATFORM_KEY: String = "platform"
+
+    /** The `statusSemantics` key a catalog lists the packs merged into it under. */
+    public const val COMPONENT_PACKS_KEY: String = "componentPacks"
+
+    /** The platform word of a catalog that declares none. */
+    public const val DEFAULT_PLATFORM: String = "mobile"
+
     private val SAFE_SYSTEM_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
     private fun packagedM3CatalogSource(): String =
@@ -278,6 +318,128 @@ public class CurrentM3UiBuilderCatalogExecutor(
         .bufferedReader(Charsets.UTF_8)
         .use { it.readText() }
   }
+}
+
+/**
+ * A component pack as the host admits it: another catalog's components, ready to be merged.
+ *
+ * The runtime does not derive packs — a pack derived from a served catalog's component record is
+ * `:server`'s to build, because reading a record needs the discovery library this module's boundary
+ * keeps out. What arrives here is the finished list of capabilities and the facts the merge needs
+ * about them.
+ *
+ * @property id the pack's id, which is the served catalog it came from and the prefix every one of
+ *   its component ids carries (`confetti-mobile/session-card`). Checked against the same id rule as
+ *   a catalog, because it reaches a served-catalog branch name on the native lane.
+ * @property label what the editor calls the pack.
+ * @property platform the platform word (`mobile`, `wear`, `remote-compose`) naming which enabled
+ *   catalogs receive it. Compared as written; a catalog declaring no platform is
+ *   [CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM].
+ * @property nativeCatalog the served catalog whose bundle compiles a design that uses the pack, or
+ *   null when the pack does not say. A derived pack names the catalog it was derived from.
+ * @property components the capabilities, every id prefixed `<id>/`.
+ * @property notes a sentence for the settings row; empty when there is nothing to add.
+ */
+public data class UiBuilderComponentPackSource(
+  val id: String,
+  val label: String,
+  val platform: String,
+  val nativeCatalog: String?,
+  val components: List<ComponentCapabilityV1>,
+  val notes: String = "",
+) {
+  init {
+    require(id.isNotBlank()) { "a component pack needs an id" }
+    require(platform.isNotBlank()) { "component pack $id needs a platform" }
+    components.forEach { component ->
+      require(component.componentId.startsWith("$id/")) {
+        "component ${component.componentId} of pack $id must be namespaced under `$id/`"
+      }
+    }
+    require(components.map { it.componentId }.distinct().size == components.size) {
+      "component pack $id declares a component id twice"
+    }
+  }
+}
+
+/** The platform word a catalog declares, or the default for one that says nothing. */
+internal val CatalogCapabilityV1.platform: String
+  get() =
+    statusSemantics[CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY]
+      ?.let { it as? JsonPrimitive }
+      ?.contentOrNull
+      ?.trim()
+      ?.lowercase()
+      ?.takeIf(String::isNotEmpty) ?: CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM
+
+/**
+ * This catalog with [packs] merged in, or itself when there are none.
+ *
+ * Three things change and nothing else does. The components are appended, in pack order, after the
+ * catalog's own — an id the catalog already has is a configuration error and refused, since two
+ * capabilities under one id would make validation depend on list order. The insert-panel shelf
+ * declaration gains one shelf per pack, named for the pack, so its components read as a group
+ * rather than being scattered by kind among the catalog's own; an existing shelf table is extended,
+ * a missing one is created, and the pack's shelves go after every shelf the catalog declared. And
+ * `componentPacks` records what was merged, which is how the editor and the server tell a pack's
+ * component from the catalog's own afterwards — `UiBuilderComponentPacks` in `:ui-builder-export`
+ * reads it back.
+ *
+ * The catalog pin is untouched. A pack is part of the catalog the way `wear-m3`'s borrowed
+ * foundation components are, and a design pinned before a pack was admitted keeps resolving.
+ */
+private fun CatalogCapabilityV1.withPacks(
+  packs: List<UiBuilderComponentPackSource>
+): CatalogCapabilityV1 {
+  if (packs.isEmpty()) return this
+  val own = components.map { it.componentId }.toSet()
+  packs.forEach { pack ->
+    pack.components.forEach { component ->
+      require(component.componentId !in own) {
+        "pack ${pack.id} redeclares ${component.componentId}, which ${benchmark.catalogSystemId} already has"
+      }
+    }
+  }
+  val existingMenu = (statusSemantics["componentMenu"] as? JsonObject) ?: JsonObject(emptyMap())
+  val existingOrder = (existingMenu["groupOrder"] as? JsonArray) ?: JsonArray(emptyList())
+  val existingEntries = (existingMenu["components"] as? JsonObject) ?: JsonObject(emptyMap())
+  val menu =
+    JsonObject(
+      existingMenu +
+        ("groupOrder" to
+          JsonArray(existingOrder + packs.map { JsonPrimitive(it.label) }.distinct())) +
+        ("components" to
+          JsonObject(
+            existingEntries +
+              packs.flatMap { pack ->
+                pack.components.map { component ->
+                  component.componentId to buildJsonObject { put("group", pack.label) }
+                }
+              }
+          ))
+    )
+  val declaredPacks =
+    JsonArray(
+      packs.map { pack ->
+        buildJsonObject {
+          put("id", pack.id)
+          put("label", pack.label)
+          put("platform", pack.platform)
+          pack.nativeCatalog?.let { put("nativeCatalog", it) }
+          put("components", JsonArray(pack.components.map { JsonPrimitive(it.componentId) }))
+          if (pack.notes.isNotEmpty()) put("notes", pack.notes)
+        }
+      }
+    )
+  return copy(
+    statusSemantics =
+      JsonObject(
+        statusSemantics +
+          ("componentMenu" to menu) +
+          (CurrentM3UiBuilderCatalogExecutor.COMPONENT_PACKS_KEY to declaredPacks)
+      ),
+    components = components + packs.flatMap { it.components },
+  )
 }
 
 /**
@@ -493,6 +655,14 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "remote-compose/document",
     )
   return base.copy(
+    // A Wear widget body is a Remote Compose document, played rather than composed. Said here so
+    // the New design chooser can group it apart from the phone screens, and so no mobile pack is
+    // ever merged into it: a `@RemoteComposable` body cannot call an application's composables.
+    statusSemantics =
+      JsonObject(
+        base.statusSemantics +
+          (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("remote-compose"))
+      ),
     benchmark =
       base.benchmark.copy(
         id = "remote-m3-wear-widget-scaffolds",
@@ -1356,6 +1526,10 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
     statusSemantics =
       JsonObject(
         base.statusSemantics +
+          // A round watch screen against Wear Compose: grouped apart from the phone screens in the
+          // chooser, and offered no mobile pack — Wear Material 3 and Material 3 are not used
+          // together, which is the rule this whole catalog is written around.
+          (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("wear")) +
           ("previewSurfaces" to
             buildJsonObject {
               putJsonObject("wasm") {
