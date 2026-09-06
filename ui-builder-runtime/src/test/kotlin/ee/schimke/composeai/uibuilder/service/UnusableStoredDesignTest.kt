@@ -193,12 +193,27 @@ class UnusableStoredDesignTest {
     assertEquals(setOf("outgrown"), reopened.adminUnusableDesigns().keys, "nothing was written")
 
     // The repair: within the limit the deployment now enforces.
-    val kept = stored.roots.take(2)
+    //
+    // Trimming means dropping the child from its parent's slot as well as from the node map. This
+    // test was written against a `create` that made every node its own root, where filtering the
+    // map was the whole edit; #450 gave the helper one root with the rest beneath it, so a
+    // candidate that merely keeps a subset of the map leaves the root naming children that are no
+    // longer in it, and `validateTopology` refuses it for an unknown placed node — a rejection
+    // about topology, not about the size this test is repairing.
+    val root = stored.nodes.getValue(stored.roots.single())
+    val keptChildren = root.slots.getValue("content").take(1)
+    val kept = listOf(root.id) + keptChildren
     val repaired =
       assertIs<UiBuilderAdminRepair.Repaired>(
         reopened.adminRepairDesign(
           "outgrown",
-          encode(stored.copy(roots = kept, nodes = stored.nodes.filterKeys { it in kept })),
+          encode(
+            stored.copy(
+              nodes =
+                stored.nodes.filterKeys { it in kept } +
+                  (root.id to root.copy(slots = mapOf("content" to keptChildren)))
+            )
+          ),
         )
       )
     assertEquals(stored.revision + 1, repaired.revision)
