@@ -106,7 +106,10 @@ object UiBuilderNewDesignSeed {
         blankUiBuilderDocument(
           designId = designId,
           catalogPin = catalogPin,
-          environment = environment,
+          // A phone, not the fixture's 1280x800 supporting-pane canvas — see
+          // [mobileScreenEnvironment]. The Jetcaster template below keeps the fixture's own frame,
+          // which is the design it was built to show.
+          environment = mobileScreenEnvironment(environment),
           state = state,
         )
       else -> fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin)

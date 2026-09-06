@@ -560,6 +560,36 @@ fun wearScreenEnvironment(environment: JsonObject): JsonObject =
     }
   )
 
+/**
+ * [environment] on the frame a new mobile screen opens at: `pixel_6`.
+ *
+ * A blank design used to inherit the fixture's own 1280x800 at density 1 — the Jetcaster screen's
+ * expanded supporting-pane canvas, which is the right frame for *that* design and matches no device
+ * in the catalog, so the Screen inspector opened reading "Custom size" on every new screen. A phone
+ * is what a screen is drawn for, and a typical one is easier to reason about than a canvas whose
+ * width no handset has.
+ *
+ * `pixel_6` rather than a newer id because its geometry is the one four catalog entries share
+ * (`pixel_6`, `pixel_6a`, `pixel_7`, `pixel_7a`), so the frame stays matched — and named — as the
+ * catalog grows. The fixture's own template keeps the fixture's frame: re-pinning Jetcaster to a
+ * phone would redraw the design the pane was built to show.
+ */
+fun mobileScreenEnvironment(environment: JsonObject): JsonObject =
+  JsonObject(
+    environment.toMutableMap().also {
+      it["widthDp"] = JsonPrimitive(PIXEL_6_WIDTH_DP)
+      it["heightDp"] = JsonPrimitive(PIXEL_6_HEIGHT_DP)
+      it["density"] = JsonPrimitive(PIXEL_6_DENSITY)
+    }
+  )
+
+/** `pixel_6` from `DeviceDimensions`, which is what the frame menu matches this against. */
+private const val PIXEL_6_WIDTH_DP = 411
+
+private const val PIXEL_6_HEIGHT_DP = 914
+
+private const val PIXEL_6_DENSITY = 2.625
+
 /** `wearos_small_round` from `DeviceDimensions`, which is what the frame menu will match. */
 private const val WEAR_SMALL_ROUND_DP = 192
 
