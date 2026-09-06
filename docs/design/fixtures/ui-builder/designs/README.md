@@ -6,6 +6,10 @@ order, plus the `expectedDocumentHash` the replay must reproduce. These are the 
 screens — the editor chrome, its dialogs, docks, menus and the mobile workspace — authored as designs
 in the builder's own catalog, so the builder is designed with the builder.
 
+The chrome moves, so these move with it: when a change lands in `UiBuilderEditor.kt` that alters a
+screen one of these depicts, the design is updated in the same way it was authored, and the test
+below is what stops the two drifting apart quietly.
+
 They are three things at once:
 
 | Consumer | What it does with a file here |

@@ -585,6 +585,14 @@ COMPOSE_PREVIEW_UI_BUILDER_TOKEN=… node scripts/ui-builder/design-sync.mjs exp
   --server https://preview.coo.ee --out docs/design/fixtures/ui-builder/designs/my-widget.json
 ```
 
+If the design belongs to an app rather than to this repository, the same file has a second home:
+`ui-builder/designs/` in the app's own checkout, with an `index.json` beside it. Point a host at it
+with `--ui-builder-designs ./ui-builder/designs` and every design in there is listed under **From
+the projects** on `/admin/ui-builder`, ready to open and carry on with. That is the loop an app uses
+while a screen is still being designed — export when it is worth keeping, open when somebody picks
+it up — and [`design/UI_BUILDER_PROJECT_DESIGNS.md`](design/UI_BUILDER_PROJECT_DESIGNS.md) has the
+convention and the two sources in full.
+
 From there the build owns it. `DesignFixturesTest` replays the file, checks its hash, validates
 every node against the catalog it pins and requires the Compose export to accept it; a `@Preview`
 in `DesignFixturePreviews.kt` renders it through `composePreviewRender`, so the visual-diff bot

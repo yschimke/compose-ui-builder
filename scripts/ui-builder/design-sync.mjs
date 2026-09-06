@@ -102,14 +102,41 @@ function flag(argv, name) {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
+/**
+ * Write the convention directory a catalog project publishes designs from:
+ * `<out>/index.json` plus one `DesignDocumentV1` per fixture. The server reads exactly this
+ * (`ServeUiBuilderDesignLibrary`), so a project generates it into its `design-artifacts` branch
+ * beside everything else it publishes.
+ */
+export function publishDirectory(fixtures) {
+  const designs = [];
+  const files = [];
+  for (const { fixture, description } of fixtures) {
+    const document = operationsToDocument(fixture);
+    const file = `${document.id}.json`;
+    designs.push({
+      id: document.id,
+      title: document.title,
+      file,
+      ...(description ? { description } : {}),
+    });
+    files.push({ file, body: `${JSON.stringify(document, null, 2)}\n` });
+  }
+  return {
+    index: `${JSON.stringify({ schema: "compose-ui-builder-design-index/v1", designs }, null, 2)}\n`,
+    files,
+  };
+}
+
 async function main(argv) {
   const [verb, target] = argv;
   const server = flag(argv, "--server");
   const token = process.env.COMPOSE_PREVIEW_UI_BUILDER_TOKEN;
-  if (!verb || !target || !server) {
+  if (verb === "publish" ? !target : !verb || !target || !server) {
     console.error(
       "usage: design-sync.mjs export <designId> --server <url> --out <fixture.json>\n" +
-        "       design-sync.mjs import <fixture.json> --server <url> [--design-id <id>] [--title <title>]",
+        "       design-sync.mjs import <fixture.json> --server <url> [--design-id <id>] [--title <title>]\n" +
+        "       design-sync.mjs publish <fixtures dir> --out <dir>",
     );
     return 2;
   }
@@ -122,6 +149,22 @@ async function main(argv) {
     const fixture = documentToOperations(document, { designId: flag(argv, "--design-id") ?? target });
     writeFileSync(out, `${JSON.stringify(fixture, null, 2)}\n`);
     console.log(`${out}: ${target} at revision ${document.revision}, ${Object.keys(document.nodes).length} nodes, ${fixture.expectedDocumentHash.slice(0, 12)}`);
+    return 0;
+  }
+  if (verb === "publish") {
+    // `target` is the fixture directory; `--out` is where the published convention lands.
+    const out = flag(argv, "--out");
+    if (!out) throw new Error("publish needs --out <dir>");
+    const { readdirSync, mkdirSync } = await import("node:fs");
+    const names = readdirSync(target).filter((name) => name.endsWith(".json")).sort();
+    const fixtures = names.map((name) => ({
+      fixture: JSON.parse(readFileSync(`${target}/${name}`, "utf8")),
+    }));
+    const published = publishDirectory(fixtures);
+    mkdirSync(out, { recursive: true });
+    writeFileSync(`${out}/index.json`, published.index);
+    for (const { file, body } of published.files) writeFileSync(`${out}/${file}`, body);
+    console.log(`${out}: ${published.files.length} designs and an index`);
     return 0;
   }
   if (verb === "import") {

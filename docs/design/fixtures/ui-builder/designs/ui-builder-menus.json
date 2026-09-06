@@ -51,14 +51,14 @@
       }
     },
     {
-      "operationId": "insert-box-163",
+      "operationId": "insert-box-166",
       "type": "insertNode",
       "parent": {
         "nodeId": "root",
         "slot": "content"
       },
       "node": {
-        "id": "box-163",
+        "id": "box-166",
         "componentId": "layout/box",
         "modifiers": [
           {
@@ -68,14 +68,14 @@
       }
     },
     {
-      "operationId": "insert-column-162",
+      "operationId": "insert-column-165",
       "type": "insertNode",
       "parent": {
-        "nodeId": "box-163",
+        "nodeId": "box-166",
         "slot": "children"
       },
       "node": {
-        "id": "column-162",
+        "id": "column-165",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -94,7 +94,7 @@
       "operationId": "insert-topbar",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-162",
+        "nodeId": "column-165",
         "slot": "children"
       },
       "node": {
@@ -116,14 +116,14 @@
       }
     },
     {
-      "operationId": "insert-row-161",
+      "operationId": "insert-row-164",
       "type": "insertNode",
       "parent": {
         "nodeId": "topbar",
         "slot": "content"
       },
       "node": {
-        "id": "row-161",
+        "id": "row-164",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -150,14 +150,14 @@
       }
     },
     {
-      "operationId": "insert-surface-151",
+      "operationId": "insert-surface-154",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "surface-151",
+        "id": "surface-154",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -179,14 +179,14 @@
       }
     },
     {
-      "operationId": "insert-icon-150",
+      "operationId": "insert-icon-153",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-151",
+        "nodeId": "surface-154",
         "slot": "content"
       },
       "node": {
-        "id": "icon-150",
+        "id": "icon-153",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -205,14 +205,14 @@
       }
     },
     {
-      "operationId": "insert-column-154",
+      "operationId": "insert-column-157",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "column-154",
+        "id": "column-157",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -230,17 +230,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-151"
+      "afterNodeId": "surface-154"
     },
     {
-      "operationId": "insert-text-152",
+      "operationId": "insert-text-155",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-154",
+        "nodeId": "column-157",
         "slot": "children"
       },
       "node": {
-        "id": "text-152",
+        "id": "text-155",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -263,14 +263,14 @@
       }
     },
     {
-      "operationId": "insert-text-153",
+      "operationId": "insert-text-156",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-154",
+        "nodeId": "column-157",
         "slot": "children"
       },
       "node": {
-        "id": "text-153",
+        "id": "text-156",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -287,17 +287,17 @@
           }
         }
       },
-      "afterNodeId": "text-152"
+      "afterNodeId": "text-155"
     },
     {
-      "operationId": "insert-icon-button-156",
+      "operationId": "insert-icon-button-159",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-156",
+        "id": "icon-button-159",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -307,17 +307,17 @@
           }
         ]
       },
-      "afterNodeId": "column-154"
+      "afterNodeId": "column-157"
     },
     {
-      "operationId": "insert-icon-155",
+      "operationId": "insert-icon-158",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-156",
+        "nodeId": "icon-button-159",
         "slot": "content"
       },
       "node": {
-        "id": "icon-155",
+        "id": "icon-158",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -336,14 +336,14 @@
       }
     },
     {
-      "operationId": "insert-icon-button-158",
+      "operationId": "insert-icon-button-161",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-158",
+        "id": "icon-button-161",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -353,17 +353,17 @@
           }
         ]
       },
-      "afterNodeId": "icon-button-156"
+      "afterNodeId": "icon-button-159"
     },
     {
-      "operationId": "insert-icon-157",
+      "operationId": "insert-icon-160",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-158",
+        "nodeId": "icon-button-161",
         "slot": "content"
       },
       "node": {
-        "id": "icon-157",
+        "id": "icon-160",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -382,14 +382,14 @@
       }
     },
     {
-      "operationId": "insert-box-159",
+      "operationId": "insert-box-162",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "box-159",
+        "id": "box-162",
         "componentId": "layout/box",
         "modifiers": [
           {
@@ -398,17 +398,17 @@
           }
         ]
       },
-      "afterNodeId": "icon-button-158"
+      "afterNodeId": "icon-button-161"
     },
     {
-      "operationId": "insert-row-141",
+      "operationId": "insert-row-144",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "row-141",
+        "id": "row-144",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -421,17 +421,17 @@
           }
         }
       },
-      "afterNodeId": "box-159"
+      "afterNodeId": "box-162"
     },
     {
-      "operationId": "insert-filter-chip-138",
+      "operationId": "insert-filter-chip-141",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-141",
+        "nodeId": "row-144",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-138",
+        "id": "filter-chip-141",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -442,14 +442,14 @@
       }
     },
     {
-      "operationId": "insert-text-137",
+      "operationId": "insert-text-140",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-138",
+        "nodeId": "filter-chip-141",
         "slot": "label"
       },
       "node": {
-        "id": "text-137",
+        "id": "text-140",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -468,14 +468,14 @@
       }
     },
     {
-      "operationId": "insert-filter-chip-140",
+      "operationId": "insert-filter-chip-143",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-141",
+        "nodeId": "row-144",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-140",
+        "id": "filter-chip-143",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -484,17 +484,17 @@
           }
         }
       },
-      "afterNodeId": "filter-chip-138"
+      "afterNodeId": "filter-chip-141"
     },
     {
-      "operationId": "insert-text-139",
+      "operationId": "insert-text-142",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-140",
+        "nodeId": "filter-chip-143",
         "slot": "label"
       },
       "node": {
-        "id": "text-139",
+        "id": "text-142",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -513,14 +513,14 @@
       }
     },
     {
-      "operationId": "insert-box-160",
+      "operationId": "insert-box-163",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "box-160",
+        "id": "box-163",
         "componentId": "layout/box",
         "modifiers": [
           {
@@ -529,17 +529,17 @@
           }
         ]
       },
-      "afterNodeId": "row-141"
+      "afterNodeId": "row-144"
     },
     {
-      "operationId": "insert-surface-143",
+      "operationId": "insert-surface-146",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "surface-143",
+        "id": "surface-146",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -559,17 +559,17 @@
           }
         ]
       },
-      "afterNodeId": "box-160"
+      "afterNodeId": "box-163"
     },
     {
-      "operationId": "insert-icon-142",
+      "operationId": "insert-icon-145",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-143",
+        "nodeId": "surface-146",
         "slot": "content"
       },
       "node": {
-        "id": "icon-142",
+        "id": "icon-145",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -588,14 +588,14 @@
       }
     },
     {
-      "operationId": "insert-surface-145",
+      "operationId": "insert-surface-148",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "surface-145",
+        "id": "surface-148",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -615,17 +615,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-143"
+      "afterNodeId": "surface-146"
     },
     {
-      "operationId": "insert-text-144",
+      "operationId": "insert-text-147",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-145",
+        "nodeId": "surface-148",
         "slot": "content"
       },
       "node": {
-        "id": "text-144",
+        "id": "text-147",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -657,14 +657,14 @@
       }
     },
     {
-      "operationId": "insert-icon-button-147",
+      "operationId": "insert-icon-button-150",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-147",
+        "id": "icon-button-150",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -674,17 +674,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-145"
+      "afterNodeId": "surface-148"
     },
     {
-      "operationId": "insert-icon-146",
+      "operationId": "insert-icon-149",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-147",
+        "nodeId": "icon-button-150",
         "slot": "content"
       },
       "node": {
-        "id": "icon-146",
+        "id": "icon-149",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -703,14 +703,14 @@
       }
     },
     {
-      "operationId": "insert-icon-button-149",
+      "operationId": "insert-icon-button-152",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-161",
+        "nodeId": "row-164",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-149",
+        "id": "icon-button-152",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -720,17 +720,17 @@
           }
         ]
       },
-      "afterNodeId": "icon-button-147"
+      "afterNodeId": "icon-button-150"
     },
     {
-      "operationId": "insert-icon-148",
+      "operationId": "insert-icon-151",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-149",
+        "nodeId": "icon-button-152",
         "slot": "content"
       },
       "node": {
-        "id": "icon-148",
+        "id": "icon-151",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -749,14 +749,14 @@
       }
     },
     {
-      "operationId": "insert-row-136",
+      "operationId": "insert-row-139",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-162",
+        "nodeId": "column-165",
         "slot": "children"
       },
       "node": {
-        "id": "row-136",
+        "id": "row-139",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -782,7 +782,7 @@
       "operationId": "insert-left-rail",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-136",
+        "nodeId": "row-139",
         "slot": "children"
       },
       "node": {
@@ -804,14 +804,14 @@
       }
     },
     {
-      "operationId": "insert-column-70",
+      "operationId": "insert-column-73",
       "type": "insertNode",
       "parent": {
         "nodeId": "left-rail",
         "slot": "content"
       },
       "node": {
-        "id": "column-70",
+        "id": "column-73",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -838,14 +838,14 @@
       }
     },
     {
-      "operationId": "insert-surface-67",
+      "operationId": "insert-surface-70",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-70",
+        "nodeId": "column-73",
         "slot": "children"
       },
       "node": {
-        "id": "surface-67",
+        "id": "surface-70",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -867,14 +867,14 @@
       }
     },
     {
-      "operationId": "insert-icon-66",
+      "operationId": "insert-icon-69",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-67",
+        "nodeId": "surface-70",
         "slot": "content"
       },
       "node": {
-        "id": "icon-66",
+        "id": "icon-69",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -893,14 +893,14 @@
       }
     },
     {
-      "operationId": "insert-surface-69",
+      "operationId": "insert-surface-72",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-70",
+        "nodeId": "column-73",
         "slot": "children"
       },
       "node": {
-        "id": "surface-69",
+        "id": "surface-72",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -920,17 +920,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-67"
+      "afterNodeId": "surface-70"
     },
     {
-      "operationId": "insert-icon-68",
+      "operationId": "insert-icon-71",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-69",
+        "nodeId": "surface-72",
         "slot": "content"
       },
       "node": {
-        "id": "icon-68",
+        "id": "icon-71",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -949,14 +949,14 @@
       }
     },
     {
-      "operationId": "insert-column-110",
+      "operationId": "insert-column-113",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-136",
+        "nodeId": "row-139",
         "slot": "children"
       },
       "node": {
-        "id": "column-110",
+        "id": "column-113",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -978,7 +978,7 @@
       "operationId": "insert-selection-bar",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-110",
+        "nodeId": "column-113",
         "slot": "children"
       },
       "node": {
@@ -1000,14 +1000,14 @@
       }
     },
     {
-      "operationId": "insert-row-76",
+      "operationId": "insert-row-79",
       "type": "insertNode",
       "parent": {
         "nodeId": "selection-bar",
         "slot": "content"
       },
       "node": {
-        "id": "row-76",
+        "id": "row-79",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -1034,14 +1034,14 @@
       }
     },
     {
-      "operationId": "insert-text-71",
+      "operationId": "insert-text-74",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-76",
+        "nodeId": "row-79",
         "slot": "children"
       },
       "node": {
-        "id": "text-71",
+        "id": "text-74",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1066,14 +1066,14 @@
       }
     },
     {
-      "operationId": "insert-button-73",
+      "operationId": "insert-button-76",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-76",
+        "nodeId": "row-79",
         "slot": "children"
       },
       "node": {
-        "id": "button-73",
+        "id": "button-76",
         "componentId": "m3/button",
         "properties": {
           "style": {
@@ -1082,17 +1082,17 @@
           }
         }
       },
-      "afterNodeId": "text-71"
+      "afterNodeId": "text-74"
     },
     {
-      "operationId": "insert-text-72",
+      "operationId": "insert-text-75",
       "type": "insertNode",
       "parent": {
-        "nodeId": "button-73",
+        "nodeId": "button-76",
         "slot": "content"
       },
       "node": {
-        "id": "text-72",
+        "id": "text-75",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1111,14 +1111,14 @@
       }
     },
     {
-      "operationId": "insert-icon-button-75",
+      "operationId": "insert-icon-button-78",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-76",
+        "nodeId": "row-79",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-75",
+        "id": "icon-button-78",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -1128,17 +1128,17 @@
           }
         ]
       },
-      "afterNodeId": "button-73"
+      "afterNodeId": "button-76"
     },
     {
-      "operationId": "insert-icon-74",
+      "operationId": "insert-icon-77",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-75",
+        "nodeId": "icon-button-78",
         "slot": "content"
       },
       "node": {
-        "id": "icon-74",
+        "id": "icon-77",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -1160,7 +1160,7 @@
       "operationId": "insert-canvas",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-110",
+        "nodeId": "column-113",
         "slot": "children"
       },
       "node": {
@@ -1183,14 +1183,14 @@
       "afterNodeId": "selection-bar"
     },
     {
-      "operationId": "insert-box-103",
+      "operationId": "insert-box-106",
       "type": "insertNode",
       "parent": {
         "nodeId": "canvas",
         "slot": "content"
       },
       "node": {
-        "id": "box-103",
+        "id": "box-106",
         "componentId": "layout/box",
         "modifiers": [
           {
@@ -1210,7 +1210,7 @@
       "operationId": "insert-artboard",
       "type": "insertNode",
       "parent": {
-        "nodeId": "box-103",
+        "nodeId": "box-106",
         "slot": "children"
       },
       "node": {
@@ -1240,14 +1240,14 @@
       }
     },
     {
-      "operationId": "insert-column-93",
+      "operationId": "insert-column-96",
       "type": "insertNode",
       "parent": {
         "nodeId": "artboard",
         "slot": "content"
       },
       "node": {
-        "id": "column-93",
+        "id": "column-96",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -1270,14 +1270,14 @@
       }
     },
     {
-      "operationId": "insert-text-77",
+      "operationId": "insert-text-80",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-93",
+        "nodeId": "column-96",
         "slot": "children"
       },
       "node": {
-        "id": "text-77",
+        "id": "text-80",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1300,14 +1300,14 @@
       }
     },
     {
-      "operationId": "insert-surface-81",
+      "operationId": "insert-surface-84",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-93",
+        "nodeId": "column-96",
         "slot": "children"
       },
       "node": {
-        "id": "surface-81",
+        "id": "surface-84",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -1327,17 +1327,17 @@
           }
         ]
       },
-      "afterNodeId": "text-77"
+      "afterNodeId": "text-80"
     },
     {
-      "operationId": "insert-row-80",
+      "operationId": "insert-row-83",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-81",
+        "nodeId": "surface-84",
         "slot": "content"
       },
       "node": {
-        "id": "row-80",
+        "id": "row-83",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -1364,14 +1364,14 @@
       }
     },
     {
-      "operationId": "insert-icon-78",
+      "operationId": "insert-icon-81",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-80",
+        "nodeId": "row-83",
         "slot": "children"
       },
       "node": {
-        "id": "icon-78",
+        "id": "icon-81",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -1390,14 +1390,14 @@
       }
     },
     {
-      "operationId": "insert-text-79",
+      "operationId": "insert-text-82",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-80",
+        "nodeId": "row-83",
         "slot": "children"
       },
       "node": {
-        "id": "text-79",
+        "id": "text-82",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1414,17 +1414,17 @@
           }
         }
       },
-      "afterNodeId": "icon-78"
+      "afterNodeId": "icon-81"
     },
     {
-      "operationId": "insert-row-88",
+      "operationId": "insert-row-91",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-93",
+        "nodeId": "column-96",
         "slot": "children"
       },
       "node": {
-        "id": "row-88",
+        "id": "row-91",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -1437,17 +1437,17 @@
           }
         }
       },
-      "afterNodeId": "surface-81"
+      "afterNodeId": "surface-84"
     },
     {
-      "operationId": "insert-filter-chip-83",
+      "operationId": "insert-filter-chip-86",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-88",
+        "nodeId": "row-91",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-83",
+        "id": "filter-chip-86",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -1458,14 +1458,14 @@
       }
     },
     {
-      "operationId": "insert-text-82",
+      "operationId": "insert-text-85",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-83",
+        "nodeId": "filter-chip-86",
         "slot": "label"
       },
       "node": {
-        "id": "text-82",
+        "id": "text-85",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1484,14 +1484,14 @@
       }
     },
     {
-      "operationId": "insert-filter-chip-85",
+      "operationId": "insert-filter-chip-88",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-88",
+        "nodeId": "row-91",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-85",
+        "id": "filter-chip-88",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -1500,17 +1500,17 @@
           }
         }
       },
-      "afterNodeId": "filter-chip-83"
+      "afterNodeId": "filter-chip-86"
     },
     {
-      "operationId": "insert-text-84",
+      "operationId": "insert-text-87",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-85",
+        "nodeId": "filter-chip-88",
         "slot": "label"
       },
       "node": {
-        "id": "text-84",
+        "id": "text-87",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1529,14 +1529,14 @@
       }
     },
     {
-      "operationId": "insert-filter-chip-87",
+      "operationId": "insert-filter-chip-90",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-88",
+        "nodeId": "row-91",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-87",
+        "id": "filter-chip-90",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -1545,17 +1545,17 @@
           }
         }
       },
-      "afterNodeId": "filter-chip-85"
+      "afterNodeId": "filter-chip-88"
     },
     {
-      "operationId": "insert-text-86",
+      "operationId": "insert-text-89",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-87",
+        "nodeId": "filter-chip-90",
         "slot": "label"
       },
       "node": {
-        "id": "text-86",
+        "id": "text-89",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1574,14 +1574,14 @@
       }
     },
     {
-      "operationId": "insert-surface-90",
+      "operationId": "insert-surface-93",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-93",
+        "nodeId": "column-96",
         "slot": "children"
       },
       "node": {
-        "id": "surface-90",
+        "id": "surface-93",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -1601,17 +1601,17 @@
           }
         ]
       },
-      "afterNodeId": "row-88"
+      "afterNodeId": "row-91"
     },
     {
-      "operationId": "insert-text-89",
+      "operationId": "insert-text-92",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-90",
+        "nodeId": "surface-93",
         "slot": "content"
       },
       "node": {
-        "id": "text-89",
+        "id": "text-92",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1643,14 +1643,14 @@
       }
     },
     {
-      "operationId": "insert-surface-92",
+      "operationId": "insert-surface-95",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-93",
+        "nodeId": "column-96",
         "slot": "children"
       },
       "node": {
-        "id": "surface-92",
+        "id": "surface-95",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -1670,17 +1670,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-90"
+      "afterNodeId": "surface-93"
     },
     {
-      "operationId": "insert-text-91",
+      "operationId": "insert-text-94",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-92",
+        "nodeId": "surface-95",
         "slot": "content"
       },
       "node": {
-        "id": "text-91",
+        "id": "text-94",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1712,14 +1712,14 @@
       }
     },
     {
-      "operationId": "insert-surface-102",
+      "operationId": "insert-surface-105",
       "type": "insertNode",
       "parent": {
-        "nodeId": "box-103",
+        "nodeId": "box-106",
         "slot": "children"
       },
       "node": {
-        "id": "surface-102",
+        "id": "surface-105",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -1746,14 +1746,14 @@
       "afterNodeId": "artboard"
     },
     {
-      "operationId": "insert-row-101",
+      "operationId": "insert-row-104",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-102",
+        "nodeId": "surface-105",
         "slot": "content"
       },
       "node": {
-        "id": "row-101",
+        "id": "row-104",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -1777,14 +1777,14 @@
       }
     },
     {
-      "operationId": "insert-icon-button-95",
+      "operationId": "insert-icon-button-98",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-101",
+        "nodeId": "row-104",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-95",
+        "id": "icon-button-98",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -1796,14 +1796,14 @@
       }
     },
     {
-      "operationId": "insert-icon-94",
+      "operationId": "insert-icon-97",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-95",
+        "nodeId": "icon-button-98",
         "slot": "content"
       },
       "node": {
-        "id": "icon-94",
+        "id": "icon-97",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -1822,14 +1822,14 @@
       }
     },
     {
-      "operationId": "insert-text-96",
+      "operationId": "insert-text-99",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-101",
+        "nodeId": "row-104",
         "slot": "children"
       },
       "node": {
-        "id": "text-96",
+        "id": "text-99",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -1855,17 +1855,17 @@
           }
         ]
       },
-      "afterNodeId": "icon-button-95"
+      "afterNodeId": "icon-button-98"
     },
     {
-      "operationId": "insert-icon-button-98",
+      "operationId": "insert-icon-button-101",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-101",
+        "nodeId": "row-104",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-98",
+        "id": "icon-button-101",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -1875,17 +1875,17 @@
           }
         ]
       },
-      "afterNodeId": "text-96"
+      "afterNodeId": "text-99"
     },
     {
-      "operationId": "insert-icon-97",
+      "operationId": "insert-icon-100",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-98",
+        "nodeId": "icon-button-101",
         "slot": "content"
       },
       "node": {
-        "id": "icon-97",
+        "id": "icon-100",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -1904,14 +1904,14 @@
       }
     },
     {
-      "operationId": "insert-surface-100",
+      "operationId": "insert-surface-103",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-101",
+        "nodeId": "row-104",
         "slot": "children"
       },
       "node": {
-        "id": "surface-100",
+        "id": "surface-103",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -1931,17 +1931,17 @@
           }
         ]
       },
-      "afterNodeId": "icon-button-98"
+      "afterNodeId": "icon-button-101"
     },
     {
-      "operationId": "insert-icon-99",
+      "operationId": "insert-icon-102",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-100",
+        "nodeId": "surface-103",
         "slot": "content"
       },
       "node": {
-        "id": "icon-99",
+        "id": "icon-102",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -1963,7 +1963,7 @@
       "operationId": "insert-status-bar",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-110",
+        "nodeId": "column-113",
         "slot": "children"
       },
       "node": {
@@ -1986,14 +1986,14 @@
       "afterNodeId": "canvas"
     },
     {
-      "operationId": "insert-row-109",
+      "operationId": "insert-row-112",
       "type": "insertNode",
       "parent": {
         "nodeId": "status-bar",
         "slot": "content"
       },
       "node": {
-        "id": "row-109",
+        "id": "row-112",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -2020,14 +2020,14 @@
       }
     },
     {
-      "operationId": "insert-text-104",
+      "operationId": "insert-text-107",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-109",
+        "nodeId": "row-112",
         "slot": "children"
       },
       "node": {
-        "id": "text-104",
+        "id": "text-107",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2046,14 +2046,14 @@
       }
     },
     {
-      "operationId": "insert-text-105",
+      "operationId": "insert-text-108",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-109",
+        "nodeId": "row-112",
         "slot": "children"
       },
       "node": {
-        "id": "text-105",
+        "id": "text-108",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2070,17 +2070,17 @@
           }
         }
       },
-      "afterNodeId": "text-104"
+      "afterNodeId": "text-107"
     },
     {
-      "operationId": "insert-box-106",
+      "operationId": "insert-box-109",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-109",
+        "nodeId": "row-112",
         "slot": "children"
       },
       "node": {
-        "id": "box-106",
+        "id": "box-109",
         "componentId": "layout/box",
         "modifiers": [
           {
@@ -2090,17 +2090,17 @@
           }
         ]
       },
-      "afterNodeId": "text-105"
+      "afterNodeId": "text-108"
     },
     {
-      "operationId": "insert-surface-108",
+      "operationId": "insert-surface-111",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-109",
+        "nodeId": "row-112",
         "slot": "children"
       },
       "node": {
-        "id": "surface-108",
+        "id": "surface-111",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -2120,17 +2120,17 @@
           }
         ]
       },
-      "afterNodeId": "box-106"
+      "afterNodeId": "box-109"
     },
     {
-      "operationId": "insert-text-107",
+      "operationId": "insert-text-110",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-108",
+        "nodeId": "surface-111",
         "slot": "content"
       },
       "node": {
-        "id": "text-107",
+        "id": "text-110",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2161,7 +2161,7 @@
       "operationId": "insert-inspector",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-136",
+        "nodeId": "row-139",
         "slot": "children"
       },
       "node": {
@@ -2181,17 +2181,17 @@
           }
         ]
       },
-      "afterNodeId": "column-110"
+      "afterNodeId": "column-113"
     },
     {
-      "operationId": "insert-column-122",
+      "operationId": "insert-column-125",
       "type": "insertNode",
       "parent": {
         "nodeId": "inspector",
         "slot": "content"
       },
       "node": {
-        "id": "column-122",
+        "id": "column-125",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -2207,14 +2207,14 @@
       }
     },
     {
-      "operationId": "insert-row-119",
+      "operationId": "insert-row-122",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-122",
+        "nodeId": "column-125",
         "slot": "children"
       },
       "node": {
-        "id": "row-119",
+        "id": "row-122",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -2243,14 +2243,14 @@
       }
     },
     {
-      "operationId": "insert-column-115",
+      "operationId": "insert-column-118",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-119",
+        "nodeId": "row-122",
         "slot": "children"
       },
       "node": {
-        "id": "column-115",
+        "id": "column-118",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -2261,14 +2261,14 @@
       }
     },
     {
-      "operationId": "insert-text-113",
+      "operationId": "insert-text-116",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-115",
+        "nodeId": "column-118",
         "slot": "children"
       },
       "node": {
-        "id": "text-113",
+        "id": "text-116",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2291,14 +2291,14 @@
       }
     },
     {
-      "operationId": "insert-text-114",
+      "operationId": "insert-text-117",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-115",
+        "nodeId": "column-118",
         "slot": "children"
       },
       "node": {
-        "id": "text-114",
+        "id": "text-117",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2315,17 +2315,17 @@
           }
         }
       },
-      "afterNodeId": "text-113"
+      "afterNodeId": "text-116"
     },
     {
-      "operationId": "insert-box-116",
+      "operationId": "insert-box-119",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-119",
+        "nodeId": "row-122",
         "slot": "children"
       },
       "node": {
-        "id": "box-116",
+        "id": "box-119",
         "componentId": "layout/box",
         "modifiers": [
           {
@@ -2335,17 +2335,17 @@
           }
         ]
       },
-      "afterNodeId": "column-115"
+      "afterNodeId": "column-118"
     },
     {
-      "operationId": "insert-icon-button-118",
+      "operationId": "insert-icon-button-121",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-119",
+        "nodeId": "row-122",
         "slot": "children"
       },
       "node": {
-        "id": "icon-button-118",
+        "id": "icon-button-121",
         "componentId": "m3/icon-button",
         "modifiers": [
           {
@@ -2355,17 +2355,17 @@
           }
         ]
       },
-      "afterNodeId": "box-116"
+      "afterNodeId": "box-119"
     },
     {
-      "operationId": "insert-icon-117",
+      "operationId": "insert-icon-120",
       "type": "insertNode",
       "parent": {
-        "nodeId": "icon-button-118",
+        "nodeId": "icon-button-121",
         "slot": "content"
       },
       "node": {
-        "id": "icon-117",
+        "id": "icon-120",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -2384,14 +2384,14 @@
       }
     },
     {
-      "operationId": "insert-horizontal-divider-120",
+      "operationId": "insert-horizontal-divider-123",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-122",
+        "nodeId": "column-125",
         "slot": "children"
       },
       "node": {
-        "id": "horizontal-divider-120",
+        "id": "horizontal-divider-123",
         "componentId": "m3/horizontal-divider",
         "properties": {
           "color": {
@@ -2405,17 +2405,17 @@
           }
         ]
       },
-      "afterNodeId": "row-119"
+      "afterNodeId": "row-122"
     },
     {
-      "operationId": "insert-column-121",
+      "operationId": "insert-column-124",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-122",
+        "nodeId": "column-125",
         "slot": "children"
       },
       "node": {
-        "id": "column-121",
+        "id": "column-124",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -2436,17 +2436,17 @@
           }
         ]
       },
-      "afterNodeId": "horizontal-divider-120"
+      "afterNodeId": "horizontal-divider-123"
     },
     {
-      "operationId": "insert-text-111",
+      "operationId": "insert-text-114",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-121",
+        "nodeId": "column-124",
         "slot": "children"
       },
       "node": {
-        "id": "text-111",
+        "id": "text-114",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2474,14 +2474,14 @@
       }
     },
     {
-      "operationId": "insert-text-112",
+      "operationId": "insert-text-115",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-121",
+        "nodeId": "column-124",
         "slot": "children"
       },
       "node": {
-        "id": "text-112",
+        "id": "text-115",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2498,13 +2498,13 @@
           }
         }
       },
-      "afterNodeId": "text-111"
+      "afterNodeId": "text-114"
     },
     {
       "operationId": "insert-right-rail",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-136",
+        "nodeId": "row-139",
         "slot": "children"
       },
       "node": {
@@ -2527,14 +2527,14 @@
       "afterNodeId": "inspector"
     },
     {
-      "operationId": "insert-column-135",
+      "operationId": "insert-column-138",
       "type": "insertNode",
       "parent": {
         "nodeId": "right-rail",
         "slot": "content"
       },
       "node": {
-        "id": "column-135",
+        "id": "column-138",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -2561,14 +2561,14 @@
       }
     },
     {
-      "operationId": "insert-surface-124",
+      "operationId": "insert-surface-127",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-135",
+        "nodeId": "column-138",
         "slot": "children"
       },
       "node": {
-        "id": "surface-124",
+        "id": "surface-127",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -2590,14 +2590,14 @@
       }
     },
     {
-      "operationId": "insert-icon-123",
+      "operationId": "insert-icon-126",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-124",
+        "nodeId": "surface-127",
         "slot": "content"
       },
       "node": {
-        "id": "icon-123",
+        "id": "icon-126",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -2616,14 +2616,14 @@
       }
     },
     {
-      "operationId": "insert-surface-126",
+      "operationId": "insert-surface-129",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-135",
+        "nodeId": "column-138",
         "slot": "children"
       },
       "node": {
-        "id": "surface-126",
+        "id": "surface-129",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -2643,17 +2643,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-124"
+      "afterNodeId": "surface-127"
     },
     {
-      "operationId": "insert-icon-125",
+      "operationId": "insert-icon-128",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-126",
+        "nodeId": "surface-129",
         "slot": "content"
       },
       "node": {
-        "id": "icon-125",
+        "id": "icon-128",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -2672,14 +2672,14 @@
       }
     },
     {
-      "operationId": "insert-surface-128",
+      "operationId": "insert-surface-131",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-135",
+        "nodeId": "column-138",
         "slot": "children"
       },
       "node": {
-        "id": "surface-128",
+        "id": "surface-131",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -2699,17 +2699,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-126"
+      "afterNodeId": "surface-129"
     },
     {
-      "operationId": "insert-icon-127",
+      "operationId": "insert-icon-130",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-128",
+        "nodeId": "surface-131",
         "slot": "content"
       },
       "node": {
-        "id": "icon-127",
+        "id": "icon-130",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -2728,14 +2728,14 @@
       }
     },
     {
-      "operationId": "insert-surface-130",
+      "operationId": "insert-surface-133",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-135",
+        "nodeId": "column-138",
         "slot": "children"
       },
       "node": {
-        "id": "surface-130",
+        "id": "surface-133",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -2755,17 +2755,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-128"
+      "afterNodeId": "surface-131"
     },
     {
-      "operationId": "insert-icon-129",
+      "operationId": "insert-icon-132",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-130",
+        "nodeId": "surface-133",
         "slot": "content"
       },
       "node": {
-        "id": "icon-129",
+        "id": "icon-132",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -2784,14 +2784,14 @@
       }
     },
     {
-      "operationId": "insert-surface-132",
+      "operationId": "insert-surface-135",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-135",
+        "nodeId": "column-138",
         "slot": "children"
       },
       "node": {
-        "id": "surface-132",
+        "id": "surface-135",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -2811,17 +2811,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-130"
+      "afterNodeId": "surface-133"
     },
     {
-      "operationId": "insert-icon-131",
+      "operationId": "insert-icon-134",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-132",
+        "nodeId": "surface-135",
         "slot": "content"
       },
       "node": {
-        "id": "icon-131",
+        "id": "icon-134",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -2840,14 +2840,14 @@
       }
     },
     {
-      "operationId": "insert-surface-134",
+      "operationId": "insert-surface-137",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-135",
+        "nodeId": "column-138",
         "slot": "children"
       },
       "node": {
-        "id": "surface-134",
+        "id": "surface-137",
         "componentId": "m3/surface",
         "properties": {
           "containerColor": {
@@ -2867,17 +2867,17 @@
           }
         ]
       },
-      "afterNodeId": "surface-132"
+      "afterNodeId": "surface-135"
     },
     {
-      "operationId": "insert-icon-133",
+      "operationId": "insert-icon-136",
       "type": "insertNode",
       "parent": {
-        "nodeId": "surface-134",
+        "nodeId": "surface-137",
         "slot": "content"
       },
       "node": {
-        "id": "icon-133",
+        "id": "icon-136",
         "componentId": "m3/icon",
         "properties": {
           "iconKey": {
@@ -2899,7 +2899,7 @@
       "operationId": "insert-hover-editor",
       "type": "insertNode",
       "parent": {
-        "nodeId": "box-163",
+        "nodeId": "box-166",
         "slot": "children"
       },
       "node": {
@@ -2928,17 +2928,17 @@
           }
         ]
       },
-      "afterNodeId": "column-162"
+      "afterNodeId": "column-165"
     },
     {
-      "operationId": "insert-column-65",
+      "operationId": "insert-column-68",
       "type": "insertNode",
       "parent": {
         "nodeId": "hover-editor",
         "slot": "content"
       },
       "node": {
-        "id": "column-65",
+        "id": "column-68",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -2958,14 +2958,14 @@
       }
     },
     {
-      "operationId": "insert-text-51",
+      "operationId": "insert-text-54",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-65",
+        "nodeId": "column-68",
         "slot": "children"
       },
       "node": {
-        "id": "text-51",
+        "id": "text-54",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -2984,141 +2984,10 @@
       }
     },
     {
-      "operationId": "insert-row-55",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "column-65",
-        "slot": "children"
-      },
-      "node": {
-        "id": "row-55",
-        "componentId": "layout/row",
-        "properties": {
-          "horizontalSpacingDp": {
-            "type": "float",
-            "value": 8
-          },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 3,
-            "endDp": 0,
-            "bottomDp": 3
-          }
-        ]
-      },
-      "afterNodeId": "text-51"
-    },
-    {
-      "operationId": "insert-text-52",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "row-55",
-        "slot": "children"
-      },
-      "node": {
-        "id": "text-52",
-        "componentId": "m3/text",
-        "properties": {
-          "text": {
-            "type": "string",
-            "value": "text"
-          },
-          "style": {
-            "type": "enum",
-            "value": "labelSmall"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "width",
-            "widthDp": 86
-          }
-        ]
-      }
-    },
-    {
-      "operationId": "insert-surface-54",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "row-55",
-        "slot": "children"
-      },
-      "node": {
-        "id": "surface-54",
-        "componentId": "m3/surface",
-        "properties": {
-          "containerColor": {
-            "type": "colorToken",
-            "value": "surfaceContainerHighest"
-          },
-          "shapeDp": {
-            "type": "float",
-            "value": 6
-          }
-        },
-        "modifiers": [
-          {
-            "type": "weight",
-            "weight": 1
-          }
-        ]
-      },
-      "afterNodeId": "text-52"
-    },
-    {
-      "operationId": "insert-text-53",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "surface-54",
-        "slot": "content"
-      },
-      "node": {
-        "id": "text-53",
-        "componentId": "m3/text",
-        "properties": {
-          "text": {
-            "type": "string",
-            "value": "Discover"
-          },
-          "style": {
-            "type": "enum",
-            "value": "bodySmall"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "padding",
-            "startDp": 8,
-            "topDp": 6,
-            "endDp": 8,
-            "bottomDp": 6
-          }
-        ]
-      }
-    },
-    {
       "operationId": "insert-row-58",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-65",
+        "nodeId": "column-68",
         "slot": "children"
       },
       "node": {
@@ -3147,22 +3016,22 @@
           }
         ]
       },
-      "afterNodeId": "row-55"
+      "afterNodeId": "text-54"
     },
     {
-      "operationId": "insert-text-56",
+      "operationId": "insert-text-55",
       "type": "insertNode",
       "parent": {
         "nodeId": "row-58",
         "slot": "children"
       },
       "node": {
-        "id": "text-56",
+        "id": "text-55",
         "componentId": "m3/text",
         "properties": {
           "text": {
             "type": "string",
-            "value": "style"
+            "value": "text"
           },
           "style": {
             "type": "enum",
@@ -3182,19 +3051,48 @@
       }
     },
     {
-      "operationId": "insert-text-57",
+      "operationId": "insert-surface-57",
       "type": "insertNode",
       "parent": {
         "nodeId": "row-58",
         "slot": "children"
       },
       "node": {
-        "id": "text-57",
+        "id": "surface-57",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainerHighest"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 6
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "text-55"
+    },
+    {
+      "operationId": "insert-text-56",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-57",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-56",
         "componentId": "m3/text",
         "properties": {
           "text": {
             "type": "string",
-            "value": "headlineSmall"
+            "value": "Discover"
           },
           "style": {
             "type": "enum",
@@ -3202,26 +3100,25 @@
           },
           "color": {
             "type": "colorToken",
-            "value": "primary"
+            "value": "onSurface"
           }
         },
         "modifiers": [
           {
             "type": "padding",
             "startDp": 8,
-            "topDp": 2,
+            "topDp": 6,
             "endDp": 8,
-            "bottomDp": 2
+            "bottomDp": 6
           }
         ]
-      },
-      "afterNodeId": "text-56"
+      }
     },
     {
       "operationId": "insert-row-61",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-65",
+        "nodeId": "column-68",
         "slot": "children"
       },
       "node": {
@@ -3265,7 +3162,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "fontWeight"
+            "value": "style"
           },
           "style": {
             "type": "enum",
@@ -3297,7 +3194,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "bold"
+            "value": "headlineSmall"
           },
           "style": {
             "type": "enum",
@@ -3324,7 +3221,7 @@
       "operationId": "insert-row-64",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-65",
+        "nodeId": "column-68",
         "slot": "children"
       },
       "node": {
@@ -3368,6 +3265,109 @@
         "properties": {
           "text": {
             "type": "string",
+            "value": "fontWeight"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 86
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-63",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-64",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-63",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "bold"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 8,
+            "topDp": 2,
+            "endDp": 8,
+            "bottomDp": 2
+          }
+        ]
+      },
+      "afterNodeId": "text-62"
+    },
+    {
+      "operationId": "insert-row-67",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-68",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-67",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 8
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 3,
+            "endDp": 0,
+            "bottomDp": 3
+          }
+        ]
+      },
+      "afterNodeId": "row-64"
+    },
+    {
+      "operationId": "insert-text-65",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-67",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-65",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
             "value": "softWrap"
           },
           "style": {
@@ -3388,14 +3388,14 @@
       }
     },
     {
-      "operationId": "insert-switch-63",
+      "operationId": "insert-switch-66",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-64",
+        "nodeId": "row-67",
         "slot": "children"
       },
       "node": {
-        "id": "switch-63",
+        "id": "switch-66",
         "componentId": "m3/switch",
         "properties": {
           "checked": {
@@ -3404,13 +3404,13 @@
           }
         }
       },
-      "afterNodeId": "text-62"
+      "afterNodeId": "text-65"
     },
     {
       "operationId": "insert-selection-menu",
       "type": "insertNode",
       "parent": {
-        "nodeId": "box-163",
+        "nodeId": "box-166",
         "slot": "children"
       },
       "node": {
@@ -4721,7 +4721,7 @@
       "operationId": "insert-overflow-menu",
       "type": "insertNode",
       "parent": {
-        "nodeId": "box-163",
+        "nodeId": "box-166",
         "slot": "children"
       },
       "node": {
@@ -4741,7 +4741,7 @@
           {
             "type": "size",
             "widthDp": 260,
-            "heightDp": 160
+            "heightDp": 208
           },
           {
             "type": "offset",
@@ -4753,14 +4753,14 @@
       "afterNodeId": "selection-menu"
     },
     {
-      "operationId": "insert-column-50",
+      "operationId": "insert-column-53",
       "type": "insertNode",
       "parent": {
         "nodeId": "overflow-menu",
         "slot": "content"
       },
       "node": {
-        "id": "column-50",
+        "id": "column-53",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -4783,7 +4783,7 @@
       "operationId": "insert-row-43",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-50",
+        "nodeId": "column-53",
         "slot": "children"
       },
       "node": {
@@ -4885,7 +4885,7 @@
       "operationId": "insert-row-46",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-50",
+        "nodeId": "column-53",
         "slot": "children"
       },
       "node": {
@@ -4988,7 +4988,7 @@
       "operationId": "insert-row-49",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-50",
+        "nodeId": "column-53",
         "slot": "children"
       },
       "node": {
@@ -5034,7 +5034,7 @@
         "properties": {
           "iconKey": {
             "type": "enum",
-            "value": "info"
+            "value": "image"
           },
           "sizeDp": {
             "type": "float",
@@ -5056,6 +5056,109 @@
       },
       "node": {
         "id": "text-48",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Component packs…"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 0,
+            "endDp": 0,
+            "bottomDp": 0
+          },
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "icon-47"
+    },
+    {
+      "operationId": "insert-row-52",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-53",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-52",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 260,
+            "heightDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 0,
+            "endDp": 12,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "row-49"
+    },
+    {
+      "operationId": "insert-icon-50",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-52",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-50",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "info"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-51",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-52",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-51",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -5085,8 +5188,8 @@
           }
         ]
       },
-      "afterNodeId": "icon-47"
+      "afterNodeId": "icon-50"
     }
   ],
-  "expectedDocumentHash": "d71bfd88eaa6113015881e24975434e98b6ad8e62f2e9c2db89a6c77ca6a52c2"
+  "expectedDocumentHash": "fde86e4cefb2b645470c2e3d16eef13bc5574018103e3fc9154f23a681a433f5"
 }

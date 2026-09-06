@@ -51,14 +51,14 @@
       }
     },
     {
-      "operationId": "insert-box-40",
+      "operationId": "insert-box-43",
       "type": "insertNode",
       "parent": {
         "nodeId": "root",
         "slot": "content"
       },
       "node": {
-        "id": "box-40",
+        "id": "box-43",
         "componentId": "layout/box",
         "modifiers": [
           {
@@ -71,7 +71,7 @@
       "operationId": "insert-new-design-screen-dialog",
       "type": "insertNode",
       "parent": {
-        "nodeId": "box-40",
+        "nodeId": "box-43",
         "slot": "children"
       },
       "node": {
@@ -96,14 +96,14 @@
       }
     },
     {
-      "operationId": "insert-text-39",
+      "operationId": "insert-text-42",
       "type": "insertNode",
       "parent": {
         "nodeId": "new-design-screen-dialog",
         "slot": "title"
       },
       "node": {
-        "id": "text-39",
+        "id": "text-42",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -122,14 +122,14 @@
       }
     },
     {
-      "operationId": "insert-column-30",
+      "operationId": "insert-column-33",
       "type": "insertNode",
       "parent": {
         "nodeId": "new-design-screen-dialog",
         "slot": "text"
       },
       "node": {
-        "id": "column-30",
+        "id": "column-33",
         "componentId": "layout/column",
         "properties": {
           "verticalSpacingDp": {
@@ -143,7 +143,7 @@
       "operationId": "insert-text-1",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
@@ -166,14 +166,14 @@
       }
     },
     {
-      "operationId": "insert-row-6",
+      "operationId": "insert-row-4",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "row-6",
+        "id": "row-4",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -192,7 +192,7 @@
       "operationId": "insert-filter-chip-3",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-6",
+        "nodeId": "row-4",
         "slot": "children"
       },
       "node": {
@@ -233,14 +233,37 @@
       }
     },
     {
-      "operationId": "insert-filter-chip-5",
+      "operationId": "insert-row-9",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-6",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-5",
+        "id": "row-9",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 8
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      },
+      "afterNodeId": "row-4"
+    },
+    {
+      "operationId": "insert-filter-chip-6",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-9",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-6",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -248,18 +271,17 @@
             "value": false
           }
         }
-      },
-      "afterNodeId": "filter-chip-3"
+      }
     },
     {
-      "operationId": "insert-text-4",
+      "operationId": "insert-text-5",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-5",
+        "nodeId": "filter-chip-6",
         "slot": "label"
       },
       "node": {
-        "id": "text-4",
+        "id": "text-5",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -278,14 +300,59 @@
       }
     },
     {
-      "operationId": "insert-text-7",
+      "operationId": "insert-filter-chip-8",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "row-9",
         "slot": "children"
       },
       "node": {
+        "id": "filter-chip-8",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "filter-chip-6"
+    },
+    {
+      "operationId": "insert-text-7",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-8",
+        "slot": "label"
+      },
+      "node": {
         "id": "text-7",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Wear Material 3"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-10",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-33",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-10",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -302,17 +369,17 @@
           }
         }
       },
-      "afterNodeId": "row-6"
+      "afterNodeId": "row-9"
     },
     {
-      "operationId": "insert-row-10",
+      "operationId": "insert-row-13",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "row-10",
+        "id": "row-13",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -325,17 +392,17 @@
           }
         }
       },
-      "afterNodeId": "text-7"
+      "afterNodeId": "text-10"
     },
     {
-      "operationId": "insert-filter-chip-9",
+      "operationId": "insert-filter-chip-12",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-10",
+        "nodeId": "row-13",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-9",
+        "id": "filter-chip-12",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -346,14 +413,14 @@
       }
     },
     {
-      "operationId": "insert-text-8",
+      "operationId": "insert-text-11",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-9",
+        "nodeId": "filter-chip-12",
         "slot": "label"
       },
       "node": {
-        "id": "text-8",
+        "id": "text-11",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -372,14 +439,14 @@
       }
     },
     {
-      "operationId": "insert-text-11",
+      "operationId": "insert-text-14",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "text-11",
+        "id": "text-14",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -396,17 +463,17 @@
           }
         }
       },
-      "afterNodeId": "row-10"
+      "afterNodeId": "row-13"
     },
     {
-      "operationId": "insert-text-12",
+      "operationId": "insert-text-15",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "text-12",
+        "id": "text-15",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -423,13 +490,13 @@
           }
         }
       },
-      "afterNodeId": "text-11"
+      "afterNodeId": "text-14"
     },
     {
       "operationId": "insert-design-id",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
@@ -455,17 +522,17 @@
           }
         ]
       },
-      "afterNodeId": "text-12"
+      "afterNodeId": "text-15"
     },
     {
-      "operationId": "insert-text-13",
+      "operationId": "insert-text-16",
       "type": "insertNode",
       "parent": {
         "nodeId": "design-id",
         "slot": "supportingText"
       },
       "node": {
-        "id": "text-13",
+        "id": "text-16",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -484,14 +551,14 @@
       }
     },
     {
-      "operationId": "insert-button-15",
+      "operationId": "insert-button-18",
       "type": "insertNode",
       "parent": {
         "nodeId": "design-id",
         "slot": "trailingIcon"
       },
       "node": {
-        "id": "button-15",
+        "id": "button-18",
         "componentId": "m3/button",
         "properties": {
           "style": {
@@ -502,14 +569,14 @@
       }
     },
     {
-      "operationId": "insert-text-14",
+      "operationId": "insert-text-17",
       "type": "insertNode",
       "parent": {
-        "nodeId": "button-15",
+        "nodeId": "button-18",
         "slot": "content"
       },
       "node": {
-        "id": "text-14",
+        "id": "text-17",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -528,14 +595,14 @@
       }
     },
     {
-      "operationId": "insert-text-16",
+      "operationId": "insert-text-19",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "text-16",
+        "id": "text-19",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -555,14 +622,14 @@
       "afterNodeId": "design-id"
     },
     {
-      "operationId": "insert-text-17",
+      "operationId": "insert-text-20",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "text-17",
+        "id": "text-20",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -579,17 +646,17 @@
           }
         }
       },
-      "afterNodeId": "text-16"
+      "afterNodeId": "text-19"
     },
     {
-      "operationId": "insert-row-24",
+      "operationId": "insert-row-27",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "row-24",
+        "id": "row-27",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -602,17 +669,17 @@
           }
         }
       },
-      "afterNodeId": "text-17"
+      "afterNodeId": "text-20"
     },
     {
-      "operationId": "insert-filter-chip-19",
+      "operationId": "insert-filter-chip-22",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-24",
+        "nodeId": "row-27",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-19",
+        "id": "filter-chip-22",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -623,14 +690,14 @@
       }
     },
     {
-      "operationId": "insert-text-18",
+      "operationId": "insert-text-21",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-19",
+        "nodeId": "filter-chip-22",
         "slot": "label"
       },
       "node": {
-        "id": "text-18",
+        "id": "text-21",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -649,14 +716,14 @@
       }
     },
     {
-      "operationId": "insert-filter-chip-21",
+      "operationId": "insert-filter-chip-24",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-24",
+        "nodeId": "row-27",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-21",
+        "id": "filter-chip-24",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -665,17 +732,17 @@
           }
         }
       },
-      "afterNodeId": "filter-chip-19"
+      "afterNodeId": "filter-chip-22"
     },
     {
-      "operationId": "insert-text-20",
+      "operationId": "insert-text-23",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-21",
+        "nodeId": "filter-chip-24",
         "slot": "label"
       },
       "node": {
-        "id": "text-20",
+        "id": "text-23",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -694,14 +761,14 @@
       }
     },
     {
-      "operationId": "insert-filter-chip-23",
+      "operationId": "insert-filter-chip-26",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-24",
+        "nodeId": "row-27",
         "slot": "children"
       },
       "node": {
-        "id": "filter-chip-23",
+        "id": "filter-chip-26",
         "componentId": "m3/filter-chip",
         "properties": {
           "selected": {
@@ -710,17 +777,17 @@
           }
         }
       },
-      "afterNodeId": "filter-chip-21"
+      "afterNodeId": "filter-chip-24"
     },
     {
-      "operationId": "insert-text-22",
+      "operationId": "insert-text-25",
       "type": "insertNode",
       "parent": {
-        "nodeId": "filter-chip-23",
+        "nodeId": "filter-chip-26",
         "slot": "label"
       },
       "node": {
-        "id": "text-22",
+        "id": "text-25",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -739,14 +806,14 @@
       }
     },
     {
-      "operationId": "insert-row-29",
+      "operationId": "insert-row-32",
       "type": "insertNode",
       "parent": {
-        "nodeId": "column-30",
+        "nodeId": "column-33",
         "slot": "children"
       },
       "node": {
-        "id": "row-29",
+        "id": "row-32",
         "componentId": "layout/row",
         "properties": {
           "horizontalSpacingDp": {
@@ -759,17 +826,17 @@
           }
         }
       },
-      "afterNodeId": "row-24"
+      "afterNodeId": "row-27"
     },
     {
-      "operationId": "insert-text-field-25",
+      "operationId": "insert-text-field-28",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-29",
+        "nodeId": "row-32",
         "slot": "children"
       },
       "node": {
-        "id": "text-field-25",
+        "id": "text-field-28",
         "componentId": "m3/text-field",
         "properties": {
           "variant": {
@@ -795,14 +862,14 @@
       }
     },
     {
-      "operationId": "insert-text-field-26",
+      "operationId": "insert-text-field-29",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-29",
+        "nodeId": "row-32",
         "slot": "children"
       },
       "node": {
-        "id": "text-field-26",
+        "id": "text-field-29",
         "componentId": "m3/text-field",
         "properties": {
           "variant": {
@@ -826,17 +893,17 @@
           }
         ]
       },
-      "afterNodeId": "text-field-25"
+      "afterNodeId": "text-field-28"
     },
     {
-      "operationId": "insert-button-28",
+      "operationId": "insert-button-31",
       "type": "insertNode",
       "parent": {
-        "nodeId": "row-29",
+        "nodeId": "row-32",
         "slot": "children"
       },
       "node": {
-        "id": "button-28",
+        "id": "button-31",
         "componentId": "m3/button",
         "properties": {
           "style": {
@@ -849,17 +916,17 @@
           }
         }
       },
-      "afterNodeId": "text-field-26"
+      "afterNodeId": "text-field-29"
     },
     {
-      "operationId": "insert-text-27",
+      "operationId": "insert-text-30",
       "type": "insertNode",
       "parent": {
-        "nodeId": "button-28",
+        "nodeId": "button-31",
         "slot": "content"
       },
       "node": {
-        "id": "text-27",
+        "id": "text-30",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -878,14 +945,14 @@
       }
     },
     {
-      "operationId": "insert-button-38",
+      "operationId": "insert-button-41",
       "type": "insertNode",
       "parent": {
         "nodeId": "new-design-screen-dialog",
         "slot": "confirmButton"
       },
       "node": {
-        "id": "button-38",
+        "id": "button-41",
         "componentId": "m3/button",
         "properties": {
           "style": {
@@ -896,14 +963,14 @@
       }
     },
     {
-      "operationId": "insert-text-37",
+      "operationId": "insert-text-40",
       "type": "insertNode",
       "parent": {
-        "nodeId": "button-38",
+        "nodeId": "button-41",
         "slot": "content"
       },
       "node": {
-        "id": "text-37",
+        "id": "text-40",
         "componentId": "m3/text",
         "properties": {
           "text": {
@@ -922,5 +989,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "2b47a74f2d50c4a005ced9608a47b3baedb597441afd7c60f0cd47c7938e5a7d"
+  "expectedDocumentHash": "8b905cc04c810f62cdb3f5763d5a470a36e6dea733084a36ad82ac4b42b72b21"
 }

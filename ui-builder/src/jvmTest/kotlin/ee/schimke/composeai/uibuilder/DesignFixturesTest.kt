@@ -4,12 +4,16 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import java.io.File
 import java.security.MessageDigest
+import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.float
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -82,20 +86,47 @@ class DesignFixturesTest {
   }
 
   @Test
-  fun `each fixture has a preview that draws it`() {
-    val previews =
-      File(
-          System.getProperty("uiBuilderProjectDir") ?: ".",
-          "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/DesignFixturePreviews.kt",
-        )
-        .readText()
+  fun `each fixture has a preview that draws it, framed at its own environment`() {
+    val previews = previewSource()
     fixtures.forEach { file ->
-      assertTrue(
-        "DesignFixture(\"${file.nameWithoutExtension}\")" in previews,
-        "${file.name} has no @Preview in DesignFixturePreviews.kt",
+      val call = "DesignFixture(\"${file.nameWithoutExtension}\")"
+      assertTrue(call in previews, "${file.name} has no @Preview in DesignFixturePreviews.kt")
+
+      // The device spec immediately above the call, which is where the frame is declared.
+      val spec =
+        Regex(
+            "@Preview\\(device = \"([^\"]+)\"\\)\\s*\\n@Composable\\s*\\nfun \\w+\\(\\) = ${Regex.escape(call)}"
+          )
+          .find(previews)
+          ?.groupValues
+          ?.get(1)
+      assertNotNull(spec, "${file.name}'s preview does not declare a device spec")
+
+      val environment =
+        UiBuilderReducer.replay(file.fixture()).document.environment.let { env ->
+          Triple(
+            env.getValue("widthDp").jsonPrimitive.int,
+            env.getValue("heightDp").jsonPrimitive.int,
+            env.getValue("density").jsonPrimitive.float,
+          )
+        }
+      val (widthDp, heightDp, density) = environment
+      assertEquals(
+        "spec:width=${widthDp}dp,height=${heightDp}dp,dpi=${(density * 160).roundToInt()}",
+        spec,
+        "${file.name}'s preview frame does not match the environment the design pins. " +
+          "`UiBuilderRenderer` composes at the document's own density, so a frame at a different " +
+          "one captures the design in a corner of the image",
       )
     }
   }
+
+  private fun previewSource(): String =
+    File(
+        System.getProperty("uiBuilderProjectDir") ?: ".",
+        "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/DesignFixturePreviews.kt",
+      )
+      .readText()
 
   private fun File.fixture(): JsonObject = Json.parseToJsonElement(readText()).jsonObject
 
