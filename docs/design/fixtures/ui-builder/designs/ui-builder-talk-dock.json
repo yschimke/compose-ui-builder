@@ -1,0 +1,4973 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "ui-builder-talk-dock",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "UI builder — Talk dock with comment pins",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 1600,
+        "heightDp": 900,
+        "density": 1,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-root",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "root",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "background"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-column-301",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-301",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-topbar",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-301",
+        "slot": "children"
+      },
+      "node": {
+        "id": "topbar",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 1600,
+            "heightDp": 60
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-299",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "topbar",
+        "slot": "content"
+      },
+      "node": {
+        "id": "row-299",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 2
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 14,
+            "topDp": 0,
+            "endDp": 14,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-surface-289",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-289",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "primary"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 8
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 28,
+            "heightDp": 28
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-icon-288",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-289",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-288",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "genres"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 16
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onPrimary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-column-292",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-292",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 0,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "surface-289"
+    },
+    {
+      "operationId": "insert-text-290",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-292",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-290",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Jetcaster Discover"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-291",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-292",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-291",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Compose UI Builder · m3-catalog"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "text-290"
+    },
+    {
+      "operationId": "insert-icon-button-294",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-294",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "column-292"
+    },
+    {
+      "operationId": "insert-icon-293",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-294",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-293",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "arrowBack"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-icon-button-296",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-296",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "icon-button-294"
+    },
+    {
+      "operationId": "insert-icon-295",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-296",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-295",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "arrowForward"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-box-297",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "box-297",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 1,
+            "heightDp": 1
+          }
+        ]
+      },
+      "afterNodeId": "icon-button-296"
+    },
+    {
+      "operationId": "insert-row-279",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-279",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      },
+      "afterNodeId": "box-297"
+    },
+    {
+      "operationId": "insert-filter-chip-276",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-279",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-276",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-275",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-276",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-275",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Design"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-filter-chip-278",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-279",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-278",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "filter-chip-276"
+    },
+    {
+      "operationId": "insert-text-277",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-278",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-277",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Preview"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-box-298",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "box-298",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 1,
+            "heightDp": 1
+          }
+        ]
+      },
+      "afterNodeId": "row-279"
+    },
+    {
+      "operationId": "insert-surface-281",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-281",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "transparent"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 20
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "box-298"
+    },
+    {
+      "operationId": "insert-icon-280",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-281",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-280",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "edit"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-283",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-283",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "primary"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 14
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 28,
+            "heightDp": 28
+          }
+        ]
+      },
+      "afterNodeId": "surface-281"
+    },
+    {
+      "operationId": "insert-text-282",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-283",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-282",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Y"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onPrimary"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 9,
+            "topDp": 5,
+            "endDp": 9,
+            "bottomDp": 5
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-icon-button-285",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-285",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "surface-283"
+    },
+    {
+      "operationId": "insert-icon-284",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-285",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-284",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "playlistAdd"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-icon-button-287",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-299",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-287",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "icon-button-285"
+    },
+    {
+      "operationId": "insert-icon-286",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-287",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-286",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "moreVert"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-row-300",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-301",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-300",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 1600,
+            "heightDp": 840
+          }
+        ]
+      },
+      "afterNodeId": "topbar"
+    },
+    {
+      "operationId": "insert-left-rail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-300",
+        "slot": "children"
+      },
+      "node": {
+        "id": "left-rail",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 52,
+            "heightDp": 840
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-column-207",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "left-rail",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-207",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 6,
+            "topDp": 8,
+            "endDp": 6,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-surface-204",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-207",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-204",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-icon-203",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-204",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-203",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "image"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-206",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-207",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-206",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "surface-204"
+    },
+    {
+      "operationId": "insert-icon-205",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-206",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-205",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "menu"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-column-251",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-300",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-251",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 896,
+            "heightDp": 840
+          }
+        ]
+      },
+      "afterNodeId": "left-rail"
+    },
+    {
+      "operationId": "insert-selection-bar",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-251",
+        "slot": "children"
+      },
+      "node": {
+        "id": "selection-bar",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surface"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 896,
+            "heightDp": 48
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-217",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "selection-bar",
+        "slot": "content"
+      },
+      "node": {
+        "id": "row-217",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 2
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 18,
+            "topDp": 0,
+            "endDp": 10,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-212",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-217",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-212",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Discover · m3/text"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-button-214",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-217",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-214",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "text-212"
+    },
+    {
+      "operationId": "insert-text-213",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-214",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-213",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Properties"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-icon-button-216",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-217",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-216",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "button-214"
+    },
+    {
+      "operationId": "insert-icon-215",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-216",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-215",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "moreVert"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-canvas",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-251",
+        "slot": "children"
+      },
+      "node": {
+        "id": "canvas",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "#FF0D0E11"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 896,
+            "heightDp": 762
+          }
+        ]
+      },
+      "afterNodeId": "selection-bar"
+    },
+    {
+      "operationId": "insert-box-244",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "canvas",
+        "slot": "content"
+      },
+      "node": {
+        "id": "box-244",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 12,
+            "endDp": 12,
+            "bottomDp": 12
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-artboard",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "box-244",
+        "slot": "children"
+      },
+      "node": {
+        "id": "artboard",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surface"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 360,
+            "heightDp": 640
+          },
+          {
+            "type": "align",
+            "alignment": "center"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-column-234",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "artboard",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-234",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 14
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 20,
+            "topDp": 24,
+            "endDp": 20,
+            "bottomDp": 24
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-218",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-234",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-218",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Discover"
+          },
+          "style": {
+            "type": "enum",
+            "value": "headlineSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-222",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-234",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-222",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainerHigh"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 20
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 320,
+            "heightDp": 44
+          }
+        ]
+      },
+      "afterNodeId": "text-218"
+    },
+    {
+      "operationId": "insert-row-221",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-222",
+        "slot": "content"
+      },
+      "node": {
+        "id": "row-221",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 0,
+            "endDp": 12,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-icon-219",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-221",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-219",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "search"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 18
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-220",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-221",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-220",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Search for a podcast"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "icon-219"
+    },
+    {
+      "operationId": "insert-row-229",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-234",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-229",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 8
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      },
+      "afterNodeId": "surface-222"
+    },
+    {
+      "operationId": "insert-filter-chip-224",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-229",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-224",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-223",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-224",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-223",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Crime"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-filter-chip-226",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-229",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-226",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "filter-chip-224"
+    },
+    {
+      "operationId": "insert-text-225",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-226",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-225",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Tech"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-filter-chip-228",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-229",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-228",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "filter-chip-226"
+    },
+    {
+      "operationId": "insert-text-227",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-228",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-227",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "News"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-231",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-234",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-231",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainerHigh"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 320,
+            "heightDp": 120
+          }
+        ]
+      },
+      "afterNodeId": "row-229"
+    },
+    {
+      "operationId": "insert-text-230",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-231",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-230",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Podcast of the week"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 16,
+            "endDp": 16,
+            "bottomDp": 16
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-surface-233",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-234",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-233",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainerHigh"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 320,
+            "heightDp": 120
+          }
+        ]
+      },
+      "afterNodeId": "surface-231"
+    },
+    {
+      "operationId": "insert-text-232",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-233",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-232",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Latest episodes"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 16,
+            "endDp": 16,
+            "bottomDp": 16
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-surface-243",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "box-244",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-243",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainerHigh"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 20
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 220,
+            "heightDp": 44
+          },
+          {
+            "type": "align",
+            "alignment": "bottomEnd"
+          }
+        ]
+      },
+      "afterNodeId": "artboard"
+    },
+    {
+      "operationId": "insert-row-242",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-243",
+        "slot": "content"
+      },
+      "node": {
+        "id": "row-242",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 2
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 4,
+            "topDp": 0,
+            "endDp": 4,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-icon-button-236",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-242",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-236",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-icon-235",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-236",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-235",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "remove"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 18
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-237",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-242",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-237",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Fit · 62%"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 8,
+            "topDp": 0,
+            "endDp": 8,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "icon-button-236"
+    },
+    {
+      "operationId": "insert-icon-button-239",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-242",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-239",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "text-237"
+    },
+    {
+      "operationId": "insert-icon-238",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-239",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-238",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "add"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 18
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-241",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-242",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-241",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "primary"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "icon-button-239"
+    },
+    {
+      "operationId": "insert-icon-240",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-241",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-240",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "phone"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 18
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onPrimary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-209",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "box-244",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-209",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "primary"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 11
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 22,
+            "heightDp": 22
+          },
+          {
+            "type": "offset",
+            "xDp": 660,
+            "yDp": 130
+          }
+        ]
+      },
+      "afterNodeId": "surface-243"
+    },
+    {
+      "operationId": "insert-text-208",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-209",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-208",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "1"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onPrimary"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 7,
+            "topDp": 3,
+            "endDp": 7,
+            "bottomDp": 3
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-surface-211",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "box-244",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-211",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "primary"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 11
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 22,
+            "heightDp": 22
+          },
+          {
+            "type": "offset",
+            "xDp": 930,
+            "yDp": 300
+          }
+        ]
+      },
+      "afterNodeId": "surface-209"
+    },
+    {
+      "operationId": "insert-text-210",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-211",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-210",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "2"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onPrimary"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 7,
+            "topDp": 3,
+            "endDp": 7,
+            "bottomDp": 3
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-status-bar",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-251",
+        "slot": "children"
+      },
+      "node": {
+        "id": "status-bar",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 896,
+            "heightDp": 30
+          }
+        ]
+      },
+      "afterNodeId": "canvas"
+    },
+    {
+      "operationId": "insert-row-250",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "status-bar",
+        "slot": "content"
+      },
+      "node": {
+        "id": "row-250",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 0,
+            "endDp": 16,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-245",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-250",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-245",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Revision 12"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-246",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-250",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-246",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "18 nodes"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "text-245"
+    },
+    {
+      "operationId": "insert-box-247",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-250",
+        "slot": "children"
+      },
+      "node": {
+        "id": "box-247",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 1,
+            "heightDp": 1
+          }
+        ]
+      },
+      "afterNodeId": "text-246"
+    },
+    {
+      "operationId": "insert-surface-249",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-250",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-249",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "#FF214C37"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 10
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 100,
+            "heightDp": 20
+          }
+        ]
+      },
+      "afterNodeId": "box-247"
+    },
+    {
+      "operationId": "insert-text-248",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-249",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-248",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Live session"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "#FFA8F2C6"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 3,
+            "endDp": 10,
+            "bottomDp": 3
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-inspector",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-300",
+        "slot": "children"
+      },
+      "node": {
+        "id": "inspector",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surface"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 320,
+            "heightDp": 840
+          }
+        ]
+      },
+      "afterNodeId": "column-251"
+    },
+    {
+      "operationId": "insert-column-261",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "inspector",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-261",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-258",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-261",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-258",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 320,
+            "heightDp": 44
+          },
+          {
+            "type": "padding",
+            "startDp": 14,
+            "topDp": 0,
+            "endDp": 6,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-column-254",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-258",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-254",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-252",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-254",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-252",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Talk · 2"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-253",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-254",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-253",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "What people and agents have said"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "text-252"
+    },
+    {
+      "operationId": "insert-box-255",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-258",
+        "slot": "children"
+      },
+      "node": {
+        "id": "box-255",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 60,
+            "heightDp": 1
+          }
+        ]
+      },
+      "afterNodeId": "column-254"
+    },
+    {
+      "operationId": "insert-icon-button-257",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-258",
+        "slot": "children"
+      },
+      "node": {
+        "id": "icon-button-257",
+        "componentId": "m3/icon-button",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "box-255"
+    },
+    {
+      "operationId": "insert-icon-256",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "icon-button-257",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-256",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "close"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-horizontal-divider-259",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-261",
+        "slot": "children"
+      },
+      "node": {
+        "id": "horizontal-divider-259",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "row-258"
+    },
+    {
+      "operationId": "insert-column-260",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-261",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-260",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 12,
+            "endDp": 16,
+            "bottomDp": 12
+          }
+        ]
+      },
+      "afterNodeId": "horizontal-divider-259"
+    },
+    {
+      "operationId": "insert-text-130",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-130",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Kept beside the design and never part of it: no node holds a comment and no export sees one. Everybody watching sees a reply the moment it lands."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-horizontal-divider-131",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "horizontal-divider-131",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 10,
+            "endDp": 0,
+            "bottomDp": 10
+          },
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "text-130"
+    },
+    {
+      "operationId": "insert-text-132",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-132",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Pin the next thread to"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "horizontal-divider-131"
+    },
+    {
+      "operationId": "insert-row-139",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-139",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "text-132"
+    },
+    {
+      "operationId": "insert-filter-chip-134",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-139",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-134",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-133",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-134",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-133",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "This design"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-filter-chip-136",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-139",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-136",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "filter-chip-134"
+    },
+    {
+      "operationId": "insert-text-135",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-136",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-135",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Discover"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-filter-chip-138",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-139",
+        "slot": "children"
+      },
+      "node": {
+        "id": "filter-chip-138",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "filter-chip-136"
+    },
+    {
+      "operationId": "insert-text-137",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "filter-chip-138",
+        "slot": "label"
+      },
+      "node": {
+        "id": "text-137",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Last box"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-column-142",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-142",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 3
+          }
+        }
+      },
+      "afterNodeId": "row-139"
+    },
+    {
+      "operationId": "insert-surface-141",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-142",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-141",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "transparent"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 8
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 288,
+            "heightDp": 40
+          },
+          {
+            "type": "border",
+            "widthDp": 1,
+            "color": {
+              "type": "colorToken",
+              "value": "outlineVariant"
+            },
+            "shape": "8"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-140",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-141",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-140",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Start a thread…"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 8,
+            "endDp": 10,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-147",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-147",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 6,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "column-142"
+    },
+    {
+      "operationId": "insert-button-144",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-147",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-144",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "enabled": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-143",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-144",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-143",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Post"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-button-146",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-147",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-146",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "button-144"
+    },
+    {
+      "operationId": "insert-text-145",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-146",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-145",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Show resolved (1)"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-horizontal-divider-148",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "horizontal-divider-148",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 10,
+            "endDp": 0,
+            "bottomDp": 10
+          },
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "row-147"
+    },
+    {
+      "operationId": "insert-surface-173",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-173",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "transparent"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 10
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 8,
+            "endDp": 0,
+            "bottomDp": 0
+          },
+          {
+            "type": "border",
+            "widthDp": 1,
+            "color": {
+              "type": "colorToken",
+              "value": "outlineVariant"
+            }
+          }
+        ]
+      },
+      "afterNodeId": "horizontal-divider-148"
+    },
+    {
+      "operationId": "insert-column-172",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-173",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-172",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 10,
+            "endDp": 10,
+            "bottomDp": 10
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-150",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-172",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-150",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-149",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-150",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-149",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Discover"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-column-160",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-172",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-160",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 6,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "row-150"
+    },
+    {
+      "operationId": "insert-row-152",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-160",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-152",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-151",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-152",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-151",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "yuri"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-159",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-160",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-159",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Move the category chips under the search bar, they read as filters for it."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      },
+      "afterNodeId": "row-152"
+    },
+    {
+      "operationId": "insert-column-165",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-172",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-165",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 6,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "column-160"
+    },
+    {
+      "operationId": "insert-row-163",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-165",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-163",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-161",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-163",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-161",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Claude"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-162",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-163",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-162",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": " · agent"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      },
+      "afterNodeId": "text-161"
+    },
+    {
+      "operationId": "insert-text-164",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-165",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-164",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Done: the chip row now sits inside the column, revision 12."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      },
+      "afterNodeId": "row-163"
+    },
+    {
+      "operationId": "insert-row-158",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-172",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-158",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "column-165"
+    },
+    {
+      "operationId": "insert-text-153",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-158",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-153",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": " "
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-button-155",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-158",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-155",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "text-153"
+    },
+    {
+      "operationId": "insert-text-154",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-155",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-154",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Collapse"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-button-157",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-158",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-157",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "button-155"
+    },
+    {
+      "operationId": "insert-text-156",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-157",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-156",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Resolve"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-column-168",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-172",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-168",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 3
+          }
+        }
+      },
+      "afterNodeId": "row-158"
+    },
+    {
+      "operationId": "insert-surface-167",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-168",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-167",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "transparent"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 8
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 266,
+            "heightDp": 36
+          },
+          {
+            "type": "border",
+            "widthDp": 1,
+            "color": {
+              "type": "colorToken",
+              "value": "outlineVariant"
+            },
+            "shape": "8"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-166",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-167",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-166",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Reply…"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 8,
+            "endDp": 10,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-171",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-172",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-171",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 6,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "column-168"
+    },
+    {
+      "operationId": "insert-button-170",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-171",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-170",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "enabled": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-169",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-170",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-169",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Reply"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-187",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-187",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "transparent"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 10
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 8,
+            "endDp": 0,
+            "bottomDp": 0
+          },
+          {
+            "type": "border",
+            "widthDp": 1,
+            "color": {
+              "type": "colorToken",
+              "value": "outlineVariant"
+            }
+          }
+        ]
+      },
+      "afterNodeId": "surface-173"
+    },
+    {
+      "operationId": "insert-column-186",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-187",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-186",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 10,
+            "endDp": 10,
+            "bottomDp": 10
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-175",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-186",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-175",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-174",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-175",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-174",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "The box"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-column-185",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-186",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-185",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 6,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "row-175"
+    },
+    {
+      "operationId": "insert-row-177",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-185",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-177",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-176",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-177",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-176",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "kate"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-184",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-185",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-184",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "This card is 8dp taller than the Figma frame."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      },
+      "afterNodeId": "row-177"
+    },
+    {
+      "operationId": "insert-row-183",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-186",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-183",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "column-185"
+    },
+    {
+      "operationId": "insert-text-178",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-183",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-178",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": " "
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-button-180",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-183",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-180",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "text-178"
+    },
+    {
+      "operationId": "insert-text-179",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-180",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-179",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Open"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-button-182",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-183",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-182",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "button-180"
+    },
+    {
+      "operationId": "insert-text-181",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-182",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-181",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Resolve"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-202",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-260",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-202",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "transparent"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 10
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 8,
+            "endDp": 0,
+            "bottomDp": 0
+          },
+          {
+            "type": "border",
+            "widthDp": 1,
+            "color": {
+              "type": "colorToken",
+              "value": "outlineVariant"
+            }
+          }
+        ]
+      },
+      "afterNodeId": "surface-187"
+    },
+    {
+      "operationId": "insert-column-201",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-202",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-201",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 10,
+            "endDp": 10,
+            "bottomDp": 10
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-row-189",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-201",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-189",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-text-188",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-189",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-188",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "This design"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-column-200",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-201",
+        "slot": "children"
+      },
+      "node": {
+        "id": "column-200",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 6,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "row-189"
+    },
+    {
+      "operationId": "insert-row-192",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-200",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-192",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-190",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-192",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-190",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Claude"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "bold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-text-191",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-192",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-191",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": " · agent"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      },
+      "afterNodeId": "text-190"
+    },
+    {
+      "operationId": "insert-text-199",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-200",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-199",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Exported at revision 9; the grid refuses adaptive columns below 240dp."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      },
+      "afterNodeId": "row-192"
+    },
+    {
+      "operationId": "insert-row-198",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-201",
+        "slot": "children"
+      },
+      "node": {
+        "id": "row-198",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "column-200"
+    },
+    {
+      "operationId": "insert-text-193",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-198",
+        "slot": "children"
+      },
+      "node": {
+        "id": "text-193",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": " "
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-button-195",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-198",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-195",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "text-193"
+    },
+    {
+      "operationId": "insert-text-194",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-195",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-194",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Open"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-button-197",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-198",
+        "slot": "children"
+      },
+      "node": {
+        "id": "button-197",
+        "componentId": "m3/button",
+        "properties": {
+          "style": {
+            "type": "enum",
+            "value": "text"
+          }
+        }
+      },
+      "afterNodeId": "button-195"
+    },
+    {
+      "operationId": "insert-text-196",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "button-197",
+        "slot": "content"
+      },
+      "node": {
+        "id": "text-196",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Resolve"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-right-rail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "row-300",
+        "slot": "children"
+      },
+      "node": {
+        "id": "right-rail",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 52,
+            "heightDp": 840
+          }
+        ]
+      },
+      "afterNodeId": "inspector"
+    },
+    {
+      "operationId": "insert-column-274",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "right-rail",
+        "slot": "content"
+      },
+      "node": {
+        "id": "column-274",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 6,
+            "topDp": 8,
+            "endDp": 6,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-surface-263",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-274",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-263",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-icon-262",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-263",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-262",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "settings"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-265",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-274",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-265",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "surface-263"
+    },
+    {
+      "operationId": "insert-icon-264",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-265",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-264",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "favorite"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-267",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-274",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-267",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "surface-265"
+    },
+    {
+      "operationId": "insert-icon-266",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-267",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-266",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "phone"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-269",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-274",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-269",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "surface-267"
+    },
+    {
+      "operationId": "insert-icon-268",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-269",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-268",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "warning"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-271",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-274",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-271",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "primary"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "surface-269"
+    },
+    {
+      "operationId": "insert-icon-270",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-271",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-270",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "email"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onPrimary"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-surface-273",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "column-274",
+        "slot": "children"
+      },
+      "node": {
+        "id": "surface-273",
+        "componentId": "m3/surface",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
+          },
+          "shapeDp": {
+            "type": "float",
+            "value": 12
+          }
+        },
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 40,
+            "heightDp": 40
+          }
+        ]
+      },
+      "afterNodeId": "surface-271"
+    },
+    {
+      "operationId": "insert-icon-272",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "surface-273",
+        "slot": "content"
+      },
+      "node": {
+        "id": "icon-272",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "edit"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 20
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    }
+  ],
+  "expectedDocumentHash": "c45ca2be7252874ae9e40503abee128f4bd55e61fe55e022d9a7df3230dab175"
+}

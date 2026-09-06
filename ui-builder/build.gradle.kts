@@ -156,6 +156,13 @@ val collaborationSoakMinutes = providers.gradleProperty("uiBuilderCollaborationS
 
 tasks.named<Test>("jvmTest") {
   collaborationSoakMinutes.orNull?.let { systemProperty("uiBuilderCollaborationSoakMinutes", it) }
+  // `DesignFixturesTest` reads the committed designs from disk, not from a hand-kept list, so a
+  // file cannot join the directory without being replayed, validated and exported.
+  systemProperty(
+    "uiBuilderDesignFixturesDir",
+    rootProject.file("docs/design/fixtures/ui-builder/designs").absolutePath,
+  )
+  systemProperty("uiBuilderProjectDir", projectDir.absolutePath)
 }
 
 tasks.register<JavaExec>("generateJetcasterComposeFixture") {

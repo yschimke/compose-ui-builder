@@ -571,6 +571,24 @@ Existing `size`, `fillMaxWidth`, and `padding` modifiers render and export. Thei
 the inspector, but modifier parameter editing is read-only until the released Design API has an
 authoritative modifier mutation; the builder does not invent a browser-only operation.
 
+## Keep a design in the repository
+
+A live design lives in the server's own state directory and nowhere else. To version one, put it in
+the repository as an operations fixture under
+[`docs/design/fixtures/ui-builder/designs/`](design/fixtures/ui-builder/designs/README.md):
+
+```shell
+COMPOSE_PREVIEW_UI_BUILDER_TOKEN=… node scripts/ui-builder/design-sync.mjs export my-widget \
+  --server https://preview.coo.ee --out docs/design/fixtures/ui-builder/designs/my-widget.json
+```
+
+From there the build owns it. `DesignFixturesTest` replays the file, checks its hash, validates
+every node against the catalog it pins and requires the Compose export to accept it; a `@Preview`
+in `DesignFixturePreviews.kt` renders it through `composePreviewRender`, so the visual-diff bot
+reports when a catalog change moves its pixels. `import` opens a committed file as a fresh live
+design again. The builder's own screens are kept this way, which is how the builder is designed
+with the builder.
+
 ## Connect an MCP agent
 
 The builder is reachable over the server's own `/mcp` endpoint — the same one the catalog tools use,
