@@ -144,7 +144,7 @@ that existed first. The other is the **vocabulary switch**.
 | What the node holds | a wire document somebody else published | a subtree this design authors |
 | Where the bytes come from | `documentBase64`, or `documentUrl` resolved by the host | a capture of the generated `@RemoteComposable` body |
 | Who wrote the content | the serving catalog, or whoever published the URL | the person in this editor |
-| What the canvas draws | the real player, on the real bytes | Compose stand-ins in a marked frame |
+| What the canvas draws | the real player, on the real bytes | Compose stand-ins in a marked frame, or [the real player once the subtree is captured](#playing-inline-content) |
 | What the generator writes | nothing — it is data | the body, through `InlineRemoteContentExporter` |
 
 Both are offered by `m3-catalog`, `wear-m3` and — for the document, and for the custom component
@@ -262,6 +262,10 @@ correct here, and would stay correct if the default moved, because the capture a
 it from the same place. Expressions become the question only where one document has to serve hosts
 that disagree, which is a capture this repository does not perform.
 
+That is also the lane a **design's** inline content is captured through — see
+[Playing inline content](#playing-inline-content) below — so it inherits the single-target case
+rather than opening a second one.
+
 The custom component used to be the one node no generator could write, and it is not any more —
 which is why this section no longer names a single refusal.
 `remote-creation-compose` 1.0.0-alpha18 publishes
@@ -277,6 +281,83 @@ is still refused, because a hole nothing can be registered against is not a comp
 with `@file:Suppress("RestrictedApi")`, so the call compiles and lints clean; what the annotation
 costs is a promise — a restricted API can change shape between alphas, and this call site is one of
 the places a `remote-creation-compose` bump has to be read against.
+
+### Playing inline content
+
+The canvas draws an inline subtree with Compose stand-ins in a marked frame, and that is a strictly
+weaker guarantee than the `remote-compose/document` beside it, which `RcComposePlayer` plays on real
+bytes. Two nodes in one design, one authoritative and one an approximation, is the gap
+[`ServeUiBuilderInlineCapture`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderInlineCapture.kt)
+closes — by getting bytes, rather than by drawing better.
+
+`POST /api/ui-builder/v1/designs/{designId}/remote-content/{nodeId}/capture` joins four things that
+already existed and adds no fifth: `InlineRemoteContentExporter` writes the body, the playground's
+`remote-compose` mode compiles it and runs `captureSingleRemoteDocument` on the Robolectric daemon,
+the captured `.rc` is published as a `/d/<id>` permalink, and that URL is the shape the editor's own
+resolver already fetches and plays. Gated on `ui-builder-export` like the native render, and for the
+same reason: it compiles and runs the Kotlin an export hands back.
+
+Two details are load-bearing and neither is obvious:
+
+- **The capture compiles against the *host's* catalog, not the design's.** An inline body is written
+  in `RemoteColumn`, `RemoteText` and `RemoteCustomComponent`, which come from
+  `remote-creation-compose` rather than from whichever Material catalog the screen around it is
+  pinned to. So the target is the first served catalog this box offers `remote-compose` on — a
+  property of the deployment. A host with none refuses by naming itself, exactly as
+  `NO_NATIVE_CATALOG` does.
+- **The generated entry wraps the body in `RemoteOverridablePreview` rather than annotating it.**
+  `@PreviewWrapper` is `AnnotationRetention.BINARY`, so the only path that recovers a wrapper FQN is
+  `previews.json`'s `params.wrapperClassName`, which the Gradle plugin fills at discovery time; a
+  playground snippet's manifest is synthesised from discovered ids and carries no params. An
+  annotation would compile and then be silently ignored — a capture that returns no document for a
+  reason nothing reports.
+
+On the canvas, `LocalRemoteComposeCaptures` answers with a captured document *or nothing*, keyed by
+node id. Nothing is the common answer and the honest one: it is what every node says before anyone
+has asked for a capture and what a host with no capture lane always says, and the node then draws
+its stand-ins exactly as before. Where there is a document, `RcComposePlayer` draws it, the frame
+stays as the boundary marker and stops standing in for the content, and the design's own
+`remote-compose/custom` nodes register their `content` slots by `name` — so what fills the hole is
+the same Compose an application would register on a watch. `UI_BUILDER_WEAR_SCREEN.md`'s *never fake
+a component* rule is then satisfied by drawing rather than by a note.
+
+| Described: nothing captured | Played: the captured document |
+| --- | --- |
+| ![Inline content drawn with Compose stand-ins in a marked frame](evidence/ui-builder-remote-compose/inline-described.png) | ![The same node played by RcComposePlayer, its custom component filled by the design's own Compose](evidence/ui-builder-remote-compose/inline-played.png) |
+
+Both are rendered by `InlineRemoteContentPlaybackTest` from the same preview document through the
+same renderer, so they cannot drift from the assertions beside them. On the right the design's
+`Search` and `Recent` labels are gone because the fixture document carries only the custom
+operation — a real capture carries everything the body wrote — and `Recently played`, which sits
+*outside* the remote content, is still drawn: the player is given the shape the document's header
+declares rather than every pixel the column has left, which is the one place an inline node
+deliberately differs from an embedded one.
+
+#### What the capture costs
+
+The density decision is `RemoteOverridablePreview`'s, made once, with its reasoning written down
+beside it: `RemoteDensityBehavior.Legacy`, because that is the only value that describes what the
+creation library actually writes — padding, gaps, border widths and clip radii are already pixels at
+capture, `heightIn`/`widthIn` are dp, and `Dp` would scale the first group a second time (a bug this
+stack shipped three times). The generation density is then stamped into the header so a player can
+scale the dp-typed dimensions back. This document does not re-state that decision and the lane does
+not re-make it; it names the call site that already did.
+
+What that costs here is the same thing it costs everywhere: the document is constant-folded at the
+**daemon's** density, and the canvas that plays it is at the browser's. A design pinned to a 2.625
+phone whose content was captured at the daemon's 2.0 is not wrong — the header carries the
+generation density and the player scales — but it is a document baked for one density being replayed
+at another, and the two agree only as far as that stamp and the player's scaling take them.
+Absolute sizes survive it; anything the creation library wrote as pixels at capture time is fixed at
+capture time. `Legacy` is also the legacy track, and its own kdoc concedes that "historically some
+layout properties might have behaved differently"; the forward-looking value is `Dp`, and it stays
+unusable until the creation library honours it.
+
+The other cost is staleness, and it is why the capture is a *lookup* rather than design state. Bytes
+captured from revision 3 describe revision 3; edit the subtree and they describe something that is
+no longer there. Keyed by node id in a composition local, a capture lives as long as the host that
+made it and is re-taken when the design changes — where a `capturedDocumentUrl` property written
+into the design would persist, reopen, and quietly play the wrong content.
 
 ## Named slots
 

@@ -1,7 +1,16 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.tooling.preview.Preview
+import ee.schimke.composeai.rcplayer.protocol.RcCustomLayout
+import ee.schimke.composeai.rcplayer.protocol.RcDocument
+import ee.schimke.composeai.rcplayer.protocol.RcHeader
+import ee.schimke.composeai.rcplayer.protocol.RcNoArg
+import ee.schimke.composeai.rcplayer.protocol.RcOpcodes
+import ee.schimke.composeai.rcplayer.protocol.RcRootLayout
+import ee.schimke.composeai.rcplayer.protocol.RcTextData
+import ee.schimke.composeai.rcplayer.protocol.RcVersion
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -32,6 +41,63 @@ fun InlineRemoteContentPreview() {
 }
 
 /**
+ * The same screen once its remote content has been **captured** and is played for real.
+ *
+ * The counterpart of [InlineRemoteContentPreview] and the reason both are wired: they are the two
+ * states of one node, and the difference between them is the whole feature. Above, the subtree is
+ * drawn with Compose stand-ins because nobody has captured it — the shapes the generated
+ * `@RemoteComposable` body *describes*. Here a document exists, so `RcComposePlayer` draws it and
+ * the design's own Compose fills the `field` custom component through
+ * [RcCustomComponentRegistry][ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry],
+ * which is exactly what a host does with a registered renderer on a watch.
+ *
+ * The frame survives the upgrade and stops standing in for anything: the boundary is still a fact
+ * about the design, and `played` beside the label is what says the pixels inside it are a player's.
+ *
+ * The fixture is built here rather than captured, because a preview has no Android daemon to run
+ * `captureSingleRemoteDocument` on. What it stands for is the shape a capture returns — a root, and
+ * the custom component the emitted body writes for a `remote-compose/custom` node — and the bytes
+ * are real: they are encoded and parsed by the same codec and played by the same player as any
+ * document this builder embeds.
+ */
+@Preview(widthDp = 320, heightDp = 260)
+@Composable
+fun PlayedInlineRemoteContentPreview() {
+  CompositionLocalProvider(
+    LocalRemoteComposeCaptures provides
+      { nodeId ->
+        if (nodeId == "remote") Result.success(capturedInlineDocument()) else null
+      }
+  ) {
+    UiBuilderSurface(
+      document = inlineRemoteContentDocument(),
+      editorOverlay = false,
+    )
+  }
+}
+
+/**
+ * What a capture of the design's `remote` node comes back as, in the smallest honest form.
+ *
+ * One `LAYOUT_CUSTOM` operation naming `field`, which is the operation `RemoteCustomComponent(name
+ * = "field")` writes and the one the design's own `remote-compose/custom` node registers a renderer
+ * for. A document with no custom component would play as an empty box and prove nothing about the
+ * seam this preview exists to show.
+ */
+internal fun capturedInlineDocument(width: Int = 300, height: Int = 96): RcDocument =
+  RcDocument(
+    header = RcHeader(RcVersion(0, 1, 0), legacyWidth = width, legacyHeight = height),
+    operations =
+      listOf(
+        RcTextData(1, "field"),
+        RcRootLayout(10),
+        RcCustomLayout(componentId = 20, animationId = 0, configId = 1, properties = emptyList()),
+        RcNoArg(RcOpcodes.CONTAINER_END),
+        RcNoArg(RcOpcodes.CONTAINER_END),
+      ),
+  )
+
+/**
  * The same screen with its remote content sourced by URL instead of authored.
  *
  * Nothing resolves it here — a preview has no host to fetch with — which is exactly the state worth
@@ -47,7 +113,7 @@ fun UnresolvedRemoteComposeUrlPreview() {
   )
 }
 
-private fun inlineRemoteContentDocument(): UiBuilderDocument =
+internal fun inlineRemoteContentDocument(): UiBuilderDocument =
   previewDocument(
     title = "Player screen",
     roots = listOf("screen"),
