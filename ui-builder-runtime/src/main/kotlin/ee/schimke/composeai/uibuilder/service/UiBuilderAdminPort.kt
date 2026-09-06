@@ -41,4 +41,19 @@ public interface UiBuilderAdminPort {
    * exists.
    */
   public fun adminDeleteDesign(designId: String): Boolean
+
+  /**
+   * Stored designs this build cannot serve, by id, each with the reason.
+   *
+   * `diagnostics()` counts them; this names them. A count tells an operator that something is being
+   * held back and nothing about which design or why, which is the difference between knowing a host
+   * has a problem and being able to act on it — repair the catalog the design pins and restart, or
+   * retire it with [adminDeleteDesign].
+   *
+   * Deliberately a method beside [adminListDesigns] rather than a field on
+   * [UiBuilderAdminDesignSummary]: this artifact is published and its ABI is checked, and a new
+   * constructor parameter on a data class changes `copy` and every `componentN` — binary-breaking
+   * for a consumer compiled against an earlier release. A defaulted method is additive.
+   */
+  public fun adminUnusableDesigns(): Map<String, String> = emptyMap()
 }

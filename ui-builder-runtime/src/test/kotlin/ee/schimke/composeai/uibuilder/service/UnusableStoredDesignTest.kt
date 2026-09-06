@@ -56,6 +56,25 @@ class UnusableStoredDesignTest {
   }
 
   @Test
+  fun `the operator can see which designs are unusable and why, not merely how many`() {
+    val storage = MemoryStorage()
+    val stocked = service(storage, PinnedCatalogs(resolves = true))
+    create(stocked, "kept")
+    val reopened = service(storage, PinnedCatalogs(resolves = false))
+
+    // `diagnostics()` says one design is being held back. That is enough to alert on and not enough
+    // to act on: repairing the catalog a design pins, or retiring it, both need to know which.
+    assertEquals(1, reopened.diagnostics().unusableDesigns)
+    val unusable = reopened.adminUnusableDesigns()
+    assertEquals(setOf("kept"), unusable.keys)
+    assertTrue(unusable.getValue("kept").contains("catalog unavailable"), unusable.getValue("kept"))
+
+    // Still listed for the operator too — reported beside the listing rather than by dropping the
+    // row, for the same reason `ListDesigns` keeps it.
+    assertEquals(listOf("kept"), reopened.adminListDesigns().map { it.designId })
+  }
+
+  @Test
   fun `one unusable design does not take the others with it`() {
     val storage = MemoryStorage()
     val stocked = service(storage, PinnedCatalogs(resolves = true))

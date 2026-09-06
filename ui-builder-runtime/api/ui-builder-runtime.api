@@ -65,6 +65,7 @@ public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderSer
 	public synthetic fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun adminDeleteDesign (Ljava/lang/String;)Z
 	public fun adminListDesigns ()Ljava/util/List;
+	public fun adminUnusableDesigns ()Ljava/util/Map;
 	public fun diagnostics ()Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
 	public fun execute (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun migratePersistenceToLatest ()Lee/schimke/composeai/uibuilder/service/UiBuilderPersistenceMigrationResult;
@@ -168,6 +169,11 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSu
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort {
 	public abstract fun adminDeleteDesign (Ljava/lang/String;)Z
 	public abstract fun adminListDesigns ()Ljava/util/List;
+	public fun adminUnusableDesigns ()Ljava/util/Map;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort$DefaultImpls {
+	public static fun adminUnusableDesigns (Lee/schimke/composeai/uibuilder/service/UiBuilderAdminPort;)Ljava/util/Map;
 }
 
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {

@@ -2178,6 +2178,11 @@ public class PersistentUiBuilderService(
       }
   }
 
+  override fun adminUnusableDesigns(): Map<String, String> =
+    unusableDesigns.mapValues { (_, unusable) ->
+      unusable.reason
+    }
+
   override fun adminDeleteDesign(designId: String): Boolean {
     val closed: List<SubscriberMailbox> = lock.withLock {
       if (designId !in persisted.designs) return false
