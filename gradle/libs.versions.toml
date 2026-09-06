@@ -47,8 +47,10 @@ maven-publish = "0.37.0"
 # here rather than in a Renovate bump because the new `EnvironmentFieldV1.EXPORT_DEVICES` makes
 # three `when` expressions in `PersistentUiBuilderService` non-exhaustive, so the bump and the
 # field's handling are one change. `screen-model` also first carries `ScreenGenerator.Preview
-# .screenSizes` here, which the export half will read once it lands.
-composeai-tools = "2.0.0"
+# .screenSizes` here. 2.1.0 is the first release carrying `ScreenGenerator.Preview.devices`
+# (compose-ai-tools#5248), which is what turns a design's export-device set into one
+# `@Preview(device = …)` per id rather than a multipreview that discards which devices it named.
+composeai-tools = "2.1.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in.
 composeai-contracts = "2.9.0"
