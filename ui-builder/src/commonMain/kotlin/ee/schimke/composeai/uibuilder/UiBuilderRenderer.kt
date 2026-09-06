@@ -206,6 +206,27 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
 /**
+ * Remote Compose documents a host has fetched for the `documentUrl` of an embedded document node.
+ *
+ * A composition local rather than a renderer parameter, for the reason [LocalUiBuilderNativeOnly]
+ * is one: every surface that draws a document — the canvas, the thumbnails, the JVM render port,
+ * the previews — would otherwise have to thread a parameter it has no opinion about.
+ *
+ * A **lookup**, not a fetch. Loading bytes is suspending, size-limited and cancellable, and none of
+ * those belong inside a composable that draws: the host resolves a URL once, decides what an
+ * over-large or unreachable one means, and answers here with the document or the failure. `null` is
+ * the third answer and the common one — *not resolved yet*, which is what a first frame sees and
+ * what a host with no resolver at all always answers. The node draws its own waiting state for it
+ * rather than an error, because a design pointing at a URL nobody has fetched is not a broken
+ * design.
+ */
+public val LocalRemoteComposeDocuments:
+  androidx.compose.runtime.ProvidableCompositionLocal<(String) -> Result<RcDocument>?> =
+  staticCompositionLocalOf {
+    { _ -> null }
+  }
+
+/**
  * Draw the design at its whole extent rather than at its frame: lists unrolled, scrolling dropped.
  *
  * Compose refuses to measure a scrollable against an unbounded height — a `LazyColumn` under
@@ -684,6 +705,35 @@ private fun RenderNode(
         { next -> slot("mainPane").forEach { child(it, next) } },
         { next -> slot("supportingPane").forEach { child(it, next) } },
       )
+    // The vocabulary switch. Everything below is `@RemoteComposable` in the code this design
+    // generates, and this canvas draws it with the ordinary Compose stand-ins the `remote-m3`
+    // catalog has always used for the same components — a `RemoteColumn` is drawn by a `Column`.
+    //
+    // Framed rather than drawn flush, and the frame is the honest part. The browser has no Remote
+    // Compose writer, so these are the shapes the generated body *describes* rather than the pixels
+    // a player produces; the frame is what stops an author reading them as the latter. The rule
+    // this keeps is `wear-m3`'s — never fake a component so it runs in Wasm — applied to a whole
+    // subtree rather than to one component.
+    REMOTE_COMPOSE_INLINE_COMPONENT_ID ->
+      RemoteContentFrame(label = "Remote Compose", detail = null, modifier = measured) {
+        slot("content").forEach { child(it, Modifier.fillMaxWidth()) }
+      }
+    // The way back out. A custom component is a hole the document reserves for host content, so
+    // what the canvas draws inside it is ordinary Compose — which is also what a registered
+    // renderer draws on a real player. The name is on the frame because it is the whole contract:
+    // a preview draws this only where a custom component of that name is registered, and an author
+    // who cannot see the name cannot check that.
+    REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
+      RemoteContentFrame(
+        label = "Custom",
+        detail = node.string("name").ifEmpty { "unnamed" },
+        modifier =
+          measured
+            .then(node.dimension("widthDp")?.let { Modifier.width(it) } ?: Modifier)
+            .then(node.dimension("heightDp")?.let { Modifier.height(it) } ?: Modifier),
+      ) {
+        slot("content").forEach { child(it, Modifier.fillMaxWidth()) }
+      }
     "remote-compose/document" ->
       RemoteComposeDocument(
         document = document,
@@ -1594,7 +1644,30 @@ private fun RemoteComposeDocument(
   slotContent: @Composable (String, Modifier) -> Unit,
 ) {
   val encoded = node.string("documentBase64")
-  val decoded = remember(encoded) { decodeRemoteComposeDocument(encoded) }
+  val url = node.string("documentUrl")
+  val resolve = LocalRemoteComposeDocuments.current
+  // Bytes win. A design that carries its own document has already been decided; reaching for the
+  // network as well would make an offline reopen of a saved design depend on a host it does not
+  // need, and would leave two answers to the question of what this node holds.
+  val decoded =
+    when {
+      encoded.isNotBlank() -> remember(encoded) { decodeRemoteComposeDocument(encoded) }
+      url.isNotBlank() -> resolve(url)
+      else ->
+        remember {
+          Result.failure(
+            IllegalArgumentException(
+              "Remote Compose node needs either documentBase64 or documentUrl"
+            )
+          )
+        }
+    }
+  if (decoded == null) {
+    // Waiting, not broken — see [LocalRemoteComposeDocuments]. The URL is shown because it is the
+    // only thing an author can act on while it is unresolved.
+    RemoteComposeDiagnostic(message = "Loading $url", modifier = modifier, error = false)
+    return
+  }
   val rcDocument = decoded.getOrNull()
   if (rcDocument == null) {
     RemoteComposeDiagnostic(
@@ -1700,14 +1773,19 @@ private fun RcPlayerEvent.bindingName(): String? =
   }
 
 @Composable
-private fun RemoteComposeDiagnostic(message: String, modifier: Modifier) {
-  Surface(modifier, color = MaterialTheme.colorScheme.errorContainer) {
-    Text(
-      message,
-      Modifier.padding(8.dp),
-      color = MaterialTheme.colorScheme.onErrorContainer,
-    )
-  }
+private fun RemoteComposeDiagnostic(
+  message: String,
+  modifier: Modifier,
+  /** False for a document that is merely not here yet, which is not the same as a broken one. */
+  error: Boolean = true,
+) {
+  val container =
+    if (error) MaterialTheme.colorScheme.errorContainer
+    else MaterialTheme.colorScheme.surfaceVariant
+  val content =
+    if (error) MaterialTheme.colorScheme.onErrorContainer
+    else MaterialTheme.colorScheme.onSurfaceVariant
+  Surface(modifier, color = container) { Text(message, Modifier.padding(8.dp), color = content) }
 }
 
 /**
@@ -2008,6 +2086,48 @@ private fun NativeOnlyPlaceholder(
     node.string("label").takeIf(String::isNotEmpty)?.let {
       Text(it, color = MaterialTheme.colorScheme.onSurface)
     }
+    content()
+  }
+}
+
+/**
+ * A labelled frame around content that is not what it appears to be drawn with.
+ *
+ * [NativeOnlyPlaceholder]'s neighbour and deliberately not the same thing. That one stands in for a
+ * component the canvas cannot draw *at all*, so it draws a name and a box. This draws the content
+ * for real — the stand-ins are the right shapes and the right text — and marks the boundary the
+ * content sits on, because a subtree in a different vocabulary is a fact about the design that a
+ * flush render would hide.
+ */
+@Composable
+private fun RemoteContentFrame(
+  label: String,
+  detail: String?,
+  modifier: Modifier,
+  content: @Composable ColumnScope.() -> Unit,
+) {
+  val outline = MaterialTheme.colorScheme.tertiary
+  Column(
+    modifier
+      .drawBehind {
+        drawRoundRect(
+          color = outline,
+          cornerRadius = CornerRadius(8.dp.toPx()),
+          style =
+            androidx.compose.ui.graphics.drawscope.Stroke(
+              width = 1.dp.toPx(),
+              pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f)),
+            ),
+        )
+      }
+      .padding(horizontal = 6.dp, vertical = 6.dp),
+    verticalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
+    Text(
+      detail?.let { "$label · $it" } ?: label,
+      color = outline,
+      style = MaterialTheme.typography.labelSmall,
+    )
     content()
   }
 }

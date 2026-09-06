@@ -107,6 +107,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -166,6 +167,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlin.math.roundToInt
@@ -444,6 +446,20 @@ fun UiBuilderEditor(
    * cannot add anything, so the panel requires both.
    */
   resolveRemoteComposeDocument: (suspend (RemoteComposeSource) -> String)? = null,
+  /**
+   * Fetches the Base64-encoded document at an embedded node's `documentUrl`, or throws.
+   *
+   * The other half of [resolveRemoteComposeDocument] and deliberately a separate parameter. That
+   * one is an *authoring* action: an author presses Add, the bytes are copied into the design, and
+   * the design carries them for ever after. This one is a *reference*: the design carries a URL,
+   * and what the canvas draws is whatever that URL serves today. A host that can do one and not the
+   * other is a real configuration — a catalog with a published sticker sheet and no proxy for
+   * arbitrary URLs is exactly it — so the two are asked for separately.
+   *
+   * Null leaves every `documentUrl` node drawing its waiting state, which is the honest answer for
+   * a host that cannot fetch: the node is not broken, it is unresolved.
+   */
+  resolveRemoteComposeUrl: (suspend (String) -> String)? = null,
   /**
    * Fetches a Lottie animation's JSON from the URL a `remote-m3/lottie` element carries, or throws.
    *
@@ -916,6 +932,41 @@ fun UiBuilderEditor(
     }
     pendingRemoteSource = null
   }
+  // Every `documentUrl` the design references, and what came back for it.
+  //
+  // Keyed by URL rather than by node, so two nodes pointing at one document are one fetch and one
+  // decode. Held across revisions on purpose: an edit elsewhere in the design must not re-fetch
+  // content that has not changed, and a URL removed from the design costs a map entry rather than a
+  // round trip to discover it is gone.
+  val remoteDocumentsByUrl = remember { mutableStateMapOf<String, Result<RcDocument>>() }
+  val referencedUrls =
+    state.document.nodes.values
+      .filter { it.componentId == REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID }
+      .mapNotNull { node ->
+        (node.properties["documentUrl"] as? JsonObject)
+          ?.get("value")
+          ?.jsonPrimitive
+          ?.contentOrNull
+          ?.takeIf(String::isNotBlank)
+      }
+      .distinct()
+      .sorted()
+  LaunchedEffect(referencedUrls, resolveRemoteComposeUrl) {
+    val resolve = resolveRemoteComposeUrl ?: return@LaunchedEffect
+    referencedUrls.filterNot(remoteDocumentsByUrl::containsKey).forEach { url ->
+      // Stored per URL as it arrives rather than after the whole list, so one unreachable
+      // document does not hold the others off the canvas. The failure is stored too: a URL that
+      // 404s is answered once and drawn as the error it is, instead of being retried every frame.
+      remoteDocumentsByUrl[url] =
+        try {
+          decodeRemoteComposeDocument(resolve(url))
+        } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+          throw cancelled
+        } catch (failure: Throwable) {
+          Result.failure(failure)
+        }
+    }
+  }
   // The URL half of a Lottie element, resolved into the JSON half exactly once.
   //
   // Once, because the two halves are one source: `url` says which animation this is and `json` is
@@ -1037,7 +1088,10 @@ fun UiBuilderEditor(
 
   // Provided once here rather than at each surface: the canvas, every palette thumbnail and the
   // preview frame all draw a pack component, and all of them should draw its placeholder.
-  CompositionLocalProvider(LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds) {
+  CompositionLocalProvider(
+    LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
+    LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
+  ) {
     MaterialTheme(colorScheme = EditorColors) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxWidth < 840.dp

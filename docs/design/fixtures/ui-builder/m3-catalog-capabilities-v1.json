@@ -61,6 +61,8 @@
         "m3/text-field": { "group": "Text inputs", "variantProperty": "variant" },
         "m3/time-picker": { "group": "Selection", "variantProperty": "mode" },
         "remote-compose/document": { "group": "Embedded" },
+        "remote-compose/inline": { "group": "Embedded" },
+        "remote-compose/custom": { "group": "Embedded" },
         "shape/colour-dot": { "group": "Styles" },
         "shape/linear-gradient": { "group": "Styles" },
         "shape/radial-gradient": { "group": "Styles" }
@@ -100,7 +102,7 @@
       "componentId": "layout/box",
       "displayName": "Box",
       "role": "Container",
-      "traits": ["OrderedContent", "OverlayContent", "LayoutPrimitive"],
+      "traits": ["OrderedContent", "OverlayContent", "LayoutPrimitive", "RemoteAuthorable"],
       "slots": [
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
@@ -117,7 +119,7 @@
       "componentId": "layout/column",
       "displayName": "Column",
       "role": "Container",
-      "traits": ["OrderedContent", "VerticalContent", "LayoutPrimitive"],
+      "traits": ["OrderedContent", "VerticalContent", "LayoutPrimitive", "RemoteAuthorable"],
       "slots": [
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
@@ -218,7 +220,7 @@
       "componentId": "layout/row",
       "displayName": "Row",
       "role": "Container",
-      "traits": ["OrderedContent", "HorizontalContent", "LayoutPrimitive"],
+      "traits": ["OrderedContent", "HorizontalContent", "LayoutPrimitive", "RemoteAuthorable"],
       "slots": [
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
@@ -626,7 +628,7 @@
       "componentId": "m3/surface",
       "displayName": "Surface",
       "role": "Container",
-      "traits": ["ScreenContent", "PaneContent", "GridItem", "ListItem"],
+      "traits": ["ScreenContent", "PaneContent", "GridItem", "ListItem", "RemoteAuthorable"],
       "slots": [
         { "name": "content", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
@@ -682,7 +684,7 @@
       "componentId": "m3/text",
       "displayName": "Text",
       "role": "Leaf",
-      "traits": ["TextContent"],
+      "traits": ["TextContent", "RemoteAuthorable"],
       "slots": [],
       "properties": [
         { "name": "text", "jsonType": "string", "required": true },
@@ -750,13 +752,32 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "remote-compose/custom",
+      "displayName": "Custom component",
+      "role": "Container",
+      "traits": ["RemoteContent", "RemoteAuthorable", "OrderedContent"],
+      "slots": [
+        { "name": "content", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
+      ],
+      "properties": [
+        { "name": "name", "jsonType": "string", "required": true, "notes": "The custom-component config name the document writes and the host registers a renderer under. Namespaced by convention (slot:, rc:, or an application domain) so two documents composed together cannot collide." },
+        { "name": "widthDp", "jsonType": "number", "required": false, "notes": "The bounds the document reserves for host content it cannot measure. A player lays out a custom component from the document, not from the Compose content filling it." },
+        { "name": "heightDp", "jsonType": "number", "required": false, "notes": "See widthDp." }
+      ],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Draws the ordinary Compose content in its own slot, which is what a registered renderer draws on a real player too. A preview only draws it if a custom component of this name is registered; an unregistered one is a player support issue rather than silently borrowed content. The code mapping names the registry rather than a composable, because the composable is whatever the host registers under this name." },
+      "code": { "symbol": "RcCustomComponentRegistry", "imports": ["ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry"] },
+      "svg": { "status": "unsupported", "fallback": "none", "blocksExport": true, "notes": "Host content inside a Remote Compose document has no structured SVG answer." }
+    },
+    {
       "componentId": "remote-compose/document",
       "displayName": "Remote Compose document",
       "role": "Container",
       "traits": ["RemoteContent", "OrderedContent", "DynamicSlots"],
       "slots": [],
       "properties": [
-        { "name": "documentBase64", "jsonType": "string", "required": true, "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded." },
+        { "name": "documentBase64", "jsonType": "string", "required": false, "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded. Not required on its own: a node carries either the bytes or a documentUrl, and the editor's own rule reports a node that carries neither." },
+        { "name": "documentUrl", "jsonType": "string", "required": false, "notes": "Absolute http(s) URL the host resolves to the same wire document. Read only when documentBase64 is empty, so a design that carries its own bytes never depends on the network." },
         { "name": "theme", "jsonType": "string", "required": false, "allowedValues": ["inherit", "light", "dark", "system"] },
         { "name": "namedValues", "jsonType": "object", "required": false, "notes": "Typed host values keyed by the Remote Compose named-variable name." }
       ],
@@ -764,6 +785,22 @@
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config." },
       "code": { "symbol": "RcComposePlayer", "imports": ["ee.schimke.composeai.rcplayer.compose.RcComposePlayer"] },
       "svg": { "status": "unsupported", "fallback": "none", "blocksExport": true, "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation." }
+    },
+    {
+      "componentId": "remote-compose/inline",
+      "displayName": "Remote Compose content",
+      "role": "Container",
+      "traits": ["RemoteContent", "OrderedContent"],
+      "slots": [
+        { "name": "content", "cardinality": { "min": 0, "max": 1 }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["RemoteAuthorable"] }
+      ],
+      "properties": [
+        { "name": "theme", "jsonType": "string", "required": false, "allowedValues": ["inherit", "light", "dark", "system"] }
+      ],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
+      "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "The subtree is drawn with the ordinary Compose stand-ins remote-m3 already uses, inside a marked frame. The canvas has no Remote Compose writer, so these are the shapes the generated @RemoteComposable body describes rather than the pixels a player produces; the Android lane is what renders it for real." },
+      "code": { "symbol": "RemoteDocumentPlayer", "imports": ["androidx.compose.remote.creation.compose.capture.captureSingleRemoteDocument", "androidx.compose.remote.player.compose.RemoteDocumentPlayer"] },
+      "svg": { "status": "unsupported", "fallback": "none", "blocksExport": true, "notes": "The subtree becomes a Remote Compose document at export; SVG export of one needs an explicit renderer, exactly as remote-compose/document does." }
     },
     {
       "componentId": "shape/colour-dot",

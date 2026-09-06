@@ -2126,7 +2126,54 @@ class UiBuilderEditorReducer(
    * fail its decode, and a pane that propagated that would take the editor down over exactly the
    * document whose code someone is trying to read.
    */
-  fun generatedCode(document: UiBuilderDocument): EditorGeneratedCode = runCatching {
+  fun generatedCode(document: UiBuilderDocument): EditorGeneratedCode =
+    screenCode(document).withRemoteContent(document)
+
+  /**
+   * The `@RemoteComposable` bodies of the design's inline remote content, joined to [screenCode].
+   *
+   * Two generators write one design, and a pane that showed only the first would show a refusal for
+   * every design holding remote content — the screen generators have no call site for it, which is
+   * the whole reason [InlineRemoteContentExporter] exists. So the bodies are appended when the
+   * screen generates, and *replace* the refusal when it does not: a designer who has drawn remote
+   * content and is told only "this design cannot be exported" has been given the least useful true
+   * thing that could be said. The screen's reasons are kept as a header comment above the bodies,
+   * so nothing is dropped.
+   */
+  private fun EditorGeneratedCode.withRemoteContent(
+    document: UiBuilderDocument
+  ): EditorGeneratedCode {
+    val hosts =
+      document.nodes.values
+        .filter { it.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID }
+        .map { it.id }
+        .sorted()
+    if (hosts.isEmpty()) return this
+    val bodies = hosts.map { InlineRemoteContentExporter.export(document, it) }
+    val emitted = bodies.filterIsInstance<InlineRemoteContentExporter.Result.Emitted>()
+    val refusedBodies =
+      bodies.filterIsInstance<InlineRemoteContentExporter.Result.Refused>().flatMap { it.reasons }
+    if (emitted.isEmpty()) {
+      return EditorGeneratedCode.Refused(
+        (this as? EditorGeneratedCode.Refused)?.reasons.orEmpty() + refusedBodies
+      )
+    }
+    val header =
+      when (this) {
+        is EditorGeneratedCode.Source -> listOf(kotlin)
+        is EditorGeneratedCode.Refused ->
+          listOf(
+            (reasons + refusedBodies).joinToString("\n") {
+              "// The screen around this content is not generated: ${it.replace("\n", " ")}"
+            }
+          )
+      }
+    return EditorGeneratedCode.Source(
+      (header + emitted.map { it.source }).joinToString("\n\n").trimEnd() + "\n"
+    )
+  }
+
+  private fun screenCode(document: UiBuilderDocument): EditorGeneratedCode = runCatching {
     // A Wear widget ships as a `WearWidgetDocument` of Remote Compose and a Wear screen's
     // `ScreenScaffold` takes a scroll state no record can recover, so neither has a component
     // record and the Compose gate below can only ever refuse them. Asked first rather than as a
@@ -4121,7 +4168,7 @@ private fun defaultChildFor(
  * Free-text means a lone `string` with no `allowedValues` — an enum is a setting, and a colour is
  * not something anyone recognises a layer by.
  */
-private val IDENTITY_PROPERTY_SUFFIXES = listOf("Key", "Id", "Base64")
+private val IDENTITY_PROPERTY_SUFFIXES = listOf("Key", "Id", "Base64", "Url")
 
 private fun UiBuilderNode.contentLabel(capability: ComponentCapability): String? {
   fun freeText(property: PropertyCapability) =
@@ -4130,10 +4177,14 @@ private fun UiBuilderNode.contentLabel(capability: ComponentCapability): String?
       !property.name.endsWith("Color", ignoreCase = true) &&
       // `required` is necessary and not sufficient, which the first cut of this got wrong twice.
       // A component can require a string it needs in order to work rather than one a person would
-      // recognise it by, and in this catalog five of the six do: `asset/image` requires `assetKey`,
-      // the three lazy containers require `scrollStateKey`, and `remote-compose/document` requires
-      // `documentBase64` — so the layers panel offered an asset key, a scroll key, and a base64
-      // blob as layer names. Only `m3/text.text` was content.
+      // recognise it by, and in this catalog most do: `asset/image` requires `assetKey` and the
+      // three lazy containers require `scrollStateKey` — so the layers panel offered an asset key
+      // and a scroll key as layer names. Only `m3/text.text` was content.
+      //
+      // `remote-compose/document` used to require `documentBase64` and be the worst of them, a
+      // base64 blob as a layer name. It now requires neither of its two sources — a node carries
+      // bytes or a URL — so it no longer reaches this at all; both suffixes stay listed because
+      // the rule is about the kind of string, not about which component happens to require one.
       //
       // The name carries the kind, the same way it does for a `…Dp` dimension: a key, an id or a
       // payload is plumbing whatever its type. Excluding them by suffix leaves `text` and any

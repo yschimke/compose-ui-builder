@@ -285,6 +285,20 @@ class GeneratedDocumentTest {
         "$case: every component is recorded, so nothing should be reported",
       )
       assertIs<EditorGeneratedCode.Source>(generated, "$case: every component is recorded")
+    } else if (document.nodes.values.any { it.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID }) {
+      // The one case where an unrecorded component still produces Kotlin, and it is a second
+      // generator rather than a hole in this rule. `remote-compose/inline` has no component record
+      // because no Compose call site could have one — its subtree is `@RemoteComposable` — so
+      // `InlineRemoteContentExporter` writes that subtree and the pane shows it beneath the
+      // screen's own refusal, kept as a header comment. A design holding remote content answered
+      // with a bare "cannot export" would be the least useful true thing that could be said.
+      val source =
+        assertIs<EditorGeneratedCode.Source>(generated, "$case: remote content generates")
+      assertTrue("@RemoteComposable" in source.kotlin, "$case: ${source.kotlin}")
+      assertTrue(
+        "The screen around this content is not generated" in source.kotlin,
+        "$case: the screen's refusal is kept rather than dropped: ${source.kotlin}",
+      )
     } else {
       assertIs<EditorGeneratedCode.Refused>(generated, "$case: expected a refusal for $expected")
     }

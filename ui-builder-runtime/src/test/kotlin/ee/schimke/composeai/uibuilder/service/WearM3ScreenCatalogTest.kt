@@ -144,6 +144,8 @@ class WearM3ScreenCatalogTest {
         "layout/row",
         "asset/image",
         "remote-compose/document",
+        "remote-compose/inline",
+        "remote-compose/custom",
       ),
       borrowed,
     )

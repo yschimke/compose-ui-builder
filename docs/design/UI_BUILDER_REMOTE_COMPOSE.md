@@ -11,6 +11,9 @@ The implementation uses the common Compose Multiplatform player API from `rc-pla
 Wasm-specific player design: JVM, Android, iOS, and Wasm hosts can use the same node renderer. The
 current Base64 source is intentionally transport-neutral. A later URL, bundle, or repository
 resolver should load and verify bytes outside the renderer, then supply the same decoded document.
+The URL half of that is now built — see [`documentUrl`](#documenturl) — and it is one of two ways a
+design holds Remote Compose content, the other being the vocabulary switch described in the same
+section.
 
 The checked-in JVM Compose render evidence captures the same fixture immediately
 [before](evidence/ui-builder-remote-compose/before.png) and
@@ -129,6 +132,109 @@ it:
 - The JVM Compose render port (`ServeUiBuilderNativePreview`, the editor's **Native** button)
   renders a saved revision with real Compose on the host. It is a second opinion on the canvas, not
   a second canvas.
+
+## Two ways in, and one way back out
+
+The decision above is about an embedded *document* — bytes the design carries and the player draws.
+That is one of the two ways a mobile or Wear design holds Remote Compose, and it is the only one
+that existed first. The other is the **vocabulary switch**.
+
+| | `remote-compose/document` | `remote-compose/inline` |
+| --- | --- | --- |
+| What the node holds | a wire document somebody else published | a subtree this design authors |
+| Where the bytes come from | `documentBase64`, or `documentUrl` resolved by the host | a capture of the generated `@RemoteComposable` body |
+| Who wrote the content | the serving catalog, or whoever published the URL | the person in this editor |
+| What the canvas draws | the real player, on the real bytes | Compose stand-ins in a marked frame |
+| What the generator writes | nothing — it is data | the body, through `InlineRemoteContentExporter` |
+
+Both are offered by `m3-catalog`, `wear-m3` and — for the document, and for the custom component
+below — `remote-m3`, so a phone screen, a watch screen and a widget body can each hold the other
+kind of content. A Wear widget already *is* a document, so it is offered no inline switch: that
+would be a second answer to a question its container has answered.
+
+### `documentUrl`
+
+The transport-neutral resolver [the decision](#decision) anticipated, in its second honest form.
+`documentBase64` wins wherever both are set — a design that carries its own bytes must not start
+depending on the network when it is reopened — and neither property is `required` on its own,
+because the node needs exactly one and the catalog wire shape has no way to say "one of these".
+
+Resolution stays outside the renderer, exactly as the decision requires. The editor collects the
+URLs the design references, fetches each once, keyed by URL rather than by node, and answers a
+composition local with the decoded document *or the failure*. The third answer is `null` — not
+resolved yet — which the node draws as a waiting state rather than an error, because a design
+pointing at a URL nobody has fetched is not a broken design. A host with no resolver answers `null`
+for everything, which is what every host but the browser editor does today.
+
+Which URLs are reachable is not a policy this feature invented: the browser resolver is
+`sameOriginRequestUrl`, which resolves against the page and throws on anything that leaves the
+origin. A design pointing at another host therefore draws that refusal as its own diagnostic rather
+than quietly sending the page's `?token=` somewhere it does not belong.
+
+### The vocabulary switch, and why it is ancestry rather than a trait
+
+A `remote-compose/inline` node says *everything below me is `@RemoteComposable`*. Its `content` slot
+takes one child and accepts only the `RemoteAuthorable` trait — the ids
+[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteContentEmitter.kt)
+can actually write, which is `layout/box`, `layout/column`, `layout/row`, `m3/surface`, `m3/text`
+and the custom component below.
+
+Those are the same ids `remote-m3` already publishes as stand-ins for remote components, and that is
+the point rather than an accident: `layout/column` inside remote content becomes `RemoteColumn`, and
+the identical node inside a mobile screen becomes `androidx.compose.foundation.layout.Column`. The
+component does not change; where it sits does. Slot acceptance cannot say that — it decides from the
+two components alone, and every generic container accepts `AnyContent` — so the scope is resolved
+from the ancestry instead, once, in
+[`RemoteScopes`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteScopes.kt),
+and the canvas, the export gate and the emitter all read it from there.
+
+### Custom components, and the way back out
+
+`remote-compose/custom` is the return direction. A Remote Compose document cannot call an
+application's composables, so the only way host content gets inside one is a `LAYOUT_CUSTOM`
+operation naming a renderer the host registered — which is the same seam the [named
+slots](#named-slots) below already use, reached from the other side. The node carries the registry
+`name`, the `widthDp`/`heightDp` the document reserves for content it cannot measure, and a
+`content` slot holding ordinary Compose.
+
+So a design can nest all three:
+
+```
+Scaffold
+  Column
+    Text
+    Remote Compose            <- remote-compose/inline
+      RemoteColumn            <- layout/column, in the remote vocabulary
+        RemoteText            <- m3/text
+        Custom("field")       <- remote-compose/custom
+          BasicTextField      <- ordinary Compose again
+        RemoteText
+    Text
+```
+
+On the canvas that draws as three scopes in one composition, each frame labelled. In a real preview
+the custom component draws **only where a renderer of that name is registered**; an unregistered one
+stays a player support issue rather than silently borrowing arbitrary outer content, which is the
+same rule the named slots keep.
+
+### What the generators do, and the one thing they refuse
+
+The Compose exporters refuse an inline node by name — `REMOTE_CONTENT_NOT_COMPOSE` — and say nothing
+about its subtree, because judging `RemoteColumn` by whether Compose can call it is asking about the
+wrong language. What they refuse is only the *call site*: `captureSingleRemoteDocument` takes a
+`RemoteCreationDisplayInfo`, a `RemoteDensity` and a density behaviour whose disagreements have
+already shipped as bugs in this stack twice, and which of them an application wants is not a decision
+a design makes. `InlineRemoteContentExporter` writes the half that is the design's — the
+`@RemoteComposable` function — and the editor's generated-code pane shows it beneath whatever the
+screen generator said, so a design holding remote content is never answered with a bare refusal.
+
+The one node no generator can write is the custom component itself. Every published creation-side API
+this repository writes against — `remote-creation-compose`, `remote-foundation`, `remote-material3` —
+is layout, text, state and modifiers; none of them emits the custom operation. So it is refused by
+name, with the reason, in the same discipline `WearWidgetCodeExporter` refuses an image background:
+the canvas authors it, a player draws it wherever a document already carries it, and the generator
+says out loud what it cannot write rather than handing somebody a file that does not compile. A
+creation-side API for the operation is what closes this, and nothing else is missing.
 
 ## Named slots
 
@@ -252,6 +358,8 @@ the exported source is compiled against, which is what keeps this file's promise
 
 1. A suspendable, size-limited document resolver with content hashes, caching, cancellation, and
    cycle/depth limits. Browser fetch, Android resources, files, and bundles become adapters.
+   `documentUrl` is the first adapter and the caching half of this — one fetch per URL, the failure
+   stored so it is not retried every frame — without the content hashes or the size limit.
 2. Player support preflight exposed before composition, including missing custom configs, fonts,
    images, opcodes, and capability versions.
 3. Bidirectional observable named values, avoiding the current need for a host action when the host

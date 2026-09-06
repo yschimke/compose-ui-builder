@@ -112,6 +112,36 @@ internal class RemoteContentEmitter(
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node))
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
+      // Named separately from the fallback because the reason is different in kind, and a designer
+      // reading "has no Remote Compose counterpart" about a component that is *entirely* a Remote
+      // Compose one would go looking for the wrong fix.
+      //
+      // A custom component is a `LAYOUT_CUSTOM` operation naming a renderer the host registers.
+      // Every published creation-side API this generator writes against — `remote-creation-compose`
+      // and `remote-material3` — is layout, text, state and modifiers; none of them emits that
+      // operation, and no symbol here can be guessed for it without handing somebody a file that
+      // does not compile. So the canvas authors it, the player draws it wherever the document
+      // already carries it, and the generator says out loud that it cannot write one yet.
+      REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
+        emptyList<String>().also {
+          refusals +=
+            "the custom component `${node.id}` names the host renderer " +
+              "`${node.properties["name"]?.stringOrNull().orEmpty()}`, and no published " +
+              "remote-creation API writes the custom operation that carries it — author the body " +
+              "and register the renderer by hand, or embed a document that already contains one"
+        }
+      REMOTE_COMPOSE_INLINE_COMPONENT_ID ->
+        emptyList<String>().also {
+          refusals +=
+            "`${node.id}` switches into the Remote Compose vocabulary inside content that is " +
+              "already written in it; drop its children into the enclosing remote content instead"
+        }
+      "remote-compose/document" ->
+        emptyList<String>().also {
+          refusals +=
+            "the embedded document `${node.id}` is bytes rather than source, and a captured " +
+              "document cannot be nested inside one being written from source here"
+        }
       else -> {
         refusals +=
           "`${node.componentId}` has no Remote Compose counterpart this generator can write"
@@ -345,9 +375,9 @@ internal class RemoteContentEmitter(
    * in the reader's IDE the moment they paste this in, and "generated" is not a licence to hand
    * someone code they have to tidy.
    */
-  fun imports(previewParamsProvider: String): List<String> {
+  fun imports(previewParamsProvider: String?): List<String> {
     val imports = mutableSetOf<String>()
-    imports += "android.content.Context"
+    if (previewParamsProvider != null) imports += "android.content.Context"
     if (usesBox) imports += "androidx.compose.remote.creation.compose.layout.RemoteBox"
     if (usesColumn) imports += "androidx.compose.remote.creation.compose.layout.RemoteColumn"
     imports += "androidx.compose.remote.creation.compose.layout.RemoteComposable"
@@ -369,18 +399,25 @@ internal class RemoteContentEmitter(
     imports += "androidx.compose.runtime.Composable"
     if (usesColorLiteral) imports += "androidx.compose.ui.graphics.Color"
     if (usesTextAlign) imports += "androidx.compose.ui.text.style.TextAlign"
-    imports += "androidx.compose.ui.tooling.preview.Preview"
-    imports += "androidx.compose.ui.tooling.preview.PreviewParameter"
-    imports += "androidx.glance.wear.GlanceWearWidget"
-    imports += "androidx.glance.wear.WearWidgetBrush"
-    imports += "androidx.glance.wear.WearWidgetData"
-    imports += "androidx.glance.wear.WearWidgetDocument"
-    if (usesBrushColor) imports += "androidx.glance.wear.color"
-    if (usesHorizontalGradient) imports += "androidx.glance.wear.horizontalGradient"
-    if (usesVerticalGradient) imports += "androidx.glance.wear.verticalGradient"
-    imports += "androidx.glance.wear.core.WearWidgetParams"
-    imports += "androidx.glance.wear.tooling.preview.$previewParamsProvider"
-    imports += "androidx.glance.wear.tooling.preview.WearWidgetPreview"
+    // The widget half. A Wear widget is delivered as a `WearWidgetDocument` and previewed through
+    // the Glance host tooling; inline remote content inside a phone or watch *screen* is neither,
+    // so it takes the vocabulary above and none of this. Gated rather than always-on for the reason
+    // every other import here is: an unused import is a warning in the reader's IDE on their first
+    // paste.
+    if (previewParamsProvider != null) {
+      imports += "androidx.compose.ui.tooling.preview.Preview"
+      imports += "androidx.compose.ui.tooling.preview.PreviewParameter"
+      imports += "androidx.glance.wear.GlanceWearWidget"
+      imports += "androidx.glance.wear.WearWidgetBrush"
+      imports += "androidx.glance.wear.WearWidgetData"
+      imports += "androidx.glance.wear.WearWidgetDocument"
+      if (usesBrushColor) imports += "androidx.glance.wear.color"
+      if (usesHorizontalGradient) imports += "androidx.glance.wear.horizontalGradient"
+      if (usesVerticalGradient) imports += "androidx.glance.wear.verticalGradient"
+      imports += "androidx.glance.wear.core.WearWidgetParams"
+      imports += "androidx.glance.wear.tooling.preview.$previewParamsProvider"
+      imports += "androidx.glance.wear.tooling.preview.WearWidgetPreview"
+    }
     if (usesRemoteColorScheme) {
       imports += "androidx.wear.compose.remote.material3.RemoteColorScheme"
     }

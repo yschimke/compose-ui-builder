@@ -157,11 +157,45 @@ object CapabilityComposeCodeExporter {
       return diagnostics
     }
 
+    // Which nodes are written in the Remote Compose vocabulary rather than this one. A node inside
+    // remote content is not this exporter's to judge: `layout/column` there becomes `RemoteColumn`,
+    // its modifiers are `RemoteModifier`s, and every question below — is there a typed call
+    // emitter,
+    // does the catalog allow this modifier on this component — is being asked about the wrong
+    // language. The host that opened the scope is reported once, immediately below, and the subtree
+    // it covers is `RemoteContentEmitter`'s to accept or refuse.
+    val remoteScopes = RemoteScopes.of(document)
+
     document.nodes.values.sortedBy(UiBuilderNode::id).forEach { node ->
+      if (remoteScopes.isRemote(node.id)) return@forEach
       val capability = catalog.componentsById[node.componentId]
       when {
         capability == null ->
           diagnostics += node.error("UNKNOWN_COMPONENT", "No catalog capability exists")
+        // Named before the two generic refusals below, because both of them would be true of it and
+        // neither would be useful. "No typed call emitter exists for RemoteDocumentPlayer" tells a
+        // designer that a component is missing an implementation; what is actually true is that
+        // this subtree is a different language, whose delivery — captured at build time, fetched,
+        // played by whichever host the app already has — the design does not decide.
+        node.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID ->
+          diagnostics +=
+            node.error(
+              "REMOTE_CONTENT_NOT_COMPOSE",
+              "Remote Compose content is not part of a Compose screen's source: generate its " +
+                "@RemoteComposable body separately and play the captured document at a call site " +
+                "whose display info and density behaviour are your application's to choose",
+            )
+        // Reachable only by dropping one outside remote content, which the slot rules allow — a
+        // generic container accepts `AnyContent`, and whether a subtree is remote is ancestry
+        // rather than anything a slot can say (see [RemoteScopes]). So it is caught here instead.
+        node.componentId == REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
+          diagnostics +=
+            node.error(
+              "CUSTOM_COMPONENT_OUTSIDE_REMOTE_CONTENT",
+              "A custom component is a Remote Compose operation naming a host renderer, so it " +
+                "only means something inside remote content; put it under a " +
+                "$REMOTE_COMPOSE_INLINE_COMPONENT_ID node, or use its children directly here",
+            )
         capability.code == null ->
           diagnostics +=
             node.error("MISSING_CODE_CAPABILITY", "No Kotlin symbol/import mapping exists")

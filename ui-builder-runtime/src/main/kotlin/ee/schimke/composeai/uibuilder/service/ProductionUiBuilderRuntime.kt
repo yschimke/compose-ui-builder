@@ -369,6 +369,37 @@ public data class UiBuilderComponentPackSource(
   }
 }
 
+/**
+ * The Remote Compose ids `wear-m3` borrows without calling them stand-ins for anything.
+ *
+ * A borrowed *Material* component is drawn as its mobile counterpart and its note says so; a
+ * borrowed *foundation* one is the same declaration on both platforms. These three are neither.
+ * They are the Remote Compose seam itself — a published document, the switch into the remote
+ * vocabulary, and the custom component that switches back out — and none of them is a Wear Compose
+ * component whose fidelity a note could be making a claim about.
+ */
+/**
+ * The node that switches a subtree into the Remote Compose vocabulary.
+ *
+ * Spelled here rather than imported from `:ui-builder-export`, which owns the same two constants
+ * for the emitter and the canvas. This module's dependency graph is a positive allowlist checked by
+ * `checkUiBuilderRuntimeBoundary` and written down in `docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`;
+ * taking an edge to the export module to reach two string literals would be a change to that
+ * document for no gain. `SlotAcceptanceTest`'s committed table is what keeps the two spellings
+ * honest — a catalog naming an id no component declares shows up there.
+ */
+private const val REMOTE_COMPOSE_INLINE_COMPONENT_ID = "remote-compose/inline"
+
+/** The node that switches back out of it — see [REMOTE_COMPOSE_INLINE_COMPONENT_ID]. */
+private const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID = "remote-compose/custom"
+
+private val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
+  setOf(
+    "remote-compose/document",
+    REMOTE_COMPOSE_INLINE_COMPONENT_ID,
+    REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
+  )
+
 /** The platform word a catalog declares, or the default for one that says nothing. */
 internal val CatalogCapabilityV1.platform: String
   get() =
@@ -593,7 +624,12 @@ private fun wearComponentMenu(): JsonObject {
         ),
       "Communication" to listOf("wear-m3/progress-indicator"),
       "Content" to listOf("wear-m3/text", "wear-m3/icon", "asset/image"),
-      "Embedded" to listOf("remote-compose/document"),
+      "Embedded" to
+        listOf(
+          "remote-compose/document",
+          REMOTE_COMPOSE_INLINE_COMPONENT_ID,
+          REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
+        ),
     )
   val variantProperties =
     mapOf(
@@ -693,6 +729,13 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "m3/surface",
       "m3/text",
       "remote-compose/document",
+      // The way host content gets inside a widget body. A `@RemoteComposable` body cannot call an
+      // application's composables — that is the rule this catalog exists to keep — so a custom
+      // component is not a hole in it: the document carries an operation naming a renderer, and the
+      // application registers Compose under that name. `remote-compose/inline` is deliberately
+      // absent, because this catalog's whole body is already a document; an inline switch inside it
+      // would be a second answer to a question the container already answered.
+      REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
       "shape/linear-gradient",
       "asset/image",
     )
@@ -1624,6 +1667,19 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // Compose call site, so a screen holding one exports as a refusal that names the node rather
       // than as Kotlin that does not compile.
       "remote-compose/document",
+      // The vocabulary switch and the way back out of it. `remote-compose/inline` says "everything
+      // below me is @RemoteComposable", which is the second way a Wear screen embeds Remote Compose
+      // content: `remote-compose/document` plays bytes somebody else published, and this one is
+      // authored here, in this design, out of the same `layout/column` and `m3/text` stand-ins the
+      // `remote-m3` catalog already publishes for exactly that purpose.
+      //
+      // `remote-compose/custom` is the return direction, and it is why the pair is worth having:
+      // a Remote Compose document cannot call an application's composables, so the only way host
+      // content gets inside one is a custom component the host registers a renderer under. A design
+      // can therefore nest Compose inside Remote Compose inside Compose, which is the shape the
+      // Wear catalogs' own stickers already take.
+      REMOTE_COMPOSE_INLINE_COMPONENT_ID,
+      REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
     )
   val borrowed =
     borrowedIds.map(components::getValue).map { component ->
@@ -1633,7 +1689,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // foundation component is not a stand-in for anything: `Box`, `Column`, `Row` and `Image` are
       // the same declarations on both platforms, which is the whole reason these are the only ones
       // left.
-      if (component.componentId == "remote-compose/document") component
+      if (component.componentId in REMOTE_COMPOSE_BORROWED_AS_THEMSELVES) component
       else
         component.copy(
           wasm =
