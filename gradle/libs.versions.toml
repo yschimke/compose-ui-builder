@@ -41,8 +41,17 @@ maven-publish = "0.37.0"
 # 1.82.0 is a floor rather than a bump: `ScreenDocumentProjection` emits `ChainLink
 # .receiverScopeFqn` and `ScreenValue.Fractional32`, which is how a layout weight became
 # expressible (compose-ai-tools#5212), and neither exists below it.
-composeai-tools = "1.84.0"
-composeai-contracts = "2.8.0"
+#
+# 2.0.0 is not a breaking bump. compose-ai-tools#5229 adopted minor-only versioning and cut 2.0.0
+# as the last major it will ever publish, so the number changed and the API did not. The move is
+# here rather than in a Renovate bump because the new `EnvironmentFieldV1.EXPORT_DEVICES` makes
+# three `when` expressions in `PersistentUiBuilderService` non-exhaustive, so the bump and the
+# field's handling are one change. `screen-model` also first carries `ScreenGenerator.Preview
+# .screenSizes` here, which the export half will read once it lands.
+composeai-tools = "2.0.0"
+# 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
+# changes, which is the field a design names its export devices in.
+composeai-contracts = "2.9.0"
 rc-players = "1.57.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"

@@ -18,9 +18,11 @@ import ee.schimke.composeai.uibuilder.protocol.MoveNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
+import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetHeightDpEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
@@ -41,6 +43,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 private val bridgeJson = Json {
@@ -226,6 +229,16 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
               SetLayoutDirectionEnvironmentChangeV1(
                 LayoutDirectionV1.valueOf(value.jsonPrimitive.content.uppercase())
               )
+            // Reset rather than an empty Set, because the protocol distinguishes them and the
+            // document's own default is the empty set: clearing the picker should leave a design
+            // saying exactly what one written before the field ever existed says.
+            "exportDevices" ->
+              value.jsonArray
+                .map { it.jsonPrimitive.content }
+                .let { devices ->
+                  if (devices.isEmpty()) ResetExportDevicesEnvironmentChangeV1
+                  else SetExportDevicesEnvironmentChangeV1(devices)
+                }
             else -> error("unsupported editor environment field: $field")
           }
         )

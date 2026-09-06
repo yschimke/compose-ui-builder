@@ -3442,6 +3442,12 @@ private fun DesignEnvironmentV1.applyChange(change: EnvironmentChangeV1): Design
     ResetBackgroundEnvironmentChangeV1 -> copy(background = null)
     is SetTypefaceEnvironmentChangeV1 -> copy(typeface = change.value)
     ResetTypefaceEnvironmentChangeV1 -> copy(typeface = null)
+    // The whole set per change, which is what the protocol offers: an add and a remove would each
+    // be a mutation a client could interleave, and the set is read as a set by everything that
+    // consumes it. Reset is the empty set rather than a null, because "exports at its own frame
+    // alone" is a real answer and not an absent one.
+    is SetExportDevicesEnvironmentChangeV1 -> copy(exportDevices = change.value)
+    ResetExportDevicesEnvironmentChangeV1 -> copy(exportDevices = emptyList())
   }
 
 private fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
@@ -3461,6 +3467,7 @@ private fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
     EnvironmentFieldV1.NETWORK_ACCESS -> networkAccess
     EnvironmentFieldV1.BACKGROUND -> background
     EnvironmentFieldV1.TYPEFACE -> typeface
+    EnvironmentFieldV1.EXPORT_DEVICES -> exportDevices
   }
 
 private fun DesignEnvironmentV1.copyFieldsFrom(
@@ -3486,6 +3493,7 @@ private fun DesignEnvironmentV1.copyFieldsFrom(
       EnvironmentFieldV1.NETWORK_ACCESS -> environment.copy(networkAccess = source.networkAccess)
       EnvironmentFieldV1.BACKGROUND -> environment.copy(background = source.background)
       EnvironmentFieldV1.TYPEFACE -> environment.copy(typeface = source.typeface)
+      EnvironmentFieldV1.EXPORT_DEVICES -> environment.copy(exportDevices = source.exportDevices)
     }
   }
 

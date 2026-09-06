@@ -261,6 +261,19 @@ data class ScreenEnvironmentSettings(
   val locale: String,
   val theme: EditorScreenTheme,
   val layoutDirection: EditorLayoutDirection,
+  /**
+   * Device ids this design is also exported as, beside the one frame the fields above describe.
+   *
+   * A design is authored at one size and lives at several, and until this existed the answer to
+   * "which devices does this screen claim to work on?" was whatever each exporter guessed from the
+   * catalog it happened to be generating for. The frame stays a single choice — it is the canvas
+   * somebody approved — and this is the set beside it.
+   *
+   * Ids rather than geometry, matching `DesignEnvironmentV1.exportDevices`: an id is what a
+   * `@Preview(device = …)` resolves, so a design cannot name a frame no renderer produces. Empty
+   * means it exports at its own frame alone, which is what every design written before this said.
+   */
+  val exportDevices: List<String> = emptyList(),
 )
 
 fun UiBuilderDocument.screenEnvironmentSettings(): ScreenEnvironmentSettings =
@@ -278,6 +291,10 @@ fun UiBuilderDocument.screenEnvironmentSettings(): ScreenEnvironmentSettings =
       EditorLayoutDirection.entries.firstOrNull {
         it.wireValue == environment["layoutDirection"]?.primitiveOrNull()?.content
       } ?: EditorLayoutDirection.Ltr,
+    exportDevices =
+      (environment["exportDevices"] as? JsonArray)
+        ?.mapNotNull { it.primitiveOrNull()?.content }
+        .orEmpty(),
   )
 
 /**
@@ -2820,7 +2837,7 @@ class UiBuilderEditorReducer(
       )
     }
     val values =
-      linkedMapOf(
+      linkedMapOf<String, JsonElement>(
         "widthDp" to JsonPrimitive(settings.widthDp),
         "heightDp" to JsonPrimitive(settings.heightDp),
         "density" to JsonPrimitive(settings.density),
@@ -2829,6 +2846,14 @@ class UiBuilderEditorReducer(
         "theme" to JsonPrimitive(settings.theme.wireValue),
         "layoutDirection" to JsonPrimitive(settings.layoutDirection.wireValue),
       )
+    // Not in the map above, because the map's "has this field moved?" test is a raw JSON compare
+    // and an absent key is not the same JSON as an empty array — though it is the same *answer*.
+    // Every design written before this field says nothing, so folding it in blindly would have
+    // added an empty `exportDevices` write to every unrelated environment edit, turning a
+    // single-field density change into a two-field one and costing the undo step its meaning.
+    if (settings.exportDevices != state.document.screenEnvironmentSettings().exportDevices) {
+      values["exportDevices"] = JsonArray(settings.exportDevices.map(::JsonPrimitive))
+    }
     val operations = values.mapNotNull { (field, value) ->
       DesignOperation.SetEnvironment(field, value).takeIf {
         state.document.environment[field] != value

@@ -79,6 +79,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconToggleButton
@@ -5984,6 +5985,18 @@ private fun ScreenEnvironmentInspector(
         if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(applied))
       },
     )
+    ExportDevicePicker(
+      presets = devicePresets,
+      selected = current.exportDevices,
+      onToggle = { id ->
+        // The whole set per edit, matching the protocol change and for its reason: a toggle that
+        // sent an add or a remove would let two people's ideas of the set drift apart between them.
+        val next =
+          if (id in current.exportDevices) current.exportDevices - id
+          else current.exportDevices + id
+        dispatch(UiBuilderEditorEvent.UpdateEnvironment(current.copy(exportDevices = next)))
+      },
+    )
   }
   Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     EnvironmentTextField(
@@ -6147,6 +6160,84 @@ private fun DevicePresetPicker(
               expanded = false
               onPick(preset)
             },
+          )
+        }
+      }
+    }
+  }
+}
+
+/**
+ * The devices a design is exported as, beside the one it is drawn at.
+ *
+ * A multi-select rather than a second single choice, because the answer is genuinely a set: a
+ * screen claims to work on a phone *and* a foldable *and* a tablet, and picking them one at a time
+ * would make "which does this cover?" a question you answer by remembering. The frame above stays
+ * single — it is the canvas somebody approved — and this says where else the export has to hold up.
+ *
+ * Checked state is the set's membership, so the menu is also the report: open it and the ticks are
+ * the answer. Nothing here is the frame device, which is why picking none is a legitimate state and
+ * reads as "exports at its own frame alone" rather than as an empty selection nobody finished.
+ */
+@Composable
+private fun ExportDevicePicker(
+  presets: List<UiBuilderDevicePreset>,
+  selected: List<String>,
+  onToggle: (String) -> Unit,
+) {
+  var expanded by remember { mutableStateOf(false) }
+  Text(
+    "Also exports as",
+    style = MaterialTheme.typography.labelMedium,
+    fontWeight = FontWeight.Bold,
+  )
+  Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp)) {
+    Button(
+      onClick = { expanded = true },
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Export devices" },
+    ) {
+      Text(
+        // Naming the devices while there are few enough to read beats a count: "Pixel 6, Pixel
+        // Fold" is the answer, where "2 devices" is a prompt to go and look.
+        when {
+          selected.isEmpty() -> "This frame only"
+          selected.size <= 2 ->
+            selected.joinToString(", ") { id -> presets.firstOrNull { it.id == id }?.label ?: id }
+          else -> "${selected.size} devices"
+        },
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      presets.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
+        Text(
+          group,
+          Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+          fontWeight = FontWeight.Bold,
+        )
+        devices.forEach { preset ->
+          val checked = preset.id in selected
+          DropdownMenuItem(
+            text = {
+              Column {
+                Text(
+                  preset.label,
+                  fontWeight = if (checked) FontWeight.Bold else FontWeight.Normal,
+                )
+                Text(
+                  preset.summary,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  style = MaterialTheme.typography.bodySmall,
+                )
+              }
+            },
+            leadingIcon = { Checkbox(checked = checked, onCheckedChange = null) },
+            // The menu stays open: picking a set one item at a time through a menu that closes
+            // after each is the interaction this control exists to avoid.
+            onClick = { onToggle(preset.id) },
           )
         }
       }
