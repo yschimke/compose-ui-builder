@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
+import ee.schimke.composeai.uibuilder.capability.accepts
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -90,7 +91,7 @@ class StarterContentTest {
           "$where seeds ${child.componentId}, which is not in the catalog",
         )
       assertTrue(
-        slot.acceptsForTest(capability),
+        slot.accepts(capability),
         "$where does not accept ${child.componentId}",
       )
       child.properties.forEach { (name, encoded) ->
@@ -293,9 +294,4 @@ class StarterContentTest {
 
   private fun UiBuilderNode.stringProperty(name: String): String =
     properties.getValue(name).jsonObject.getValue("value").jsonPrimitive.content
-
-  private fun SlotCapability.acceptsForTest(component: ComponentCapability): Boolean =
-    "AnyContent" in acceptedTraits ||
-      component.role in acceptedRoles ||
-      component.traits.any(acceptedTraits::contains)
 }

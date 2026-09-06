@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
+import ee.schimke.composeai.uibuilder.capability.accepts
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlin.math.abs
@@ -3574,26 +3575,29 @@ class UiBuilderEditorReducer(
         else propertyErrors,
     )
 
+  /**
+   * Where an insert of [inserted] lands with [selectedNodeId] selected: the first of the selected
+   * node's own slots that accepts it and has room, else the first such slot anywhere below it in
+   * document order, else the slot the selected node itself sits in.
+   *
+   * The descent is what makes a fresh design usable. The blank template is a scaffold holding one
+   * box in its single `content` slot, and the scaffold is what is selected when the editor opens;
+   * its `topBar` takes an app bar or a layout primitive and nothing else, and `content` is full. A
+   * chip added there used to go into the top bar — a `Container` matched on its role alone — and
+   * with the slot rule now asking for the trait too, a search that stopped at the scaffold's own
+   * slots would offer nowhere at all. The box below it is where the chip was always meant to go.
+   */
   private fun findDestination(
     document: UiBuilderDocument,
     selectedNodeId: String?,
     inserted: ComponentCapability,
   ): ParentSlot? {
     val selected = selectedNodeId?.let(document.nodes::get)
-    val selectedCapability = selected?.let { catalog.componentsById[it.componentId] }
-    selectedCapability
-      ?.let { capability ->
-        capability.slots +
-          selected.slots.keys
-            .filterNot(capability.slotsByName::containsKey)
-            .mapNotNull(capability::slot)
+    if (selected != null) {
+      firstAcceptingSlotBelow(document, selected, inserted)?.let {
+        return it
       }
-      ?.firstOrNull { slot ->
-        slot.accepts(inserted) && slot.hasRoom(selected.slots[slot.name].orEmpty().size)
-      }
-      ?.let {
-        return ParentSlot(selected.id, it.name)
-      }
+    }
 
     val selectedParent = selectedNodeId?.let(document::location)
     if (selectedParent != null) {
@@ -3606,6 +3610,31 @@ class UiBuilderEditorReducer(
         return selectedParent
     }
     return null
+  }
+
+  private fun firstAcceptingSlotBelow(
+    document: UiBuilderDocument,
+    node: UiBuilderNode,
+    inserted: ComponentCapability,
+  ): ParentSlot? {
+    val capability = catalog.componentsById[node.componentId] ?: return null
+    val slots =
+      capability.slots +
+        node.slots.keys.filterNot(capability.slotsByName::containsKey).mapNotNull(capability::slot)
+    slots
+      .firstOrNull { slot ->
+        slot.accepts(inserted) && slot.hasRoom(node.slots[slot.name].orEmpty().size)
+      }
+      ?.let {
+        return ParentSlot(node.id, it.name)
+      }
+    // Depth-first in slot order, and the document's own topology guarantees no node is visited
+    // twice: every node sits in exactly one slot, and no slot leads back to an ancestor.
+    return slots
+      .asSequence()
+      .flatMap { slot -> node.slots[slot.name].orEmpty().asSequence() }
+      .mapNotNull(document.nodes::get)
+      .firstNotNullOfOrNull { child -> firstAcceptingSlotBelow(document, child, inserted) }
   }
 }
 
@@ -3673,11 +3702,6 @@ private fun ComponentCapability.editorKind(): EditorComponentKind =
     "Container" -> EditorComponentKind.Container
     else -> EditorComponentKind.Composable
   }
-
-private fun SlotCapability.accepts(component: ComponentCapability): Boolean =
-  "AnyContent" in acceptedTraits ||
-    component.role in acceptedRoles ||
-    component.traits.any(acceptedTraits::contains)
 
 private fun SlotCapability.hasRoom(childCount: Int): Boolean =
   cardinality.max?.let { childCount < it } ?: true

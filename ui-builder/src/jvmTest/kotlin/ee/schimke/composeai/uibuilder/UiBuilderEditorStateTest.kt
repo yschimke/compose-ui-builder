@@ -1482,6 +1482,37 @@ class UiBuilderEditorStateTest {
     )
   }
 
+  /**
+   * The document from `/ui-builder/m3-catalog/a`, at the door a person uses. With the blank
+   * scaffold selected, a lazy grid used to be offered its `topBar` — a `Container` on its role
+   * alone — and every add after that landed inside the grid. Now the grid goes to the body box, and
+   * the top bar is offered only to what belongs in one.
+   */
+  @Test
+  fun `a grid added with the blank scaffold selected goes into the body and not the top bar`() {
+    val blank = blankUiBuilderDocument("a", document.catalogPin, document.environment, emptyList())
+    val scaffoldId = blank.roots.single()
+    val bodyId = blank.nodes.getValue(scaffoldId).slots.getValue("content").single()
+    val state = reducer.initial(blank, scaffoldId)
+
+    assertEquals(ParentSlot(bodyId, "children"), reducer.dropTarget(state, "layout/lazy-grid"))
+    assertEquals(
+      ParentSlot(scaffoldId, "topBar"),
+      reducer.dropTarget(state, "m3/center-aligned-top-app-bar"),
+    )
+
+    val inserted =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.InsertComponent(
+          "layout/lazy-grid",
+          ParentSlot(scaffoldId, "topBar"),
+        ),
+      )
+    assertIs<CommandOutcome.Rejected>(inserted.lastOutcome)
+    assertEquals(blank.nodes, inserted.document.nodes)
+  }
+
   @Test
   fun `a from-scratch design can declare state and bind a property to it`() {
     // The whole point of declaring at creation: without it a new design has no state, nothing can

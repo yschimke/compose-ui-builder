@@ -83,7 +83,13 @@ tasks.processResources {
   }
 }
 
-tasks.withType<Test>().configureEach { useJUnitPlatform() }
+tasks.withType<Test>().configureEach {
+  useJUnitPlatform()
+  // `SlotAcceptanceTest` rewrites its committed table when asked; see the class for the command.
+  providers.gradleProperty("uiBuilderSlotAcceptanceUpdate").orNull?.let {
+    systemProperty("uiBuilderSlotAcceptanceUpdate", it)
+  }
+}
 
 abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
   @get:Input abstract val resolvedComponents: SetProperty<String>

@@ -341,11 +341,7 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
       return
     }
     val childCapability = catalog.componentsById[child.componentId] ?: return
-    val acceptsAnyContent = "AnyContent" in slot.acceptedTraits
-    val acceptsRole = childCapability.role in slot.acceptedRoles
-    val acceptsTrait = childCapability.traits.any(slot.acceptedTraits::contains)
-    val constrainsChildren = slot.acceptedRoles.isNotEmpty() || slot.acceptedTraits.isNotEmpty()
-    if (constrainsChildren && !acceptsAnyContent && !acceptsRole && !acceptsTrait) {
+    if (!slot.accepts(childCapability)) {
       issues +=
         issue(
           CapabilityIssueCode.INCOMPATIBLE_SLOT_CHILD,

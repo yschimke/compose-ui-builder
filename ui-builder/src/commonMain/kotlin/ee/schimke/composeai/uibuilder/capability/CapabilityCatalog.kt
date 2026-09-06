@@ -85,6 +85,37 @@ data class SlotCapability(
   val acceptedTraits: List<String> = emptyList(),
 )
 
+/**
+ * Whether this slot accepts [component] as a child. The one slot rule, used by the validator, the
+ * editor's drop targets and required-slot fill alike, and mirrored verbatim by the server's catalog
+ * validation in `:ui-builder-runtime` (`slotAccepts`), which cannot reach this module.
+ *
+ * Each axis is a filter, and a child has to pass **both**: an empty `acceptedRoles` or
+ * `acceptedTraits` constrains nothing on that axis, and `AnyContent` in the traits is the same as
+ * declaring none. The rule used to pass a child that matched *either* axis, and since every slot
+ * lists the coarse roles beside its traits, the roles decided everything: `layout/scaffold.topBar`
+ * declares `Container` + `TopBar`, and a lazy grid is a `Container`, so a grid sat in the top bar
+ * holding text and icon buttons the way `GridItem` was meant to forbid. Twenty-three of the
+ * thirty-nine catalog components fit that slot under the old rule; two do under this one.
+ */
+fun SlotCapability.accepts(component: ComponentCapability): Boolean =
+  slotAccepts(acceptedRoles, acceptedTraits, component.role, component.traits)
+
+/** [SlotCapability.accepts] over the raw lists, for a caller holding another slot type. */
+fun slotAccepts(
+  acceptedRoles: List<String>,
+  acceptedTraits: List<String>,
+  role: String,
+  traits: List<String>,
+): Boolean {
+  val roleAccepted = acceptedRoles.isEmpty() || role in acceptedRoles
+  val traitAccepted =
+    acceptedTraits.isEmpty() ||
+      "AnyContent" in acceptedTraits ||
+      traits.any(acceptedTraits::contains)
+  return roleAccepted && traitAccepted
+}
+
 /** Rules for document-authored slot names, such as Remote Compose custom component configs. */
 @Serializable
 data class DynamicSlotCapability(

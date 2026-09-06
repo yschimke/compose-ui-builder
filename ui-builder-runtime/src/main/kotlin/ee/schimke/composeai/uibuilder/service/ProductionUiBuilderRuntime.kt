@@ -236,16 +236,7 @@ public class CurrentM3UiBuilderCatalogExecutor(
                 "child $childId has an unknown component",
                 childId,
               )
-          val roleAccepted =
-            slot == null ||
-              slot.acceptedRoles.isEmpty() ||
-              childCapability.role in slot.acceptedRoles
-          val traitAccepted =
-            slot == null ||
-              slot.acceptedTraits.isEmpty() ||
-              "AnyContent" in slot.acceptedTraits ||
-              childCapability.traits.any(slot.acceptedTraits::contains)
-          if (!roleAccepted && !traitAccepted) {
+          if (slot != null && !slotAccepts(slot, childCapability)) {
             return issue(
               "INCOMPATIBLE_SLOT_CHILD",
               "child $childId is not compatible with slot $name",
@@ -287,6 +278,25 @@ public class CurrentM3UiBuilderCatalogExecutor(
         .bufferedReader(Charsets.UTF_8)
         .use { it.readText() }
   }
+}
+
+/**
+ * Whether [slot] accepts a child of [component]: both the role and a trait have to match, an empty
+ * list constrains nothing on its axis, and `AnyContent` is the same as declaring no traits.
+ *
+ * This is `SlotCapability.accepts` from `:ui-builder`, written again because this module cannot
+ * reach that one; `SlotAcceptanceTest` on either side pins both to the same committed table so they
+ * cannot drift. Before this, an empty role list counted as a role *match* and the two were joined
+ * with *or*, so for a catalog built with `singleSlot`/`manySlot` — every slot below — the server
+ * checked traits on no slot at all, while the editor did.
+ */
+internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV1): Boolean {
+  val roleAccepted = slot.acceptedRoles.isEmpty() || component.role in slot.acceptedRoles
+  val traitAccepted =
+    slot.acceptedTraits.isEmpty() ||
+      "AnyContent" in slot.acceptedTraits ||
+      component.traits.any(slot.acceptedTraits::contains)
+  return roleAccepted && traitAccepted
 }
 
 /**
@@ -1244,6 +1254,15 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // `OutlinedButton` and `ChildButton`; the mobile `style` list this borrowed carried `fab` and
       // `elevated`, which no watch publishes, so the property is replaced rather than filtered.
       button.copy(
+        // The borrowed `leadingIcon` slot asks for `IconContent`, which is `m3/icon`'s trait, and
+        // `m3/icon` did not come along; `wear-m3/icon` is an `Adornment`, the trait every other
+        // Wear icon slot names. Left as borrowed the slot is one nothing in this catalog fits —
+        // which the old slot rule hid, since any `Leaf` passed on its role alone.
+        slots =
+          button.slots.map { slot ->
+            if (slot.name == "leadingIcon") slot.copy(acceptedTraits = listOf("Adornment"))
+            else slot
+          },
         properties =
           button.properties.filterNot { it.name == "variant" || it.name == "style" } +
             PropertyCapabilityV1(
@@ -1255,7 +1274,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                 "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or " +
                   "`ChildButton`. There is no `fab` — a watch has no floating action button, " +
                   "which is one of the things a borrowed `m3/button` was quietly offering.",
-            )
+            ),
       )
     }
   val nativeOnly =

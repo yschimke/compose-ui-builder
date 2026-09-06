@@ -99,7 +99,7 @@
       "componentId": "layout/box",
       "displayName": "Box",
       "role": "Container",
-      "traits": ["OrderedContent", "OverlayContent"],
+      "traits": ["OrderedContent", "OverlayContent", "LayoutPrimitive"],
       "slots": [
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
@@ -116,7 +116,7 @@
       "componentId": "layout/column",
       "displayName": "Column",
       "role": "Container",
-      "traits": ["OrderedContent", "VerticalContent"],
+      "traits": ["OrderedContent", "VerticalContent", "LayoutPrimitive"],
       "slots": [
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
@@ -159,7 +159,7 @@
       "role": "Container",
       "traits": ["OrderedContent", "VerticalContent", "ScrollableContent", "RepeatedContent"],
       "slots": [
-        { "name": "items", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["ListItem"] }
+        { "name": "items", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "contentPadding", "jsonType": "object", "required": false },
@@ -178,7 +178,7 @@
       "role": "Container",
       "traits": ["OrderedContent", "GridContent", "ScrollableContent", "RepeatedContent"],
       "slots": [
-        { "name": "items", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["GridItem"] }
+        { "name": "items", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "columns", "jsonType": "object", "required": true },
@@ -199,7 +199,7 @@
       "role": "Container",
       "traits": ["OrderedContent", "HorizontalContent", "ScrollableContent", "RepeatedContent"],
       "slots": [
-        { "name": "items", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["ListItem"] }
+        { "name": "items", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "contentPadding", "jsonType": "object", "required": false },
@@ -217,7 +217,7 @@
       "componentId": "layout/row",
       "displayName": "Row",
       "role": "Container",
-      "traits": ["OrderedContent", "HorizontalContent"],
+      "traits": ["OrderedContent", "HorizontalContent", "LayoutPrimitive"],
       "slots": [
         { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
@@ -237,9 +237,9 @@
       "role": "Scaffold",
       "traits": ["ScreenContent"],
       "slots": [
-        { "name": "topBar", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["TopBar"] },
+        { "name": "topBar", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["TopBar", "LayoutPrimitive"] },
         { "name": "snackbarHost", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["SnackbarHost"] },
-        { "name": "content", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["ScreenContent"] }
+        { "name": "content", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "containerColor", "jsonType": "string", "required": false },
@@ -258,8 +258,8 @@
       "role": "Scaffold",
       "traits": ["ScreenContent", "AdaptivePaneLayout"],
       "slots": [
-        { "name": "mainPane", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["ScreenContent"] },
-        { "name": "supportingPane", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["PaneContent"] }
+        { "name": "mainPane", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["AnyContent"] },
+        { "name": "supportingPane", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "layoutMode", "jsonType": "string", "required": true, "allowedValues": ["adaptive", "expandedTwoPane", "singlePane", "twoPane"] },
@@ -280,7 +280,7 @@
       "role": "Container",
       "traits": ["Action", "ToolbarItem"],
       "slots": [
-        { "name": "content", "cardinality": { "min": 1, "max": null }, "ordered": true, "acceptedRoles": ["Leaf", "Container"], "acceptedTraits": ["TextContent", "IconContent"] },
+        { "name": "content", "cardinality": { "min": 1, "max": null }, "ordered": true, "acceptedRoles": ["Leaf", "Container"], "acceptedTraits": ["AnyContent"] },
         { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
       ],
       "properties": [
@@ -394,7 +394,7 @@
       "traits": ["SelectionControl", "ListItem"],
       "slots": [
         { "name": "label", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] },
-        { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["IconContent"] }
+        { "name": "leadingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "selected", "jsonType": ["boolean", "string", "object"], "required": true, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types." },
@@ -552,7 +552,7 @@
       "traits": ["TopBar", "SearchContent"],
       "slots": [
         { "name": "inputField", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["SearchInput"] },
-        { "name": "expandedContent", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["SearchResults"] }
+        { "name": "expandedContent", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "expanded", "jsonType": "boolean", "required": true },
@@ -610,7 +610,7 @@
       "role": "Container",
       "traits": ["SnackbarHost"],
       "slots": [
-        { "name": "snackbar", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["SnackbarContent"] }
+        { "name": "snackbar", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
         { "name": "visible", "jsonType": "boolean", "required": true },

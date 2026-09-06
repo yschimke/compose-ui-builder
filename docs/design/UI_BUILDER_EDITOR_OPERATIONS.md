@@ -32,6 +32,50 @@ Jetcaster render using exact geometry assertions and the existing sub-0.2% one-c
 tolerance. Editor chrome and history controls therefore cannot change the design's layout mode or
 canvas geometry unnoticed.
 
+## What a slot accepts
+
+A slot declares `acceptedRoles` and `acceptedTraits`, and a child has to pass **both**: an empty
+list constrains nothing on its axis, and `AnyContent` in the traits is the same as declaring none.
+The rule lives once in `SlotCapability.accepts`
+([`CapabilityCatalog.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/capability/CapabilityCatalog.kt)),
+which the validator, the drop targets and the required-slot fill all call, and once more as
+`slotAccepts` in `:ui-builder-runtime`, which cannot reach that module. The two are pinned to the
+same committed table,
+[`slot-acceptance-v1.json`](fixtures/ui-builder/slot-acceptance-v1.json) — for every slot of every
+enabled catalog, the component ids it accepts — by `CatalogGrammarTest` on the editor side and
+`SlotAcceptanceTest` on the server side, so a change to either copy, or to the catalog, shows up
+as a diff in that file rather than as a document one side accepts and the other refuses.
+
+It used to be *either*. Every m3 slot lists the coarse roles beside its traits, so the role decided
+everything: `layout/scaffold.topBar` declares `Container` + `TopBar`, a lazy grid is a `Container`,
+and a design shipped with a lazy grid in its top bar holding text and icon buttons the way
+`GridItem` was meant to forbid. Twenty-three of the thirty-nine components fit that slot under the
+old rule. The server's copy was looser still — an empty role list counted as a *match* — so for the
+catalogs built in code, where no slot declares roles, the server checked traits on no slot at all.
+
+Requiring both would have refused the checked-in designs at twenty places, and the blank template
+with them: a box in `scaffold.content` is not `ScreenContent`, a text in `lazy-column.items` is not
+a `ListItem`. Those traits described what a slot is *for*, not what Compose takes, so the catalog
+now tells the two kinds of slot apart:
+
+- **Free content lambdas** — `scaffold.content`, both panes, every `lazy-*.items`, `button.content`,
+  `filter-chip.leadingIcon`, `snackbar-host.snackbar`, `search-bar.expandedContent` — declare
+  `AnyContent`, because the Compose parameter is a lambda that takes any composable.
+- **Structural slots** — `scaffold.topBar`, `dialog.confirmButton`, `tab-row.tabs`,
+  `search-bar.inputField`, `icon-button.content`, the widget background — keep their trait, because
+  the parameter has a shape the trait names. The top bar takes a `TopBar` or a `LayoutPrimitive`,
+  a trait `layout/box`, `layout/row` and `layout/column` now carry: the Jetcaster top bar is a
+  `Row`, and a custom app bar is a legitimate thing to build, where a scrolling grid is not.
+
+`CatalogGrammarTest` reads the catalog as a grammar and holds four more things that need no
+document to check: every required slot accepts something, every component can be closed by a finite
+subtree, every component is accepted by some slot, and every trait a slot names is carried by some
+component. The last found two slots nothing could ever fill — the snackbar host's `SnackbarContent`
+and the search bar's `SearchResults` — and, in `wear-m3`, a button whose borrowed `leadingIcon` slot
+asked for `m3/icon`'s trait after `m3/icon` had left the catalog. The `remote-m3` widget background
+is the one known survivor: the brushes it takes are not in that reviewed subset yet, and the test
+names it rather than tolerating it.
+
 ## Starter content
 
 A container inserted from the palette arrives holding typical content rather than empty: an icon
