@@ -228,6 +228,30 @@ a design makes. `InlineRemoteContentExporter` writes the half that is the design
 `@RemoteComposable` function — and the editor's generated-code pane shows it beneath whatever the
 screen generator said, so a design holding remote content is never answered with a bare refusal.
 
+### Choosing the density behaviour at the call site
+
+The generator refuses to pick it, but the decision is not arbitrary, and the rule is short enough to
+state here so that whoever writes the call site is not left guessing:
+
+- **One target device → assume a constant.** Capture at that device's density and let the document
+  carry absolute values. It is smaller, it is what every published `remote-m3` document already
+  does, and nothing about it can be wrong when there is exactly one density to be right about.
+- **Several targets whose densities differ → use expressions.** Defer to the host and let the
+  document resolve at paint time. `RemoteContext`'s system variables (`ID_*`) cover density, so this
+  is a capability of the format rather than a workaround, and it is the only way one document is
+  correct on all of them.
+
+Form factor is what usually decides which case applies: every Wear id in the device catalog is
+density 2.0, so a watch-only design is the single-target case almost by construction, while a design
+that has to be right on a phone *and* a watch is not — 42 of the 56 ids `DeviceDimensions` knows are
+not 2.0, and 2.625 is merely the commonest.
+
+What a wrong choice costs is why the call site is refused rather than guessed: a constant captured
+against the wrong density draws at the wrong size on every host that disagrees, and `ServeBundleHost`
+had the matching bug on the replay side — a hardcoded 2.625, the desktop renderer's phone-shaped
+default, scaling every Wear document by 1.31 against its own baked PNG until it was taught to ask
+the device.
+
 The custom component used to be the one node no generator could write, and it is not any more.
 `remote-creation-compose` 1.0.0-alpha18 publishes
 `RemoteCustomComponent(name, modifier, properties)`, which emits the `LAYOUT_CUSTOM` operation

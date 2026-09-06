@@ -20,6 +20,11 @@ package ee.schimke.composeai.uibuilder
  * generator that guessed them would hand somebody code that compiles and draws the wrong size,
  * which is the failure every refusal in this file exists to avoid.
  *
+ * Refusing to pick is not the same as having nothing to say about it: `docs/design/
+ * UI_BUILDER_REMOTE_COMPOSE.md` → "Choosing the density behaviour at the call site" carries the
+ * rule — one target device, capture a constant; several whose densities differ, use expressions and
+ * let the document resolve against the host's own `ID_*` density at paint time.
+ *
  * ## Refusals are by name
  *
  * The same discipline as the other two. A node the vocabulary cannot write is refused and said out
