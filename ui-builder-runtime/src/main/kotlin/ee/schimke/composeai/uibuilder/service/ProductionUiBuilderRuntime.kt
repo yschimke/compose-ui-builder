@@ -652,6 +652,17 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
           notes = "The copied Wear widget host geometry has not yet passed structured SVG parity."
         ),
     )
+  // The reviewed `remote-m3` subset. The last two are brushes, and they are here because the
+  // background slot above declares `DrawLayer` and `ImageContent` and nothing else in this list
+  // carries either — a slot narrowed to traits no component in its own catalog has is a slot no
+  // author can fill from the palette, from a drop, or from a document the validator would accept
+  // (yschimke/compose-preview-server#428).
+  //
+  // `shape/radial-gradient` is deliberately not among them. `RemoteContentEmitter` writes
+  // `horizontalGradient`/`verticalGradient` chains from `shape/linear-gradient` and has an authored
+  // refusal for `asset/image` that names what to add by hand; a radial gradient would fall through
+  // to the generic "is not a widget background brush", which is a worse answer than not offering
+  // it. It joins the list when `WearWidgetBrush` gains the chain element it needs.
   val authoringIds =
     listOf(
       "layout/box",
@@ -660,6 +671,8 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "m3/surface",
       "m3/text",
       "remote-compose/document",
+      "shape/linear-gradient",
+      "asset/image",
     )
   return base.copy(
     // A Wear widget body is a Remote Compose document, played rather than composed. Said here so

@@ -492,6 +492,12 @@ class PersistentDesignService(
 }
 
 private fun validateTopology(document: UiBuilderDocument): String? {
+  // The same bound the persistent service and the collaboration reducer apply, for the same reason:
+  // export requires exactly one root, and a second one is a document this service would otherwise
+  // store and serve until somebody asked it for Kotlin (yschimke/compose-preview-server#429).
+  if (document.roots.size > 1) {
+    return "a design has at most one root; found ${document.roots.size}"
+  }
   val locations = linkedMapOf<String, String>()
   document.roots.forEach { root ->
     if (root !in document.nodes) return "root $root does not exist"

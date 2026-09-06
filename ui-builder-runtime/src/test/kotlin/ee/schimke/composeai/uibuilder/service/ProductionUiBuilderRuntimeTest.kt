@@ -91,6 +91,8 @@ class ProductionUiBuilderRuntimeTest {
         "m3/surface",
         "m3/text",
         "remote-compose/document",
+        "shape/linear-gradient",
+        "asset/image",
       ),
       remoteCatalog.components.map { it.componentId },
     )

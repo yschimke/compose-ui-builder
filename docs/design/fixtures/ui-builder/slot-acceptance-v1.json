@@ -739,6 +739,7 @@
         },
         "remote-m3": {
             "layout/box.children": [
+                "asset/image",
                 "layout/box",
                 "layout/column",
                 "layout/row",
@@ -746,9 +747,11 @@
                 "m3/text",
                 "remote-compose/document",
                 "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small"
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
             "layout/column.children": [
+                "asset/image",
                 "layout/box",
                 "layout/column",
                 "layout/row",
@@ -756,9 +759,11 @@
                 "m3/text",
                 "remote-compose/document",
                 "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small"
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
             "layout/row.children": [
+                "asset/image",
                 "layout/box",
                 "layout/column",
                 "layout/row",
@@ -766,9 +771,11 @@
                 "m3/text",
                 "remote-compose/document",
                 "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small"
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
             "m3/surface.content": [
+                "asset/image",
                 "layout/box",
                 "layout/column",
                 "layout/row",
@@ -776,10 +783,15 @@
                 "m3/text",
                 "remote-compose/document",
                 "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small"
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
-            "remote-m3/widget-container-large.background": [],
+            "remote-m3/widget-container-large.background": [
+                "asset/image",
+                "shape/linear-gradient"
+            ],
             "remote-m3/widget-container-large.content": [
+                "asset/image",
                 "layout/box",
                 "layout/column",
                 "layout/row",
@@ -787,10 +799,15 @@
                 "m3/text",
                 "remote-compose/document",
                 "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small"
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
-            "remote-m3/widget-container-small.background": [],
+            "remote-m3/widget-container-small.background": [
+                "asset/image",
+                "shape/linear-gradient"
+            ],
             "remote-m3/widget-container-small.content": [
+                "asset/image",
                 "layout/box",
                 "layout/column",
                 "layout/row",
@@ -798,7 +815,8 @@
                 "m3/text",
                 "remote-compose/document",
                 "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small"
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ]
         },
         "wear-m3": {

@@ -164,11 +164,14 @@ class CollaborationConvergenceTest {
     val inserts =
       listOf(
         command(
-          "insert-before-root",
+          "insert-before-b",
           "actor-a",
           "browser-a",
           4,
-          DesignOperation.InsertNode(UiBuilderNode("root-first", "button")),
+          DesignOperation.InsertNode(
+            UiBuilderNode("extras-first", "button"),
+            ParentSlot("container", "extras"),
+          ),
         ),
         command(
           "insert-after-anchor",
@@ -206,14 +209,14 @@ class CollaborationConvergenceTest {
           "actor-a",
           "browser-a",
           4,
-          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("a", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
         command(
           "move-anchor",
           "actor-b",
           "mcp-b",
           4,
-          DesignOperation.MoveNode("anchor", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("anchor", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
       )
     val moveStates = moves.permutations().map { applyAll(initial, it) }
@@ -231,7 +234,7 @@ class CollaborationConvergenceTest {
           "actor-a",
           "browser-a",
           4,
-          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("a", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
       )
     val stale =
@@ -269,7 +272,7 @@ class CollaborationConvergenceTest {
           "actor-b",
           "mcp-b",
           4,
-          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("a", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
       )
     assertEquals(
@@ -286,7 +289,7 @@ class CollaborationConvergenceTest {
           "actor-a",
           "browser-a",
           4,
-          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("a", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
       )
     val deleteAfterMove =
@@ -357,7 +360,15 @@ class CollaborationConvergenceTest {
 
   @Test
   fun `commands reject a loaded document with duplicate parent topology`() {
-    val malformedDocument = document().copy(roots = listOf("container", "b", "a"))
+    val container = document().nodes.getValue("container")
+    val malformedDocument =
+      document()
+        .copy(
+          nodes =
+            document().nodes +
+              ("container" to
+                container.copy(slots = container.slots + ("extras" to listOf("b", "a"))))
+        )
     val initial = CollaborationState(malformedDocument)
     val application =
       CollaborationReducer.apply(
@@ -367,7 +378,7 @@ class CollaborationConvergenceTest {
           "actor-a",
           "browser-a",
           4,
-          DesignOperation.MoveNode("b", parent = null, afterNodeId = "container"),
+          DesignOperation.MoveNode("b", ParentSlot("container", "items"), afterNodeId = "a"),
         ),
       )
 
@@ -375,6 +386,66 @@ class CollaborationConvergenceTest {
     assertEquals(RejectionCode.INVALID_LOCATION, rejected.code)
     assertEquals("a", rejected.nodeId)
     assertNoDesignMutation(initial, application.state)
+  }
+
+  /**
+   * A design has at most one root, checked here rather than only when somebody asks for Kotlin.
+   *
+   * Both doors: an insert that names no parent puts its node in the root list, and a document
+   * loaded with two roots satisfies every placement rule — each node reachable once, no cycles — so
+   * nothing else here would notice. Export refuses `ROOT_CARDINALITY` and the editor cannot delete
+   * a root without its whole subtree, which makes a second root a state a real design can be stored
+   * in and never leave (yschimke/compose-preview-server#429).
+   */
+  @Test
+  fun `a second root is refused, by an insert and in a loaded document`() {
+    val initial = CollaborationState(document())
+    val inserted =
+      CollaborationReducer.apply(
+        initial,
+        command(
+          "insert-second-root",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(UiBuilderNode("second-root", "button")),
+        ),
+      )
+
+    val rejected = assertIs<CommandOutcome.Rejected>(inserted.outcome)
+    assertEquals(RejectionCode.INVALID_DOCUMENT, rejected.code)
+    assertEquals("a design has at most one root; found 2", rejected.message)
+    assertNoDesignMutation(initial, inserted.state)
+
+    val loaded =
+      CollaborationState(
+        document().let { base ->
+          val container = base.nodes.getValue("container")
+          base.copy(
+            roots = listOf("container", "b"),
+            nodes =
+              base.nodes + ("container" to container.copy(slots = container.slots - "extras")),
+          )
+        }
+      )
+    val touched =
+      CollaborationReducer.apply(
+        loaded,
+        command(
+          "touch-two-roots",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.SetProperty("a", "text", typed("string", "anything")),
+        ),
+        propertyValidator,
+      )
+
+    assertEquals(
+      RejectionCode.INVALID_DOCUMENT,
+      assertIs<CommandOutcome.Rejected>(touched.outcome).code,
+    )
+    assertNoDesignMutation(loaded, touched.state)
   }
 
   @Test
@@ -566,7 +637,7 @@ class CollaborationConvergenceTest {
           "actor-a",
           "browser-a",
           4,
-          DesignOperation.MoveNode("a", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("a", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
       )
     val moveUndone =
@@ -583,7 +654,10 @@ class CollaborationConvergenceTest {
         moveUndone.state,
         redo("redo-move", "actor-a", "browser-a", 6, "undo-move"),
       )
-    assertEquals(listOf("container", "b", "a"), moveRedone.state.document.roots)
+    assertEquals(
+      listOf("b", "a"),
+      moveRedone.state.document.nodes.getValue("container").slots["extras"],
+    )
 
     val deleted =
       CollaborationReducer.apply(
@@ -744,7 +818,7 @@ class CollaborationConvergenceTest {
               put("value", true)
             },
           ),
-          DesignOperation.MoveNode("mixed", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("mixed", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
         propertyValidator,
       )
@@ -764,7 +838,10 @@ class CollaborationConvergenceTest {
         redo("redo-mixed", "actor-a", "browser-a", 6, "undo-mixed"),
       )
     assertIs<CommandOutcome.Accepted>(redone.outcome)
-    assertEquals(listOf("container", "b", "mixed"), redone.state.document.roots)
+    assertEquals(
+      listOf("b", "mixed"),
+      redone.state.document.nodes.getValue("container").slots["extras"],
+    )
     assertEquals(
       buildJsonObject {
         put("type", "bool")
@@ -867,7 +944,11 @@ class CollaborationConvergenceTest {
         "actor-a",
         "browser-a",
         4,
-        DesignOperation.InsertNode(UiBuilderNode("replay-node", "button")),
+        DesignOperation.InsertNode(
+          UiBuilderNode("replay-node", "button"),
+          ParentSlot("container", "extras"),
+          "b",
+        ),
       )
     val accepted = CollaborationReducer.apply(initial, command)
     val tampered =
@@ -1126,7 +1207,15 @@ class CollaborationConvergenceTest {
         slots = mapOf("content" to listOf("child")),
       )
     val b = UiBuilderNode("b", "button")
-    val container = UiBuilderNode("container", "column", slots = mapOf("items" to listOf("a")))
+    // One root. A second is a document nothing can export and the reducer now refuses it
+    // (yschimke/compose-preview-server#429), so `b` lives in a second slot of the container — which
+    // is what the moves below want it for: a place to move to that is not where the node is.
+    val container =
+      UiBuilderNode(
+        "container",
+        "column",
+        slots = mapOf("items" to listOf("a"), "extras" to listOf("b")),
+      )
     return UiBuilderDocument(
       schema = "compose-ui-builder-document/v1",
       id = "design",
@@ -1135,7 +1224,7 @@ class CollaborationConvergenceTest {
       catalogPin = JsonObject(emptyMap()),
       environment = JsonObject(emptyMap()),
       stateVariables = JsonObject(emptyMap()),
-      roots = listOf("container", "b"),
+      roots = listOf("container"),
       nodes = mapOf("container" to container, "a" to a, "child" to child, "b" to b),
     )
   }
@@ -1149,7 +1238,10 @@ class CollaborationConvergenceTest {
           mapOf(
             "anchor" to UiBuilderNode("anchor", "button"),
             "tail" to UiBuilderNode("tail", "button"),
-            "container" to container.copy(slots = mapOf("items" to listOf("anchor", "a", "tail"))),
+            "container" to
+              container.copy(
+                slots = mapOf("items" to listOf("anchor", "a", "tail"), "extras" to listOf("b"))
+              ),
           )
     )
   }
@@ -1165,6 +1257,9 @@ class CollaborationConvergenceTest {
             listOf(
               SlotCapability("content", SlotCardinality(0, 1), ordered = true),
               SlotCapability("items", SlotCardinality(0, 1), ordered = true),
+              // Where the fixture's `b` lives now that a document may not have a second root. Left
+              // unbounded so that the overflow this catalog is here to test stays `items`'s.
+              SlotCapability("extras", SlotCardinality(0, null), ordered = true),
             )
           else emptyList(),
         properties =

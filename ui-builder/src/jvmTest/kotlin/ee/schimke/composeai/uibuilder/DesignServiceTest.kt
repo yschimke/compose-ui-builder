@@ -34,7 +34,10 @@ class DesignServiceTest {
               id = "text-2",
               componentId = "m3/text",
               properties = buildJsonObject { put("text", literal("Second")) },
-            )
+            ),
+            // Under the root, not beside it: a design has at most one root
+            // (yschimke/compose-preview-server#429).
+            ParentSlot("text", "content"),
           ),
       )
     val accepted = assertIs<CommandOutcome.Accepted>(service.apply(insert).application.outcome)

@@ -3274,6 +3274,23 @@ private fun List<String>.insertAtAnchors(nodeId: String, location: NodeLocationV
 }
 
 private fun validateTopology(document: DesignDocumentV1): RejectedOutcomeV1? {
+  // At most one root, checked on the way in rather than only on the way out. Export requires
+  // exactly
+  // one — `validateDocumentForExport`'s `ROOT_CARDINALITY`, and `ScreenDocumentProjection` again —
+  // while every placement rule below is satisfied by two disjoint trees under two roots. Without
+  // this a design could be created, persisted, loaded and edited and only refuse when somebody
+  // asked for Kotlin out of it (yschimke/compose-preview-server#429).
+  //
+  // Zero roots stays legal: that is the empty document `create_design` takes and the first
+  // parentless insert fills. Two is the count nothing but deleting a whole subtree can undo.
+  if (document.roots.size > 1) {
+    return rejected(
+      "",
+      document.revision,
+      RejectionCodeV1.INVALID_DOCUMENT,
+      "a design has at most one root; found ${document.roots.size}",
+    )
+  }
   if (document.nodes.any { (key, node) -> key != node.id }) {
     return rejected(
       "",

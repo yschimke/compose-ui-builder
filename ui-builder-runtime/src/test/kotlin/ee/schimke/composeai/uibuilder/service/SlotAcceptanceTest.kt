@@ -118,20 +118,16 @@ class SlotAcceptanceTest {
   /**
    * A slot naming a trait no component in its catalog carries is a slot the palette can never fill.
    *
-   * One is known and left standing: `remote-m3`'s widget background takes `DrawLayer` and
-   * `ImageContent` brushes, and `RemoteContentEmitter` already writes the gradients, but the
-   * reviewed `remote-m3` subset does not yet include `shape/linear-gradient`,
-   * `shape/radial-gradient` or `asset/image`, so no author can put one there. Widening that subset
-   * is a product decision with its own render evidence; until it is taken the slot is listed here
-   * rather than silently tolerated, and adding any other dangling trait still fails.
+   * There are none left. The last two were `remote-m3`'s widget backgrounds, which take `DrawLayer`
+   * and `ImageContent` brushes the reviewed subset had no component for; that subset now carries
+   * `shape/linear-gradient`, which `RemoteContentEmitter` writes as a `WearWidgetBrush` chain, and
+   * `asset/image`, whose export refusal names the bitmap to supply by hand
+   * (yschimke/compose-preview-server#428). `shape/radial-gradient` stays out, and the reason is in
+   * `remoteM3Catalog`.
    */
   @Test
   fun `every trait a slot names is carried by some component`() {
-    val known =
-      setOf(
-        "remote-m3/widget-container-small.background",
-        "remote-m3/widget-container-large.background",
-      )
+    val known = emptySet<String>()
     catalogs.forEach { catalog ->
       val carried = catalog.components.flatMap { it.traits }.toSet()
       val dangling =

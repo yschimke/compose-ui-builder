@@ -295,6 +295,11 @@ Important invariants:
 
 - Node ids are stable UUIDs and survive moves and property edits.
 - A node has exactly one parent location or is a root; cycles are invalid.
+- A document has at most one root, and export requires exactly one. Both the server's
+  `validateTopology` and the client's `requireValidTopology` refuse a second, because a two-root
+  document passes every other rule here, cannot be exported to Kotlin or SVG, and cannot be brought
+  back to one root except by deleting a whole subtree. Zero roots is the empty document a design is
+  created as, one insert away from being exportable.
 - Slot existence, cardinality, allowed roles, required properties, and value types validate against
   the pinned component capability digest.
 - Modifier order is preserved because it changes Compose output.

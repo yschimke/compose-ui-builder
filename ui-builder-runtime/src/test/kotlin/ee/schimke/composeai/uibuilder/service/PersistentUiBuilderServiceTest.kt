@@ -963,7 +963,7 @@ class PersistentUiBuilderServiceTest {
           batch(
             "two",
             1,
-            InsertNodeMutationV1(textNode("two"), NodeLocationV1(afterNodeId = "one")),
+            InsertNodeMutationV1(textNode("two"), NodeLocationV1(ParentSlotV1("one", "content"))),
           )
         ),
       )
@@ -976,7 +976,10 @@ class PersistentUiBuilderServiceTest {
           batch(
             "three",
             2,
-            InsertNodeMutationV1(textNode("three"), NodeLocationV1(afterNodeId = "two")),
+            InsertNodeMutationV1(
+              textNode("three"),
+              NodeLocationV1(ParentSlotV1("one", "content"), afterNodeId = "two"),
+            ),
           )
         ),
       )
@@ -1158,15 +1161,32 @@ class PersistentUiBuilderServiceTest {
     val secondOrder = service()
     create(firstOrder)
     create(secondOrder)
+    // The anchor both clients insert at is a slot rather than the root list, because a design has
+    // at most one root (yschimke/compose-preview-server#429). The convergence question is the same
+    // one: two inserts at the same anchor, arriving in either order.
+    val root =
+      UiBuilderServiceRequest.ApplyOperation(
+        batch("root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+      )
     val alpha =
       UiBuilderServiceRequest.ApplyOperation(
-        batch("client-a-insert", 0, InsertNodeMutationV1(textNode("alpha"), NodeLocationV1()))
+        batch(
+          "client-a-insert",
+          1,
+          InsertNodeMutationV1(textNode("alpha"), NodeLocationV1(ParentSlotV1("root", "content"))),
+        )
       )
     val beta =
       UiBuilderServiceRequest.ApplyOperation(
-        batch("client-b-insert", 0, InsertNodeMutationV1(textNode("beta"), NodeLocationV1()))
+        batch(
+          "client-b-insert",
+          1,
+          InsertNodeMutationV1(textNode("beta"), NodeLocationV1(ParentSlotV1("root", "content"))),
+        )
       )
 
+    accepted(execute(firstOrder, owner, root))
+    accepted(execute(secondOrder, owner, root))
     accepted(execute(firstOrder, owner, alpha))
     val firstFinal = accepted(execute(firstOrder, owner, beta))
     accepted(execute(secondOrder, owner, beta))
@@ -1174,7 +1194,10 @@ class PersistentUiBuilderServiceTest {
 
     assertEquals(currentDocument(firstOrder), currentDocument(secondOrder))
     assertEquals(firstFinal.documentHash, secondFinal.documentHash)
-    assertEquals(listOf("alpha", "beta"), currentDocument(firstOrder).roots)
+    assertEquals(
+      listOf("alpha", "beta"),
+      currentDocument(firstOrder).nodes.getValue("root").slots.getValue("content"),
+    )
     assertTrue(accepted(execute(firstOrder, owner, alpha)).idempotentReplay)
     assertEquals(currentDocument(firstOrder), currentDocument(secondOrder))
   }
@@ -1229,7 +1252,7 @@ class PersistentUiBuilderServiceTest {
             batch(
               "two",
               1,
-              InsertNodeMutationV1(textNode("two"), NodeLocationV1(afterNodeId = "one")),
+              InsertNodeMutationV1(textNode("two"), NodeLocationV1(ParentSlotV1("one", "content"))),
             )
           ),
         )
@@ -1368,7 +1391,7 @@ class PersistentUiBuilderServiceTest {
           batch(
             "two",
             1,
-            InsertNodeMutationV1(textNode("two"), NodeLocationV1(afterNodeId = "one")),
+            InsertNodeMutationV1(textNode("two"), NodeLocationV1(ParentSlotV1("one", "content"))),
           )
         ),
       )
@@ -1464,7 +1487,14 @@ class PersistentUiBuilderServiceTest {
               service,
               owner,
               UiBuilderServiceRequest.ApplyOperation(
-                batch("two", 1, InsertNodeMutationV1(textNode("two"), NodeLocationV1()))
+                batch(
+                  "two",
+                  1,
+                  InsertNodeMutationV1(
+                    textNode("two"),
+                    NodeLocationV1(ParentSlotV1("one", "content")),
+                  ),
+                )
               ),
             )
           )
@@ -1480,7 +1510,11 @@ class PersistentUiBuilderServiceTest {
         service,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("three", 1, InsertNodeMutationV1(textNode("three"), NodeLocationV1()))
+          batch(
+            "three",
+            1,
+            InsertNodeMutationV1(textNode("three"), NodeLocationV1(ParentSlotV1("one", "content"))),
+          )
         ),
       )
     )

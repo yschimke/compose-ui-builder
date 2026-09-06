@@ -2026,7 +2026,25 @@ private fun stableKeySuffix(value: String): List<Int> =
 
 private const val POSITION_STEP = 1024
 
+/**
+ * A document has at most one root, every node is placed exactly once, and nothing cycles.
+ *
+ * The root count is bounded here rather than only in the exporter because a second root is a state
+ * nothing can get out of: `validateDocumentForExport` refuses it with `ROOT_CARDINALITY` and
+ * `ScreenDocumentProjection` refuses it again, and the editor cannot delete a root without deleting
+ * its whole subtree. Until this bound existed such a document could be created, persisted, loaded
+ * and edited, and only refused when somebody asked for Kotlin or SVG out of it — by which time it
+ * was the stored state of a real design (yschimke/compose-preview-server#429).
+ *
+ * At most one, not exactly one: a design legitimately begins with no root at all — `create_design`
+ * takes an empty document and the first insert names no parent (`NodeLocation` with a null parent
+ * is the root list) — and that state is one insert from being exportable. Two roots is the state
+ * that is one *deletion of everything* from being exportable, so it is the one refused.
+ */
 internal fun UiBuilderDocument.requireValidTopology() {
+  if (roots.size > 1) {
+    fail(RejectionCode.INVALID_DOCUMENT, "a design has at most one root; found ${roots.size}")
+  }
   val locations = mutableMapOf<String, Int>()
   fun record(nodeId: String) {
     if (nodeId !in nodes) {

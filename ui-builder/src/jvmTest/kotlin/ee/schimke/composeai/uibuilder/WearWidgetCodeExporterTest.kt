@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 class WearWidgetCodeExporterTest {
   private val pin = JsonObject(emptyMap())
@@ -46,6 +47,59 @@ class WearWidgetCodeExporterTest {
     assertTrue("RemoteColumn(" in source, source)
     assertTrue("SquircleLargeWidgetPreviewParams::class" in source, source)
   }
+
+  /**
+   * A gradient in the background slot becomes the `WearWidgetBrush` chain the container takes.
+   *
+   * `RemoteContentEmitter` has written this since the slot existed, but nothing could author it:
+   * the reviewed `remote-m3` subset carried no component with a `DrawLayer` trait, so the slot was
+   * unfillable from the palette and from any document the catalog validator would accept
+   * (yschimke/compose-preview-server#428). `shape/linear-gradient` is in that subset now, and this
+   * is the export end of it.
+   */
+  @Test
+  fun `a linear gradient in the background slot is written as a brush chain`() {
+    val base = weatherWidgetUiBuilderDocument("weather", pin, environment)
+    val scaffold = base.nodes.values.first { it.componentId.startsWith("remote-m3/") }
+    val gradient =
+      UiBuilderNode(
+        id = "sky",
+        componentId = "shape/linear-gradient",
+        properties =
+          JsonObject(
+            mapOf(
+              "startColor" to literal("color", "#FF2196F3"),
+              "endColor" to literal("color", "#FF0D47A1"),
+              "direction" to literal("enum", "leftToRight"),
+            )
+          ),
+      )
+    val document =
+      base.copy(
+        nodes =
+          base.nodes +
+            mapOf(
+              gradient.id to gradient,
+              scaffold.id to
+                scaffold.copy(slots = scaffold.slots + ("background" to listOf(gradient.id))),
+            )
+      )
+
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(document))
+        .source
+
+    write("GradientWidget.kt", source)
+    assertTrue(
+      "WearWidgetBrush.color(Color(0xFF2196F3).rc).horizontalGradient(" in source,
+      source,
+    )
+    assertTrue("Color(0xFF2196F3).rc, Color(0xFF0D47A1).rc" in source, source)
+    assertTrue("import androidx.glance.wear.horizontalGradient" in source, source)
+  }
+
+  private fun literal(type: String, value: String): JsonObject =
+    JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
 
   /** A screen is the Compose exporter's job, and saying so beats emitting something plausible. */
   @Test

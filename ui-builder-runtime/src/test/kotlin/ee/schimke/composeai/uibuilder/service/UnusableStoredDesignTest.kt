@@ -277,6 +277,8 @@ class UnusableStoredDesignTest {
     execute(service, OWNER, UiBuilderServiceRequest.OpenDesign(designId))
 
   private fun create(service: PersistentUiBuilderService, designId: String, nodes: Int = 1) {
+    // One root with the rest beneath it: a design has at most one root
+    // (yschimke/compose-preview-server#429), and what this helper is for is the node *count*.
     val ids = (1..nodes).map { "$designId-node-$it" }
     val response =
       execute(
@@ -285,8 +287,15 @@ class UnusableStoredDesignTest {
         UiBuilderServiceRequest.CreateDesign(
           document(designId)
             .copy(
-              roots = ids,
-              nodes = ids.associateWith { DesignNodeV1(id = it, componentId = "m3.Text") },
+              roots = ids.take(1),
+              nodes =
+                ids.associateWith { DesignNodeV1(id = it, componentId = "m3.Text") } +
+                  (ids.first() to
+                    DesignNodeV1(
+                      id = ids.first(),
+                      componentId = "m3.Text",
+                      slots = mapOf("content" to ids.drop(1)),
+                    )),
             )
         ),
       )

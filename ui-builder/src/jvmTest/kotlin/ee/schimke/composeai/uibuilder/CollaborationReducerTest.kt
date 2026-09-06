@@ -81,11 +81,13 @@ class CollaborationReducerTest {
   fun `insert can add the first child without an anchor`() {
     val base = document()
     val emptyContainer =
-      base.nodes.getValue("container").copy(slots = mapOf("items" to emptyList()))
+      base.nodes
+        .getValue("container")
+        .copy(slots = mapOf("items" to emptyList(), "extras" to listOf("b")))
     val initial =
       CollaborationState(
         base.copy(
-          roots = listOf("container", "b"),
+          roots = listOf("container"),
           nodes = mapOf("container" to emptyContainer, "b" to base.nodes.getValue("b")),
         )
       )
@@ -397,7 +399,7 @@ class CollaborationReducerTest {
       )
     assertNull(deleted.state.document.nodes["a"])
     assertNull(deleted.state.document.nodes["child"])
-    assertEquals(listOf("container", "b"), deleted.state.document.roots)
+    assertEquals(listOf("container"), deleted.state.document.roots)
     assertEquals(emptyList(), deleted.state.document.nodes.getValue("container").slots["items"])
     assertEquals(setOf("a", "child"), deleted.state.tombstones.getValue("a").nodes.keys)
 
@@ -440,10 +442,12 @@ class CollaborationReducerTest {
     val movedAnchor =
       CollaborationReducer.apply(
         deleted.state,
+        // Out of `items` and into the container's other slot: the point is that `a`'s previous
+        // neighbour has left the slot, and a move to the root list would now make a second root.
         command(
           "move-anchor",
           5,
-          DesignOperation.MoveNode("anchor", parent = null, afterNodeId = "b"),
+          DesignOperation.MoveNode("anchor", ParentSlot("container", "extras"), afterNodeId = "b"),
         ),
       )
     val restored =
@@ -538,11 +542,14 @@ class CollaborationReducerTest {
         slots = mapOf("content" to listOf("child")),
       )
     val b = UiBuilderNode(id = "b", componentId = "button")
+    // One root, because a document with two is one nothing can export and the reducer now refuses
+    // it (yschimke/compose-preview-server#429). `b` is a second slot of the container rather than a
+    // second root, which is what the moves below need it to be: somewhere to move *from*.
     val container =
       UiBuilderNode(
         id = "container",
         componentId = "column",
-        slots = mapOf("items" to listOf("a")),
+        slots = mapOf("items" to listOf("a"), "extras" to listOf("b")),
       )
     return UiBuilderDocument(
       schema = "compose-ui-builder-document/v1",
@@ -552,7 +559,7 @@ class CollaborationReducerTest {
       catalogPin = JsonObject(emptyMap()),
       environment = JsonObject(emptyMap()),
       stateVariables = JsonObject(emptyMap()),
-      roots = listOf("container", "b"),
+      roots = listOf("container"),
       nodes = mapOf("container" to container, "a" to a, "child" to child, "b" to b),
     )
   }
