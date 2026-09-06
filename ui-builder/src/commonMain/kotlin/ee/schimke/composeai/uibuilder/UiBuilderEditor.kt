@@ -57,11 +57,14 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LibraryAdd
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -102,6 +105,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -161,6 +165,8 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -401,6 +407,13 @@ fun UiBuilderEditor(
     ) -> Unit)? =
     null,
   onHelp: (() -> Unit)? = null,
+  /**
+   * Copies, links and downloads the rendered design, or null where the host cannot.
+   *
+   * Null in every preview and test, where the toolbar then carries no Export menu rather than one
+   * whose every row fails — see [UiBuilderExportHost].
+   */
+  exportHost: UiBuilderExportHost? = null,
   /**
    * The published Remote Compose documents the pinned catalog offers as content, if any.
    *
@@ -994,6 +1007,7 @@ fun UiBuilderEditor(
               } else null,
             onReconnect = onReconnect,
             onHelp = onHelp,
+            exportHost = exportHost,
             dispatch = ::dispatch,
           )
         } else {
@@ -1008,6 +1022,7 @@ fun UiBuilderEditor(
               } else null,
             onReconnect = onReconnect,
             onHelp = onHelp,
+            exportHost = exportHost,
             // Absent where the host cannot draw: a project with no compile lane has exactly one
             // renderer, and offering a choice between it and nothing is not a choice.
             previewSurface = if (onRequestNativeRender == null) null else state.previewSurface,
@@ -1430,6 +1445,7 @@ private fun MobileEditorToolbar(
   onNewDesign: (() -> Unit)?,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
+  exportHost: UiBuilderExportHost?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var expanded by remember { mutableStateOf(false) }
@@ -1441,6 +1457,7 @@ private fun MobileEditorToolbar(
       Text("UI Builder", Modifier.weight(1f), fontWeight = FontWeight.Bold)
       EditorAction("Undo", "Ctrl/⌘+Z", canUndo) { dispatch(UiBuilderEditorEvent.Undo) }
       EditorAction("Redo", "Ctrl/⌘+Shift+Z", canRedo) { dispatch(UiBuilderEditorEvent.Redo) }
+      if (exportHost != null) ExportMenu(exportHost, showStatus = false)
       Box {
         TextButton(
           onClick = { expanded = true },
@@ -1580,6 +1597,8 @@ private fun EditorToolbar(
   onNewDesign: (() -> Unit)?,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
+  /** Copies, links and downloads the render, or null where the host cannot; hides the menu. */
+  exportHost: UiBuilderExportHost?,
   /**
    * The surface in use, or null where the host cannot compile — a project with one renderer is not
    * offered a choice between it and nothing.
@@ -1642,6 +1661,9 @@ private fun EditorToolbar(
       ) {
         dispatch(UiBuilderEditorEvent.ToggleCodePane)
       }
+      // Beside Code, because they are the two answers to "how do I get this out": the Kotlin the
+      // design is, and the picture it draws. Absent where the host cannot render one.
+      if (exportHost != null) ExportMenu(exportHost)
       if (previewSurface != null) {
         RenderSurfaceMenu(previewSurface, previewSurfaces, dispatch)
       }
@@ -1693,6 +1715,108 @@ private fun EditorToolbar(
     }
   }
 }
+
+/**
+ * The Export menu: the design as a picture, out of the builder and into Figma, a link or a file.
+ *
+ * One button, because the catalog viewer's preview page has one row and this toolbar has no room
+ * for six; the rows are [exportMenuEntries], grouped by verb. Each row hands its work to the host
+ * and shows the sentence the host answers with beside the button for a moment — "SVG copied", or
+ * why it was not — since a clipboard write that says nothing is indistinguishable from one that
+ * failed. The button stays enabled while a row runs: a second press while an export renders is a
+ * second export, which is harmless, and a disabled button reads as a broken one.
+ */
+@Composable
+private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
+  val groups = remember(host.formats) { exportMenuEntries(host.formats) }
+  if (groups.isEmpty()) return
+  var open by remember { mutableStateOf(false) }
+  var status by remember { mutableStateOf<String?>(null) }
+  var statusGeneration by remember { mutableStateOf(0) }
+  val scope = rememberCoroutineScope()
+  LaunchedEffect(statusGeneration) {
+    if (status == null) return@LaunchedEffect
+    delay(EXPORT_STATUS_MILLIS)
+    status = null
+  }
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    val shown = status
+    if (showStatus && shown != null) {
+      Text(
+        shown,
+        Modifier.widthIn(max = 260.dp).semantics { contentDescription = "Export status" },
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    Box {
+      ToolbarIconAction("Export", "", Icons.Filled.IosShare, true) { open = true }
+      DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        ExportMenuRows(groups) { entry ->
+          open = false
+          scope.launch {
+            status =
+              try {
+                host.perform(entry)
+              } catch (failure: Exception) {
+                "${entry.label} failed: ${failure.message ?: "unknown error"}"
+              }
+            statusGeneration++
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * The rows of the Export menu, without the popup around them.
+ *
+ * Separate from [ExportMenu] so a preview can draw them: a `DropdownMenu` is a popup window, which
+ * a static render does not capture, and rows nobody can diff are rows that drift. The verb groups
+ * are divided, and every row carries its second line, because "Copy SVG" alone does not say that it
+ * is the Figma route.
+ */
+@Composable
+internal fun ExportMenuRows(
+  groups: List<List<EditorExportMenuEntry>>,
+  onPick: (EditorExportMenuEntry) -> Unit,
+) {
+  groups.forEachIndexed { index, group ->
+    if (index > 0) HorizontalDivider()
+    group.forEach { entry ->
+      DropdownMenuItem(
+        text = {
+          Column {
+            Text(entry.label)
+            Text(
+              entry.detail,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
+        },
+        leadingIcon = {
+          Icon(
+            when (entry) {
+              is EditorExportMenuEntry.CopyPicture -> Icons.Filled.ContentCopy
+              is EditorExportMenuEntry.CopyLink -> Icons.Filled.Link
+              is EditorExportMenuEntry.Download -> Icons.Filled.Download
+            },
+            contentDescription = null,
+          )
+        },
+        modifier = Modifier.semantics { contentDescription = entry.label },
+        onClick = { onPick(entry) },
+      )
+    }
+  }
+}
+
+/** How long an export's answer stays beside the button. */
+private const val EXPORT_STATUS_MILLIS = 4_000L
 
 /** The file, the way a design tool names one: a mark, the title, and what it is pinned to. */
 @Composable

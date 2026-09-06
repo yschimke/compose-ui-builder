@@ -54,7 +54,8 @@ it gets the window. Everything else is a panel behind a switch on one of the two
 Pressing a switch that is already lit closes that panel and gives the space back to the canvas.
 
 The top bar carries what is global: the design's name and catalog, undo and redo, the
-**Design / Preview** switch, which renderer draws the canvas, and who else is in the document. What
+**Design / Preview** switch, **Export**, which renderer draws the canvas, and who else is in the
+document. What
 can be done to a *selection* — duplicate, copy, cut, paste, delete, wrap, unwrap — appears in a bar
 above the canvas while there is one, and nowhere at all while there is not. Every one of those
 still has the keyboard chord it always had; **Keyboard shortcuts** in the top bar's overflow menu
@@ -105,7 +106,8 @@ authoritative collaboration snapshot. Text, booleans,
 catalog choices, bounded numbers, and declared colors are validated locally and then submitted as
 the ordinary authoritative `SetProperty` operation. A rejection names the node and field beside
 the control. Help returns to this guide. SVG and Compose export use the current committed revision
-through the server or MCP adapter.
+through the server or MCP adapter, and the same SVG and PNG are one press away in the top bar — see
+[Getting the design out](#getting-the-design-out-figma-a-link-a-file).
 
 The canvas uses real catalog components where a supported Compose/Wasm adapter exists. A
 compatibility adapter is explicit capability metadata, not a claim that an unavailable platform
@@ -353,6 +355,40 @@ generated Kotlin compiled and captured on Android —
 [`design/UI_BUILDER_WEAR_SCREEN.md`](design/UI_BUILDER_WEAR_SCREEN.md) carries the measurements,
 where each number came from, and what is still not the watch — chiefly that none of these three is a
 live frame, where `SurfaceTransformation` scales each row by its distance from the bezel.
+
+## Getting the design out: Figma, a link, a file
+
+**Export** in the top bar lists the same three verbs the catalog viewer's preview pages offer, for
+each format the design's catalog can render. SVG leads, because pasting into Figma is what the
+menu is for.
+
+| Row | What it does |
+| --- | --- |
+| **Copy SVG** | Puts the Figma-compatible SVG markup on the clipboard. Paste into a Figma page and it lands as editable layers. |
+| **Copy PNG** | Puts the picture on the clipboard as an image, for Figma, Slack, a document. |
+| **Copy SVG link** / **Copy PNG link** | Copies a **live** URL. The server draws the current committed revision every time it is opened, so a link pasted into a pull request or a README keeps up with the design. |
+| **Download SVG** / **Download PNG** | Saves the current design as a file named after the design. |
+
+Every row renders the committed revision through the server's own export lane — the one the MCP
+`ui_builder_export` tool and the protocol's `exportDesign` request use — so what you paste is what
+an agent would have been handed, with none of the editor's chrome, selection or reference overlay
+in it. A sentence beside the button says what happened: `SVG copied — paste it into Figma`, or why
+the browser refused.
+
+The live address behind the links is a plain `GET`, one per format:
+
+```text
+/api/ui-builder/v1/designs/<designId>/export.svg
+/api/ui-builder/v1/designs/<designId>/export.png
+```
+
+It answers with the artifact's media type, its digest as the `ETag`, and the revision it drew in
+`X-UI-Builder-Revision`. `?revision=N` pins an earlier retained revision; `?download=1` asks for an
+attachment. The route is gated on `ui-builder-export`, exactly like the protocol export, and the
+copied link carries **no credential**: whoever opens it presents their own token, session or grant.
+A design's catalog decides which rows appear — a catalog whose renderer cannot draw SVG has no SVG
+rows, and one that cannot render at all has no Export button. On a server running below Java 21
+there is no render lane, so there is no menu; the startup line says so.
 
 ## Adding a published Remote Compose component
 

@@ -40,6 +40,7 @@ fun UiBuilderEditorChromePreview() {
     // and [UiBuilderCanvasForwardPreview] is the one that diffs the default.
     initialComponentsOpen = true,
     initialInspectorOpen = true,
+    exportHost = PREVIEW_EXPORT_HOST,
   )
 }
 
@@ -57,6 +58,9 @@ fun UiBuilderCanvasForwardPreview() {
     document = editorChromePreviewDocument,
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    // The toolbar as a served catalog shows it: every production catalog renders PNG, so the
+    // Export button is part of the default chrome rather than an exception to it.
+    exportHost = PREVIEW_EXPORT_HOST,
   )
 }
 

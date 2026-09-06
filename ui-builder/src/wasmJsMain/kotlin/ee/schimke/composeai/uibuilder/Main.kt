@@ -535,6 +535,10 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
   // the store behind them all. Rebuilt only when the design changes, because it is addressed to
   // one design.
   val references = remember(config.designId) { BrowserReferenceHost(config.designId, http) }
+  // Built once the catalog is known, because what the menu offers is what the catalog's renderer
+  // can draw; null until then, which is a toolbar without an Export button rather than one that
+  // promises formats it has not checked.
+  var exportHost by remember(config.designId) { mutableStateOf<UiBuilderExportHost?>(null) }
   var restoredReference by remember(config.designId) { mutableStateOf<RestoredReference?>(null) }
   var referenceStatus by remember(config.designId) { mutableStateOf<String?>(null) }
   // What was last written, so a settings drag can take the cheap route and a new picture cannot.
@@ -633,6 +637,15 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
     catalog =
       CapabilityCatalogParser.parse(
         Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), selectedCatalog)
+      )
+    exportHost =
+      BrowserExportHost(
+        designId = config.designId,
+        formats =
+          exportFormatsFor(
+            svg = selectedCatalog.exportCapabilities.svg,
+            png = selectedCatalog.exportCapabilities.png,
+          ),
       )
     val openResult = UiBuilderLiveSessionApi(config.designId, http).open()
     when (val result = openResult) {
@@ -864,6 +877,7 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
         navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
       },
       onHelp = ::openUiBuilderGuide,
+      exportHost = exportHost,
       restoredReference = restoredReference,
       onPickReference = { references.pickFile() },
       onSnapshotDesign = { references.snapshotDesign() },
