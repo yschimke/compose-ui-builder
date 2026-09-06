@@ -2169,6 +2169,241 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `setting a property to null unsets it and the change undoes and redoes`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("set", 1, SetPropertyMutationV1("node", "text", StringValueV1("First")))
+        ),
+      )
+    )
+    // The node keeps its id, its place and everything else; only the property goes.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("unset", 2, SetPropertyMutationV1("node", "text", NullValueV1))
+        ),
+      )
+    )
+    assertFalse("text" in currentNode(service, "node").properties)
+    assertTrue("node" in currentDocument(service).nodes)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-unset", "browser", 3, "unset")
+        ),
+      )
+    )
+    assertEquals(StringValueV1("First"), currentNode(service, "node").properties["text"])
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Redo("design", "redo-unset", "browser", 4, "undo-unset")
+        ),
+      )
+    )
+    assertFalse("text" in currentNode(service, "node").properties)
+
+    // Unsetting what is not set is accepted and changes nothing: the state asked for is the state
+    // the node is in, and a retry of an unset must not be refused.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("unset-again", 5, SetPropertyMutationV1("node", "text", NullValueV1))
+        ),
+      )
+    )
+    assertFalse("text" in currentNode(service, "node").properties)
+  }
+
+  @Test
+  fun `unsetting a required property is refused with the catalog's located message`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "insert",
+            0,
+            InsertNodeMutationV1(
+              DesignNodeV1(
+                id = "button",
+                componentId = "m3.Button",
+                properties = mapOf("label" to StringValueV1("Go")),
+              ),
+              NodeLocationV1(),
+            ),
+          )
+        ),
+      )
+    )
+    val refused =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("unset", 1, SetPropertyMutationV1("button", "label", NullValueV1))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
+    assertEquals("required property label is missing", refused.message)
+    assertEquals("button", refused.nodeId)
+    assertEquals("label", refused.field)
+    // Nothing landed: the batch is atomic and the node still carries its label.
+    assertEquals(StringValueV1("Go"), currentNode(service, "button").properties["label"])
+  }
+
+  @Test
+  fun `anybody who may write a design may rename it, and nobody else`() {
+    val service = service()
+    create(service)
+    val editor = AuthenticatedUiBuilderActor("editor")
+    grant(service, owner, editor, 0, listOf(DesignAccessActionV1.READ, DesignAccessActionV1.WRITE))
+    grant(service, owner, viewer, 1, listOf(DesignAccessActionV1.READ))
+
+    val renamed =
+      assertIs<UiBuilderServiceResponse.DesignRenamed>(
+        execute(service, editor, UiBuilderServiceRequest.RenameDesign("design", "  Library  "))
+      )
+    assertEquals("Library", renamed.design.title)
+    assertEquals("editor", renamed.design.requesterAccess.actorId)
+    // The revision is not a rename's to advance: it identifies the design, which did not change.
+    assertEquals(0, renamed.design.revision)
+    assertEquals("Library", currentDocument(service).title)
+    // Reading the design at its current revision agrees with reading it plainly.
+    assertEquals(
+      "Library",
+      snapshot(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 0)))
+        .state
+        .document
+        .title,
+    )
+    val listed =
+      assertIs<UiBuilderServiceResponse.Designs>(
+        execute(service, viewer, UiBuilderServiceRequest.ListDesigns(null, 10))
+      )
+    assertEquals("Library", listed.designs.single().title)
+
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, viewer, UiBuilderServiceRequest.RenameDesign("design", "Mine"))).code,
+    )
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, outsider, UiBuilderServiceRequest.RenameDesign("design", "Mine")))
+        .code,
+    )
+    assertEquals(
+      ServiceErrorCodeV1.BAD_REQUEST,
+      error(execute(service, owner, UiBuilderServiceRequest.RenameDesign("design", "   "))).code,
+    )
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(service, owner, UiBuilderServiceRequest.RenameDesign("missing", "Mine"))).code,
+    )
+    assertEquals("Library", currentDocument(service).title)
+  }
+
+  @Test
+  fun `only the owner may delete a design, and a delete closes every stream on it`() {
+    val service = service()
+    create(service)
+    val editor = AuthenticatedUiBuilderActor("editor")
+    // Even a grant that spells out `delete` does not make a grantee the owner.
+    grant(service, owner, editor, 0, DesignAccessActionV1.entries)
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, editor, UiBuilderServiceRequest.DeleteDesign("design"))).code,
+    )
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, outsider, UiBuilderServiceRequest.DeleteDesign("design"))).code,
+    )
+    assertTrue(
+      "design" in
+        assertIs<UiBuilderServiceResponse.Designs>(
+            execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+          )
+          .designs
+          .map { it.designId }
+    )
+
+    val updates = mutableListOf<UiBuilderServiceUpdate>()
+    val subscription =
+      service.subscribe(UiBuilderSubscriptionCall(editor, "design", 0), updates::add)
+    // An agent acting for the owner is the owner for this purpose, as for every other.
+    val delegate = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("design"),
+      execute(service, delegate, UiBuilderServiceRequest.DeleteDesign("design")),
+    )
+    subscription.close()
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(service, owner, UiBuilderServiceRequest.OpenDesign("design"))).code,
+    )
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(service, owner, UiBuilderServiceRequest.DeleteDesign("design"))).code,
+    )
+    assertEquals(emptyList(), service.adminListDesigns())
+  }
+
+  @Test
+  fun `a delete survives a reload of the same storage`() {
+    val storage = MemoryStorage()
+    val first = service(storage)
+    create(first)
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("design"),
+      execute(first, owner, UiBuilderServiceRequest.DeleteDesign("design")),
+    )
+    val second = service(storage)
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(second, owner, UiBuilderServiceRequest.OpenDesign("design"))).code,
+    )
+    // And the id is free again for the next design.
+    create(second)
+  }
+
+  @Test
+  fun `listing catalogs reports the pin a document must carry for each`() {
+    val listed =
+      assertIs<UiBuilderServiceResponse.Catalogs>(
+        execute(service(), owner, UiBuilderServiceRequest.ListCatalogs)
+      )
+    assertEquals(mapOf("m3" to CATALOG_REFERENCE), listed.pins)
+  }
+
+  @Test
   fun `a write is checked against the catalog's value rules where the value is chosen`() {
     // The catalog decides what a value of a kind looks like
     // (`UiBuilderCatalogExecutor.validateWrite`);
@@ -2456,11 +2691,27 @@ class PersistentUiBuilderServiceTest {
       reference == CATALOG_REFERENCE
     }
 
+    override fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? =
+      CATALOG_REFERENCE.takeIf {
+        catalog == CATALOG
+      }
+
     override fun validate(
       document: DesignDocumentV1,
       catalog: CatalogCapabilityV1,
     ): UiBuilderCatalogIssue? {
       document.nodes.values.forEach { node ->
+        if (node.componentId == "m3.Button") {
+          if ("label" !in node.properties) {
+            return UiBuilderCatalogIssue(
+              "MISSING_REQUIRED_PROPERTY",
+              "required property label is missing",
+              node.id,
+              "label",
+            )
+          }
+          return@forEach
+        }
         if (node.componentId != "m3.Text") {
           return UiBuilderCatalogIssue("UNKNOWN_COMPONENT", "unknown component", node.id)
         }
@@ -2497,7 +2748,15 @@ class PersistentUiBuilderServiceTest {
               properties =
                 listOf(PropertyCapabilityV1("text", JsonPrimitive("string"), required = false)),
               wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
-            )
+            ),
+            ComponentCapabilityV1(
+              componentId = "m3.Button",
+              displayName = "Button",
+              role = "action",
+              properties =
+                listOf(PropertyCapabilityV1("label", JsonPrimitive("string"), required = true)),
+              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
+            ),
           ),
         exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),
       )

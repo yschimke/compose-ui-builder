@@ -97,6 +97,37 @@ public sealed interface UiBuilderServiceRequest {
     val revision: Long?,
     val format: ExportFormatV1,
   ) : UiBuilderServiceRequest
+
+  /**
+   * Change a design's title, and nothing else about it.
+   *
+   * Outside the operation log on purpose. The title is document metadata rather than design
+   * content: no node reads it, no export emits it, and the revision — which is what an editor
+   * quotes as `baseRevision` and what an export pins — identifies the *design*, which a rename
+   * leaves untouched. Making it a mutation would give a rename a revision, a delta and an undo
+   * record, for something a concurrent edit cannot conflict with. Anybody who may write the design
+   * may name it. A listing shows the new title at once; an open editor shows it when it next opens
+   * the design.
+   *
+   * Has no `ui-builder-protocol` request shape yet, so it is answered outside the released
+   * envelope; see [UiBuilderProtocolMapper.toProtocolRequest].
+   */
+  public data class RenameDesign(val designId: String, val title: String) : UiBuilderServiceRequest
+
+  /**
+   * Remove a design, its history and its access list; every open stream on it is closed.
+   *
+   * **Owner only** — not a grantee, however wide its grant, and not an actor that merely holds a
+   * write capability on the host. That is the guard `AGENT_ACCESS_GRANTS.md` argues for: an agent
+   * must not be able to wipe somebody else's work. An agent acting under an approved grant owns
+   * what it created *as the person who approved it*, so a session can clean up after itself and
+   * cannot reach past that. The operator's [UiBuilderAdminPort.adminDeleteDesign] remains the way
+   * to remove a design whose owner is gone.
+   *
+   * Has no `ui-builder-protocol` request shape yet, so it is answered outside the released
+   * envelope; see [UiBuilderProtocolMapper.toProtocolRequest].
+   */
+  public data class DeleteDesign(val designId: String) : UiBuilderServiceRequest
 }
 
 /**
@@ -152,7 +183,16 @@ public data class UiBuilderPresence(
 }
 
 public sealed interface UiBuilderServiceResponse {
-  public data class Catalogs(val catalogs: List<CatalogCapabilityV1>) : UiBuilderServiceResponse
+  /**
+   * The catalogs a design may pin to. [pins], keyed by catalog system id, is the exact
+   * [CatalogReferenceV1] a document must carry to resolve to each — the thing a client used to have
+   * to guess, since the capability itself does not spell its digest. Empty where the executor
+   * cannot say.
+   */
+  public data class Catalogs(
+    val catalogs: List<CatalogCapabilityV1>,
+    val pins: Map<String, CatalogReferenceV1> = emptyMap(),
+  ) : UiBuilderServiceResponse
 
   public data class Designs(val designs: List<DesignListItemV1>, val nextCursor: String?) :
     UiBuilderServiceResponse
@@ -173,6 +213,12 @@ public sealed interface UiBuilderServiceResponse {
     UiBuilderServiceResponse
 
   public data class Export(val artifact: ExportArtifactV1) : UiBuilderServiceResponse
+
+  /** The design as the caller now sees it in a listing, carrying its new title. */
+  public data class DesignRenamed(val design: DesignListItemV1) : UiBuilderServiceResponse
+
+  /** The design is gone, durably. */
+  public data class DesignDeleted(val designId: String) : UiBuilderServiceResponse
 
   public data class Error(val error: UiBuilderServiceError) : UiBuilderServiceResponse
 }

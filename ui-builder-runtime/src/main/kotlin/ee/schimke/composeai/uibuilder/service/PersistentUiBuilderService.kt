@@ -52,6 +52,13 @@ public interface UiBuilderCatalogExecutor {
   ): UiBuilderCatalogIssue?
 
   /**
+   * The pin a document must carry for [resolve] to answer with [catalog], or null when this
+   * executor cannot say. Defaulted so an executor that predates the question still compiles; a null
+   * here means a client is back to guessing the digest, which is what the answer exists to end.
+   */
+  public fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? = null
+
+  /**
    * Whether one property **write** carries a value of the kind the catalog means, asked of the node
    * as it will be committed.
    *
@@ -417,6 +424,8 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.GetDelta -> designId
       is UiBuilderServiceRequest.UpdatePresence -> designId
       is UiBuilderServiceRequest.ExportDesign -> designId
+      is UiBuilderServiceRequest.RenameDesign -> designId
+      is UiBuilderServiceRequest.DeleteDesign -> designId
       UiBuilderServiceRequest.ListCatalogs,
       is UiBuilderServiceRequest.CreateDesign,
       is UiBuilderServiceRequest.ListDesigns -> null
@@ -483,8 +492,20 @@ public class PersistentUiBuilderService(
 
   private fun executeLocked(call: UiBuilderServiceCall): LockedExecution =
     when (val request = call.request) {
-      UiBuilderServiceRequest.ListCatalogs ->
-        LockedExecution(UiBuilderServiceResponse.Catalogs(catalogs.listCatalogs()))
+      UiBuilderServiceRequest.ListCatalogs -> {
+        val listed = catalogs.listCatalogs()
+        LockedExecution(
+          UiBuilderServiceResponse.Catalogs(
+            listed,
+            pins =
+              listed
+                .mapNotNull { catalog ->
+                  catalogs.reference(catalog)?.let { catalog.benchmark.catalogSystemId to it }
+                }
+                .toMap(),
+          )
+        )
+      }
       is UiBuilderServiceRequest.CreateDesign -> create(call.actor, request.document)
       is UiBuilderServiceRequest.ListDesigns -> list(call.actor, request)
       is UiBuilderServiceRequest.OpenDesign -> open(call.actor, request.designId, revision = null)
@@ -501,7 +522,72 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.UpdatePresence -> presence(call.actor, request)
       is UiBuilderServiceRequest.ExportDesign ->
         error("export is executed outside the service lock")
+      is UiBuilderServiceRequest.RenameDesign -> rename(call.actor, request)
+      is UiBuilderServiceRequest.DeleteDesign -> delete(call.actor, request.designId)
     }
+
+  /**
+   * See [UiBuilderServiceRequest.RenameDesign] for why this is not a mutation. The current
+   * revision's retained snapshot is renamed with the live document, so reading the design *at* its
+   * current revision agrees with reading it plainly; earlier revisions keep the title they had,
+   * which is what a historical read is for.
+   *
+   * Nothing is pushed to subscribers: the protocol client discards a snapshot that does not advance
+   * its sequence cursor, and a rename advances nothing. An open editor sees the new title when it
+   * next opens the design; a listing sees it at once.
+   */
+  private fun rename(
+    actor: AuthenticatedUiBuilderActor,
+    request: UiBuilderServiceRequest.RenameDesign,
+  ): LockedExecution {
+    val design =
+      persisted.designs[request.designId] ?: return serviceError(notFound(request.designId))
+    if (!design.allows(actor, DesignAccessActionV1.WRITE)) {
+      return serviceError(forbidden("write", request.designId))
+    }
+    val title = request.title.trim()
+    if (title.isEmpty()) {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design title is blank")
+    }
+    if (title.length > MAXIMUM_TITLE_LENGTH) {
+      return serviceError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "design title exceeds $MAXIMUM_TITLE_LENGTH characters",
+      )
+    }
+    val now = clock.millis()
+    val document = design.document.copy(title = title, updatedAtEpochMillis = now)
+    val updated =
+      design.copy(
+        document = document,
+        revisionSnapshots =
+          design.revisionSnapshots.map { retained ->
+            if (retained.document.revision == document.revision)
+              retained.copy(document = retained.document.copy(title = title))
+            else retained
+          },
+        updatedAtEpochMillis = now,
+      )
+    commitPersisted(persisted.copy(designs = persisted.designs + (request.designId to updated)))
+    return LockedExecution(UiBuilderServiceResponse.DesignRenamed(updated.listItem(actor)))
+  }
+
+  /**
+   * See [UiBuilderServiceRequest.DeleteDesign] for who may. The removal itself is the operator's
+   * [adminDeleteDesign], reached through an ownership check rather than an admin token; the two
+   * share [removeLocked] so they cannot disagree about what "gone" means.
+   */
+  private fun delete(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
+    val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
+    if (!design.ownedBy(actor)) {
+      return serviceError(forbidden("delete", designId))
+    }
+    // Closed under the lock, as [updateAccess] closes the streams of an actor it revoked: a
+    // subscriber learns the design is gone only after the removal is durable, which
+    // [removeLocked] guarantees by committing first.
+    removeLocked(designId).forEach(SubscriberMailbox::close)
+    return LockedExecution(UiBuilderServiceResponse.DesignDeleted(designId))
+  }
 
   private fun create(
     actor: AuthenticatedUiBuilderActor,
@@ -1625,11 +1711,28 @@ public class PersistentUiBuilderService(
           }
           val beforePresent = mutation.property in node.properties
           val before = node.properties[mutation.property]
+          // A null value unsets the property rather than storing a null. A stored null is what
+          // the catalog validator refuses ("does not match its catalog JSON type"), and what the
+          // Compose export refuses again; an *absent* property is the state every node starts in
+          // and the one whose default the renderer applies. Whether the property may be absent is
+          // not decided here: the catalog validation the whole batch passes through afterwards
+          // refuses an unset required property with its usual located message. An unset is not a
+          // write of a value either, so the catalog's value rules are asked only of a set.
+          val afterPresent = mutation.value !is NullValueV1
           val written =
-            node.copy(properties = node.properties + (mutation.property to mutation.value))
-          catalogs.validateWrite(catalog, written, mutation.property)?.let {
-            fail(RejectionCodeV1.INVALID_PROPERTY, it.message, index, mutation.nodeId, it.field)
-          }
+            if (afterPresent) {
+              node.copy(properties = node.properties + (mutation.property to mutation.value)).also {
+                catalogs.validateWrite(catalog, it, mutation.property)?.let { issue ->
+                  fail(
+                    RejectionCodeV1.INVALID_PROPERTY,
+                    issue.message,
+                    index,
+                    mutation.nodeId,
+                    issue.field,
+                  )
+                }
+              }
+            } else node.copy(properties = node.properties - mutation.property)
           val document =
             working.document.copy(nodes = working.document.nodes + (node.id to written))
           val conflicts =
@@ -1661,6 +1764,7 @@ public class PersistentUiBuilderService(
               beforePresent,
               before,
               mutation.value,
+              afterPresent,
             ),
             conflicts,
           )
@@ -1914,8 +2018,8 @@ public class PersistentUiBuilderService(
                   "property node no longer exists",
                   nodeId = change.nodeId,
                 )
-            val expectedPresent = if (undo) true else change.beforePresent
-            val expected = if (undo) change.after else change.before
+            val expectedPresent = if (undo) change.afterPresent else change.beforePresent
+            val expected = if (undo) change.after.takeIf { change.afterPresent } else change.before
             if (
               (change.property in node.properties) != expectedPresent ||
                 node.properties[change.property] != expected
@@ -1927,7 +2031,7 @@ public class PersistentUiBuilderService(
                 field = change.property,
               )
             }
-            val targetPresent = if (undo) change.beforePresent else true
+            val targetPresent = if (undo) change.beforePresent else change.afterPresent
             val targetValue = if (undo) change.before else change.after
             val properties =
               if (targetPresent) node.properties + (change.property to requireNotNull(targetValue))
@@ -2346,18 +2450,26 @@ public class PersistentUiBuilderService(
   override fun adminDeleteDesign(designId: String): Boolean {
     val closed: List<SubscriberMailbox> = lock.withLock {
       if (designId !in persisted.designs) return false
-      // Durable first: a subscriber whose stream closes has lost the design, not merely the
-      // connection, and must not observe that before the removal is on disk.
-      commitPersisted(persisted.copy(designs = persisted.designs - designId))
-      // The design is gone, so its quarantine goes with it: leaving the entry would answer this id
-      // with a catalog error rather than "not found", and would follow a re-created design here.
-      unusableDesigns.remove(designId)
-      val removed = runtime.remove(designId)
-      mutationBuckets.keys.removeIf { (_, bucketDesignId) -> bucketDesignId == designId }
-      removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
+      removeLocked(designId)
     }
     closed.forEach(SubscriberMailbox::close)
     return true
+  }
+
+  /**
+   * Remove a design that exists, under the lock, and hand back the streams that were open on it for
+   * the caller to close once it is safe to.
+   */
+  private fun removeLocked(designId: String): List<SubscriberMailbox> {
+    // Durable first: a subscriber whose stream closes has lost the design, not merely the
+    // connection, and must not observe that before the removal is on disk.
+    commitPersisted(persisted.copy(designs = persisted.designs - designId))
+    // The design is gone, so its quarantine goes with it: leaving the entry would answer this id
+    // with a catalog error rather than "not found", and would follow a re-created design here.
+    unusableDesigns.remove(designId)
+    val removed = runtime.remove(designId)
+    mutationBuckets.keys.removeIf { (_, bucketDesignId) -> bucketDesignId == designId }
+    return removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
   }
 
   private fun commitPersisted(candidate: PersistedServiceV1) {
@@ -2700,6 +2812,12 @@ private data class PropertyChangeV1(
   val beforePresent: Boolean,
   val before: UiValueV1?,
   val after: UiValueV1,
+  /**
+   * False when the operation unset the property — a `setProperty` whose value was `null`. [after]
+   * is then the null value as submitted, kept so the record still says what was asked for.
+   * Defaulted, because every record written before the rule existed set a value.
+   */
+  val afterPresent: Boolean = true,
 ) : ChangeRecordV1
 
 /**
@@ -3587,6 +3705,9 @@ private fun DesignEnvironmentV1.copyFieldsFrom(
       EnvironmentFieldV1.EXPORT_DEVICES -> environment.copy(exportDevices = source.exportDevices)
     }
   }
+
+/** Longer than any title a listing can show, shorter than anything that is really a document. */
+private const val MAXIMUM_TITLE_LENGTH = 200
 
 private fun notFound(designId: String): UiBuilderServiceError =
   UiBuilderServiceError(ServiceErrorCodeV1.NOT_FOUND, "design $designId was not found")

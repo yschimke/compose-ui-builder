@@ -646,19 +646,21 @@ with the builder.
 ## Connect an MCP agent
 
 The builder is reachable over the server's own `/mcp` endpoint — the same one the catalog tools use,
-with the same bearer. Seven tools, one per protocol request plus the native render:
+with the same bearer. One tool per protocol request, plus the ones the contract does not define:
 
 | Tool | Capability | What it answers |
 | --- | --- | --- |
-| `ui_builder_list_catalogs` | `ui-builder-read` | What a design's `catalogPin` may name |
+| `ui_builder_list_catalogs` | `ui-builder-read` | What a design's `catalogPin` may name, as a summary with the pin; `full: true` for the whole capability |
 | `ui_builder_list_designs` | `ui-builder-read` | The designs on this box |
-| `ui_builder_get_design` | `ui-builder-read` | One whole document, and the revision to quote next |
+| `ui_builder_get_design` | `ui-builder-read` | One whole document, and the revision to quote next; the pinned catalog only with `includeCatalog: true` |
 | `ui_builder_await_design` | `ui-builder-read` | Waits for somebody else to change the design, and returns what they changed |
 | `ui_builder_create_design` | `ui-builder-write` | A design, from a document or copied from one |
-| `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set, delete, move |
+| `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set (a null value unsets), delete, move |
 | `ui_builder_export` | `ui-builder-export` | The generator's Kotlin, or its refusals |
 | `ui_builder_design_access` | `ui-builder-read` | Who can open the design: its owner, and everyone it is shared with |
 | `ui_builder_share_design` | `ui-builder-write` | Shares it with an actor id as `viewer` or `editor`, or takes that back |
+| `ui_builder_rename_design` | `ui-builder-write` | A new title, from anybody who may write the design; the revision does not move |
+| `ui_builder_delete_design` | `ui-builder-write` | Removes a design — its **owner** only, so a session cleans up after itself and nobody else |
 | `ui_builder_render_native` | `ui-builder-export` | A frame compiled by real Compose on the host, plus where each node drew on it |
 | `ui_builder_list_comments` | `ui-builder-read` | The discussion on a design, and the cursor to wait from |
 | `ui_builder_await_comments` | `ui-builder-read` | Waits for the next thing anybody says about the design |
@@ -668,7 +670,9 @@ with the same bearer. Seven tools, one per protocol request plus the native rend
 They are absent from `tools/list` on a box that serves no builder, and `ui_builder_render_native` is
 absent on one that cannot compile — a client reads what this server can do off the tool list rather
 than off a failed call. Replies are the released `McpResponseEnvelopeV1`, except the native render,
-which has no request type in the contract and says so in its own description.
+the rename and the delete, which have no request type in the contract and say so in their own
+descriptions; and a snapshot's `catalog` is left out unless asked for, because an agent pays for it
+as context on every call and the design's `catalogPin` already names it.
 
 A session runs: list catalogs → create or open a design → read its revision → apply mutations →
 export. `baseRevision` is how a concurrent edit is detected, so quote the revision you read rather

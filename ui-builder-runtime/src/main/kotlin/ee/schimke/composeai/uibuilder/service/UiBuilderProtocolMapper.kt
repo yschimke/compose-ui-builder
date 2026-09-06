@@ -131,6 +131,14 @@ public object UiBuilderProtocolMapper {
         )
       is UiBuilderServiceRequest.ExportDesign ->
         ExportDesignRequestV1(request.designId, request.revision, request.format)
+      // Not on the v1 wire. `UiBuilderRequestV1` is a released, sealed contract with no rename and
+      // no delete; a host that offers either does so through a door of its own (the MCP tools do)
+      // and answers outside the envelope. Reaching here is a programming error, not a bad request.
+      is UiBuilderServiceRequest.RenameDesign,
+      is UiBuilderServiceRequest.DeleteDesign ->
+        throw IllegalArgumentException(
+          "${request::class.simpleName} has no ui-builder-protocol v1 request shape"
+        )
     }
 
   public fun toProtocolResponse(response: UiBuilderServiceResponse): UiBuilderResponseV1 =
@@ -148,6 +156,17 @@ public object UiBuilderProtocolMapper {
       is UiBuilderServiceResponse.PresenceAccepted ->
         PresenceAcceptedResponseV1(response.designId, response.actorId)
       is UiBuilderServiceResponse.Export -> ExportResponseV1(response.artifact)
+      // The replies to the two requests above, equally absent from the wire. Answered as an error
+      // rather than thrown: a response is on its way to a client, and a reply that names what
+      // happened beats a connection that drops.
+      is UiBuilderServiceResponse.DesignRenamed,
+      is UiBuilderServiceResponse.DesignDeleted ->
+        ErrorResponseV1(
+          ServiceErrorV1(
+            ServiceErrorCodeV1.INTERNAL,
+            "${response::class.simpleName} has no ui-builder-protocol v1 response shape",
+          )
+        )
       is UiBuilderServiceResponse.Error -> ErrorResponseV1(response.error.toProtocol())
     }
 

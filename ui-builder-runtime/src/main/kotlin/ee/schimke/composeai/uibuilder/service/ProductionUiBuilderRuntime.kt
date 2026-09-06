@@ -151,6 +151,9 @@ public class CurrentM3UiBuilderCatalogExecutor(
   override fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1? =
     catalogs[reference.systemId]?.takeIf { reference == references[reference.systemId] }
 
+  override fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? =
+    catalog.benchmark.catalogSystemId.takeIf { catalogs[it] == catalog }?.let(references::get)
+
   override fun validate(
     document: DesignDocumentV1,
     catalog: CatalogCapabilityV1,

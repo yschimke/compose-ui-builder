@@ -30,6 +30,7 @@ public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCata
 	public fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun listCatalogs ()Ljava/util/List;
+	public fun reference (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;
 	public fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
 	public fun validate (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 	public fun validateWrite (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
@@ -234,12 +235,14 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderAdminRepair$R
 
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {
 	public abstract fun listCatalogs ()Ljava/util/List;
+	public fun reference (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;
 	public abstract fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
 	public abstract fun validate (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 	public fun validateWrite (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 }
 
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor$DefaultImpls {
+	public static fun reference (Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;
 	public static fun validateWrite (Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 }
 
@@ -537,6 +540,17 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceReques
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$DeleteDesign : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$DeleteDesign;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$DeleteDesign;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$DeleteDesign;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesignId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$ExportDesign : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
 	public fun <init> (Ljava/lang/String;Ljava/lang/Long;Lee/schimke/composeai/uibuilder/protocol/ExportFormatV1;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -639,6 +653,19 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceReques
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$RenameDesign : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$RenameDesign;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$RenameDesign;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$RenameDesign;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesignId ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$UpdateDesignAccess : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
 	public fun <init> (Ljava/lang/String;JLjava/util/List;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -682,12 +709,15 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRespon
 }
 
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$Catalogs : ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse {
-	public fun <init> (Ljava/util/List;)V
+	public fun <init> (Ljava/util/List;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
-	public final fun copy (Ljava/util/List;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$Catalogs;
-	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$Catalogs;Ljava/util/List;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$Catalogs;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/List;Ljava/util/Map;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$Catalogs;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$Catalogs;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$Catalogs;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCatalogs ()Ljava/util/List;
+	public final fun getPins ()Ljava/util/Map;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -712,6 +742,28 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRespon
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAccess ()Lee/schimke/composeai/uibuilder/protocol/DesignAccessControlV1;
 	public final fun getDesignId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignDeleted : ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignDeleted;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignDeleted;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignDeleted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesignId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignRenamed : ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse {
+	public fun <init> (Lee/schimke/composeai/uibuilder/protocol/DesignListItemV1;)V
+	public final fun component1 ()Lee/schimke/composeai/uibuilder/protocol/DesignListItemV1;
+	public final fun copy (Lee/schimke/composeai/uibuilder/protocol/DesignListItemV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignRenamed;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignRenamed;Lee/schimke/composeai/uibuilder/protocol/DesignListItemV1;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignRenamed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesign ()Lee/schimke/composeai/uibuilder/protocol/DesignListItemV1;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
