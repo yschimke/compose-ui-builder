@@ -400,6 +400,32 @@ A design's catalog decides which rows appear — a catalog whose renderer cannot
 rows, and one that cannot render at all has no Export button. On a server running below Java 21
 there is no render lane, so there is no menu; the startup line says so.
 
+## Letting somebody else in
+
+A design belongs to whoever created it, and nobody else can open it until you say so. Two doors,
+per design:
+
+- **The page.** `/ui-builder/<catalog>/<designId>/access` — visible to the owner, and to an agent
+  acting for them. It lists who can open the design and shares it with somebody else.
+- **The MCP tools.** `ui_builder_design_access` reads that list; `ui_builder_share_design` changes
+  it, so "share this with @colleague" is one tool call.
+
+You name the other party by **actor id**, which is how this server spells an identity:
+`github:<login>` for a signed-in person, `operator` for the token holder, `agent:<fingerprint>` for
+an agent's approved grant. An agent reads its own from `GET /agent-access/whoami`; a browser reads
+yours from `GET /api/ui-builder/v1/identity`, and the share page prints it.
+
+A **viewer** may open and export; an **editor** may also change the design. Neither may share it on
+— a design has exactly one owner, and sharing never hands that over.
+
+### Your agent is already in
+
+An agent working under a grant **you** approved acts for you: designs it creates are owned by *you*,
+and designs you own are open to it, with the read/write/export capabilities you ticked when you
+approved. Nothing has to be shared for that, and nothing outlives the grant — it is your access,
+borrowed. Its edits and comments are still recorded under the agent's own id, so the history says
+who did what. `docs/design/AGENT_ACCESS_GRANTS.md` has the whole rule.
+
 ## Adding a published Remote Compose component
 
 Under the component list, a catalog that offers `remote-compose/document` also shows **Remote
@@ -622,6 +648,8 @@ with the same bearer. Seven tools, one per protocol request plus the native rend
 | `ui_builder_create_design` | `ui-builder-write` | A design, from a document or copied from one |
 | `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set, delete, move |
 | `ui_builder_export` | `ui-builder-export` | The generator's Kotlin, or its refusals |
+| `ui_builder_design_access` | `ui-builder-read` | Who can open the design: its owner, and everyone it is shared with |
+| `ui_builder_share_design` | `ui-builder-write` | Shares it with an actor id as `viewer` or `editor`, or takes that back |
 | `ui_builder_render_native` | `ui-builder-export` | A frame compiled by real Compose on the host, plus where each node drew on it |
 | `ui_builder_list_comments` | `ui-builder-read` | The discussion on a design, and the cursor to wait from |
 | `ui_builder_await_comments` | `ui-builder-read` | Waits for the next thing anybody says about the design |

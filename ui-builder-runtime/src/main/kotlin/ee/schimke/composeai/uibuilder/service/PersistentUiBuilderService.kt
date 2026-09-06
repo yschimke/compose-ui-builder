@@ -425,7 +425,7 @@ public class PersistentUiBuilderService(
       val design =
         persisted.designs[call.designId]
           ?: throw UiBuilderSubscriptionRejectedException(notFound(call.designId))
-      if (!design.allows(call.actor.actorId, DesignAccessActionV1.READ)) {
+      if (!design.allows(call.actor, DesignAccessActionV1.READ)) {
         throw UiBuilderSubscriptionRejectedException(forbidden("read", call.designId))
       }
       if (
@@ -519,7 +519,12 @@ public class PersistentUiBuilderService(
       PersistedDesignV1(
         document = document,
         lastSequence = 0,
-        access = DesignAccessControlV1(0, actor.actorId),
+        // Owned by the human when the caller is acting for one. An agent's grant is a
+        // short-lived delegation of *their* authority, so a design it creates has to outlive the
+        // grant in the hands of the person who approved it — the alternative is what this fixes: a
+        // design owned by an id that stops existing in an hour, which its own approver is then
+        // refused when they open the link the agent sent them.
+        access = DesignAccessControlV1(0, actor.onBehalfOfActorId ?: actor.actorId),
         revisionSnapshots = listOf(RevisionStateV1(document, 0)),
         positions = derivePositions(document),
         positionSnapshots = listOf(PositionStateV1(0, derivePositions(document))),
@@ -542,7 +547,7 @@ public class PersistentUiBuilderService(
     }
     val accessible =
       persisted.designs.values
-        .filter { it.allows(actor.actorId, DesignAccessActionV1.READ) }
+        .filter { it.allows(actor, DesignAccessActionV1.READ) }
         .sortedBy { it.document.id }
     val offset =
       request.cursor?.toIntOrNull()?.takeIf { it >= 0 }
@@ -553,9 +558,7 @@ public class PersistentUiBuilderService(
     }
     val page = accessible.drop(offset).take(request.limit)
     val next = (offset + page.size).takeIf { it < accessible.size }?.toString()
-    return LockedExecution(
-      UiBuilderServiceResponse.Designs(page.map { it.listItem(actor.actorId) }, next)
-    )
+    return LockedExecution(UiBuilderServiceResponse.Designs(page.map { it.listItem(actor) }, next))
   }
 
   private fun open(
@@ -564,7 +567,7 @@ public class PersistentUiBuilderService(
     revision: Long?,
   ): LockedExecution {
     val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
-    if (!design.allows(actor.actorId, DesignAccessActionV1.READ)) {
+    if (!design.allows(actor, DesignAccessActionV1.READ)) {
       return serviceError(forbidden("read", designId))
     }
     val state =
@@ -603,7 +606,7 @@ public class PersistentUiBuilderService(
 
   private fun access(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
     val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
-    if (design.access.ownerActorId != actor.actorId) {
+    if (!design.ownedBy(actor)) {
       return serviceError(forbidden("manage access for", designId))
     }
     return LockedExecution(UiBuilderServiceResponse.DesignAccess(designId, design.access))
@@ -615,7 +618,7 @@ public class PersistentUiBuilderService(
   ): LockedExecution {
     val design =
       persisted.designs[request.designId] ?: return serviceError(notFound(request.designId))
-    if (design.access.ownerActorId != actor.actorId) {
+    if (!design.ownedBy(actor)) {
       return serviceError(forbidden("manage access for", request.designId))
     }
     if (request.baseAccessRevision != design.access.accessRevision) {
@@ -709,7 +712,7 @@ public class PersistentUiBuilderService(
 
     val closed = mutableListOf<SubscriberMailbox>()
     runtime.getValue(request.designId).subscribers.entries.removeIf { (_, subscriber) ->
-      val revoke = !updated.allows(subscriber.actor.actorId, DesignAccessActionV1.READ)
+      val revoke = !updated.allows(subscriber.actor, DesignAccessActionV1.READ)
       if (revoke) closed += subscriber.mailbox
       revoke
     }
@@ -723,7 +726,7 @@ public class PersistentUiBuilderService(
   ): LockedExecution {
     val design =
       persisted.designs[submission.designId] ?: return serviceError(notFound(submission.designId))
-    if (!design.allows(actor.actorId, DesignAccessActionV1.WRITE)) {
+    if (!design.allows(actor, DesignAccessActionV1.WRITE)) {
       return serviceError(forbidden("write", submission.designId))
     }
     if (
@@ -885,7 +888,7 @@ public class PersistentUiBuilderService(
   ): LockedExecution {
     val design =
       persisted.designs[request.designId] ?: return serviceError(notFound(request.designId))
-    if (!design.allows(actor.actorId, DesignAccessActionV1.READ)) {
+    if (!design.allows(actor, DesignAccessActionV1.READ)) {
       return serviceError(forbidden("read", request.designId))
     }
     if (request.limit !in 1..1_024) {
@@ -915,7 +918,7 @@ public class PersistentUiBuilderService(
   ): LockedExecution {
     val design =
       persisted.designs[request.designId] ?: return serviceError(notFound(request.designId))
-    if (!design.allows(actor.actorId, DesignAccessActionV1.READ)) {
+    if (!design.allows(actor, DesignAccessActionV1.READ)) {
       return serviceError(forbidden("read", request.designId))
     }
     if (
@@ -981,7 +984,7 @@ public class PersistentUiBuilderService(
       val design =
         persisted.designs[request.designId]
           ?: return UiBuilderServiceResponse.Error(notFound(request.designId))
-      if (!design.allows(call.actor.actorId, DesignAccessActionV1.EXPORT)) {
+      if (!design.allows(call.actor, DesignAccessActionV1.EXPORT)) {
         return UiBuilderServiceResponse.Error(forbidden("export", request.designId))
       }
       val revision = request.revision ?: design.document.revision
@@ -2096,7 +2099,7 @@ public class PersistentUiBuilderService(
       catalog = catalog,
       retainedFromSequence = design.retainedFromSequence(),
       presence = presence,
-      access = design.access.takeIf { design.access.ownerActorId == actor.actorId },
+      access = design.access.takeIf { design.ownedBy(actor) },
     )
 
   private fun catchUp(
@@ -2138,7 +2141,7 @@ public class PersistentUiBuilderService(
   ): List<SubscriberMailbox> {
     val accepted = mutableListOf<SubscriberMailbox>()
     runtime.getValue(designId).subscribers.entries.removeIf { (_, subscriber) ->
-      if (!design.allows(subscriber.actor.actorId, DesignAccessActionV1.READ)) {
+      if (!design.allows(subscriber.actor, DesignAccessActionV1.READ)) {
         subscriber.mailbox.close()
         true
       } else if (!subscriber.mailbox.enqueue(update)) {
@@ -2787,12 +2790,36 @@ private fun PersistedDesignV1.allows(actorId: String, action: DesignAccessAction
   actorId == access.ownerActorId ||
     access.actorGrants.any { it.actorId == actorId && action in it.allowedActions }
 
-private fun PersistedDesignV1.listItem(actorId: String): DesignListItemV1 {
+/**
+ * The same question asked of a whole identity: an actor may act, or the human it acts for may.
+ *
+ * This is the one place delegation is honoured, and it is deliberately a *widening of who* rather
+ * than a widening of what — a delegate reaches exactly the designs its principal reaches, with
+ * exactly the actions the design granted the principal. An actor with no principal
+ * ([AuthenticatedUiBuilderActor.onBehalfOfActorId] null) asks precisely the question it always did.
+ */
+private fun PersistedDesignV1.allows(
+  actor: AuthenticatedUiBuilderActor,
+  action: DesignAccessActionV1,
+): Boolean = actor.accessIdentities.any { allows(it, action) }
+
+/** True when this actor owns the design outright, or acts for the human who does. */
+private fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
+  access.ownerActorId in actor.accessIdentities
+
+private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): DesignListItemV1 {
+  // Reported under the *actor's own* id — the caller asked what it may do here, and being told
+  // about an id it does not use would be an answer to a question nobody asked. What it may do is
+  // resolved through its principal when it has one, which is what put this design in the listing.
+  val actorId = actor.actorId
   val requester =
-    if (actorId == access.ownerActorId)
+    if (ownedBy(actor))
       DesignActorAccessV1(actorId, DesignAccessRoleV1.OWNER, DesignAccessActionV1.entries)
     else {
-      val grant = access.actorGrants.first { it.actorId == actorId }
+      val grant =
+        actor.accessIdentities.firstNotNullOf { identity ->
+          access.actorGrants.firstOrNull { it.actorId == identity }
+        }
       DesignActorAccessV1(actorId, grant.role, grant.allowedActions)
     }
   return DesignListItemV1(

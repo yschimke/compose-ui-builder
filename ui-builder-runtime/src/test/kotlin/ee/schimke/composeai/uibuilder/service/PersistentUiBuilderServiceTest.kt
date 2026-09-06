@@ -43,6 +43,103 @@ class PersistentUiBuilderServiceTest {
   private val outsider = AuthenticatedUiBuilderActor("outsider")
 
   @Test
+  fun `an agent acting for a person reaches the designs that person owns`() {
+    val service = service()
+    create(service)
+    val delegate = AuthenticatedUiBuilderActor("agent:abc123", onBehalfOfActorId = owner.actorId)
+
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design")),
+      "a delegate reads what its principal owns",
+    )
+    accepted(
+      execute(
+        service,
+        delegate,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("delegated-insert", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+        ),
+      )
+    )
+    val delta =
+      assertIs<UiBuilderServiceResponse.Delta>(
+        execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 10))
+      )
+    // The edit is attributed to the agent, not to the person it acted for: delegation decides what
+    // may be touched and never who touched it.
+    assertEquals(
+      "agent:abc123",
+      (delta.delta.operations.single().submission as DesignCommandV1).actorId,
+    )
+    assertIs<UiBuilderServiceResponse.Error>(
+      execute(
+        service,
+        AuthenticatedUiBuilderActor("agent:other"),
+        UiBuilderServiceRequest.OpenDesign("design"),
+      ),
+      "an agent nobody delegated to is still refused",
+    )
+  }
+
+  @Test
+  fun `a design an agent creates for a person is owned by that person`() {
+    val service = service()
+    val delegate = AuthenticatedUiBuilderActor("agent:abc123", onBehalfOfActorId = owner.actorId)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, delegate, UiBuilderServiceRequest.CreateDesign(document()))
+    )
+
+    val access =
+      assertIs<UiBuilderServiceResponse.DesignAccess>(
+        execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design")),
+        "the approver owns it, so the approver may manage it",
+      )
+    assertEquals(owner.actorId, access.access.ownerActorId)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, owner, UiBuilderServiceRequest.OpenDesign("design")),
+      "the person who approved the grant can open what the agent made — the whole point",
+    )
+    // And the delegate keeps working through its principal for as long as the grant lives.
+    assertIs<UiBuilderServiceResponse.DesignAccess>(
+      execute(service, delegate, UiBuilderServiceRequest.GetDesignAccess("design"))
+    )
+    assertIs<UiBuilderServiceResponse.Error>(
+      execute(service, outsider, UiBuilderServiceRequest.OpenDesign("design"))
+    )
+  }
+
+  @Test
+  fun `a delegate is listed under its own id with the access its principal has`() {
+    val service = service()
+    create(service)
+    grant(service, owner, viewer, 0, listOf(DesignAccessActionV1.READ))
+    val delegate = AuthenticatedUiBuilderActor("agent:abc123", onBehalfOfActorId = viewer.actorId)
+
+    val listed =
+      assertIs<UiBuilderServiceResponse.Designs>(
+        execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10))
+      )
+    val row = listed.designs.single()
+    assertEquals(owner.actorId, row.ownerActorId)
+    assertEquals(
+      "agent:abc123",
+      row.requesterAccess.actorId,
+      "the caller is told about its own id",
+    )
+    assertContentEquals(listOf(DesignAccessActionV1.READ), row.requesterAccess.allowedActions)
+    assertIs<UiBuilderServiceResponse.Error>(
+      execute(
+        service,
+        delegate,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("no-write", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+        ),
+      ),
+      "a delegate gets no more than its principal was granted",
+    )
+  }
+
+  @Test
   fun `typed render environment updates are document level atomic and compensatable`() {
     val clock = MutableClock(1_000)
     val storage = MemoryStorage()

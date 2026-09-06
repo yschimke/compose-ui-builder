@@ -17,12 +17,39 @@ import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceSnapshotV1
 import java.io.Closeable
 
-/** Actor identity established by the host's authentication layer, never by a request payload. */
-@JvmInline
-public value class AuthenticatedUiBuilderActor(public val actorId: String) {
+/**
+ * Actor identity established by the host's authentication layer, never by a request payload.
+ *
+ * [onBehalfOfActorId] is the second half of that identity: the human an automated actor is acting
+ * for. A host mints one when a credential is itself a delegation — this repository's server does it
+ * for an agent grant, whose whole existence is a person clicking *approve* on an agent's request —
+ * and leaves it null for a credential that speaks for itself, which is every browser session.
+ *
+ * The service reads it in exactly one place, [designs' access control][accessIdentities]: a
+ * delegate may do what its principal may do, and nothing more. Everything an actor *writes* —
+ * operations, presence, undo eligibility — stays under [actorId] alone, so the audit record still
+ * says the agent did it and two identities never collide in one design's presence.
+ */
+public data class AuthenticatedUiBuilderActor(
+  public val actorId: String,
+  public val onBehalfOfActorId: String? = null,
+) {
   init {
     require(actorId.isNotBlank()) { "authenticated UI-builder actor id must not be blank" }
+    require(onBehalfOfActorId?.isNotBlank() != false) {
+      "a delegating principal's actor id must not be blank"
+    }
+    require(onBehalfOfActorId != actorId) { "an actor cannot act on behalf of itself" }
   }
+
+  /**
+   * Every identity this actor's authority may be found under, its own first.
+   *
+   * The order matters where an answer is derived from the first match — a delegate that also holds
+   * a grant of its own is described by that grant rather than by its principal's.
+   */
+  public val accessIdentities: List<String>
+    get() = listOfNotNull(actorId, onBehalfOfActorId)
 }
 
 /** One transport-neutral service invocation with its independently authenticated principal. */
