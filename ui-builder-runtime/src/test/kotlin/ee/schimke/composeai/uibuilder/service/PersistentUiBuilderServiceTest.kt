@@ -2168,6 +2168,132 @@ class PersistentUiBuilderServiceTest {
     assertEquals(setOf("design", "other"), service.adminListDesigns().map { it.designId }.toSet())
   }
 
+  @Test
+  fun `a write is checked against the catalog's value rules where the value is chosen`() {
+    // The catalog decides what a value of a kind looks like
+    // (`UiBuilderCatalogExecutor.validateWrite`);
+    // what the service owes it is to ask on every write — a `setProperty`, and each property of an
+    // `insertNode` — and to refuse with the node, the field and the operation named.
+    val checked = mutableListOf<Pair<String, String>>()
+    val catalogs =
+      object : UiBuilderCatalogExecutor by TestCatalogs {
+        override fun validateWrite(
+          catalog: CatalogCapabilityV1,
+          node: DesignNodeV1,
+          property: String,
+        ): UiBuilderCatalogIssue? {
+          checked += node.id to property
+          val value = node.properties[property]
+          return if (value is StringValueV1 && value.value == "refused")
+            UiBuilderCatalogIssue("INVALID_PROPERTY", "text is refused", node.id, property)
+          else null
+        }
+      }
+    val service = service(catalogs = catalogs)
+    create(service)
+
+    val refusedNode = textNode("t").copy(properties = mapOf("text" to StringValueV1("refused")))
+    val insert =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "insert-refused",
+              0,
+              InsertNodeMutationV1(textNode("keep"), NodeLocationV1()),
+              InsertNodeMutationV1(refusedNode, NodeLocationV1()),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_PROPERTY, insert.code)
+    assertEquals("t", insert.nodeId)
+    assertEquals("text", insert.field)
+    assertEquals(1, insert.operationIndex)
+    assertEquals("text is refused", insert.message)
+    // The batch is atomic: the node that was fine did not land either.
+    assertTrue(currentDocument(service).nodes.isEmpty())
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+        ),
+      )
+    )
+    val write =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("write-refused", 1, SetPropertyMutationV1("t", "text", StringValueV1("refused")))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_PROPERTY, write.code)
+    assertEquals("t", write.nodeId)
+    assertEquals("text", write.field)
+    assertEquals(0, write.operationIndex)
+    assertEquals(emptyMap(), currentNode(service, "t").properties)
+
+    // Asked of the written field and of nothing else — never document-wide.
+    checked.clear()
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("write", 1, SetPropertyMutationV1("t", "text", StringValueV1("fine")))
+        ),
+      )
+    )
+    assertEquals(listOf("t" to "text"), checked)
+  }
+
+  @Test
+  fun `an export failure reaches the client without a Java exception class name`() {
+    // The render daemon says `IllegalStateException: unsupported asset …`, the render host adds
+    // `render failed: `, and the lot used to arrive under `internal`. The class name is the one
+    // part of that a client cannot use (#484).
+    val service =
+      service(
+        exporter =
+          UiBuilderExportExecutor {
+            throw IllegalStateException(
+              "render failed: IllegalStateException: unsupported asset 'avatar-lain' on photo"
+            )
+          }
+      )
+    create(service)
+
+    val failure =
+      error(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ExportDesign("design", null, ExportFormatV1.PNG),
+        )
+      )
+    assertEquals(ServiceErrorCodeV1.INTERNAL, failure.code)
+    assertEquals(
+      "export failed: render failed: unsupported asset 'avatar-lain' on photo",
+      failure.message,
+    )
+
+    assertEquals(
+      "Java heap space",
+      RuntimeException("java.lang.OutOfMemoryError: Java heap space").clientMessage(),
+    )
+    assertEquals("the exporter threw", RuntimeException("UnsatisfiedLinkError").clientMessage())
+    assertEquals("the exporter threw without a message", RuntimeException().clientMessage())
+    assertEquals("timed out after 30s", RuntimeException("timed out after 30s").clientMessage())
+  }
+
   private fun service(
     storage: UiBuilderStateStorage = MemoryStorage(),
     retained: Int = 16,
@@ -2175,10 +2301,11 @@ class PersistentUiBuilderServiceTest {
     limits: UiBuilderServiceLimits? = null,
     exporter: UiBuilderExportExecutor = validExporter(exportRequests),
     clock: Clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+    catalogs: UiBuilderCatalogExecutor = TestCatalogs,
   ): PersistentUiBuilderService =
     PersistentUiBuilderService(
       storage = storage,
-      catalogs = TestCatalogs,
+      catalogs = catalogs,
       exporter = exporter,
       clock = clock,
       limits =

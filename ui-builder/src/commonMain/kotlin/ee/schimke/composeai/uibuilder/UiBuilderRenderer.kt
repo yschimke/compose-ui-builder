@@ -1975,11 +1975,11 @@ private fun AssetPlaceholder(node: UiBuilderNode, modifier: Modifier) {
     )
     return
   }
-  val palette =
-    when (key) {
-      "ui-builder.gate0.cover" -> listOf(Color(0xFF6750A4), Color(0xFFB69DF8), Color(0xFF21005D))
-      else -> error("unsupported asset '$key' on ${node.id}")
-    }
+  if (key != GATE0_COVER_ASSET_KEY) {
+    UnresolvedAssetPlaceholder(key, modifier)
+    return
+  }
+  val palette = listOf(Color(0xFF6750A4), Color(0xFFB69DF8), Color(0xFF21005D))
   Canvas(modifier) {
     drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height)))
     drawCircle(
@@ -2052,6 +2052,59 @@ private val WEAR_NATIVE_ONLY: Set<String> = WearScreenCodeExporter.NATIVE_ONLY_C
  * A dashed outline rather than [UnsupportedComponentDiagnostic]'s error container, because nothing
  * is wrong. The component is in the catalog, it exports, and it renders — just not here.
  */
+/**
+ * The one generated cover this canvas draws by name; every other key resolves through
+ * `:ui-builder-artwork` or not at all.
+ */
+private const val GATE0_COVER_ASSET_KEY = "ui-builder.gate0.cover"
+
+/**
+ * What an `asset/image` draws when nothing resolves its key: a visible frame naming the key, and
+ * never an exception.
+ *
+ * It used to be `error("unsupported asset …")`, and one accepted node then took the whole design
+ * down — every render of a ninety-node screen failed, for a collaborator with the tab open as much
+ * as for the author, until somebody worked out which node to delete
+ * (yschimke/compose-preview-server#484). Both reducers now refuse an unresolvable key at commit, so
+ * this is the second line: whatever slips past validation — a design committed before the rule, a
+ * catalog whose registry changed underneath it — degrades to a placeholder rather than detonating.
+ * The dashed outline is [NativeOnlyPlaceholder]'s, because the claim is the same: the design is
+ * fine, this canvas just cannot draw the thing.
+ */
+@Composable
+private fun UnresolvedAssetPlaceholder(key: String, modifier: Modifier) {
+  val outline = MaterialTheme.colorScheme.outline
+  val fill = MaterialTheme.colorScheme.surfaceVariant
+  Box(
+    modifier
+      .drawBehind {
+        drawRect(fill)
+        val inset = 1.dp.toPx()
+        drawRoundRect(
+          color = outline,
+          topLeft = Offset(inset / 2, inset / 2),
+          size = Size(size.width - inset, size.height - inset),
+          cornerRadius = CornerRadius(4.dp.toPx()),
+          style =
+            Stroke(width = inset, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))),
+        )
+        drawLine(outline, Offset.Zero, Offset(size.width, size.height), strokeWidth = inset)
+        drawLine(outline, Offset(size.width, 0f), Offset(0f, size.height), strokeWidth = inset)
+      }
+      .padding(4.dp),
+    contentAlignment = Alignment.Center,
+  ) {
+    Text(
+      key.ifEmpty { "asset" },
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+      textAlign = TextAlign.Center,
+      maxLines = 2,
+      overflow = TextOverflow.Ellipsis,
+    )
+  }
+}
+
 @Composable
 private fun NativeOnlyPlaceholder(
   node: UiBuilderNode,
@@ -2803,28 +2856,21 @@ private fun uiBuilderColor(value: String): Color =
   if (value.startsWith("#")) Color(parseArgb(value))
   else colorTokenOrNull(value) ?: Color.Unspecified
 
+/**
+ * A property's colour, through the same table a modifier's goes through.
+ *
+ * An unknown token draws [fallback] rather than throwing. It used to be `error("unsupported color
+ * token …")`, which is the asset failure of #484 in another property: one node's value that this
+ * canvas could not resolve failed the whole frame. The reducers refuse such a value at commit now,
+ * and what still arrives — a design committed before the rule — is drawn in the component's own
+ * default, which is what an unset colour draws anyway.
+ */
 @Composable
 private fun UiBuilderNode.color(name: String, fallback: Color): Color {
   val value = string(name)
   if (value.startsWith("#")) return Color(parseArgb(value))
-  return when (value) {
-    "background" -> MaterialTheme.colorScheme.background
-    "surface" -> MaterialTheme.colorScheme.surface
-    "surfaceContainer" -> MaterialTheme.colorScheme.surfaceContainer
-    "surfaceContainerLow" -> MaterialTheme.colorScheme.surfaceContainerLow
-    "surfaceContainerHigh" -> MaterialTheme.colorScheme.surfaceContainerHigh
-    "surfaceContainerHighest" -> MaterialTheme.colorScheme.surfaceContainerHighest
-    "primary" -> MaterialTheme.colorScheme.primary
-    "onPrimary" -> MaterialTheme.colorScheme.onPrimary
-    "tertiary" -> MaterialTheme.colorScheme.tertiary
-    "onTertiary" -> MaterialTheme.colorScheme.onTertiary
-    "onSurface" -> MaterialTheme.colorScheme.onSurface
-    "onSurfaceVariant" -> MaterialTheme.colorScheme.onSurfaceVariant
-    "outlineVariant" -> MaterialTheme.colorScheme.outlineVariant
-    "transparent" -> Color.Transparent
-    "" -> fallback
-    else -> error("unsupported color token '$value' for $name on $id")
-  }
+  if (value.isEmpty()) return fallback
+  return colorTokenOrNull(value) ?: fallback
 }
 
 private fun UiBuilderNode.shape(themeCornerRadius: Float) =

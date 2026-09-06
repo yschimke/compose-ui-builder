@@ -50,6 +50,28 @@ public interface UiBuilderCatalogExecutor {
     document: DesignDocumentV1,
     catalog: CatalogCapabilityV1,
   ): UiBuilderCatalogIssue?
+
+  /**
+   * Whether one property **write** carries a value of the kind the catalog means, asked of the node
+   * as it will be committed.
+   *
+   * [validate] asks about shape — is the component declared, does it declare this property, is the
+   * scalar the right JSON type, is an enumerated value in `allowedValues` — and every expensive
+   * failure of yschimke/compose-preview-server#487 passed it: a colour committed as `string` and
+   * refused at export, an `asset/image` whose key nothing resolved and whose render then failed the
+   * whole design. This is the semantic half, and it is asked **only where a value is chosen** — a
+   * `setProperty`, and each property of an `insertNode` — never document-wide, so a design
+   * committed before a rule existed stays editable everywhere but the field that holds the old
+   * value. The default says nothing, which is what a catalog with no value semantics means.
+   *
+   * A refusal is returned as `INVALID_PROPERTY` naming the node and the field, the way every other
+   * property refusal in the reducer is.
+   */
+  public fun validateWrite(
+    catalog: CatalogCapabilityV1,
+    node: DesignNodeV1,
+    property: String,
+  ): UiBuilderCatalogIssue? = null
 }
 
 public data class RevisionPinnedUiBuilderExport(
@@ -1054,7 +1076,10 @@ public class PersistentUiBuilderService(
         )
       } catch (failure: Exception) {
         return UiBuilderServiceResponse.Error(
-          UiBuilderServiceError(ServiceErrorCodeV1.INTERNAL, "export failed: ${failure.message}")
+          UiBuilderServiceError(
+            ServiceErrorCodeV1.INTERNAL,
+            "export failed: ${failure.clientMessage()}",
+          )
         )
       }
     val validDigest =
@@ -1177,6 +1202,17 @@ public class PersistentUiBuilderService(
           RejectionCodeV1.REVISION_NOT_RETAINED,
           "position state for revision ${command.baseRevision} is not retained",
         )
+    // Resolved before the first mutation rather than after the last, because a write is checked
+    // against the catalog as it is applied (`UiBuilderCatalogExecutor.validateWrite`), not only as
+    // a whole document afterwards.
+    val catalog =
+      catalogs.resolve(design.document.catalogPin)
+        ?: return rejectedReduction(
+          design,
+          command.operationId,
+          RejectionCodeV1.INVALID_DOCUMENT,
+          "catalog pin is unavailable",
+        )
     var working = WorkingDesign(design.document, design.tombstones, design.positions)
     val changes = mutableListOf<ChangeRecordV1>()
     val conflicts = mutableListOf<CommandConflictV1>()
@@ -1187,7 +1223,16 @@ public class PersistentUiBuilderService(
             .filterIsInstance<StructureChangeV1>()
             .flatMap { it.affectedNodeIds }
             .mapNotNull { nodeId -> working.positions[nodeId]?.let { nodeId to it } }
-      val applied = applyMutation(working, mutation, command, design, batchPositions, index)
+      val applied =
+        applyMutation(
+          working,
+          mutation,
+          command,
+          design,
+          basePositions = batchPositions,
+          index,
+          catalog,
+        )
       if (applied.error != null) {
         return rejectedReduction(design, command.operationId, applied.error)
       }
@@ -1206,14 +1251,6 @@ public class PersistentUiBuilderService(
     validateTopology(working.document)?.let {
       return rejectedReduction(design, command.operationId, it)
     }
-    val catalog =
-      catalogs.resolve(working.document.catalogPin)
-        ?: return rejectedReduction(
-          design,
-          command.operationId,
-          RejectionCodeV1.INVALID_DOCUMENT,
-          "catalog pin is unavailable",
-        )
     catalogs.validate(working.document, catalog)?.let {
       return rejectedReduction(design, command.operationId, it.toRejection())
     }
@@ -1432,6 +1469,7 @@ public class PersistentUiBuilderService(
     original: PersistedDesignV1,
     basePositions: Map<String, StableNodePositionV1>,
     index: Int,
+    catalog: CatalogCapabilityV1,
   ): MutationResult =
     try {
       when (mutation) {
@@ -1447,6 +1485,14 @@ public class PersistentUiBuilderService(
               index,
               mutation.node.id,
             )
+          }
+          // An insert is a write of every property at once, and it is how an `asset/image` with a
+          // key nothing resolves arrived (#484): checked here, per property, the way a
+          // `setProperty` of the same value would be.
+          mutation.node.properties.keys.forEach { property ->
+            catalogs.validateWrite(catalog, mutation.node, property)?.let {
+              fail(RejectionCodeV1.INVALID_PROPERTY, it.message, index, mutation.node.id, it.field)
+            }
           }
           val position =
             allocatePosition(
@@ -1579,13 +1625,13 @@ public class PersistentUiBuilderService(
           }
           val beforePresent = mutation.property in node.properties
           val before = node.properties[mutation.property]
+          val written =
+            node.copy(properties = node.properties + (mutation.property to mutation.value))
+          catalogs.validateWrite(catalog, written, mutation.property)?.let {
+            fail(RejectionCodeV1.INVALID_PROPERTY, it.message, index, mutation.nodeId, it.field)
+          }
           val document =
-            working.document.copy(
-              nodes =
-                working.document.nodes +
-                  (node.id to
-                    node.copy(properties = node.properties + (mutation.property to mutation.value)))
-            )
+            working.document.copy(nodes = working.document.nodes + (node.id to written))
           val conflicts =
             if (
               command.baseRevision < original.document.revision &&
@@ -3372,6 +3418,24 @@ private fun validateTopology(document: DesignDocumentV1): RejectedOutcomeV1? {
   }
   return null
 }
+
+/**
+ * A throwable's message with Java exception class names taken out of it.
+ *
+ * The render daemon reports a failed composition as `IllegalStateException: unsupported asset
+ * 'avatar-lain' on d-m1-photo`, the render host prefixes `render failed: `, and the export lane
+ * used to forward the lot to the client under the `internal` code. A design the renderer cannot
+ * draw is an ordinary state; a stack-trace class name in a user-facing error is not
+ * (yschimke/compose-preview-server#484). The class names are dropped and the sentence the code
+ * actually wrote is kept.
+ */
+internal fun Throwable.clientMessage(): String {
+  val message = message?.takeIf { it.isNotBlank() } ?: return "the exporter threw without a message"
+  return EXCEPTION_CLASS_PREFIX.replace(message, "").trim().ifEmpty { "the exporter threw" }
+}
+
+private val EXCEPTION_CLASS_PREFIX =
+  Regex("""\b(?:[A-Za-z_$][\w$]*\.)*[A-Z][\w$]*(?:Exception|Error)\b:?\s*""")
 
 private fun UiBuilderCatalogIssue.toRejection(): RejectedOutcomeV1 =
   rejected("", 0, RejectionCodeV1.INVALID_DOCUMENT, message, nodeId = nodeId, field = field)

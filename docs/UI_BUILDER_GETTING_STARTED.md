@@ -604,6 +604,15 @@ as `typographyToken` — is a different claim about the value and is still prese
 hold the old spelling keep rendering, keep exporting, and are rewritten to `enum` by the next edit
 to that field.
 
+The same shape of rule covers what a value *means*. A property named `color` or `…Color` is a
+colour and takes a `color` (`#RRGGBB` / `#AARRGGBB`) or `colorToken` wrapper naming one of the
+theme roles in the catalog's `statusSemantics.colorTokens`; `assetKey` names one of the keys in
+`statusSemantics.assetRegistry`. Either written otherwise is refused at commit, on the write that
+chooses the value, with the node and the field named — and a design that already holds such a
+value renders it as a visible placeholder rather than failing the frame. The decision, and why
+the line is "the canvas cannot draw it" rather than "the export cannot write it", is
+[`design/UI_BUILDER_VALUE_SEMANTICS.md`](design/UI_BUILDER_VALUE_SEMANTICS.md).
+
 Existing `size`, `fillMaxWidth`, and `padding` modifiers render and export. Their JSON is visible in
 the inspector, but modifier parameter editing is read-only until the released Design API has an
 authoritative modifier mutation; the builder does not invent a browser-only operation.

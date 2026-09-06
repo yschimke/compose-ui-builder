@@ -323,7 +323,7 @@ enum class RejectionCode {
 
 data class CommandApplication(val state: CollaborationState, val outcome: CommandOutcome)
 
-data class PropertyWriteIssue(val message: String)
+data class PropertyWriteIssue(val message: String, val field: String? = null)
 
 data class DocumentWriteIssue(
   val message: String,
@@ -338,6 +338,15 @@ fun interface CollaborationPropertyValidator {
     property: String,
     encodedValue: JsonObject,
   ): PropertyWriteIssue?
+
+  /**
+   * The write-time rules for a node that arrives whole, asked of every property at once.
+   *
+   * Defaulted to nothing so a reducer-only test's lambda validator is unchanged; the catalog-backed
+   * validator answers with `CapabilityValidator.insertIssue`. The field the issue is about rides in
+   * [PropertyWriteIssue.field] so the rejection is located the way a `setProperty` one is.
+   */
+  fun validateInsert(document: UiBuilderDocument, node: UiBuilderNode): PropertyWriteIssue? = null
 }
 
 fun interface CollaborationDocumentValidator {
@@ -375,7 +384,7 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
     // `allowedValues` property also type-checks against `jsonType`, so the general pass below has
     // nothing to say about it. See `CapabilityValidator.writeWrapperIssue`.
     validator.writeWrapperIssue(node, property, encodedValue)?.let {
-      return PropertyWriteIssue(it.message)
+      return PropertyWriteIssue(it.message, property)
     }
     val relevantCodes =
       setOf(
@@ -392,8 +401,14 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
           it.code in relevantCodes &&
           (it.field == property || it.code == CapabilityIssueCode.UNKNOWN_COMPONENT)
       }
-      ?.let { PropertyWriteIssue(it.message) }
+      ?.let { PropertyWriteIssue(it.message, property) }
   }
+
+  override fun validateInsert(
+    document: UiBuilderDocument,
+    node: UiBuilderNode,
+  ): PropertyWriteIssue? =
+    validator.insertIssue(node)?.let { PropertyWriteIssue(it.message, it.field) }
 }
 
 /**
@@ -1320,6 +1335,9 @@ private fun CollaborationState.applyOperation(
   when (operation) {
     is DesignOperation.InsertNode -> {
       val changed = insertNode(operation, basePositions, operationKey)
+      propertyValidator?.validateInsert(changed.document, operation.node)?.let { issue ->
+        fail(RejectionCode.INVALID_PROPERTY, issue.message, operation.node.id, issue.field)
+      }
       trace.batchPositionTouches += operation.node.id
       trace.structuralTouches += operation.node.id
       val change =

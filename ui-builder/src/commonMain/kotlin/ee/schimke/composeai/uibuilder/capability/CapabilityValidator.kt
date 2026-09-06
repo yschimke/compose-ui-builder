@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.capability
 
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -137,18 +138,91 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     property: String,
     encodedValue: JsonObject,
   ): CapabilityValidationIssue? {
-    val declared = catalog.componentsById[node.componentId]?.propertiesByName?.get(property)
-    if (declared == null || declared.allowedValues.isEmpty()) return null
+    val declared =
+      catalog.componentsById[node.componentId]?.propertiesByName?.get(property) ?: return null
     val wrapper = (encodedValue["type"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-    if (wrapper != "string") return null
-    return issue(
-      CapabilityIssueCode.INVALID_PROPERTY_TYPE,
-      node,
-      "property $property is one of this component's allowed values, so it takes the `enum` " +
-        "wrapper rather than `string`",
-      property,
-    )
+    if (declared.allowedValues.isNotEmpty()) {
+      if (wrapper != "string") return null
+      return issue(
+        CapabilityIssueCode.INVALID_PROPERTY_TYPE,
+        node,
+        "property $property is one of this component's allowed values, so it takes the `enum` " +
+          "wrapper rather than `string`",
+        property,
+      )
+    }
+    return writeValueIssue(node, property, wrapper, encodedValue)
   }
+
+  /**
+   * The value-kind half of the write rule: does this value have a type the canvas can draw?
+   *
+   * The wrapper question above is about *spelling* an enumeration; this one is about *meaning*, and
+   * it is the rule [PropertyValueKinds] states and the server's catalog executor mirrors. A colour
+   * property given a `string` wrapper committed, rendered, and was refused one export later with ``
+   * `Text`.`color` is androidx.compose.ui.graphics.Color, which Text is not `` — a message about
+   * `Text` on a document the author never wrote `Text` into (#476). A colour whose token the canvas
+   * did not know, or an `asset/image` whose key nothing resolved, did worse: the reducer accepted
+   * the node and the renderer threw, taking every render of the design with it (#484).
+   *
+   * Asked on a write only, like the wrapper rule and for the same reason: a design committed before
+   * the rule keeps being editable, and the canvas draws a placeholder for what it holds.
+   */
+  private fun writeValueIssue(
+    node: UiBuilderNode,
+    property: String,
+    wrapper: String?,
+    encodedValue: JsonObject,
+  ): CapabilityValidationIssue? {
+    val value = (encodedValue["value"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+    when {
+      PropertyValueKinds.isColour(property) -> {
+        if (wrapper == "string") {
+          return issue(
+            CapabilityIssueCode.INVALID_PROPERTY_TYPE,
+            node,
+            "property $property is a colour, which is written as a `#RRGGBB` literal or as a " +
+              "theme role — a `color` or `colorToken` wrapper, not `string`",
+            property,
+          )
+        }
+        if (wrapper != "color" && wrapper != "colorToken") return null
+        if (value == null || PropertyValueKinds.isDrawableColour(value)) return null
+        return issue(
+          CapabilityIssueCode.INVALID_PROPERTY_VALUE,
+          node,
+          "property $property is `$value`, which is neither a `#RRGGBB` literal nor one of the " +
+            "theme roles the canvas draws (${PropertyValueKinds.CANVAS_COLOR_TOKENS.joinToString(", ")})",
+          property,
+        )
+      }
+      PropertyValueKinds.isAssetKey(property) -> {
+        if (wrapper != "assetKey" && wrapper != "string") return null
+        val registry = PropertyValueKinds.declaredAssetKeys(catalog.statusSemantics) ?: return null
+        if (value == null || value in registry) return null
+        return issue(
+          CapabilityIssueCode.INVALID_PROPERTY_VALUE,
+          node,
+          "property $property is `$value`, which no asset this catalog can draw resolves; the " +
+            "keys it declares are ${registry.joinToString(", ")}",
+          property,
+        )
+      }
+    }
+    return null
+  }
+
+  /**
+   * [writeWrapperIssue] for every property of a node that arrives whole, for an insert.
+   *
+   * An insert is a write of each of its properties at once, and an `asset/image` arrives with its
+   * `assetKey` already set — which is exactly how #484's node got in. The document-wide pass that
+   * follows an insert deliberately asks none of the write-time questions, so they are asked here.
+   */
+  fun insertIssue(node: UiBuilderNode): CapabilityValidationIssue? =
+    node.properties.entries.firstNotNullOfOrNull { (property, encoded) ->
+      (encoded as? JsonObject)?.let { writeWrapperIssue(node, property, it) }
+    }
 
   private fun validateNode(
     document: UiBuilderDocument,

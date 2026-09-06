@@ -50,6 +50,106 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   @Test
+  fun `a write is refused for the value kind its name states, and only on the write`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalog = catalogs.listCatalogs().single()
+    val text = document().nodes.getValue("text")
+    fun coloured(value: UiValueV1) = text.copy(properties = text.properties + ("color" to value))
+
+    // #476: a colour written as `string` committed, rendered, and was refused at export with a
+    // sentence about `Text`. Refused here instead, naming the node, the field and the wrapper.
+    val asString =
+      assertNotNull(catalogs.validateWrite(catalog, coloured(StringValueV1("#5F6368")), "color"))
+    assertEquals("INVALID_PROPERTY", asString.code)
+    assertEquals("text", asString.nodeId)
+    assertEquals("color", asString.field)
+    assertTrue(asString.message.contains("`color` or `colorToken`"), asString.message)
+    assertTrue(asString.message.contains("`string`"), asString.message)
+    assertNull(catalogs.validateWrite(catalog, coloured(ColorValueV1("#5F6368")), "color"))
+    assertNull(catalogs.validateWrite(catalog, coloured(ColorTokenValueV1("primary")), "color"))
+    // A role the export can write but the canvas does not draw used to throw inside the renderer.
+    val unknownRole =
+      assertNotNull(
+        catalogs.validateWrite(catalog, coloured(ColorTokenValueV1("primaryContainer")), "color")
+      )
+    assertEquals("color", unknownRole.field)
+    assertTrue(unknownRole.message.contains("`primaryContainer`"), unknownRole.message)
+    // An empty colour is the component's own default, which `startAccentColor` documents.
+    assertNull(catalogs.validateWrite(catalog, coloured(ColorValueV1("")), "color"))
+    // Bound to state, or not a colour property at all: nothing to say here — `validate` answers.
+    assertNull(catalogs.validateWrite(catalog, coloured(StateValueV1("accent")), "color"))
+    assertNull(catalogs.validateWrite(catalog, text, "text"))
+
+    // The rule bites on the write and nowhere else: a document that already holds the old
+    // spelling still validates as a whole, so an unrelated edit to it is not refused.
+    val legacy =
+      document().copy(nodes = document().nodes + ("text" to coloured(StringValueV1("#5F6368"))))
+    assertNull(catalogs.validate(legacy, catalog))
+  }
+
+  @Test
+  fun `an asset key is refused unless the catalog's registry lists it`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalog = catalogs.listCatalogs().single()
+    fun image(key: UiValueV1) =
+      DesignNodeV1(id = "photo", componentId = "asset/image", properties = mapOf("assetKey" to key))
+
+    // #484: the one property whose value the renderer must resolve was the one nothing checked.
+    val unresolved =
+      assertNotNull(
+        catalogs.validateWrite(catalog, image(StringValueV1("avatar-lain")), "assetKey")
+      )
+    assertEquals("INVALID_PROPERTY", unresolved.code)
+    assertEquals("photo", unresolved.nodeId)
+    assertEquals("assetKey", unresolved.field)
+    assertTrue(unresolved.message.contains("`avatar-lain`"), unresolved.message)
+    assertTrue(
+      unresolved.message.contains("jetcaster.cover.android-developers-backstage"),
+      "the refusal says what a valid key looks like: ${unresolved.message}",
+    )
+    assertNull(
+      catalogs.validateWrite(
+        catalog,
+        image(AssetKeyValueV1("jetcaster.cover.google-developers-podcast")),
+        "assetKey",
+      )
+    )
+    // The editor's own insert placeholder is a key the canvas draws, so an insert from the palette
+    // is not refused by the rule that refuses an agent's guess.
+    assertNull(
+      catalogs.validateWrite(catalog, image(StringValueV1("editor.placeholder")), "assetKey")
+    )
+
+    // The registry is the catalog's, and every catalog derived from the base one inherits it.
+    val everyCatalog =
+      CurrentM3UiBuilderCatalogExecutor(
+          catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3", "wear-m3")
+        )
+        .listCatalogs()
+    everyCatalog.forEach { each ->
+      assertEquals(
+        setOf(
+          "jetcaster.cover.android-developers-backstage",
+          "jetcaster.cover.google-developers-podcast",
+          "ui-builder.gate0.cover",
+          "editor.placeholder",
+        ),
+        CurrentM3UiBuilderCatalogExecutor.declaredAssetKeys(each),
+        each.benchmark.catalogSystemId,
+      )
+      // The roles the catalog tells a reader about are the roles the executor refuses against.
+      assertEquals(
+        CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS,
+        CurrentM3UiBuilderCatalogExecutor.declaredColorTokens(each),
+        each.benchmark.catalogSystemId,
+      )
+    }
+    // A catalog that declares no registry says nothing about keys.
+    val silent = catalog.copy(statusSemantics = kotlinx.serialization.json.JsonObject(emptyMap()))
+    assertNull(catalogs.validateWrite(silent, image(StringValueV1("avatar-lain")), "assetKey"))
+  }
+
+  @Test
   fun `only explicitly enabled catalogs get independent exact pins`() {
     val catalogs =
       CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3"))

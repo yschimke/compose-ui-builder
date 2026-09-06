@@ -9,6 +9,14 @@
   },
   "statusSemantics": {
     "platform": "mobile",
+    "colorTokens": {
+      "$comment": "The theme roles a colour property or a background modifier may name, which are the roles the canvas draws. A colour is otherwise a #RRGGBB or #AARRGGBB literal. Mirrored by PropertyValueKinds.CANVAS_COLOR_TOKENS in :ui-builder-export and by the runtime's catalog executor; a test pins the three to this list.",
+      "roles": ["background", "surface", "surfaceContainer", "surfaceContainerLow", "surfaceContainerHigh", "surfaceContainerHighest", "primary", "onPrimary", "tertiary", "onTertiary", "onSurface", "onSurfaceVariant", "outlineVariant", "transparent"]
+    },
+    "assetRegistry": {
+      "$comment": "Every assetKey an asset/image may carry, because these are the assets the canvas can draw: the two project-owned Jetcaster covers in :ui-builder-artwork, the generated gate-0 cover, and the editor's own insert placeholder. Both reducers refuse any other key at commit (yschimke/compose-preview-server#484); the registry a host could extend is #478.",
+      "keys": ["jetcaster.cover.android-developers-backstage", "jetcaster.cover.google-developers-podcast", "ui-builder.gate0.cover", "editor.placeholder"]
+    },
     "componentMenu": {
       "$comment": "How the UI builder shelves this catalog in its insert panel. Read by ComponentMenu.from; see ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ComponentMenu.kt. Section names are m3-catalog's own @file:CatalogGroup(section = ...) vocabulary.",
       "groupOrder": [
@@ -88,7 +96,7 @@
       "traits": ["ImageContent"],
       "slots": [],
       "properties": [
-        { "name": "assetKey", "jsonType": "string", "required": true },
+        { "name": "assetKey", "jsonType": "string", "required": true, "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}; the keys are listed in statusSemantics.assetRegistry.keys, and any other key is refused at commit." },
         { "name": "contentDescription", "jsonType": ["string", "null"], "required": false },
         { "name": "contentScale", "jsonType": "string", "required": false, "allowedValues": ["crop", "fit", "fillBounds", "inside"] },
         { "name": "alignment", "jsonType": "string", "required": false }
@@ -245,7 +253,7 @@
         { "name": "content", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
-        { "name": "containerColor", "jsonType": "string", "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "contentWindowInsets", "jsonType": "array", "required": false },
         { "name": "loading", "jsonType": "boolean", "required": false },
         { "name": "scrollStateKey", "jsonType": "string", "required": false }
@@ -289,7 +297,7 @@
         { "name": "style", "jsonType": "string", "required": true, "allowedValues": ["filled", "filledTonal", "text", "fab"] },
         { "name": "enabled", "jsonType": "boolean", "required": false },
         { "name": "selected", "jsonType": ["boolean", "string", "object"], "required": false, "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types." },
-        { "name": "containerColor", "jsonType": "string", "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "onClickAction", "jsonType": ["object", "null"], "required": false }
       ],
       "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
@@ -307,7 +315,7 @@
       ],
       "properties": [
         { "name": "variant", "jsonType": "string", "required": false, "allowedValues": ["filled", "elevated", "outlined"] },
-        { "name": "containerColor", "jsonType": "string", "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "shape", "jsonType": "string", "required": false },
         { "name": "stableKey", "jsonType": "string", "required": false },
         { "name": "elevationDp", "jsonType": "number", "required": false },
@@ -327,8 +335,8 @@
         { "name": "title", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] }
       ],
       "properties": [
-        { "name": "containerColor", "jsonType": "string", "required": false },
-        { "name": "scrolledContainerColor", "jsonType": "string", "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
+        { "name": "scrolledContainerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "scrollBehavior", "jsonType": "string", "required": false, "allowedValues": ["pinned", "enterAlways", "exitUntilCollapsed"], "notes": "Reaches the generated Kotlin as the matching TopAppBarDefaults behavior. The canvas draws the bar pinned whatever this says: a scroll behavior is driven by a nested-scroll connection the document has no scaffold to carry." }
       ],
       "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
@@ -380,7 +388,7 @@
         { "name": "confirmButton", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Container"], "acceptedTraits": ["Action"] }
       ],
       "properties": [
-        { "name": "containerColor", "jsonType": "string", "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "tonalElevationDp", "jsonType": "number", "required": false },
         { "name": "shapeDp", "jsonType": "number", "required": false }
       ],
@@ -417,7 +425,7 @@
       "slots": [],
       "properties": [
         { "name": "thicknessDp", "jsonType": "number", "required": false },
-        { "name": "color", "jsonType": "string", "required": false }
+        { "name": "color", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." }
       ],
       "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
@@ -434,7 +442,7 @@
       ],
       "properties": [
         { "name": "expanded", "jsonType": "boolean", "required": false },
-        { "name": "containerColor", "jsonType": "string", "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "contentPadding", "jsonType": "object", "required": false },
         { "name": "alignment", "jsonType": "string", "required": false }
       ],
@@ -453,7 +461,7 @@
         { "name": "iconKey", "jsonType": "string", "required": true, "allowedValues": ["accessTime", "accountCircle", "add", "addCircle", "arrowBack", "arrowForward", "bookmark", "bookmarkBorder", "calendarMonth", "cameraAlt", "check", "checkCircle", "chevronRight", "close", "coffee", "delete", "download", "edit", "email", "expandMore", "favorite", "genres", "home", "image", "info", "locationOn", "lock", "menu", "moreVert", "notifications", "pauseCircle", "person", "phone", "playCircle", "playlistAdd", "refresh", "remove", "search", "settings", "share", "star", "stopCircle", "upload", "videoLibrary", "visibility", "warning"] },
         { "name": "contentDescription", "jsonType": ["string", "null"], "required": false },
         { "name": "sizeDp", "jsonType": "number", "required": false },
-        { "name": "color", "jsonType": "string", "required": false }
+        { "name": "color", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." }
       ],
       "modifierCapabilities": ["size", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Only explicitly registered, license-compatible vector keys are valid." },
@@ -493,7 +501,7 @@
         { "name": "trailing", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
-        { "name": "startAccentColor", "jsonType": "string", "required": false, "notes": "A 3dp bar down the leading edge, drawn behind the item. Empty draws none." }
+        { "name": "startAccentColor", "jsonType": "string", "required": false, "notes": "A 3dp bar down the leading edge, drawn behind the item. Empty draws none. A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." }
       ],
       "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
@@ -633,14 +641,14 @@
         { "name": "content", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],
       "properties": [
-        { "name": "containerColor", "jsonType": "string", "required": false },
-        { "name": "contentColor", "jsonType": "string", "required": false },
+        { "name": "containerColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
+        { "name": "contentColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "shapeDp", "jsonType": "number", "required": false },
         { "name": "tonalElevationDp", "jsonType": "number", "required": false },
-        { "name": "themePrimaryColor", "jsonType": "string", "required": false },
-        { "name": "themeBackgroundColor", "jsonType": "string", "required": false },
-        { "name": "themeSurfaceColor", "jsonType": "string", "required": false },
-        { "name": "themeContentColor", "jsonType": "string", "required": false },
+        { "name": "themePrimaryColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
+        { "name": "themeBackgroundColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
+        { "name": "themeSurfaceColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
+        { "name": "themeContentColor", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "themeTypeScale", "jsonType": "number", "required": false },
         { "name": "themeCornerRadiusDp", "jsonType": "number", "required": false }
       ],
@@ -691,7 +699,7 @@
         { "name": "style", "jsonType": "string", "required": false, "allowedValues": ["displayLarge", "displayMedium", "displaySmall", "headlineLarge", "headlineMedium", "headlineSmall", "titleLarge", "titleMedium", "titleSmall", "bodyLarge", "bodyMedium", "bodySmall", "labelLarge", "labelMedium", "labelSmall"] },
         { "name": "fontWeight", "jsonType": "string", "required": false, "allowedValues": ["normal", "medium", "semiBold", "bold"] },
         { "name": "fontStyle", "jsonType": "string", "required": false, "allowedValues": ["normal", "italic"] },
-        { "name": "color", "jsonType": "string", "required": false },
+        { "name": "color", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "fontSizeSp", "jsonType": "number", "required": false },
         { "name": "lineHeightSp", "jsonType": "number", "required": false },
         { "name": "letterSpacingSp", "jsonType": "number", "required": false },
@@ -809,7 +817,7 @@
       "traits": ["Decoration", "DrawLayer"],
       "slots": [],
       "properties": [
-        { "name": "color", "jsonType": "string", "required": true },
+        { "name": "color", "jsonType": "string", "required": true, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "diameterDp", "jsonType": "number", "required": false }
       ],
       "modifierCapabilities": ["padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
@@ -824,8 +832,8 @@
       "traits": ["DrawLayer", "OverlayContent"],
       "slots": [],
       "properties": [
-        { "name": "startColor", "jsonType": "string", "required": true },
-        { "name": "endColor", "jsonType": "string", "required": true },
+        { "name": "startColor", "jsonType": "string", "required": true, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
+        { "name": "endColor", "jsonType": "string", "required": true, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "direction", "jsonType": "string", "required": false }
       ],
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
@@ -840,8 +848,8 @@
       "traits": ["DrawLayer", "BackgroundContent"],
       "slots": [],
       "properties": [
-        { "name": "innerColor", "jsonType": "string", "required": true },
-        { "name": "outerColor", "jsonType": "string", "required": true },
+        { "name": "innerColor", "jsonType": "string", "required": true, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
+        { "name": "outerColor", "jsonType": "string", "required": true, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." },
         { "name": "innerAlpha", "jsonType": "number", "required": false },
         { "name": "center", "jsonType": "string", "required": false }
       ],

@@ -2,10 +2,14 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.protocol.AssetKeyValueV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
+import ee.schimke.composeai.uibuilder.protocol.ColorTokenValueV1
+import ee.schimke.composeai.uibuilder.protocol.ColorValueV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DiagnosticSeverityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportArtifactV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
@@ -15,7 +19,9 @@ import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.SlotCardinalityV1
+import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.SvgCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import java.io.Closeable
 import java.nio.file.Files
@@ -299,9 +305,162 @@ public class CurrentM3UiBuilderCatalogExecutor(
     return null
   }
 
+  override fun validateWrite(
+    catalog: CatalogCapabilityV1,
+    node: DesignNodeV1,
+    property: String,
+  ): UiBuilderCatalogIssue? {
+    val value = node.properties[property] ?: return null
+    // Undeclared is `validate`'s finding, and a wrapper the value rules do not speak about — a
+    // state binding, a number — is answered by `jsonType` there too.
+    components[catalog.benchmark.catalogSystemId]?.get(node.componentId)?.properties?.firstOrNull {
+      it.name == property
+    } ?: return null
+    return when {
+      isColourProperty(property) -> colourWriteIssue(node, property, value)
+      property == ASSET_KEY_PROPERTY -> assetKeyWriteIssue(catalog, node, property, value)
+      else -> null
+    }
+  }
+
+  /**
+   * The colour rule: the wrapper says colour, and the value is one the canvas draws.
+   *
+   * A `string` wrapper committed, rendered, and was refused at export with a sentence about `Text`
+   * (#476); a `colorToken` the canvas does not draw committed, and the renderer threw on it. Both
+   * refused here, with the wording the `background` modifier's export refusal already had — it
+   * names the property, says what a colour looks like, and names the wrapper that was wrong.
+   */
+  private fun colourWriteIssue(
+    node: DesignNodeV1,
+    property: String,
+    value: UiValueV1,
+  ): UiBuilderCatalogIssue? {
+    val colour =
+      when (value) {
+        is StringValueV1 ->
+          return issue(
+            "INVALID_PROPERTY",
+            "property $property is a colour, which is written as a `#RRGGBB` literal or as a " +
+              "theme role — a `color` or `colorToken` wrapper, not `string`",
+            node.id,
+            property,
+          )
+        is ColorValueV1 -> value.value
+        is ColorTokenValueV1 -> value.value
+        else -> return null
+      }
+    if (isDrawableColour(colour)) return null
+    return issue(
+      "INVALID_PROPERTY",
+      "property $property is `$colour`, which is neither a `#RRGGBB` literal nor one of the theme " +
+        "roles the canvas draws (${CANVAS_COLOR_TOKENS.joinToString(", ")})",
+      node.id,
+      property,
+    )
+  }
+
+  /**
+   * The asset rule: the key is one the catalog's registry lists.
+   *
+   * `asset/image` is the one component whose value the renderer must *resolve*, and it was the one
+   * property nothing checked: the reducer accepted `avatar-lain`, and every render of the design
+   * then failed with an `IllegalStateException` (#484). The registry is
+   * `statusSemantics.assetRegistry.keys`; a catalog that declares none says nothing about keys.
+   */
+  private fun assetKeyWriteIssue(
+    catalog: CatalogCapabilityV1,
+    node: DesignNodeV1,
+    property: String,
+    value: UiValueV1,
+  ): UiBuilderCatalogIssue? {
+    val key =
+      when (value) {
+        is AssetKeyValueV1 -> value.value
+        is StringValueV1 -> value.value
+        else -> return null
+      }
+    val registry = declaredAssetKeys(catalog) ?: return null
+    if (key in registry) return null
+    return issue(
+      "INVALID_PROPERTY",
+      "property $property is `$key`, which no asset this catalog can draw resolves; the keys it " +
+        "declares are ${registry.joinToString(", ")}",
+      node.id,
+      property,
+    )
+  }
+
   public companion object {
     public const val RESOURCE: String =
       "/ee/schimke/composeai/uibuilder/catalogs/m3-catalog-v1.json"
+
+    /**
+     * The value-kind rules, mirrored from `PropertyValueKinds` in `:ui-builder-export`, which this
+     * module cannot reach — the same arrangement `slotAccepts` has with `SlotCapability.accepts`. A
+     * property's name states its kind: `color` and `…Color` hold a colour, `assetKey` a key into
+     * the catalog's asset registry. `docs/design/UI_BUILDER_VALUE_SEMANTICS.md` is the decision.
+     */
+    public fun isColourProperty(property: String): Boolean =
+      property == "color" || property.endsWith("Color")
+
+    /** The property whose value the canvas has to resolve against the catalog's registry. */
+    public const val ASSET_KEY_PROPERTY: String = "assetKey"
+
+    /** The `statusSemantics` entry listing the asset keys the canvas draws, as `{"keys": […]}`. */
+    public const val ASSET_REGISTRY_KEY: String = "assetRegistry"
+
+    /** The `statusSemantics` entry listing [CANVAS_COLOR_TOKENS] for a reader of the catalog. */
+    public const val COLOR_TOKENS_KEY: String = "colorTokens"
+
+    /**
+     * The theme roles the canvas draws — `PropertyValueKinds.CANVAS_COLOR_TOKENS`, and the
+     * catalog's own `statusSemantics.colorTokens.roles`; `ProductionUiBuilderRuntimeTest` pins the
+     * three to one list.
+     */
+    public val CANVAS_COLOR_TOKENS: Set<String> =
+      setOf(
+        "background",
+        "surface",
+        "surfaceContainer",
+        "surfaceContainerLow",
+        "surfaceContainerHigh",
+        "surfaceContainerHighest",
+        "primary",
+        "onPrimary",
+        "tertiary",
+        "onTertiary",
+        "onSurface",
+        "onSurfaceVariant",
+        "outlineVariant",
+        "transparent",
+      )
+
+    /** Whether the canvas draws [value]: a hex literal, a listed role, or nothing (the default). */
+    public fun isDrawableColour(value: String): Boolean =
+      value.isEmpty() || COLOR_LITERAL.matches(value) || value in CANVAS_COLOR_TOKENS
+
+    /** The asset keys [catalog] declares, or null when it declares no registry. */
+    public fun declaredAssetKeys(catalog: CatalogCapabilityV1): Set<String>? =
+      declaredStrings(catalog.statusSemantics, ASSET_REGISTRY_KEY, "keys")
+
+    /** The theme roles [catalog] lists, or null when it lists none. */
+    public fun declaredColorTokens(catalog: CatalogCapabilityV1): Set<String>? =
+      declaredStrings(catalog.statusSemantics, COLOR_TOKENS_KEY, "roles")
+
+    private fun declaredStrings(
+      statusSemantics: JsonObject,
+      entry: String,
+      field: String,
+    ): Set<String>? {
+      val declared =
+        (statusSemantics[entry] as? JsonObject)?.get(field) as? JsonArray ?: return null
+      return declared.mapNotNullTo(linkedSetOf()) {
+        (it as? JsonPrimitive)?.takeIf { primitive -> primitive.isString }?.content
+      }
+    }
+
+    private val COLOR_LITERAL = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")
     public const val CURRENT_CAPABILITY_DIGEST: String = "candidate"
     public const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
     public const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"

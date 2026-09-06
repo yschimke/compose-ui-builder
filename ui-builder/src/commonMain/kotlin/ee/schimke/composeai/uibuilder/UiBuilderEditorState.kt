@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
+import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlin.math.abs
 import kotlin.math.floor
@@ -2645,8 +2646,15 @@ class UiBuilderEditorReducer(
       val existingType =
         property.canonicalWrapper(existingValue?.get("type")?.primitiveOrNull()?.contentOrNull)
       val encoded =
-        if (edgeName == null) literal(existingType ?: field.defaultEncodedType(), value)
-        else
+        if (edgeName == null) {
+          // A colour's wrapper follows the value rather than the node's existing spelling: a theme
+          // role is a `colorToken` and a literal is a `color`, which is what the export reads, and
+          // an existing `string` is exactly the spelling this edit exists to leave behind.
+          val type =
+            if (field.control == EditorPropertyControl.Color) colourWrapper(value)
+            else existingType ?: field.defaultEncodedType()
+          literal(type, value)
+        } else
           objectValueWithEdge(
             kind = property.editor?.objectKind ?: existingType.orEmpty(),
             existing = existingValue,
@@ -4428,7 +4436,9 @@ private fun JsonElement.asLiteral(property: PropertyCapability): JsonObject {
     when {
       primitive.booleanOrNull != null -> "bool"
       primitive.doubleOrNull != null -> "float"
-      property.name.endsWith("Color") -> "color"
+      PropertyValueKinds.isColour(property.name) ->
+        if (primitive.content.isEmpty() || primitive.content.startsWith("#")) "color"
+        else "colorToken"
       // Read off the declaration rather than from a list of three property names, which is how
       // `textAlign` and `horizontalAlignment` came to be written as `string` in the first place.
       property.allowedValues.isNotEmpty() -> "enum"
@@ -4538,7 +4548,9 @@ private fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
     }
     EditorPropertyControl.Color -> {
       val color = draft.trim()
-      if (color.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")) || color in choices)
+      // Empty is the component's own default, which `startAccentColor` documents as "draws none";
+      // clearing the field is how an author asks for it.
+      if (color.isEmpty() || PropertyValueKinds.isDrawableColour(color) || color in choices)
         PropertyDraft.Valid(JsonPrimitive(color))
       else
         PropertyDraft.Invalid("$label must be #RRGGBB, #AARRGGBB, or a listed Material color token")
@@ -4546,6 +4558,15 @@ private fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
     EditorPropertyControl.Unsupported ->
       PropertyDraft.Invalid("$label cannot be safely edited from its catalog metadata")
   }
+}
+
+/**
+ * `color` for a literal (or nothing), `colorToken` for a theme role — the wrappers the export
+ * reads.
+ */
+private fun colourWrapper(value: JsonElement): String {
+  val content = (value as? JsonPrimitive)?.contentOrNull.orEmpty()
+  return if (content.isEmpty() || content.startsWith("#")) "color" else "colorToken"
 }
 
 private fun EditorPropertyField.defaultEncodedType(): String =

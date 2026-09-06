@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.ComponentMenu
 import ee.schimke.composeai.uibuilder.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.UiBuilderPreviewSurfaces
+import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -284,6 +285,12 @@ object CapabilityCatalogParser {
     EDITOR_OVERRIDES[componentId to property.name]?.let {
       return it
     }
+    // A colour property is a colour control, by the name rule `PropertyValueKinds` states. Two
+    // colours had this by override and the other twenty were plain text fields, so the inspector
+    // wrote `containerColor` on an app bar as a `string` — the very spelling both reducers now
+    // refuse (#476). The rule that decides what a value means is the rule that decides how it is
+    // edited, or the editor's own writes are the first thing it turns away.
+    if (PropertyValueKinds.isColour(property.name)) return colorEditor()
     return when ((property.jsonType as? JsonPrimitive)?.contentOrNull) {
       "string" -> PropertyEditorCapability(control = PropertyEditorControl.TEXT)
       "boolean" -> PropertyEditorCapability(control = PropertyEditorControl.BOOLEAN)

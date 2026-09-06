@@ -14,6 +14,9 @@ public final class ee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilder
 }
 
 public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor : ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {
+	public static final field ASSET_KEY_PROPERTY Ljava/lang/String;
+	public static final field ASSET_REGISTRY_KEY Ljava/lang/String;
+	public static final field COLOR_TOKENS_KEY Ljava/lang/String;
 	public static final field COMPONENT_PACKS_KEY Ljava/lang/String;
 	public static final field CURRENT_CAPABILITY_DIGEST Ljava/lang/String;
 	public static final field Companion Lee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor$Companion;
@@ -29,9 +32,15 @@ public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCata
 	public fun listCatalogs ()Ljava/util/List;
 	public fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
 	public fun validate (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
+	public fun validateWrite (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 }
 
 public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor$Companion {
+	public final fun declaredAssetKeys (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Ljava/util/Set;
+	public final fun declaredColorTokens (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Ljava/util/Set;
+	public final fun getCANVAS_COLOR_TOKENS ()Ljava/util/Set;
+	public final fun isColourProperty (Ljava/lang/String;)Z
+	public final fun isDrawableColour (Ljava/lang/String;)Z
 }
 
 public final class ee/schimke/composeai/uibuilder/service/FileUiBuilderStateStorage : ee/schimke/composeai/uibuilder/service/RecoverableUiBuilderMigrationStorage {
@@ -227,6 +236,11 @@ public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilder
 	public abstract fun listCatalogs ()Ljava/util/List;
 	public abstract fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
 	public abstract fun validate (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
+	public fun validateWrite (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor$DefaultImpls {
+	public static fun validateWrite (Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 }
 
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue {

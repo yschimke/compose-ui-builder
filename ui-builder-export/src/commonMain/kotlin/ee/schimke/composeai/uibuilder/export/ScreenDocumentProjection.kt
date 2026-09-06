@@ -1382,9 +1382,17 @@ object ScreenDocumentProjection {
         // refusing them here with "`Text`.`style` is a TextStyle, which Text is not" names the
         // wrong problem in a message that cannot be acted on from the builder.
         is StringValueV1 ->
-          if (enumerated(node.componentId, property))
-            enum(value.value, node.componentId, property, where)
-          else ScreenValue.Text(value.value)
+          when {
+            enumerated(node.componentId, property) ->
+              enum(value.value, node.componentId, property, where)
+            // The modifier's sentence for the property's mistake. Left to the generator, a
+            // `string` on `m3/text.color` was refused as "`Text`.`color` is Color, which Text is
+            // not" — a message about a type the author never wrote, with no hint that the wrapper
+            // was the problem (#476). The reducers refuse the spelling at commit now; a document
+            // that already holds it gets the same words here.
+            PropertyValueKinds.isColour(property) -> colour(value, where)
+            else -> ScreenValue.Text(value.value)
+          }
         is BooleanValueV1 -> ScreenValue.Bool(value.value)
         is IntegerValueV1 -> ScreenValue.Whole(value.value)
         is DecimalValueV1 -> ScreenValue.Fractional(value.value)
