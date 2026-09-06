@@ -217,7 +217,7 @@ the custom component draws **only where a renderer of that name is registered**;
 stays a player support issue rather than silently borrowing arbitrary outer content, which is the
 same rule the named slots keep.
 
-### What the generators do, and the one thing they refuse
+### What the generators do, and what they refuse
 
 The Compose exporters refuse an inline node by name — `REMOTE_CONTENT_NOT_COMPOSE` — and say nothing
 about its subtree, because judging `RemoteColumn` by whether Compose can call it is asking about the
@@ -252,7 +252,18 @@ had the matching bug on the replay side — a hardcoded 2.625, the desktop rende
 default, scaling every Wear document by 1.31 against its own baked PNG until it was taught to ask
 the device.
 
-The custom component used to be the one node no generator could write, and it is not any more.
+The one place this repository **records** a document is already the single-target case, and by
+construction rather than by choice. `PlaygroundRcCaptureService` captures a snippet's `.rc` by
+rendering it on one Robolectric daemon, against a `previews.json` that `PlaygroundPreviews`
+synthesises with `params = PreviewParams()` — no density and no device — so the daemon's own
+resolution reaches its 2.0 default and the document is constant-folded at the density the render
+that produced it used. One snippet, one daemon, one density to be right about: the constant is
+correct here, and would stay correct if the default moved, because the capture and the render read
+it from the same place. Expressions become the question only where one document has to serve hosts
+that disagree, which is a capture this repository does not perform.
+
+The custom component used to be the one node no generator could write, and it is not any more —
+which is why this section no longer names a single refusal.
 `remote-creation-compose` 1.0.0-alpha18 publishes
 `RemoteCustomComponent(name, modifier, properties)`, which emits the `LAYOUT_CUSTOM` operation
 directly, so `RemoteContentEmitter` writes it from the node's `name` and reserves the node's
