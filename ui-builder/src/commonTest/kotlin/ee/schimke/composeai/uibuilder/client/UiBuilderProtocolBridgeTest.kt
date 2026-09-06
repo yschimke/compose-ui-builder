@@ -13,6 +13,7 @@ import ee.schimke.composeai.uibuilder.protocol.DesignEnvironmentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.NullValueV1
+import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
@@ -118,7 +119,7 @@ class UiBuilderProtocolBridgeTest {
   }
 
   @Test
-  fun `a removal is sent as a null write, and a null write in a delta removes the property`() {
+  fun `a removal is sent as its own mutation, and either spelling in a delta removes the property`() {
     // The published protocol has no removal mutation; `setProperty` with `{"type":"null"}` is what
     // the server reads as an unset (#480), and the client has to read it back the same way rather
     // than storing a null the canvas would then treat as a value.
@@ -140,10 +141,9 @@ class UiBuilderProtocolBridgeTest {
             authoritativeRevision = 7,
           )
       )
-    val mutation = assertIs<SetPropertyMutationV1>(sent.operations.single())
+    val mutation = assertIs<RemoveNodePropertyMutationV1>(sent.operations.single())
     assertEquals("title", mutation.nodeId)
     assertEquals("text", mutation.property)
-    assertEquals(NullValueV1, mutation.value)
 
     val before = protocolDocument(revision = 7, text = "Before")
     val committedAt = 1_750_000_010_123
@@ -178,6 +178,25 @@ class UiBuilderProtocolBridgeTest {
     assertTrue(candidate.hasVerifiedHash())
     assertEquals(after, candidate.protocolDocument)
     assertFalse("text" in candidate.rendererDocument.nodes.getValue("title").properties)
+
+    // The null spelling is still what a client written before 2.10.0 sends, and the server echoes
+    // it back in the delta as sent; it reads as the same removal.
+    val nullWrite =
+      delta.copy(
+        operations =
+          listOf(
+            CommittedOperationV1(
+              command.copy(
+                operations = listOf(SetPropertyMutationV1("title", "text", NullValueV1))
+              ),
+              accepted,
+            )
+          )
+      )
+    val fromNull =
+      assertNotNull(before.preparePropertyDelta(before.toRendererDocument(), nullWrite))
+    assertEquals(after, fromNull.protocolDocument)
+    assertFalse("text" in fromNull.rendererDocument.nodes.getValue("title").properties)
   }
 
   @Test

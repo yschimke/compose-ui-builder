@@ -92,12 +92,11 @@ named — and nothing lands. Unsetting what is not set is accepted as the no-op 
 The editor spells the same thing as `DesignOperation.RemoveNodeProperty`, which refuses a required
 property at the operation — *required property `text` cannot be unset; give it a value or delete
 the node* — and is undone and redone like any other scalar write. The protocol bridge sends it as
-the null write, and the client's delta path removes the property rather than storing a null the
-canvas would read as a value.
-
-`RemoveNodePropertyMutationV1` — the explicit wire spelling — belongs in the published protocol
-(compose-preview-contracts) and is not there yet; once it is, the runtime reads it as the same
-removal.
+`RemoveNodePropertyMutationV1`, the explicit wire spelling compose-preview-contracts 2.10.0 added,
+and the runtime routes it through the one property-write path the null `setProperty` uses, so the
+two cannot drift. The null spelling stays accepted for clients written against it, and the
+client's delta path removes the property for either rather than storing a null the canvas would
+read as a value.
 
 ## Where the line is
 

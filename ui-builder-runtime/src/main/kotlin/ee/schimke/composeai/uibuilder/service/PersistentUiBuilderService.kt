@@ -1917,74 +1917,30 @@ public class PersistentUiBuilderService(
             ),
           )
         }
-        is SetPropertyMutationV1 -> {
-          val node =
-            working.document.nodes[mutation.nodeId]
-              ?: fail(RejectionCodeV1.UNKNOWN_NODE, "unknown node", index, mutation.nodeId)
-          if (mutation.property.isBlank()) {
-            fail(RejectionCodeV1.INVALID_PROPERTY, "property name is blank", index, mutation.nodeId)
-          }
-          val beforePresent = mutation.property in node.properties
-          val before = node.properties[mutation.property]
-          // A null value unsets the property rather than storing a null. A stored null is what
-          // the catalog validator refuses ("does not match its catalog JSON type"), and what the
-          // Compose export refuses again; an *absent* property is the state every node starts in
-          // and the one whose default the renderer applies. Whether the property may be absent is
-          // not decided here: the catalog validation the whole batch passes through afterwards
-          // refuses an unset required property with its usual located message. An unset is not a
-          // write of a value either, so the catalog's value rules are asked only of a set.
-          val afterPresent = mutation.value !is NullValueV1
-          val written =
-            if (afterPresent) {
-              node.copy(properties = node.properties + (mutation.property to mutation.value)).also {
-                catalogs.validateWrite(catalog, working.document, it, mutation.property)?.let {
-                  issue ->
-                  fail(
-                    RejectionCodeV1.INVALID_PROPERTY,
-                    issue.message,
-                    index,
-                    mutation.nodeId,
-                    issue.field,
-                  )
-                }
-              }
-            } else node.copy(properties = node.properties - mutation.property)
-          val document =
-            working.document.copy(nodes = working.document.nodes + (node.id to written))
-          val conflicts =
-            if (
-              command.baseRevision < original.document.revision &&
-                original.acceptedOperations.values.any {
-                  it.committedRevision > command.baseRevision &&
-                    it.changes.any { change ->
-                      change is PropertyChangeV1 &&
-                        change.nodeId == mutation.nodeId &&
-                        change.property == mutation.property
-                    }
-                }
-            )
-              listOf(
-                CommandConflictV1(
-                  ConflictCodeV1.STALE_PROPERTY_WRITE,
-                  mutation.nodeId,
-                  mutation.property,
-                  original.document.revision,
-                )
-              )
-            else emptyList()
-          MutationResult(
-            WorkingDesign(document, working.tombstones, working.positions),
-            PropertyChangeV1(
-              mutation.nodeId,
-              mutation.property,
-              beforePresent,
-              before,
-              mutation.value,
-              afterPresent,
-            ),
-            conflicts,
+        is SetPropertyMutationV1 ->
+          writeProperty(
+            working,
+            mutation.nodeId,
+            mutation.property,
+            mutation.value,
+            command,
+            original,
+            index,
+            catalog,
           )
-        }
+        // The explicit spelling of the null write (compose-preview-contracts 2.10.0, #480): the
+        // same path, so the change record is the same `afterPresent = false` either way.
+        is RemoveNodePropertyMutationV1 ->
+          writeProperty(
+            working,
+            mutation.nodeId,
+            mutation.property,
+            NullValueV1,
+            command,
+            original,
+            index,
+            catalog,
+          )
         is UpdateEnvironmentMutationV1 -> {
           if (mutation.changes.isEmpty()) {
             fail(
@@ -2215,6 +2171,87 @@ public class PersistentUiBuilderService(
     } catch (failure: ReductionFailure) {
       MutationResult(error = failure.rejection(command.operationId, working.document.revision))
     }
+
+  /**
+   * One property write, for a `setProperty` and for the explicit `removeNodeProperty` alike.
+   *
+   * A [NullValueV1] value unsets the property (#480); `RemoveNodePropertyMutationV1` says the same
+   * thing in its own words and arrives here with that value, so there is one removal path and the
+   * two spellings cannot drift.
+   */
+  private fun writeProperty(
+    working: WorkingDesign,
+    nodeId: String,
+    property: String,
+    value: UiValueV1,
+    command: DesignCommandV1,
+    original: PersistedDesignV1,
+    index: Int,
+    catalog: CatalogCapabilityV1,
+  ): MutationResult {
+    val node =
+      working.document.nodes[nodeId]
+        ?: fail(RejectionCodeV1.UNKNOWN_NODE, "unknown node", index, nodeId)
+    if (property.isBlank()) {
+      fail(RejectionCodeV1.INVALID_PROPERTY, "property name is blank", index, nodeId)
+    }
+    val beforePresent = property in node.properties
+    val before = node.properties[property]
+    // A null value unsets the property rather than storing a null. A stored null is what
+    // the catalog validator refuses ("does not match its catalog JSON type"), and what the
+    // Compose export refuses again; an *absent* property is the state every node starts in
+    // and the one whose default the renderer applies. Whether the property may be absent is
+    // not decided here: the catalog validation the whole batch passes through afterwards
+    // refuses an unset required property with its usual located message. An unset is not a
+    // write of a value either, so the catalog's value rules are asked only of a set.
+    val afterPresent = value !is NullValueV1
+    val written =
+      if (afterPresent) {
+        node.copy(properties = node.properties + (property to value)).also {
+          catalogs.validateWrite(catalog, working.document, it, property)?.let { issue ->
+            fail(
+              RejectionCodeV1.INVALID_PROPERTY,
+              issue.message,
+              index,
+              nodeId,
+              issue.field,
+            )
+          }
+        }
+      } else node.copy(properties = node.properties - property)
+    val document = working.document.copy(nodes = working.document.nodes + (node.id to written))
+    val conflicts =
+      if (
+        command.baseRevision < original.document.revision &&
+          original.acceptedOperations.values.any {
+            it.committedRevision > command.baseRevision &&
+              it.changes.any { change ->
+                change is PropertyChangeV1 && change.nodeId == nodeId && change.property == property
+              }
+          }
+      )
+        listOf(
+          CommandConflictV1(
+            ConflictCodeV1.STALE_PROPERTY_WRITE,
+            nodeId,
+            property,
+            original.document.revision,
+          )
+        )
+      else emptyList()
+    return MutationResult(
+      WorkingDesign(document, working.tombstones, working.positions),
+      PropertyChangeV1(
+        nodeId,
+        property,
+        beforePresent,
+        before,
+        value,
+        afterPresent,
+      ),
+      conflicts,
+    )
+  }
 
   private fun compensate(
     design: PersistedDesignV1,

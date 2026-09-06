@@ -657,8 +657,9 @@ the line is "the canvas cannot draw it" rather than "the export cannot write it"
 [`design/UI_BUILDER_VALUE_SEMANTICS.md`](design/UI_BUILDER_VALUE_SEMANTICS.md).
 
 An optional property can be **unset** again, so the component's own default applies: the editor's
-`removeNodeProperty` operation names the node and the field, and on the wire a `setProperty` whose
-value is `{"type": "null"}` means the same thing. A required property cannot be unset — the
+`removeNodeProperty` operation names the node and the field, and on the wire
+`removeNodeProperty` is its own mutation (a `setProperty` whose value is `{"type": "null"}` still
+means the same thing). A required property cannot be unset — the
 refusal names it — and unsetting a property the node does not hold is accepted as the no-op it is.
 Undo puts the value back.
 
@@ -704,7 +705,7 @@ with the same bearer. One tool per protocol request, plus the ones the contract 
 | `ui_builder_get_design` | `ui-builder-read` | One whole document, and the revision to quote next; the pinned catalog only with `includeCatalog: true` |
 | `ui_builder_await_design` | `ui-builder-read` | Waits for somebody else to change the design, and returns what they changed |
 | `ui_builder_create_design` | `ui-builder-write` | A design, from a document or copied from one |
-| `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set (a null value unsets), delete, move |
+| `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set, removeNodeProperty (a null set unsets too), delete, move |
 | `ui_builder_export` | `ui-builder-export` | The generator's Kotlin, or its refusals |
 | `ui_builder_put_asset` | `ui-builder-write` | A picture behind an `assetKey`, for an `asset/image` node to draw |
 | `ui_builder_design_access` | `ui-builder-read` | Who can open the design: its owner, and everyone it is shared with |

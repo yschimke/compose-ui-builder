@@ -2239,6 +2239,60 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `removeNodeProperty is the null write in its own words, on the same path`() {
+    // compose-preview-contracts 2.10.0 gave the unset its own mutation (#480). It has to land
+    // exactly where the null `setProperty` lands: property gone, undo restores, redo removes.
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "insert",
+            0,
+            InsertNodeMutationV1(
+              textNode("node").copy(properties = mapOf("text" to StringValueV1("First"))),
+              NodeLocationV1(),
+            ),
+          )
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("remove", 1, RemoveNodePropertyMutationV1("node", "text"))
+        ),
+      )
+    )
+    assertEquals(emptyMap(), currentNode(service, "node").properties)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 2, "remove")
+        ),
+      )
+    )
+    assertEquals(mapOf("text" to StringValueV1("First")), currentNode(service, "node").properties)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Redo("design", "redo-remove", "browser", 3, "undo-remove")
+        ),
+      )
+    )
+    assertEquals(emptyMap(), currentNode(service, "node").properties)
+  }
+
+  @Test
   fun `unsetting a required property is refused with the catalog's located message`() {
     val service = service()
     create(service)
@@ -2277,6 +2331,20 @@ class PersistentUiBuilderServiceTest {
     assertEquals("button", refused.nodeId)
     assertEquals("label", refused.field)
     // Nothing landed: the batch is atomic and the node still carries its label.
+    assertEquals(StringValueV1("Go"), currentNode(service, "button").properties["label"])
+
+    // The explicit mutation is refused the same way, with the same words.
+    val explicitlyRefused =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("remove", 1, RemoveNodePropertyMutationV1("button", "label"))
+          ),
+        )
+      )
+    assertEquals(refused.copy(operationId = "remove"), explicitlyRefused)
     assertEquals(StringValueV1("Go"), currentNode(service, "button").properties["label"])
   }
 
