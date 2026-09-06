@@ -126,6 +126,19 @@ data class EditorCatalogItem(
   val variants: List<EditorCatalogVariant> = emptyList(),
   /** The pack this component came from, or null for one of the catalog's own. */
   val pack: String? = null,
+  /**
+   * Whether the Compose export can write this component, or null where the panel cannot say.
+   *
+   * Read off the same component record the code pane and the problems panel judge a design by — see
+   * [UiBuilderEditorReducer.composeExportCoverage] — so the palette and the export cannot disagree
+   * about which third of the catalog is writable. Before this the only way to learn that
+   * `asset/image` renders and does not export was to place one and read the refusal, one component
+   * at a time (compose-preview-server#477).
+   *
+   * False is not "do not insert": the canvas draws every one of these, and the PNG and SVG exports
+   * carry them. It is a warning drawn on the row, not a gate on the Add.
+   */
+  val exportsToCompose: Boolean? = null,
 )
 
 /**
@@ -146,6 +159,8 @@ data class EditorCatalogVariant(
   val label: String,
   /** Whether this is what the component inserts as when nobody picks a variant. */
   val default: Boolean,
+  /** The component's own [EditorCatalogItem.exportsToCompose], so a variant row dims with it. */
+  val exportsToCompose: Boolean? = null,
 )
 
 /**
@@ -1019,6 +1034,27 @@ class UiBuilderEditorReducer(
    * [exportRecord]: the code pane and the problems panel. See [packComponentsById].
    */
   private val packComponents by lazy { catalog.packComponentsById() }
+
+  /**
+   * The catalog ids the Compose export can write a call site for, or null when this panel cannot
+   * say.
+   *
+   * The record, not a second table: a component is covered when [exportRecord] holds a component
+   * answering to its id with a printable call, which is the same question `ScreenGenerator` asks
+   * before it writes one. A pack's components count, because [exportRecord] carries their projected
+   * records exactly as the export does.
+   *
+   * Null — no marker on any row — for a catalog the embedded record was not authored for. `wear-m3`
+   * and `remote-m3` screens generate through their own emitters (`RecordFreeExport`) and are judged
+   * by neither this record nor its absence, so greying every row of a Wear palette against
+   * `m3-catalog`'s record would be the palette lying in the other direction.
+   */
+  private val composeExportCoverage: Set<String>? by lazy {
+    val record = exportRecord ?: return@lazy null
+    if (record.module != catalog.benchmark.catalogSystemId) return@lazy null
+    record.components.filter { it.code?.call != null }.flatMapTo(mutableSetOf()) { it.componentIds }
+  }
+
   private val validator = CapabilityPropertyWriteValidator(capabilityValidator)
   private val documentValidator = CapabilityDocumentWriteValidator(capabilityValidator)
 
@@ -1595,12 +1631,14 @@ class UiBuilderEditorReducer(
 
   private fun ComponentCapability.editorCatalogItem(): EditorCatalogItem {
     val kind = editorKind()
+    val exportsToCompose = composeExportCoverage?.let { componentId in it }
     return EditorCatalogItem(
       componentId = componentId,
       displayName = displayName,
       kind = kind,
       group = catalog.componentMenu.groupOf(componentId) ?: kind.label,
       pack = catalog.componentPacks.packOf(componentId)?.id,
+      exportsToCompose = exportsToCompose,
       variants =
         menuVariantValues(catalog.componentMenu).mapIndexed { index, value ->
           EditorCatalogVariant(
@@ -1611,6 +1649,7 @@ class UiBuilderEditorReducer(
             // The catalog's first allowed value is what `defaultEncodedValue` writes on a plain
             // insert, so it is the default here by the same rule rather than by a second opinion.
             default = index == 0,
+            exportsToCompose = exportsToCompose,
           )
         },
     )

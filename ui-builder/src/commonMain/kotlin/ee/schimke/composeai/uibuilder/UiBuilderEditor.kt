@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.CodeOff
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
@@ -115,6 +116,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
@@ -4215,15 +4217,18 @@ private fun CatalogRow(
         DisclosureTriangle(expanded, MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
-    CatalogThumbnail(
-      document = thumbnail,
-      dragKey = item.componentId,
-      label = item.displayName,
-      size = COMPONENT_THUMBNAIL_SIZE,
-      onDrag = onDrag,
-      onDrop = onDrop,
-    )
-    Column(Modifier.padding(start = 6.dp).weight(1f)) {
+    val unexportable = item.exportsToCompose == false
+    Box(Modifier.unexportable(unexportable)) {
+      CatalogThumbnail(
+        document = thumbnail,
+        dragKey = item.componentId,
+        label = item.displayName,
+        size = COMPONENT_THUMBNAIL_SIZE,
+        onDrag = onDrag,
+        onDrop = onDrop,
+      )
+    }
+    Column(Modifier.padding(start = 6.dp).weight(1f).unexportable(unexportable)) {
       Text(item.displayName, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
       Text(
         item.componentId,
@@ -4232,6 +4237,7 @@ private fun CatalogRow(
         maxLines = 1,
       )
     }
+    if (unexportable) UnexportableBadge(item.displayName)
     if (item.variants.isNotEmpty()) {
       Text(
         item.variants.size.toString(),
@@ -4274,17 +4280,25 @@ private fun CatalogVariantRow(
     verticalAlignment = Alignment.CenterVertically,
   ) {
     IndentGuide(depth = 2)
-    CatalogThumbnail(
-      document = thumbnail,
-      dragKey = "${variant.componentId}#${variant.value}",
-      label = qualified,
-      // Smaller than a component's, because a variant is a detail of the row above it and a column
-      // of equal-sized pictures loses the hierarchy the indent just established.
-      size = VARIANT_THUMBNAIL_SIZE,
-      onDrag = onDrag,
-      onDrop = onDrop,
-    )
-    Row(Modifier.padding(start = 6.dp).weight(1f), verticalAlignment = Alignment.CenterVertically) {
+    // Dimmed with its component and no badge of its own: the row above already carries the word,
+    // and a variant is a detail of that row rather than a second component.
+    val unexportable = variant.exportsToCompose == false
+    Box(Modifier.unexportable(unexportable)) {
+      CatalogThumbnail(
+        document = thumbnail,
+        dragKey = "${variant.componentId}#${variant.value}",
+        label = qualified,
+        // Smaller than a component's, because a variant is a detail of the row above it and a
+        // column of equal-sized pictures loses the hierarchy the indent just established.
+        size = VARIANT_THUMBNAIL_SIZE,
+        onDrag = onDrag,
+        onDrop = onDrop,
+      )
+    }
+    Row(
+      Modifier.padding(start = 6.dp).weight(1f).unexportable(unexportable),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
       Text(
         label,
         style = MaterialTheme.typography.bodySmall,
@@ -4304,6 +4318,41 @@ private fun CatalogVariantRow(
     }
     CatalogAddButton(canAdd, onAdd, qualified)
   }
+}
+
+/**
+ * How far a row the Compose export cannot write fades.
+ *
+ * Faded rather than disabled, because the row is not broken: the canvas draws the component, the
+ * PNG and SVG exports carry it, and only the Kotlin is missing. Far enough to read as greyed at a
+ * glance next to a covered row, not so far that the name and the picture stop being legible — the
+ * row still has to be findable by someone who wants the thing on the canvas.
+ */
+private const val UNEXPORTABLE_ALPHA = 0.45f
+
+private fun Modifier.unexportable(unexportable: Boolean): Modifier =
+  if (unexportable) alpha(UNEXPORTABLE_ALPHA) else this
+
+/**
+ * The mark on a row the Compose export cannot write, beside the Add it does not take away.
+ *
+ * An icon rather than a word, and the reason is the panel's width. It is 280 dp at its narrowest
+ * and the name column gives way to whatever sits here: a two-word label turned "Supporting pane"
+ * into "Supporting" and "Search input field" into "Search" — the row saying less about what the
+ * component is in order to say what it cannot do. Code, crossed out, is the whole message in 16 dp;
+ * the fade on the rest of the row is what makes it read at a glance, and the description carries
+ * the sentence for the reader who cannot see either. "Compose export" rather than "export": the PNG
+ * and SVG exports do carry these, and the toolbar's Export offers all three.
+ */
+@Composable
+private fun UnexportableBadge(componentName: String) {
+  Icon(
+    Icons.Filled.CodeOff,
+    contentDescription =
+      "$componentName renders on the canvas, but the Compose export cannot write it yet",
+    modifier = Modifier.padding(end = 6.dp).size(16.dp),
+    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
 }
 
 /**

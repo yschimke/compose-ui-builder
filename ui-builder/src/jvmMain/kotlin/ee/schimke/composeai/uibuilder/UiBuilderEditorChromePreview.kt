@@ -119,6 +119,31 @@ fun UiBuilderComponentVariantsPreview() {
 }
 
 /**
+ * The palette narrowed to the components the Compose export cannot write.
+ *
+ * Every row here is one the embedded component record has no call site for, so every one is faded
+ * and carries the "no Kotlin" word — with a variant row under the date picker, which dims with its
+ * component and carries no word of its own. It exists to diff the marker rather than the panel:
+ * [UiBuilderEditorChromePreview] shows the marker beside covered rows, which is where the contrast
+ * is, and this is the row shapes the marker has to survive on.
+ *
+ * "picker" matches the two pickers and nothing else in this catalog, and both take a remembered
+ * state no value expresses, so neither is going to become exportable by accident and turn this
+ * preview into a picture of nothing.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderUnexportablePalettePreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "discover-grid",
+    initialComponentsOpen = true,
+    initialCatalogQuery = "picker",
+  )
+}
+
+/**
  * Two families and three states, so the palette's group headings are visible rather than implied.
  */
 private val REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES =
