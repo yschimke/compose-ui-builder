@@ -28,7 +28,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -3445,8 +3447,23 @@ private fun PinnedDesignCanvas(
     // constraints scope these come from.
     val workspaceWidth = maxWidth
     val workspaceHeight = maxHeight
+    // How tall the design actually is, which is not how tall its frame is.
+    //
+    // A screen is drawn at one frame and is usually longer than it: a list of twelve rows on a
+    // 914dp phone is a design whose author is working on rows nine to twelve as much as on the
+    // first four. So the canvas draws the *extent* — the frame's width, the content's height — and
+    // that is the surface edits land on, the way the Wear stadium already works. Until the content
+    // has been measured this is the frame's own height, which is what a design that fits stays at.
+    var expandedHeightDp by remember(document.id) { mutableStateOf(sourceHeight) }
+    // Only a design that outgrows its frame gets the second pane. One that fits would be drawn
+    // twice identically, and two identical pictures side by side say nothing the one said.
+    val overflowsFrame = expandedHeightDp > sourceHeight + 0.5f
+    val pairWidth = if (overflowsFrame) sourceWidth * 2f + CANVAS_PANE_GAP_DP.value else sourceWidth
+    // Fit frames the pair, not the extent alone: zooming to fit a design whose companion is off
+    // the right edge is not fitting the design. Height is the extent's, which is the taller of
+    // the two by construction.
     val fitScale =
-      minOf(workspaceWidth.value / sourceWidth, workspaceHeight.value / sourceHeight)
+      minOf(workspaceWidth.value / pairWidth, workspaceHeight.value / expandedHeightDp)
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
     val scale = zoom ?: fitScale
     // In dp, because that is what the metrics callback reports and what the frame is measured in.
@@ -3477,112 +3494,133 @@ private fun PinnedDesignCanvas(
         Modifier.widthIn(min = workspaceWidth).heightIn(min = workspaceHeight),
         contentAlignment = contentAlignment,
       ) {
-        Box(Modifier.size((sourceWidth * scale).dp, (sourceHeight * scale).dp)) {
-          Surface(
-            Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
-              .requiredSize(sourceWidth.dp, sourceHeight.dp)
-              .onSizeChanged { size ->
-                measuredDp =
-                  with(density) {
-                    size.width.toDp().value.roundToInt() to size.height.toDp().value.roundToInt()
-                  }
-              }
-              .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                transformOrigin = TransformOrigin(0f, 0f)
-                compositingStrategy = CompositingStrategy.Offscreen
-              }
-              .onGloballyPositioned {
-                frameBounds = it.boundsInRoot()
-                onCanvasBounds(frameBounds)
-              }
-              .then(
-                if (dropHovered) Modifier.border(4.dp, MaterialTheme.colorScheme.primary)
-                else Modifier
-              ),
-            shape = RoundedCornerShape(0.dp),
-            shadowElevation = 0.dp,
-          ) {
-            // Where a right-click landed on the design, in the frame's own pixels, and null
-            // while no menu is open.
-            var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
-            Box(
-              Modifier.fillMaxSize().onSecondaryClick(document.id) { position ->
-                if (!showSelectionOverlay) return@onSecondaryClick
-                // The inspection reports each box in root pixels, which is the space this press
-                // has to be asked in: the frame is offset in the workspace and drawn at [scale].
-                val point =
-                  Offset(
-                    frameBounds.left + position.x * scale,
-                    frameBounds.top + position.y * scale,
-                  )
-                // The design already reports every node's box, which is what the presence
-                // overlay and the catalog drop both hit-test against. Smallest box wins: the
-                // deepest node containing the point is the one under the pointer.
-                val hit =
-                  inspection
-                    ?.nodes
-                    .orEmpty()
-                    .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-                    .filter { (_, bounds) ->
-                      point.x >= bounds.x &&
-                        point.x <= bounds.x + bounds.width &&
-                        point.y >= bounds.y &&
-                        point.y <= bounds.y + bounds.height
-                    }
-                    .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-                    ?.first
-                if (hit != null) {
-                  if (hit != selectedNodeId) onNodeSelected(hit)
-                  menuAt = position
-                }
-              }
-            ) {
-              Box {
-                DropdownMenu(
-                  expanded = menuAt != null,
-                  onDismissRequest = { menuAt = null },
-                  offset =
+        Row(horizontalArrangement = Arrangement.spacedBy((CANVAS_PANE_GAP_DP.value * scale).dp)) {
+          Box(Modifier.size((sourceWidth * scale).dp, (expandedHeightDp * scale).dp)) {
+            Surface(
+              Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
+                // The frame's width, the content's height, never shorter than the frame — the
+                // extent. `requiredSize` here is what used to cut a long list off at the frame and
+                // leave the rest of it somewhere nobody could edit.
+                .requiredWidth(sourceWidth.dp)
+                .requiredHeightIn(min = sourceHeight.dp)
+                .onSizeChanged { size ->
+                  measuredDp =
                     with(density) {
-                      DpOffset(
-                        ((menuAt?.x ?: 0f) * scale).toDp(),
-                        ((menuAt?.y ?: 0f) * scale).toDp(),
-                      )
-                    },
-                ) {
-                  selectionMenu { menuAt = null }
+                      size.width.toDp().value.roundToInt() to size.height.toDp().value.roundToInt()
+                    }
+                  expandedHeightDp = with(density) { size.height.toDp().value }
                 }
+                .graphicsLayer {
+                  scaleX = scale
+                  scaleY = scale
+                  transformOrigin = TransformOrigin(0f, 0f)
+                  compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .onGloballyPositioned {
+                  frameBounds = it.boundsInRoot()
+                  onCanvasBounds(frameBounds)
+                }
+                .then(
+                  if (dropHovered) Modifier.border(4.dp, MaterialTheme.colorScheme.primary)
+                  else Modifier
+                ),
+              shape = RoundedCornerShape(0.dp),
+              shadowElevation = 0.dp,
+            ) {
+              // Where a right-click landed on the design, in the frame's own pixels, and null
+              // while no menu is open.
+              var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
+              Box(
+                Modifier.fillMaxSize().onSecondaryClick(document.id) { position ->
+                  if (!showSelectionOverlay) return@onSecondaryClick
+                  // The inspection reports each box in root pixels, which is the space this press
+                  // has to be asked in: the frame is offset in the workspace and drawn at [scale].
+                  val point =
+                    Offset(
+                      frameBounds.left + position.x * scale,
+                      frameBounds.top + position.y * scale,
+                    )
+                  // The design already reports every node's box, which is what the presence
+                  // overlay and the catalog drop both hit-test against. Smallest box wins: the
+                  // deepest node containing the point is the one under the pointer.
+                  val hit =
+                    inspection
+                      ?.nodes
+                      .orEmpty()
+                      .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                      .filter { (_, bounds) ->
+                        point.x >= bounds.x &&
+                          point.x <= bounds.x + bounds.width &&
+                          point.y >= bounds.y &&
+                          point.y <= bounds.y + bounds.height
+                      }
+                      .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                      ?.first
+                  if (hit != null) {
+                    if (hit != selectedNodeId) onNodeSelected(hit)
+                    menuAt = position
+                  }
+                }
+              ) {
+                Box {
+                  DropdownMenu(
+                    expanded = menuAt != null,
+                    onDismissRequest = { menuAt = null },
+                    offset =
+                      with(density) {
+                        DpOffset(
+                          ((menuAt?.x ?: 0f) * scale).toDp(),
+                          ((menuAt?.y ?: 0f) * scale).toDp(),
+                        )
+                      },
+                  ) {
+                    selectionMenu { menuAt = null }
+                  }
+                }
+                UiBuilderSurface(
+                  document = document,
+                  editorOverlay = showSelectionOverlay,
+                  selectedNodeId = selectedNodeId,
+                  onNodeSelected = onNodeSelected,
+                  // The extent is a proxy: lists unrolled, scrolling dropped, sized by content.
+                  // Compose will not measure a real scrollable against an unbounded height, so
+                  // this is what lets a long list be drawn — and edited — whole.
+                  unrolled = true,
+                  onInspectionSnapshot = { snapshot ->
+                    inspection = snapshot
+                    onInspectionSnapshot?.invoke(snapshot)
+                  },
+                  onInspectionInvalidated = onInspectionInvalidated,
+                )
+                // Over the document and under the collaborators: the reference is being compared
+                // against
+                // what the document draws, so it goes on top of that; another person's selection is
+                // a
+                // fact
+                // about this session and must not be hidden by a mock.
+                ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
+                RemotePresenceOverlay(collaborators, inspection)
+                // Above everything, because a pin is the one thing on this canvas a person clicks
+                // that is
+                // not part of the design: it must not end up under a mock somebody just turned up
+                // the
+                // opacity of, and it must not be what a selection outline is drawn over.
+                CommentPinOverlay(
+                  threads = commentThreads,
+                  marks = reference.marks,
+                  selectedThreadId = selectedThreadId,
+                  onSelect = onCommentThreadSelected,
+                )
               }
-              UiBuilderSurface(
-                document = document,
-                editorOverlay = showSelectionOverlay,
-                selectedNodeId = selectedNodeId,
-                onNodeSelected = onNodeSelected,
-                onInspectionSnapshot = { snapshot ->
-                  inspection = snapshot
-                  onInspectionSnapshot?.invoke(snapshot)
-                },
-                onInspectionInvalidated = onInspectionInvalidated,
-              )
-              // Over the document and under the collaborators: the reference is being compared
-              // against
-              // what the document draws, so it goes on top of that; another person's selection is a
-              // fact
-              // about this session and must not be hidden by a mock.
-              ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
-              RemotePresenceOverlay(collaborators, inspection)
-              // Above everything, because a pin is the one thing on this canvas a person clicks
-              // that is
-              // not part of the design: it must not end up under a mock somebody just turned up the
-              // opacity of, and it must not be what a selection outline is drawn over.
-              CommentPinOverlay(
-                threads = commentThreads,
-                marks = reference.marks,
-                selectedThreadId = selectedThreadId,
-                onSelect = onCommentThreadSelected,
-              )
             }
+          }
+          if (overflowsFrame) {
+            ConstrainedFramePane(
+              document = document,
+              widthDp = sourceWidth,
+              heightDp = sourceHeight,
+              scale = scale,
+            )
           }
         }
       }
@@ -3623,6 +3661,69 @@ private fun PinnedDesignCanvas(
     )
   }
 }
+
+/**
+ * The design at its frame, beside the extent: what fits on the device, scrollable.
+ *
+ * Read-only, and that is the point of it rather than a limitation. The extent beside it is the
+ * editing surface — one live coordinate space, one hit-test, one place a drop or a comment pin can
+ * land — and this pane answers the other question that space cannot: *what does someone actually
+ * see when they open the screen?* A list edited at full height hides the thing a phone shows first,
+ * which is the fold; a frame that clips and scrolls puts it back without asking anybody to switch
+ * between two views of their own design.
+ *
+ * Its own [renderSessionId] because [UiBuilderSurface] keys its bounds, overlay boxes and
+ * inspection collector on that: sharing the editing pane's id would have the two panes' geometry
+ * overwrite each other, and the inspection the editor hit-tests against would be whichever composed
+ * last.
+ */
+@Composable
+private fun ConstrainedFramePane(
+  document: UiBuilderDocument,
+  widthDp: Float,
+  heightDp: Float,
+  scale: Float,
+) {
+  Box(Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)) {
+    Surface(
+      Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
+        .requiredSize(widthDp.dp, heightDp.dp)
+        // Clipped before it is scrolled: the frame is the device's edge, and content past it is
+        // what the person scrolls to rather than something that spills onto the canvas.
+        .clip(RoundedCornerShape(0.dp))
+        .graphicsLayer {
+          scaleX = scale
+          scaleY = scale
+          transformOrigin = TransformOrigin(0f, 0f)
+          compositingStrategy = CompositingStrategy.Offscreen
+        },
+      shape = RoundedCornerShape(0.dp),
+      shadowElevation = 0.dp,
+    ) {
+      // The real composition, deliberately: this pane is the one that answers what a device
+      // actually shows, so its list is the lazy one, and the scrolling is the design's own —
+      // the `LazyColumn` or the `verticalScroll` the author put there, at a live position.
+      //
+      // No outer scroll wrapped around it, for two reasons that happen to agree. It would measure
+      // the design against an unbounded height, which is the thing this whole pane exists to avoid.
+      // And a design that overflows *without* a scrollable of its own is a design that overflows on
+      // the device too: clipping it here is not a gap in the pane, it is the answer to the question
+      // the pane is asking. The extent beside it is where the rest of that content is legible.
+      UiBuilderSurface(
+        document = document,
+        editorOverlay = false,
+        renderSessionId = FRAME_COMPANION_SESSION,
+        unrolled = false,
+      )
+    }
+  }
+}
+
+/** Keeps the companion's remembered geometry out of the editing pane's. */
+private const val FRAME_COMPANION_SESSION = "frame-companion"
+
+/** Canvas dp between the extent and the frame beside it. */
+private val CANVAS_PANE_GAP_DP = 24.dp
 
 /** How wide the editor that follows the selection is, and how much room it needs under a node. */
 private val HOVER_EDITOR_WIDTH = 268.dp

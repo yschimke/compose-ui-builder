@@ -1,4 +1,7 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(
+  androidx.compose.material3.ExperimentalMaterial3Api::class,
+  androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
 
 package ee.schimke.composeai.uibuilder
 
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -201,6 +205,24 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
  */
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
+/**
+ * Draw the design at its whole extent rather than at its frame: lists unrolled, scrolling dropped.
+ *
+ * Compose refuses to measure a scrollable against an unbounded height — a `LazyColumn` under
+ * `wrapContentSize(unbounded = true)` fails with "measured with an infinity maximum height
+ * constraints" rather than growing — so a pane that draws a design at content height cannot be the
+ * design's own composition. It is a **proxy**: `layout/lazy-column` becomes a `Column`,
+ * `layout/lazy-grid` a non-lazy grid, and a `verticalScroll` modifier is dropped, so the content
+ * that would be behind a scroll position is laid out where it would sit if the screen were tall
+ * enough to hold it.
+ *
+ * What that costs is the laziness itself, and it is worth stating rather than discovering: nothing
+ * here recycles, `fillParentMaxHeight` measures against the extent instead of the viewport, and a
+ * sticky header does not stick. The same trade [WearScreenScaffold] already makes for the Wear
+ * stadium, for the same reason and with the same honesty about it.
+ */
+internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
+
 fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
   else listOf(UiBuilderLayer.Design)
@@ -317,6 +339,11 @@ fun UiBuilderSurface(
    * provider by default, so an editor that provides it once covers its canvas and every thumbnail.
    */
   nativeOnlyComponentIds: Set<String> = LocalUiBuilderNativeOnly.current,
+  /**
+   * Draw the design at its whole extent rather than at its frame — see [LocalUiBuilderUnrolled] for
+   * what that swaps and what it costs.
+   */
+  unrolled: Boolean = LocalUiBuilderUnrolled.current,
 ) {
   val bounds =
     remember(document.id, document.revision, renderSessionId) { mutableStateMapOf<String, Rect>() }
@@ -436,6 +463,7 @@ fun UiBuilderSurface(
     LocalUiBuilderTypeScale provides typeScale,
     LocalUiBuilderCornerRadius provides cornerRadius,
     LocalUiBuilderNativeOnly provides nativeOnlyComponentIds,
+    LocalUiBuilderUnrolled provides unrolled,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
       Box(
@@ -674,16 +702,34 @@ private fun RenderNode(
     // API nor host a Lottie runtime to fake it with. What the canvas can say truthfully is which
     // animation is here and whether it is ready to export, so that is what it says.
     "remote-m3/lottie" -> LottiePlaceholder(node, measured)
-    "layout/scaffold" ->
-      Scaffold(
-        modifier = measured,
-        containerColor = node.color("containerColor", MaterialTheme.colorScheme.background),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { slot("topBar").forEach { child(it, Modifier) } },
-        snackbarHost = { slot("snackbarHost").forEach { child(it, Modifier) } },
-      ) { padding ->
-        slot("content").forEach { child(it, Modifier.padding(padding)) }
+    "layout/scaffold" -> {
+      val containerColor = node.color("containerColor", MaterialTheme.colorScheme.background)
+      // `Scaffold` is a `SubcomposeLayout`, and one measured against an unbounded height does not
+      // grow — it fails outright with `Size(w x 2147483647) is out of range`. So the extent draws
+      // the same three parts as a plain Column: the bar, then the content under it.
+      //
+      // The snackbar host is dropped rather than stacked below the content. It is a transient
+      // overlay that floats above the *viewport*, and a strip three screens long has no viewport to
+      // float above — drawing it at the bottom of the extent would put it where nobody will ever
+      // see it and add a band of empty space where the design has none. The frame pane beside the
+      // extent is a real `Scaffold`, so that is where a snackbar keeps its meaning.
+      if (LocalUiBuilderUnrolled.current) {
+        Column(measured.background(containerColor)) {
+          slot("topBar").forEach { child(it, Modifier) }
+          slot("content").forEach { child(it, Modifier) }
+        }
+      } else {
+        Scaffold(
+          modifier = measured,
+          containerColor = containerColor,
+          contentWindowInsets = WindowInsets(0, 0, 0, 0),
+          topBar = { slot("topBar").forEach { child(it, Modifier) } },
+          snackbarHost = { slot("snackbarHost").forEach { child(it, Modifier) } },
+        ) { padding ->
+          slot("content").forEach { child(it, Modifier.padding(padding)) }
+        }
       }
+    }
     "layout/box" ->
       Box(measured) {
         slot("children").forEach { id ->
@@ -705,8 +751,15 @@ private fun RenderNode(
         slot("children").forEach { id ->
           val item = document.nodes.getValue(id)
           val weight = item.layoutWeight()
+          // A weight is a share of what is left over, and at the extent there is no "left over":
+          // the column is measured against an unbounded height, so a weighted child is handed no
+          // space at all and draws nothing. That is the failure that looks most like success — the
+          // strip measures a plausible height and the list inside it is simply blank — so the
+          // extent drops every weight, authored or inferred, and lets each child wrap.
           val sized =
             when {
+              LocalUiBuilderUnrolled.current ->
+                if (item.componentId == "layout/lazy-column") Modifier.fillMaxWidth() else Modifier
               weight != null -> Modifier.weight(weight.weight, weight.fill ?: true)
               // A lazy column with no weight of its own would measure its children unbounded and
               // fail; taking what is left is the only sane reading of "put a list here".
@@ -746,42 +799,66 @@ private fun RenderNode(
       }
     }
     "layout/lazy-column" -> {
-      val lazyState = rememberLazyListState()
-      semanticActions[node.id] =
-        semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
-      LazyColumn(
-        modifier = measured,
-        state = lazyState,
-        contentPadding = node.obj("contentPadding").paddingValues(),
-        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
-      ) {
-        items(slot("items"), key = { it }) { child(it, Modifier) }
+      // A list drawn at the extent is a Column of the same children: same order, same spacing,
+      // same padding, no viewport. See [LocalUiBuilderUnrolled].
+      if (LocalUiBuilderUnrolled.current) {
+        Column(
+          modifier = measured.padding(node.obj("contentPadding").paddingValues()),
+          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+        ) {
+          slot("items").forEach { child(it, Modifier) }
+        }
+      } else {
+        val lazyState = rememberLazyListState()
+        semanticActions[node.id] =
+          semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
+        LazyColumn(
+          modifier = measured,
+          state = lazyState,
+          contentPadding = node.obj("contentPadding").paddingValues(),
+          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+        ) {
+          items(slot("items"), key = { it }) { child(it, Modifier) }
+        }
       }
     }
     "layout/lazy-grid" -> {
       val minimum = node.obj("columns").number("minimumCellWidthDp", 362f).coerceAtLeast(1f)
-      val lazyState = rememberLazyGridState()
-      semanticActions[node.id] =
-        semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
-      LazyVerticalGrid(
-        columns = GridCells.Adaptive(minimum.dp),
-        modifier = measured,
-        state = lazyState,
-        contentPadding = node.obj("contentPadding").paddingValues(),
-        // The catalog declares both on this component and nothing read either, so a grid's
-        // spacing was authored, stored, offered in the inspector, and drawn as zero.
-        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
-        horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
-      ) {
-        items(
-          items = slot("items"),
-          key = { it },
-          span = { id ->
-            if (document.nodes.getValue(id).string("span") == "full") GridItemSpan(maxLineSpan)
-            else GridItemSpan(1)
-          },
+      // A vertical grid refuses an unbounded height for the same reason a column does, so the
+      // extent draws its cells as wrapping rows. Spans are lost with the lazy layout; a `full`
+      // span still takes the row it is given rather than the whole line.
+      if (LocalUiBuilderUnrolled.current) {
+        FlowRow(
+          modifier = measured.padding(node.obj("contentPadding").paddingValues()),
+          horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
         ) {
-          child(it, Modifier)
+          slot("items").forEach { child(it, Modifier.width(minimum.dp)) }
+        }
+      } else {
+        val lazyState = rememberLazyGridState()
+        semanticActions[node.id] =
+          semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
+        LazyVerticalGrid(
+          columns = GridCells.Adaptive(minimum.dp),
+          modifier = measured,
+          state = lazyState,
+          contentPadding = node.obj("contentPadding").paddingValues(),
+          // The catalog declares both on this component and nothing read either, so a grid's
+          // spacing was authored, stored, offered in the inspector, and drawn as zero.
+          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+          horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+        ) {
+          items(
+            items = slot("items"),
+            key = { it },
+            span = { id ->
+              if (document.nodes.getValue(id).string("span") == "full") GridItemSpan(maxLineSpan)
+              else GridItemSpan(1)
+            },
+          ) {
+            child(it, Modifier)
+          }
         }
       }
     }
@@ -2068,7 +2145,10 @@ private fun Modifier.applyModifier(value: JsonObject, themeCornerRadius: Float):
     is UiBuilderModifierPlan.Scale -> scale(plan.scaleX, plan.scaleY)
     // The position is the renderer's, not the document's: two people looking at one design scroll
     // independently, so the state is remembered per composition and never persisted.
-    UiBuilderModifierPlan.VerticalScroll -> verticalScroll(rememberScrollState())
+    // Dropped at the extent: the pane's whole point is that nothing is behind a scroll position,
+    // and a scrollable measured against an unbounded height does not grow, it fails.
+    UiBuilderModifierPlan.VerticalScroll ->
+      if (LocalUiBuilderUnrolled.current) this else verticalScroll(rememberScrollState())
     UiBuilderModifierPlan.HorizontalScroll -> horizontalScroll(rememberScrollState())
     is UiBuilderModifierPlan.TestTag -> testTag(plan.tag)
     // Not an error, for the reason `uiBuilderStateWrite` gives: one unusable modifier costs one
