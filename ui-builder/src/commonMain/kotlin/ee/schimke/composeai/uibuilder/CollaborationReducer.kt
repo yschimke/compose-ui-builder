@@ -383,7 +383,7 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
     // The wrapper question first, because it is the more specific answer: a `string` on an
     // `allowedValues` property also type-checks against `jsonType`, so the general pass below has
     // nothing to say about it. See `CapabilityValidator.writeWrapperIssue`.
-    validator.writeWrapperIssue(node, property, encodedValue)?.let {
+    validator.writeWrapperIssue(node, property, encodedValue, document.assets.keys)?.let {
       return PropertyWriteIssue(it.message, property)
     }
     val relevantCodes =
@@ -408,7 +408,9 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
     document: UiBuilderDocument,
     node: UiBuilderNode,
   ): PropertyWriteIssue? =
-    validator.insertIssue(node)?.let { PropertyWriteIssue(it.message, it.field) }
+    validator.insertIssue(node, document.assets.keys)?.let {
+      PropertyWriteIssue(it.message, it.field)
+    }
 }
 
 /**

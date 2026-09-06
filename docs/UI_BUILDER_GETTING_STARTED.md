@@ -227,8 +227,10 @@ gradient, not the gradient over `#272430`.
 
 The image tile shows the brush slot composing and clipping a bitmap to the frame. Whether arbitrary
 widget artwork resolves in the browser is the builder's asset-registry question, not this
-scaffold's: `asset/image` currently draws real pixels for the project-owned artwork keys and a
-placeholder otherwise.
+scaffold's: `asset/image` draws the bytes the design's `assets` map pins under its key (put there
+with `PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey}` or `ui_builder_put_asset`), the
+project-owned artwork keys, and a placeholder carrying the key otherwise — see
+[`design/UI_BUILDER_ASSETS.md`](design/UI_BUILDER_ASSETS.md).
 
 A blank widget declares none of this, so both empty templates open on the default frame:
 
@@ -673,6 +675,7 @@ with the same bearer. One tool per protocol request, plus the ones the contract 
 | `ui_builder_create_design` | `ui-builder-write` | A design, from a document or copied from one |
 | `ui_builder_apply` | `ui-builder-write` | `DesignMutationV1` operations — insert, set (a null value unsets), delete, move |
 | `ui_builder_export` | `ui-builder-export` | The generator's Kotlin, or its refusals |
+| `ui_builder_put_asset` | `ui-builder-write` | A picture behind an `assetKey`, for an `asset/image` node to draw |
 | `ui_builder_design_access` | `ui-builder-read` | Who can open the design: its owner, and everyone it is shared with |
 | `ui_builder_share_design` | `ui-builder-write` | Shares it with an actor id as `viewer` or `editor`, or takes that back |
 | `ui_builder_rename_design` | `ui-builder-write` | A new title, from anybody who may write the design; the revision does not move |

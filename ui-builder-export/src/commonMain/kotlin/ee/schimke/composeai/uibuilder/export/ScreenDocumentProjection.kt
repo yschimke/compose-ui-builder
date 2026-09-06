@@ -179,7 +179,19 @@ object ScreenDocumentProjection {
     parameterForSlot(componentId, slot)
 
   sealed interface Outcome {
-    data class Projected(val document: ScreenDocument) : Outcome
+    data class Projected(
+      val document: ScreenDocument,
+      /**
+       * Every `asset/image` whose picture the source stands in for with a placeholder painter.
+       *
+       * Not a refusal, and not silent either: the generated call is the right `Image(...)` with the
+       * design's own description, scale and modifiers, and the one argument this projection cannot
+       * write — a `Painter` for bytes that live in the design's asset store, not in Kotlin — is a
+       * theme-coloured `ColorPainter`. The caller says so beside the source, naming the key and the
+       * digest, so the person bundling the picture knows exactly which line to replace.
+       */
+      val assetPlaceholders: List<AssetPlaceholder> = emptyList(),
+    ) : Outcome
 
     /** Every unexpressible thing found, not the first — a builder wants the whole list. */
     data class Refused(val reasons: List<String>) : Outcome
@@ -221,8 +233,22 @@ object ScreenDocumentProjection {
     }
     val root = pass.node(roots.single())
     if (pass.reasons.isNotEmpty()) return Outcome.Refused(pass.reasons.distinct())
-    return Outcome.Projected(ScreenDocument(name = screenName, root = checkNotNull(root)))
+    return Outcome.Projected(
+      ScreenDocument(name = screenName, root = checkNotNull(root)),
+      assetPlaceholders = pass.assetPlaceholders.toList(),
+    )
   }
+
+  /** One `asset/image` the source draws with a placeholder painter in place of its picture. */
+  data class AssetPlaceholder(
+    val nodeId: String,
+    val assetKey: String,
+    /**
+     * The registry binding's media type and digest, or null for a key the design has no entry for.
+     */
+    val mediaType: String?,
+    val contentDigest: String?,
+  )
 
   /**
    * A Kotlin function name for the design.
@@ -251,6 +277,7 @@ object ScreenDocumentProjection {
 
   private class Pass(val document: DesignDocumentV1, val tagNodes: Boolean = false) {
     val reasons = mutableListOf<String>()
+    val assetPlaceholders = mutableListOf<AssetPlaceholder>()
     private val visiting = mutableSetOf<String>()
 
     /**
@@ -1271,6 +1298,41 @@ object ScreenDocumentProjection {
     ): ScreenValue? {
       val where = "node `${node.id}`.`$property`"
       if (target.kind == TargetKind.RENAME) return value(value, node, property)
+      if (target.kind == TargetKind.ASSET_PAINTER) {
+        // The one argument no `ScreenValue` can carry: the picture is bytes in the design's asset
+        // store, and the host convention for a bundled resource — `R.drawable` here, `Res.drawable`
+        // there — names a symbol nothing on the generator's classpath declares. What compiles on
+        // every host and draws *something* in the picture's frame is a `ColorPainter` in the
+        // theme's surface-variant, the same ground the canvas paints under an unresolved key. The
+        // substitution is recorded on the outcome rather than hidden in it, so the export can say
+        // beside the source which line to replace and with which bytes.
+        val assetKey =
+          when (value) {
+            is AssetKeyValueV1 -> value.value
+            is StringValueV1 -> value.value
+            else -> return refuse("$where must be an asset key")
+          }
+        val binding = document.assets[assetKey]
+        assetPlaceholders +=
+          AssetPlaceholder(
+            nodeId = node.id,
+            assetKey = assetKey,
+            mediaType = binding?.mediaType,
+            contentDigest = binding?.contentDigest,
+          )
+        return ScreenValue.Construct(
+          callableFqn = COLOR_PAINTER,
+          positional =
+            listOf(
+              ScreenValue.Reference(
+                rootFqn = THEME,
+                members = listOf("colorScheme", "surfaceVariant"),
+                typeFqn = COLOR,
+              )
+            ),
+          typeFqn = PAINTER,
+        )
+      }
       if (target.kind == TargetKind.CARD_COLORS) {
         // `CardDefaults.cardColors` is `@Composable`, which is why this is expressible at all: the
         // generated screen body is one, so the call site is legal exactly where the argument goes.
@@ -1808,6 +1870,9 @@ object ScreenDocumentProjection {
   private const val TEXT_OVERFLOW = "androidx.compose.ui.text.style.TextOverflow"
   private const val TEXT_DECORATION = "androidx.compose.ui.text.style.TextDecoration"
   private const val ALIGNMENT = "androidx.compose.ui.Alignment"
+  private const val CONTENT_SCALE = "androidx.compose.ui.layout.ContentScale"
+  private const val PAINTER = "androidx.compose.ui.graphics.painter.Painter"
+  private const val COLOR_PAINTER = "androidx.compose.ui.graphics.painter.ColorPainter"
 
   /**
    * A `$`, not a `.`, and this is the whole reason the constant exists rather than being spelled
@@ -1900,6 +1965,8 @@ object ScreenDocumentProjection {
     FLOAT_LAMBDA,
     /** A resting elevation in dp, which `Card` takes as a `CardElevation` bundle. */
     CARD_ELEVATION,
+    /** An asset key, which `Image` takes as a `Painter` this projection stands in for. */
+    ASSET_PAINTER,
   }
 
   private class ParameterTarget(val parameter: String, val kind: TargetKind)
@@ -1940,6 +2007,7 @@ object ScreenDocumentProjection {
           "iconKey" to ParameterTarget("imageVector", TargetKind.RENAME),
           "color" to ParameterTarget("tint", TargetKind.RENAME),
         ),
+      "asset/image" to mapOf("assetKey" to ParameterTarget("painter", TargetKind.ASSET_PAINTER)),
       // Three of the four styles; `fab` overrides this in `COMPONENT_VARIANTS` because it takes a
       // bare `Color` on a different parameter.
       "m3/button" to mapOf("containerColor" to ParameterTarget("colors", TargetKind.BUTTON_COLORS)),
@@ -2026,6 +2094,32 @@ object ScreenDocumentProjection {
    */
   private val ENUM_MEMBERS: Map<String, Map<String, EnumMembers>> =
     mapOf(
+      "asset/image" to
+        mapOf(
+          "contentScale" to
+            members(
+              CONTENT_SCALE,
+              CONTENT_SCALE,
+              "crop" to "Crop",
+              "fit" to "Fit",
+              "fillBounds" to "FillBounds",
+              "inside" to "Inside",
+            ),
+          "alignment" to
+            members(
+              ALIGNMENT,
+              ALIGNMENT,
+              "center" to "Center",
+              "topStart" to "TopStart",
+              "topCenter" to "TopCenter",
+              "topEnd" to "TopEnd",
+              "centerStart" to "CenterStart",
+              "centerEnd" to "CenterEnd",
+              "bottomStart" to "BottomStart",
+              "bottomCenter" to "BottomCenter",
+              "bottomEnd" to "BottomEnd",
+            ),
+        ),
       "m3/text" to
         mapOf(
           "style" to EnumMembers(TEXT_STYLE, TYPOGRAPHY_TOKENS),

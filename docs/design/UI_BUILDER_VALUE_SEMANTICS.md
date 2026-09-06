@@ -27,7 +27,8 @@ The catalog already knew most of it. It knows `m3/text.color` is a colour; it kn
 rules, applied in the two reducers and the renderer:
 
 1. **A property's name states its value kind.** `color` and `…Color` hold a colour; `assetKey`
-   holds a key into the catalog's asset registry; a property with `allowedValues` is an
+   holds a key into the catalog's asset registry or the design's own `assets` map; a property
+   with `allowedValues` is an
    enumeration (the rule [#339](https://github.com/yschimke/compose-preview-server/issues/339)
    settled). Named rather than declared per property because `CatalogCapabilityV1` is published
    from compose-preview-contracts and cannot grow a field from here, and because the whole
@@ -63,11 +64,12 @@ The rules are visible where an author reads the catalog, not only where a refusa
 - `statusSemantics.colorTokens.roles` lists the fourteen theme roles the canvas draws. A role the
   export can write (`primaryContainer` is in `MaterialTheme.colorScheme`) but this list does not
   carry is refused at commit, because the canvas would not draw it.
-- `statusSemantics.assetRegistry.keys` lists every `assetKey` an `asset/image` may carry: the two
+- `statusSemantics.assetRegistry.keys` lists every `assetKey` the catalog itself ships: the two
   project-owned Jetcaster covers in `:ui-builder-artwork`, the generated gate-0 cover, and the
   editor's own insert placeholder. A catalog that declares no registry says nothing about keys.
-  The registry a host could extend is
-  [#478](https://github.com/yschimke/compose-preview-server/issues/478).
+  The design's own `assets` map extends the set with the pictures its asset lane pinned
+  ([`UI_BUILDER_ASSETS.md`](UI_BUILDER_ASSETS.md), closing
+  [#478](https://github.com/yschimke/compose-preview-server/issues/478)); both reducers read it.
 
 Tests pin the two lists to the code's own (`ValueKindWriteRulesTest`,
 `ProductionUiBuilderRuntimeTest`), so the document cannot promise what the canvas will not draw.

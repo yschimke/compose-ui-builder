@@ -90,7 +90,9 @@ test("unimplemented Jetcaster gaps remain visible instead of silently substitute
   assert.ok(gaps.includes("layout/supporting-pane-scaffold"));
   assert.ok(gaps.includes("layout/lazy-grid"));
   assert.ok(gaps.includes("layout/horizontal-carousel"));
-  assert.ok(gaps.includes("asset/image"));
+  // `asset/image` left this list when the design gained an asset registry: the canvas draws the
+  // bytes a key names, and a key with nothing behind it draws a placeholder rather than failing.
+  assert.ok(!gaps.includes("asset/image"));
   assert.ok(gaps.includes("m3/search-bar"));
   assert.ok(gaps.includes("m3/horizontal-floating-toolbar"));
 });

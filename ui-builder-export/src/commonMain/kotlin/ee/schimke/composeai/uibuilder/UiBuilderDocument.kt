@@ -23,6 +23,15 @@ data class UiBuilderDocument(
   val stateVariables: JsonObject,
   val roots: List<String>,
   val nodes: Map<String, UiBuilderNode>,
+  /**
+   * The design's asset registry, keyed by the `assetKey` an `asset/image` names: the protocol's
+   * `AssetBindingV1` shape, carried untyped the way `catalogPin` is. Each value has a `mediaType`,
+   * a `contentDigest`, and a `source` whose `type` is `embedded` (with the bytes in `base64`),
+   * `uploaded` (with the `storageKey` a host resolves) or `catalog`. Defaulted so every fixture and
+   * every document written before the registry existed still parses; a renderer that finds a key
+   * here draws it, and one that does not draws a placeholder.
+   */
+  val assets: JsonObject = JsonObject(emptyMap()),
 )
 
 @Serializable
@@ -62,6 +71,7 @@ object UiBuilderReducer {
               stateVariables = operation.obj("stateVariables"),
               roots = emptyList(),
               nodes = emptyMap(),
+              assets = operation.obj("assets"),
             )
           outcomes[operationId] = 0
         }

@@ -14,7 +14,7 @@
       "roles": ["background", "surface", "surfaceContainer", "surfaceContainerLow", "surfaceContainerHigh", "surfaceContainerHighest", "primary", "onPrimary", "tertiary", "onTertiary", "onSurface", "onSurfaceVariant", "outlineVariant", "transparent"]
     },
     "assetRegistry": {
-      "$comment": "Every assetKey an asset/image may carry, because these are the assets the canvas can draw: the two project-owned Jetcaster covers in :ui-builder-artwork, the generated gate-0 cover, and the editor's own insert placeholder. Both reducers refuse any other key at commit (yschimke/compose-preview-server#484); the registry a host could extend is #478.",
+      "$comment": "Every assetKey the catalog itself ships, because these are the assets the canvas draws from its own resources: the two project-owned Jetcaster covers in :ui-builder-artwork, the generated gate-0 cover, and the editor's own insert placeholder. A design extends this set with the keys its assets map pins through the asset lane (PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey}, ui_builder_put_asset; yschimke/compose-preview-server#478). Both reducers refuse any other key at commit (#484).",
       "keys": ["jetcaster.cover.android-developers-backstage", "jetcaster.cover.google-developers-podcast", "ui-builder.gate0.cover", "editor.placeholder"]
     },
     "componentMenu": {
@@ -96,15 +96,15 @@
       "traits": ["ImageContent"],
       "slots": [],
       "properties": [
-        { "name": "assetKey", "jsonType": "string", "required": true, "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}; the keys are listed in statusSemantics.assetRegistry.keys, and any other key is refused at commit." },
+        { "name": "assetKey", "jsonType": "string", "required": true, "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}: one of statusSemantics.assetRegistry.keys, or a key pinned in the design's own assets map by PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey} (raw PNG, JPEG, GIF or WebP body) or the ui_builder_put_asset MCP tool. Any other key is refused at commit, so put the picture before inserting the node. A pinned key whose bytes this lane cannot show renders as a placeholder naming it, and exports as Image(painter = ColorPainter(...)) with an ASSET_PLACEHOLDER warning." },
         { "name": "contentDescription", "jsonType": ["string", "null"], "required": false },
         { "name": "contentScale", "jsonType": "string", "required": false, "allowedValues": ["crop", "fit", "fillBounds", "inside"] },
         { "name": "alignment", "jsonType": "string", "required": false }
       ],
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "align", "alignHorizontal", "alignVertical", "weight"],
-      "wasm": { "platformSupported": true, "adapterStatus": "planned", "notes": "Requires the pinned, hash-checked builder asset registry and deterministic loading state." },
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Draws the bytes the design's assets map pins under assetKey (content-addressed, hash-checked, stored by the host), the project-owned Jetcaster covers, or a visible placeholder carrying the key. External URLs are not accepted." },
       "code": { "symbol": "Image", "imports": ["androidx.compose.foundation.Image", "androidx.compose.ui.layout.ContentScale"] },
-      "svg": { "status": "raster-fallback-required", "fallback": "embedded-raster", "blocksExport": false, "notes": "The current recorder embeds deterministic generated placeholder bytes with source and payload provenance; production asset bytes remain a release gate and external URLs are forbidden." }
+      "svg": { "status": "raster-fallback-required", "fallback": "embedded-raster", "blocksExport": false, "notes": "The recorder embeds the pinned asset bytes, or the project-owned artwork, with source and payload provenance; a key with no bytes behind it is drawn as a vector placeholder rather than declared as a raster fallback." }
     },
     {
       "componentId": "layout/box",

@@ -137,6 +137,10 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     node: UiBuilderNode,
     property: String,
     encodedValue: JsonObject,
+    /**
+     * The keys the design's own `assets` map pins, which resolve as the catalog's registry does.
+     */
+    pinnedAssetKeys: Set<String> = emptySet(),
   ): CapabilityValidationIssue? {
     val declared =
       catalog.componentsById[node.componentId]?.propertiesByName?.get(property) ?: return null
@@ -151,7 +155,7 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
         property,
       )
     }
-    return writeValueIssue(node, property, wrapper, encodedValue)
+    return writeValueIssue(node, property, wrapper, encodedValue, pinnedAssetKeys)
   }
 
   /**
@@ -173,6 +177,7 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     property: String,
     wrapper: String?,
     encodedValue: JsonObject,
+    pinnedAssetKeys: Set<String>,
   ): CapabilityValidationIssue? {
     val value = (encodedValue["value"] as? JsonPrimitive)?.takeIf { it.isString }?.content
     when {
@@ -199,12 +204,13 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
       PropertyValueKinds.isAssetKey(property) -> {
         if (wrapper != "assetKey" && wrapper != "string") return null
         val registry = PropertyValueKinds.declaredAssetKeys(catalog.statusSemantics) ?: return null
-        if (value == null || value in registry) return null
+        if (value == null || value in registry || value in pinnedAssetKeys) return null
         return issue(
           CapabilityIssueCode.INVALID_PROPERTY_VALUE,
           node,
-          "property $property is `$value`, which no asset this catalog can draw resolves; the " +
-            "keys it declares are ${registry.joinToString(", ")}",
+          "property $property is `$value`, which no asset this design or its catalog can draw " +
+            "resolves; the catalog declares ${registry.joinToString(", ")}, and a picture of your " +
+            "own is pinned under a key by the design's asset lane before the node names it",
           property,
         )
       }
@@ -219,9 +225,12 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
    * `assetKey` already set — which is exactly how #484's node got in. The document-wide pass that
    * follows an insert deliberately asks none of the write-time questions, so they are asked here.
    */
-  fun insertIssue(node: UiBuilderNode): CapabilityValidationIssue? =
+  fun insertIssue(
+    node: UiBuilderNode,
+    pinnedAssetKeys: Set<String> = emptySet(),
+  ): CapabilityValidationIssue? =
     node.properties.entries.firstNotNullOfOrNull { (property, encoded) ->
-      (encoded as? JsonObject)?.let { writeWrapperIssue(node, property, it) }
+      (encoded as? JsonObject)?.let { writeWrapperIssue(node, property, it, pinnedAssetKeys) }
     }
 
   private fun validateNode(

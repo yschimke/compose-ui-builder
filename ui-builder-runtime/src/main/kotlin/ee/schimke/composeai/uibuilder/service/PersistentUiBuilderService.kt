@@ -4,6 +4,7 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.io.Closeable
+import java.io.IOException
 import java.security.MessageDigest
 import java.time.Clock
 import java.util.Base64
@@ -76,6 +77,13 @@ public interface UiBuilderCatalogExecutor {
    */
   public fun validateWrite(
     catalog: CatalogCapabilityV1,
+    /**
+     * The document the node is being written into. It is what makes an `assetKey` resolvable beyond
+     * the catalog's own registry: a key pinned into `assets` by the asset lane
+     * (`UiBuilderAssetPort`) is one the canvas draws, and a rule that read only the catalog would
+     * refuse the picture a designer just uploaded.
+     */
+    document: DesignDocumentV1,
     node: DesignNodeV1,
     property: String,
   ): UiBuilderCatalogIssue? = null
@@ -155,9 +163,19 @@ public data class UiBuilderServiceLimits(
   val maximumSerializedDocumentBytes: Int = 8 * 1_024 * 1_024,
   val maximumEmbeddedAssetBytes: Int = 6 * 1_024 * 1_024,
   val presenceTtlMillis: Long = 30_000,
+  /**
+   * Ceiling on one uploaded asset ([UiBuilderAssetPort.putAsset]). A megabyte is a generous
+   * photograph at the sizes a phone screen draws one; it is also what every render lane carries
+   * inline to the daemon on each export, so this bounds a request as much as a file.
+   */
+  val maximumAssetBytes: Int = 1_024 * 1_024,
+  /** How many keys one design's `assets` map may hold. */
+  val maximumAssetsPerDesign: Int = 64,
 ) {
   init {
     require(maximumDesigns > 0)
+    require(maximumAssetBytes > 0)
+    require(maximumAssetsPerDesign > 0)
     require(maximumNodesPerDesign > 0)
     require(retainedCommittedOperations > 0)
     require(retainedOperationOutcomes > 0)
@@ -200,7 +218,13 @@ public class PersistentUiBuilderService(
     UiBuilderSubscriberFailureHandler {},
   private val clock: Clock = Clock.systemUTC(),
   private val limits: UiBuilderServiceLimits = UiBuilderServiceLimits(),
-) : UiBuilderServicePort, UiBuilderServiceDiagnosticsSource, UiBuilderAdminPort {
+  /**
+   * Where uploaded asset bytes go. Null on a host with nowhere to keep them, which makes [putAsset]
+   * refuse and leaves every other lane exactly as it was.
+   */
+  private val assets: UiBuilderAssetStore? = null,
+) :
+  UiBuilderServicePort, UiBuilderServiceDiagnosticsSource, UiBuilderAdminPort, UiBuilderAssetPort {
   private data class MutationBucket(var tokens: Int, var refilledAtMillis: Long)
 
   private data class RuntimeDesign(
@@ -441,6 +465,197 @@ public class PersistentUiBuilderService(
     val execution = lock.withLock { executeLocked(call) }
     drain(execution.mailboxes)
     return execution.response
+  }
+
+  override suspend fun putAsset(write: UiBuilderAssetWrite): UiBuilderServiceResponse {
+    unusableDesigns[write.designId]?.let {
+      return UiBuilderServiceResponse.Error(UiBuilderServiceError(it.code, it.reason))
+    }
+    val execution = lock.withLock { putAssetLocked(write) }
+    drain(execution.mailboxes)
+    return execution.response
+  }
+
+  /**
+   * An asset write is a commit without an operation.
+   *
+   * It moves the revision and the sequence exactly as an accepted batch does — the document's bytes
+   * changed, so its hash, its retained snapshot and every `baseRevision` a client quotes must move
+   * with it — but no `CommittedOperationV1` can describe it, because the released mutation set has
+   * no asset write. So the delta log is cut here: `history` is emptied, which makes
+   * `retainedFromSequence` this sequence, and a subscriber behind it is caught up with a whole
+   * snapshot instead of a delta it could not replay. Live subscribers get that snapshot now. It is
+   * not undoable, for the same reason: undo compensates an operation record, and there is none.
+   * Re-pointing the key, or deleting the node that names it, is how it is taken back.
+   */
+  private fun putAssetLocked(write: UiBuilderAssetWrite): LockedExecution {
+    val store =
+      assets
+        ?: return serviceError(
+          ServiceErrorCodeV1.BAD_REQUEST,
+          "this host keeps no asset store, so a design cannot hold an uploaded image",
+        )
+    val design = persisted.designs[write.designId] ?: return serviceError(notFound(write.designId))
+    if (!design.allows(write.actor, DesignAccessActionV1.WRITE)) {
+      return serviceError(forbidden("write", write.designId))
+    }
+    if (!UiBuilderAssetKeys.isValid(write.assetKey)) {
+      return serviceError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "asset key '${write.assetKey}' is malformed: ${UiBuilderAssetKeys.RULE}",
+      )
+    }
+    if (write.bytes.isEmpty()) {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "asset bytes are empty")
+    }
+    if (write.bytes.size > limits.maximumAssetBytes) {
+      rejectedAssetBytes.incrementAndGet()
+      return serviceError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "asset is ${write.bytes.size} bytes; this host stores at most " +
+          "${limits.maximumAssetBytes} bytes per asset",
+      )
+    }
+    val image =
+      UiBuilderImageBytes.sniff(write.bytes)
+        ?: return serviceError(
+          ServiceErrorCodeV1.BAD_REQUEST,
+          "asset bytes are not a ${UiBuilderImageBytes.KNOWN} image",
+        )
+    val digest = UiBuilderAssetDigests.of(write.bytes)
+    val binding =
+      AssetBindingV1(
+        mediaType = image.mediaType,
+        contentDigest = digest,
+        source = UploadedAssetSourceV1(storageKey = digest),
+        widthPx = image.widthPx,
+        heightPx = image.heightPx,
+      )
+    val operationId = "asset:${write.assetKey}:$digest"
+    val current = design.document
+    if (current.assets[write.assetKey] == binding) {
+      return LockedExecution(
+        UiBuilderServiceResponse.OperationOutcome(
+          AcceptedOutcomeV1(
+            operationId,
+            current.revision,
+            design.lastSequence,
+            documentHash(current),
+            idempotentReplay = true,
+            documentUpdatedAtEpochMillis = current.updatedAtEpochMillis,
+          )
+        )
+      )
+    }
+    if (write.assetKey !in current.assets && current.assets.size >= limits.maximumAssetsPerDesign) {
+      return serviceError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "a design may hold at most ${limits.maximumAssetsPerDesign} assets",
+      )
+    }
+    val catalog =
+      catalogs.resolve(current.catalogPin)
+        ?: return serviceError(ServiceErrorCodeV1.CATALOG_UNAVAILABLE, "catalog pin is unavailable")
+    val revision = current.revision + 1
+    val sequence = design.lastSequence + 1
+    val now = clock.millis()
+    val document =
+      current.copy(
+        assets = current.assets + (write.assetKey to binding),
+        revision = revision,
+        updatedAtEpochMillis = now,
+      )
+    documentQuotaIssue(document, countRejection = true)?.let {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, it)
+    }
+    try {
+      store.write(digest, write.bytes)
+    } catch (failure: IOException) {
+      return serviceError(
+        ServiceErrorCodeV1.INTERNAL,
+        "asset bytes could not be stored: ${failure.message}",
+      )
+    }
+    val outcome =
+      AcceptedOutcomeV1(
+        operationId,
+        revision,
+        sequence,
+        documentHash(document),
+        idempotentReplay = false,
+        documentUpdatedAtEpochMillis = now,
+      )
+    val updated =
+      design.copy(
+        document = document,
+        lastSequence = sequence,
+        history = emptyList(),
+        revisionSnapshots =
+          (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(
+            limits.retainedRevisionSnapshots
+          ),
+        positionSnapshots =
+          (design.positionSnapshots + PositionStateV1(revision, design.positions)).takeLast(
+            limits.retainedRevisionSnapshots
+          ),
+        updatedAtEpochMillis = now,
+        audit =
+          (design.audit +
+              AuditRecordV1(
+                AuditKindV1.COMMIT,
+                write.actor.actorId,
+                current.id,
+                revision,
+                sequence,
+                operationId,
+                null,
+                now,
+              ))
+            .takeLast(limits.retainedAuditRecords),
+      )
+    commitPersisted(persisted.copy(designs = persisted.designs + (write.designId to updated)))
+    // One snapshot for every subscriber, so it carries no access list: `snapshot` includes one
+    // for the owner, and the writer being the owner must not show it to the viewers.
+    val broadcast =
+      snapshot(updated, write.actor, catalog, activePresence(write.designId)).copy(access = null)
+    val mailboxes = enqueue(write.designId, UiBuilderServiceUpdate.Snapshot(broadcast), updated)
+    return LockedExecution(UiBuilderServiceResponse.OperationOutcome(outcome), mailboxes)
+  }
+
+  override suspend fun readAsset(read: UiBuilderAssetRead): UiBuilderAssetReadResult {
+    val binding = lock.withLock {
+      val design =
+        persisted.designs[read.designId]
+          ?: return UiBuilderAssetReadResult.Failed(notFound(read.designId))
+      if (!design.allows(read.actor, DesignAccessActionV1.READ)) {
+        return UiBuilderAssetReadResult.Failed(forbidden("read", read.designId))
+      }
+      design.document.assets[read.assetKey]
+        ?: return UiBuilderAssetReadResult.Failed(
+          UiBuilderServiceError(
+            ServiceErrorCodeV1.NOT_FOUND,
+            "design ${read.designId} has no asset '${read.assetKey}'",
+          )
+        )
+    }
+    val bytes =
+      when (val source = binding.source) {
+        is EmbeddedAssetSourceV1 ->
+          try {
+            Base64.getDecoder().decode(source.base64)
+          } catch (_: IllegalArgumentException) {
+            null
+          }
+        is UploadedAssetSourceV1 -> assets?.read(source.storageKey)
+        is CatalogAssetSourceV1 -> null
+      }
+        ?: return UiBuilderAssetReadResult.Failed(
+          UiBuilderServiceError(
+            ServiceErrorCodeV1.NOT_FOUND,
+            "the bytes behind asset '${read.assetKey}' are not on this host",
+          )
+        )
+    return UiBuilderAssetReadResult.Found(binding, bytes)
   }
 
   override fun subscribe(
@@ -1576,7 +1791,7 @@ public class PersistentUiBuilderService(
           // key nothing resolves arrived (#484): checked here, per property, the way a
           // `setProperty` of the same value would be.
           mutation.node.properties.keys.forEach { property ->
-            catalogs.validateWrite(catalog, mutation.node, property)?.let {
+            catalogs.validateWrite(catalog, working.document, mutation.node, property)?.let {
               fail(RejectionCodeV1.INVALID_PROPERTY, it.message, index, mutation.node.id, it.field)
             }
           }
@@ -1722,7 +1937,8 @@ public class PersistentUiBuilderService(
           val written =
             if (afterPresent) {
               node.copy(properties = node.properties + (mutation.property to mutation.value)).also {
-                catalogs.validateWrite(catalog, it, mutation.property)?.let { issue ->
+                catalogs.validateWrite(catalog, working.document, it, mutation.property)?.let {
+                  issue ->
                   fail(
                     RejectionCodeV1.INVALID_PROPERTY,
                     issue.message,

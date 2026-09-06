@@ -472,6 +472,15 @@ fun UiBuilderEditor(
    * the unfinished thing it is.
    */
   loadLottieAnimation: (suspend (String) -> String)? = null,
+  /**
+   * Fetches the bytes behind one of the design's **uploaded** assets, by asset key, or throws.
+   *
+   * Host-owned for the reason the two above are: the design names a storage key and only the host
+   * that stores it can turn that into pixels, over whatever route and credential it holds. Null
+   * leaves every uploaded picture drawing its placeholder, which is the honest answer for a host
+   * with no asset lane — the node is not broken, its picture is elsewhere.
+   */
+  resolveDesignAsset: (suspend (String) -> ByteArray)? = null,
 ) {
   val reducer =
     remember(catalog, actorId, clientId, operationIdPrefix) {
@@ -969,6 +978,29 @@ fun UiBuilderEditor(
         }
     }
   }
+  // Every uploaded asset the design names, decoded once per content digest.
+  //
+  // Keyed by digest rather than by asset key, which is what `LocalUiBuilderAssetBitmaps` is keyed
+  // by too: re-pointing a key at a new picture changes the digest and fetches again, while an edit
+  // anywhere else in the design finds its pictures already here. A failed fetch or decode is stored
+  // as null so the placeholder is drawn once rather than the request retried every recomposition.
+  val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
+  val uploadedAssets = state.document.uploadedAssets()
+  LaunchedEffect(uploadedAssets, resolveDesignAsset) {
+    val resolve = resolveDesignAsset ?: return@LaunchedEffect
+    uploadedAssets
+      .filterNot { (_, asset) -> assetBitmapsByDigest.containsKey(asset.contentDigest) }
+      .forEach { (assetKey, asset) ->
+        assetBitmapsByDigest[asset.contentDigest] =
+          try {
+            decodeUiBuilderAssetBitmap(resolve(assetKey))
+          } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+            throw cancelled
+          } catch (_: Throwable) {
+            null
+          }
+      }
+  }
   // The URL half of a Lottie element, resolved into the JSON half exactly once.
   //
   // Once, because the two halves are one source: `url` says which animation this is and `json` is
@@ -1093,6 +1125,7 @@ fun UiBuilderEditor(
   CompositionLocalProvider(
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
+    LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
   ) {
     MaterialTheme(colorScheme = EditorColors) {
       BoxWithConstraints(Modifier.fillMaxSize()) {

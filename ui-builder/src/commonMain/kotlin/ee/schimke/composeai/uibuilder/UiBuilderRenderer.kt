@@ -161,8 +161,6 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
 import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
 import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
-import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
-import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 import kotlin.io.encoding.Base64
 import kotlin.math.PI
@@ -1219,7 +1217,7 @@ private fun RenderNode(
         textAlign = node.textAlign(),
         onTextLayout = { onTextLayout(node.id, it) },
       )
-    "asset/image" -> AssetPlaceholder(node, measured)
+    "asset/image" -> AssetImage(document, node, measured)
     "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
     "shape/radial-gradient" -> {
       val inner =
@@ -1946,46 +1944,153 @@ private fun LegacyListItem(
   )
 }
 
+/**
+ * An `asset/image` node: the picture its `assetKey` names, or a placeholder that says which key it
+ * could not draw.
+ *
+ * Resolution is [UiBuilderDocument.resolveAsset]'s, shared with the SVG lanes; this composable only
+ * decides what each answer looks like. The one rule here is that **no key fails the frame**. This
+ * used to `error()` on a key it did not know, and because the design is one composition, a single
+ * inserted node took a whole screen down — in the editor, in the daemon render behind
+ * `ui_builder_export`, and for every collaborator with the design open. A key with nothing behind
+ * it is now an ordinary picture-shaped placeholder carrying the key, which is what a designer needs
+ * to see to fix it and what an agent's next render shows it has not.
+ */
 @Composable
-private fun AssetPlaceholder(node: UiBuilderNode, modifier: Modifier) {
+private fun AssetImage(document: UiBuilderDocument, node: UiBuilderNode, modifier: Modifier) {
+  val contentDescription = node.string("contentDescription").ifEmpty { null }
+  val contentScale =
+    when (node.string("contentScale")) {
+      "fit" -> ContentScale.Fit
+      "fillBounds" -> ContentScale.FillBounds
+      "inside" -> ContentScale.Inside
+      else -> ContentScale.Crop
+    }
   val exportRaster = LocalUiBuilderExportRasterAssets.current[node.id]
   if (exportRaster != null) {
     Image(
       bitmap = exportRaster,
-      contentDescription = node.string("contentDescription").ifEmpty { null },
+      contentDescription = contentDescription,
       modifier = modifier,
-      contentScale =
-        when (node.string("contentScale")) {
-          "fit" -> ContentScale.Fit
-          "fillBounds" -> ContentScale.FillBounds
-          "inside" -> ContentScale.Inside
-          else -> ContentScale.Crop
-        },
+      contentScale = contentScale,
     )
     return
   }
   val key = node.string("assetKey")
-  if (
-    key == ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY || key == GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
-  ) {
-    ProjectOwnedJetcasterArtwork(
-      assetKey = key,
-      contentDescription = node.string("contentDescription").ifEmpty { null },
-      modifier = modifier,
-      contentScale =
-        when (node.string("contentScale")) {
-          "fit" -> ContentScale.Fit
-          "fillBounds" -> ContentScale.FillBounds
-          "inside" -> ContentScale.Inside
-          else -> ContentScale.Crop
+  when (val resolved = document.resolveAsset(key)) {
+    is ResolvedUiBuilderAsset.Embedded -> {
+      // Remembered by digest, not by node: the same bytes under two nodes decode once, and a key
+      // re-pointed at a new picture decodes again because the digest moved.
+      val bitmap = remember(resolved.contentDigest) { decodeUiBuilderAssetBitmap(resolved.bytes) }
+      if (bitmap != null) {
+        Image(
+          bitmap = bitmap,
+          contentDescription = contentDescription,
+          modifier = modifier,
+          contentScale = contentScale,
+        )
+      } else {
+        MissingAssetPlaceholder(key, contentDescription, modifier)
+      }
+    }
+    is ResolvedUiBuilderAsset.Uploaded -> {
+      val bitmap = LocalUiBuilderAssetBitmaps.current(resolved.contentDigest)
+      if (bitmap != null) {
+        Image(
+          bitmap = bitmap,
+          contentDescription = contentDescription,
+          modifier = modifier,
+          contentScale = contentScale,
+        )
+      } else {
+        MissingAssetPlaceholder(key, contentDescription, modifier)
+      }
+    }
+    is ResolvedUiBuilderAsset.ProjectOwned ->
+      ProjectOwnedJetcasterArtwork(
+        assetKey = key,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = contentScale,
+      )
+    ResolvedUiBuilderAsset.Generated -> GeneratedCoverPlaceholder(modifier)
+    is ResolvedUiBuilderAsset.Missing -> MissingAssetPlaceholder(key, contentDescription, modifier)
+  }
+}
+
+/**
+ * The frame of a picture nobody can show here: a neutral ground, a picture glyph, and the key.
+ *
+ * Neutral rather than an error container, because nothing is necessarily wrong — the bytes may be
+ * uploading, may live on a host this lane cannot reach, or may simply not have been given yet. What
+ * it must be is *visible* and *legible*: a viewer should see at a glance that a picture belongs
+ * here, and read which key to fill. Drawn with the theme's own surface-variant pair so it sits in
+ * either scheme, and with nothing animated or random so two renders of one design are one image.
+ */
+@Composable
+private fun MissingAssetPlaceholder(
+  assetKey: String,
+  contentDescription: String?,
+  modifier: Modifier,
+) {
+  val ground = MaterialTheme.colorScheme.surfaceVariant
+  val ink = MaterialTheme.colorScheme.onSurfaceVariant
+  val semantics =
+    if (contentDescription == null) modifier
+    else modifier.semantics { this.contentDescription = contentDescription }
+  BoxWithConstraints(semantics.background(ground), contentAlignment = Alignment.Center) {
+    Canvas(Modifier.matchParentSize()) {
+      val inset = size.minDimension * 0.18f
+      val frameWidth = size.width - inset * 2
+      val frameHeight = size.height - inset * 2
+      if (frameWidth <= 0f || frameHeight <= 0f) return@Canvas
+      val stroke = Stroke((size.minDimension * 0.035f).coerceAtLeast(1f))
+      drawRect(
+        ink.copy(alpha = 0.55f),
+        Offset(inset, inset),
+        androidx.compose.ui.geometry.Size(frameWidth, frameHeight),
+        style = stroke,
+      )
+      drawCircle(
+        ink.copy(alpha = 0.55f),
+        size.minDimension * 0.07f,
+        Offset(inset + frameWidth * 0.30f, inset + frameHeight * 0.32f),
+      )
+      drawPath(
+        Path().apply {
+          moveTo(inset, inset + frameHeight)
+          lineTo(inset + frameWidth * 0.38f, inset + frameHeight * 0.52f)
+          lineTo(inset + frameWidth * 0.60f, inset + frameHeight * 0.76f)
+          lineTo(inset + frameWidth * 0.76f, inset + frameHeight * 0.60f)
+          lineTo(inset + frameWidth, inset + frameHeight)
+          close()
         },
-    )
-    return
+        ink.copy(alpha = 0.35f),
+      )
+    }
+    // The key, on the canvas and in a PNG, where there is room for a word — an avatar-sized frame
+    // shows the glyph alone rather than three clipped letters. Not in a structured SVG: that
+    // recorder fails closed on any text it cannot attribute to an authored text node, which is the
+    // right rule for an export and the wrong place for a label; the SVG keeps the frame and glyph.
+    if (!LocalUiBuilderExportStructuredIcons.current && maxWidth >= 96.dp && maxHeight >= 48.dp) {
+      Text(
+        text = assetKey,
+        modifier =
+          Modifier.align(Alignment.BottomCenter).padding(horizontal = 4.dp, vertical = 2.dp),
+        color = ink,
+        fontSize = 9.sp,
+        lineHeight = 11.sp,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+      )
+    }
   }
-  if (key != GATE0_COVER_ASSET_KEY) {
-    UnresolvedAssetPlaceholder(key, modifier)
-    return
-  }
+}
+
+/** The gate-0 fixture's generated cover: a gradient with a few shapes, no bytes behind it. */
+@Composable
+private fun GeneratedCoverPlaceholder(modifier: Modifier) {
   val palette = listOf(Color(0xFF6750A4), Color(0xFFB69DF8), Color(0xFF21005D))
   Canvas(modifier) {
     drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height)))
@@ -2059,59 +2164,6 @@ private val WEAR_NATIVE_ONLY: Set<String> = WearScreenCodeExporter.NATIVE_ONLY_C
  * A dashed outline rather than [UnsupportedComponentDiagnostic]'s error container, because nothing
  * is wrong. The component is in the catalog, it exports, and it renders — just not here.
  */
-/**
- * The one generated cover this canvas draws by name; every other key resolves through
- * `:ui-builder-artwork` or not at all.
- */
-private const val GATE0_COVER_ASSET_KEY = "ui-builder.gate0.cover"
-
-/**
- * What an `asset/image` draws when nothing resolves its key: a visible frame naming the key, and
- * never an exception.
- *
- * It used to be `error("unsupported asset …")`, and one accepted node then took the whole design
- * down — every render of a ninety-node screen failed, for a collaborator with the tab open as much
- * as for the author, until somebody worked out which node to delete
- * (yschimke/compose-preview-server#484). Both reducers now refuse an unresolvable key at commit, so
- * this is the second line: whatever slips past validation — a design committed before the rule, a
- * catalog whose registry changed underneath it — degrades to a placeholder rather than detonating.
- * The dashed outline is [NativeOnlyPlaceholder]'s, because the claim is the same: the design is
- * fine, this canvas just cannot draw the thing.
- */
-@Composable
-private fun UnresolvedAssetPlaceholder(key: String, modifier: Modifier) {
-  val outline = MaterialTheme.colorScheme.outline
-  val fill = MaterialTheme.colorScheme.surfaceVariant
-  Box(
-    modifier
-      .drawBehind {
-        drawRect(fill)
-        val inset = 1.dp.toPx()
-        drawRoundRect(
-          color = outline,
-          topLeft = Offset(inset / 2, inset / 2),
-          size = Size(size.width - inset, size.height - inset),
-          cornerRadius = CornerRadius(4.dp.toPx()),
-          style =
-            Stroke(width = inset, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))),
-        )
-        drawLine(outline, Offset.Zero, Offset(size.width, size.height), strokeWidth = inset)
-        drawLine(outline, Offset(size.width, 0f), Offset(0f, size.height), strokeWidth = inset)
-      }
-      .padding(4.dp),
-    contentAlignment = Alignment.Center,
-  ) {
-    Text(
-      key.ifEmpty { "asset" },
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-      textAlign = TextAlign.Center,
-      maxLines = 2,
-      overflow = TextOverflow.Ellipsis,
-    )
-  }
-}
-
 @Composable
 private fun NativeOnlyPlaceholder(
   node: UiBuilderNode,

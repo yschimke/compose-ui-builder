@@ -403,6 +403,72 @@
       "signatureKnown": true
     },
     {
+      "canonicalId": "m3-catalog/androidx.compose.foundation.ImageKt.Image",
+      "componentIds": [
+        "asset/image"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.foundation.ImageKt",
+        "callable": "androidx.compose.foundation.Image",
+        "name": "Image",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "painter",
+          "type": "Painter",
+          "hasDefault": false,
+          "typeFqn": "androidx.compose.ui.graphics.painter.Painter"
+        },
+        {
+          "name": "contentDescription",
+          "type": "String?",
+          "hasDefault": false,
+          "typeFqn": "kotlin.String",
+          "nullable": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "alignment",
+          "type": "Alignment",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Alignment"
+        },
+        {
+          "name": "contentScale",
+          "type": "ContentScale",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.layout.ContentScale"
+        },
+        {
+          "name": "alpha",
+          "type": "Float",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Float"
+        },
+        {
+          "name": "colorFilter",
+          "type": "ColorFilter?",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.ColorFilter",
+          "nullable": true
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "Image(painter = TODO(), contentDescription = null)",
+        "imports": [
+          "androidx.compose.foundation.Image"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
       "canonicalId": "m3-catalog/androidx.compose.material3.ScaffoldKt.Scaffold",
       "componentIds": [
         "layout/scaffold"

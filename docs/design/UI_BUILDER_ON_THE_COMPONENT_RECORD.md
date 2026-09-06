@@ -190,15 +190,23 @@ numeric property `Unsupported` in the inspector and delete the colour choices. S
 record carries this metadata as authored per-property editor hints; generation fills
 in the control kind, never the bounds.
 
-**Not every builder node is a composable, and three of the current 25 are not.**
+**Not every builder node is a composable, and two of the current 25 are not.**
 `shape/linear-gradient` and `shape/radial-gradient` identify
-`Modifier.background(Brush…)` *expressions*; `asset/image` exposes an `assetKey`
-resolved through the builder's asset registry rather than `Image`'s `Painter`. The
-Jetcaster operations fixture uses all three, so generating solely from composable
-records would drop or mis-shape them and make existing documents fail validation. These
-keep an explicit **built-in/adapter record lane**: hand-authored capability entries,
-marked as such, that the generator merges with rather than overwrites. The lane is the
-declared exception, so it is visible instead of being an accident.
+`Modifier.background(Brush…)` *expressions*. The Jetcaster operations fixture uses both,
+so generating solely from composable records would drop or mis-shape them and make
+existing documents fail validation. These keep an explicit **built-in/adapter record
+lane**: hand-authored capability entries, marked as such, that the generator merges with
+rather than overwrites. The lane is the declared exception, so it is visible instead of
+being an accident.
+
+`asset/image` used to be the third. It exposes an `assetKey` resolved through the
+design's asset registry rather than `Image`'s `Painter`, and it now has an ordinary
+record for `androidx.compose.foundation.Image` beside the others: `ScreenDocumentProjection`
+writes the call with the design's description, scale, alignment and modifiers, and stands a
+theme-coloured `ColorPainter` in for the one argument no generated Kotlin can carry — the
+picture's bytes, which live in the host's asset store. The substitution is named in the
+file's header and as an `ASSET_PLACEHOLDER` warning, so it is a line to replace rather than
+a refusal; [`UI_BUILDER_ASSETS.md`](UI_BUILDER_ASSETS.md) has the whole lane.
 
 `CapabilityValidator` keeps its job unchanged — it just validates against a table
 nobody typed by hand for the composable-backed majority.

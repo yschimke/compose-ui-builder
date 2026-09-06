@@ -2414,6 +2414,7 @@ class PersistentUiBuilderServiceTest {
       object : UiBuilderCatalogExecutor by TestCatalogs {
         override fun validateWrite(
           catalog: CatalogCapabilityV1,
+          document: DesignDocumentV1,
           node: DesignNodeV1,
           property: String,
         ): UiBuilderCatalogIssue? {

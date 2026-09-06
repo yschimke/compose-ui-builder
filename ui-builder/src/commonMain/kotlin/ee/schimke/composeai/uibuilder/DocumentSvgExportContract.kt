@@ -3,6 +3,8 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.SvgCapability
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 enum class DocumentSvgExecutionBridge {
   GENERATED_COMPOSE_WRAPPER,
@@ -94,9 +96,12 @@ fun inspectDocumentSvgExport(
               "FULL_SCREEN_RASTER_FALLBACK",
               "root, scaffold, and fillMaxSize nodes cannot flatten the design to a raster",
             )
-        } else {
+        } else if (node.hasOfflineRasterBytes(document)) {
           rasterFallbacks += node.id
         }
+        // Otherwise the node has no pixels this lane can embed — an unresolved key, or an
+        // uploaded asset only a host can fetch — and the renderer draws its vector placeholder,
+        // which the recorder needs no raster correlation for.
       }
       ClosedSvgStatus.VERIFIED ->
         if (svg.blocksExport) {
@@ -153,3 +158,15 @@ private fun UiBuilderNode.isFullScreenRaster(
   id in document.roots ||
     catalog.componentsById[componentId]?.role == "Scaffold" ||
     modifiers.any { modifier -> (modifier as? JsonObject)?.optionalString("type") == "fillMaxSize" }
+
+/** Whether the recorder can embed real pixels for this node without asking a host for them. */
+private fun UiBuilderNode.hasOfflineRasterBytes(document: UiBuilderDocument): Boolean =
+  componentId == "asset/image" && document.resolveAsset(safeAssetKey()).hasRasterBytesOffline()
+
+/** The key as text, or empty for a malformed wrapper the export gate already reports. */
+private fun UiBuilderNode.safeAssetKey(): String =
+  (properties["assetKey"] as? JsonObject)
+    ?.get("value")
+    ?.let { it as? JsonPrimitive }
+    ?.contentOrNull
+    .orEmpty()

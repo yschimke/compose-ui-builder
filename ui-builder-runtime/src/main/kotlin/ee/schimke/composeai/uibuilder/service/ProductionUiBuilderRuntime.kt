@@ -2,7 +2,9 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.protocol.AssetBindingV1
 import ee.schimke.composeai.uibuilder.protocol.AssetKeyValueV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogAssetSourceV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.ColorTokenValueV1
@@ -11,6 +13,7 @@ import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DiagnosticSeverityV1
+import ee.schimke.composeai.uibuilder.protocol.EmbeddedAssetSourceV1
 import ee.schimke.composeai.uibuilder.protocol.ExportArtifactV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
 import ee.schimke.composeai.uibuilder.protocol.ExportDiagnosticV1
@@ -22,6 +25,7 @@ import ee.schimke.composeai.uibuilder.protocol.SlotCardinalityV1
 import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.SvgCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
+import ee.schimke.composeai.uibuilder.protocol.UploadedAssetSourceV1
 import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import java.io.Closeable
 import java.nio.file.Files
@@ -308,10 +312,26 @@ public class CurrentM3UiBuilderCatalogExecutor(
     return null
   }
 
-  override fun validateWrite(
+  /** [validateWrite] against no document — the catalog's own rules alone. */
+  public fun validateWrite(
     catalog: CatalogCapabilityV1,
     node: DesignNodeV1,
     property: String,
+  ): UiBuilderCatalogIssue? = validateWrite(catalog, node, property, pinnedAssetKeys = emptySet())
+
+  override fun validateWrite(
+    catalog: CatalogCapabilityV1,
+    document: DesignDocumentV1,
+    node: DesignNodeV1,
+    property: String,
+  ): UiBuilderCatalogIssue? =
+    validateWrite(catalog, node, property, pinnedAssetKeys = document.assets.keys)
+
+  private fun validateWrite(
+    catalog: CatalogCapabilityV1,
+    node: DesignNodeV1,
+    property: String,
+    pinnedAssetKeys: Set<String>,
   ): UiBuilderCatalogIssue? {
     val value = node.properties[property] ?: return null
     // Undeclared is `validate`'s finding, and a wrapper the value rules do not speak about — a
@@ -321,7 +341,8 @@ public class CurrentM3UiBuilderCatalogExecutor(
     } ?: return null
     return when {
       isColourProperty(property) -> colourWriteIssue(node, property, value)
-      property == ASSET_KEY_PROPERTY -> assetKeyWriteIssue(catalog, node, property, value)
+      property == ASSET_KEY_PROPERTY ->
+        assetKeyWriteIssue(catalog, node, property, value, pinnedAssetKeys)
       else -> null
     }
   }
@@ -364,18 +385,21 @@ public class CurrentM3UiBuilderCatalogExecutor(
   }
 
   /**
-   * The asset rule: the key is one the catalog's registry lists.
+   * The asset rule: the key is one the catalog's registry lists, or one the design has pinned.
    *
    * `asset/image` is the one component whose value the renderer must *resolve*, and it was the one
    * property nothing checked: the reducer accepted `avatar-lain`, and every render of the design
    * then failed with an `IllegalStateException` (#484). The registry is
    * `statusSemantics.assetRegistry.keys`; a catalog that declares none says nothing about keys.
+   * [pinnedAssetKeys] are the design's own `assets` — what the asset lane put behind a key (#478) —
+   * and they resolve exactly as a catalog key does, because the canvas draws them.
    */
   private fun assetKeyWriteIssue(
     catalog: CatalogCapabilityV1,
     node: DesignNodeV1,
     property: String,
     value: UiValueV1,
+    pinnedAssetKeys: Set<String>,
   ): UiBuilderCatalogIssue? {
     val key =
       when (value) {
@@ -384,11 +408,15 @@ public class CurrentM3UiBuilderCatalogExecutor(
         else -> return null
       }
     val registry = declaredAssetKeys(catalog) ?: return null
-    if (key in registry) return null
+    if (key in registry || key in pinnedAssetKeys) return null
     return issue(
       "INVALID_PROPERTY",
-      "property $property is `$key`, which no asset this catalog can draw resolves; the keys it " +
-        "declares are ${registry.joinToString(", ")}",
+      "property $property is `$key`, which no asset this design or its catalog can draw " +
+        "resolves; the catalog declares ${registry.joinToString(", ")}, and a picture is pinned " +
+        "under a key of your own by PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey} " +
+        "or the ui_builder_put_asset tool" +
+        (if (pinnedAssetKeys.isEmpty()) ""
+        else "; this design has pinned ${pinnedAssetKeys.sorted().joinToString(", ")}"),
       node.id,
       property,
     )
@@ -1969,6 +1997,13 @@ public class ProductionUiBuilderExportExecutor(
   // reachable only by wiring nobody does in production; a default nobody should take is worse than
   // an argument everybody must pass.
   private val compose: UiBuilderExportExecutor,
+  /**
+   * Where a design's uploaded asset bytes are. The daemon render sees one string — the projected
+   * document — so the bytes an `asset/image` names are inlined into that string here, from this
+   * store, as an embedded source. Null leaves every uploaded binding as it is, and the renderer
+   * draws its placeholder for it.
+   */
+  private val assets: UiBuilderAssetStore? = null,
 ) : UiBuilderExportExecutor, Closeable {
   public val capabilities: ExportCapabilitiesV1 =
     ExportCapabilitiesV1(composeCode = true, svg = renderer.supportsSvg, png = true)
@@ -1992,7 +2027,10 @@ public class ProductionUiBuilderExportExecutor(
       density = document.environment.density.toFloat(),
       localeTag = document.environment.locale,
       fontScale = document.environment.fontScale.toFloat(),
-      encodedDocument = projectRendererDocument(document),
+      encodedDocument =
+        projectRendererDocument(document) { binding ->
+          (binding.source as? UploadedAssetSourceV1)?.let { assets?.read(it.storageKey) }
+        },
     )
 
   private fun RevisionPinnedUiBuilderExport.binaryArtifact(bytes: ByteArray): ExportArtifactV1 =
@@ -2086,7 +2124,21 @@ public object PackagedUiBuilderRenderBundle {
 }
 
 /** Canonical, loss-checked protocol → renderer wire projection used by the named override. */
-public fun projectRendererDocument(document: DesignDocumentV1): String {
+public fun projectRendererDocument(document: DesignDocumentV1): String =
+  projectRendererDocument(document) { null }
+
+/**
+ * The same projection, carrying the design's `assets` with uploaded bytes inlined.
+ *
+ * [resolveAsset] answers the bytes behind a binding, or null. A binding it answers is rewritten as
+ * an embedded source so the renderer — which sees only this string — can draw it; one it cannot
+ * answer travels as it is and the renderer draws a placeholder in its place. An empty map is left
+ * out altogether, so a design with no assets projects to the same bytes it always did.
+ */
+public fun projectRendererDocument(
+  document: DesignDocumentV1,
+  resolveAsset: (AssetBindingV1) -> ByteArray?,
+): String {
   require(document.revision in 0..Int.MAX_VALUE.toLong()) {
     "renderer revision is outside the v1 Int range: ${document.revision}"
   }
@@ -2125,9 +2177,32 @@ public fun projectRendererDocument(document: DesignDocumentV1): String {
         "stateVariables" to (source["stateVariables"] ?: JsonObject(emptyMap())),
         "roots" to source.getValue("roots"),
         "nodes" to projectedNodes,
-      )
+      ) + projectedAssets(document, resolveAsset)
     )
   return canonicalJson(projected)
+}
+
+private fun projectedAssets(
+  document: DesignDocumentV1,
+  resolveAsset: (AssetBindingV1) -> ByteArray?,
+): Map<String, JsonElement> {
+  if (document.assets.isEmpty()) return emptyMap()
+  val inlined =
+    document.assets.entries
+      .sortedBy { it.key }
+      .associate { (key, binding) ->
+        val carried =
+          when (binding.source) {
+            is UploadedAssetSourceV1 ->
+              resolveAsset(binding)?.let {
+                binding.copy(source = EmbeddedAssetSourceV1(Base64.getEncoder().encodeToString(it)))
+              } ?: binding
+            is EmbeddedAssetSourceV1,
+            is CatalogAssetSourceV1 -> binding
+          }
+        key to json.encodeToJsonElement(carried)
+      }
+  return mapOf("assets" to JsonObject(inlined))
 }
 
 private fun validateCatalog(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {

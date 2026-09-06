@@ -271,9 +271,29 @@ private constructor(
           }
           val assetKey = node.stringProperty("assetKey")
           val (widthPx, heightPx) = node.rasterPixelSize(document, layoutBounds[nodeId])
-          val encoded = runBlocking { readProjectOwnedJetcasterArtwork(assetKey) }
-          val sourceIdentity =
-            "project-owned-artwork/v1/$assetKey/square-512/rendered-${widthPx}x$heightPx"
+          // The same resolution the canvas draws by, so the pixels this recorder embeds are the
+          // pixels the design shows: the document's own registry first, then the artwork this
+          // build ships. A key with nothing behind either is never declared as a raster fallback
+          // (`DocumentSvgExportContract`), so reaching the `else` is a caller bug, not a design.
+          val encoded: ByteArray
+          val sourceIdentity: String
+          when (val resolved = document.resolveAsset(assetKey)) {
+            is ResolvedUiBuilderAsset.Embedded -> {
+              encoded = resolved.bytes
+              sourceIdentity =
+                "design-asset/v1/$assetKey/${resolved.contentDigest}/rendered-${widthPx}x$heightPx"
+            }
+            is ResolvedUiBuilderAsset.ProjectOwned -> {
+              encoded = runBlocking { readProjectOwnedJetcasterArtwork(assetKey) }
+              sourceIdentity =
+                "project-owned-artwork/v1/$assetKey/square-512/rendered-${widthPx}x$heightPx"
+            }
+            else ->
+              error(
+                "raster export node $nodeId names asset '$assetKey', which has no bytes this " +
+                  "recorder can embed"
+              )
+          }
           JvmStructuredSvgRasterIdentity(
               image = createScaledProjectOwnedImage(encoded, widthPx, heightPx),
               sourceIdentity = sourceIdentity,
