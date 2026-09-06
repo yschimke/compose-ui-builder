@@ -1268,13 +1268,18 @@ private fun NewDesignDialog(
   var selectedTemplateId by remember {
     mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
   }
-  var designId by remember { mutableStateOf("") }
+  // Pre-filled, so a design can be created in one click; a person who wants their own name
+  // overwrites it, and one who wants another roll asks for it.
+  var designId by remember { mutableStateOf(NewDesignNames.random()) }
   val selectedCatalog = catalogs.first { it.systemId == selectedCatalogId }
   val selectedTemplate =
     selectedCatalog.templates.firstOrNull { it.id == selectedTemplateId }
       ?: selectedCatalog.templates.first()
   val designIdValid = designId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]*"))
   var declared by remember { mutableStateOf(listOf<NewDesignState>()) }
+  // Folded away until asked for: most new designs declare no state at all, and the three
+  // controls it takes to add one made the dialog read as a form with a required last section.
+  var stateExpanded by remember { mutableStateOf(false) }
   var variableName by remember { mutableStateOf("") }
   var variableKind by remember { mutableStateOf(NewDesignStateType.Flag) }
   var variableInitial by remember { mutableStateOf("") }
@@ -1320,6 +1325,14 @@ private fun NewDesignDialog(
           onValueChange = { designId = it },
           modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Design ID" },
           placeholder = { Text("my-widget") },
+          trailingIcon = {
+            TextButton(
+              onClick = { designId = NewDesignNames.random() },
+              modifier = Modifier.semantics { contentDescription = "Suggest another name" },
+            ) {
+              Text("Shuffle")
+            }
+          },
           supportingText = {
             Text(
               if (designId.isEmpty() || designIdValid) {
@@ -1335,60 +1348,70 @@ private fun NewDesignDialog(
         // State is declared here because `CreateDesign` carries a whole document and no released
         // mutation reaches `stateVariables` afterwards. Until one does, this is the only moment a
         // design can be given the variables the inspector then binds properties to.
-        Text("State", style = MaterialTheme.typography.labelLarge)
-        Text(
-          "Variables this screen reacts to. A property can be bound to one once the design exists.",
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.bodySmall,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          NewDesignStateType.entries.forEach { kind ->
-            FilterChip(
-              selected = kind == variableKind,
-              onClick = { variableKind = kind },
-              label = { Text(kind.label) },
-            )
-          }
-        }
-        Row(
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          OutlinedTextField(
-            value = variableName,
-            onValueChange = { variableName = it },
-            modifier = Modifier.weight(1f).semantics { contentDescription = "State name" },
-            placeholder = { Text("expanded") },
-            isError = variableName.isNotEmpty() && !variableNameValid,
-            singleLine = true,
-          )
-          OutlinedTextField(
-            value = variableInitial,
-            onValueChange = { variableInitial = it },
-            modifier = Modifier.weight(1f).semantics { contentDescription = "State initial value" },
-            placeholder = { Text(variableKind.placeholder) },
-            singleLine = true,
-          )
+        if (!stateExpanded && declared.isEmpty()) {
           TextButton(
-            onClick = {
-              declared +=
-                NewDesignState(variableName, variableKind, variableKind.parse(variableInitial))
-              variableName = ""
-              variableInitial = ""
-            },
-            enabled = variableNameValid,
+            onClick = { stateExpanded = true },
+            modifier = Modifier.semantics { contentDescription = "Add state variables" },
           ) {
-            Text("Add")
+            Text("Add state variables…")
           }
-        }
-        if (declared.isNotEmpty()) {
+        } else {
+          Text("State", style = MaterialTheme.typography.labelLarge)
+          Text(
+            "Variables this screen reacts to. A property can be bound to one once the design exists.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+          )
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            declared.forEach { variable ->
+            NewDesignStateType.entries.forEach { kind ->
               FilterChip(
-                selected = false,
-                onClick = { declared = declared - variable },
-                label = { Text("${variable.name} · ${variable.type.label}") },
+                selected = kind == variableKind,
+                onClick = { variableKind = kind },
+                label = { Text(kind.label) },
               )
+            }
+          }
+          Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            OutlinedTextField(
+              value = variableName,
+              onValueChange = { variableName = it },
+              modifier = Modifier.weight(1f).semantics { contentDescription = "State name" },
+              placeholder = { Text("expanded") },
+              isError = variableName.isNotEmpty() && !variableNameValid,
+              singleLine = true,
+            )
+            OutlinedTextField(
+              value = variableInitial,
+              onValueChange = { variableInitial = it },
+              modifier =
+                Modifier.weight(1f).semantics { contentDescription = "State initial value" },
+              placeholder = { Text(variableKind.placeholder) },
+              singleLine = true,
+            )
+            TextButton(
+              onClick = {
+                declared +=
+                  NewDesignState(variableName, variableKind, variableKind.parse(variableInitial))
+                variableName = ""
+                variableInitial = ""
+              },
+              enabled = variableNameValid,
+            ) {
+              Text("Add")
+            }
+          }
+          if (declared.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              declared.forEach { variable ->
+                FilterChip(
+                  selected = false,
+                  onClick = { declared = declared - variable },
+                  label = { Text("${variable.name} · ${variable.type.label}") },
+                )
+              }
             }
           }
         }

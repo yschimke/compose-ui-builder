@@ -74,7 +74,9 @@ A design has one URL, and it names the catalog and the design:
 Opening it opens the design. It does not create one: a `GET` never writes, so a mistyped link
 reports a design that is not there rather than quietly making it.
 
-Creating is a `POST`. The New design dialog submits an ordinary form to
+Creating is a `POST`. The New design dialog opens on a form factor — Mobile, Wear, RemoteCompose
+— with a generated id already filled in (a `cheeky-raccoon`, reshuffled or overwritten as you
+like) and its state variables folded away until asked for. It submits an ordinary form to
 `/ui-builder/<catalog>` with the id, the template and any state variables, and the server answers
 `303 See Other` with the design's permalink — which the browser follows, so the URL you end up on,
 bookmark and share is the plain one above, and reloading it re-opens rather than re-creates. A

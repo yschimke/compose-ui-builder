@@ -170,7 +170,7 @@ public class PersistentUiBuilderService(
     UiBuilderSubscriberFailureHandler {},
   private val clock: Clock = Clock.systemUTC(),
   private val limits: UiBuilderServiceLimits = UiBuilderServiceLimits(),
-) : UiBuilderServicePort, UiBuilderServiceDiagnosticsSource {
+) : UiBuilderServicePort, UiBuilderServiceDiagnosticsSource, UiBuilderAdminPort {
   private data class MutationBucket(var tokens: Int, var refilledAtMillis: Long)
 
   private data class RuntimeDesign(
@@ -2096,6 +2096,39 @@ public class PersistentUiBuilderService(
         }
       }
     }
+  }
+
+  override fun adminListDesigns(): List<UiBuilderAdminDesignSummary> = lock.withLock {
+    persisted.designs.values
+      .sortedWith(compareBy({ it.createdAtEpochMillis }, { it.document.id }))
+      .map { design ->
+        UiBuilderAdminDesignSummary(
+          designId = design.document.id,
+          title = design.document.title,
+          revision = design.document.revision,
+          catalogPin = design.document.catalogPin,
+          ownerActorId = design.access.ownerActorId,
+          collaborators =
+            design.access.actorGrants.count { it.actorId != design.access.ownerActorId },
+          createdAtEpochMillis = design.createdAtEpochMillis,
+          updatedAtEpochMillis = design.updatedAtEpochMillis,
+          activeSubscribers = runtime[design.document.id]?.subscribers?.size ?: 0,
+        )
+      }
+  }
+
+  override fun adminDeleteDesign(designId: String): Boolean {
+    val closed: List<SubscriberMailbox> = lock.withLock {
+      if (designId !in persisted.designs) return false
+      // Durable first: a subscriber whose stream closes has lost the design, not merely the
+      // connection, and must not observe that before the removal is on disk.
+      commitPersisted(persisted.copy(designs = persisted.designs - designId))
+      val removed = runtime.remove(designId)
+      mutationBuckets.keys.removeIf { (_, bucketDesignId) -> bucketDesignId == designId }
+      removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
+    }
+    closed.forEach(SubscriberMailbox::close)
+    return true
   }
 
   private fun commitPersisted(candidate: PersistedServiceV1) {

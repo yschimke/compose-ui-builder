@@ -56,10 +56,12 @@ public final class ee/schimke/composeai/uibuilder/service/PackagedUiBuilderRende
 	public final fun requiredJavaFeatureVersion ()I
 }
 
-public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService : ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnosticsSource, ee/schimke/composeai/uibuilder/service/UiBuilderServicePort {
+public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService : ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort, ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnosticsSource, ee/schimke/composeai/uibuilder/service/UiBuilderServicePort {
 	public static final field Companion Lee/schimke/composeai/uibuilder/service/PersistentUiBuilderService$Companion;
 	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;)V
 	public synthetic fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun adminDeleteDesign (Ljava/lang/String;)Z
+	public fun adminListDesigns ()Ljava/util/List;
 	public fun diagnostics ()Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
 	public fun execute (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun migratePersistenceToLatest ()Lee/schimke/composeai/uibuilder/service/UiBuilderPersistenceMigrationResult;
@@ -131,6 +133,38 @@ public final class ee/schimke/composeai/uibuilder/service/RevisionPinnedUiBuilde
 	public final fun getRevision ()J
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSummary {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;JLee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;Ljava/lang/String;IJJI)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()J
+	public final fun component4 ()Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()I
+	public final fun component7 ()J
+	public final fun component8 ()J
+	public final fun component9 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;JLee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;Ljava/lang/String;IJJI)Lee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSummary;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSummary;Ljava/lang/String;Ljava/lang/String;JLee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;Ljava/lang/String;IJJIILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSummary;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActiveSubscribers ()I
+	public final fun getCatalogPin ()Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;
+	public final fun getCollaborators ()I
+	public final fun getCreatedAtEpochMillis ()J
+	public final fun getDesignId ()Ljava/lang/String;
+	public final fun getOwnerActorId ()Ljava/lang/String;
+	public final fun getRevision ()J
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun getUpdatedAtEpochMillis ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort {
+	public abstract fun adminDeleteDesign (Ljava/lang/String;)Z
+	public abstract fun adminListDesigns ()Ljava/util/List;
 }
 
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {

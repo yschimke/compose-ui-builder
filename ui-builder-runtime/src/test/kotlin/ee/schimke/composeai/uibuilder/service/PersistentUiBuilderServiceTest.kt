@@ -1990,6 +1990,53 @@ class PersistentUiBuilderServiceTest {
     )
   }
 
+  /**
+   * The administrator sees every design, whoever owns it, and a delete is durable, closes the
+   * design's streams, and leaves nothing an actor can open or a restart can bring back.
+   */
+  @Test
+  fun `an administrator lists every owner's designs and a delete is durable and closes streams`() {
+    val storage = MemoryStorage()
+    var service = service(storage = storage)
+    create(service)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        viewer,
+        UiBuilderServiceRequest.CreateDesign(document().copy(id = "other", title = "Other")),
+      )
+    )
+    val subscription = service.subscribe(UiBuilderSubscriptionCall(owner, "design", 0)) {}
+
+    val listed = service.adminListDesigns()
+    assertEquals(listOf("design", "other"), listed.map { it.designId })
+    assertEquals(listOf("owner", "viewer"), listed.map { it.ownerActorId })
+    assertEquals(listOf(1, 0), listed.map { it.activeSubscribers })
+    assertEquals("Discover", listed.first().title)
+    assertEquals(CATALOG_REFERENCE, listed.first().catalogPin)
+
+    assertTrue(service.adminDeleteDesign("design"))
+    assertFalse(service.adminDeleteDesign("design"), "a second delete finds nothing")
+    assertFalse(service.adminDeleteDesign("never-existed"))
+    assertEquals(listOf("other"), service.adminListDesigns().map { it.designId })
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(service, owner, UiBuilderServiceRequest.OpenDesign("design"))).code,
+    )
+    assertEquals(0, service.diagnostics().activeSubscribers)
+    subscription.close()
+
+    service = service(storage = storage)
+    assertEquals(listOf("other"), service.adminListDesigns().map { it.designId })
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(service, owner, UiBuilderServiceRequest.OpenDesign("design"))).code,
+    )
+    // The id is free again: the same design can be created afresh after its delete.
+    create(service)
+    assertEquals(setOf("design", "other"), service.adminListDesigns().map { it.designId }.toSet())
+  }
+
   private fun service(
     storage: UiBuilderStateStorage = MemoryStorage(),
     retained: Int = 16,
