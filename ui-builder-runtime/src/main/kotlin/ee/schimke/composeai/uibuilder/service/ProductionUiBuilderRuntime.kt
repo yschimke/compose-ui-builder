@@ -450,6 +450,28 @@ private fun CatalogCapabilityV1.withPacks(
 }
 
 /**
+ * This catalog's component menu with one more component shelved on [group].
+ *
+ * Every miss degrades rather than throws, exactly as [CatalogCapabilityV1.withPacks] and
+ * `ComponentMenu.from` do: a catalog declaring no menu gets one holding this single entry, and a
+ * group name the order does not carry is appended rather than dropped. A wrong menu must never be
+ * the reason a component cannot be inserted.
+ */
+private fun JsonObject.withMenuEntry(componentId: String, group: String): JsonObject {
+  val menu = (this["componentMenu"] as? JsonObject) ?: JsonObject(emptyMap())
+  val order = (menu["groupOrder"] as? JsonArray) ?: JsonArray(emptyList())
+  val entries = (menu["components"] as? JsonObject) ?: JsonObject(emptyMap())
+  return JsonObject(
+    menu +
+      ("groupOrder" to
+        if (order.any { (it as? JsonPrimitive)?.contentOrNull == group }) order
+        else JsonArray(order + JsonPrimitive(group))) +
+      ("components" to
+        JsonObject(entries + (componentId to buildJsonObject { put("group", group) })))
+  )
+}
+
+/**
  * Whether [slot] accepts a child of [component]: both the role and a trait have to match, an empty
  * list constrains nothing on its axis, and `AnyContent` is the same as declaring no traits.
  *
@@ -681,7 +703,12 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
     statusSemantics =
       JsonObject(
         base.statusSemantics +
-          (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("remote-compose"))
+          (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("remote-compose")) +
+          // `remote-m3` reads the base catalog's shelves, and the base catalog has never heard of
+          // this component: it is synthesized here. Shelved rather than left to fall back to its
+          // role heading ("Leaf") for the reason `ComponentMenu` gives — a menu is presentation,
+          // and an author looking for an animation looks under Content.
+          ("componentMenu" to base.statusSemantics.withMenuEntry("remote-m3/lottie", "Content"))
       ),
     benchmark =
       base.benchmark.copy(
@@ -694,9 +721,106 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       listOf(
         widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
         widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
+        lottie(components.getValue("asset/image"), supportedWasm, blockedSvg),
       ) + authoringIds.map(components::getValue),
   )
 }
+
+/**
+ * `remote-m3/lottie` — a Lottie animation, **compiled into the document** rather than played from
+ * it.
+ *
+ * This is the whole reason it can exist here and nowhere else. Horologist's `remotecompose/lottie`
+ * (vendored at `yschimke/rc-players`'s `third_party/horologist-lottie`, whose PROVENANCE.md carries
+ * the pinned commit) is not a Lottie player: `LottieAnimation(json = …)` is a `@RemoteComposable`
+ * that parses the animation once, at document-build time, and re-emits every layer, shape and
+ * keyframe as Remote Compose operations over the document's own animation clock. What ships to the
+ * watch is a `.rc` document that draws the animation — no Lottie runtime on the device, no JSON, no
+ * fetch.
+ *
+ * So it belongs to the catalog whose export *is* a Remote Compose document, and to no other. A
+ * `wear-m3` screen or an `m3-catalog` phone screen exports ordinary Compose, where the answer to
+ * "play a Lottie" is `lottie-compose`, a different library with a different API that this element
+ * would misdescribe.
+ *
+ * ## Two sources, one compiled thing
+ *
+ * `url` is where the animation came from and `json` is what gets compiled. The builder resolves the
+ * first into the second once, at authoring time (`UiBuilderEditor`'s Lottie fetch), and keeps both:
+ * the URL because "which animation is this?" is a question an author asks of a design six months
+ * later, and the JSON because a generated widget cannot reach the network while it is being built.
+ * An element carrying only a URL is authored-but-unresolved — the canvas says so and
+ * [RemoteContentEmitter] refuses it by name rather than writing source that would not compile.
+ */
+private fun lottie(
+  borrowed: ComponentCapabilityV1,
+  supportedWasm: WasmCapabilityV1,
+  blockedSvg: SvgCapabilityV1?,
+): ComponentCapabilityV1 =
+  borrowed.copy(
+    componentId = "remote-m3/lottie",
+    displayName = "Lottie animation",
+    role = "Leaf",
+    // Not `ImageContent`, deliberately, even though the nearest borrowed shape is `asset/image`:
+    // the widget's `background` slot accepts that trait, and a background there is a
+    // `WearWidgetBrush` built outside composition — which a `@RemoteComposable` animation is not.
+    // `RemoteContent` is what `remote-compose/document` carries and says the same true thing.
+    traits = listOf("RemoteContent"),
+    slots = emptyList(),
+    properties = lottieProperties(),
+    // Exactly the three [RemoteContentEmitter] can write, and no more. A component that advertises
+    // a modifier the generator refuses is a component whose export fails after the design is drawn,
+    // which is the worst moment to learn it.
+    modifierCapabilities = listOf("fillMaxSize", "fillMaxWidth", "padding"),
+    wasm =
+      supportedWasm.copy(
+        notes =
+          "Drawn as a named placeholder carrying the animation's source and size. The canvas has no Lottie renderer, and compiling the animation the way the export does — into Remote Compose operations — is Horologist's Android-only creation API, which a Wasm build cannot link. A lookalike would be an impression of an animation nobody could check; the picture comes from the native lane, which builds this design's own generated document."
+      ),
+    // No component record: `WearWidgetCodeExporter` writes the whole widget, so the call site comes
+    // from `RemoteContentEmitter` like every other node in this catalog's body.
+    code = null,
+    svg =
+      blockedSvg?.copy(
+        notes =
+          "A placeholder on the canvas must not claim structured SVG parity with an animation."
+      ),
+  )
+
+/**
+ * `url`, `json` and `progress` — the animation, where it came from, and whether it runs.
+ *
+ * `progress` is the one that is not obvious. `LottieAnimation`'s `progress` argument is a
+ * `RemoteFloat?`, and leaving it out is what makes the compiled document drive the animation from
+ * its own clock: `floor(ANIMATION_TIME * frameRate) % frames`, looping forever. Setting it pins the
+ * animation to one frame — 0 is the first, 1 the last — which is what a widget that must not
+ * animate (a glanceable state, a still icon) wants. Unset means "run", which is why it has no
+ * default rather than defaulting to 0.
+ */
+private fun lottieProperties(): List<PropertyCapabilityV1> =
+  listOf(
+    PropertyCapabilityV1(
+      name = "url",
+      jsonType = JsonPrimitive("string"),
+      notes =
+        "Where the animation was fetched from. Resolved into `json` once, in the builder; the " +
+          "generated widget never reaches the network.",
+    ),
+    PropertyCapabilityV1(
+      name = "json",
+      jsonType = JsonPrimitive("string"),
+      notes =
+        "The Lottie animation itself, as JSON text. This is what is compiled into the Remote " +
+          "Compose document, so it is what the export needs.",
+    ),
+    PropertyCapabilityV1(
+      name = "progress",
+      jsonType = JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object"))),
+      notes =
+        "Pins the animation to one frame, 0 (first) to 1 (last). Unset — the default — lets the " +
+          "document's animation clock run it in a loop.",
+    ),
+  )
 
 /**
  * The Wear screen host's authored parameters.

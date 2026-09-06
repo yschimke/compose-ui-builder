@@ -98,6 +98,138 @@ class WearWidgetCodeExporterTest {
     assertTrue("import androidx.glance.wear.horizontalGradient" in source, source)
   }
 
+  /**
+   * A Lottie element compiles into the document, and the animation lands in a constant.
+   *
+   * The three assertions are the three halves of the promise (the call, the import, the bytes): the
+   * body calls Horologist's `LottieAnimation`, the file imports it from the module
+   * `yschimke/rc-players` vendors, and the animation itself is a top-level constant rather than a
+   * few thousand columns inside the design.
+   */
+  @Test
+  fun `a lottie element is compiled into the widget's document`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(lottieWidget(LOTTIE_JSON))
+        )
+        .source
+
+    write("LottieWidget.kt", source)
+    assertTrue("LottieAnimation(json = LOTTIE_ANIMATION" in source, source)
+    assertTrue(
+      "import com.google.android.horologist.remotecompose.lottie.LottieAnimation" in source,
+      source,
+    )
+    assertTrue("private const val LOTTIE_ANIMATION = \"{" in source, source)
+    // Reparsed and reprinted: the indentation the author's file carried is most of its bytes, and
+    // all of them wasted inside a string literal.
+    assertTrue("\\n" !in source, source)
+    // Unset progress is what makes the compiled document run the animation off its own clock.
+    assertTrue("progress" !in source, source)
+  }
+
+  /** A pinned frame is an argument; the absence of one is what makes the animation loop. */
+  @Test
+  fun `a pinned progress is emitted as a remote float`() {
+    val base = lottieWidget(LOTTIE_JSON)
+    val lottie = base.nodes.values.first { it.componentId == LOTTIE_COMPONENT_ID }
+    val document =
+      base.copy(
+        nodes =
+          base.nodes +
+            (lottie.id to
+              lottie.copy(
+                properties =
+                  JsonObject(lottie.properties + ("progress" to literalNumber("number", 0f)))
+              ))
+      )
+
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(document))
+        .source
+
+    assertTrue("progress = 0.rf" in source, source)
+    assertTrue("import androidx.compose.remote.creation.compose.state.rf" in source, source)
+  }
+
+  /**
+   * A URL alone is refused, because the generated widget has no network at the moment it needs the
+   * animation. The builder resolves a URL into the JSON while the design is open; an element that
+   * arrived here without one is unfinished, and saying so beats writing a file that cannot fetch.
+   */
+  @Test
+  fun `a lottie element carrying only a url is refused by name`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(
+          lottieWidget(json = "", url = "https://example.test/spin.json")
+        )
+      )
+
+    assertEquals(1, refused.reasons.size)
+    assertTrue(
+      "https://example.test/spin.json" in refused.reasons.single(),
+      refused.reasons.single(),
+    )
+  }
+
+  /** Not JSON is caught here rather than by the compiler of whoever pasted the file. */
+  @Test
+  fun `a lottie element holding something other than json is refused`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(lottieWidget("not an animation"))
+      )
+
+    assertTrue("valid JSON" in refused.reasons.single(), refused.reasons.single())
+  }
+
+  /** A small, real Lottie: one solid layer, which is enough for the compiler to have something. */
+  private val LOTTIE_JSON =
+    """
+    {
+      "v": "5.9.6",
+      "fr": 30,
+      "ip": 0,
+      "op": 30,
+      "w": 64,
+      "h": 64,
+      "layers": [
+        { "ty": 1, "ind": 1, "sc": "#2196f3", "sw": 64, "sh": 64, "ip": 0, "op": 30, "st": 0 }
+      ]
+    }
+    """
+      .trimIndent()
+
+  private fun lottieWidget(json: String, url: String = ""): UiBuilderDocument {
+    val base = helloWidgetUiBuilderDocument("lottie", pin, environment)
+    val scaffold =
+      base.nodes.values.first { it.componentId.startsWith("remote-m3/widget-container") }
+    val lottie =
+      UiBuilderNode(
+        id = "spinner",
+        componentId = LOTTIE_COMPONENT_ID,
+        properties =
+          JsonObject(
+            buildMap {
+              if (json.isNotEmpty()) put("json", literal("string", json))
+              if (url.isNotEmpty()) put("url", literal("string", url))
+            }
+          ),
+      )
+    return base.copy(
+      nodes =
+        base.nodes +
+          mapOf(
+            lottie.id to lottie,
+            scaffold.id to scaffold.copy(slots = scaffold.slots + ("content" to listOf(lottie.id))),
+          )
+    )
+  }
+
+  private fun literalNumber(type: String, value: Float): JsonObject =
+    JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
+
   private fun literal(type: String, value: String): JsonObject =
     JsonObject(mapOf("type" to JsonPrimitive(type), "value" to JsonPrimitive(value)))
 

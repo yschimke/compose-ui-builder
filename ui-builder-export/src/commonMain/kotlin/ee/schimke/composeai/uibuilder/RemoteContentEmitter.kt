@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -110,6 +111,7 @@ internal class RemoteContentEmitter(
       "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node))
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node))
+      "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       else -> {
         refusals +=
           "`${node.componentId}` has no Remote Compose counterpart this generator can write"
@@ -255,6 +257,88 @@ internal class RemoteContentEmitter(
   }
 
   /**
+   * `LottieAnimation(json = …)` — Horologist's Lottie **compiler**, called with the animation this
+   * element carries.
+   *
+   * The animation does not travel beside the widget: `LottieAnimation` is a `@RemoteComposable`
+   * that parses the JSON while the document is being built and re-emits it as Remote Compose
+   * operations, so what reaches the watch is a document that draws the animation and nothing else.
+   * That is also why a URL cannot be written here — the generated widget has no network at the
+   * moment it needs the bytes, so the builder resolves the URL into `json` at authoring time and
+   * this refuses the element that still carries only one.
+   *
+   * The JSON goes into a top-level constant rather than inline. A minified animation is a few
+   * thousand columns on one line; put in the body it buries the design in a file somebody has to
+   * read, and put in a constant it sits at the bottom where a reader can skip it.
+   */
+  private fun lottie(node: UiBuilderNode, pad: String): String? {
+    val url = node.properties["url"]?.stringOrNull().orEmpty()
+    val json = node.properties["json"]?.stringOrNull().orEmpty()
+    if (json.isBlank()) {
+      refusals +=
+        if (url.isNotEmpty()) {
+          "the Lottie element `${node.id}` carries only its URL (`$url`): a widget is built with " +
+            "no network to fetch it from, so the animation's JSON has to be resolved in the " +
+            "builder first"
+        } else {
+          "the Lottie element `${node.id}` has no animation — give it a URL to fetch, or paste " +
+            "the animation's JSON in"
+        }
+      return null
+    }
+    // Reparsed rather than pasted through, for two reasons: an animation that is not JSON is
+    // caught here instead of by the reader's compiler, and the round trip drops whatever
+    // indentation the source had — which is most of the bytes of a pretty-printed Lottie, and all
+    // of them wasted in a string literal.
+    val compact =
+      try {
+        Json.parseToJsonElement(json).toString()
+      } catch (failure: Exception) {
+        refusals +=
+          "the Lottie element `${node.id}` does not hold valid JSON: ${failure.message ?: "it could not be parsed"}"
+        return null
+      }
+    val literal = compact.escaped()
+    // A Kotlin string literal is a JVM constant, and a JVM constant is capped at 65535 *bytes* of
+    // modified UTF-8. Past that the generated file does not compile — which the author would
+    // discover after pasting it — so it is refused here, with the route that does work.
+    if (literal.encodeToByteArray().size > MAX_STRING_CONSTANT_BYTES) {
+      refusals +=
+        "the Lottie animation on `${node.id}` is ${compact.encodeToByteArray().size / 1024}KiB, past the 64KiB a " +
+          "Kotlin string constant holds — put the JSON in `res/raw` and call " +
+          "`LottieAnimation(rawRes = R.raw.…)`, which takes the same animation"
+      return null
+    }
+    usesLottie = true
+    val constant =
+      if (lottieDeclarations.isEmpty()) LOTTIE_CONSTANT
+      else "${LOTTIE_CONSTANT}_${lottieDeclarations.size + 1}"
+    lottieDeclarations += "private const val $constant = \"$literal\""
+    val arguments = mutableListOf("json = $constant")
+    node.modifierExpression()?.let { arguments += "modifier = $it" }
+    // Absent means "run": `LottieAnimation` drives the frame off the document's own animation
+    // clock when it is given no progress. A value pins the animation to one frame, which is what a
+    // widget that must not animate wants — so 0f is emitted and an unset property is not.
+    node.properties["progress"]?.numberOrNull()?.let {
+      usesRemoteFloat = true
+      arguments += "progress = ${if (it % 1f == 0f) "${it.toInt()}.rf" else "${it}f.rf"}"
+    }
+    return call("LottieAnimation", arguments, pad)
+  }
+
+  /**
+   * Top-level declarations the body refers to, in emission order.
+   *
+   * Separate from the body because they belong at the *file's* level, not inside the content
+   * function: [WearWidgetCodeExporter] appends them after the preview, which is where a reader
+   * expects a wall of generated bytes to be rather than in the middle of the design.
+   */
+  val declarations: List<String>
+    get() = lottieDeclarations.toList()
+
+  private val lottieDeclarations = mutableListOf<String>()
+
+  /**
    * The imports the emitted file needs, sorted the way Kotlin style orders them.
    *
    * Gated on what was actually written rather than emitted wholesale: an unused import is a warning
@@ -268,6 +352,8 @@ internal class RemoteContentEmitter(
     if (usesColumn) imports += "androidx.compose.remote.creation.compose.layout.RemoteColumn"
     imports += "androidx.compose.remote.creation.compose.layout.RemoteComposable"
     if (usesRow) imports += "androidx.compose.remote.creation.compose.layout.RemoteRow"
+    if (usesLottie) imports += "com.google.android.horologist.remotecompose.lottie.LottieAnimation"
+    if (usesRemoteFloat) imports += "androidx.compose.remote.creation.compose.state.rf"
     if (usesAlignment) imports += "androidx.compose.remote.creation.compose.layout.RemoteAlignment"
     if (usesArrangement) {
       imports += "androidx.compose.remote.creation.compose.layout.RemoteArrangement"
@@ -315,6 +401,8 @@ internal class RemoteContentEmitter(
   private fun vertical(call: String): String = call.also { usesVerticalGradient = true }
 
   private var usesModifier = false
+  private var usesLottie = false
+  private var usesRemoteFloat = false
   private var usesSp = false
   private var usesHorizontalGradient = false
   private var usesVerticalGradient = false
@@ -370,6 +458,12 @@ internal class RemoteContentEmitter(
 
     /** What [container] appends after a call that takes children. */
     const val OPENING_BRACE = " {"
+
+    /** The first Lottie animation's constant; a second one is suffixed. */
+    const val LOTTIE_CONSTANT = "LOTTIE_ANIMATION"
+
+    /** A JVM string constant's cap, in modified-UTF-8 bytes. */
+    const val MAX_STRING_CONSTANT_BYTES = 65535
   }
 }
 
@@ -389,7 +483,15 @@ private fun String.remoteAlignment(): String =
 /** `#FF2196F3` becomes `Color(0xFF2196F3)`. */
 private fun String.argbLiteral(): String = "Color(0x${removePrefix("#").uppercase()})"
 
-private fun String.escaped(): String = replace("\\", "\\\\").replace("\"", "\\\"")
+/**
+ * Escaped for a Kotlin `"…"` literal.
+ *
+ * `$` is in here because of the Lottie path: a template expansion is not something a text property
+ * ever contained by accident, but an animation's JSON is arbitrary text somebody else wrote, and a
+ * layer named `$1` would otherwise generate a file that does not compile.
+ */
+private fun String.escaped(): String =
+  replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
 
 private fun kotlinx.serialization.json.JsonElement.stringValue(): String? =
   (this as? JsonPrimitive)?.contentOrNull

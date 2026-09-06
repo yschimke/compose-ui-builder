@@ -147,6 +147,13 @@ object WearWidgetCodeExporter {
           "$INDENT@PreviewParameter(${size.previewParamsProvider}::class) params: WearWidgetParams"
         )
         appendLine(") = WearWidgetPreview($name(), params)")
+        // Last in the file, and deliberately: a Lottie animation is a few thousand columns of
+        // minified JSON, and a reader who has to scroll past it to reach the widget has been
+        // handed a worse file than one who can stop reading at the preview.
+        emitter.declarations.forEach {
+          appendLine()
+          appendLine(it)
+        }
       }
     )
   }

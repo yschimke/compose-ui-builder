@@ -12,6 +12,14 @@ import kotlinx.serialization.json.Json
 const val REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID: String = "remote-compose/document"
 
 /**
+ * The Lottie element, named for the same reason the one above is: three places agree on it.
+ *
+ * `remote-m3` synthesizes the component, this editor resolves its `url` into its `json` and draws
+ * it, and `RemoteContentEmitter` compiles the `json` into the exported document.
+ */
+const val LOTTIE_COMPONENT_ID: String = "remote-m3/lottie"
+
+/**
  * One published Remote Compose document the pinned catalog offers as authoring content.
  *
  * The `remote-compose/document` component takes its child document as a Base64 `documentBase64`

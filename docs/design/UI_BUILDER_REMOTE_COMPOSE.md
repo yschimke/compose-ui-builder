@@ -212,6 +212,42 @@ widget can never hold. It is not the foundation carve-out `wear-m3` got, and app
 here — leaving `layout/column` because "foundation is shared" — would keep in the palette the one id
 whose sharing claim is provably false.
 
+## The Lottie element compiles; it does not play
+
+`remote-m3/lottie` is the one component in this catalog whose export is the entire feature, and the
+verb matters. Horologist's [`remotecompose/lottie`][horologist-lottie] is a **Lottie compiler**:
+`LottieAnimation(json = …)` is a `@RemoteComposable` that parses the animation while the document is
+being built and re-emits every layer, shape and keyframe as Remote Compose operations over the
+document's own animation clock. What reaches the watch is a `.rc` document that draws the animation
+— no Lottie runtime on the device, no JSON, no fetch. That is why the element belongs here and
+nowhere else: a `wear-m3` screen or an `m3-catalog` phone screen exports ordinary Compose, where the
+answer to "play a Lottie" is `lottie-compose`, a different library this element would misdescribe.
+
+It has two source properties, which are two halves of one source rather than two options:
+
+* `url` — where the animation came from. The builder resolves it into `json` **once**, while the
+  design is open, and the fetch obeys the host's own rule: `sameOriginRequestUrl` refuses anything
+  that leaves the page's origin, so an animation served from a CDN is pasted in rather than fetched.
+* `json` — the animation itself, and the only half the export can use. A generated widget has no
+  network at the moment it needs the bytes, so an element still carrying only a URL is refused **by
+  name** rather than written as source that cannot fetch. The canvas says the same thing where the
+  node sits, so an author learns it before pressing export.
+
+`progress` is the third property and the one worth reading twice: leaving it unset is what makes the
+compiled document animate, driving the frame from `ANIMATION_TIME`; setting it (0 first frame, 1
+last) pins the animation to one frame, which is what a glanceable widget that must not move wants.
+
+The animation is emitted as a top-level `private const val` rather than inline — a minified Lottie
+is a few thousand columns — and past a JVM string constant's 64KiB cap it is refused with the route
+that does work (`res/raw` plus `LottieAnimation(rawRes = R.raw.…)`).
+
+Horologist publishes no artifact for that module, so `yschimke/rc-players` vendors it at
+`third_party/horologist-lottie`, pinned and unmodified; its `PROVENANCE.md` carries the commit and
+the note that the copy should be deleted the moment upstream publishes. The vendored module is what
+the exported source is compiled against, which is what keeps this file's promise checkable.
+
+[horologist-lottie]: https://github.com/google/horologist/tree/main/remotecompose/lottie
+
 ## Follow-up features useful to every CMP player
 
 1. A suspendable, size-limited document resolver with content hashes, caching, cancellation, and

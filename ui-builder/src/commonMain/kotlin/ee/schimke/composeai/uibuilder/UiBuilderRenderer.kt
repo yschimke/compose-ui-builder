@@ -667,6 +667,13 @@ private fun RenderNode(
           Box(next) { slot(name).forEach { child(it, Modifier.fillMaxSize()) } }
         },
       )
+    // The Lottie element. Drawn as its identity and place, like the Wear components below and for
+    // a sharper version of the same reason: the animation this node carries is not *played* by the
+    // export at all — Horologist's `LottieAnimation` compiles it into the document's own operations
+    // while the widget is being built — and the browser can neither run that Android-only creation
+    // API nor host a Lottie runtime to fake it with. What the canvas can say truthfully is which
+    // animation is here and whether it is ready to export, so that is what it says.
+    "remote-m3/lottie" -> LottiePlaceholder(node, measured)
     "layout/scaffold" ->
       Scaffold(
         modifier = measured,
@@ -1927,6 +1934,70 @@ private fun NativeOnlyPlaceholder(
     content()
   }
 }
+
+/**
+ * A Lottie element: what animation it holds, where it came from, and whether it will export.
+ *
+ * The unresolved case is the one worth drawing loudly. `url` and `json` are two halves of one
+ * source — the builder fetches the first into the second — and an element carrying only a URL looks
+ * finished in the layers panel while [RemoteContentEmitter] refuses it, because a widget is built
+ * with no network to fetch from. Saying so here is what turns that into something an author can fix
+ * before they press export.
+ */
+@Composable
+private fun LottiePlaceholder(node: UiBuilderNode, modifier: Modifier) {
+  val outline = MaterialTheme.colorScheme.outline
+  val json = node.string("json")
+  val url = node.string("url")
+  Column(
+    modifier
+      .fillMaxWidth()
+      .drawBehind {
+        drawRoundRect(
+          color = outline,
+          cornerRadius = CornerRadius(8.dp.toPx()),
+          style =
+            androidx.compose.ui.graphics.drawscope.Stroke(
+              width = 1.dp.toPx(),
+              pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
+            ),
+        )
+      }
+      .padding(horizontal = 10.dp, vertical = 8.dp),
+    verticalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
+    Text(
+      "Lottie animation",
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelMedium,
+    )
+    // The file name rather than the whole URL: a Lottie URL is usually a long CDN path, and the
+    // canvas has a widget's worth of width to say something useful in.
+    url.takeIf(String::isNotEmpty)?.let {
+      Text(
+        it.substringAfterLast('/').ifEmpty { it },
+        color = MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
+    Text(
+      // Short on purpose: a Small widget is 216×76dp, and a sentence that wraps past the frame is
+      // a sentence the author reads half of.
+      when {
+        json.isNotEmpty() -> "${json.length.animationSize()} · compiled into the document"
+        url.isNotEmpty() -> "Not fetched — the export needs the JSON"
+        else -> "No animation — add a URL or JSON"
+      },
+      color =
+        if (json.isNotEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
+        else MaterialTheme.colorScheme.error,
+      style = MaterialTheme.typography.bodySmall,
+    )
+  }
+}
+
+/** `840 B`, `12 KiB` — the animation's weight, in the unit that reads at that size. */
+private fun Int.animationSize(): String = if (this < 1024) "$this B" else "${this / 1024} KiB"
 
 @Composable
 private fun UnsupportedComponentDiagnostic(componentId: String, modifier: Modifier) {

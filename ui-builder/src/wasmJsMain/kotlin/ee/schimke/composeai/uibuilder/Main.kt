@@ -924,6 +924,11 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       resolveRemoteComposeDocument = { source ->
         fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${source.id}.rc"))
       },
+      // Same-origin, like every other request this page makes: `sameOriginRequestUrl` refuses the
+      // rest, and a builder that made an exception for animation URLs would be a page fetching
+      // arbitrary third-party JSON into a design. An animation served from elsewhere is pasted
+      // into the element's `json` instead, which is the same bytes by a route the host can see.
+      loadLottieAnimation = { url -> fetchText(url) },
     )
     LaunchedEffect(loadedDocument.revision) { markReady() }
   }
