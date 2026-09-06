@@ -93,6 +93,15 @@ private val SLOT_PARAMETERS: Map<String, Map<String, String>> =
     "layout/lazy-column" to mapOf("items" to "content"),
     "layout/lazy-row" to mapOf("items" to "content"),
     "layout/lazy-grid" to mapOf("items" to "content"),
+    // `ListItem` names each region by what it holds — `headlineContent` — where the catalog names
+    // the region alone. Three of its six slots; `overlineContent` and `leadingContent` are not in
+    // the catalog's vocabulary, so nothing here can name them.
+    "m3/list-item" to
+      mapOf(
+        "headline" to "headlineContent",
+        "supporting" to "supportingContent",
+        "trailing" to "trailingContent",
+      ),
   )
 
 private fun parameterForSlot(componentId: String, slot: String): String =
@@ -415,7 +424,12 @@ object ScreenDocumentProjection {
       // so a node with an authored modifier list and a modifier-shaped property produces one chain
       // in a fixed order instead of two arguments the generator would reject the second of.
       val fromProperties = mutableListOf<ChainLink>()
+      // Properties that are read together rather than one at a time, spent here before the loop
+      // below reaches them: an arrangement and the spacing it composes with, the two colour roles
+      // one `colors` bundle carries, a colour dot's whole modifier chain.
+      val spent = composite(node, arguments, fromProperties)
       for ((property, value) in node.properties) {
+        if (property in spent) continue
         // Spent on the call site above; emitting it as well would hand the component a parameter
         // it does not declare.
         if (variant != null && property == VARIANT_SELECTORS[node.componentId]) continue
@@ -428,6 +442,20 @@ object ScreenDocumentProjection {
         // reason that is written down: see [IDENTITY_PROPERTIES].
         if (property in IDENTITY_PROPERTIES) continue
         if (unplaceable(property, node)) continue
+        // How a parent box aligns this node — `BoxScope.align`, so a scoped link decided by the
+        // slot the node sits in, exactly as the authored `align` modifier is.
+        if (property == BOX_ALIGNMENT && node.componentId in BOX_ALIGNED) {
+          boxAlignmentLink(value, node, property, scope)?.let { fromProperties += it }
+          continue
+        }
+        if (node.componentId == LIST_ITEM && property == START_ACCENT_COLOR) {
+          accent(value, node, property)
+          continue
+        }
+        if (node.componentId == SLIDER && property in SLIDER_BOUNDS) {
+          sliderBound(value, node, property)
+          continue
+        }
         val link = MODIFIER_PROPERTIES[node.componentId]?.get(property)
         if (link != null) {
           modifierLink(link, value, node, property)?.let { fromProperties += it }
@@ -448,6 +476,241 @@ object ScreenDocumentProjection {
         modifiers(node, fromProperties, scope)?.let { arguments["modifier"] = it }
       }
       return arguments
+    }
+
+    /**
+     * The arguments built from **more than one** property, and the properties they consumed.
+     *
+     * Every other property is one value on one parameter, which the loop in [arguments] handles a
+     * row at a time. Three shapes are not: an arrangement and a spacing name **one** `Arrangement`
+     * between them, two colour roles fill **one** `TopAppBarColors` bundle, and a colour dot is a
+     * `Box` whose entire meaning is a modifier chain built from both its properties. Read one at a
+     * time, the second of each pair would silently overwrite the first in the argument map — a row
+     * with `spaceBetween` and an 8dp gap exporting as whichever the document happened to list last.
+     */
+    private fun composite(
+      node: DesignNodeV1,
+      arguments: MutableMap<String, ScreenValue>,
+      fromProperties: MutableList<ChainLink>,
+    ): Set<String> {
+      val spent = mutableSetOf<String>()
+      ARRANGEMENTS[node.componentId]?.let { axis ->
+        if (axis.property in node.properties && axis.spacing in node.properties) {
+          spent += axis.property
+          spent += axis.spacing
+          arranged(axis, node)?.let { arguments[axis.parameter] = it }
+        }
+      }
+      COLOR_BUNDLES[node.componentId]?.let { bundle ->
+        val roles = bundle.roles.filter { it in node.properties }
+        if (roles.isNotEmpty()) {
+          spent += roles
+          val named =
+            roles
+              .mapNotNull { role ->
+                colour(node.properties.getValue(role), "node `${node.id}`.`$role`")?.let {
+                  role to it
+                }
+              }
+              .toMap()
+          // Only when every role resolved: a bundle missing one would export a bar whose colour
+          // silently fell back to Material's, which is the wrong-picture-that-compiles case.
+          if (named.size == roles.size) {
+            arguments[bundle.parameter] =
+              ScreenValue.Construct(
+                callableFqn = bundle.factoryFqn,
+                named = named,
+                typeFqn = bundle.typeFqn,
+                requiredOptIns = bundle.optIns,
+              )
+          }
+        }
+      }
+      if (node.componentId == COLOUR_DOT) spent += colourDot(node, fromProperties)
+      return spent
+    }
+
+    /**
+     * The one `Arrangement` a node's arrangement **and** spacing name together, or null having said
+     * why there isn't one.
+     *
+     * Compose has two families here and the catalog documents which composes with what: the three
+     * *aligned* arrangements take a gap through `Arrangement.spacedBy(space, alignment)`, and the
+     * three `space*` arrangements "distribute the free space themselves, and Compose has no form
+     * that also inserts a fixed gap" — the catalog's own note on `verticalArrangement`. The canvas
+     * renders exactly that rule, so this writes exactly that rule: `spacedBy(8.dp, Alignment.End)`
+     * for an aligned value with a gap, the bare member for a `space*` value with the gap spent, and
+     * the bare member again for an aligned value whose gap is zero — `spacedBy(0.dp, Top)` is
+     * `Top`, and a person writes the shorter one.
+     */
+    private fun arranged(axis: ArrangementAxis, node: DesignNodeV1): ScreenValue? {
+      val where = "node `${node.id}`.`${axis.property}`"
+      val entry =
+        when (val value = node.properties.getValue(axis.property)) {
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          else ->
+            return refuse(
+              "$where is a ${value::class.simpleName}, and an arrangement is one of " +
+                ENUM_MEMBERS.getValue(node.componentId)
+                  .getValue(axis.property)
+                  .members
+                  .keys
+                  .sorted()
+                  .joinToString(", ")
+            )
+        }
+      // Through the same table a lone arrangement reads, so an unknown value refuses with the
+      // same list it would have refused with alone.
+      val member = enum(entry, node.componentId, axis.property, where) ?: return null
+      val spacingWhere = "node `${node.id}`.`${axis.spacing}`"
+      val number =
+        when (val value = node.properties.getValue(axis.spacing)) {
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else -> return refuse("$spacingWhere becomes `${axis.parameter}`, which needs a number")
+        }
+      val alignment = axis.aligned[entry] ?: return member
+      if (number <= 0.0) return member
+      val dp = dp(number) ?: return refuse("$spacingWhere is $number, which does not survive `Dp`")
+      return ScreenValue.Construct(
+        callableFqn = "$ARRANGEMENT.spacedBy",
+        positional =
+          listOf(dp, ScreenValue.Reference(ALIGNMENT, listOf(alignment), typeFqn = axis.alignment)),
+        typeFqn = axis.typeFqn,
+      )
+    }
+
+    /**
+     * A colour dot's whole modifier chain — `size(d.dp).clip(CircleShape).background(colour)` — and
+     * the two properties it spent.
+     *
+     * `shape/colour-dot` is a `Box` and nothing else: the catalog's own `code.symbol` says so, and
+     * the canvas draws exactly this chain. So the record it exports through is `Box`'s, reached by
+     * alias, and the component's identity is entirely the links appended here. The diameter
+     * defaults to the canvas's 8dp rather than to nothing, because a `Box` with no size is 0dp and
+     * a dot that vanished on export is a different design.
+     */
+    private fun colourDot(node: DesignNodeV1, fromProperties: MutableList<ChainLink>): Set<String> {
+      val where = "node `${node.id}`"
+      val size =
+        when (val value = node.properties[DIAMETER_DP]) {
+          null -> dp(DEFAULT_DOT_DIAMETER)
+          is DecimalValueV1 -> dp(value.value)
+          is IntegerValueV1 -> dp(value.value.toDouble())
+          else -> null
+        }
+      if (size == null) {
+        refuse("$where.`$DIAMETER_DP` is a diameter in dp, which needs a number that survives `Dp`")
+      }
+      val fill =
+        when (val value = node.properties[DOT_COLOR]) {
+          null -> refuse("$where sets no `$DOT_COLOR`, and a colour dot is nothing but its colour")
+          // The canvas reads this property as a literal string, so the text spelling is the one
+          // real documents hold; the wrappers are accepted because the reducer canonicalises to
+          // them.
+          is StringValueV1 -> color(value.value, "$where.`$DOT_COLOR`")
+          else -> colour(value, "$where.`$DOT_COLOR`")
+        }
+      if (size != null && fill != null) {
+        fromProperties += ChainLink("$LAYOUT.size", positional = listOf(size))
+        fromProperties +=
+          ChainLink(
+            "$DRAW.clip",
+            positional =
+              listOf(ScreenValue.Reference(SHAPE_CONSTANTS.getValue("circle"), typeFqn = SHAPE)),
+          )
+        fromProperties +=
+          ChainLink("androidx.compose.foundation.background", named = mapOf("color" to fill))
+      }
+      return setOf(DIAMETER_DP, DOT_COLOR)
+    }
+
+    /**
+     * `BoxScope.align(…)` for the `alignment` **property**, or null having said where the node is.
+     *
+     * The catalog declares `alignment` on `m3/text` and `layout/column` as "how a parent Box aligns
+     * this" node, and the canvas reads it off any child of a box. It is the authored `align`
+     * modifier under another spelling, so it takes the same route: a scoped link, legal only inside
+     * a `layout/box` slot, refused by name anywhere else rather than dropped.
+     */
+    private fun boxAlignmentLink(
+      value: UiValueV1,
+      node: DesignNodeV1,
+      property: String,
+      scope: String?,
+    ): ChainLink? {
+      val where = "node `${node.id}`.`$property`"
+      val choices = BOX_ALIGNMENT_MEMBERS.members.keys.sorted().joinToString(", ")
+      val entry =
+        when (value) {
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          else -> {
+            refuse("$where is how a parent box aligns this node, which is one of $choices")
+            return null
+          }
+        }
+      val path =
+        BOX_ALIGNMENT_MEMBERS.members[entry]
+          ?: run {
+            refuse("$where is the enum value `$entry`, which is not one of $choices")
+            return null
+          }
+      return alignLink(
+        node.id,
+        scope,
+        BOX_SCOPE,
+        "box",
+        ScreenValue.Reference(path.first(), path.drop(1), typeFqn = ALIGNMENT),
+      )
+    }
+
+    /**
+     * A list item's leading accent bar, which is the one part of the component nothing here can
+     * write.
+     *
+     * The canvas draws it with `Modifier.drawBehind { drawRect(colour, size = Size(3.dp.toPx(),
+     * size.height)) }` — a draw lambda with a statement in it, which is precisely the shape this
+     * vocabulary refuses to grow into. An empty value is the catalog's own "draws none" and is
+     * spent, so a plain list item exports; a colour refuses by name, so a schedule whose track
+     * colours are the point does not come back as a plain list that compiles.
+     */
+    private fun accent(value: UiValueV1, node: DesignNodeV1, property: String) {
+      if (value is StringValueV1 && value.value.isEmpty()) return
+      refuse(
+        "node `${node.id}`.`$property` is a 3dp bar drawn down the item's leading edge with " +
+          "`Modifier.drawBehind { … }` — a draw lambda this vocabulary has no form for; leave it " +
+          "empty to export the item without the bar"
+      )
+    }
+
+    /**
+     * One end of a slider's range, which exports only when it is the end Material already has.
+     *
+     * `Slider` takes `valueRange: ClosedFloatingPointRange<Float>`, written `0f..100f`, and a range
+     * expression is not one of this vocabulary's shapes — `rangeTo` is a member of `Float` in the
+     * standard library, outside the packages a generated screen may name. So a bound equal to the
+     * default is spent, because omitting it leaves the parameter at exactly that value, and any
+     * other bound refuses by name rather than exporting a 0-to-100 slider as a 0-to-1 one.
+     */
+    private fun sliderBound(value: UiValueV1, node: DesignNodeV1, property: String) {
+      val where = "node `${node.id}`.`$property`"
+      val number =
+        when (value) {
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else -> {
+            refuse("$where becomes one end of `valueRange`, which needs a number")
+            return
+          }
+        }
+      if (number == SLIDER_BOUNDS.getValue(property)) return
+      refuse(
+        "$where is $number, which reaches `Slider` as `valueRange = valueFrom..valueTo` — a range " +
+          "expression this vocabulary has no form for; only Material's default range " +
+          "(`valueFrom` 0, `valueTo` 1) exports"
+      )
     }
 
     /**
@@ -613,11 +876,11 @@ object ScreenDocumentProjection {
      * expression for", including `background`, `border`, `width` and `align`, which the m3-catalog
      * palette offers on almost every component.
      *
-     * Two are refused **deliberately** and stay refused: `verticalScroll` and `horizontalScroll`
-     * take a `ScrollState` from `rememberScrollState()`, and no [ScreenValue] is a remembered
-     * value. The `else` branch below is therefore not a list of things left undone; it is what a
-     * *newer* `ui-builder-protocol` than the one this compiled against would fall into, and it
-     * keeps that arriving as a named refusal rather than as a silently dropped modifier.
+     * None is refused on principle any more. `verticalScroll` and `horizontalScroll` were, as "a
+     * `remember { … }` preamble this projection does not emit", and that was a wrong diagnosis —
+     * see [scrolls]. The `else` branch below is therefore not a list of things left undone; it is
+     * what a *newer* `ui-builder-protocol` than the one this compiled against would fall into, and
+     * it keeps that arriving as a named refusal rather than as a silently dropped modifier.
      */
     private fun link(modifier: DesignModifierV1, nodeId: String, scope: String?): ChainLink? {
       return when (modifier) {
@@ -798,8 +1061,8 @@ object ScreenDocumentProjection {
                   "scope only inside a `layout/box` slot; this node sits " +
                   (scope?.let { "in a `$it` slot" } ?: "at the root, which has no receiver")
             }
-        VerticalScrollModifierV1 -> scrolls(nodeId, "verticalScroll")
-        HorizontalScrollModifierV1 -> scrolls(nodeId, "horizontalScroll")
+        VerticalScrollModifierV1 -> scrolls("androidx.compose.foundation.verticalScroll")
+        HorizontalScrollModifierV1 -> scrolls("androidx.compose.foundation.horizontalScroll")
         else ->
           null.also {
             reasons +=
@@ -900,12 +1163,23 @@ object ScreenDocumentProjection {
       return null
     }
 
-    private fun scrolls(nodeId: String, name: String): ChainLink? {
-      reasons +=
-        "node `$nodeId` uses `$name`, which takes a `ScrollState` from " +
-          "`rememberScrollState()` — a `remember { … }` preamble this projection does not emit"
-      return null
-    }
+    /**
+     * `.verticalScroll(rememberScrollState())` — the state remembered **inline**, at the call.
+     *
+     * This refused for several rounds, as taking "a `ScrollState` from `rememberScrollState()` — a
+     * `remember { … }` preamble this projection does not emit", and the diagnosis mislocated the
+     * state. `rememberScrollState()` is a `@Composable` function whose parameters all default, and
+     * the generated screen body is composable, so the call is legal exactly where the modifier is
+     * written — which is where a person writes it, and where `rememberCarouselState { n }` already
+     * goes one component over. A `ScrollState` never needed a declaration line above the tree; it
+     * needed a [ScreenValue.Construct] in the link's argument
+     * ([#481](https://github.com/yschimke/compose-preview-server/issues/481)).
+     */
+    private fun scrolls(callableFqn: String): ChainLink =
+      ChainLink(
+        callableFqn,
+        positional = listOf(ScreenValue.Construct(REMEMBER_SCROLL_STATE, typeFqn = SCROLL_STATE)),
+      )
 
     /**
      * A `<Scope>.align(…)`, or null having said where the node actually is.
@@ -1027,14 +1301,15 @@ object ScreenDocumentProjection {
           typeFqn = "androidx.compose.material3.ButtonColors",
         )
       }
-      if (target.kind == TargetKind.FLOAT_LAMBDA) {
+      if (target.kind == TargetKind.FLOAT_LAMBDA || target.kind == TargetKind.FLOAT) {
         val fraction =
           when (value) {
             is DecimalValueV1 -> value.value
             is IntegerValueV1 -> value.value.toDouble()
-            // A `state` read is the catalog's other spelling for `progress`, and it refuses under
-            // its own name rather than this one: the lambda is expressible now, and the state
-            // variable inside it still needs the `remember` preamble this projection does not emit.
+            // A `state` read is the catalog's other spelling for `progress` and for a slider's
+            // `value`, and it refuses under its own name rather than this one: the lambda is
+            // expressible now, and the state variable inside it still needs the `remember`
+            // preamble this projection does not emit.
             else -> return value(value, node, property)
           }
         val narrowed = fraction.toFloat()
@@ -1044,7 +1319,8 @@ object ScreenDocumentProjection {
         if (!narrowed.isFinite() || (narrowed == 0f && fraction != 0.0)) {
           return refuse("$where is $fraction, which does not survive `Float`")
         }
-        return ScreenValue.Lambda(ScreenValue.Fractional32(narrowed))
+        val float = ScreenValue.Fractional32(narrowed)
+        return if (target.kind == TargetKind.FLOAT) float else ScreenValue.Lambda(float)
       }
       if (target.kind == TargetKind.SHAPE_TOKEN) {
         // Only the text spelling needs help. A `shapeToken` wrapper already resolves through the
@@ -1090,6 +1366,7 @@ object ScreenDocumentProjection {
         TargetKind.RENAME,
         TargetKind.CARD_COLORS,
         TargetKind.BUTTON_COLORS,
+        TargetKind.FLOAT,
         TargetKind.FLOAT_LAMBDA,
         TargetKind.SHAPE_TOKEN -> error("handled above")
       }
@@ -1304,6 +1581,19 @@ object ScreenDocumentProjection {
               ICON_MEMBERS.keys.sorted().joinToString(", ")
           )
       }
+      FACTORY_MEMBERS[componentId to property]?.let { factory ->
+        val callable =
+          factory.members[entry]
+            ?: return refuse(
+              "$where is the enum value `$entry`, which is not one of " +
+                factory.members.keys.sorted().joinToString(", ")
+            )
+        return ScreenValue.Construct(
+          callableFqn = callable,
+          typeFqn = factory.typeFqn,
+          requiredOptIns = factory.optIns,
+        )
+      }
       val mapping =
         ENUM_MEMBERS[componentId]?.get(property)
           ?: return refuse(
@@ -1337,7 +1627,8 @@ object ScreenDocumentProjection {
     /** Whether this catalog property's values are an enumeration one of the tables names. */
     private fun enumerated(componentId: String, property: String): Boolean =
       ENUM_MEMBERS[componentId]?.containsKey(property) == true ||
-        componentId to property in ICON_PROPERTIES
+        componentId to property in ICON_PROPERTIES ||
+        componentId to property in FACTORY_MEMBERS
 
     private fun icon(entry: String): ScreenValue? {
       val path = ICON_MEMBERS[entry]?.split(".") ?: return null
@@ -1589,6 +1880,8 @@ object ScreenDocumentProjection {
     /** A gap between children, which Compose takes as an `Arrangement`. */
     SPACED_BY_VERTICAL,
     SPACED_BY_HORIZONTAL,
+    /** A number the parameter takes as a `Float` — a slider's `value`. */
+    FLOAT,
     /** A theme shape role named as text — `large`. */
     SHAPE_TOKEN,
     /** A container colour Material 3 takes as a `CardColors` bundle. */
@@ -1646,6 +1939,9 @@ object ScreenDocumentProjection {
       // catalog carries a number and Compose takes `() -> Float`.
       "m3/progress-indicator" to
         mapOf("progress" to ParameterTarget("progress", TargetKind.FLOAT_LAMBDA)),
+      // Same name on both sides again, and again for the kind: the catalog holds a number and
+      // `Slider` takes a `Float`, which a whole number in the document would not render as.
+      SLIDER to mapOf("value" to ParameterTarget("value", TargetKind.FLOAT)),
       "layout/row" to
         mapOf(
           "horizontalSpacingDp" to
@@ -1684,6 +1980,25 @@ object ScreenDocumentProjection {
 
   private fun members(typeFqn: String, root: String, vararg pairs: Pair<String, String>) =
     EnumMembers(typeFqn, pairs.toMap().mapValues { (_, member) -> listOf(root, member) })
+
+  /**
+   * The nine two-axis alignments, named once: `layout/box`'s `contentAlignment` reads them, and so
+   * does the `alignment` property a box's children carry (see [BOX_ALIGNED]).
+   */
+  private val BOX_ALIGNMENT_MEMBERS =
+    members(
+      ALIGNMENT,
+      ALIGNMENT,
+      "topStart" to "TopStart",
+      "topCenter" to "TopCenter",
+      "topEnd" to "TopEnd",
+      "centerStart" to "CenterStart",
+      "center" to "Center",
+      "centerEnd" to "CenterEnd",
+      "bottomStart" to "BottomStart",
+      "bottomCenter" to "BottomCenter",
+      "bottomEnd" to "BottomEnd",
+    )
 
   /**
    * Which Kotlin member each catalog enum value names, per component and property.
@@ -1743,8 +2058,25 @@ object ScreenDocumentProjection {
               "lineThrough" to "LineThrough",
             ),
         ),
+      // The arrangements sat beside the alignments in the catalog and nowhere in this table, so a
+      // `spaceBetween` top bar or a `spaceEvenly` navigation row refused as "nothing maps this
+      // catalog property's values" while the `verticalAlignment: center` on the same node went
+      // through ([#475](https://github.com/yschimke/compose-preview-server/issues/475)). Six
+      // members of the `Arrangement` object each; when a spacing is set on the same node the two
+      // are read together instead — see `arranged`.
       "layout/row" to
         mapOf(
+          "horizontalArrangement" to
+            members(
+              ARRANGEMENT_HORIZONTAL,
+              ARRANGEMENT,
+              "start" to "Start",
+              "center" to "Center",
+              "end" to "End",
+              "spaceBetween" to "SpaceBetween",
+              "spaceAround" to "SpaceAround",
+              "spaceEvenly" to "SpaceEvenly",
+            ),
           "verticalAlignment" to
             members(
               ALIGNMENT_VERTICAL,
@@ -1752,10 +2084,21 @@ object ScreenDocumentProjection {
               "top" to "Top",
               "center" to "CenterVertically",
               "bottom" to "Bottom",
-            )
+            ),
         ),
       "layout/column" to
         mapOf(
+          "verticalArrangement" to
+            members(
+              ARRANGEMENT_VERTICAL,
+              ARRANGEMENT,
+              "top" to "Top",
+              "center" to "Center",
+              "bottom" to "Bottom",
+              "spaceBetween" to "SpaceBetween",
+              "spaceAround" to "SpaceAround",
+              "spaceEvenly" to "SpaceEvenly",
+            ),
           "horizontalAlignment" to
             members(
               ALIGNMENT_HORIZONTAL,
@@ -1763,26 +2106,142 @@ object ScreenDocumentProjection {
               "start" to "Start",
               "center" to "CenterHorizontally",
               "end" to "End",
-            )
+            ),
         ),
-      "layout/box" to
-        mapOf(
-          "contentAlignment" to
-            members(
-              ALIGNMENT,
-              ALIGNMENT,
-              "topStart" to "TopStart",
-              "topCenter" to "TopCenter",
-              "topEnd" to "TopEnd",
-              "centerStart" to "CenterStart",
-              "center" to "Center",
-              "centerEnd" to "CenterEnd",
-              "bottomStart" to "BottomStart",
-              "bottomCenter" to "BottomCenter",
-              "bottomEnd" to "BottomEnd",
-            )
+      "layout/box" to mapOf("contentAlignment" to BOX_ALIGNMENT_MEMBERS),
+    )
+
+  /**
+   * The arrangement property each layout pairs with a spacing, and how the two compose.
+   *
+   * @property aligned the arrangements that take a gap — as the `Alignment` member
+   *   `Arrangement.spacedBy(space, alignment)` wants for each, which is a **different** member from
+   *   the one the arrangement alone names: `center` is `Arrangement.Center` on its own and
+   *   `Alignment.CenterHorizontally` beside a gap. The three `space*` values are absent because no
+   *   form of them takes a gap.
+   */
+  private class ArrangementAxis(
+    val property: String,
+    val spacing: String,
+    val parameter: String,
+    val typeFqn: String,
+    val alignment: String,
+    val aligned: Map<String, String>,
+  )
+
+  private val ARRANGEMENTS: Map<String, ArrangementAxis> =
+    mapOf(
+      "layout/row" to
+        ArrangementAxis(
+          property = "horizontalArrangement",
+          spacing = "horizontalSpacingDp",
+          parameter = "horizontalArrangement",
+          typeFqn = ARRANGEMENT_HORIZONTAL,
+          alignment = ALIGNMENT_HORIZONTAL,
+          aligned = mapOf("start" to "Start", "center" to "CenterHorizontally", "end" to "End"),
+        ),
+      "layout/column" to
+        ArrangementAxis(
+          property = "verticalArrangement",
+          spacing = "verticalSpacingDp",
+          parameter = "verticalArrangement",
+          typeFqn = ARRANGEMENT_VERTICAL,
+          alignment = ALIGNMENT_VERTICAL,
+          aligned = mapOf("top" to "Top", "center" to "CenterVertically", "bottom" to "Bottom"),
         ),
     )
+
+  /**
+   * Catalog enum values that name a **factory call** rather than a member — `pinned` is
+   * `TopAppBarDefaults.pinnedScrollBehavior()`, a `@Composable` function with every parameter
+   * defaulted, called where the argument goes.
+   *
+   * A third table beside [ENUM_MEMBERS] and [ICON_MEMBERS] because the value's shape is a third
+   * one: a [ScreenValue.Construct] with no arguments, where those two produce a reference and a
+   * chain. The catalog says of `scrollBehavior` that it "reaches the generated Kotlin as the
+   * matching `TopAppBarDefaults` behavior", and that the canvas draws the bar pinned whatever it
+   * says — so this is the one place the export can say more than the canvas shows, and it says
+   * exactly what the catalog promised.
+   */
+  private class FactoryMembers(
+    val typeFqn: String,
+    val optIns: List<String>,
+    val members: Map<String, String>,
+  )
+
+  private val FACTORY_MEMBERS: Map<Pair<String, String>, FactoryMembers> =
+    mapOf(
+      (TOP_APP_BAR to "scrollBehavior") to
+        FactoryMembers(
+          typeFqn = "androidx.compose.material3.TopAppBarScrollBehavior",
+          optIns = listOf(EXPERIMENTAL_MATERIAL3),
+          members =
+            mapOf(
+              "pinned" to "$TOP_APP_BAR_DEFAULTS.pinnedScrollBehavior",
+              "enterAlways" to "$TOP_APP_BAR_DEFAULTS.enterAlwaysScrollBehavior",
+              "exitUntilCollapsed" to "$TOP_APP_BAR_DEFAULTS.exitUntilCollapsedScrollBehavior",
+            ),
+        )
+    )
+
+  /**
+   * Colour roles that fill one `…Colors` bundle between them, per component.
+   *
+   * [TargetKind.CARD_COLORS] and [TargetKind.BUTTON_COLORS] are this shape for one role each. A top
+   * app bar carries two — `containerColor` and `scrolledContainerColor` — and they are the same
+   * `colors` argument, so they have to be read together or the second overwrites the first.
+   *
+   * @property roles the catalog properties, which are also the factory's parameter names.
+   */
+  private class ColorBundle(
+    val parameter: String,
+    val factoryFqn: String,
+    val typeFqn: String,
+    val roles: List<String>,
+    val optIns: List<String>,
+  )
+
+  private val COLOR_BUNDLES: Map<String, ColorBundle> =
+    mapOf(
+      TOP_APP_BAR to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn = "$TOP_APP_BAR_DEFAULTS.centerAlignedTopAppBarColors",
+          typeFqn = "androidx.compose.material3.TopAppBarColors",
+          roles = listOf("containerColor", "scrolledContainerColor"),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3),
+        )
+    )
+
+  /**
+   * The components whose `alignment` property is "how a parent Box aligns this" node — the
+   * catalog's words on `layout/column`, and `m3/text` declares the same nine values. A modifier in
+   * a property's clothing, routed through `alignLink` like the authored one.
+   */
+  private val BOX_ALIGNED: Set<String> = setOf("m3/text", "layout/column")
+
+  private const val BOX_ALIGNMENT = "alignment"
+
+  private const val ARRANGEMENT = "androidx.compose.foundation.layout.Arrangement"
+  private const val EXPERIMENTAL_MATERIAL3 = "androidx.compose.material3.ExperimentalMaterial3Api"
+  private const val TOP_APP_BAR = "m3/center-aligned-top-app-bar"
+  private const val TOP_APP_BAR_DEFAULTS = "androidx.compose.material3.TopAppBarDefaults"
+  private const val LIST_ITEM = "m3/list-item"
+  private const val START_ACCENT_COLOR = "startAccentColor"
+  private const val SLIDER = "m3/slider"
+
+  /** A slider's two range bounds, with the value each has when Material is left to default it. */
+  private val SLIDER_BOUNDS: Map<String, Double> = mapOf("valueFrom" to 0.0, "valueTo" to 1.0)
+
+  private const val COLOUR_DOT = "shape/colour-dot"
+  private const val DIAMETER_DP = "diameterDp"
+  private const val DOT_COLOR = "color"
+
+  /** What the canvas draws when a dot sets no diameter, and so what the export writes. */
+  private const val DEFAULT_DOT_DIAMETER = 8.0
+
+  private const val REMEMBER_SCROLL_STATE = "androidx.compose.foundation.rememberScrollState"
+  private const val SCROLL_STATE = "androidx.compose.foundation.ScrollState"
 
   /**
    * Catalog properties whose Compose spelling is a **modifier link**, not a parameter.
@@ -2046,6 +2505,11 @@ object ScreenDocumentProjection {
       "layout/column" to mapOf("children" to COLUMN_SCOPE),
       "layout/row" to mapOf("children" to ROW_SCOPE),
       "layout/box" to mapOf("children" to BOX_SCOPE),
+      // A colour dot is `Box` by alias (see `colourDot`), so the record attests `Box`'s
+      // `content` slot for it too. Keyed by the parameter name because the catalog gives the dot
+      // no slot at all — nothing ever fills this, and the claim exists so the drift check that
+      // compares this table with the record stays exact.
+      COLOUR_DOT to mapOf("content" to BOX_SCOPE),
       "m3/card" to mapOf("content" to COLUMN_SCOPE),
       "m3/button" to mapOf("content" to ROW_SCOPE),
     )

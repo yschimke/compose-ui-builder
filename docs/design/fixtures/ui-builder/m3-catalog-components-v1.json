@@ -97,6 +97,13 @@
           "typeFqn": "androidx.compose.ui.graphics.Color"
         },
         {
+          "name": "fontStyle",
+          "type": "FontStyle?",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.text.font.FontStyle",
+          "nullable": true
+        },
+        {
           "name": "fontWeight",
           "type": "FontWeight",
           "hasDefault": true,
@@ -257,7 +264,8 @@
     {
       "canonicalId": "m3-catalog/androidx.compose.foundation.layout.BoxKt.Box",
       "componentIds": [
-        "layout/box"
+        "layout/box",
+        "shape/colour-dot"
       ],
       "symbol": {
         "jvmOwner": "androidx.compose.foundation.layout.BoxKt",
@@ -1805,6 +1813,183 @@
         "call": "LazyVerticalGrid(columns = TODO())",
         "imports": [
           "androidx.compose.foundation.lazy.grid.LazyVerticalGrid"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.ListItemKt.ListItem",
+      "componentIds": [
+        "m3/list-item"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.ListItemKt",
+        "callable": "androidx.compose.material3.ListItem",
+        "name": "ListItem",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "headlineContent",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "supportingContent",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "trailingContent",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "headlineContent",
+          "required": true
+        },
+        {
+          "name": "supportingContent",
+          "required": false
+        },
+        {
+          "name": "trailingContent",
+          "required": false
+        }
+      ],
+      "code": {
+        "call": "ListItem(headlineContent = {})",
+        "imports": [
+          "androidx.compose.material3.ListItem"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.AppBarKt.CenterAlignedTopAppBar",
+      "componentIds": [
+        "m3/center-aligned-top-app-bar"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.AppBarKt",
+        "callable": "androidx.compose.material3.CenterAlignedTopAppBar",
+        "name": "CenterAlignedTopAppBar",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "title",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "colors",
+          "type": "TopAppBarColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.TopAppBarColors"
+        },
+        {
+          "name": "scrollBehavior",
+          "type": "TopAppBarScrollBehavior?",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.TopAppBarScrollBehavior",
+          "nullable": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "title",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "CenterAlignedTopAppBar(title = {})",
+        "imports": [
+          "androidx.compose.material3.CenterAlignedTopAppBar"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.ExperimentalMaterial3Api"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.ExperimentalMaterial3Api"
+      ]
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.SliderKt.Slider",
+      "componentIds": [
+        "m3/slider"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.SliderKt",
+        "callable": "androidx.compose.material3.Slider",
+        "name": "Slider",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "value",
+          "type": "Float",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Float"
+        },
+        {
+          "name": "onValueChange",
+          "type": "(Float) -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function1"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "valueRange",
+          "type": "ClosedFloatingPointRange<Float>",
+          "hasDefault": true,
+          "typeFqn": "kotlin.ranges.ClosedFloatingPointRange"
+        },
+        {
+          "name": "steps",
+          "type": "Int",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Int"
+        }
+      ],
+      "slots": [],
+      "code": {
+        "call": "Slider(value = 0f, onValueChange = {})",
+        "imports": [
+          "androidx.compose.material3.Slider"
         ]
       },
       "signatureKnown": true
