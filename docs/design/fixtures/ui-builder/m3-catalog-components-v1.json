@@ -669,6 +669,12 @@
           "typeFqn": "kotlin.Boolean"
         },
         {
+          "name": "colors",
+          "type": "ButtonColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.ButtonColors"
+        },
+        {
           "name": "contentPadding",
           "type": "PaddingValues",
           "hasDefault": true,
@@ -726,6 +732,12 @@
           "typeFqn": "kotlin.Boolean"
         },
         {
+          "name": "colors",
+          "type": "ButtonColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.ButtonColors"
+        },
+        {
           "name": "contentPadding",
           "type": "PaddingValues",
           "hasDefault": true,
@@ -781,6 +793,12 @@
           "type": "Boolean",
           "hasDefault": true,
           "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "colors",
+          "type": "ButtonColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.ButtonColors"
         },
         {
           "name": "contentPadding",

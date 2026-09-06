@@ -430,7 +430,11 @@ object ScreenDocumentProjection {
           modifierLink(link, value, node, property)?.let { fromProperties += it }
           continue
         }
-        val target = PROPERTY_PARAMETERS[node.componentId]?.get(property)
+        // The variant's own target wins, because it describes the component actually being
+        // emitted; the catalog id's table is what the other values fall back to.
+        val target =
+          variant?.propertyTargets?.get(property)
+            ?: PROPERTY_PARAMETERS[node.componentId]?.get(property)
         if (target == null) {
           arguments[property] = value(value, node, property) ?: continue
           continue
@@ -1005,6 +1009,21 @@ object ScreenDocumentProjection {
           typeFqn = "androidx.compose.material3.CardColors",
         )
       }
+      if (target.kind == TargetKind.BUTTON_COLORS) {
+        // The card's argument one component family over, and it needs the same care for the same
+        // reason: all four `ButtonDefaults` factories return a `ButtonColors`, so `buttonColors`
+        // would compile on a `TextButton` and hand it the *filled* button's content and disabled
+        // colours for every role the designer did not set.
+        //
+        // `fab` never reaches here — `FloatingActionButton` takes a bare `Color` and says so
+        // through `ComponentVariant.propertyTargets`, which is the axis #393 added.
+        val color = value(value, node, property) ?: return null
+        return ScreenValue.Construct(
+          callableFqn = "$BUTTON_DEFAULTS.${variant?.defaults ?: "button"}Colors",
+          named = mapOf("containerColor" to color),
+          typeFqn = "androidx.compose.material3.ButtonColors",
+        )
+      }
       if (target.kind == TargetKind.SHAPE_TOKEN) {
         // Only the text spelling needs help. A `shapeToken` wrapper already resolves through the
         // same table in `value`, and the checked-in fixtures use it — narrowing this to strings
@@ -1048,6 +1067,7 @@ object ScreenDocumentProjection {
           )
         TargetKind.RENAME,
         TargetKind.CARD_COLORS,
+        TargetKind.BUTTON_COLORS,
         TargetKind.SHAPE_TOKEN -> error("handled above")
       }
     }
@@ -1550,6 +1570,8 @@ object ScreenDocumentProjection {
     SHAPE_TOKEN,
     /** A container colour Material 3 takes as a `CardColors` bundle. */
     CARD_COLORS,
+    /** The same, for the buttons whose colours live in a `ButtonColors` bundle. */
+    BUTTON_COLORS,
     /** A resting elevation in dp, which `Card` takes as a `CardElevation` bundle. */
     CARD_ELEVATION,
   }
@@ -1592,6 +1614,9 @@ object ScreenDocumentProjection {
           "iconKey" to ParameterTarget("imageVector", TargetKind.RENAME),
           "color" to ParameterTarget("tint", TargetKind.RENAME),
         ),
+      // Three of the four styles; `fab` overrides this in `COMPONENT_VARIANTS` because it takes a
+      // bare `Color` on a different parameter.
+      "m3/button" to mapOf("containerColor" to ParameterTarget("colors", TargetKind.BUTTON_COLORS)),
       "layout/row" to
         mapOf(
           "horizontalSpacingDp" to
@@ -1774,6 +1799,22 @@ object ScreenDocumentProjection {
      * `weight` inside a floating action button refuse where one inside a `TextButton` does not.
      */
     val slotScopes: Map<String, String> = emptyMap(),
+    /**
+     * The [ParameterTarget] **this** component takes for a property, where it differs from the one
+     * the catalog id's own table names.
+     *
+     * [defaults] already made a *factory* vary with the variant — that is how `m3/card` picks
+     * `elevatedCardColors` over `cardColors` — and for three of `m3/button`'s four values that is
+     * the whole difference: the same `colors` parameter, a different `ButtonDefaults` function.
+     *
+     * `fab` is the one it could not express. `FloatingActionButton` takes `containerColor: Color`
+     * directly, so the property lands on a **different parameter** holding a **different shape** —
+     * a bare `Color` rather than a `ButtonColors` bundle — and no choice of factory says that. An
+     * entry here replaces the table's target outright, which is why the value is a whole
+     * [ParameterTarget] rather than a parameter name
+     * ([#393](https://github.com/yschimke/compose-preview-server/issues/393)).
+     */
+    val propertyTargets: Map<String, ParameterTarget> = emptyMap(),
   )
 
   private val COLUMN_CONTENT = mapOf("content" to COLUMN_SCOPE)
@@ -1823,7 +1864,15 @@ object ScreenDocumentProjection {
             ComponentVariant(FILLED_TONAL_BUTTON_ID, "filledTonalButton", ROW_CONTENT),
           "text" to ComponentVariant(TEXT_BUTTON_ID, "textButton", ROW_CONTENT),
           // No slot scopes: `FloatingActionButton`'s content is a plain `@Composable () -> Unit`.
-          "fab" to ComponentVariant(FAB_ID, "floatingActionButton"),
+          // And the one property target that does not follow the others: a bare `Color` on
+          // `containerColor`, where the other three build a `ButtonColors` bundle for `colors`.
+          "fab" to
+            ComponentVariant(
+              FAB_ID,
+              "floatingActionButton",
+              propertyTargets =
+                mapOf("containerColor" to ParameterTarget("containerColor", TargetKind.RENAME)),
+            ),
         ),
       "m3/icon-button" to
         mapOf(
@@ -1900,6 +1949,8 @@ object ScreenDocumentProjection {
   private val IDENTITY_PROPERTIES: Set<String> = setOf("scrollStateKey", "stableKey")
 
   private const val SPAN = "span"
+
+  private const val BUTTON_DEFAULTS = "androidx.compose.material3.ButtonDefaults"
 
   private const val PROGRESS_INDICATOR = "m3/progress-indicator"
   private const val PROGRESS = "progress"
