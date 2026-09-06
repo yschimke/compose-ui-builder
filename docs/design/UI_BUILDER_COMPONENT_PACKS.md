@@ -113,7 +113,7 @@ so the keys are literals on that side, exactly as `previewSurfaces` is.
 | Surface | What changes |
 | --- | --- |
 | **Runtime** (`CurrentM3UiBuilderCatalogExecutor`) | Takes `packs: List<UiBuilderComponentPackSource>`. Each enabled catalog receives the packs of its platform: components appended, one insert-panel shelf per pack named for it, `componentPacks` written. An id a pack redeclares, a pack id that is also an enabled catalog, or a duplicate pack id is a startup failure. Validation is unchanged — a pack node is a node of the catalog. The pin is untouched. |
-| **Server** (`--ui-builder-packs <catalog>=<platform>`) | Reads the pack's record from `--ui-builder-components <pack>=<components.json>` at startup, projects it, passes it to the runtime. A pack with no record refuses to start, naming the flag. The export executor merges each *used* pack's aliased record into the design catalog's; the native lane compiles a design that uses a pack against the **pack's** bundle — the one classpath carrying both the pack's classes and the Material 3 the catalog names — and refuses a design mixing two packs (`MIXED_PACKS`), since no served bundle carries both. |
+| **Server** (`--ui-builder-packs <catalog>=<platform>`) | Reads the pack's record at startup — from `--ui-builder-components <pack>=<components.json>` where the operator named one, otherwise from the **served catalog's own delivery branch** (see below) — projects it, and passes it to the runtime. A record the operator named that will not load is a startup failure; a served catalog that supplies none is a warning and an absent shelf, because the catalog may simply not have republished yet. The export executor merges each *used* pack's aliased record into the design catalog's; the native lane compiles a design that uses a pack against the **pack's** bundle — the one classpath carrying both the pack's classes and the Material 3 the catalog names — and refuses a design mixing two packs (`MIXED_PACKS`), since no served bundle carries both. |
 | **Editor** | The palette hides a pack's shelf until the pack is switched on; search does not find what the switch hides. **Component packs…** in the toolbar overflow (and a summary row at the top of the insert panel) opens a dialog with one switch per pack. The choice is remembered per catalog in the browser (`localStorage`), because which shelves a palette shows is a preference of the person at the keyboard, not a fact about the document. The canvas draws a pack node as a dashed, captioned outline holding its children; the code pane and the problems panel generate from the embedded record plus the pack's components projected back into record shape, so a pack node is never reported as "no component in this catalog". |
 | **New design chooser** | Catalogs are grouped by platform — Mobile, Wear, Remote Compose — once more than one platform is enabled. A catalog the chooser has no templates for gets a card named after itself with a blank starting point, rather than silently missing. |
 
@@ -128,16 +128,36 @@ is diffed without anyone remembering to render it.
 
 ```text
 --ui-builder-catalogs m3-catalog,remote-m3,wear-m3
---ui-builder-components m3-catalog=<m3 components.json>,confetti-mobile=<confetti components.json>
 --ui-builder-packs confetti-mobile=mobile
 ```
 
-The packaged image reads the same from `SERVE_UI_BUILDER_PACKS` and `SERVE_UI_BUILDER_COMPONENTS`.
-Admitting a pack only makes it *available*; an author switches it on from the editor.
+The packaged image reads the same from `SERVE_UI_BUILDER_PACKS`. Admitting a pack only makes it
+*available*; an author switches it on from the editor.
 
-`components.json` is a build output of the pack's own module (`build/compose-previews/components.json`
-after `composePreviewDiscover`), which is why the flag takes a file: the delivery branch a served
-catalog is fetched from does not yet carry it. That is the first follow-up below.
+### Where the record comes from
+
+A pack is projected from the served catalog's own component record, and the server finds that
+record on the catalog's delivery branch by the same route it fetches everything else:
+
+1. the file `catalog.json` declares as `componentsFile` (the design-artifacts pipeline publishes
+   `components.json` beside `catalog.json`); failing that,
+2. the `components.json` entry inside the catalog's **live bundle**, which the Gradle plugin has
+   packed into every bundle since component records existed.
+
+`ServeCatalogStore` stages whichever it finds at the generation root
+(`<catalog dir>/components.json`, read back by `componentRecord`) on every load, so the export
+path always generates against the served catalog's current record. A pack, being a startup fact,
+cannot wait for that load — catalogs load in the background, for minutes — so the builder lane
+asks the store to fetch the record ahead of the load (`fetchComponentRecord`) and keeps that file
+as the export's fallback until the catalog has published a generation of its own.
+
+`--ui-builder-components <catalog>=<components.json>` still exists and still wins, for a catalog
+that publishes no record (one rendered before records existed, or a local module) and for the
+packaged `m3-catalog` record. It is no longer needed to admit a pack.
+
+A catalog whose bundle predates records — `confetti-mobile` at the time of writing was rendered by
+compose-preview 1.14.1 — yields no record, so the pack is logged as not offered rather than failing
+startup, and appears on its next publish.
 
 ## What this deliberately does not do
 
@@ -158,10 +178,9 @@ catalog is fetched from does not yet carry it. That is the first follow-up below
 
 ## Follow-ups
 
-1. **Carry `components.json` in the delivery branch**, so a served catalog can be admitted as a pack
-   without an operator copying a build output onto the box. That is a compose-ai-tools change (the
-   design-artifacts pipeline) plus reading it out of the bundle in `ServeCatalogStore`; once it lands,
-   `--ui-builder-packs confetti-mobile=mobile` needs no matching `--ui-builder-components` entry.
+1. ~~**Carry `components.json` in the delivery branch.**~~ Done: the server reads the served
+   catalog's record (declared file, else the live bundle), and the design-artifacts pipeline
+   publishes `components.json` beside `catalog.json`. A pack's record is no longer a flag.
 2. **Authored overrides for a pack** — the `stateCallback` role, enum constants, slot policy — as
    the sidecar `UI_BUILDER_ON_THE_COMPONENT_RECORD.md` describes, so a pack can grow from passable to
    good without becoming a hand-written catalog.

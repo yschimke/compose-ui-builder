@@ -445,13 +445,16 @@ not call it. The operator admits one:
 
 ```text
 --ui-builder-packs confetti-mobile=mobile
---ui-builder-components m3-catalog=<components.json>,confetti-mobile=<confetti components.json>
 ```
 
 The pack's components are projected from that catalog's own discovered component record — every
 composable of the project's own the producer proved a call site for, with its literal parameters as
-properties and its `@Composable` lambdas as slots — so nothing is transcribed by hand. Admitting a
-pack only makes it available. In the editor, **Component packs…** in the toolbar overflow (or
+properties and its `@Composable` lambdas as slots — so nothing is transcribed by hand. The record
+comes from the served catalog's delivery branch (the `components.json` published beside
+`catalog.json`, or the one inside its live bundle); a catalog rendered before records existed
+yields none, and the pack is logged as not offered until it republishes. Only a catalog that
+publishes no record needs `--ui-builder-components <catalog>=<components.json>`. Admitting a pack
+only makes it available. In the editor, **Component packs…** in the toolbar overflow (or
 **Packs…** at the top of the Insert panel) lists the packs the host admitted with a switch each;
 switch one on and its components appear on a shelf named for the pack. The choice is remembered per
 catalog in your browser, not in the design.
