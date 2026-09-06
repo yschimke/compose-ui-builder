@@ -210,6 +210,12 @@ public data class UiBuilderServiceDiagnostics(
   val timedOutExports: Long,
   val activeMutationBuckets: Int,
   val persistenceMigrations: Long,
+  /**
+   * Stored designs the current catalog or limits cannot serve, which are loaded but answer every
+   * request naming them with the reason. They do not stop the service starting, so this is how an
+   * operator learns they exist without opening one.
+   */
+  val unusableDesigns: Int = 0,
 )
 
 public interface UiBuilderServiceDiagnosticsSource {

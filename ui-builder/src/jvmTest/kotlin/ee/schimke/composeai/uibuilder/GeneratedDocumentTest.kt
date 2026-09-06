@@ -208,15 +208,21 @@ class GeneratedDocumentTest {
 
   /**
    * A component the record covers, inserted from the palette with the defaults the palette gives
-   * it, produces a document that exports to Kotlin. One does not, and it is a bug in what the
-   * insert writes — see [PALETTE_INSERTS_THAT_DO_NOT_EXPORT].
+   * it, produces a document that exports to Kotlin. Every one of them, with no exceptions left.
+   *
+   * There were two when this was written, and both were bugs in what the insert writes rather than
+   * in the exporter: `m3/button` arrived carrying an empty `leadingIcon` the record had no
+   * parameter for, and `m3/progress-indicator` arrived determinate, which needs a `progress: () ->
+   * Float` no value in the document vocabulary can be. The slot was withdrawn in #430 and the
+   * determinate export landed in #435, and this test is how the second one was noticed: it had been
+   * pinned as known, so fixing it turned this red and asked for the pin to go.
    *
    * This is the test the checked-in goldens cannot be: they replay hand-authored operation lists,
    * which write only the slots and properties somebody meant to write, where an insert writes
    * everything the catalog declares.
    */
   @Test
-  fun `a palette insert of a recorded component exports, except the one known bug`() {
+  fun `every recorded component exports after a palette insert`() {
     val box = blank.nodes.values.first { it.componentId == "layout/box" }.id
     val refused =
       catalog.components
@@ -232,7 +238,7 @@ class GeneratedDocumentTest {
         }
         .toSet()
 
-    assertEquals(PALETTE_INSERTS_THAT_DO_NOT_EXPORT, refused)
+    assertEquals(emptySet(), refused)
   }
 
   /** Structural, catalog and round-trip validity — the tiers that hold for every document. */
@@ -270,7 +276,7 @@ class GeneratedDocumentTest {
    */
   private fun assertExportAgreesWithTheRecord(document: UiBuilderDocument, case: String) {
     val used = document.nodes.values.map { it.componentId }.toSet()
-    val expected = used - recordedComponentIds + (used intersect PALETTE_INSERTS_THAT_DO_NOT_EXPORT)
+    val expected = used - recordedComponentIds
     val generated = reducer.generatedCode(document)
     if (expected.isEmpty()) {
       assertEquals(
@@ -298,29 +304,6 @@ class GeneratedDocumentTest {
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 
   private companion object {
-    /**
-     * Components the record covers, whose *palette insert* the Compose export nonetheless refuses.
-     *
-     * Both are bugs in what the insert writes rather than in the exporter, and both are
-     * yschimke/compose-preview-server#430:
-     *
-     * `m3/progress-indicator` arrives determinate, carrying a `progress` number, and a determinate
-     * indicator takes `progress: () -> Float` — a lambda no value in the document vocabulary can
-     * be. The indeterminate form is the one that exports, and is what an insert should default to
-     * (yschimke/compose-preview-server#430).
-     *
-     * `m3/button` was the other, and is fixed: it arrived carrying an empty `leadingIcon`, because
-     * the insert writes an entry for every slot the catalog declares and Material's `Button` has no
-     * such parameter, so the export refused on the key being *present*, empty or not. That made
-     * every design holding a button unexportable, dialogs included, since a dialog is seeded with
-     * two of them. The slot is gone from the catalog.
-     *
-     * Neither was caught by the checked-in goldens, which are hand-authored operation lists rather
-     * than the editor's own inserts: the Jetcaster fixture exports three buttons happily because
-     * none of them carries the key the editor would have written.
-     */
-    val PALETTE_INSERTS_THAT_DO_NOT_EXPORT = setOf("m3/progress-indicator")
-
     /**
      * Fixed rather than drawn from the clock: a generative test that cannot be re-run on the seed
      * that failed is a bug report nobody can act on. Twenty seeds is what fits in the `check` lane;

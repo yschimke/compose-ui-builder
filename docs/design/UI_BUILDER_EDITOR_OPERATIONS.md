@@ -93,6 +93,18 @@ selection does not resolve to, which is what stops a stale panel writing into a 
 Seeds are fixed, so a failure reproduces from the seed alone. The catalog is the grammar, so a
 component or slot added to it is generated the day it is declared.
 
+[`EditSequenceTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/EditSequenceTest.kt)
+runs the operations that are not inserts — move, delete, duplicate, wrap, unwrap, copy, cut, paste,
+property writes, undo and redo — in whatever order a seeded walk puts them, against whatever the
+selection happens to be, and without consulting the `can…` guards. Those guards decide what the
+toolbar offers; the reducer is what has to hold when something is asked for anyway, which is what a
+stale panel, a keyboard shortcut or a racing collaborator produces. Two invariants after every
+event: the document changes **only** through an accepted command, and every document it passes
+through is valid — each intermediate one, not just the last, because that is what a collaborator's
+screen, an autosave and an export all see. Undo has its own: it restores the previous document
+node-for-node. Both tests assert a floor on how many events actually edited and how many were
+refused, so a walk that quietly became a no-op fails rather than passes.
+
 [`MutatedDocumentTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/MutatedDocumentTest.kt)
 is the other direction: it takes a generated document, breaks exactly one rule, and asserts the code
 that names it — an incompatible slot child, a required slot emptied, a slot past its maximum, a
@@ -115,10 +127,12 @@ What they found, each pinned by the test that found it so the list cannot grow q
   empty or not. Dialogs refused three times over, being seeded with two buttons. The slot is gone:
   Material's `Button` takes one content lambda and an icon goes inside it, beside the label
   ([#430](https://github.com/yschimke/compose-preview-server/issues/430)).
-- **A progress indicator inserted from the palette still cannot be exported.** It arrives
-  determinate, and a determinate one takes `progress: () -> Float`, a lambda no value in the
-  document vocabulary can be. The indeterminate form is what exports, and is what the insert should
-  default to (same issue).
+- **A progress indicator inserted from the palette could not be exported.** It arrived determinate,
+  and a determinate one takes `progress: () -> Float`, a lambda no value in the document vocabulary
+  can be. Fixed by [#435](https://github.com/yschimke/compose-preview-server/pull/435), which the
+  suite noticed on its own: the case had been pinned as a known failure, so the fix turned the test
+  red and asked for the pin to go. Nothing is pinned there now — every recorded component exports
+  after a palette insert, unconditionally.
 - **Nothing bounds the root count before export**, so a design with zero or two roots can be stored
   and never exported ([#429](https://github.com/yschimke/compose-preview-server/issues/429)).
 
@@ -131,14 +145,43 @@ the editor would have written.
 ### An empty slot entry outlives its declaration
 
 Withdrawing `m3/button.leadingIcon` would have invalidated every design anybody had saved, because
-every button the editor ever inserted carries an empty `leadingIcon` key — and the persisted store
-is validated on load, so "invalid" there means the service does not start.
+every button the editor ever inserted carries an empty `leadingIcon` key — and at the time the
+persisted store was validated on load, so "invalid" there meant the service did not start. (It no
+longer does; see [validity is checked late](#validity-is-checked-late-so-the-service-always-starts)
+below. Both changes are worth having: one keeps documents valid, the other keeps one that is not
+from taking the server down with it.)
 
 So an entry with **no children** for a slot the catalog does not declare is not a finding, in
 `CapabilityValidator` and in the server's catalog validation alike. It says nothing is in that slot,
 which is exactly what leaving the key out says, and it lets the catalog drop a slot without
 invalidating documents that never used one. A child in an undeclared slot is still `UNKNOWN_SLOT`,
 because that child would otherwise be silently dropped.
+
+### Validity is checked late, so the service always starts
+
+The persisted store used to be validated in the service's constructor: every stored design against
+the current catalog, the current limits and the topology rules, throwing on the first one that
+failed. So one design could stop the whole server coming up, in a store that may hold a thousand.
+
+The shapes that trigger it are ordinary rather than exotic. A catalog revision moves and every
+design pinned to the old one stops resolving. An operator stops serving a catalog, or tightens a
+per-design node limit. Withdrawing a slot did it, which is how this was found. In every one of those
+the blast radius — the whole service — had no relationship to the cause.
+
+So the check moved to the point of use. Every design loads; one that cannot be served is recorded
+with the reason and **every request naming it is answered with that reason** — `CATALOG_UNAVAILABLE`
+when its pin no longer resolves, `INTERNAL` otherwise — including subscribing, which is the other
+door in. It still appears in the design list, because a design nobody can open is bad and one nobody
+can see is worse. `diagnostics().unusableDesigns` counts them, so an operator learns they exist
+without opening one. `UnusableStoredDesignTest` in `:ui-builder-runtime` holds all of that.
+
+**Integrity is the line this does not cross.** A state file whose checksum does not match, that is
+truncated, or that declares a persistence format this build cannot read is still refused outright by
+the storage layer before any of this runs, and `restoreBackup` is the recovery. Trusting a file that
+failed those checks would be worse than not starting; carrying a design the catalog outgrew is not.
+The format migration is not gated on design validity either, for the same reason the startup check
+was not kept: an unservable design must not be able to block the one path an operator has to move
+the store forward.
 
 ## Starter content
 

@@ -293,39 +293,97 @@ public class PersistentUiBuilderService(
       timedOutExports = timedOutExports.get(),
       activeMutationBuckets = mutationBuckets.size,
       persistenceMigrations = persistenceMigrations.get(),
+      unusableDesigns = unusableDesigns.size,
     )
   }
 
   init {
-    validatePersisted(persisted)
     persisted.designs.forEach { (designId, _) -> runtime[designId] = RuntimeDesign() }
   }
 
-  private fun validatePersisted(value: PersistedServiceV1) {
-    require(value.designs.size <= limits.maximumDesigns) {
-      "stored design count exceeds configured limit"
+  /**
+   * Why one stored design cannot be served, held rather than thrown.
+   *
+   * A design the current catalog or limits no longer accept used to be fatal: the check ran in
+   * `init`, so the service could not be constructed, so **the server did not start** — over one
+   * design, in a store that may hold a thousand. And it is not a rare shape. A catalog revision
+   * moves and every design pinned to the old one stops resolving; an operator stops serving a
+   * catalog, or tightens a node limit, and everything authored against it is unloadable. The blast
+   * radius of a content change had no relationship to its cause.
+   *
+   * So the check moved to the point of use. Every design loads, one that cannot be served is
+   * recorded here with the reason, and any request naming it is answered with that reason. A design
+   * nobody asks for costs nothing, the rest of the store works, and `diagnostics()` counts them so
+   * this is visible without opening one.
+   *
+   * The line this does **not** cross is integrity. A state file whose checksum does not match, that
+   * is truncated, or that declares a format this build cannot read is still refused by the storage
+   * layer before any of this runs, and `restoreBackup` is the recovery. Trusting a file that failed
+   * those checks would be worse than not starting; carrying a design the catalog outgrew is not.
+   */
+  private data class UnusableDesign(val code: ServiceErrorCodeV1, val reason: String)
+
+  private val unusableDesigns: Map<String, UnusableDesign> =
+    persisted.designs
+      .mapNotNull { (designId, design) -> unusableReason(designId, design)?.let { designId to it } }
+      .toMap()
+
+  private fun unusableReason(designId: String, design: PersistedDesignV1): UnusableDesign? {
+    fun internal(reason: String) = UnusableDesign(ServiceErrorCodeV1.INTERNAL, reason)
+    if (designId != design.document.id) {
+      return internal("stored design key/id mismatch for $designId")
     }
-    value.designs.forEach { (designId, design) ->
-      require(designId == design.document.id) { "stored design key/id mismatch for $designId" }
-      require(design.document.nodes.size <= limits.maximumNodesPerDesign) {
-        "stored node count exceeds configured limit for $designId"
-      }
-      documentQuotaIssue(design.document)?.let {
-        throw UiBuilderPersistenceException("stored design $designId exceeds configured limit: $it")
-      }
-      validateTopology(design.document)?.let {
-        throw UiBuilderPersistenceException("invalid stored design $designId: ${it.message}")
-      }
-      val catalog =
-        catalogs.resolve(design.document.catalogPin)
-          ?: throw UiBuilderPersistenceException("catalog unavailable for stored design $designId")
-      catalogs.validate(design.document, catalog)?.let {
-        throw UiBuilderPersistenceException("invalid stored design $designId: ${it.message}")
-      }
+    if (design.document.nodes.size > limits.maximumNodesPerDesign) {
+      return internal("stored node count exceeds configured limit for $designId")
     }
+    documentQuotaIssue(design.document)?.let {
+      return internal("stored design $designId exceeds configured limit: $it")
+    }
+    validateTopology(design.document)?.let {
+      return internal("invalid stored design $designId: ${it.message}")
+    }
+    // The most likely reason by far, and the one worth its own code: the pin names a catalog
+    // revision this deployment no longer serves. Nothing is wrong with the document.
+    val catalog =
+      catalogs.resolve(design.document.catalogPin)
+        ?: return UnusableDesign(
+          ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
+          "catalog unavailable for stored design $designId",
+        )
+    catalogs.validate(design.document, catalog)?.let {
+      return internal("invalid stored design $designId: ${it.message}")
+    }
+    return null
   }
 
+  /**
+   * The design a request is about, or null for the requests that are about none of them.
+   *
+   * Listing is deliberately in the second group: a design that cannot be served still appears, so
+   * an operator can see that it is there. Hiding it would make it unfindable as well as unusable.
+   */
+  private fun UiBuilderServiceRequest.designId(): String? =
+    when (this) {
+      is UiBuilderServiceRequest.OpenDesign -> designId
+      is UiBuilderServiceRequest.GetDesignAccess -> designId
+      is UiBuilderServiceRequest.UpdateDesignAccess -> designId
+      is UiBuilderServiceRequest.PreviewCatalogUpgrade -> designId
+      is UiBuilderServiceRequest.ApplyOperation -> submission.designId
+      is UiBuilderServiceRequest.GetSnapshot -> designId
+      is UiBuilderServiceRequest.GetDelta -> designId
+      is UiBuilderServiceRequest.UpdatePresence -> designId
+      is UiBuilderServiceRequest.ExportDesign -> designId
+      UiBuilderServiceRequest.ListCatalogs,
+      is UiBuilderServiceRequest.CreateDesign,
+      is UiBuilderServiceRequest.ListDesigns -> null
+    }
+
   override suspend fun execute(call: UiBuilderServiceCall): UiBuilderServiceResponse {
+    call.request.designId()?.let { designId ->
+      unusableDesigns[designId]?.let {
+        return UiBuilderServiceResponse.Error(UiBuilderServiceError(it.code, it.reason))
+      }
+    }
     if (call.request is UiBuilderServiceRequest.ExportDesign) return export(call)
     val execution = lock.withLock { executeLocked(call) }
     drain(execution.mailboxes)
@@ -339,6 +397,9 @@ public class PersistentUiBuilderService(
     val subscriberId: Long
     val mailbox: SubscriberMailbox
     lock.withLock {
+      unusableDesigns[call.designId]?.let {
+        throw UiBuilderSubscriptionRejectedException(UiBuilderServiceError(it.code, it.reason))
+      }
       val design =
         persisted.designs[call.designId]
           ?: throw UiBuilderSubscriptionRejectedException(notFound(call.designId))
@@ -2156,7 +2217,13 @@ public class PersistentUiBuilderService(
         ?: throw UiBuilderPersistenceException(
           "persistence migration requires recoverable migration storage"
         )
-    validatePersisted(persisted)
+    // Deliberately not gated on every stored design being servable. This rewrites the envelope
+    // format and does not reinterpret a single document, so a design the current catalog cannot
+    // serve is no reason to refuse — and refusing would put back, in an operator's one recovery
+    // path, exactly the trap that moving validation off startup removed: one design pinned to a
+    // withdrawn catalog and the migration can never be run. What this step does need is proved
+    // below and is about the bytes: the preflight round trip, the durable readback, and the
+    // rollback if either disagrees.
     val migratedBytes = encode(persisted, PersistenceFormat.V2)
     val preflight = decode(migratedBytes)
     check(preflight.format == PersistenceFormat.V2 && preflight.value == persisted) {
