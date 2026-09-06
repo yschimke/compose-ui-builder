@@ -112,24 +112,8 @@ internal class RemoteContentEmitter(
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node))
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
-      // Named separately from the fallback because the reason is different in kind, and a designer
-      // reading "has no Remote Compose counterpart" about a component that is *entirely* a Remote
-      // Compose one would go looking for the wrong fix.
-      //
-      // A custom component is a `LAYOUT_CUSTOM` operation naming a renderer the host registers.
-      // Every published creation-side API this generator writes against — `remote-creation-compose`
-      // and `remote-material3` — is layout, text, state and modifiers; none of them emits that
-      // operation, and no symbol here can be guessed for it without handing somebody a file that
-      // does not compile. So the canvas authors it, the player draws it wherever the document
-      // already carries it, and the generator says out loud that it cannot write one yet.
       REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
-        emptyList<String>().also {
-          refusals +=
-            "the custom component `${node.id}` names the host renderer " +
-              "`${node.properties["name"]?.stringOrNull().orEmpty()}`, and no published " +
-              "remote-creation API writes the custom operation that carries it — author the body " +
-              "and register the renderer by hand, or embed a document that already contains one"
-        }
+        customComponent(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       REMOTE_COMPOSE_INLINE_COMPONENT_ID ->
         emptyList<String>().also {
           refusals +=
@@ -287,6 +271,58 @@ internal class RemoteContentEmitter(
   }
 
   /**
+   * `RemoteCustomComponent(name = "field", …)` — the way host content gets back inside a document.
+   *
+   * A custom component is a `LAYOUT_CUSTOM` operation naming a renderer the *host* registers, so
+   * what the body writes is the hole and its reserved bounds, and never the content filling it. The
+   * node's `content` slot is therefore deliberately not walked: those children are ordinary Compose
+   * the application draws under this name, and emitting them here would put host composables inside
+   * a `@RemoteComposable` body, which is the one thing the vocabulary cannot do.
+   *
+   * The size comes from the node's `widthDp`/`heightDp` rather than from the content, for the
+   * reason the capability states: a player lays a custom component out from the document, which
+   * cannot measure content it does not have. Both absent is legal and emits no size — the component
+   * then takes whatever its parent gives it, which is what an author who set neither asked for.
+   *
+   * `RemoteCustomComponent` is `@RestrictTo(LIBRARY_GROUP)`, which is why both generated files open
+   * with `@file:Suppress("RestrictedApi")`: the call compiles, and the annotation is a lint opinion
+   * about who upstream expects to call it rather than a guarantee it will keep working.
+   */
+  private fun customComponent(node: UiBuilderNode, pad: String): String? {
+    // `name` is what the operation carries and what the host looks the renderer up by, so a blank
+    // one is not a component with a default — it is a hole nothing can ever fill. Refused by name
+    // rather than emitted as `""`, which would compile and draw nothing on every player.
+    val name = node.properties["name"]?.stringOrNull().orEmpty()
+    if (name.isBlank()) {
+      refusals +=
+        "the custom component `${node.id}` has no name, and a custom operation is only reachable " +
+          "by the name the host registers its renderer under — give it one in the inspector"
+      return null
+    }
+    usesCustomComponent = true
+    val width = node.properties["widthDp"]?.numberOrNull()?.takeIf { it > 0f }
+    val height = node.properties["heightDp"]?.numberOrNull()?.takeIf { it > 0f }
+    // Reserved bounds first, then whatever the author put on the node: a `padding` after a `size`
+    // insets the content of a box that size, which is what an author dragging a padding onto a
+    // sized component means, and the reverse would silently grow the hole.
+    val reserved =
+      when {
+        width != null && height != null ->
+          listOf("size(${width.dpLiteral()}, ${height.dpLiteral()})").also {
+            usedModifierImports += "size"
+          }
+        width != null ->
+          listOf("width(${width.dpLiteral()})").also { usedModifierImports += "width" }
+        height != null ->
+          listOf("height(${height.dpLiteral()})").also { usedModifierImports += "height" }
+        else -> emptyList()
+      }
+    val arguments = mutableListOf("name = \"${name.escaped()}\"")
+    node.modifierExpression(reserved)?.let { arguments += "modifier = $it" }
+    return call("RemoteCustomComponent", arguments, pad)
+  }
+
+  /**
    * `LottieAnimation(json = …)` — Horologist's Lottie **compiler**, called with the animation this
    * element carries.
    *
@@ -381,6 +417,9 @@ internal class RemoteContentEmitter(
     if (usesBox) imports += "androidx.compose.remote.creation.compose.layout.RemoteBox"
     if (usesColumn) imports += "androidx.compose.remote.creation.compose.layout.RemoteColumn"
     imports += "androidx.compose.remote.creation.compose.layout.RemoteComposable"
+    if (usesCustomComponent) {
+      imports += "androidx.compose.remote.creation.compose.layout.RemoteCustomComponent"
+    }
     if (usesRow) imports += "androidx.compose.remote.creation.compose.layout.RemoteRow"
     if (usesLottie) imports += "com.google.android.horologist.remotecompose.lottie.LottieAnimation"
     if (usesRemoteFloat) imports += "androidx.compose.remote.creation.compose.state.rf"
@@ -438,6 +477,7 @@ internal class RemoteContentEmitter(
   private fun vertical(call: String): String = call.also { usesVerticalGradient = true }
 
   private var usesModifier = false
+  private var usesCustomComponent = false
   private var usesLottie = false
   private var usesRemoteFloat = false
   private var usesSp = false
@@ -445,33 +485,39 @@ internal class RemoteContentEmitter(
   private var usesVerticalGradient = false
   private val usedModifierImports = mutableSetOf<String>()
 
-  private fun UiBuilderNode.modifierExpression(): String? {
-    val parts = modifiers.mapNotNull { element ->
-      val modifier = element as? JsonObject ?: return@mapNotNull null
-      when (val type = modifier["type"]?.stringValue()) {
-        "fillMaxSize" -> {
-          usedModifierImports += "fillMaxSize"
-          "fillMaxSize()"
+  /**
+   * @param leading modifier calls this emitter derived from the node's own properties, applied
+   *   before the authored chain.
+   */
+  private fun UiBuilderNode.modifierExpression(leading: List<String> = emptyList()): String? {
+    val parts =
+      leading +
+        modifiers.mapNotNull { element ->
+          val modifier = element as? JsonObject ?: return@mapNotNull null
+          when (val type = modifier["type"]?.stringValue()) {
+            "fillMaxSize" -> {
+              usedModifierImports += "fillMaxSize"
+              "fillMaxSize()"
+            }
+            "fillMaxWidth" -> {
+              usedModifierImports += "fillMaxWidth"
+              "fillMaxWidth()"
+            }
+            "padding" -> {
+              usedModifierImports += "padding"
+              val start = modifier["startDp"]?.numberValue() ?: 0f
+              val top = modifier["topDp"]?.numberValue() ?: 0f
+              val end = modifier["endDp"]?.numberValue() ?: 0f
+              val bottom = modifier["bottomDp"]?.numberValue() ?: 0f
+              "padding(${start.dpLiteral()}, ${top.dpLiteral()}, ${end.dpLiteral()}, ${bottom.dpLiteral()})"
+            }
+            null -> null
+            else -> {
+              refusals += "the `$type` modifier on `$id` has no RemoteModifier counterpart here"
+              null
+            }
+          }
         }
-        "fillMaxWidth" -> {
-          usedModifierImports += "fillMaxWidth"
-          "fillMaxWidth()"
-        }
-        "padding" -> {
-          usedModifierImports += "padding"
-          val start = modifier["startDp"]?.numberValue() ?: 0f
-          val top = modifier["topDp"]?.numberValue() ?: 0f
-          val end = modifier["endDp"]?.numberValue() ?: 0f
-          val bottom = modifier["bottomDp"]?.numberValue() ?: 0f
-          "padding(${start.dpLiteral()}, ${top.dpLiteral()}, ${end.dpLiteral()}, ${bottom.dpLiteral()})"
-        }
-        null -> null
-        else -> {
-          refusals += "the `$type` modifier on `$id` has no RemoteModifier counterpart here"
-          null
-        }
-      }
-    }
     if (parts.isEmpty()) return null
     usesModifier = true
     return parts.joinToString(".", prefix = "RemoteModifier.")

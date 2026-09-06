@@ -23,8 +23,10 @@ package ee.schimke.composeai.uibuilder
  * ## Refusals are by name
  *
  * The same discipline as the other two. A node the vocabulary cannot write is refused and said out
- * loud — a custom component most of all, because that is the one an author is most likely to reach
- * for and the one no published creation API can emit yet.
+ * loud, by name and with the reason, rather than approximated into something that does not compile.
+ * A custom component is no longer one of them — `remote-creation-compose` publishes
+ * `RemoteCustomComponent`, so [RemoteContentEmitter] writes the operation from the node — but an
+ * *unnamed* one still is, because the name is the whole contract with the host.
  */
 public object InlineRemoteContentExporter {
 

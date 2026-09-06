@@ -228,13 +228,20 @@ a design makes. `InlineRemoteContentExporter` writes the half that is the design
 `@RemoteComposable` function — and the editor's generated-code pane shows it beneath whatever the
 screen generator said, so a design holding remote content is never answered with a bare refusal.
 
-The one node no generator can write is the custom component itself. Every published creation-side API
-this repository writes against — `remote-creation-compose`, `remote-foundation`, `remote-material3` —
-is layout, text, state and modifiers; none of them emits the custom operation. So it is refused by
-name, with the reason, in the same discipline `WearWidgetCodeExporter` refuses an image background:
-the canvas authors it, a player draws it wherever a document already carries it, and the generator
-says out loud what it cannot write rather than handing somebody a file that does not compile. A
-creation-side API for the operation is what closes this, and nothing else is missing.
+The custom component used to be the one node no generator could write, and it is not any more.
+`remote-creation-compose` 1.0.0-alpha18 publishes
+`RemoteCustomComponent(name, modifier, properties)`, which emits the `LAYOUT_CUSTOM` operation
+directly, so `RemoteContentEmitter` writes it from the node's `name` and reserves the node's
+`widthDp`/`heightDp` as `RemoteModifier.size(…)` — the bounds a player lays the component out from,
+since it cannot measure content it does not have. What the body never writes is the node's `content`
+slot: those children are host Compose the application draws under that name, and a
+`@RemoteComposable` body calling them is the one thing the vocabulary cannot do. An **unnamed** node
+is still refused, because a hole nothing can be registered against is not a component with a default.
+
+`RemoteCustomComponent` is `@RestrictTo(LIBRARY_GROUP)` upstream. Both generated files already open
+with `@file:Suppress("RestrictedApi")`, so the call compiles and lints clean; what the annotation
+costs is a promise — a restricted API can change shape between alphas, and this call site is one of
+the places a `remote-creation-compose` bump has to be read against.
 
 ## Named slots
 

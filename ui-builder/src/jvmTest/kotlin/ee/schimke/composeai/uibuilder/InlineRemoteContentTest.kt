@@ -8,6 +8,8 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
@@ -101,7 +103,7 @@ class InlineRemoteContentTest {
 
   @Test
   fun `the generated-code pane shows the remote body even when the screen refuses`() {
-    val generated = UiBuilderEditorReducer(catalog).generatedCode(screenWithoutCustomComponent())
+    val generated = UiBuilderEditorReducer(catalog).generatedCode(screenWithRemoteContent())
 
     val source = assertIs<EditorGeneratedCode.Source>(generated)
     assertTrue("@RemoteComposable" in source.kotlin, source.kotlin)
@@ -110,6 +112,36 @@ class InlineRemoteContentTest {
       "The screen around this content is not generated" in source.kotlin,
       "the screen's own refusal is kept rather than dropped: ${source.kotlin}",
     )
+  }
+
+  /**
+   * Author → emit → the name in the generated body is the name the canvas draws the hole under.
+   *
+   * The two sides of the seam are written in different places and read the same property, and a
+   * design whose body names `search-field` while the canvas registers `field` is a design that
+   * authors, validates, exports and then draws nothing on a real player — the failure this round
+   * trip exists to catch.
+   */
+  @Test
+  fun `the emitted custom component carries the name the design authored`() {
+    val design = screenWithRemoteContent()
+    val authored =
+      design.nodes
+        .getValue("custom")
+        .properties["name"]!!
+        .jsonObject["value"]!!
+        .jsonPrimitive
+        .content
+
+    val emitted =
+      InlineRemoteContentExporter.export(design, "remote")
+        as InlineRemoteContentExporter.Result.Emitted
+
+    assertEquals("field", authored)
+    assertTrue("""RemoteCustomComponent(name = "$authored")""" in emitted.source, emitted.source)
+    // What fills the hole stays on this side of it: `field`'s text is Compose the host draws under
+    // that name, and the body writes the hole rather than the content.
+    assertTrue("type here" !in emitted.source, emitted.source)
   }
 
   private fun screenWithRemoteContent(): UiBuilderDocument =
@@ -136,18 +168,6 @@ class InlineRemoteContentTest {
         text("outro", "Recently played"),
       )
     )
-
-  private fun screenWithoutCustomComponent(): UiBuilderDocument =
-    screenWithRemoteContent().let { design ->
-      design.copy(
-        nodes =
-          design.nodes +
-            ("remoteColumn" to
-              design.nodes
-                .getValue("remoteColumn")
-                .copy(slots = mapOf("children" to listOf("remoteLabel"))))
-      )
-    }
 
   private fun text(id: String, value: String) =
     UiBuilderNode(

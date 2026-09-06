@@ -91,15 +91,87 @@ class RemoteScopesTest {
   @Test
   fun `the inline body generates a RemoteComposable function in the remote vocabulary`() {
     val result = InlineRemoteContentExporter.export(threeScopeDocument(), "remote")
-    val refused = result as? InlineRemoteContentExporter.Result.Refused
+    val emitted = result as? InlineRemoteContentExporter.Result.Emitted
 
-    // The custom component is the one node the vocabulary cannot write, and it is refused by name
-    // rather than approximated. Everything else in this tree it can.
-    assertTrue(refused != null, "a custom component is refused: $result")
+    assertTrue(emitted != null, "the whole three-scope body writes: $result")
+    // The custom component is the boundary the vocabulary crosses, and it writes as the operation
+    // that carries it rather than as a refusal. What it does NOT write is the `field` text under
+    // it: that is host content the application draws under this name, and a `@RemoteComposable`
+    // body cannot call an application's composables.
+    assertTrue("""RemoteCustomComponent(name = "field")""" in emitted.source, emitted.source)
+    assertFalse("type here" in emitted.source, emitted.source)
     assertTrue(
-      refused.reasons.any { "custom component `custom`" in it && "field" in it },
-      refused.reasons.toString(),
+      "import androidx.compose.remote.creation.compose.layout.RemoteCustomComponent" in
+        emitted.source,
+      emitted.source,
     )
+  }
+
+  @Test
+  fun `a custom component reserves the bounds it declares`() {
+    val sized =
+      threeScopeDocument().let { design ->
+        design.copy(
+          nodes =
+            design.nodes +
+              ("custom" to
+                design.nodes
+                  .getValue("custom")
+                  .copy(
+                    properties =
+                      buildJsonObject {
+                        putJsonObject("name") {
+                          put("type", "string")
+                          put("value", "field")
+                        }
+                        putJsonObject("widthDp") {
+                          put("type", "number")
+                          put("value", 200)
+                        }
+                        putJsonObject("heightDp") {
+                          put("type", "number")
+                          put("value", 48)
+                        }
+                      }
+                  ))
+        )
+      }
+
+    val emitted =
+      InlineRemoteContentExporter.export(sized, "remote")
+        as InlineRemoteContentExporter.Result.Emitted
+
+    // A player lays a custom component out from the document, which cannot measure content it does
+    // not have, so the reserved box is the design's to state and it reaches the body as a size.
+    assertTrue(
+      """RemoteCustomComponent(name = "field", modifier = RemoteModifier.size(200.rdp, 48.rdp))""" in
+        emitted.source,
+      emitted.source,
+    )
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.modifier.size" in emitted.source,
+      emitted.source,
+    )
+  }
+
+  /** A name is the whole contract, so an unnamed hole is refused rather than emitted as `""`. */
+  @Test
+  fun `an unnamed custom component is refused by name`() {
+    val unnamed =
+      threeScopeDocument().let { design ->
+        design.copy(
+          nodes =
+            design.nodes +
+              ("custom" to
+                design.nodes.getValue("custom").copy(properties = JsonObject(emptyMap())))
+        )
+      }
+
+    val refused =
+      InlineRemoteContentExporter.export(unnamed, "remote")
+        as InlineRemoteContentExporter.Result.Refused
+
+    assertTrue(refused.reasons.any { "`custom` has no name" in it }, refused.reasons.toString())
   }
 
   @Test
