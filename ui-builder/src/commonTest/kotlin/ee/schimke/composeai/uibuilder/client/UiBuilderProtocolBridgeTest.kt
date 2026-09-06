@@ -12,6 +12,7 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignEnvironmentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
+import ee.schimke.composeai.uibuilder.protocol.NullValueV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChangeV1
@@ -114,6 +115,69 @@ class UiBuilderProtocolBridgeTest {
     assertEquals("browser-a", command.clientId)
     assertEquals(41, command.baseRevision)
     assertIs<SetPropertyMutationV1>(command.operations.single())
+  }
+
+  @Test
+  fun `a removal is sent as a null write, and a null write in a delta removes the property`() {
+    // The published protocol has no removal mutation; `setProperty` with `{"type":"null"}` is what
+    // the server reads as an unset (#480), and the client has to read it back the same way rather
+    // than storing a null the canvas would then treat as a value.
+    val local =
+      DesignCommand(
+        designId = "shared-design",
+        operationId = "browser-a-editor-operation-0002",
+        actorId = "local-placeholder",
+        clientId = "browser-a",
+        baseRevision = 7,
+        operations = listOf(DesignOperation.RemoveNodeProperty("title", "text")),
+      )
+    val sent =
+      assertIs<DesignCommandV1>(
+        EditorSubmission.Batch(local)
+          .toProtocolSubmission(
+            actorId = "actor-a",
+            clientId = "browser-a",
+            authoritativeRevision = 7,
+          )
+      )
+    val mutation = assertIs<SetPropertyMutationV1>(sent.operations.single())
+    assertEquals("title", mutation.nodeId)
+    assertEquals("text", mutation.property)
+    assertEquals(NullValueV1, mutation.value)
+
+    val before = protocolDocument(revision = 7, text = "Before")
+    val committedAt = 1_750_000_010_123
+    val title = before.nodes.getValue("title")
+    val after =
+      before.copy(
+        revision = 8,
+        updatedAtEpochMillis = committedAt,
+        nodes = mapOf("title" to title.copy(properties = title.properties - "text")),
+      )
+    val command = sent.copy(operationId = "remote-unset")
+    val accepted =
+      AcceptedOutcomeV1(
+        operationId = command.operationId,
+        committedRevision = 8,
+        sequence = 4,
+        documentHash = after.canonicalDocumentHash(),
+        idempotentReplay = false,
+        documentUpdatedAtEpochMillis = committedAt,
+      )
+    val delta =
+      ServiceDeltaV1(
+        designId = before.id,
+        afterSequence = 3,
+        throughSequence = 4,
+        currentRevision = 8,
+        retainedFromSequence = 0,
+        operations = listOf(CommittedOperationV1(command, accepted)),
+      )
+
+    val candidate = assertNotNull(before.preparePropertyDelta(before.toRendererDocument(), delta))
+    assertTrue(candidate.hasVerifiedHash())
+    assertEquals(after, candidate.protocolDocument)
+    assertFalse("text" in candidate.rendererDocument.nodes.getValue("title").properties)
   }
 
   @Test

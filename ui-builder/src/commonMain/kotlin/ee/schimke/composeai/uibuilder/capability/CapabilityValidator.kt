@@ -225,6 +225,24 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
    * `assetKey` already set — which is exactly how #484's node got in. The document-wide pass that
    * follows an insert deliberately asks none of the write-time questions, so they are asked here.
    */
+  /**
+   * Whether [property] may be unset on [node]: refused for a required one, in the words the
+   * document-wide pass would use a moment later, so the author hears it at the operation rather
+   * than as a refusal of the whole batch. An undeclared property is let go — taking it off makes
+   * the document more valid, not less.
+   */
+  fun removeIssue(node: UiBuilderNode, property: String): CapabilityValidationIssue? {
+    val declared =
+      catalog.componentsById[node.componentId]?.propertiesByName?.get(property) ?: return null
+    if (!declared.required) return null
+    return issue(
+      CapabilityIssueCode.MISSING_REQUIRED_PROPERTY,
+      node,
+      "required property $property cannot be unset; give it a value or delete the node",
+      property,
+    )
+  }
+
   fun insertIssue(
     node: UiBuilderNode,
     pinnedAssetKeys: Set<String> = emptySet(),

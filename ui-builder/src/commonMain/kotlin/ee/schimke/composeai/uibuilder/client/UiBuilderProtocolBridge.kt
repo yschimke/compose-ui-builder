@@ -16,6 +16,7 @@ import ee.schimke.composeai.uibuilder.protocol.InsertNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.MoveNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
+import ee.schimke.composeai.uibuilder.protocol.NullValueV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
@@ -106,11 +107,16 @@ internal fun DesignDocumentV1.preparePropertyDelta(
     mutations.forEach { mutation ->
       val protocolNode = protocolNodes[mutation.nodeId] ?: return null
       val rendererNode = rendererNodes[mutation.nodeId] ?: return null
+      // A `null` write is an unset (#480): the property leaves both documents rather than being
+      // stored as a null the canvas would then read as a value.
+      val unset = mutation.value is NullValueV1
       protocolNodes =
         protocolNodes +
           (protocolNode.id to
             protocolNode.copy(
-              properties = protocolNode.properties + (mutation.property to mutation.value)
+              properties =
+                if (unset) protocolNode.properties - mutation.property
+                else protocolNode.properties + (mutation.property to mutation.value)
             ))
       val rendererValue = bridgeJson.encodeToJsonElement(UiValueV1.serializer(), mutation.value)
       rendererNodes =
@@ -119,7 +125,8 @@ internal fun DesignDocumentV1.preparePropertyDelta(
             rendererNode.copy(
               properties =
                 kotlinx.serialization.json.JsonObject(
-                  rendererNode.properties + (mutation.property to rendererValue)
+                  if (unset) rendererNode.properties - mutation.property
+                  else rendererNode.properties + (mutation.property to rendererValue)
                 )
             ))
     }
@@ -209,6 +216,10 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
         property,
         bridgeJson.decodeFromString(UiValueV1.serializer(), value.toString()),
       )
+    // The published protocol has no removal mutation, and the server reads a `null` write on an
+    // optional property as an unset (#480) — so that is the spelling until
+    // `RemoveNodePropertyMutationV1` exists on the wire.
+    is DesignOperation.RemoveNodeProperty -> SetPropertyMutationV1(nodeId, property, NullValueV1)
     is DesignOperation.SetModifiers ->
       SetModifiersMutationV1(
         nodeId,

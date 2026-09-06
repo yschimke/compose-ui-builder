@@ -631,6 +631,12 @@ value renders it as a visible placeholder rather than failing the frame. The dec
 the line is "the canvas cannot draw it" rather than "the export cannot write it", is
 [`design/UI_BUILDER_VALUE_SEMANTICS.md`](design/UI_BUILDER_VALUE_SEMANTICS.md).
 
+An optional property can be **unset** again, so the component's own default applies: the editor's
+`removeNodeProperty` operation names the node and the field, and on the wire a `setProperty` whose
+value is `{"type": "null"}` means the same thing. A required property cannot be unset — the
+refusal names it — and unsetting a property the node does not hold is accepted as the no-op it is.
+Undo puts the value back.
+
 Existing `size`, `fillMaxWidth`, and `padding` modifiers render and export. Their JSON is visible in
 the inspector, but modifier parameter editing is read-only until the released Design API has an
 authoritative modifier mutation; the builder does not invent a browser-only operation.

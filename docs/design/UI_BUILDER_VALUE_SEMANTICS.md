@@ -74,6 +74,31 @@ The rules are visible where an author reads the catalog, not only where a refusa
 Tests pin the two lists to the code's own (`ValueKindWriteRulesTest`,
 `ProductionUiBuilderRuntimeTest`), so the document cannot promise what the canvas will not draw.
 
+## Unsetting a property
+
+The same mutation surface, opened in the other direction
+([#480](https://github.com/yschimke/compose-preview-server/issues/480)). `setProperty` had no
+inverse: an author who tried a property and found it wrong — an export diagnostic, say — could
+change its value but not the shape of the node, and the only ways back were to delete and rebuild
+the node or to guess the renderer's default.
+
+On the wire, a `setProperty` whose value is `{"type": "null"}` unsets the property
+([#495](https://github.com/yschimke/compose-preview-server/pull/495)): it leaves the node, the
+component's default applies, and the change record's `afterPresent` is what marks a removal for
+undo and redo. The batch still passes catalog validation, so unsetting a required property is
+refused with the usual located message — *required property `text` is missing*, node and field
+named — and nothing lands. Unsetting what is not set is accepted as the no-op it is.
+
+The editor spells the same thing as `DesignOperation.RemoveNodeProperty`, which refuses a required
+property at the operation — *required property `text` cannot be unset; give it a value or delete
+the node* — and is undone and redone like any other scalar write. The protocol bridge sends it as
+the null write, and the client's delta path removes the property rather than storing a null the
+canvas would read as a value.
+
+`RemoveNodePropertyMutationV1` — the explicit wire spelling — belongs in the published protocol
+(compose-preview-contracts) and is not there yet; once it is, the runtime reads it as the same
+removal.
+
 ## Where the line is
 
 "The renderer cannot draw it", not "the generator cannot write it". A design that is a mockup is a

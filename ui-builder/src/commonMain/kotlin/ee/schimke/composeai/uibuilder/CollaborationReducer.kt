@@ -6,6 +6,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -55,6 +56,23 @@ sealed interface DesignOperation {
   @SerialName("setProperty")
   data class SetProperty(val nodeId: String, val property: String, val value: JsonElement) :
     DesignOperation
+
+  /**
+   * Unset one optional property, so the node takes the component's own default again.
+   *
+   * `setProperty` had no inverse (yschimke/compose-preview-server#480): an author who tried a
+   * property and found it wrong could change its value but not the *shape* of the node, and the
+   * only ways back were to delete and rebuild the node or to guess the default. A required property
+   * cannot be unset — the reducer already refuses a document missing one — and a property the node
+   * does not hold is unset already, which is accepted as the no-op it is.
+   *
+   * On the wire this is `setProperty` with `{"type": "null"}`, which the server reads as an unset
+   * on an optional property; `RemoveNodePropertyMutationV1` is the explicit spelling the published
+   * protocol does not carry yet.
+   */
+  @Serializable
+  @SerialName("removeNodeProperty")
+  data class RemoveNodeProperty(val nodeId: String, val property: String) : DesignOperation
 
   @Serializable
   @SerialName("setEnvironment")
@@ -146,6 +164,11 @@ data class AcceptedCommand(
 data class PropertyChange(
   val address: PropertyAddress,
   val before: JsonElement?,
+  /**
+   * The value written, or [JsonNull] for a [DesignOperation.RemoveNodeProperty] — a property is
+   * always a typed object, so the bare null is unambiguous. Read through [afterValue], which is the
+   * absence a removal leaves.
+   */
   val after: JsonElement,
   /**
    * The revision that owned [address] before this command wrote it, or null if nothing had.
@@ -156,7 +179,11 @@ data class PropertyChange(
    * `UNSAFE_COMPENSATION`.
    */
   val beforeVersion: Int? = null,
-)
+) {
+  /** The property's value once this change applied — null when the change removed it. */
+  val afterValue: JsonElement?
+    get() = after.takeUnless { it is JsonNull }
+}
 
 data class EnvironmentChange(
   val field: String,
@@ -347,6 +374,16 @@ fun interface CollaborationPropertyValidator {
    * [PropertyWriteIssue.field] so the rejection is located the way a `setProperty` one is.
    */
   fun validateInsert(document: UiBuilderDocument, node: UiBuilderNode): PropertyWriteIssue? = null
+
+  /**
+   * Whether [property] may be taken off [node] — refused for a required one by the catalog-backed
+   * validator; nothing to say by default.
+   */
+  fun validateRemove(
+    document: UiBuilderDocument,
+    node: UiBuilderNode,
+    property: String,
+  ): PropertyWriteIssue? = null
 }
 
 fun interface CollaborationDocumentValidator {
@@ -411,6 +448,13 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
     validator.insertIssue(node, document.assets.keys)?.let {
       PropertyWriteIssue(it.message, it.field)
     }
+
+  override fun validateRemove(
+    document: UiBuilderDocument,
+    node: UiBuilderNode,
+    property: String,
+  ): PropertyWriteIssue? =
+    validator.removeIssue(node, property)?.let { PropertyWriteIssue(it.message, property) }
 }
 
 /**
@@ -505,16 +549,23 @@ object CollaborationReducer {
     }
     if (propertyValidator == null) {
       val propertyOperationIndex =
-        command.operations.indexOfFirst { it is DesignOperation.SetProperty }
+        command.operations.indexOfFirst {
+          it is DesignOperation.SetProperty || it is DesignOperation.RemoveNodeProperty
+        }
       if (propertyOperationIndex >= 0) {
-        val propertyOperation =
-          command.operations[propertyOperationIndex] as DesignOperation.SetProperty
+        val (propertyNodeId, propertyName) =
+          when (val propertyOperation = command.operations[propertyOperationIndex]) {
+            is DesignOperation.SetProperty -> propertyOperation.nodeId to propertyOperation.property
+            is DesignOperation.RemoveNodeProperty ->
+              propertyOperation.nodeId to propertyOperation.property
+            else -> error("indexOfFirst matched a property operation")
+          }
         return state.rejected(
           RejectionCode.MISSING_PROPERTY_VALIDATOR,
-          "SetProperty requires capability validation",
+          "a property operation requires capability validation",
           propertyOperationIndex,
-          propertyOperation.nodeId,
-          propertyOperation.property,
+          propertyNodeId,
+          propertyName,
         )
       }
     }
@@ -698,8 +749,7 @@ object CollaborationReducer {
       )
     }
     val scalarOnly =
-      target.propertyChanges.isNotEmpty() &&
-        target.command.operations.all { it is DesignOperation.SetProperty }
+      target.propertyChanges.isNotEmpty() && target.command.operations.all { it.isPropertyWrite() }
     // Its own lane, beside the property one and for the same reason: a chain is a value on a node,
     // so undoing it is a rewind of one address rather than a structural replay.
     val modifierOnly =
@@ -711,7 +761,7 @@ object CollaborationReducer {
     val structuralOnly =
       target.structuralChanges.isNotEmpty() &&
         target.command.operations.all {
-          it !is DesignOperation.SetProperty && it !is DesignOperation.SetEnvironment
+          !it.isPropertyWrite() && it !is DesignOperation.SetEnvironment
         }
     val mixed = target.propertyChanges.isNotEmpty() && target.structuralChanges.isNotEmpty()
     // A batch that mixes a modifier write with anything else has no lane here, and quietly
@@ -740,7 +790,7 @@ object CollaborationReducer {
         val current =
           state.document.nodes[change.address.nodeId]?.properties?.get(change.address.property)
         val currentVersion = state.propertyVersions[change.address]
-        if (current != change.after || currentVersion != target.committedRevision) {
+        if (current != change.afterValue || currentVersion != target.committedRevision) {
           return state.rejected(
             RejectionCode.UNSAFE_COMPENSATION,
             "property changed after ${target.command.operationId} at revision $currentVersion",
@@ -1116,15 +1166,13 @@ object CollaborationReducer {
       var document = prepared.document
       undo.target.propertyChanges.forEach { change ->
         val node = document.nodes.getValue(change.address.nodeId)
+        val after = change.afterValue
+        val properties =
+          if (after == null) node.properties - change.address.property
+          else node.properties + (change.address.property to after)
         document =
           document.copy(
-            nodes =
-              document.nodes +
-                (node.id to
-                  node.copy(
-                    properties =
-                      JsonObject(node.properties + (change.address.property to change.after))
-                  ))
+            nodes = document.nodes + (node.id to node.copy(properties = JsonObject(properties)))
           )
       }
       changed = changed.copy(document = document)
@@ -1432,6 +1480,27 @@ private fun CollaborationState.applyOperation(
       trace.compensationChanges += CompensationChange.Property(change)
       changed
     }
+    is DesignOperation.RemoveNodeProperty -> {
+      val address = PropertyAddress(operation.nodeId, operation.property)
+      propertyVersions[address]
+        ?.takeIf { it > baseRevision }
+        ?.let { overwrittenRevision ->
+          trace.conflicts +=
+            ConflictNotice(
+              ConflictCode.STALE_PROPERTY_WRITE,
+              operation.nodeId,
+              operation.property,
+              overwrittenRevision,
+            )
+        }
+      val before = document.nodes[operation.nodeId]?.properties?.get(operation.property)
+      val changed = removeProperty(operation, propertyValidator)
+      trace.propertyTouches += address
+      val change = PropertyChange(address, before, JsonNull, propertyVersions[address])
+      trace.propertyChanges += change
+      trace.compensationChanges += CompensationChange.Property(change)
+      changed
+    }
     is DesignOperation.SetModifiers -> {
       modifierVersions[operation.nodeId]
         ?.takeIf { it > baseRevision }
@@ -1694,6 +1763,28 @@ private fun CollaborationState.setProperty(
   return copy(document = document.copy(nodes = document.nodes + (node.id to changed)))
 }
 
+/** A write to one property address — a set or an unset — which undo rewinds as a scalar lane. */
+private fun DesignOperation.isPropertyWrite(): Boolean =
+  this is DesignOperation.SetProperty || this is DesignOperation.RemoveNodeProperty
+
+private fun CollaborationState.removeProperty(
+  operation: DesignOperation.RemoveNodeProperty,
+  propertyValidator: CollaborationPropertyValidator?,
+): CollaborationState {
+  if (operation.property.isBlank()) {
+    fail(RejectionCode.INVALID_COMMAND, "property name must be non-empty")
+  }
+  val node = liveNode(operation.nodeId)
+  requireNotNull(propertyValidator).validateRemove(document, node, operation.property)?.let {
+    fail(RejectionCode.INVALID_PROPERTY, it.message, node.id, operation.property)
+  }
+  val changed =
+    node.copy(
+      properties = kotlinx.serialization.json.JsonObject(node.properties - operation.property)
+    )
+  return copy(document = document.copy(nodes = document.nodes + (node.id to changed)))
+}
+
 private fun CollaborationState.validateStructuralCompensation(
   changes: List<StructuralChange>,
   expectedRevision: Int,
@@ -1763,7 +1854,7 @@ private fun CollaborationState.compensateProperty(
   undo: Boolean,
 ): CollaborationState {
   val node = liveNode(change.address.nodeId)
-  val expected = if (undo) change.after else change.before
+  val expected = if (undo) change.afterValue else change.before
   val current = node.properties[change.address.property]
   if (current != expected) {
     fail(
@@ -1773,9 +1864,10 @@ private fun CollaborationState.compensateProperty(
       change.address.property,
     )
   }
+  val target = if (undo) change.before else change.afterValue
   val properties =
-    if (undo && change.before == null) node.properties - change.address.property
-    else node.properties + (change.address.property to if (undo) change.before!! else change.after)
+    if (target == null) node.properties - change.address.property
+    else node.properties + (change.address.property to target)
   return copy(
     document =
       document.copy(
