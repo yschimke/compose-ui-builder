@@ -66,14 +66,25 @@ class PaletteExportStatusTest {
 
   @Test
   fun `the marker names the gap #477 was filed about, and not the components it closed`() {
-    // The one the record still cannot carry — a `Painter` no value expresses — is marked; the
-    // four #477 named alongside it are recorded now and must read as writable, or the palette
-    // would be greying out exactly the components that were just made to export.
+    // All five #477 named must read as writable, or the palette would be greying out exactly the
+    // components that were made to export. `asset/image` was the last of them: its `Painter` was
+    // the value nothing expressed until yschimke/compose-preview-server#503 gave a design an asset
+    // registry to name, so the record carries a call site for it now and the row is not marked.
     val byId = items().associateBy { it.componentId }
-    assertEquals(false, byId.getValue("asset/image").exportsToCompose)
-    for (id in listOf("m3/list-item", "m3/center-aligned-top-app-bar", "m3/slider", "m3/text")) {
+    for (id in
+      listOf(
+        "asset/image",
+        "m3/list-item",
+        "m3/center-aligned-top-app-bar",
+        "m3/slider",
+        "m3/text",
+      )) {
       assertEquals(true, byId.getValue(id).exportsToCompose, id)
     }
+    // And the marker still says no where the record has nothing to print: a row the export cannot
+    // write is what the panel was built to grey out, so the closing of #477 must not have turned
+    // the marker into a constant.
+    assertEquals(false, byId.getValue("m3/date-picker").exportsToCompose)
   }
 
   @Test

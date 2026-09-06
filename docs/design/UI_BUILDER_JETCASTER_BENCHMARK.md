@@ -132,7 +132,7 @@ The checked-in candidate contracts are:
 
 - [`jetcaster-discover-operations-v1.json`](fixtures/ui-builder/jetcaster-discover-operations-v1.json):
   109 public operations reducing to 108 semantic nodes and canonical document hash
-  `dbd6d052f9b766db76aa7541927bacc5b6d993367f66ff05d98383be7be04cdc`.
+  `d62e2f4c892ba8bba1d0e4f1e1d7beaedd8e00d43a075dd9f0087942ce4c1a59`.
 - [`m3-catalog-capabilities-v1.json`](fixtures/ui-builder/m3-catalog-capabilities-v1.json):
   24 generic component capabilities, including explicit planned/unsupported Wasm states and SVG
   evidence scoped to each authored usage in this frozen benchmark.

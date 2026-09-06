@@ -29,6 +29,11 @@ export function replayCandidateOperations(input) {
         stateVariables: clone(command.stateVariables ?? {}),
         roots: [],
         nodes: {},
+        // The design's asset registry, carried untyped the way `catalogPin` is. Present even when
+        // empty: the Kotlin `UiBuilderDocument` serialises it with `encodeDefaults`, so a document
+        // without the key here would hash differently in the two languages, which is the one thing
+        // the cross-language hash exists to catch.
+        assets: clone(command.assets ?? {}),
       };
       outcomes.set(command.operationId, { revision: 0 });
       continue;

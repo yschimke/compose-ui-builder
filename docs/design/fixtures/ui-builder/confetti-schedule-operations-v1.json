@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-operations/v1-candidate",
   "documentSchema": "compose-ui-builder-document/v1-candidate",
   "designId": "fixture-confetti-schedule",
-  "expectedDocumentHash": "7b5fec021abcd5d368e571d8b14769acbce97a7b36a6ba0b1b614f8c911a0091",
+  "expectedDocumentHash": "2f7f75b547bcf0e097f33a61c349ee7f5eaf14bab681a06d897a95e609e0e681",
   "operations": [
     {
       "operationId": "create",

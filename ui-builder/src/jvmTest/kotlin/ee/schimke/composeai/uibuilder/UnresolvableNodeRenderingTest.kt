@@ -34,15 +34,16 @@ class UnresolvableNodeRenderingTest {
         )
       )
 
-    // The placeholder is a framed box with a cross through it, so it is not one flat colour: the
-    // centre, an edge and a corner are not all the same pixel.
-    val samples =
-      listOf(
-        pixels.getColor(SIZE / 2, SIZE / 2),
-        pixels.getColor(1, 1),
-        pixels.getColor(SIZE / 2, 1),
-      )
-    assertTrue(samples.distinct().size > 1, "the placeholder is visible: $samples")
+    // The property is that something is drawn where the node is, not where each stroke lands: the
+    // placeholder is a neutral ground carrying a picture glyph, and its frame, circle and mountain
+    // move whenever that glyph is redrawn. Reading the whole frame keeps the assertion on the
+    // visibility this test is named for — three fixed samples pinned the *previous* glyph's
+    // corner-to-corner diagonals and went quiet when yschimke/compose-preview-server#503 replaced
+    // it, reporting a flat frame that was never flat.
+    val distinct = buildSet {
+      for (y in 0 until SIZE) for (x in 0 until SIZE) add(pixels.getColor(x, y))
+    }
+    assertTrue(distinct.size > 1, "the placeholder is one flat colour: $distinct")
   }
 
   @Test

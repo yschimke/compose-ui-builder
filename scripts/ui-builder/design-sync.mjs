@@ -30,6 +30,12 @@ export function documentToOperations(document, { designId = document.id, title =
       stateVariables: clone(document.stateVariables ?? {}),
     },
   ];
+  // Only when the design has one, the way a node's `properties` are emitted only when it has some:
+  // the replay defaults an absent registry to `{}`, so a design with no assets round-trips to the
+  // operations it was written as rather than growing an empty key.
+  if (document.assets && Object.keys(document.assets).length > 0) {
+    operations[0].assets = clone(document.assets);
+  }
   // The replay inserts an anchorless node at the front of its slot, so every sibling after the
   // first names the one before it; without that a slot replays in reverse.
   const visit = (nodeId, parent, afterNodeId) => {

@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-operations/v1-candidate",
   "documentSchema": "compose-ui-builder-document/v1-candidate",
   "designId": "fixture-jetcaster-discover-expanded",
-  "expectedDocumentHash": "dbd6d052f9b766db76aa7541927bacc5b6d993367f66ff05d98383be7be04cdc",
+  "expectedDocumentHash": "d62e2f4c892ba8bba1d0e4f1e1d7beaedd8e00d43a075dd9f0087942ce4c1a59",
   "operations": [
     {
       "operationId": "create",
