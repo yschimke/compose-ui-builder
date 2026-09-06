@@ -113,7 +113,7 @@ so the keys are literals on that side, exactly as `previewSurfaces` is.
 | Surface | What changes |
 | --- | --- |
 | **Runtime** (`CurrentM3UiBuilderCatalogExecutor`) | Takes `packs: List<UiBuilderComponentPackSource>`. Each enabled catalog receives the packs of its platform: components appended, one insert-panel shelf per pack named for it, `componentPacks` written. An id a pack redeclares, a pack id that is also an enabled catalog, or a duplicate pack id is a startup failure. Validation is unchanged — a pack node is a node of the catalog. The pin is untouched. |
-| **Server** (`--ui-builder-packs <catalog>=<platform>`) | Reads the pack's record at startup — from `--ui-builder-components <pack>=<components.json>` where the operator named one, otherwise from the **served catalog's own delivery branch** (see below) — projects it, and passes it to the runtime. A record the operator named that will not load is a startup failure; a served catalog that supplies none is a warning and an absent shelf, because the catalog may simply not have republished yet. The export executor merges each *used* pack's aliased record into the design catalog's; the native lane compiles a design that uses a pack against the **pack's** bundle — the one classpath carrying both the pack's classes and the Material 3 the catalog names — and refuses a design mixing two packs (`MIXED_PACKS`), since no served bundle carries both. |
+| **Server** (`--ui-builder-packs <catalog>=<platform>`) | Reads the pack's record at startup — from `--ui-builder-components <pack>=<components.json>` where the operator named one, otherwise from the **served catalog's own delivery branch** (see below) — projects it, and passes it to the runtime. A record the operator named that will not load is a startup failure; a served catalog that supplies none is a warning and an absent shelf, because the catalog may simply not have republished yet. The export executor merges each *used* pack's aliased record into the design catalog's; a **Wear screen**, which has no record and is written by `WearScreenCodeExporter`, gets each used pack's components handed to that emitter by id, and it writes the call from the record (see below). The native lane compiles a design that uses a pack against the **pack's** bundle — the one classpath carrying both the pack's classes and the Material 3 the catalog names — and refuses a design mixing two packs (`MIXED_PACKS`), since no served bundle carries both. |
 | **Editor** | The palette hides a pack's shelf until the pack is switched on; search does not find what the switch hides. **Component packs…** in the toolbar overflow (and a summary row at the top of the insert panel) opens a dialog with one switch per pack. The choice is remembered per catalog in the browser (`localStorage`), because which shelves a palette shows is a preference of the person at the keyboard, not a fact about the document. The canvas draws a pack node as a dashed, captioned outline holding its children; the code pane and the problems panel generate from the embedded record plus the pack's components projected back into record shape, so a pack node is never reported as "no component in this catalog". |
 | **New design chooser** | Catalogs are grouped by platform — Mobile, Wear, Remote Compose — once more than one platform is enabled. A catalog the chooser has no templates for gets a card named after itself with a blank starting point, rather than silently missing. |
 
@@ -159,6 +159,57 @@ A catalog whose bundle predates records — `confetti-mobile` at the time of wri
 compose-preview 1.14.1 — yields no record, so the pack is logged as not offered rather than failing
 startup, and appears on its next publish.
 
+### A Wear pack
+
+```text
+--ui-builder-catalogs m3-catalog,remote-m3,wear-m3
+--ui-builder-packs confetti-mobile=mobile,confetti-wear=wear
+```
+
+A `wear` pack lands in `wear-m3` by the platform rule, and its bundle is an Android one, so a design
+using it compiles on the Robolectric daemon — both by construction. What was *not* by construction
+is the export: `wear-m3` deliberately has no component record and its screens are written by
+`WearScreenCodeExporter`, an authored emitter that refused every id it had not met, a pack's
+included. It now takes the used packs' components by id and writes each from its record
+(`WearContentEmitter.emitPack`): the design's literals for the parameters it set, the record's
+proven placeholders for the required ones it did not, its children in the record's slots, and the
+row treatment on a `Modifier` or a `SurfaceTransformation` parameter where the component declares
+one. A design pinned to `wear-m3` that holds `confetti-wear/section-header` generates
+
+```kotlin
+SectionHeader(
+    text = "Thursday",
+    modifier = Modifier.transformedHeight(this, spec),
+    transformation = SurfaceTransformation(spec),
+)
+```
+
+inside the `TransformingLazyColumn` item, imports `dev.johnoreilly.confetti.wear.components
+.SectionHeader`, and compiles against the served `confetti-wear` bundle on the Android daemon.
+
+What Confetti's Wear module is worth as a pack is real data rather than a limitation of the
+projection. Discovery run over the published bundle's classes records fifteen of its own
+composables; seven have a proven call site and would be offered. Four are components —
+`SectionHeader` and `ScreenHeader` (a `String`), `PlaceholderButton` (fully defaulted), and
+`SessionCard`, whose `SessionDetails` is nullable so its call site passes `null` and draws the
+card's own loading skeleton — and three are the theme and preview scaffolds
+(`ConfettiThemeFixed`, `ConfettiPreviewScaffold`, `TestScaffold`), single-slot containers that
+are technically callable and not much use on a shelf. The rest are left out by name:
+`SessionSpeakerChip` and every screen take a non-null domain object or a `UiState`, and
+`SocialIcon` an `ImageVector`, for which no placeholder can be written. That is the honest shelf,
+and an authored override (follow-up 2) — a `SessionDetails` sample, say — is what would widen it.
+
+Two things stand between that shelf and a deployed box today, neither in this repository. The
+published `design-artifacts/confetti-wear` bundle was rendered by compose-preview 1.14.1, before
+records existed, so it carries no `components.json` and the pack is logged as not offered until
+Confetti republishes. And the discovery that ran to produce the numbers above is the fixed one:
+Confetti's component previews are `ConfettiThemeFixed { SessionCard(…) }`, and a released plugin
+records the *wrapper* as each preview's subject, because Kotlin 2.3+ compiles a non-capturing
+composable lambda into a static method of the `ComposableSingletons$…` class rather than into a
+class of its own, and the walker that descends into `Theme { Component() }` looked only for the
+class. Fixed in compose-ai-tools (follow-up 5); the exporter here is ready for the record a plugin
+carrying that fix produces.
+
 ## What this deliberately does not do
 
 - **It does not make `m3-catalog` a pack of itself.** The hand-authored M3 catalog carries editor
@@ -187,6 +238,13 @@ startup, and appears on its next publish.
 3. **Per-design pack pins.** A pack is derived from whatever record is on disk at startup; a design
    that uses one is not pinned to that record's revision. The same gap `ComponentRecordSource`
    records for the export, with the same retention question behind it.
-4. **A Wear pack.** `confetti-wear` is served beside `confetti-mobile`; admitting it as a `wear` pack
-   works by construction (it lands in `wear-m3`), and the Robolectric bundle it compiles against is
-   the pack's own. Not exercised yet.
+4. ~~**A Wear pack.**~~ Exercised: `confetti-wear=wear` lands in `wear-m3`, the Wear screen emitter
+   writes a pack node from its record, and the native lane compiles the screen against the pack's
+   Android bundle. See [A Wear pack](#a-wear-pack) for what Confetti's record offers and why.
+5. ~~**Discovery under Kotlin 2.3+ lambdas.**~~ Fixed in compose-ai-tools: `PreviewTargetInference`
+   used to descend into a preview's `Theme { … }` content lambda only when the compiler lifted it
+   into a `ComposableSingletons$…$lambda$…` class; Kotlin 2.3+ emits a static method on the
+   singletons class instead, so a `ConfettiThemeFixed { SessionCard() }` preview recorded the
+   wrapper as its subject and the component never reached the record. The walker now reads both
+   shapes, and a `SessionCardPopulatedPreview` counts for `SessionCard`. A pack projected from a
+   bundle rendered by a plugin without that fix offers its theme wrappers and little else.

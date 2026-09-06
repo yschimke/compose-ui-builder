@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.discovery.ComponentRecord
+import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.ScreenDocumentProjection
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -66,11 +68,20 @@ object WearScreenCodeExporter {
    * rectangle — which is what makes an overlay and a clickable region possible over an image the
    * browser did not draw. An export artifact is left untagged, because a test tag is not something
    * a designer asked for in source they keep.
+   *
+   * @param packComponents the **component pack** components this screen may hold, by component id
+   *   (`confetti-wear/section-header`), each as the record the pack was projected from. A pack is
+   *   another catalog's composable admitted into `wear-m3` (`UiBuilderComponentPacks`); the canvas
+   *   draws it as a placeholder and this writes the real call from its record — the proven call
+   *   site's imports and placeholders, the design's literals for its parameters, its children in
+   *   its slots. Empty by default, which refuses every pack node by name exactly as before packs
+   *   existed. See [WearContentEmitter.emitPack].
    */
   fun export(
     document: UiBuilderDocument,
     packageName: String? = null,
     tagNodes: Boolean = false,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
   ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a screen design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
@@ -82,7 +93,7 @@ object WearScreenCodeExporter {
     }
 
     val refusals = mutableListOf<String>()
-    val emitter = WearContentEmitter(document, refusals, tagNodes)
+    val emitter = WearContentEmitter(document, refusals, tagNodes, packComponents)
     val contentIds = root.slots["content"].orEmpty()
     val body =
       when (contentIds.size) {
@@ -327,6 +338,10 @@ object WearScreenCodeExporter {
 
   internal const val INDENT = "    "
 
+  /** The two parameter types a pack component's row treatment reaches; see [emitPack]. */
+  const val MODIFIER_FQN = "androidx.compose.ui.Modifier"
+  const val SURFACE_TRANSFORMATION_FQN = "androidx.wear.compose.material3.SurfaceTransformation"
+
   /**
    * The screen the parity capture is taken on: `wearos_small_round`, the smallest and the tightest.
    *
@@ -351,6 +366,8 @@ internal class WearContentEmitter(
    * See [WearScreenCodeExporter.export]; the native preview lane is the only caller that sets it.
    */
   private val tagNodes: Boolean = false,
+  /** See [WearScreenCodeExporter.export]. */
+  private val packComponents: Map<String, ComponentRecord> = emptyMap(),
 ) {
   private var usesText = false
   private var usesColumn = false
@@ -380,6 +397,9 @@ internal class WearContentEmitter(
   private val usesSelection = mutableSetOf<String>()
   private val usesDialog = mutableSetOf<String>()
   private val iconImports = mutableSetOf<String>()
+
+  /** The imports the pack components this screen holds resolve through; see [emitPack]. */
+  private val packImports = mutableSetOf<String>()
 
   /**
    * The `remember`s the screen function declares before anything is drawn.
@@ -727,6 +747,8 @@ internal class WearContentEmitter(
           (modifierChain(nodeId)?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
           listOf("${pad})")
       }
+      in packComponents ->
+        emitPack(node, packComponents.getValue(node.componentId), depth, transformed)
       in WearScreenCodeExporter.OVERLAYS ->
         refused(
           "`${node.componentId}` (node `$nodeId`) is a dialog, and a dialog is a screen state " +
@@ -748,6 +770,173 @@ internal class WearContentEmitter(
             "`asset/image` — from m3-catalog; a Material 3 component is not a Wear one, and there " +
             "is nothing on a watch to write it as"
         )
+    }
+  }
+
+  /**
+   * A **pack** component — another catalog's composable admitted into this one — written from the
+   * record it was projected from.
+   *
+   * ## Why the record and not a table
+   *
+   * Every other branch of [emit] is authored: this file knows that `wear-m3/card` is a `TitleCard`
+   * and what its arguments mean. A pack component is one nobody here has met. What is known about
+   * it is exactly what its catalog's `components.json` proved — the callable, its parameters, and a
+   * call site the producer showed compiles (`code.call`) — and that is what this writes from. The
+   * projection in the server (`ComponentRecordPacks`) offers a pack component only when that call
+   * site exists, so a record reaching here has one.
+   *
+   * ## What each parameter becomes
+   *
+   * - A **slot** (a `@Composable` lambda the record lists under `slots`) holds the node's children
+   *   for that slot, emitted through [emit] like any other content — so a pack container can hold
+   *   `wear-m3/text` rows, or another pack node.
+   * - A **literal** parameter (`String`, `Boolean`, `Int`, `Long`, `Float`, `Double`) takes the
+   *   value the design set, written as the Kotlin literal its type spells.
+   * - A **`Modifier`** parameter takes the node's chain — the test tag when tagging, and the row
+   *   treatment when the node is a list item — and is omitted when there is nothing to say, as
+   *   every authored branch omits it.
+   * - A **`SurfaceTransformation`** parameter takes the row treatment, which is the argument
+   *   `ListHeader` and `TitleCard` take for the same thing; a pack component declaring one is
+   *   saying it is a surface.
+   * - Anything else the design did not set is **omitted when defaulted** and otherwise takes the
+   *   placeholder the proven call site used for it, read back out of `code.call` by parameter name.
+   *   A required parameter with no placeholder there refuses by name, because inventing a value is
+   *   how generated code stops compiling — the same rule `ComponentSnippets` keeps.
+   *
+   * The imports are the call site's own (`code.imports`): the callable plus whatever a constructed
+   * placeholder needs. Nothing is spelled from a type name.
+   */
+  fun emitPack(
+    node: UiBuilderNode,
+    record: ComponentRecord,
+    depth: Int,
+    transformed: Boolean,
+  ): List<String> {
+    val pad = indent(depth)
+    val name = record.symbol.name
+    val placeholders = placeholderArguments(record)
+    val slotNames = record.slots.mapTo(mutableSetOf()) { it.name }
+    val arguments = mutableListOf<String>()
+    for (parameter in record.parameters) {
+      val argument = parameter.name
+      when {
+        parameter.composableSlot || argument in slotNames -> {
+          val children = node.slots[argument].orEmpty()
+          if (children.isNotEmpty()) {
+            arguments += "${pad}${INDENT}$argument = {"
+            arguments += children.flatMap { emit(it, depth + 2) }
+            arguments += "${pad}${INDENT}},"
+          } else if (!parameter.hasDefault) {
+            arguments += "${pad}${INDENT}$argument = ${placeholders[argument] ?: "{}"},"
+          }
+        }
+        parameter.typeFqn == WearScreenCodeExporter.MODIFIER_FQN -> {
+          val chain = modifierChain(node.id, transformedHeight(transformed))
+          if (chain != null) arguments += "${pad}${INDENT}$argument = $chain,"
+          else if (!parameter.hasDefault) arguments += "${pad}${INDENT}$argument = Modifier,"
+        }
+        parameter.typeFqn == WearScreenCodeExporter.SURFACE_TRANSFORMATION_FQN -> {
+          if (transformed) arguments += "${pad}${INDENT}$argument = SurfaceTransformation(spec),"
+          else if (!parameter.hasDefault) {
+            arguments += "${pad}${INDENT}$argument = ${placeholders[argument] ?: "null"},"
+          }
+        }
+        else -> {
+          val value = literal(node, parameter)
+          when {
+            value != null -> arguments += "${pad}${INDENT}$argument = $value,"
+            parameter.hasDefault -> Unit
+            else -> {
+              val placeholder =
+                placeholders[argument]
+                  ?: return refused(
+                    "`${node.componentId}` (node `${node.id}`) needs a value for " +
+                      "`$argument: ${parameter.type}`, and its catalog's record proved no " +
+                      "placeholder for one; set it in the design or give the parameter a default"
+                  )
+              arguments += "${pad}${INDENT}$argument = $placeholder,"
+            }
+          }
+        }
+      }
+    }
+    packImports += record.code?.imports.orEmpty().ifEmpty { listOf(record.symbol.callable) }
+    return if (arguments.isEmpty()) listOf("${pad}$name()")
+    else listOf("${pad}$name(") + arguments + listOf("${pad})")
+  }
+
+  /**
+   * The value the design set for a literal parameter, as the Kotlin literal its type spells, or
+   * null when the parameter is not a literal one or the design set nothing.
+   *
+   * Matched on the qualified type where the record carries one, and on the rendered spelling for a
+   * record written before `typeFqn` existed — the same fallback `ComponentSnippets` makes, for the
+   * same reason: a value written for `com.example.String` does not compile.
+   */
+  private fun literal(node: UiBuilderNode, parameter: TargetParameter): String? {
+    val type =
+      parameter.typeFqn
+        ?: when (parameter.type.removeSuffix("?")) {
+          "String" -> "kotlin.String"
+          "Boolean" -> "kotlin.Boolean"
+          "Int" -> "kotlin.Int"
+          "Long" -> "kotlin.Long"
+          "Float" -> "kotlin.Float"
+          "Double" -> "kotlin.Double"
+          else -> return null
+        }
+    val name = parameter.name
+    return when (type) {
+      "kotlin.String" -> node.stringOrNull(name)?.quoted()
+      "kotlin.Boolean" -> node.boolean(name)?.toString()
+      "kotlin.Int" -> node.number(name)?.toInt()?.toString()
+      "kotlin.Long" -> node.number(name)?.toLong()?.let { "${it}L" }
+      "kotlin.Float" -> node.number(name)?.let { "${it.dp()}f" }
+      "kotlin.Double" -> node.number(name)?.let { it.toDouble().toString() }
+      else -> null
+    }
+  }
+
+  /**
+   * The placeholder the proven call site wrote for each parameter, by name.
+   *
+   * `code.call` is `Name(a = x, b = y)` as `ComponentSnippets` prints it: every required parameter
+   * once, `name = placeholder`, comma-separated, and no placeholder ever contains `, <name> = ` —
+   * they are literals, `null`, `{}`, `{ 0 }`, `Type()` and `rememberType()`. So each value runs
+   * from its own marker to the next parameter's. Read back here rather than re-derived, because the
+   * placeholder table is that library's and is deliberately not reproduced anywhere else.
+   */
+  private fun placeholderArguments(record: ComponentRecord): Map<String, String> {
+    val call = record.code?.call ?: return emptyMap()
+    val open = call.indexOf('(')
+    if (open < 0 || !call.endsWith(")")) return emptyMap()
+    val body = call.substring(open + 1, call.length - 1)
+    val starts =
+      record.parameters
+        .mapNotNull { parameter ->
+          val markers = listOf("${parameter.name} = ", "`${parameter.name}` = ")
+          markers.firstNotNullOfOrNull { marker ->
+            argumentStart(body, marker)?.let { Triple(parameter.name, it, marker.length) }
+          }
+        }
+        .sortedBy { it.second }
+    return starts
+      .mapIndexed { index, (name, at, markerLength) ->
+        val end = starts.getOrNull(index + 1)?.second ?: body.length
+        name to body.substring(at + markerLength, end).trim().removeSuffix(",").trim()
+      }
+      .toMap()
+  }
+
+  /** Where [marker] begins an argument in [body]: at its start, or right after `, `. */
+  private fun argumentStart(body: String, marker: String): Int? {
+    var from = 0
+    while (true) {
+      val at = body.indexOf(marker, from)
+      if (at < 0) return null
+      if (at == 0 || body.startsWith(", ", at - 2)) return at
+      from = at + 1
     }
   }
 
@@ -1118,6 +1307,7 @@ internal class WearContentEmitter(
     add("ee.schimke.composeai.preview.ScrollingPreview")
     if (usesEdgeButton) add("androidx.wear.compose.material3.EdgeButton")
     if (usesEdgeButtonSize) add("androidx.wear.compose.material3.EdgeButtonSize")
+    addAll(packImports)
   }
     .distinct()
     .sorted()
@@ -1126,8 +1316,10 @@ internal class WearContentEmitter(
 
   // Properties arrive as the wire's typed values — `{"type": "string", "value": "…"}` — so a read
   // that took `properties[name]` straight would see the wrapper object and never the value.
-  private fun UiBuilderNode.string(name: String): String =
-    (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull.orEmpty()
+  private fun UiBuilderNode.string(name: String): String = stringOrNull(name).orEmpty()
+
+  private fun UiBuilderNode.stringOrNull(name: String): String? =
+    (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull
 
   private fun UiBuilderNode.number(name: String): Float? =
     (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.floatOrNull

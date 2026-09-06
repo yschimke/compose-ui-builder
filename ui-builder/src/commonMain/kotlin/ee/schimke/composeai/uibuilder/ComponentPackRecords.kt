@@ -46,6 +46,14 @@ internal fun CapabilityCatalog.packComponentRecords(): List<ComponentRecord> =
     }
   }
 
+/**
+ * The same projection keyed by the id a design refers to each pack component by, which is what the
+ * record-free Wear screen emitter takes: a `wear-m3` screen holding `confetti-wear/section-header`
+ * is written from this record, and the pane and the export read the same call off it.
+ */
+internal fun CapabilityCatalog.packComponentsById(): Map<String, ComponentRecord> =
+  packComponentRecords().flatMap { record -> record.componentIds.map { it to record } }.toMap()
+
 /** The embedded record with this catalog's pack components appended, or null with no record. */
 internal fun CapabilityCatalog.exportRecord(embedded: ComponentRecordFile?): ComponentRecordFile? {
   val packs = packComponentRecords()

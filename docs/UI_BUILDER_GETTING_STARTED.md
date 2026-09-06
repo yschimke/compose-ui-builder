@@ -444,10 +444,12 @@ platform, so a mobile pack appears in `m3-catalog` designs and never in a Wear w
 not call it. The operator admits one:
 
 ```text
---ui-builder-packs confetti-mobile=mobile
+--ui-builder-packs confetti-mobile=mobile,confetti-wear=wear
 ```
 
-The pack's components are projected from that catalog's own discovered component record — every
+A `wear` pack lands in `wear-m3` designs instead, and a Wear screen holding one of its components
+is written and compiled against that catalog's own Android bundle. The pack's components are
+projected from that catalog's own discovered component record — every
 composable of the project's own the producer proved a call site for, with its literal parameters as
 properties and its `@Composable` lambdas as slots — so nothing is transcribed by hand. The record
 comes from the served catalog's delivery branch (the `components.json` published beside

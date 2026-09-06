@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 
 /**
@@ -48,11 +49,15 @@ object RecordFreeExport {
    *
    * @param packageName the package the emitted file declares, or null for a snippet without one —
    *   which is what the editor's Code pane wants and what an exported *file* must not be.
+   * @param packComponents the component pack components a Wear **screen** may hold, by component
+   *   id, each as its record — see [WearScreenCodeExporter.export]. A widget takes none: its source
+   *   is Remote Compose, which no pack's Jetpack Compose composable can be played as.
    */
   fun generate(
     document: UiBuilderDocument,
     packageName: String? = null,
     tagNodes: Boolean = false,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
   ): Generated? =
     when {
       // A widget takes no [tagNodes]: it generates a `WearWidgetDocument` of Remote Compose, whose
@@ -60,7 +65,7 @@ object RecordFreeExport {
       // ([composeCompilable]). Accepting the flag and dropping it would read as support.
       document.isWearWidget() -> WearWidgetCodeExporter.export(document, packageName).generated()
       document.isWearScreen() ->
-        WearScreenCodeExporter.export(document, packageName, tagNodes).generated()
+        WearScreenCodeExporter.export(document, packageName, tagNodes, packComponents).generated()
       else -> null
     }
 
@@ -92,9 +97,12 @@ object RecordFreeExport {
     document: DesignDocumentV1,
     packageName: String? = null,
     tagNodes: Boolean = false,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
   ): Generated? {
     if (!document.isRecordFree()) return null
-    return runCatching { generate(document.toUiBuilderDocument(), packageName, tagNodes) }
+    return runCatching {
+      generate(document.toUiBuilderDocument(), packageName, tagNodes, packComponents)
+    }
       .getOrElse { failure ->
         Generated.Refused(
           listOf(

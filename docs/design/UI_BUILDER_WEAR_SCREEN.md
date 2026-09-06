@@ -438,6 +438,14 @@ A borrowed component with no Wear counterpart is refused **by node**, never appr
 will draw an `m3/filter-chip` quite happily and there is nothing in Wear Compose Material 3 to write
 it as, so the generator names the node and stops rather than emitting Kotlin that does not compile.
 
+The one kind of stranger it does write is a **component pack** node — another served catalog's
+composable admitted into `wear-m3` (`UI_BUILDER_COMPONENT_PACKS.md`). It is not authored here
+either; it is written from the pack's component record, which is the one thing about it that is
+proven: the callable, its parameters, and a call site the producer showed compiles. The design's
+values fill the literal parameters, the record's placeholders fill the required rest, children go
+in its slots, and the row treatment reaches it through a `Modifier` or `SurfaceTransformation`
+parameter when it declares one.
+
 ## Not done here
 
 - **No Compose export from a component record.** `wear-m3` has `code = null` on its own components.

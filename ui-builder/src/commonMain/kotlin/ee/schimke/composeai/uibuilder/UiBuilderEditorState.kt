@@ -995,6 +995,12 @@ class UiBuilderEditorReducer(
    * catalog's pack components projected back into record shape. See [packComponentRecords].
    */
   private val exportRecord by lazy { catalog.exportRecord(embeddedComponentRecord()) }
+
+  /**
+   * The pack components a record-free (Wear screen) design may hold, for the same two callers as
+   * [exportRecord]: the code pane and the problems panel. See [packComponentsById].
+   */
+  private val packComponents by lazy { catalog.packComponentsById() }
   private val validator = CapabilityPropertyWriteValidator(capabilityValidator)
   private val documentValidator = CapabilityDocumentWriteValidator(capabilityValidator)
 
@@ -2113,7 +2119,7 @@ class UiBuilderEditorReducer(
     //
     // No package: this pane is read and pasted into a file that already has one. The export passes
     // `ScreenExportGate.PACKAGE_NAME` for the same designs, because an artifact *is* the file.
-    RecordFreeExport.generate(document)?.let { recordFree ->
+    RecordFreeExport.generate(document, packComponents = packComponents)?.let { recordFree ->
       return@runCatching when (recordFree) {
         is RecordFreeExport.Generated.Emitted -> EditorGeneratedCode.Source(recordFree.source)
         is RecordFreeExport.Generated.Refused -> EditorGeneratedCode.Refused(recordFree.reasons)
@@ -2155,7 +2161,7 @@ class UiBuilderEditorReducer(
   // editor down over the one document whose problems a designer most needs listed. The capability
   // diagnostics above already name that document's real fault.
   runCatching {
-    when (val recordFree = RecordFreeExport.generate(document)) {
+    when (val recordFree = RecordFreeExport.generate(document, packComponents = packComponents)) {
       is RecordFreeExport.Generated.Refused -> recordFree.reasons
       // It generates. The gate below would still refuse it — that is the whole reason these
       // designs have their own emitter — so asking it anything here is asking the wrong question.
