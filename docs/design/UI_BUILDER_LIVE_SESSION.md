@@ -14,6 +14,23 @@ than *what*. The browser reads the design out of `location.pathname`; the server
 shell for a catalog-scoped segment that names no file, and redirects the trailing-slash spelling
 away, because the shell resolves `uiBuilder.mjs` relative to the document.
 
+**A design named without its catalog redirects to the canonical URL.** `/ui-builder/<designId>`
+answers `302` to `/ui-builder/<catalogPin.systemId>/<designId>`. The catalog is a segment the *API*
+never asks for — `PUT /api/ui-builder/v1/designs/{designId}` is catalog-free, because the server
+reads the pin out of the stored document, and `ui_builder_create_design` takes an id and returns no
+URL — so anything holding only an id builds the shorter link, and it used to answer a bare `404`
+that reads like a deleted design
+([#509](https://github.com/yschimke/compose-preview-server/issues/509)).
+
+The redirect is **not** an existence oracle, and that is what makes it safe to have. Designs are
+private to their owner and collaborators, and `cheeky-raccoon`-style ids are guessable, so a
+redirect that fired for any id that exists would tell an unauthenticated stranger both that the id
+is taken and which catalog it pins. So the lookup is made as the caller, through the same
+`GetSnapshot` the design API would answer: a caller who cannot open the design gets the `404` they
+got before, and an id that names nothing is a `404` for everyone. That last part also keeps the
+property the catalog-scoped branch protects — an asset that is simply missing must 404 rather than
+silently render the app shell.
+
 Opening a design is a `GET`, and a `GET` never creates one. A design that does not exist is
 reported as missing, not brought into existence by somebody following a link. Creating is its own
 request, in two shapes.

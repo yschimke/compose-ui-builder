@@ -1,12 +1,85 @@
 package ee.schimke.composeai.uibuilder
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * The modifier types [RemoteContentEmitter] can write, and therefore the only ones a `remote-m3`
+ * component may advertise.
+ *
+ * This constant exists because the two lists drifted: the catalog offered 28 modifiers on a widget
+ * node, the canvas drew them, and the generator could write three — so `size`, `background` and
+ * `weight`, which is how anyone builds a fixed-size coloured button beside a text column that
+ * truncates, made a design that exported nowhere (yschimke/compose-preview-server#508). Two tests
+ * hold the halves together: one in `:ui-builder` walks every name here through the emitter and
+ * fails on a refusal, and one in `:server` fails when a `remote-m3` component advertises a modifier
+ * this set does not carry.
+ *
+ * What is deliberately *absent* is as load-bearing as what is here. `matchParentSize`,
+ * `aspectRatio`, `shadow` and `testTag` have no `RemoteModifier` counterpart at
+ * `remote-creation-compose` 1.0.0-alpha18; each is refused by name with the reason and the route
+ * that does work, rather than being dropped from the chain. The three `align*` modifiers are in
+ * here but write no call of their own: a played document aligns content from the container, so they
+ * become an argument of the row, column or box above — and are refused anywhere else.
+ */
+public val REMOTE_CONTENT_MODIFIERS: Set<String> =
+  setOf(
+    "align",
+    "alignHorizontal",
+    "alignVertical",
+    "alpha",
+    "background",
+    "border",
+    "clip",
+    "fillMaxHeight",
+    "fillMaxSize",
+    "fillMaxWidth",
+    "height",
+    "heightIn",
+    "horizontalScroll",
+    "offset",
+    "padding",
+    "rotate",
+    "scale",
+    "size",
+    "verticalScroll",
+    "weight",
+    "width",
+    "widthIn",
+    "wrapContentSize",
+    "zIndex",
+  )
+
+/**
+ * The component ids [RemoteContentEmitter] has an authored answer for — a call it writes, or a
+ * refusal that states the reason and the way round it.
+ *
+ * The other half of the same drift: `asset/image` was in the `remote-m3` palette, the canvas drew
+ * it, and the generator sent it to the catch-all `else` branch, so a widget with album art in it
+ * refused to export with the same sentence an unknown component gets. A `remote-m3` catalog may
+ * only offer ids in here, which the `:server` test asserts.
+ */
+public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
+  setOf(
+    "asset/image",
+    "layout/box",
+    "layout/column",
+    "layout/row",
+    "m3/surface",
+    "m3/text",
+    "remote-m3/lottie",
+    "shape/linear-gradient",
+    "remote-compose/document",
+    REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
+    REMOTE_COMPOSE_INLINE_COMPONENT_ID,
+  )
 
 /**
  * Writes a widget's designed content as Remote Compose source, and its background as a
@@ -108,10 +181,28 @@ internal class RemoteContentEmitter(
     val pad = INDENT.repeat(depth)
     return when (node.componentId) {
       "m3/text" -> (pad + text(node, pad)).split("\n")
-      "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node))
-      "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node))
-      "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node))
+      "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node, pad))
+      "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node, pad))
+      "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node, pad))
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
+      "asset/image" -> image(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
+      // Authored refusals, not the catch-all below. `m3/surface` and `shape/linear-gradient` are
+      // both in the `remote-m3` palette and neither has a body counterpart, so each says what to
+      // reach for instead — which is the whole difference between "the generator has not been
+      // taught this" and "this vocabulary does not have it".
+      "m3/surface" ->
+        emptyList<String>().also {
+          refusals +=
+            "the surface `${node.id}` is a Material container — tonal elevation and a content " +
+              "colour its children inherit — and a widget body has neither; a coloured, rounded " +
+              "container here is a `layout/box` with `background` and `clip` modifiers"
+        }
+      "shape/linear-gradient" ->
+        emptyList<String>().also {
+          refusals +=
+            "the gradient `${node.id}` is a brush rather than content; put it in the widget " +
+              "container's background slot, where it is written as a WearWidgetBrush chain"
+        }
       REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
         customComponent(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       REMOTE_COMPOSE_INLINE_COMPONENT_ID ->
@@ -157,18 +248,29 @@ internal class RemoteContentEmitter(
       // `call` measures the call alone; the ` {` this appends is two more columns, and without
       // counting them a call landing on 99 or 100 columns is emitted one or two over the budget.
       else "${call(symbol, arguments, pad, trailing = OPENING_BRACE.length)}$OPENING_BRACE"
-    return (pad + head).split("\n") + children.flatMap { emit(it, depth + 1) } + listOf("$pad}")
+    // The children are emitted inside this container's scope, which is what decides whether a
+    // `weight` modifier on one of them has a counterpart at all: `weight` is a member of
+    // `RemoteColumnScope`/`RemoteRowScope` upstream, so it is legal in the lambda below and
+    // nowhere else. Saved and restored rather than assigned, because emission is depth-first and
+    // a row inside a column has to hand the column's scope back on the way out.
+    val enclosing = scope
+    scope = symbol
+    val body = children.flatMap { emit(it, depth + 1) }
+    scope = enclosing
+    return (pad + head).split("\n") + body + listOf("$pad}")
   }
 
-  private fun boxArguments(node: UiBuilderNode): List<String> {
+  /** The container symbol whose lambda the node being emitted sits in, or null at the top. */
+  private var scope: String? = null
+
+  private fun boxArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
-    node.modifierExpression()?.let { arguments += "modifier = $it" }
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
     // `layout/box` aligns each child by that child's own `alignment`, while `RemoteBox` aligns all
     // of them together. One child is the case both samples write and the case the two models agree
     // on; more than one, each wanting a different corner, is a design this cannot write.
     val children = node.slots["children"].orEmpty().mapNotNull(document.nodes::get)
-    val alignments =
-      children.map { it.properties["alignment"]?.stringOrNull().orEmpty() }.distinct()
+    val alignments = children.map { it.declaredAlignment("align") }.distinct()
     when {
       alignments.size > 1 ->
         refusals +=
@@ -183,9 +285,60 @@ internal class RemoteContentEmitter(
     return arguments
   }
 
-  private fun columnArguments(node: UiBuilderNode): List<String> {
+  /**
+   * What a child asks to be aligned to: its scoped modifier if it has one, else its property.
+   *
+   * Both spellings reach a document — the modifier chain is what the inspector writes now and the
+   * property is what older designs carry — and they mean the same thing, so the modifier wins and
+   * the property is the fallback. Reading only the property is what made a `size` + `background` +
+   * `align` button, which is most of what a widget is, refuse to export
+   * (yschimke/compose-preview-server#508).
+   */
+  private fun UiBuilderNode.declaredAlignment(modifierType: String): String =
+    modifiers
+      .mapNotNull { it as? JsonObject }
+      .firstOrNull { it["type"]?.stringValue() == modifierType }
+      ?.get("alignment")
+      ?.stringValue() ?: properties["alignment"]?.stringOrNull().orEmpty()
+
+  /**
+   * The one alignment a row or column lays every child out on, or null when nothing asked for one.
+   *
+   * `RemoteColumn` takes a `horizontalAlignment` and `RemoteRow` a `verticalAlignment`, both for
+   * the whole content — the same group semantics `RemoteBox` has — so children that disagree are
+   * refused here rather than aligned to whichever came first.
+   *
+   * @param modifierType the scoped modifier this axis is written from, and the only place it is
+   *   read from.
+   */
+  private fun crossAxisAlignment(node: UiBuilderNode, modifierType: String): String? {
+    val children = node.slots["children"].orEmpty().mapNotNull(document.nodes::get)
+    val scoped =
+      children
+        .mapNotNull { child ->
+          child.modifiers
+            .mapNotNull { it as? JsonObject }
+            .firstOrNull { it["type"]?.stringValue() == modifierType }
+            ?.get("alignment")
+            ?.stringValue()
+        }
+        .distinct()
+    if (scoped.size > 1) {
+      refusals +=
+        "`${node.id}` aligns its children differently from one another, and a " +
+          "${if (modifierType == "alignHorizontal") "RemoteColumn" else "RemoteRow"} aligns them " +
+          "as a group"
+      return null
+    }
+    // Only the modifier, never the node's own `horizontalAlignment`/`verticalAlignment` property:
+    // the canvas does not read those, so writing them here would generate a widget that lays its
+    // content out differently from the design the author approved.
+    return scoped.singleOrNull()?.ifEmpty { null }
+  }
+
+  private fun columnArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
-    node.modifierExpression()?.let { arguments += "modifier = $it" }
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
     node.properties["verticalSpacingDp"]
       ?.numberOrNull()
       ?.takeIf { it != 0f }
@@ -193,18 +346,30 @@ internal class RemoteContentEmitter(
         usesArrangement = true
         arguments += "verticalArrangement = RemoteArrangement.spacedBy(${it.dpLiteral()})"
       }
+    crossAxisAlignment(node, "alignHorizontal")
+      ?.takeIf { it != "start" }
+      ?.let {
+        usesAlignment = true
+        arguments += "horizontalAlignment = RemoteAlignment.${it.remoteHorizontal()}"
+      }
     return arguments
   }
 
-  private fun rowArguments(node: UiBuilderNode): List<String> {
+  private fun rowArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
-    node.modifierExpression()?.let { arguments += "modifier = $it" }
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
     node.properties["horizontalSpacingDp"]
       ?.numberOrNull()
       ?.takeIf { it != 0f }
       ?.let {
         usesArrangement = true
         arguments += "horizontalArrangement = RemoteArrangement.spacedBy(${it.dpLiteral()})"
+      }
+    crossAxisAlignment(node, "alignVertical")
+      ?.takeIf { it != "top" }
+      ?.let {
+        usesAlignment = true
+        arguments += "verticalAlignment = RemoteAlignment.${it.remoteVertical()}"
       }
     return arguments
   }
@@ -234,7 +399,7 @@ internal class RemoteContentEmitter(
     usesMaterialText = true
     val arguments =
       mutableListOf("text = \"${node.properties["text"]?.stringOrNull().orEmpty().escaped()}\".rs")
-    node.modifierExpression()?.let { arguments += "modifier = $it" }
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
     node.properties["color"]
       ?.stringOrNull()
       ?.takeIf { it.isNotEmpty() }
@@ -318,7 +483,7 @@ internal class RemoteContentEmitter(
         else -> emptyList()
       }
     val arguments = mutableListOf("name = \"${name.escaped()}\"")
-    node.modifierExpression(reserved)?.let { arguments += "modifier = $it" }
+    node.modifierExpression(pad, reserved)?.let { arguments += "modifier = $it" }
     return call("RemoteCustomComponent", arguments, pad)
   }
 
@@ -381,7 +546,7 @@ internal class RemoteContentEmitter(
       else "${LOTTIE_CONSTANT}_${lottieDeclarations.size + 1}"
     lottieDeclarations += "private const val $constant = \"$literal\""
     val arguments = mutableListOf("json = $constant")
-    node.modifierExpression()?.let { arguments += "modifier = $it" }
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
     // Absent means "run": `LottieAnimation` drives the frame off the document's own animation
     // clock when it is given no progress. A value pins the animation to one frame, which is what a
     // widget that must not animate wants — so 0f is emitted and an unset property is not.
@@ -391,6 +556,91 @@ internal class RemoteContentEmitter(
     }
     return call("LottieAnimation", arguments, pad)
   }
+
+  /**
+   * `RemoteImage(remoteBitmap = albumArt, …)` — a picture in the widget's content, drawn from a
+   * bitmap the **application** supplies.
+   *
+   * The design carries an asset *key* and the builder's registry carries the bytes behind it.
+   * Neither travels into generated source: a widget's picture is application data — album art, an
+   * avatar, a logo — that changes long after this file is written, and baking today's bytes in as a
+   * constant would generate a widget that draws the picture the design was built with forever. So
+   * the key becomes a **parameter**: [imageParameters] names one per distinct key, the content
+   * function takes it, and `provideWidgetData` hands it on. That is the same split
+   * `docs/UI_BUILDER_GETTING_STARTED.md` already describes for an image *background*, applied to
+   * the content slot rather than to the brush chain.
+   *
+   * `contentDescription` is not optional in the call: upstream declares it `RemoteString?` with no
+   * default, so a node without one passes `null` explicitly rather than leaving it out.
+   */
+  private fun image(node: UiBuilderNode, pad: String): String? {
+    val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
+    if (key.isBlank()) {
+      refusals +=
+        "the image `${node.id}` names no asset, and a picture with no key is one nothing can " +
+          "resolve — pick an asset for it in the inspector"
+      return null
+    }
+    usesRemoteImage = true
+    val arguments = mutableListOf("remoteBitmap = ${imageParameter(key)}")
+    val description = node.properties["contentDescription"]?.stringOrNull().orEmpty()
+    arguments +=
+      if (description.isEmpty()) "contentDescription = null"
+      else {
+        usesRemoteString = true
+        "contentDescription = \"${description.escaped()}\".rs"
+      }
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    // Written even when it is upstream's own default: `Fit` is the library's default and `crop` is
+    // the builder's, so a design that says nothing means Crop here and leaving the argument out
+    // would quietly letterbox every picture the canvas fills.
+    usesContentScale = true
+    arguments += "contentScale = ContentScale.${node.contentScale()}"
+    return call("RemoteImage", arguments, pad)
+  }
+
+  private fun UiBuilderNode.contentScale(): String =
+    when (properties["contentScale"]?.stringOrNull()) {
+      "fit" -> "Fit"
+      "fillBounds" -> "FillBounds"
+      "inside" -> "Inside"
+      else -> "Crop"
+    }
+
+  /**
+   * The parameter name an asset key becomes, allocated once per key.
+   *
+   * Per *key* rather than per node, because two nodes drawing the same asset are one picture the
+   * application supplies once. Collisions after identifier-ing (`album-art` and `album art`) are
+   * suffixed, since two parameters of one name do not compile.
+   */
+  private fun imageParameter(key: String): String {
+    imageAssets[key]?.let {
+      return it
+    }
+    val base = exportedStateIdentifier(key)
+    val taken = imageAssets.values.toSet()
+    val name =
+      if (base !in taken) base
+      else generateSequence(2) { it + 1 }.map { "$base$it" }.first { it !in taken }
+    imageAssets[key] = name
+    return name
+  }
+
+  private val imageAssets = linkedMapOf<String, String>()
+
+  /**
+   * The bitmaps this body was written against, in the order they were first drawn.
+   *
+   * [WearWidgetCodeExporter] turns these into the content function's parameters and the widget
+   * class's; [InlineRemoteContentExporter] into the fragment's. The exporters differ over the
+   * default, and deliberately — see each.
+   */
+  val imageParameters: List<ImageParameter>
+    get() = imageAssets.map { (key, identifier) -> ImageParameter(identifier, key) }
+
+  /** @property assetKey the design's own key, which the parameter's doc comment names. */
+  data class ImageParameter(val identifier: String, val assetKey: String)
 
   /**
    * Top-level declarations the body refers to, in emission order.
@@ -420,6 +670,7 @@ internal class RemoteContentEmitter(
     if (usesCustomComponent) {
       imports += "androidx.compose.remote.creation.compose.layout.RemoteCustomComponent"
     }
+    if (usesRemoteImage) imports += "androidx.compose.remote.creation.compose.layout.RemoteImage"
     if (usesRow) imports += "androidx.compose.remote.creation.compose.layout.RemoteRow"
     if (usesLottie) imports += "com.google.android.horologist.remotecompose.lottie.LottieAnimation"
     if (usesRemoteFloat) imports += "androidx.compose.remote.creation.compose.state.rf"
@@ -428,15 +679,26 @@ internal class RemoteContentEmitter(
       imports += "androidx.compose.remote.creation.compose.layout.RemoteArrangement"
     }
     if (usesModifier) imports += "androidx.compose.remote.creation.compose.modifier.RemoteModifier"
+    if (usesRemoteScrollState) {
+      imports += "androidx.compose.remote.creation.compose.modifier.rememberRemoteScrollState"
+    }
+    if (usesRoundedCornerShape) {
+      imports += "androidx.compose.remote.creation.compose.shapes.RemoteRoundedCornerShape"
+    }
     usedModifierImports.forEach {
       imports += "androidx.compose.remote.creation.compose.modifier.$it"
     }
     if (usesDp) imports += "androidx.compose.remote.creation.compose.state.rdp"
     if (usesColorLiteral) imports += "androidx.compose.remote.creation.compose.state.rc"
-    if (usesMaterialText) imports += "androidx.compose.remote.creation.compose.state.rs"
+    if (usesRemoteImage)
+      imports += "androidx.compose.remote.creation.compose.state.RemoteImageBitmap"
+    if (usesMaterialText || usesRemoteString) {
+      imports += "androidx.compose.remote.creation.compose.state.rs"
+    }
     if (usesSp) imports += "androidx.compose.remote.creation.compose.state.rsp"
     imports += "androidx.compose.runtime.Composable"
     if (usesColorLiteral) imports += "androidx.compose.ui.graphics.Color"
+    if (usesContentScale) imports += "androidx.compose.ui.layout.ContentScale"
     if (usesTextAlign) imports += "androidx.compose.ui.text.style.TextAlign"
     // The widget half. A Wear widget is delivered as a `WearWidgetDocument` and previewed through
     // the Glance host tooling; inline remote content inside a phone or watch *screen* is neither,
@@ -453,6 +715,12 @@ internal class RemoteContentEmitter(
       if (usesBrushColor) imports += "androidx.glance.wear.color"
       if (usesHorizontalGradient) imports += "androidx.glance.wear.horizontalGradient"
       if (usesVerticalGradient) imports += "androidx.glance.wear.verticalGradient"
+      // The blank placeholder the generated widget class defaults an image parameter to, so the
+      // `@Preview` beside it compiles without a bitmap only the application has.
+      if (usesRemoteImage) {
+        imports += "androidx.compose.remote.creation.compose.state.rb"
+        imports += "androidx.compose.ui.graphics.ImageBitmap"
+      }
       imports += "androidx.glance.wear.core.WearWidgetParams"
       imports += "androidx.glance.wear.tooling.preview.$previewParamsProvider"
       imports += "androidx.glance.wear.tooling.preview.WearWidgetPreview"
@@ -483,50 +751,271 @@ internal class RemoteContentEmitter(
   private var usesSp = false
   private var usesHorizontalGradient = false
   private var usesVerticalGradient = false
+  private var usesRemoteScrollState = false
+  private var usesRoundedCornerShape = false
+  private var usesRemoteImage = false
+  private var usesRemoteString = false
+  private var usesContentScale = false
   private val usedModifierImports = mutableSetOf<String>()
 
   /**
    * @param leading modifier calls this emitter derived from the node's own properties, applied
    *   before the authored chain.
    */
-  private fun UiBuilderNode.modifierExpression(leading: List<String> = emptyList()): String? {
-    val parts =
-      leading +
-        modifiers.mapNotNull { element ->
-          val modifier = element as? JsonObject ?: return@mapNotNull null
-          when (val type = modifier["type"]?.stringValue()) {
-            "fillMaxSize" -> {
-              usedModifierImports += "fillMaxSize"
-              "fillMaxSize()"
-            }
-            "fillMaxWidth" -> {
-              usedModifierImports += "fillMaxWidth"
-              "fillMaxWidth()"
-            }
-            "padding" -> {
-              usedModifierImports += "padding"
-              val start = modifier["startDp"]?.numberValue() ?: 0f
-              val top = modifier["topDp"]?.numberValue() ?: 0f
-              val end = modifier["endDp"]?.numberValue() ?: 0f
-              val bottom = modifier["bottomDp"]?.numberValue() ?: 0f
-              "padding(${start.dpLiteral()}, ${top.dpLiteral()}, ${end.dpLiteral()}, ${bottom.dpLiteral()})"
-            }
-            null -> null
-            else -> {
-              refusals += "the `$type` modifier on `$id` has no RemoteModifier counterpart here"
-              null
-            }
-          }
-        }
+  private fun UiBuilderNode.modifierExpression(
+    pad: String,
+    leading: List<String> = emptyList(),
+  ): String? {
+    val parts = leading + modifiers.flatMap { element -> modifierCalls(element) }
     if (parts.isEmpty()) return null
     usesModifier = true
-    return parts.joinToString(".", prefix = "RemoteModifier.")
+    val single = parts.joinToString(".", prefix = "RemoteModifier.")
+    // A chain of four modifiers is past the column budget on its own, and [call] can only break
+    // between *arguments* — so a long chain is broken here, at its dots, the way the formatter the
+    // budget exists to satisfy would break it. The continuation indent is two levels because a
+    // call carrying an argument this long has already wrapped one argument per line.
+    if (pad.length + INDENT.length + MODIFIER_ARGUMENT.length + single.length <= MAX_LINE) {
+      return single
+    }
+    val continuation = "\n$pad$INDENT$INDENT."
+    return parts.joinToString(continuation, prefix = "RemoteModifier.")
+  }
+
+  /**
+   * One authored modifier as the calls it becomes — none, one, or two.
+   *
+   * Two exists for `background(colour, shape)`, which upstream does not have: `RemoteModifier`
+   * takes a colour, a brush or a painter and no shape, and `clip(shape).background(colour)` is what
+   * Compose's own two-argument overload does. Nothing here approximates: a modifier the vocabulary
+   * has no counterpart for is refused **by name and with the reason**, never dropped, because a
+   * widget that silently loses its `size` draws something the canvas never showed.
+   */
+  private fun UiBuilderNode.modifierCalls(element: JsonElement): List<String> {
+    val modifier = element as? JsonObject ?: return emptyList()
+    return when (val type = modifier["type"]?.stringValue()) {
+      "fillMaxSize" -> listOf(modifierCall("fillMaxSize()"))
+      "fillMaxWidth" -> listOf(modifierCall("fillMaxWidth()"))
+      "fillMaxHeight" -> listOf(modifierCall("fillMaxHeight()"))
+      "wrapContentSize" -> {
+        // Upstream's `wrapContentSize()` takes no alignment, and Compose's default is `Center`.
+        // A design that named a corner asked for something this cannot write, so it is refused
+        // rather than centred silently.
+        val alignment = modifier["alignment"]?.stringValue().orEmpty()
+        if (alignment.isEmpty() || alignment == "center") listOf(modifierCall("wrapContentSize()"))
+        else {
+          refusals +=
+            "the `wrapContentSize` modifier on `$id` aligns its content `$alignment`; a " +
+              "RemoteModifier wraps and centres, with no alignment to give it"
+          emptyList()
+        }
+      }
+      "padding" -> {
+        val start = modifier["startDp"]?.numberValue() ?: 0f
+        val top = modifier["topDp"]?.numberValue() ?: 0f
+        val end = modifier["endDp"]?.numberValue() ?: 0f
+        val bottom = modifier["bottomDp"]?.numberValue() ?: 0f
+        listOf(
+          modifierCall(
+            "padding(${start.dpLiteral()}, ${top.dpLiteral()}, ${end.dpLiteral()}, ${bottom.dpLiteral()})"
+          )
+        )
+      }
+      // `size(width, height)` is `width(width).height(height)` upstream, and both halves are
+      // imported by the call rather than by the modifier's name.
+      "size" -> listOf(modifierCall("size(${modifier.dp("widthDp")}, ${modifier.dp("heightDp")})"))
+      "width" -> listOf(modifierCall("width(${modifier.dp("widthDp")})"))
+      "height" -> listOf(modifierCall("height(${modifier.dp("heightDp")})"))
+      "widthIn" -> listOf(modifierCall("widthIn(${modifier.boundsArguments()})"))
+      "heightIn" -> listOf(modifierCall("heightIn(${modifier.boundsArguments()})"))
+      "offset" -> listOf(modifierCall("offset(${modifier.dp("xDp")}, ${modifier.dp("yDp")})"))
+      "alpha" -> listOf(modifierCall("alpha(${modifier.float("alpha", 1f)})"))
+      "rotate" -> listOf(modifierCall("rotate(${modifier.float("degrees")})"))
+      "scale" ->
+        listOf(
+          modifierCall("scale(${modifier.float("scaleX", 1f)}, ${modifier.float("scaleY", 1f)})")
+        )
+      "zIndex" -> listOf(modifierCall("zIndex(${modifier.float("zIndex")})"))
+      "clip" -> listOf(modifierCall("clip(${modifier.shapeExpression()})"))
+      "background" ->
+        listOfNotNull(
+          modifier["shape"]?.stringValue()?.let {
+            modifierCall("clip(${modifier.shapeExpression()})")
+          },
+          modifierCall("background(${modifier.colorExpression()})"),
+        )
+      "border" ->
+        listOf(
+          modifierCall(
+            "border(${modifier.dp("widthDp", 1f)}, ${modifier.colorExpression()}" +
+              (modifier["shape"]?.stringValue()?.let { ", ${modifier.shapeExpression()}" } ?: "") +
+              ")"
+          )
+        )
+      // The scroll position belongs to the played document rather than to the design, exactly as
+      // the Compose exporter's `rememberScrollState()` does: the body is a composable, so the
+      // state is remembered at the call site.
+      "verticalScroll",
+      "horizontalScroll" -> {
+        usesRemoteScrollState = true
+        listOf(modifierCall("$type(rememberRemoteScrollState())"))
+      }
+      "weight" -> weightCall(modifier)
+      // Everything below is in the catalog's modifier vocabulary and has no `RemoteModifier`
+      // counterpart at `remote-creation-compose` 1.0.0-alpha18. Each says which, and what to
+      // reach for instead, rather than sharing one "no counterpart" sentence: an author who is
+      // told `matchParentSize` is missing still has to guess that `fillMaxSize` is the answer.
+      "matchParentSize" -> {
+        refusals +=
+          "the `matchParentSize` modifier on `$id` is a Compose BoxScope member; a RemoteBox has " +
+            "no scope of its own, so a child that fills its box uses `fillMaxSize` here"
+        emptyList()
+      }
+      "aspectRatio" -> {
+        refusals +=
+          "the `aspectRatio` modifier on `$id` has no RemoteModifier counterpart; a widget body " +
+            "states the size it wants, so give the node `size`, or `width` and `height`"
+        emptyList()
+      }
+      "shadow" -> {
+        refusals +=
+          "the `shadow` modifier on `$id` has no RemoteModifier counterpart — a played document " +
+            "draws no elevation shadow; a `border`, or a darker `background`, is what a widget has"
+        emptyList()
+      }
+      "testTag" -> {
+        refusals +=
+          "the `testTag` modifier on `$id` has no RemoteModifier counterpart; the semantics a " +
+            "player carries are the content description and role, which are node properties"
+        emptyList()
+      }
+      // Read by the parent rather than written here: `RemoteBox`, `RemoteColumn` and `RemoteRow`
+      // each align their content as a group, so a child's alignment becomes an argument of the
+      // container above it — see [boxArguments] and [crossAxisAlignment], which also refuse when
+      // two children ask for different ones. In the wrong container it is a refusal, because the
+      // axis a column aligns on is not the axis the design named.
+      "align" -> alignmentConsumedBy("RemoteBox", type, "a box")
+      "alignHorizontal" -> alignmentConsumedBy("RemoteColumn", type, "a column")
+      "alignVertical" -> alignmentConsumedBy("RemoteRow", type, "a row")
+      null -> emptyList()
+      else -> {
+        refusals += "the `$type` modifier on `$id` has no RemoteModifier counterpart here"
+        emptyList()
+      }
+    }
+  }
+
+  /**
+   * Nothing, when the container above this node has already written the alignment as an argument.
+   *
+   * @param container the symbol whose lambda consumes it, and the only scope it means anything in.
+   */
+  private fun UiBuilderNode.alignmentConsumedBy(
+    container: String,
+    type: String,
+    article: String,
+  ): List<String> {
+    if (scope == container) return emptyList()
+    refusals +=
+      "the `$type` modifier on `$id` aligns a child of $article, and this node is in " +
+        "${scope?.let { "a $it" } ?: "the widget's content slot"}; a played document has no " +
+        "per-child alignment outside the container that lays it out"
+    return emptyList()
+  }
+
+  /**
+   * `weight`, which is legal only in the lambda of the row or column it is measured against.
+   *
+   * Upstream puts it on `RemoteColumnScope` and `RemoteRowScope` rather than on `RemoteModifier`,
+   * so a weight anywhere else does not compile — and the node that carries one outside a row or
+   * column is a design mistake worth naming rather than a call worth writing.
+   */
+  private fun UiBuilderNode.weightCall(modifier: JsonObject): List<String> {
+    if (scope != "RemoteColumn" && scope != "RemoteRow") {
+      refusals +=
+        "the `weight` modifier on `$id` divides the space of a row or a column, and this node is " +
+          "in ${scope?.let { "a $it" } ?: "the widget's content slot"}; put it in a " +
+          "`layout/row` or `layout/column` to weight it"
+      return emptyList()
+    }
+    // Compose's `fill = false` weights the space but does not make the child take it. There is no
+    // second argument upstream, so a design asking for it is refused rather than filled anyway.
+    if (modifier["fill"]?.let { (it as? JsonPrimitive)?.booleanOrNull } == false) {
+      refusals +=
+        "the `weight` modifier on `$id` asks for `fill = false`, which a RemoteModifier weight " +
+          "has no argument for — it always fills the space it is given"
+      return emptyList()
+    }
+    val weight = modifier["weight"]?.numberValue() ?: 1f
+    return listOf("weight(${weight.floatLiteral()})")
+  }
+
+  /**
+   * A modifier call, and the import its symbol needs.
+   *
+   * Every modifier upstream is an extension function in its own file, so the import is the call's
+   * name — which is why this pairs the two rather than letting [imports] guess from the chain.
+   */
+  private fun modifierCall(call: String): String {
+    usedModifierImports += call.substringBefore('(')
+    return call
+  }
+
+  /** `min`/`max` are both optional upstream, and a bound the design did not set is not written. */
+  private fun JsonObject.boundsArguments(): String =
+    listOfNotNull(
+        this["minDp"]?.numberValue()?.let { "min = ${it.dpLiteral()}" },
+        this["maxDp"]?.numberValue()?.let { "max = ${it.dpLiteral()}" },
+      )
+      .joinToString()
+
+  private fun JsonObject.dp(name: String, fallback: Float = 0f): String =
+    (this[name]?.numberValue() ?: fallback).dpLiteral()
+
+  private fun JsonObject.float(name: String, fallback: Float = 0f): String =
+    (this[name]?.numberValue() ?: fallback).floatLiteral()
+
+  /**
+   * The colour inside a modifier, which is a `UiValueV1` rather than a bare string.
+   *
+   * The same two cases the rest of this emitter reads a colour through: a theme role is
+   * `RemoteMaterialTheme.colorScheme.<role>` and needs the theme wrapper, and a `#AARRGGBB` literal
+   * is a `Color(0x…).rc`.
+   */
+  private fun JsonObject.colorExpression(): String {
+    val declared = (this["color"] as? JsonObject)?.get("value")?.stringValue().orEmpty()
+    return if (declared.startsWith("#")) {
+      usesColorLiteral = true
+      "${declared.argbLiteral()}.rc"
+    } else {
+      usesTheme = true
+      "RemoteMaterialTheme.colorScheme.${declared.ifEmpty { "surface" }}"
+    }
+  }
+
+  /** `small`/`medium`/`large` are the catalog's names for the radii the Compose exporter uses. */
+  private fun JsonObject.shapeExpression(): String {
+    usesRoundedCornerShape = true
+    val declared = this["shape"]?.stringValue()
+    val radius =
+      when (declared) {
+        "large" -> 16f
+        "medium" -> 12f
+        "small" -> 8f
+        else -> declared?.toFloatOrNull() ?: 0f
+      }
+    return "RemoteRoundedCornerShape(${radius.dpLiteral()})"
   }
 
   /** Every dp literal needs `rdp`, which is why the flag is set here and not per call site. */
   private fun Float.dpLiteral(): String {
     usesDp = true
     return if (this % 1f == 0f) "${toInt()}.rdp" else "${this}f.rdp"
+  }
+
+  /** Every remote float literal needs `rf`, the same way a dp literal needs `rdp`. */
+  private fun Float.floatLiteral(): String {
+    usesRemoteFloat = true
+    return if (this % 1f == 0f) "${toInt()}.rf" else "${this}f.rf"
   }
 
   private fun Float.spLiteral(): String =
@@ -538,6 +1027,9 @@ internal class RemoteContentEmitter(
 
     /** ktfmt's own default, so pasted output survives the formatter unchanged. */
     const val MAX_LINE = 100
+
+    /** The argument a modifier chain is written as, whose width the chain has to allow for. */
+    const val MODIFIER_ARGUMENT = "modifier = "
 
     /** What [container] appends after a call that takes children. */
     const val OPENING_BRACE = " {"
@@ -561,6 +1053,22 @@ private fun String.remoteAlignment(): String =
     "bottomCenter" -> "BottomCenter"
     "bottomEnd" -> "BottomEnd"
     else -> "TopStart"
+  }
+
+private fun String.remoteHorizontal(): String =
+  when (this) {
+    "centerHorizontally",
+    "center" -> "CenterHorizontally"
+    "end" -> "End"
+    else -> "Start"
+  }
+
+private fun String.remoteVertical(): String =
+  when (this) {
+    "centerVertically",
+    "center" -> "CenterVertically"
+    "bottom" -> "Bottom"
+    else -> "Top"
   }
 
 /** `#FF2196F3` becomes `Color(0xFF2196F3)`. */

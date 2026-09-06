@@ -119,7 +119,12 @@ public object InlineRemoteContentExporter {
           appendLine()
           appendLine("@RemoteComposable")
           appendLine("@Composable")
-          appendLine("fun $name() {")
+          // The pictures the body draws, as parameters and without defaults: an inline fragment
+          // has no generated preview to construct, and its call site is the application's own —
+          // so the bitmap is asked for where the caller can see it is needed.
+          appendLine(
+            "fun $name(${emitter.imageParameters.joinToString { "${it.identifier}: RemoteImageBitmap" }}) {"
+          )
           if (emitter.usesTheme) {
             appendLine("${INDENT}RemoteMaterialTheme {")
             body.forEach(::appendLine)
@@ -155,4 +160,4 @@ public object InlineRemoteContentExporter {
 }
 
 /** A comment carries the rest of its line, so a newline in one would comment out the code below. */
-private fun String.escapeComment(): String = replace("\n", " ").replace("\r", " ")
+internal fun String.escapeComment(): String = replace("\n", " ").replace("\r", " ")

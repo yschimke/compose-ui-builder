@@ -76,20 +76,21 @@ A design has one URL, and it names the catalog and the design:
 Opening it opens the design. It does not create one: a `GET` never writes, so a mistyped link
 reports a design that is not there rather than quietly making it.
 
-**Both segments are required.** `/ui-builder/<designId>`, with the catalog left out, is not a
-shorter spelling of the same link — it is not a design URL at all, and the server answers `404`.
-The routing reads the first segment as a catalog name, so a single segment that names no catalog
-falls through to the static bundle and is looked up as a file; that is what keeps a genuinely
-missing asset a `404` instead of silently rendering the app shell. Nothing on the page can say
-"you meant the other form", because the request never reaches the app.
+**Both segments are canonical, and the short form redirects to them.** `/ui-builder/<designId>`,
+with the catalog left out, is not a design URL: the routing reads the first segment as a catalog
+name, and the app reads the catalog back out of `location.pathname` before it has fetched anything.
+It is a link people and agents build anyway, because the design's *API* resource below **is**
+catalog-free — `/api/ui-builder/v1/designs/<designId>` names a design with its id alone, since the
+server reads the catalog out of the stored document's `catalogPin` — so an id that works against
+the API used to produce a `404` that looks like a deleted design
+([#509](https://github.com/yschimke/compose-preview-server/issues/509)).
 
-The trap is that the design's *API* resource below **is** catalog-free — `/api/ui-builder/v1/designs/<designId>`
-names a design with its id alone, because the server reads the catalog out of the stored document's
-`catalogPin`. The browser URL cannot: the app reads the catalog back out of `location.pathname`
-before it has fetched anything. So an id that works against the API is not a browser link, and
-pasting one produces a `404` that looks like a deleted design. Whether the short form should
-redirect to the canonical one is
-[#509](https://github.com/yschimke/compose-preview-server/issues/509).
+The server now answers it with `302` to `/ui-builder/<catalog>/<designId>`, reading the missing
+segment from that same `catalogPin`. It does that **as the caller**: designs are private to their
+owner and collaborators, and a redirect that fired for any id that exists would tell a stranger
+both that a (fairly guessable) id is taken and which catalog it pins. Whoever cannot open the
+design still gets a `404`, and so does an id that names nothing — which is also what keeps a
+genuinely missing asset a `404` instead of silently rendering the app shell.
 
 Creating is a `POST`. The New design dialog opens on a form factor — Mobile, Wear, RemoteCompose
 — with a generated id already filled in (a `cheeky-raccoon`, reshuffled or overwritten as you
@@ -352,10 +353,62 @@ canvas instead of the 216×124dp frame the design was authored in.
 
 ![The Code pane showing a widget's generated Kotlin](design/evidence/ui-builder-remote-compose/widget-code-pane.png)
 
-Refusals work the way the Compose exporter's do: a node with no Remote Compose counterpart is named
-rather than approximated. An image background is the one to expect — `WearWidgetBrush.image` takes a
-`RemoteImageBitmap`, which generated source cannot name from an asset key, so the refusal says to
-supply the bitmap in `provideWidgetData` and add the call by hand.
+### A picture in the content slot
+
+An image is the one node whose bytes stay out of the generated file, and the reason is not a
+limitation: album art, an avatar or a logo is *application data* that changes long after the file is
+written, so baking today's bytes in would generate a widget that draws the picture the design was
+built with forever. The design names an asset **key**; the generated code takes a bitmap.
+
+```kotlin
+@RemoteComposable
+@Composable
+fun NowPlayingWidgetContent(albumArt: RemoteImageBitmap) {
+    RemoteRow(modifier = RemoteModifier.fillMaxSize()) {
+        RemoteImage(
+            remoteBitmap = albumArt,
+            contentDescription = "Album art".rs,
+            modifier = RemoteModifier.size(60.rdp, 60.rdp).clip(RemoteRoundedCornerShape(8.rdp)),
+            contentScale = ContentScale.Crop,
+        )
+        …
+    }
+}
+
+class NowPlayingWidget(
+    // The design's `album-art` asset.
+    private val albumArt: RemoteImageBitmap = ImageBitmap(1, 1).rb,
+) : GlanceWearWidget() { … }
+```
+
+One parameter per distinct key, named after it, defaulted to a **blank** 1×1 bitmap — which is what
+lets the generated `@Preview` beside it still compile, and is deliberately not a picture: a
+placeholder that looked like artwork would be a preview showing something the design does not have.
+Pass the real bitmap when the application constructs the widget.
+
+The **background** slot is the case that still refuses, and for a reason particular to it:
+`WearWidgetBrush.image` takes a `RemoteImageBitmap` and the brush chain is built in
+`provideWidgetData`, outside composition, where nothing resolves an asset key. The refusal says to
+supply the bitmap there and add `WearWidgetBrush.image(bitmap)` by hand.
+
+### What else a widget body can say
+
+The modifiers are `RemoteModifier`'s, not Compose's, and the palette offers exactly the ones the
+generator can write — `size`, `width`, `height`, `widthIn`, `heightIn`, `fillMax*`, `padding`,
+`background`, `border`, `clip`, `alpha`, `offset`, `rotate`, `scale`, `zIndex`, `wrapContentSize`,
+the scrolls, `weight` and the three alignments. Four Compose modifiers are missing from a widget's
+inspector on purpose, because Remote Compose has no counterpart: `matchParentSize` (use
+`fillMaxSize`), `aspectRatio` (state a `size`), `shadow` (a played document draws no elevation) and
+`testTag`.
+
+Two of them are written by the *container* rather than as a call: `background` with a shape becomes
+`clip(shape).background(colour)`, because `RemoteModifier.background` takes no shape, and an
+alignment becomes the row's, column's or box's own argument, because a played document aligns its
+content as a group. That last one is why a box whose children ask to be aligned differently from one
+another is refused: `RemoteBox` has one `contentAlignment` for all of them.
+
+Refusals work the way the Compose exporter's do: a node or modifier with no Remote Compose
+counterpart is named, with the reason and the route that does work, rather than approximated.
 
 ## Authoring a Wear screen
 

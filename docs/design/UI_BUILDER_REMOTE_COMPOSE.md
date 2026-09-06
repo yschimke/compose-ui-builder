@@ -228,6 +228,41 @@ a design makes. `InlineRemoteContentExporter` writes the half that is the design
 `@RemoteComposable` function — and the editor's generated-code pane shows it beneath whatever the
 screen generator said, so a design holding remote content is never answered with a bare refusal.
 
+### The palette and the emitter are one vocabulary, checked as two
+
+A `remote-m3` design is authorable in whatever the catalog declares and exportable in whatever
+[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteContentEmitter.kt)
+can write, and for a while those were two independent lists. The catalog borrowed each component's
+modifiers from `m3-catalog` — 28 of them on a widget node — the canvas drew all 28, and the emitter
+wrote three. `size`, `background`, `weight` and `align` were the ones an ordinary widget needs, so a
+coloured button in a corner beside a column of text that truncates was authorable, drawable and
+unexportable, and the author learned it after the design was built
+([#508](https://github.com/yschimke/compose-preview-server/issues/508)). The component dimension had
+the same shape: `asset/image` was in the palette and reached the emitter's catch-all `else`, whose
+sentence — "has no Remote Compose counterpart this generator can write" — is the one a *typo* in a
+component id gets.
+
+The list now has one source, `REMOTE_CONTENT_MODIFIERS`, and 21 entries: everything
+`remote-creation-compose` 1.0.0-alpha18 publishes a `RemoteModifier` for, plus the three alignments,
+which are written as an argument of the enclosing container rather than as a call of their own. Four
+are refused by name with the reason and the route — `matchParentSize`, `aspectRatio`, `shadow`,
+`testTag` — and the catalog does not offer them.
+
+It is **checked** as two lists rather than derived as one, because it cannot be derived:
+`:ui-builder-runtime` owns the catalog and `CheckUiBuilderRuntimeBoundary` keeps `:ui-builder-export`
+off its classpath deliberately, so the catalog's copy cannot import the emitter's. `:server` sees
+both, and `RemoteM3VocabularyParityTest` there fails when the palette advertises a component or a
+modifier the emitter cannot write — a red build the moment the palette changes, rather than a
+refusal an author finds at the end of a design. `RemoteContentVocabularyTest` in `:ui-builder` walks
+every name in the set through a real export, so the set cannot claim something the emitter refuses.
+
+`asset/image` is emitted in the **content** slot as `RemoteImage`, with the bitmap threaded through
+as a parameter of the content function and of the generated `GlanceWearWidget` — the design names
+the key, the application supplies the picture, because a widget's artwork is data rather than a
+constant a generator could bake in. In the **background** slot it still refuses, and that refusal is
+about the brush chain rather than about images: `WearWidgetBrush.image` is built in
+`provideWidgetData`, outside composition, where nothing resolves an asset key.
+
 ### Choosing the density behaviour at the call site
 
 The generator refuses to pick it, but the decision is not arbitrary, and the rule is short enough to

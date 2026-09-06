@@ -118,7 +118,7 @@ object WearWidgetCodeExporter {
         appendLine()
         appendLine("@RemoteComposable")
         appendLine("@Composable")
-        appendLine("fun ${name}Content() {")
+        appendLine("fun ${name}Content(${parameterList(emitter.imageParameters)}) {")
         if (emitter.usesTheme) {
           appendLine("${INDENT}RemoteMaterialTheme {")
           body.forEach(::appendLine)
@@ -128,14 +128,16 @@ object WearWidgetCodeExporter {
         }
         appendLine("}")
         appendLine()
-        appendLine("class $name : GlanceWearWidget() {")
+        appendLine(widgetClassHeader(name, emitter.imageParameters))
         appendLine("${INDENT}override suspend fun provideWidgetData(")
         appendLine("$INDENT${INDENT}context: Context,")
         appendLine("$INDENT${INDENT}params: WearWidgetParams,")
         appendLine("$INDENT): WearWidgetData {")
         background.locals.forEach { appendLine("$INDENT$INDENT$it") }
         documentReturn(background.expression).forEach(::appendLine)
-        appendLine("$INDENT$INDENT${INDENT}${name}Content()")
+        appendLine(
+          "$INDENT$INDENT${INDENT}${name}Content(${argumentList(emitter.imageParameters)})"
+        )
         appendLine("$INDENT$INDENT}")
         appendLine("$INDENT}")
         appendLine("}")
@@ -156,6 +158,44 @@ object WearWidgetCodeExporter {
         }
       }
     )
+  }
+
+  /** `albumArt: RemoteImageBitmap`, once per picture the body draws, or nothing at all. */
+  private fun parameterList(parameters: List<RemoteContentEmitter.ImageParameter>): String =
+    parameters.joinToString {
+      "${it.identifier}: RemoteImageBitmap"
+    }
+
+  private fun argumentList(parameters: List<RemoteContentEmitter.ImageParameter>): String =
+    parameters.joinToString {
+      "${it.identifier} = ${it.identifier}"
+    }
+
+  /**
+   * The widget class, which takes the body's pictures and defaults each to a blank bitmap.
+   *
+   * The parameters are the honest half: a widget's picture is application data, and the design
+   * carries an asset key rather than bytes source could name. The **default** is what makes the
+   * generated `@Preview` below still compile — it constructs this class with no arguments — and it
+   * is a 1×1 transparent bitmap rather than anything drawn, because a placeholder that looked like
+   * a picture would be a preview showing something the design does not have. An application passes
+   * the real bitmap; a preview shows the hole it goes in.
+   */
+  private fun widgetClassHeader(
+    name: String,
+    parameters: List<RemoteContentEmitter.ImageParameter>,
+  ): String {
+    if (parameters.isEmpty()) return "class $name : GlanceWearWidget() {"
+    return buildString {
+      appendLine("class $name(")
+      parameters.forEach {
+        appendLine("$INDENT// The design's `${it.assetKey.escapeComment()}` asset.")
+        appendLine(
+          "${INDENT}private val ${it.identifier}: RemoteImageBitmap = ImageBitmap(1, 1).rb,"
+        )
+      }
+      append(") : GlanceWearWidget() {")
+    }
   }
 
   /**

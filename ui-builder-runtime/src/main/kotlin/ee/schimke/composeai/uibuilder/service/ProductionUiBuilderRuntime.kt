@@ -848,6 +848,43 @@ private fun wearComponentMenu(): JsonObject {
   }
 }
 
+/**
+ * The modifiers a `remote-m3` component may advertise: what `RemoteContentEmitter` can write.
+ *
+ * A copy, and it has to be one. The emitter lives in `:ui-builder-export` and this module's
+ * `CheckUiBuilderRuntimeBoundary` keeps that classpath out on purpose, so the list cannot be
+ * imported from the one place it is derived. `RemoteContentModifierParityTest` in `:server` — which
+ * has both — fails when this set and `REMOTE_CONTENT_MODIFIERS` disagree, so the copy cannot rot
+ * quietly the way the last one did.
+ */
+private val REMOTE_M3_MODIFIERS =
+  setOf(
+    "align",
+    "alignHorizontal",
+    "alignVertical",
+    "alpha",
+    "background",
+    "border",
+    "clip",
+    "fillMaxHeight",
+    "fillMaxSize",
+    "fillMaxWidth",
+    "height",
+    "heightIn",
+    "horizontalScroll",
+    "offset",
+    "padding",
+    "rotate",
+    "scale",
+    "size",
+    "verticalScroll",
+    "weight",
+    "width",
+    "widthIn",
+    "wrapContentSize",
+    "zIndex",
+  )
+
 private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }
   val box = components.getValue("layout/box")
@@ -929,6 +966,13 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "shape/linear-gradient",
       "asset/image",
     )
+  // Every borrowed component is narrowed to the modifiers the generator can write. The two lists
+  // used to be independent — the palette offered 28 on a widget node and `RemoteContentEmitter`
+  // wrote three — so `size`, `background` and `weight` were authorable, drawable, and unexportable
+  // (yschimke/compose-preview-server#508). Narrowing here moves the refusal to the moment the
+  // modifier is added, which is the only moment an author can act on it.
+  fun ComponentCapabilityV1.narrowed(): ComponentCapabilityV1 =
+    copy(modifierCapabilities = modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS })
   return base.copy(
     // A Wear widget body is a Remote Compose document, played rather than composed. Said here so
     // the New design chooser can group it apart from the phone screens, and so no mobile pack is
@@ -955,7 +999,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
         widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
         lottie(components.getValue("asset/image"), supportedWasm, blockedSvg),
-      ) + authoringIds.map(components::getValue),
+      ) + authoringIds.map { components.getValue(it).narrowed() },
   )
 }
 
@@ -1001,10 +1045,10 @@ private fun lottie(
     traits = listOf("RemoteContent"),
     slots = emptyList(),
     properties = lottieProperties(),
-    // Exactly the three [RemoteContentEmitter] can write, and no more. A component that advertises
-    // a modifier the generator refuses is a component whose export fails after the design is drawn,
+    // Exactly what `RemoteContentEmitter` can write, and no more. A component that advertises a
+    // modifier the generator refuses is a component whose export fails after the design is drawn,
     // which is the worst moment to learn it.
-    modifierCapabilities = listOf("fillMaxSize", "fillMaxWidth", "padding"),
+    modifierCapabilities = borrowed.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS },
     wasm =
       supportedWasm.copy(
         notes =
