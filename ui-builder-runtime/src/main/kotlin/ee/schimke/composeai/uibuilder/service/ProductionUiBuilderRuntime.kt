@@ -2070,6 +2070,16 @@ public class ProductionUiBuilderExportExecutor(
       ExportFormatV1.COMPOSE -> compose.export(request)
       ExportFormatV1.PNG -> request.binaryArtifact(renderer.renderPng(request.toRenderRequest()))
       ExportFormatV1.SVG -> request.svgArtifact(renderer.renderSvg(request.toRenderRequest()))
+      // Unreachable through the service: [capabilities] leaves `bundle` at its false default, and
+      // PersistentUiBuilderService refuses any format the pinned catalog does not advertise before
+      // an executor is reached. Thrown rather than folded into an `else`, so that implementing
+      // yschimke/compose-preview-server#528 starts from a compile error here instead of silently
+      // handing back Compose source for a caller that asked for a bundle. The service already
+      // wraps this call, so the throw surfaces as an export error, not a crash.
+      ExportFormatV1.BUNDLE ->
+        throw UnsupportedOperationException(
+          "bundle export is not implemented; ExportCapabilitiesV1.bundle is false for this executor"
+        )
     }
 
   override fun close(): Unit = renderer.close()

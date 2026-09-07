@@ -3819,6 +3819,11 @@ private fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     ExportFormatV1.COMPOSE -> exportCapabilities.composeCode
     ExportFormatV1.SVG -> exportCapabilities.svg
     ExportFormatV1.PNG -> exportCapabilities.png
+    // Defaults to false in the contract, and no catalog here sets it, so a BUNDLE export is
+    // refused as BAD_REQUEST at the gate above until the server can actually write one
+    // (yschimke/compose-preview-server#528). No `else`: the next format added should fail this
+    // compile rather than silently read as unsupported.
+    ExportFormatV1.BUNDLE -> exportCapabilities.bundle
   }
 
 private data class EnvironmentValidationIssue(
