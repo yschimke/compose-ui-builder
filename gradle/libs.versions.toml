@@ -53,7 +53,7 @@ maven-publish = "0.37.0"
 composeai-tools = "2.1.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in.
-composeai-contracts = "2.10.0"
+composeai-contracts = "2.11.0"
 rc-players = "1.59.3"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
