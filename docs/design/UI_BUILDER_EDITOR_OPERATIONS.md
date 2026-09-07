@@ -525,6 +525,38 @@ recording, and generated Compose export.
 | --- | --- | --- |
 | ![Search icon before editing](../../preview-harness/snapshots/ui-builder-google-icon-before.png) | ![Searchable Google Material Icons catalog](../../preview-harness/snapshots/ui-builder-google-icon-picker.png) | ![Home icon after editing](../../preview-harness/snapshots/ui-builder-google-icon-selected.png) |
 
+## The History dock
+
+The editor has had an undo button and no way to find out what it would undo. On a design one person
+is editing that is uncomfortable; on one two people are editing it misleads, because undo walks
+*your own* commands and the change on screen is very often somebody else's.
+
+The History dock lists every accepted change, newest first, named from the operations that made it,
+with the before and after of every property, layout chain and environment field it moved. The entry
+undo is aimed at is marked, the entry redo would return is marked, and a collaborator's changes sit
+between them named and unmarked. Selecting a row selects the node the change was about.
+
+Nothing new is recorded to draw it. An accepted command already carries its operations and the
+before/after of everything it touched, so `UiBuilderEditorReducer.operationHistory` is a reading of
+what undo already acts on rather than a second account of it that could disagree.
+
+Two things it makes visible rather than changes. A row names its node as the canvas names it *now*,
+so an edit to a text node's own text reads as the new value with the old one on the line beneath —
+the row is a way back to a node, and it has to agree with the layers panel. And redo survives a new
+edit: a change made after an undo does not clear the redo target, which the panel now says out loud.
+
+Read-only. Walking the history from a row needs an answer for what becomes of the changes somebody
+else made in between, and the panel is worth having before that is answered.
+
+### Visual evidence
+
+`UiBuilderHistoryDockPreview` opens the editor on a seeded session — a layout change, a text change,
+a screen change and an undo — because a fresh session has no history and a panel about the session's
+own changes has one thing to say about that. What to look at is in
+[`renders/ui-builder-history/`](../../renders/ui-builder-history/README.md).
+
+![The editor with the History dock open, three changes listed, the undo and redo targets marked](../../renders/ui-builder-history/history-dock.after.png)
+
 ## Mobile workspace
 
 Below `840dp`, the editor defaults to a design-only workspace with a compact action bar. Components

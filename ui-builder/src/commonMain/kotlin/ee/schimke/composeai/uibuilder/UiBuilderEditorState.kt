@@ -514,7 +514,65 @@ enum class EditorInspectorMode {
    * The discussion about this design. See [DesignCommentBoard] for why it is not in the document.
    */
   Comments,
+  /** What has been done to this design, and which of it undo would take back. */
+  History,
 }
+
+/**
+ * Where one accepted change stands in the history right now.
+ *
+ * Undo and redo each act on one particular change, and until the history was drawn nothing said
+ * which. [NextUndo] and [NextRedo] are those two, and they are the reason this exists: the toolbar
+ * has a button that takes something back without saying what.
+ */
+enum class EditorOperationStanding {
+  /** In the document, with newer changes of yours above it. */
+  Applied,
+  /** In the document, and the next undo is this one. */
+  NextUndo,
+  /** Taken back, and the next redo puts this one back. */
+  NextRedo,
+  /** Taken back by an undo that has since been redone past. */
+  Undone,
+}
+
+/**
+ * One value an operation moved, as the two ends of the move.
+ *
+ * [before] and [after] are null for the absences at either end — a property that did not exist
+ * before, and one the change removed — so "added" and "cleared" are readable off the pair rather
+ * than needing a kind of their own.
+ */
+data class EditorOperationChange(
+  val label: String,
+  val before: String?,
+  val after: String?,
+)
+
+/**
+ * One accepted change to the design, said in words, with what it did to each value.
+ *
+ * Built from what the collaboration state already keeps: every accepted command carries its own
+ * operations and the before/after of every property, modifier chain, environment field and
+ * structural move it made. Nothing new is recorded to draw this — the history was always there,
+ * with nothing looking at it.
+ *
+ * [mine] is the distinction the panel is for. Undo walks *this editor's* commands, so a
+ * collaborator's change sits in the list, is not undoable by you, and is very often the reason the
+ * design does not look like what your own last change left behind.
+ */
+data class EditorOperationEntry(
+  val operationId: String,
+  val revision: Int,
+  /** What happened, in one line: "Set text on Episode title". */
+  val summary: String,
+  /** The node it happened to, for selecting it — null where the change was the screen's. */
+  val nodeId: String?,
+  val actorId: String,
+  val mine: Boolean,
+  val standing: EditorOperationStanding,
+  val changes: List<EditorOperationChange>,
+)
 
 /**
  * One thing standing between the current document and an export.
@@ -1284,6 +1342,95 @@ class UiBuilderEditorReducer(
   fun canUndo(state: UiBuilderEditorState): Boolean = state.undoTargetOperationId(actorId) != null
 
   fun canRedo(state: UiBuilderEditorState): Boolean = state.redoTargetUndoId(actorId) != null
+
+  /**
+   * What has been done to this design, newest first, and which of it undo would take back.
+   *
+   * Read out of the collaboration state rather than recorded alongside it: an accepted command
+   * already carries its operations and the before/after of everything it moved, and a second
+   * account of the same history is a second account that can disagree with the first.
+   *
+   * Everybody's changes, not only this editor's. Undo walks your own commands, so the entry it
+   * would take back is often not the newest one in the list, and the ones above it are the answer
+   * to "why did undo not put back what I was looking at".
+   */
+  fun operationHistory(state: UiBuilderEditorState): List<EditorOperationEntry> {
+    val collaboration = state.collaboration
+    val undoTarget = state.undoTargetOperationId(actorId)
+    val redoTarget =
+      state.redoTargetUndoId(actorId)?.let {
+        collaboration.undoRecords[it]?.target?.command?.operationId
+      }
+    return collaboration.acceptedCommands.values
+      .sortedByDescending(AcceptedCommand::committedRevision)
+      .map { accepted ->
+        val undone = accepted.command.operationId in collaboration.compensatedOperationIds
+        EditorOperationEntry(
+          operationId = accepted.command.operationId,
+          revision = accepted.committedRevision,
+          summary = summarise(state, accepted),
+          nodeId = accepted.subjectNodeId(),
+          actorId = accepted.command.actorId,
+          mine = accepted.command.actorId == actorId,
+          standing =
+            when {
+              undone && accepted.command.operationId == redoTarget ->
+                EditorOperationStanding.NextRedo
+              undone -> EditorOperationStanding.Undone
+              accepted.command.operationId == undoTarget -> EditorOperationStanding.NextUndo
+              else -> EditorOperationStanding.Applied
+            },
+          changes = accepted.describeChanges(),
+        )
+      }
+  }
+
+  /**
+   * The command in one line, from its operations rather than from what it moved.
+   *
+   * The operations are the intent — "set this property", "put this component there" — and the
+   * changes below are what that came to. A batch that did one kind of thing is named after it; one
+   * that did several is counted, because a sentence listing five verbs is not a summary.
+   */
+  private fun summarise(state: UiBuilderEditorState, accepted: AcceptedCommand): String {
+    val operations = accepted.command.operations
+    if (operations.isEmpty()) return "No change"
+    fun label(nodeId: String) = nodeLabel(state, nodeId)
+    val summaries = operations.map { operation ->
+      when (operation) {
+        is DesignOperation.InsertNode ->
+          "Added ${componentLabel(operation.node.componentId)}" +
+            (operation.parent?.let { " to ${label(it.nodeId)}" } ?: "")
+        is DesignOperation.MoveNode -> "Moved ${label(operation.nodeId)}"
+        is DesignOperation.DeleteNode -> "Deleted ${label(operation.nodeId)}"
+        is DesignOperation.RestoreNode -> "Restored ${label(operation.nodeId)}"
+        is DesignOperation.SetProperty -> "Set ${operation.property} on ${label(operation.nodeId)}"
+        is DesignOperation.RemoveNodeProperty ->
+          "Cleared ${operation.property} on ${label(operation.nodeId)}"
+        is DesignOperation.SetEnvironment -> "Set ${operation.field} on the screen"
+        is DesignOperation.SetModifiers -> "Changed the layout of ${label(operation.nodeId)}"
+      }
+    }
+    return summaries.distinct().singleOrNull() ?: "${operations.size} changes"
+  }
+
+  /**
+   * What a person calls this node — the layers panel's own name for it, or the bare id.
+   *
+   * The name it has *now*, deliberately, which for a text node whose text is what changed is the
+   * new one: "Set text on Nightcall". The row is a way back to a node on the canvas, so it has to
+   * agree with what the canvas and the layers panel call that node today, and the before/after line
+   * under the summary is where the old value is already said. A node deleted by the change it is
+   * describing has no name left to read and falls back to its id.
+   */
+  private fun nodeLabel(state: UiBuilderEditorState, nodeId: String): String {
+    val node = state.document.nodes[nodeId] ?: return nodeId
+    val capability = catalog.componentsById[node.componentId] ?: return nodeId
+    return node.contentLabel(capability) ?: capability.displayName
+  }
+
+  private fun componentLabel(componentId: String): String =
+    catalog.componentsById[componentId]?.displayName ?: componentId
 
   /**
    * Whether the whole selection can be duplicated.
@@ -4887,3 +5034,104 @@ private fun UiBuilderNode.modifierTypes(): Set<String> =
 
 private fun JsonObject.optionalStringValue(key: String): String? =
   (this[key] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.contentOrNull
+
+/**
+ * The node an operation is about, for selecting it from the history.
+ *
+ * The first one it names, which is the only honest answer for a batch that touched several: a list
+ * row selects one node, and the summary beside it already says how many things moved. Null for a
+ * command that only wrote the environment, which belongs to no node.
+ */
+private fun AcceptedCommand.subjectNodeId(): String? =
+  command.operations.firstNotNullOfOrNull { operation ->
+    when (operation) {
+      is DesignOperation.InsertNode -> operation.node.id
+      is DesignOperation.MoveNode -> operation.nodeId
+      is DesignOperation.DeleteNode -> operation.nodeId
+      is DesignOperation.RestoreNode -> operation.nodeId
+      is DesignOperation.SetProperty -> operation.nodeId
+      is DesignOperation.RemoveNodeProperty -> operation.nodeId
+      is DesignOperation.SetModifiers -> operation.nodeId
+      is DesignOperation.SetEnvironment -> null
+    }
+  }
+
+/**
+ * Everything this command moved, as before/after pairs.
+ *
+ * Structure last, and named by what it did rather than by a position: "added", "moved", "deleted"
+ * is what somebody reading a history wants, and a stable position key is not something to show
+ * anyone. The values either side come from the change records, which is the only place the *old*
+ * value survives at all — the document holds the new one.
+ */
+private fun AcceptedCommand.describeChanges(): List<EditorOperationChange> =
+  propertyChanges.map {
+    EditorOperationChange(
+      label = it.address.property,
+      before = it.before?.displayValue(),
+      after = it.afterValue?.displayValue(),
+    )
+  } +
+    modifierChanges.map {
+      EditorOperationChange(
+        label = "layout",
+        before = it.before.modifierSummary(),
+        after = it.after.modifierSummary(),
+      )
+    } +
+    environmentChanges.map {
+      EditorOperationChange(
+        label = it.field,
+        before = it.before?.displayValue(),
+        after = it.after.displayValue(),
+      )
+    } +
+    structuralChanges.map {
+      EditorOperationChange(
+        label =
+          when (it.kind) {
+            StructuralChangeKind.INSERT -> "added"
+            StructuralChangeKind.MOVE -> "moved"
+            StructuralChangeKind.DELETE -> "deleted"
+            StructuralChangeKind.RESTORE -> "restored"
+          },
+        before = it.beforePosition?.parent?.readable(),
+        after = it.afterPosition?.parent?.readable(),
+      )
+    }
+
+private fun ParentSlot.readable(): String = "$nodeId.$slot"
+
+/**
+ * A typed property value as the value alone.
+ *
+ * Properties are `{"type": …, "value": …}` and a history that showed the wrapper would be showing
+ * the storage rather than the change. Anything that is not that shape is printed as it stands,
+ * because guessing is worse than being literal about an unfamiliar value.
+ */
+private fun JsonElement.displayValue(): String {
+  val value = (this as? JsonObject)?.get("value") ?: this
+  return value.primitiveOrNull()?.content ?: value.toString()
+}
+
+/**
+ * A modifier chain as the short line the layout panel would show for it.
+ *
+ * Type plus its own values, because a chain named by type alone cannot distinguish the padding
+ * somebody just changed from the padding they had. Empty is stated rather than left blank: "no
+ * layout modifiers" is a real end of a change and an empty cell reads as missing information.
+ */
+private fun JsonArray.modifierSummary(): String {
+  if (isEmpty()) return "none"
+  return joinToString(", ") { element ->
+    val modifier = element as? JsonObject ?: return@joinToString element.toString()
+    val type = modifier.optionalStringValue("type") ?: return@joinToString modifier.toString()
+    val values =
+      modifier
+        .filterKeys { it != "type" }
+        .values
+        .mapNotNull { it.primitiveOrNull()?.content }
+        .joinToString(" ")
+    if (values.isEmpty()) type else "$type $values"
+  }
+}

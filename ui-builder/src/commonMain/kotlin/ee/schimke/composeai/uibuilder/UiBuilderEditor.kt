@@ -64,6 +64,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LibraryAdd
@@ -313,6 +314,20 @@ fun UiBuilderEditor(
   initialCatalogQuery: String = "",
   initialLayerQuery: String = "",
   initialInspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
+  /**
+   * Changes to make to the design as the editor opens, in order, as though somebody had made them.
+   *
+   * Empty everywhere a person is editing: this is not a way to author a document, and a host that
+   * wants a different design should open a different one. It exists for the same reason
+   * [initialCanvasZoom] pins a scale — a caller that is *picturing* the editor rather than running
+   * it. The History panel is about what this session has done, so a session that has done nothing
+   * draws the one state that says nothing about the panel, and the preview that has to diff it
+   * hands the session the edits it is a picture of.
+   *
+   * Anything the reducer refuses is left out of the state the same way it would be for a person: a
+   * seed that cannot be applied is not a reason to refuse to open the design.
+   */
+  initialEdits: List<UiBuilderEditorEvent> = emptyList(),
   initialPreviewMode: Boolean = false,
   initialCodePaneVisible: Boolean = false,
   /**
@@ -526,6 +541,17 @@ fun UiBuilderEditor(
   LaunchedEffect(document.revision, authoritativeGeneration) {
     if (state.document != document) {
       state = reducer.reconciled(state, document, initialSelectedNodeId)
+    }
+  }
+  // After the reconcile above rather than inside the state it opens with, because that reconcile
+  // fires on the first composition too: a session seeded at construction has a document the
+  // authoritative one does not match, so it was rebuilt from the authoritative one and the seed
+  // was gone before anything drew. Once per design, and never at all in the empty default.
+  var seeded by remember(document.id) { mutableStateOf(false) }
+  LaunchedEffect(document.id) {
+    if (!seeded && initialEdits.isNotEmpty()) {
+      seeded = true
+      state = initialEdits.fold(state, reducer::reduce)
     }
   }
   // Applied once, and only over an editor that has nothing of its own: the host delivers this
@@ -874,6 +900,12 @@ fun UiBuilderEditor(
   // Called inline it would run all of that on every recomposition of the inspector — which is
   // every keystroke in a property field and every frame of a drag.
   val problems = remember(reducer, state.document) { reducer.problems(state.document) }
+  // Keyed on the operation counter rather than on the document: an undo puts the document back to
+  // one the history has already seen, and the entry it moved the marker to is the whole point.
+  val operationHistory =
+    remember(reducer, state.operationSequence, state.document.revision) {
+      reducer.operationHistory(state)
+    }
   /**
    * The slot a piece would be built into, hit-tested at its own centre.
    *
@@ -1069,6 +1101,7 @@ fun UiBuilderEditor(
       comparisonBindingProperties = comparisonBindingProperties,
       bindableProperties = bindableProperties,
       problems = problems,
+      operationHistory = operationHistory,
       themeSettings = reducer.themeSettings(state),
       devicePresets = devicePresets,
       onPickReference = onPickReference,
@@ -3378,6 +3411,7 @@ private enum class EditorDock(val label: String) {
   Screen("Screen"),
   Issues("Issues"),
   Comments("Talk"),
+  History("History"),
   Code("Code"),
 }
 
@@ -3394,6 +3428,7 @@ private fun EditorDock.inspectorMode(): EditorInspectorMode? =
     EditorDock.Screen -> EditorInspectorMode.Screen
     EditorDock.Issues -> EditorInspectorMode.Issues
     EditorDock.Comments -> EditorInspectorMode.Comments
+    EditorDock.History -> EditorInspectorMode.History
     EditorDock.Code -> null
   }
 
@@ -3480,6 +3515,7 @@ private fun EditorDock.icon(): ImageVector =
     EditorDock.Screen -> Icons.Filled.PhoneAndroid
     EditorDock.Issues -> Icons.Filled.ErrorOutline
     EditorDock.Comments -> Icons.Filled.ChatBubbleOutline
+    EditorDock.History -> Icons.Filled.History
     EditorDock.Code -> Icons.Filled.Code
   }
 
@@ -5149,6 +5185,7 @@ private fun PropertyInspector(
   comparisonBindingProperties: Set<String>,
   bindableProperties: Set<String>,
   problems: List<EditorProblem>,
+  operationHistory: List<EditorOperationEntry>,
   themeSettings: EditorThemeSettings,
   devicePresets: List<UiBuilderDevicePreset>,
   onPickReference: (suspend () -> ReferenceImportOutcome)?,
@@ -5185,6 +5222,7 @@ private fun PropertyInspector(
               if (problems.isEmpty()) "Issues" else "Issues · ${problems.size}"
             EditorInspectorMode.Comments ->
               comments.openThreads.size.let { if (it == 0) "Talk" else "Talk · $it" }
+            EditorInspectorMode.History -> "History"
           },
         supporting =
           when (state.inspectorMode) {
@@ -5193,6 +5231,7 @@ private fun PropertyInspector(
             EditorInspectorMode.Screen -> "Frame, density and reference"
             EditorInspectorMode.Issues -> "What the export would refuse"
             EditorInspectorMode.Comments -> "What people and agents have said"
+            EditorInspectorMode.History -> "What has been done, newest first"
           },
         onClose = onClose,
       )
@@ -5204,6 +5243,7 @@ private fun PropertyInspector(
         comparisonBindingProperties = comparisonBindingProperties,
         bindableProperties = bindableProperties,
         problems = problems,
+        operationHistory = operationHistory,
         themeSettings = themeSettings,
         devicePresets = devicePresets,
         onPickReference = onPickReference,
@@ -5237,6 +5277,7 @@ private fun InspectorBody(
   comparisonBindingProperties: Set<String>,
   bindableProperties: Set<String>,
   problems: List<EditorProblem>,
+  operationHistory: List<EditorOperationEntry>,
   themeSettings: EditorThemeSettings,
   devicePresets: List<UiBuilderDevicePreset>,
   onPickReference: (suspend () -> ReferenceImportOutcome)?,
@@ -5259,6 +5300,12 @@ private fun InspectorBody(
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
     if (state.inspectorMode == EditorInspectorMode.Issues) {
       ProblemsInspector(problems, dispatch)
+      return@Column
+    }
+    if (state.inspectorMode == EditorInspectorMode.History) {
+      OperationHistoryInspector(operationHistory) { nodeId ->
+        dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
+      }
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Comments) {
@@ -5845,6 +5892,131 @@ private fun ProblemsInspector(
     }
   }
 }
+
+/**
+ * What has been done to this design, newest first, and which of it undo would take back.
+ *
+ * The panel exists for one sentence in the toolbar that was never written: undo takes something
+ * back without saying what, and on a design being edited by more than one person the something is
+ * very often not what you last did. So the entry undo is aimed at is marked, the entry redo would
+ * return is marked, and everybody else's changes sit in the list between them — unmarked, because
+ * they are not yours to take back, and named, because they are usually the answer.
+ *
+ * Read-only on purpose. Walking the history from a row is a different feature with a much harder
+ * question behind it — what happens to the changes somebody else made in between — and a panel that
+ * only tells the truth about the buttons that already exist is worth having before that is
+ * answered.
+ */
+@Composable
+private fun OperationHistoryInspector(
+  entries: List<EditorOperationEntry>,
+  onSelectNode: (String) -> Unit,
+) {
+  if (entries.isEmpty()) {
+    Text(
+      "Nothing has been changed in this session yet.",
+      Modifier.padding(top = 16.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    return
+  }
+  Text(
+    "Undo and redo act on the marked entries, which are your own changes.",
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+  )
+  // Selectable for the same reason the issues are: a value somebody is comparing against is a value
+  // they want to paste somewhere. A tap still selects the node underneath.
+  SelectionContainer {
+    LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+      items(entries, key = EditorOperationEntry::operationId) { entry ->
+        OperationHistoryRow(entry, onSelectNode)
+      }
+    }
+  }
+}
+
+@Composable
+private fun OperationHistoryRow(entry: EditorOperationEntry, onSelectNode: (String) -> Unit) {
+  val marked =
+    entry.standing == EditorOperationStanding.NextUndo ||
+      entry.standing == EditorOperationStanding.NextRedo
+  // Undone entries are drawn back rather than removed: what redo would put back is as much a part
+  // of "where am I in this history" as what undo would take away.
+  val faded = entry.standing == EditorOperationStanding.Undone
+  Column(
+    Modifier.fillMaxWidth()
+      .padding(bottom = 4.dp)
+      .let { base ->
+        if (marked)
+          base
+            .background(
+              MaterialTheme.colorScheme.surfaceVariant,
+              RoundedCornerShape(6.dp),
+            )
+            .padding(8.dp)
+        else base.padding(vertical = 4.dp)
+      }
+      .let { base -> entry.nodeId?.let { id -> base.clickable { onSelectNode(id) } } ?: base }
+  ) {
+    entry.standing.marker()?.let { marker ->
+      Text(
+        marker,
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+    Text(
+      entry.summary,
+      color =
+        if (faded) MaterialTheme.colorScheme.onSurfaceVariant
+        else MaterialTheme.colorScheme.onSurface,
+      style = MaterialTheme.typography.bodySmall,
+    )
+    entry.changes.forEach { change ->
+      Text(
+        change.readable(),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+    Text(
+      listOfNotNull(
+          "Revision ${entry.revision}",
+          if (entry.mine) "you" else entry.actorId,
+          if (faded) "undone" else null,
+        )
+        .joinToString(" · "),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+  }
+}
+
+/**
+ * One change as a line: what the value is now, and what it was.
+ *
+ * No arrow, and that is not a style preference: the browser build has no glyph for one, and the
+ * first render of this panel drew a box between every before and after. An absent end is said with
+ * a missing half rather than a dash, for the same reason — "text was Hello" says the property is
+ * gone, in characters the font is known to have.
+ */
+internal fun EditorOperationChange.readable(): String =
+  when {
+    after != null && before != null -> "$label  $after  \u00b7  was $before"
+    after != null -> "$label  $after"
+    before != null -> "$label  was $before"
+    else -> label
+  }
+
+/** What the two entries the toolbar is aimed at say about themselves, and nothing for the rest. */
+private fun EditorOperationStanding.marker(): String? =
+  when (this) {
+    EditorOperationStanding.NextUndo -> "Undo takes this back"
+    EditorOperationStanding.NextRedo -> "Redo puts this back"
+    EditorOperationStanding.Applied,
+    EditorOperationStanding.Undone -> null
+  }
 
 /**
  * The Kotlin the Compose export would write for the document on the canvas.
