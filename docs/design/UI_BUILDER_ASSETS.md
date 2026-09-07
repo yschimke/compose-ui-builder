@@ -100,6 +100,13 @@ to an authored node, which is the right rule for an export.
 
 ## What is deliberately not here
 
+- **The bytes beside the source.** Both source lanes above carry a picture *in* the generated file
+  — the Compose export as a `ColorPainter` stand-in and a header line naming the key to bundle, the
+  Wear widget export as inlined base64
+  ([#524](https://github.com/yschimke/compose-preview-server/pull/524)). Shipping the bytes as files
+  beside readable source is a second export format rather than a change to either, and the design is
+  [`UI_BUILDER_EXPORT_BUNDLE.md`](UI_BUILDER_EXPORT_BUNDLE.md)
+  ([#528](https://github.com/yschimke/compose-preview-server/issues/528)).
 - **External URLs.** Still refused, as #478 says they should be: a stored, hash-checked asset is
   the answer, and the host fetches nothing on a design's behalf.
 - **A browser upload control.** The canvas draws uploaded assets; putting one in from the editor

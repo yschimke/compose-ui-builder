@@ -157,12 +157,15 @@ internal class RemoteContentEmitter(
               else -> vertical("verticalGradient($stops)")
             }
         }
-        // `WearWidgetBrush.image` takes a `RemoteImageBitmap`, and the bytes are inlined rather
-        // than named. A widget is drawn by the **system** host, out of the app's process and
-        // without its resources, so anything resolved at draw time — an `R.drawable`, an asset
-        // path — is not there to resolve. The pixels have to travel inside the document, which
-        // means the only thing generated source can do is carry them
-        // (yschimke/compose-preview-server#523).
+        // `WearWidgetBrush.image` takes a `RemoteImageBitmap`, and this lane inlines the bytes
+        // rather than naming them. What a widget rules out is a name the **drawing** side
+        // resolves: the launcher draws the document out of the app's process and without its
+        // resources, so an `R.drawable` in the brush chain is not there to resolve. The pixels
+        // travel inside the document — but they are put there by `provideWidgetData`, which runs
+        // in the app's process and could equally have loaded them. Source that has to stand alone
+        // has nowhere to load from, so it carries them (yschimke/compose-preview-server#523); the
+        // export that ships them beside the source resolves a path instead
+        // (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`, yschimke/compose-preview-server#528).
         "asset/image" -> {
           val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
           when (val encoded = key.takeIf(String::isNotEmpty)?.let(assets::base64)) {
