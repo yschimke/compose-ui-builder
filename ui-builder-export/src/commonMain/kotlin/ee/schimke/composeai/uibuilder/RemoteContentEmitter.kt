@@ -93,6 +93,7 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
 internal class RemoteContentEmitter(
   private val document: UiBuilderDocument,
   private val refusals: MutableList<String>,
+  private val assets: WidgetAssetBytes = WidgetAssetBytes { null },
 ) {
   /** True once a colour or type token has been written, which only reads inside a theme. */
   var usesTheme: Boolean = false
@@ -108,7 +109,12 @@ internal class RemoteContentEmitter(
   private var usesTextAlign = false
 
   /** The `WearWidgetBrush` chain a container's background declares. */
-  data class Background(val expression: String, val locals: List<String>)
+  data class Background(
+    val expression: String,
+    val locals: List<String>,
+    /** The chain's calls in order, so a caller past its column budget can break between them. */
+    val elements: List<String> = emptyList(),
+  )
 
   fun background(container: UiBuilderNode): Background {
     val locals = mutableListOf<String>()
@@ -151,15 +157,27 @@ internal class RemoteContentEmitter(
               else -> vertical("verticalGradient($stops)")
             }
         }
-        // `WearWidgetBrush.image` takes a `RemoteImageBitmap`, which is a bitmap this generator has
-        // no way to name: the design carries an asset KEY, and resolving one to a bitmap is the
-        // builder's asset registry rather than anything source can say. Refused rather than
-        // emitted as a TODO that would not compile.
-        "asset/image" ->
-          refusals +=
-            "the image background `$id` needs a RemoteImageBitmap, which a generated file cannot " +
-              "name from an asset key — supply the bitmap in provideWidgetData and add " +
-              "`WearWidgetBrush.image(bitmap)` by hand"
+        // `WearWidgetBrush.image` takes a `RemoteImageBitmap`, and the bytes are inlined rather
+        // than named. A widget is drawn by the **system** host, out of the app's process and
+        // without its resources, so anything resolved at draw time — an `R.drawable`, an asset
+        // path — is not there to resolve. The pixels have to travel inside the document, which
+        // means the only thing generated source can do is carry them
+        // (yschimke/compose-preview-server#523).
+        "asset/image" -> {
+          val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
+          when (val encoded = key.takeIf(String::isNotEmpty)?.let(assets::base64)) {
+            null ->
+              refusals +=
+                "the image background `$id` names " +
+                  (if (key.isEmpty()) "no asset"
+                  else "the asset `$key`, whose bytes this export " + "could not read") +
+                  " — pick a picture for it in the inspector"
+            else -> {
+              usesBrushImage = true
+              elements += "image(${inlineBitmap(key, encoded)})"
+            }
+          }
+        }
         else -> refusals += "`${node.componentId}` is not a widget background brush"
       }
     }
@@ -168,10 +186,13 @@ internal class RemoteContentEmitter(
     val expression =
       if (elements.isEmpty()) "WearWidgetBrush"
       else elements.joinToString(".", prefix = "WearWidgetBrush.")
-    return Background(expression, locals)
+    return Background(expression, locals, elements)
   }
 
   private var usesRemoteColorScheme = false
+  var usesBrushImage = false
+    private set
+
   private var usesColorLiteral = false
   private var usesBrushColor = false
 
@@ -661,6 +682,36 @@ internal class RemoteContentEmitter(
     return name
   }
 
+  /**
+   * The identifier for a picture whose **bytes** the file carries, allocating one per asset key.
+   *
+   * Separate from [imageAssets] because the two answer different questions. A content picture is
+   * application data the app supplies, so it becomes a parameter; a widget *background* is drawn by
+   * the system host, which has neither the app's process nor its resources, so its bytes have to be
+   * in the document and therefore in the source.
+   */
+  private fun inlineBitmap(key: String, base64: String): String {
+    inlineAssets[key]?.let {
+      return it.identifier
+    }
+    val base = exportedStateIdentifier(key)
+    val taken = inlineAssets.values.map(InlineAsset::identifier).toSet() + imageAssets.values
+    val name =
+      if (base !in taken) base
+      else generateSequence(2) { it + 1 }.map { "$base$it" }.first { it !in taken }
+    inlineAssets[key] = InlineAsset(name, key, base64)
+    return name
+  }
+
+  private val inlineAssets = linkedMapOf<String, InlineAsset>()
+
+  /** The pictures whose bytes the generated file carries, in the order they were reached. */
+  val inlineBitmaps: List<InlineAsset>
+    get() = inlineAssets.values.toList()
+
+  /** One inlined picture: the val it becomes, the key it came from, and its bytes as base64. */
+  data class InlineAsset(val identifier: String, val assetKey: String, val base64: String)
+
   private val imageAssets = linkedMapOf<String, String>()
 
   /**
@@ -724,7 +775,7 @@ internal class RemoteContentEmitter(
     }
     if (usesDp) imports += "androidx.compose.remote.creation.compose.state.rdp"
     if (usesColorLiteral) imports += "androidx.compose.remote.creation.compose.state.rc"
-    if (usesRemoteImage)
+    if (usesRemoteImage || usesBrushImage)
       imports += "androidx.compose.remote.creation.compose.state.RemoteImageBitmap"
     if (usesMaterialText || usesRemoteString) {
       imports += "androidx.compose.remote.creation.compose.state.rs"
@@ -741,12 +792,12 @@ internal class RemoteContentEmitter(
     // paste.
     if (previewParamsProvider != null) {
       imports += "androidx.compose.ui.tooling.preview.Preview"
-      imports += "androidx.compose.ui.tooling.preview.PreviewParameter"
       imports += "androidx.glance.wear.GlanceWearWidget"
       imports += "androidx.glance.wear.WearWidgetBrush"
       imports += "androidx.glance.wear.WearWidgetData"
       imports += "androidx.glance.wear.WearWidgetDocument"
       if (usesBrushColor) imports += "androidx.glance.wear.color"
+      if (usesBrushImage) imports += "androidx.glance.wear.image"
       if (usesHorizontalGradient) imports += "androidx.glance.wear.horizontalGradient"
       if (usesVerticalGradient) imports += "androidx.glance.wear.verticalGradient"
       // The blank placeholder the generated widget class defaults an image parameter to, so the
@@ -754,6 +805,14 @@ internal class RemoteContentEmitter(
       if (usesRemoteImage) {
         imports += "androidx.compose.remote.creation.compose.state.rb"
         imports += "androidx.compose.ui.graphics.ImageBitmap"
+      }
+      // An inlined background decodes its own bytes, which is Android's decoder rather than a
+      // Compose one: the base64 becomes a `Bitmap` and then the `ImageBitmap` the `.rb` wraps.
+      if (usesBrushImage) {
+        imports += "android.graphics.BitmapFactory"
+        imports += "android.util.Base64"
+        imports += "androidx.compose.remote.creation.compose.state.rb"
+        imports += "androidx.compose.ui.graphics.asImageBitmap"
       }
       imports += "androidx.glance.wear.core.WearWidgetParams"
       imports += "androidx.glance.wear.tooling.preview.$previewParamsProvider"

@@ -43,7 +43,11 @@ object WearWidgetCodeExporter {
    *   the two differ by exactly this line. It goes after `@file:Suppress`, which Kotlin requires
    *   before the package declaration.
    */
-  fun export(document: UiBuilderDocument, packageName: String? = null): Result {
+  fun export(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
     val size =
@@ -82,7 +86,7 @@ object WearWidgetCodeExporter {
     // refusals are dropped, the real emitter below being the one that reports them.
     val depth =
       if (
-        RemoteContentEmitter(document, mutableListOf()).let { probe ->
+        RemoteContentEmitter(document, mutableListOf(), assets).let { probe ->
           probe.background(root)
           contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
           probe.usesTheme
@@ -91,7 +95,7 @@ object WearWidgetCodeExporter {
         2
       else 1
 
-    val emitter = RemoteContentEmitter(document, refusals)
+    val emitter = RemoteContentEmitter(document, refusals, assets)
     val background = emitter.background(root)
     val body =
       when (contentIds.size) {
@@ -134,7 +138,7 @@ object WearWidgetCodeExporter {
         appendLine("$INDENT${INDENT}params: WearWidgetParams,")
         appendLine("$INDENT): WearWidgetData {")
         background.locals.forEach { appendLine("$INDENT$INDENT$it") }
-        documentReturn(background.expression).forEach(::appendLine)
+        documentReturn(background).forEach(::appendLine)
         appendLine(
           "$INDENT$INDENT${INDENT}${name}Content(${argumentList(emitter.imageParameters)})"
         )
@@ -142,13 +146,25 @@ object WearWidgetCodeExporter {
         appendLine("$INDENT}")
         appendLine("}")
         appendLine()
+        // One preview, not the provider's fan-out. `@PreviewParameter` unrolls a preview per
+        // footprint the container ships — for Large that is a constrained 182×112dp beside the
+        // 216×124dp the design is authored against — and a scaffold does not need both to show
+        // what it looks like. The largest is picked by width rather than by position, so the
+        // choice does not rest on the order a provider happens to yield.
         appendLine("@Preview(name = \"Squircle Preview\")")
         appendLine("@Composable")
-        appendLine("fun ${name}SquirclePreview(")
-        appendLine(
-          "$INDENT@PreviewParameter(${size.previewParamsProvider}::class) params: WearWidgetParams"
-        )
-        appendLine(") = WearWidgetPreview($name(), params)")
+        appendLine("fun ${name}SquirclePreview() =")
+        appendLine("${INDENT}WearWidgetPreview(")
+        appendLine("$INDENT$INDENT$name(),")
+        appendLine("$INDENT$INDENT${size.previewParamsProvider}().values.maxBy { it.widthDp },")
+        appendLine("$INDENT)")
+        // The inlined pictures sit below the preview for the same reason the declarations do:
+        // a base64 PNG is thousands of columns, and a reader who has to scroll past it to reach
+        // the widget has been handed a worse file than one who can stop reading at the preview.
+        inlineBitmaps(emitter.inlineBitmaps).forEach {
+          appendLine()
+          appendLine(it)
+        }
         // Last in the file, and deliberately: a Lottie animation is a few thousand columns of
         // minified JSON, and a reader who has to scroll past it to reach the widget has been
         // handed a worse file than one who can stop reading at the preview.
@@ -158,6 +174,56 @@ object WearWidgetCodeExporter {
         }
       }
     )
+  }
+
+  /**
+   * The `val`s a background picture becomes: its bytes, and the decode that turns them into one.
+   *
+   * Chunked into a list of literals joined at runtime rather than one long `const val`, because a
+   * JVM string constant is capped at 65535 **bytes** of modified UTF-8 and a photograph passes that
+   * easily. Concatenating literals with `+` would not help — the compiler folds those into the
+   * single constant the cap applies to — so the chunks are joined by code instead, and a picture of
+   * any size compiles.
+   *
+   * One decoder per file, not per picture, and `NO_WRAP` because the encoder above emits no line
+   * breaks.
+   */
+  private fun inlineBitmaps(assets: List<RemoteContentEmitter.InlineAsset>): List<String> {
+    if (assets.isEmpty()) return emptyList()
+    val blocks = mutableListOf<String>()
+    assets.forEach { asset ->
+      // The bytes first: a top-level `val` is initialised in declaration order, so a decode that
+      // read its constant from above it would compile to "must be initialized".
+      blocks += buildString {
+        appendLine("/** The design's `${asset.assetKey.escapeComment()}` asset, inlined. */")
+        appendLine("private val ${asset.identifier.uppercaseConstant()}: String =")
+        appendLine("${INDENT}listOf(")
+        asset.base64.chunked(BASE64_CHUNK).forEach { appendLine("$INDENT$INDENT\"$it\",") }
+        appendLine("$INDENT)")
+        append("$INDENT${INDENT}.joinToString(\"\")")
+      }
+      blocks +=
+        "private val ${asset.identifier}: RemoteImageBitmap =\n" +
+          "${INDENT}decodeInlineBitmap(${asset.identifier.uppercaseConstant()})"
+    }
+    blocks += buildString {
+      appendLine("private fun decodeInlineBitmap(encoded: String): RemoteImageBitmap {")
+      appendLine("${INDENT}val bytes = Base64.decode(encoded, Base64.NO_WRAP)")
+      appendLine("${INDENT}return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)")
+      appendLine("$INDENT$INDENT.asImageBitmap()")
+      appendLine("$INDENT$INDENT.rb")
+      append("}")
+    }
+    return blocks
+  }
+
+  /** `coverWide` becomes `COVER_WIDE_PNG`, the constant beside it. */
+  private fun String.uppercaseConstant(): String = buildString {
+    this@uppercaseConstant.forEach {
+      if (it.isUpperCase() && isNotEmpty()) append('_')
+      append(it.uppercaseChar())
+    }
+    append("_PNG")
   }
 
   /** `albumArt: RemoteImageBitmap`, once per picture the body draws, or nothing at all. */
@@ -206,15 +272,26 @@ object WearWidgetCodeExporter {
    * when it fits the [MAX_LINE] budget the rest of the generator keeps. Past that the brush is
    * hoisted into a local, which is the shape `background.locals` already puts above it.
    */
-  private fun documentReturn(expression: String): List<String> {
+  private fun documentReturn(background: RemoteContentEmitter.Background): List<String> {
+    val expression = background.expression
     val body = "$INDENT${INDENT}return WearWidgetDocument(background = "
     val single = "$body$expression) {"
     if (single.length <= MAX_LINE) return listOf(single)
-    return listOf(
-      "$INDENT${INDENT}val background =",
-      "$INDENT$INDENT$INDENT$expression",
-      "$INDENT${INDENT}return WearWidgetDocument(background = background) {",
-    )
+    // Hoisted, and then broken between the chain's calls when the hoist is itself too long. An
+    // image element carries no length of its own — the bytes live in a val below — but a widget
+    // that layers a picture under two literal gradients still spends well past the budget on one
+    // line, and a generated file nobody can read across is a worse answer than a wrapped one.
+    val hoisted = "$INDENT$INDENT$INDENT$expression"
+    val chain =
+      if (hoisted.length <= MAX_LINE || background.elements.size < 2) listOf(hoisted)
+      else
+        background.elements.mapIndexed { index, element ->
+          if (index == 0) "$INDENT$INDENT${INDENT}WearWidgetBrush.$element"
+          else "$INDENT$INDENT$INDENT$INDENT.$element"
+        }
+    return listOf("$INDENT${INDENT}val background =") +
+      chain +
+      listOf("$INDENT${INDENT}return WearWidgetDocument(background = background) {")
   }
 
   private fun refuse(reason: String) = Result.Refused(listOf(reason))
@@ -239,6 +316,8 @@ object WearWidgetCodeExporter {
   private const val INDENT = "    "
 
   /** ktfmt's own default, as [RemoteContentEmitter] keeps for the body. */
+  private const val BASE64_CHUNK = 96
+
   private const val MAX_LINE = 100
 
   internal const val WEAR_WIDGET_SPEC_PADDING_DP = 8f

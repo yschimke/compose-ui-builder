@@ -31,7 +31,7 @@ class WearWidgetCodeExporterTest {
       source,
     )
     assertTrue("fun HelloWidgetContent()" in source, source)
-    assertTrue("SquircleSmallWidgetPreviewParams::class" in source, source)
+    assertTrue("SquircleSmallWidgetPreviewParams().values.maxBy { it.widthDp }" in source, source)
   }
 
   @Test
@@ -45,7 +45,7 @@ class WearWidgetCodeExporterTest {
     write("WeatherWidget.kt", source)
     assertTrue("WearWidgetBrush.color(Color(0xFF2196F3).rc)" in source, source)
     assertTrue("RemoteColumn(" in source, source)
-    assertTrue("SquircleLargeWidgetPreviewParams::class" in source, source)
+    assertTrue("SquircleLargeWidgetPreviewParams().values.maxBy { it.widthDp }" in source, source)
   }
 
   /**
@@ -90,11 +90,13 @@ class WearWidgetCodeExporterTest {
         .source
 
     write("GradientWidget.kt", source)
+    // Hoisted and broken between the chain's calls: two literal stops already spend past the
+    // column budget, so the chain is asserted call by call rather than as one line.
+    assertTrue("WearWidgetBrush.color(Color(0xFF2196F3).rc)" in source, source)
     assertTrue(
-      "WearWidgetBrush.color(Color(0xFF2196F3).rc).horizontalGradient(" in source,
+      ".horizontalGradient(listOf(Color(0xFF2196F3).rc, Color(0xFF0D47A1).rc))" in source,
       source,
     )
-    assertTrue("Color(0xFF2196F3).rc, Color(0xFF0D47A1).rc" in source, source)
     assertTrue("import androidx.glance.wear.horizontalGradient" in source, source)
   }
 
@@ -269,5 +271,73 @@ class WearWidgetCodeExporterTest {
     val directory = Path.of("build", "generated-widget-source")
     Files.createDirectories(directory)
     Files.writeString(directory.resolve(name), source)
+  }
+
+  /**
+   * A picture in the background slot is **inlined**, not named.
+   *
+   * The widget is drawn by the system host — out of the app's process, without its resources — so
+   * an `R.drawable` or an asset path is not there to resolve at draw time. The pixels have to
+   * travel inside the document, which leaves generated source carrying them
+   * (yschimke/compose-preview-server#523). Before this, every widget with an image background
+   * refused outright and told the author to write `WearWidgetBrush.image(bitmap)` by hand.
+   */
+  @Test
+  fun `an image background inlines its bytes and builds the brush`() {
+    val document = imageBackgroundDocument()
+
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            document,
+            assets = { key -> if (key == "cover") "QUJD" else null },
+          )
+        )
+        .source
+
+    assertTrue(".image(cover)" in source, source)
+    assertTrue("private val cover: RemoteImageBitmap =" in source, source)
+    assertTrue("decodeInlineBitmap(COVER_PNG)" in source, source)
+    assertTrue("\"QUJD\"," in source, source)
+    assertTrue("Base64.decode(encoded, Base64.NO_WRAP)" in source, source)
+    assertTrue("import androidx.glance.wear.image" in source, source)
+    assertTrue("import android.graphics.BitmapFactory" in source, source)
+    // The bytes are declared above the decode that reads them: a top-level `val` is initialised in
+    // declaration order, and the other way round does not compile.
+    assertTrue(
+      source.indexOf("private val COVER_PNG") < source.indexOf("private val cover:"),
+      source,
+    )
+  }
+
+  /** A key the registry cannot answer refuses by name rather than emitting a picture. */
+  @Test
+  fun `an image background with no bytes is refused by name`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(imageBackgroundDocument())
+      )
+
+    assertTrue(refused.reasons.any { "bg-art" in it }, refused.reasons.toString())
+  }
+
+  /** The weather widget with an `asset/image` in its background slot instead of a colour. */
+  private fun imageBackgroundDocument(): UiBuilderDocument {
+    val base = weatherWidgetUiBuilderDocument("cover-widget", pin, environment)
+    val scaffold = base.nodes.values.first { it.componentId.startsWith("remote-m3/") }
+    val art =
+      UiBuilderNode(
+        id = "bg-art",
+        componentId = "asset/image",
+        properties = JsonObject(mapOf("assetKey" to literal("string", "cover"))),
+      )
+    return base.copy(
+      nodes =
+        base.nodes +
+          mapOf(
+            art.id to art,
+            scaffold.id to scaffold.copy(slots = scaffold.slots + ("background" to listOf(art.id))),
+          )
+    )
   }
 }

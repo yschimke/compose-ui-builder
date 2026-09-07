@@ -291,7 +291,6 @@ import androidx.compose.remote.creation.compose.state.rs
 import androidx.compose.remote.creation.compose.state.rsp
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.glance.wear.GlanceWearWidget
 import androidx.glance.wear.WearWidgetBrush
 import androidx.glance.wear.WearWidgetData
@@ -332,9 +331,11 @@ class HelloWidget : GlanceWearWidget() {
 
 @Preview(name = "Squircle Preview")
 @Composable
-fun HelloWidgetSquirclePreview(
-    @PreviewParameter(SquircleSmallWidgetPreviewParams::class) params: WearWidgetParams
-) = WearWidgetPreview(HelloWidget(), params)
+fun HelloWidgetSquirclePreview() =
+    WearWidgetPreview(
+        HelloWidget(),
+        SquircleSmallWidgetPreviewParams().values.maxBy { it.widthDp },
+    )
 ```
 
 Read what is *not* there: the host container. `remote-m3/widget-container-*` is this builder's
@@ -346,10 +347,17 @@ that moved them is refused by name rather than generating a preview that draws a
 have.
 
 The `@Preview` carries **no `device`**, and that is deliberate rather than an omission. A widget's
-canvas is its `WearWidgetParams` — the provider yields every footprint the platform ships for that
-container size, so one preview function already fans out over them. A screen spec beside it says
-nothing the params do not, and a renderer that honours it draws the widget across a phone-sized
-canvas instead of the 216×124dp frame the design was authored in.
+canvas is its `WearWidgetParams`, so a screen spec beside it says nothing the params do not, and a
+renderer that honours it draws the widget across a phone-sized canvas instead of the 216×124dp
+frame the design was authored in.
+
+It is also **one** preview rather than a fan-out. The params still come from the shipped provider —
+the preview invents no frame — but the generator picks the widest footprint the container ships
+instead of unrolling a preview per value with `@PreviewParameter`. A scaffold does not need both
+the constrained 182×112dp and the 216×124dp the design is authored against to show what it looks
+like. The cost, stated: an overflow that only appears at the narrower footprint no longer shows up
+in the generated preview, so a widget whose content is close to the width has to be checked there
+deliberately.
 
 ![The Code pane showing a widget's generated Kotlin](design/evidence/ui-builder-remote-compose/widget-code-pane.png)
 
@@ -386,10 +394,36 @@ lets the generated `@Preview` beside it still compile, and is deliberately not a
 placeholder that looked like artwork would be a preview showing something the design does not have.
 Pass the real bitmap when the application constructs the widget.
 
-The **background** slot is the case that still refuses, and for a reason particular to it:
-`WearWidgetBrush.image` takes a `RemoteImageBitmap` and the brush chain is built in
-`provideWidgetData`, outside composition, where nothing resolves an asset key. The refusal says to
-supply the bitmap there and add `WearWidgetBrush.image(bitmap)` by hand.
+The **background** slot inlines its bytes instead, and the difference is the host. A widget is drawn
+by the **system**, out of the application's process and without its resources, so a background
+picture cannot be a name the drawing side resolves — no `R.drawable`, no asset path, nothing looked
+up at draw time. The pixels have to travel inside the document, which leaves generated source
+carrying them:
+
+```kotlin
+val background = WearWidgetBrush.image(coverWide)
+
+private val COVER_WIDE_PNG: String =
+    listOf(
+        "iVBORw0KGgoAAAANSUhEUgAAAbAAAAD4CAIAAAACUCTIAABrS0lEQVR42uzcV3Qbd5bvez53T0/Hdc890zk7yJYl",
+        …
+    )
+        .joinToString("")
+
+private fun decodeInlineBitmap(encoded: String): RemoteImageBitmap {
+    val bytes = Base64.decode(encoded, Base64.NO_WRAP)
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        .asImageBitmap()
+        .rb
+}
+```
+
+The bytes are chunked into a list joined at runtime rather than one `const val`, because a JVM
+string constant is capped at 65535 bytes and a photograph passes that easily. They are declared
+above the decode that reads them, because a top-level `val` is initialised in declaration order.
+
+A key whose bytes this host cannot read still refuses, by name — the export says which node names
+which asset rather than emitting a picture it does not have.
 
 ### What else a widget body can say
 

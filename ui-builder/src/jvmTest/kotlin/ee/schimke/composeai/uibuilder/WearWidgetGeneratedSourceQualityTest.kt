@@ -52,8 +52,27 @@ class WearWidgetGeneratedSourceQualityTest {
 
     assertTrue("@Preview(name = \"Squircle Preview\")" in source, source)
     assertFalse("device =" in source, source)
-    // The provider is still the fan-out: it yields every footprint the Large container ships.
-    assertTrue("SquircleLargeWidgetPreviewParams::class" in source, source)
+  }
+
+  /**
+   * One preview, not one per footprint.
+   *
+   * `@PreviewParameter` unrolls a preview per value the provider yields — for the Large container a
+   * constrained 182×112dp beside the 216×124dp the design is authored against — and a scaffold does
+   * not need both to show what it looks like. The provider is still where the numbers come from, so
+   * the preview keeps the shipped spec rather than inventing a frame; only the fan-out goes. Picked
+   * by width, so the choice does not rest on the order a provider happens to yield.
+   */
+  @Test
+  fun `the generated preview is one, at the container's own footprint`() {
+    val source = generate()
+
+    assertFalse("@PreviewParameter" in source, source)
+    assertFalse("import androidx.compose.ui.tooling.preview.PreviewParameter" in source, source)
+    assertTrue(
+      "SquircleLargeWidgetPreviewParams().values.maxBy { it.widthDp }" in source,
+      source,
+    )
   }
 
   /**

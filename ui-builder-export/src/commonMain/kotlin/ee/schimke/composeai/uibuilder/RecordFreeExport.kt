@@ -58,12 +58,14 @@ object RecordFreeExport {
     packageName: String? = null,
     tagNodes: Boolean = false,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? =
     when {
       // A widget takes no [tagNodes]: it generates a `WearWidgetDocument` of Remote Compose, whose
       // nodes are not Compose modifiers and which the native preview lane does not compile anyway
       // ([composeCompilable]). Accepting the flag and dropping it would read as support.
-      document.isWearWidget() -> WearWidgetCodeExporter.export(document, packageName).generated()
+      document.isWearWidget() ->
+        WearWidgetCodeExporter.export(document, packageName, assets).generated()
       document.isWearScreen() ->
         WearScreenCodeExporter.export(document, packageName, tagNodes, packComponents).generated()
       else -> null
@@ -98,10 +100,11 @@ object RecordFreeExport {
     packageName: String? = null,
     tagNodes: Boolean = false,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? {
     if (!document.isRecordFree()) return null
     return runCatching {
-      generate(document.toUiBuilderDocument(), packageName, tagNodes, packComponents)
+      generate(document.toUiBuilderDocument(), packageName, tagNodes, packComponents, assets)
     }
       .getOrElse { failure ->
         Generated.Refused(
