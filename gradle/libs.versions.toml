@@ -74,13 +74,13 @@ jmdns = "3.6.3"
 # wasmJs variant, which is the whole reason it is this library: the pane is a Compose `Text` on a
 # canvas, so a JS/DOM highlighter (the playground's vendored CodeMirror) cannot reach it.
 #
-# Held at 1.0.0 because nothing this pane does needs 1.1.0 — not because it cannot be taken. Its
-# blocker is gone: 1.1.0's JVM artifact is class file 65, and `:ui-builder` now compiles against
-# `java-ui-builder` (21), so it would load in `:ui-builder:jvmTest` and in the JVM chrome preview
-# the render evidence comes from. Read the two floors at the top of this file before taking it —
-# the constraint that remains is that it must not reach `java-server`'s lane, and
-# `:server:checkServerJvmFloor` is what says so rather than a comment.
-snipme-highlights = "1.0.0"
+# At 1.1.0, which the blocker that once held this at 1.0.0 no longer stops: 1.1.0's JVM artifact is
+# class file 65, and `:ui-builder` compiles against `java-ui-builder` (21), so it loads in
+# `:ui-builder:jvmTest` and in the JVM chrome preview the render evidence comes from. Read the two
+# floors at the top of this file before moving it again — the constraint that remains is that it
+# must not reach `java-server`'s lane, and `:server:checkServerJvmFloor` is what says so rather
+# than a comment.
+snipme-highlights = "1.1.0"
 
 [libraries]
 composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping", version.ref = "composeai-tools" }
