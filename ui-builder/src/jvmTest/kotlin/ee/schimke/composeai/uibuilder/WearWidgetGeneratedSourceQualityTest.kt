@@ -132,6 +132,66 @@ class WearWidgetGeneratedSourceQualityTest {
     )
   }
 
+  /**
+   * A row's own alignment reaches the generated `RemoteRow`, centre included.
+   *
+   * The canvas has always read `verticalAlignment` off the node and defaults a row to
+   * `CenterVertically`; the emitter read only the children's `alignVertical` modifiers, so a row
+   * generated no alignment and the widget drew top-aligned while the canvas drew it centred —
+   * silently, with no diagnostic (yschimke/compose-preview-server#518).
+   *
+   * The centre is written explicitly because `RemoteRow`'s own default is `Top`: emitting nothing
+   * is what kept the two lanes disagreeing.
+   */
+  @Test
+  fun `a row carries the alignment the canvas gives it`() {
+    val source = generate(rowAlignmentDocument())
+
+    assertTrue("verticalAlignment = RemoteAlignment.CenterVertically" in source, source)
+  }
+
+  /** A row that asks for `top` matches RemoteRow's own default, so it writes nothing. */
+  @Test
+  fun `a top-aligned row writes no alignment argument`() {
+    val source = generate(rowAlignmentDocument(alignment = "top"))
+
+    assertFalse("verticalAlignment" in source, source)
+  }
+
+  /** A row on the Large container, with only the node's own alignment to go on. */
+  private fun rowAlignmentDocument(alignment: String? = null): UiBuilderDocument {
+    val nodes =
+      listOf(
+        UiBuilderNode(
+          id = "wear-widget-large",
+          componentId = WearWidgetScaffoldSize.Large.componentId,
+          slots = mapOf("content" to listOf("bar")),
+        ),
+        UiBuilderNode(
+          id = "bar",
+          componentId = "layout/row",
+          properties =
+            JsonObject(
+              buildMap { alignment?.let { put("verticalAlignment", literal("enum", it)) } }
+            ),
+          modifiers = JsonArray(listOf(modifier("fillMaxSize"))),
+          slots = mapOf("children" to listOf("label")),
+        ),
+        text("label", "Nightcall", size = 14),
+      )
+    return UiBuilderDocument(
+      schema = "compose-ui-builder-document/v1-candidate",
+      id = "row-alignment",
+      title = "Row alignment",
+      revision = 0,
+      catalogPin = JsonObject(emptyMap()),
+      environment = JsonObject(emptyMap()),
+      stateVariables = JsonObject(emptyMap()),
+      roots = listOf("wear-widget-large"),
+      nodes = nodes.associateBy(UiBuilderNode::id),
+    )
+  }
+
   private fun activitySummaryDocument(): UiBuilderDocument {
     val nodes =
       listOf(

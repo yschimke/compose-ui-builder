@@ -346,7 +346,7 @@ internal class RemoteContentEmitter(
         usesArrangement = true
         arguments += "verticalArrangement = RemoteArrangement.spacedBy(${it.dpLiteral()})"
       }
-    crossAxisAlignment(node, "alignHorizontal")
+    (crossAxisAlignment(node, "alignHorizontal") ?: node.canvasHorizontalAlignment())
       ?.takeIf { it != "start" }
       ?.let {
         usesAlignment = true
@@ -354,6 +354,20 @@ internal class RemoteContentEmitter(
       }
     return arguments
   }
+
+  /**
+   * A column's own `horizontalAlignment`, as the canvas reads it.
+   *
+   * The same omission as [canvasVerticalAlignment] and the same fix, but a quieter one: the
+   * canvas's default here is `Start`, which is `RemoteColumn`'s too, so only a column that declares
+   * `center` or `end` was losing anything. It lost it completely.
+   */
+  private fun UiBuilderNode.canvasHorizontalAlignment(): String =
+    when (properties["horizontalAlignment"]?.stringOrNull()) {
+      "center" -> "center"
+      "end" -> "end"
+      else -> "start"
+    }
 
   private fun rowArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
@@ -365,7 +379,7 @@ internal class RemoteContentEmitter(
         usesArrangement = true
         arguments += "horizontalArrangement = RemoteArrangement.spacedBy(${it.dpLiteral()})"
       }
-    crossAxisAlignment(node, "alignVertical")
+    (crossAxisAlignment(node, "alignVertical") ?: node.canvasVerticalAlignment())
       ?.takeIf { it != "top" }
       ?.let {
         usesAlignment = true
@@ -373,6 +387,26 @@ internal class RemoteContentEmitter(
       }
     return arguments
   }
+
+  /**
+   * A row's own `verticalAlignment`, as the canvas reads it — **centre when it says nothing**.
+   *
+   * The canvas has always read this property, and its default for a row is `CenterVertically`
+   * rather than Compose's `Top`. The emitter read only the children's `alignVertical` modifiers, so
+   * a row that declared the property, or declared nothing at all, generated a `RemoteRow` with no
+   * alignment and drew top-aligned — a widget laid out differently from the design its author
+   * approved, silently, with no diagnostic (yschimke/compose-preview-server#518).
+   *
+   * The centre is written explicitly rather than left to the callee, because `RemoteRow`'s own
+   * default is `Top` like Compose's. Emitting nothing would keep the two lanes disagreeing; the
+   * argument is what makes them agree.
+   */
+  private fun UiBuilderNode.canvasVerticalAlignment(): String =
+    when (properties["verticalAlignment"]?.stringOrNull()) {
+      "top" -> "top"
+      "bottom" -> "bottom"
+      else -> "centerVertically"
+    }
 
   /**
    * `Symbol(a, b)` on one line, or one argument per line once that would run long.
