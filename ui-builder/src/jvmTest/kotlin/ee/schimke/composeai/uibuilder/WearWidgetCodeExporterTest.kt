@@ -276,11 +276,13 @@ class WearWidgetCodeExporterTest {
   /**
    * A picture in the background slot is **inlined**, not named.
    *
-   * The widget is drawn by the system host — out of the app's process, without its resources — so
-   * an `R.drawable` or an asset path is not there to resolve at draw time. The pixels have to
-   * travel inside the document, which leaves generated source carrying them
-   * (yschimke/compose-preview-server#523). Before this, every widget with an image background
-   * refused outright and told the author to write `WearWidgetBrush.image(bitmap)` by hand.
+   * What a widget rules out is a name the drawing side resolves: the launcher draws the document
+   * out of the app's process and without its resources, so an `R.drawable` in the brush chain is
+   * not there to resolve. The pixels travel inside the document — and source that has to stand
+   * alone has nowhere to load them from, so it carries them (yschimke/compose-preview-server#523).
+   * Before this, every widget with an image background refused outright and told the author to
+   * write `WearWidgetBrush.image(bitmap)` by hand. The bundle lane below is the other way to answer
+   * the same question.
    */
   @Test
   fun `an image background inlines its bytes and builds the brush`() {
@@ -319,6 +321,135 @@ class WearWidgetCodeExporterTest {
       )
 
     assertTrue(refused.reasons.any { "bg-art" in it }, refused.reasons.toString())
+  }
+
+  /**
+   * The same background, as a **bundle**: a file beside the source, and a path the source opens.
+   *
+   * The design is `docs/design/UI_BUILDER_EXPORT_BUNDLE.md`. What this pins is the shape of the
+   * answer — the picture is opened where the `Context` is, the archive carries it under a path
+   * scoped by design, and none of the base64 machinery the inlining lane needs appears at all.
+   */
+  @Test
+  fun `a bundled image background opens the file the archive carries`() {
+    val bundle =
+      assertIs<WearWidgetCodeExporter.BundleResult.Emitted>(
+          WearWidgetCodeExporter.exportBundle(
+            imageBackgroundDocument(),
+            assets = { key ->
+              if (key == "cover") WidgetAssetContent("image/png", "QUJD") else null
+            },
+          )
+        )
+        .bundle
+
+    val source = bundle.source
+    write("CoverWidgetBundle.kt", source)
+    assertTrue(".image(cover)" in source, source)
+    assertTrue(
+      "val cover = context.bundledBitmap(\"uibuilder/cover-widget/cover.png\")" in source,
+      source,
+    )
+    assertTrue("private fun Context.bundledBitmap(path: String): RemoteImageBitmap =" in source)
+    assertTrue("assets.open(path).use { BitmapFactory.decodeStream(it) }" in source, source)
+    // The whole point: no bytes in the file, and none of what decoding them needs.
+    assertTrue("QUJD" !in source, source)
+    assertTrue("Base64" !in source, source)
+    assertTrue("import android.graphics.BitmapFactory" in source, source)
+
+    assertEquals(
+      listOf(WidgetBundleFile("assets/uibuilder/cover-widget/cover.png", "image/png", "QUJD")),
+      bundle.files,
+    )
+    assertEquals("WeatherWidget.kt", bundle.sourceFileName)
+    assertTrue("assets/uibuilder/cover-widget/cover.png" in bundle.readme, bundle.readme)
+  }
+
+  /**
+   * A **content** picture keeps its parameter and gains the design's artwork as its default.
+   *
+   * The parameter is what #508 settled and a bundle does not take it back — an application's album
+   * art is not the design's. What changes is the default: nullable, resolved in `provideWidgetData`
+   * where the `Context` is, so the generated `@Preview` draws the design instead of the
+   * `ImageBitmap(1, 1)` hole the inlining lane has to leave.
+   */
+  @Test
+  fun `a bundled content picture defaults its parameter to the design's artwork`() {
+    val bundle =
+      assertIs<WearWidgetCodeExporter.BundleResult.Emitted>(
+          WearWidgetCodeExporter.exportBundle(
+            contentImageDocument(),
+            assets = { key ->
+              if (key == "album-art") WidgetAssetContent("image/jpeg", "QUJD") else null
+            },
+          )
+        )
+        .bundle
+
+    val source = bundle.source
+    write("AlbumWidgetBundle.kt", source)
+    assertTrue("private val albumArt: RemoteImageBitmap? = null," in source, source)
+    assertTrue(
+      "val albumArt = albumArt ?: context.bundledBitmap(\"uibuilder/album-widget/album-art.jpg\")" in
+        source,
+      source,
+    )
+    assertTrue("WeatherWidgetContent(albumArt = albumArt)" in source, source)
+    assertEquals(
+      listOf(WidgetBundleFile("assets/uibuilder/album-widget/album-art.jpg", "image/jpeg", "QUJD")),
+      bundle.files,
+    )
+    assertTrue("albumArt" in bundle.readme, bundle.readme)
+  }
+
+  /**
+   * A content picture the archive cannot carry keeps the blank default rather than failing.
+   *
+   * The asymmetry with a background is deliberate and is the lanes' shared rule: a background is
+   * the design's own picture, so a key nothing can answer is a refusal; a content picture is the
+   * application's, so the parameter stands on its own and the fallback is the hole.
+   */
+  @Test
+  fun `a content picture with no bytes still exports as a parameter`() {
+    val bundle =
+      assertIs<WearWidgetCodeExporter.BundleResult.Emitted>(
+          WearWidgetCodeExporter.exportBundle(contentImageDocument(), assets = { null })
+        )
+        .bundle
+
+    assertTrue("val albumArt = albumArt ?: ImageBitmap(1, 1).rb" in bundle.source, bundle.source)
+    assertEquals(emptyList(), bundle.files)
+  }
+
+  /** A background key the registry cannot answer refuses in this lane too, and by name. */
+  @Test
+  fun `a bundled image background with no bytes is refused by name`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.BundleResult.Refused>(
+        WearWidgetCodeExporter.exportBundle(imageBackgroundDocument(), assets = { null })
+      )
+
+    assertTrue(refused.reasons.any { "bg-art" in it }, refused.reasons.toString())
+  }
+
+  /** The weather widget with an `asset/image` as its whole body. */
+  private fun contentImageDocument(): UiBuilderDocument {
+    val base = weatherWidgetUiBuilderDocument("album-widget", pin, environment)
+    val scaffold = base.nodes.values.first { it.componentId.startsWith("remote-m3/") }
+    val art =
+      UiBuilderNode(
+        id = "art",
+        componentId = "asset/image",
+        properties = JsonObject(mapOf("assetKey" to literal("string", "album-art"))),
+      )
+    return base.copy(
+      nodes =
+        base.nodes +
+          mapOf(
+            art.id to art,
+            scaffold.id to scaffold.copy(slots = scaffold.slots + ("content" to listOf(art.id))),
+          )
+    )
   }
 
   /** The weather widget with an `asset/image` in its background slot instead of a colour. */

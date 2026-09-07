@@ -132,6 +132,19 @@ internal class RemoteContentEmitter(
    * that is this lane's own fault. Inlined, the two draw the same picture.
    */
   private val inlineContentImages: Boolean = false,
+  /**
+   * The registry for the **bundle** lane, or null for the inlining one.
+   *
+   * Which of the two is set decides what a picture becomes: a base64 literal the file carries, or a
+   * file beside it and a path the source opens. Nothing else about the walk changes, which is why
+   * this is one nullable field rather than a second emitter
+   * (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`).
+   *
+   * Independent of [inlineContentImages], and never set with it: that flag is the native preview
+   * lane asking for bytes because it has no argument to pass, and this one is an export shipping
+   * files because it has somewhere to put them.
+   */
+  private val bundled: WidgetAssetContents? = null,
 ) {
   /** True once a colour or type token has been written, which only reads inside a theme. */
   var usesTheme: Boolean = false
@@ -206,7 +219,7 @@ internal class RemoteContentEmitter(
         // (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`, yschimke/compose-preview-server#528).
         "asset/image" -> {
           val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
-          when (val encoded = key.takeIf(String::isNotEmpty)?.let(assets::base64)) {
+          when (val identifier = backgroundBitmap(key)) {
             null ->
               refusals +=
                 "the image background `$id` names " +
@@ -215,7 +228,7 @@ internal class RemoteContentEmitter(
                   " — pick a picture for it in the inspector"
             else -> {
               usesBrushImage = true
-              elements += "image(${inlineBitmap(key, encoded)})"
+              elements += "image($identifier)"
             }
           }
         }
@@ -662,9 +675,12 @@ internal class RemoteContentEmitter(
    * avatar, a logo — that changes long after this file is written, and baking today's bytes in as a
    * constant would generate a widget that draws the picture the design was built with forever. So
    * the key becomes a **parameter**: [imageParameters] names one per distinct key, the content
-   * function takes it, and `provideWidgetData` hands it on. That is the same split
-   * `docs/UI_BUILDER_GETTING_STARTED.md` already describes for an image *background*, applied to
-   * the content slot rather than to the brush chain.
+   * function takes it, and `provideWidgetData` hands it on. The bundle lane keeps the parameter and
+   * changes only what it defaults to: the design's own artwork, shipped as a file and opened where
+   * the `Context` is, so the generated `@Preview` draws the design rather than a blank bitmap — and
+   * the picture the application supplies still wins (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`).
+   * That is the same split `docs/UI_BUILDER_GETTING_STARTED.md` already describes for an image
+   * *background*, applied to the content slot rather than to the brush chain.
    *
    * `contentDescription` is not optional in the call: upstream declares it `RemoteString?` with no
    * default, so a node without one passes `null` explicitly rather than leaving it out.
@@ -737,8 +753,97 @@ internal class RemoteContentEmitter(
       if (base !in taken) base
       else generateSequence(2) { it + 1 }.map { "$base$it" }.first { it !in taken }
     imageAssets[key] = name
+    // In the bundle lane the design's own artwork travels too, so the parameter can default to it
+    // instead of to a blank bitmap — which is what makes the generated `@Preview` draw the design
+    // rather than the hole the picture goes in. A key the registry cannot answer is not a refusal
+    // here: a content picture is the application's to supply, and the parameter it becomes says so
+    // whether or not the archive carries a stand-in.
+    bundled?.contents(key)?.let { content ->
+      bundledParameters[key] = bundleFile(name, key, content)
+    }
     return name
   }
+
+  /**
+   * The identifier a widget **background** picture is drawn through, or null when there is none.
+   *
+   * The two lanes answer the same question with different sources: inlining allocates a file-level
+   * `val` holding the bytes, and a bundle allocates a local that opens the file the archive
+   * carries. Both are identifiers the brush chain can name, which is why the caller needs to know
+   * nothing about which lane it is in.
+   */
+  private fun backgroundBitmap(key: String): String? {
+    if (key.isEmpty()) return null
+    bundled?.let { registry ->
+      val content = registry.contents(key) ?: return null
+      bundledBackgroundAssets[key]?.let {
+        return it.identifier
+      }
+      val name = allocateBitmapIdentifier(key)
+      bundledBackgroundAssets[key] = bundleFile(name, key, content)
+      return name
+    }
+    return assets.base64(key)?.let { inlineBitmap(key, it) }
+  }
+
+  /**
+   * Where an asset key's bytes go inside the archive.
+   *
+   * `uibuilder/<design>/<key>.<extension>` — scoped by design because asset paths are global to the
+   * application, and two designs unpacked into one app would otherwise collide on a shared key like
+   * `cover`. No renaming happens inside the segment: an asset key is 1-64 characters of
+   * `[A-Za-z0-9][A-Za-z0-9._-]*`, which is already a safe path segment, so the mapping is injective
+   * and there is nothing to disambiguate. The design id is written through the same alphabet as a
+   * precaution rather than as a rule — a server-issued id already satisfies it.
+   *
+   * The extension is for the person reading the archive. `AssetManager` serves bytes by path and
+   * `BitmapFactory` sniffs them, so nothing at runtime reads it.
+   */
+  private fun bundleFile(identifier: String, key: String, content: WidgetAssetContent) =
+    BundledAsset(
+      identifier = identifier,
+      assetKey = key,
+      path =
+        "$BUNDLE_DIRECTORY/${document.id.bundleSegment()}/$key.${content.mediaType.pictureExtension()}",
+      mediaType = content.mediaType,
+      base64 = content.base64,
+    )
+
+  private fun allocateBitmapIdentifier(key: String): String {
+    val base = exportedStateIdentifier(key)
+    val taken =
+      inlineAssets.values.map(InlineAsset::identifier).toSet() +
+        bundledBackgroundAssets.values.map(BundledAsset::identifier) +
+        imageAssets.values
+    return if (base !in taken) base
+    else generateSequence(2) { it + 1 }.map { "$base$it" }.first { it !in taken }
+  }
+
+  private val bundledBackgroundAssets = linkedMapOf<String, BundledAsset>()
+
+  private val bundledParameters = linkedMapOf<String, BundledAsset>()
+
+  /** The background pictures the archive carries, in the order they were reached. */
+  val bundledBackgrounds: List<BundledAsset>
+    get() = bundledBackgroundAssets.values.toList()
+
+  /** True once a picture has been written as a file rather than as bytes in the source. */
+  val usesBundledBitmap: Boolean
+    get() = bundledBackgroundAssets.isNotEmpty() || bundledParameters.isNotEmpty()
+
+  /**
+   * One picture shipped beside the source.
+   *
+   * @property identifier the local or parameter the source draws it through.
+   * @property path where it goes inside the archive, and what the generated source opens.
+   */
+  data class BundledAsset(
+    val identifier: String,
+    val assetKey: String,
+    val path: String,
+    val mediaType: String,
+    val base64: String,
+  )
 
   /**
    * The identifier for a picture whose **bytes** the file carries, allocating one per asset key.
@@ -780,10 +885,21 @@ internal class RemoteContentEmitter(
    * default, and deliberately — see each.
    */
   val imageParameters: List<ImageParameter>
-    get() = imageAssets.map { (key, identifier) -> ImageParameter(identifier, key) }
+    get() = imageAssets.map { (key, identifier) ->
+      ImageParameter(identifier, key, bundledParameters[key])
+    }
 
-  /** @property assetKey the design's own key, which the parameter's doc comment names. */
-  data class ImageParameter(val identifier: String, val assetKey: String)
+  /**
+   * @property assetKey the design's own key, which the parameter's doc comment names.
+   * @property bundled the design's own artwork for this parameter when the archive carries it, and
+   *   therefore what the parameter falls back to; null in the inlining lane, and in the bundle lane
+   *   for a key whose bytes the registry could not answer.
+   */
+  data class ImageParameter(
+    val identifier: String,
+    val assetKey: String,
+    val bundled: BundledAsset? = null,
+  )
 
   /**
    * Top-level declarations the body refers to, in emission order.
@@ -861,12 +977,14 @@ internal class RemoteContentEmitter(
       // rather than a Compose one: the base64 becomes a `Bitmap` and then the `ImageBitmap` the
       // `.rb` wraps. Gated on there being one rather than on which slot it fills, since the widget
       // lane inlines a background and the preview lane inlines the content pictures too.
-      if (inlineAssets.isNotEmpty()) {
+      if (inlineAssets.isNotEmpty() || usesBundledBitmap) {
         imports += "android.graphics.BitmapFactory"
-        imports += "android.util.Base64"
         imports += "androidx.compose.remote.creation.compose.state.rb"
         imports += "androidx.compose.ui.graphics.asImageBitmap"
       }
+      // The one import that separates the lanes: a bundled picture is read from the byte
+      // `AssetManager` opens the file at, and needs no base64 to get there.
+      if (inlineAssets.isNotEmpty()) imports += "android.util.Base64"
     }
     if (widget is WidgetSourceShape.Exported) {
       imports += "androidx.compose.ui.tooling.preview.Preview"
@@ -1203,8 +1321,47 @@ internal class RemoteContentEmitter(
 
     /** A JVM string constant's cap, in modified-UTF-8 bytes. */
     const val MAX_STRING_CONSTANT_BYTES = 65535
+
+    /**
+     * The directory a bundle's pictures sit in, under the module's `assets/`.
+     *
+     * One level of its own rather than the root, so unpacking an archive into a source set that
+     * already has assets adds a directory instead of mixing files into one nobody owns.
+     */
+    const val BUNDLE_DIRECTORY = "uibuilder"
   }
 }
+
+/**
+ * The design id, as one path segment.
+ *
+ * A server-issued id is already within the segment alphabet
+ * (`ServeUiBuilderDesignLibrary.DESIGN_ID`), so this normally returns it unchanged; anything else —
+ * a hand-written document, a fixture — is folded into it rather than allowed to write a path with a
+ * `/` or a space in it. Two ids differing only outside the alphabet would fold together, which a
+ * host cannot produce and which costs a shared directory rather than a lost file: the archive's own
+ * paths stay distinct, because an asset key is unique within a design.
+ */
+private fun String.bundleSegment(): String {
+  val folded = map { if (it.isLetterOrDigit() || it == '.' || it == '_' || it == '-') it else '-' }
+  return folded.joinToString("").trimStart('-').ifEmpty { "design" }
+}
+
+/**
+ * The file extension for a picture's media type.
+ *
+ * Cosmetic, and deliberately forgiving: `AssetManager` serves bytes by path and `BitmapFactory`
+ * sniffs them, so an extension nobody recognises costs a reader a moment and costs the widget
+ * nothing. The four listed are the four the asset upload route accepts.
+ */
+private fun String.pictureExtension(): String =
+  when (substringBefore(';').trim().lowercase()) {
+    "image/png" -> "png"
+    "image/jpeg" -> "jpg"
+    "image/gif" -> "gif"
+    "image/webp" -> "webp"
+    else -> "bin"
+  }
 
 private fun String.remoteAlignment(): String =
   when (this) {

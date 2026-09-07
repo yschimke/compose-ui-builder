@@ -70,8 +70,8 @@ spotify-now-playing.zip
 ├── README.md                                       # where to drop it, what the app passes
 ├── SpotifyNowPlayingWidget.kt                      # readable; loads by path
 └── assets/uibuilder/spotify-now-playing/
-    ├── cover_wide.png
-    └── pulse.json
+    ├── cover-wide.png
+    └── album-art.jpg
 ```
 
 ### `assets/`, not `res/drawable-nodpi/`
@@ -84,7 +84,7 @@ cost rather than paying it, and deletes three more:
 - **No `R`.** `R` is generated into the *application's* namespace, not into the package the exported
   file declares. Source that says `R.drawable.cover_wide` compiles only when the two agree, so the
   export would need the app's namespace as a second parameter — a thing the design does not know and
-  the caller would have to be asked for. `context.assets.open("uibuilder/…/cover_wide.png")` needs
+  the caller would have to be asked for. `context.assets.open("uibuilder/…/cover-wide.png")` needs
   nothing generated. (`resources.getIdentifier` is the other way to avoid the namespace and is
   refused: a reflective lookup R8 cannot see, which resource shrinking breaks and which fails at
   draw time rather than at compile time.)
@@ -133,8 +133,8 @@ class SpotifyNowPlayingWidget(
       context: Context,
       params: WearWidgetParams,
   ): WearWidgetData {
-    val coverWide = context.bundledBitmap("uibuilder/spotify-now-playing/cover_wide.png")
-    val albumArt = albumArt ?: context.bundledBitmap("uibuilder/spotify-now-playing/album_art.png")
+    val coverWide = context.bundledBitmap("uibuilder/spotify-now-playing/cover-wide.png")
+    val albumArt = albumArt ?: context.bundledBitmap("uibuilder/spotify-now-playing/album-art.jpg")
     return WearWidgetDocument(background = WearWidgetBrush.image(coverWide)) {
       SpotifyNowPlayingWidgetContent(albumArt = albumArt)
     }
@@ -142,7 +142,9 @@ class SpotifyNowPlayingWidget(
 }
 
 private fun Context.bundledBitmap(path: String): RemoteImageBitmap =
-    assets.open(path).use(BitmapFactory::decodeStream).asImageBitmap().rb
+    assets.open(path).use { BitmapFactory.decodeStream(it) }
+        .asImageBitmap()
+        .rb
 ```
 
 Three things are load-bearing there.
@@ -156,7 +158,9 @@ means "the artwork the design was drawn with", and the fallback is resolved wher
 exists. Today that default is `ImageBitmap(1, 1)` — a deliberate hole, because in the inlining lane
 there is nowhere for the bytes to be. In the bundle lane there is, so **the generated `@Preview`
 shows the design instead of a hole**, which #528 called the thing to look at first and which is the
-strongest argument for the format existing at all.
+strongest argument for the format existing at all. A key the archive cannot carry keeps the hole —
+its local falls back to the same blank bitmap — because a content picture is the application's and
+the parameter stands whether or not there is a stand-in behind it.
 
 **The background is a local, not a `val` below the preview.** The inlining lane hoists a picture to
 the file's foot so a reader can stop before the base64; a bundle has nothing to scroll past, so the
@@ -181,10 +185,12 @@ the `composeExportFor` wiring). So the work is staged, and the first step is not
    defaulting to `false` so an older server deserialises a newer client's capability block unchanged.
    Release `ui-builder-protocol`.
 2. **Here, `:ui-builder-export`** — the emitter's second path: the same walk, answering at the
-   `inlineAssets` seam with a path instead of a base64 literal, and returning the file set
-   (`source` plus one entry per asset key, each naming a path, a media type and the digest whose
-   bytes the host holds) rather than an archive. The module is KMP with no I/O and stays that way;
-   framing bytes into a zip is a host's job.
+   `inlineAssets` seam with a path instead of a base64 literal, and returning the file set rather
+   than an archive. That is `WearWidgetCodeExporter.exportBundle`, `WidgetAssetContents` (the
+   registry seam, which answers a media type as well as bytes because a file has a name) and
+   `WidgetBundle` (the source, the `README.md`, and one `WidgetBundleFile` per picture, its bytes
+   still base64). The module is KMP with no I/O and stays that way; framing bytes into a zip is a
+   host's job.
 3. **Here, `:server` and `:ui-builder-runtime`** — `ProductionUiBuilderExportExecutor` grows the
    `BUNDLE` arm, reading bytes from `UiBuilderAssetStore` exactly as the daemon-render inlining does
    today; the download route learns the `.zip` extension; the capability is advertised per catalog
@@ -212,6 +218,13 @@ would be API with no caller. That ordering is the reason this document lands bef
 
 ## What is deliberately not here
 
+- **The Lottie animation.** A minified animation is still a few thousand columns of constant, and
+  the archive is the obvious place for it — but `LottieAnimation(json = …)` is called inside the
+  `@RemoteComposable` content function, which has no `Context` and cannot open a file. A bundled
+  animation therefore has to travel as a parameter the widget resolves in `provideWidgetData`, the
+  same shape a content picture takes, and that is a change to what the content function's signature
+  means rather than a second answer at the asset seam. Worth doing; not this change. Until then the
+  64 KiB refusal a large animation gets is unchanged in both lanes.
 - **The screen exporters.** `ScreenDocumentProjection` writes `ColorPainter(...)` for an
   `asset/image` on an ordinary screen, and the same archive would let it write a real painter. It is
   the obvious generalisation and it is a second change: the widget lane is where the inlining that
