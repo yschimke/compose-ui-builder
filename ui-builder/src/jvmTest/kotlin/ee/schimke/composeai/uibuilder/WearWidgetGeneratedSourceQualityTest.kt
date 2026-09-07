@@ -61,8 +61,8 @@ class WearWidgetGeneratedSourceQualityTest {
    * `:samples:wear-widget` (yschimke/compose-ai-tools) compiles and renders, which is the half of
    * "the generator works" no test on this side of the repository split can answer.
    */
-  private fun generate(): String {
-    val result = WearWidgetCodeExporter.export(activitySummaryDocument(), PACKAGE_NAME)
+  private fun generate(document: UiBuilderDocument = activitySummaryDocument()): String {
+    val result = WearWidgetCodeExporter.export(document, PACKAGE_NAME)
     val source =
       when (result) {
         is WearWidgetCodeExporter.Result.Emitted -> result.source
@@ -71,8 +71,65 @@ class WearWidgetGeneratedSourceQualityTest {
       }
     val directory = Path.of("build", "generated-widget-source")
     Files.createDirectories(directory)
-    Files.writeString(directory.resolve("ActivitySummaryWidget.kt"), source)
+    // Named from the document, so a second design written through here cannot overwrite the
+    // activity-summary file the samples are compared against.
+    val name = if (document.id == "activity-summary") "ActivitySummaryWidget" else document.id
+    Files.writeString(directory.resolve("$name.kt"), source)
     return source
+  }
+
+  /**
+   * A `#RRGGBB` colour is emitted opaque, because `Color` reads its argument as ARGB.
+   *
+   * Six digits spliced straight through produced `Color(0x1DB954)` — alpha `0x00`, which compiles
+   * and draws nothing (yschimke/compose-preview-server#516). Every colour in the design above is
+   * eight digits, which is why nothing here caught it; the validator asks authors for `#RRGGBB`, so
+   * the documented spelling was the one that broke.
+   *
+   * Both widths are pinned: padding six, and leaving eight alone rather than double-prefixing it.
+   */
+  @Test
+  fun `a six-digit colour is emitted opaque and an eight-digit one is left alone`() {
+    val source = generate(colourDocument())
+
+    assertTrue("Color(0xFF1DB954)" in source, source)
+    assertTrue("Color(0xFFFFFFFF)" in source, source)
+    assertTrue("Color(0x80123456)" in source, source)
+    // The transparent forms the splice used to produce.
+    assertFalse("Color(0x1DB954)" in source, source)
+    assertFalse("Color(0xFFFF80123456)" in source, source)
+  }
+
+  /** One text per colour spelling the validator admits, on the Large container. */
+  private fun colourDocument(): UiBuilderDocument {
+    val nodes =
+      listOf(
+        UiBuilderNode(
+          id = "wear-widget-large",
+          componentId = WearWidgetScaffoldSize.Large.componentId,
+          slots = mapOf("content" to listOf("stack")),
+        ),
+        UiBuilderNode(
+          id = "stack",
+          componentId = "layout/column",
+          modifiers = JsonArray(listOf(modifier("fillMaxSize"))),
+          slots = mapOf("children" to listOf("six", "white", "eight")),
+        ),
+        text("six", "Six", size = 12, color = "#1DB954"),
+        text("white", "White", size = 12, color = "#FFFFFF"),
+        text("eight", "Eight", size = 12, color = "#80123456"),
+      )
+    return UiBuilderDocument(
+      schema = "compose-ui-builder-document/v1-candidate",
+      id = "colour-widths",
+      title = "Colour widths",
+      revision = 0,
+      catalogPin = JsonObject(emptyMap()),
+      environment = JsonObject(emptyMap()),
+      stateVariables = JsonObject(emptyMap()),
+      roots = listOf("wear-widget-large"),
+      nodes = nodes.associateBy(UiBuilderNode::id),
+    )
   }
 
   private fun activitySummaryDocument(): UiBuilderDocument {

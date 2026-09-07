@@ -1071,8 +1071,33 @@ private fun String.remoteVertical(): String =
     else -> "Top"
   }
 
-/** `#FF2196F3` becomes `Color(0xFF2196F3)`. */
-private fun String.argbLiteral(): String = "Color(0x${removePrefix("#").uppercase()})"
+/**
+ * `#FF2196F3` becomes `Color(0xFF2196F3)`, and `#2196F3` becomes `Color(0xFF2196F3)` too.
+ *
+ * The padding is the whole point. `androidx.compose.ui.graphics.Color` reads its argument as
+ * **ARGB**, so splicing a six-digit value straight through produced `Color(0x2196F3)` — alpha
+ * `0x00`, a fully transparent colour that compiles, runs and draws nothing
+ * (yschimke/compose-preview-server#516). Every colour in a widget went out that way, because
+ * `#RRGGBB` is the spelling the commit-time validator asks for: "a colour, which is written as a
+ * `#RRGGBB` literal or as a theme role". The documented form was the broken one.
+ *
+ * It failed silently in the one direction nobody could see. The canvas and the PNG export both
+ * treat `#RRGGBB` as opaque, so a design looked right everywhere its author could look, and drew an
+ * empty widget on the watch.
+ *
+ * Six digits mean opaque here exactly as they do in `RcJvmServerRenderer.rcColorToArgb`, which
+ * carries the same rule for the RC player's seeded colours and a test that pins it. Anything that
+ * is neither six nor eight hex digits is passed through untouched: the validator refuses those
+ * before a document can hold one, so inventing an alpha for a value this cannot read would only
+ * turn a rejection into a wrong colour.
+ */
+private fun String.argbLiteral(): String {
+  val digits = removePrefix("#").uppercase()
+  val argb = if (SIX_DIGIT_HEX.matches(digits)) "FF$digits" else digits
+  return "Color(0x$argb)"
+}
+
+private val SIX_DIGIT_HEX = Regex("[0-9A-F]{6}")
 
 /**
  * Escaped for a Kotlin `"…"` literal.
