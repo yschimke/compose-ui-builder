@@ -985,7 +985,20 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
           // this component: it is synthesized here. Shelved rather than left to fall back to its
           // role heading ("Leaf") for the reason `ComponentMenu` gives — a menu is presentation,
           // and an author looking for an animation looks under Content.
-          ("componentMenu" to base.statusSemantics.withMenuEntry("remote-m3/lottie", "Content"))
+          ("componentMenu" to base.statusSemantics.withMenuEntry("remote-m3/lottie", "Content")) +
+          // Which daemon draws this catalog natively, and it is not a preference: a widget's body
+          // is `androidx.compose.remote.creation.compose`, its container is `androidx.glance.wear`,
+          // and both are Android AARs. Left undeclared this defaulted to `desktop`, so the native
+          // lane sent a widget to Skiko — a compile that fails on every import and reads like the
+          // design is broken. The Wasm claim is left alone: unlike `wear-m3`'s Material 3
+          // lookalikes, the canvas draws this catalog's own borrowed components.
+          ("previewSurfaces" to
+            buildJsonObject {
+              putJsonObject("native") {
+                put("fidelity", JsonPrimitive("authoritative"))
+                put("backend", JsonPrimitive("android"))
+              }
+            })
       ),
     benchmark =
       base.benchmark.copy(

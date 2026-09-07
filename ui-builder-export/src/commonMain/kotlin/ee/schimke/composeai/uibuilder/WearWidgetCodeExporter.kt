@@ -118,7 +118,9 @@ object WearWidgetCodeExporter {
           appendLine("package $packageName")
           appendLine()
         }
-        emitter.imports(size.previewParamsProvider).forEach { appendLine("import $it") }
+        emitter.imports(WidgetSourceShape.Exported(size.previewParamsProvider)).forEach {
+          appendLine("import $it")
+        }
         appendLine()
         appendLine("@RemoteComposable")
         appendLine("@Composable")
@@ -161,7 +163,7 @@ object WearWidgetCodeExporter {
         // The inlined pictures sit below the preview for the same reason the declarations do:
         // a base64 PNG is thousands of columns, and a reader who has to scroll past it to reach
         // the widget has been handed a worse file than one who can stop reading at the preview.
-        inlineBitmaps(emitter.inlineBitmaps).forEach {
+        inlineBitmapDeclarations(emitter.inlineBitmaps).forEach {
           appendLine()
           appendLine(it)
         }
@@ -174,56 +176,6 @@ object WearWidgetCodeExporter {
         }
       }
     )
-  }
-
-  /**
-   * The `val`s a background picture becomes: its bytes, and the decode that turns them into one.
-   *
-   * Chunked into a list of literals joined at runtime rather than one long `const val`, because a
-   * JVM string constant is capped at 65535 **bytes** of modified UTF-8 and a photograph passes that
-   * easily. Concatenating literals with `+` would not help — the compiler folds those into the
-   * single constant the cap applies to — so the chunks are joined by code instead, and a picture of
-   * any size compiles.
-   *
-   * One decoder per file, not per picture, and `NO_WRAP` because the encoder above emits no line
-   * breaks.
-   */
-  private fun inlineBitmaps(assets: List<RemoteContentEmitter.InlineAsset>): List<String> {
-    if (assets.isEmpty()) return emptyList()
-    val blocks = mutableListOf<String>()
-    assets.forEach { asset ->
-      // The bytes first: a top-level `val` is initialised in declaration order, so a decode that
-      // read its constant from above it would compile to "must be initialized".
-      blocks += buildString {
-        appendLine("/** The design's `${asset.assetKey.escapeComment()}` asset, inlined. */")
-        appendLine("private val ${asset.identifier.uppercaseConstant()}: String =")
-        appendLine("${INDENT}listOf(")
-        asset.base64.chunked(BASE64_CHUNK).forEach { appendLine("$INDENT$INDENT\"$it\",") }
-        appendLine("$INDENT)")
-        append("$INDENT${INDENT}.joinToString(\"\")")
-      }
-      blocks +=
-        "private val ${asset.identifier}: RemoteImageBitmap =\n" +
-          "${INDENT}decodeInlineBitmap(${asset.identifier.uppercaseConstant()})"
-    }
-    blocks += buildString {
-      appendLine("private fun decodeInlineBitmap(encoded: String): RemoteImageBitmap {")
-      appendLine("${INDENT}val bytes = Base64.decode(encoded, Base64.NO_WRAP)")
-      appendLine("${INDENT}return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)")
-      appendLine("$INDENT$INDENT.asImageBitmap()")
-      appendLine("$INDENT$INDENT.rb")
-      append("}")
-    }
-    return blocks
-  }
-
-  /** `coverWide` becomes `COVER_WIDE_PNG`, the constant beside it. */
-  private fun String.uppercaseConstant(): String = buildString {
-    this@uppercaseConstant.forEach {
-      if (it.isUpperCase() && isNotEmpty()) append('_')
-      append(it.uppercaseChar())
-    }
-    append("_PNG")
   }
 
   /** `albumArt: RemoteImageBitmap`, once per picture the body draws, or nothing at all. */
@@ -315,9 +267,6 @@ object WearWidgetCodeExporter {
 
   private const val INDENT = "    "
 
-  /** ktfmt's own default, as [RemoteContentEmitter] keeps for the body. */
-  private const val BASE64_CHUNK = 96
-
   private const val MAX_LINE = 100
 
   internal const val WEAR_WIDGET_SPEC_PADDING_DP = 8f
@@ -341,7 +290,7 @@ private val WearWidgetScaffoldSize.previewParamsProvider: String
     }
 
 /** `Hello widget · Small (216×76dp)` becomes `HelloWidget`. */
-private fun UiBuilderDocument.widgetIdentifier(): String {
+internal fun UiBuilderDocument.widgetIdentifier(): String {
   val words =
     title
       .substringBefore('·')

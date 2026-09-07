@@ -62,8 +62,10 @@ object RecordFreeExport {
   ): Generated? =
     when {
       // A widget takes no [tagNodes]: it generates a `WearWidgetDocument` of Remote Compose, whose
-      // nodes are not Compose modifiers and which the native preview lane does not compile anyway
-      // ([composeCompilable]). Accepting the flag and dropping it would read as support.
+      // nodes are not Compose modifiers, so there is nothing for a test tag to be written onto —
+      // and the native preview lane, which is the only caller that asks for tags, reaches a widget
+      // through [nativePreview] rather than here. Accepting the flag and dropping it would read as
+      // support.
       document.isWearWidget() ->
         WearWidgetCodeExporter.export(document, packageName, assets).generated()
       document.isWearScreen() ->
@@ -77,7 +79,7 @@ object RecordFreeExport {
      * @param composableName the function the file declares, where the emitter writes one this
      *   caller has to name again — the native preview lane wraps it in a `@Preview` and imports it
      *   by name. Null for a Wear widget, whose source declares a `WearWidgetDocument` rather than a
-     *   composable and which that lane does not compile ([composeCompilable]).
+     *   composable and which that lane reaches through [nativePreview] instead.
      */
     data class Emitted(val source: String, val composableName: String? = null) : Generated
 
@@ -136,8 +138,9 @@ object RecordFreeExport {
    * Android/Robolectric daemon, which is the only honest picture a Wear design has: the browser's
    * Wasm canvas cannot link an Android AAR and never will
    * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`). [WearWidgetCodeExporter] writes a
-   * `WearWidgetDocument` — Remote Compose, played rather than composed — which is not a `@Preview`
-   * this lane can discover and render, so a widget still gets the refusal.
+   * `WearWidgetDocument` — Remote Compose, played rather than composed — which is not a screen this
+   * lane can call, so a widget answers false here and reaches the same lane by [nativePreview]
+   * instead.
    *
    * Asked of the emitter's target rather than of the catalog id, for the reason
    * [CATALOG_SYSTEM_IDS] is derived: a third record-free emitter answers this question by which of
@@ -146,6 +149,79 @@ object RecordFreeExport {
   fun composeCompilable(document: DesignDocumentV1): Boolean {
     val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return false
     return root.componentId == WearScreenCodeExporter.SCAFFOLD
+  }
+
+  /**
+   * Whether this record-free design is a **Wear widget**, whose native lane source is its own.
+   *
+   * The complement of [composeCompilable] within [applies] rather than its negation restated: a
+   * widget reaches the native preview lane too, and by a third road — [nativePreview] writes a
+   * `@RemoteComposable` body, a `WearWidgetBrush` and a container spec, none of which is the file
+   * [generate] hands a designer. Asked of the emitter's target for the reason [CATALOG_SYSTEM_IDS]
+   * is derived from one.
+   */
+  fun isWearWidget(document: DesignDocumentV1): Boolean {
+    val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return false
+    return WearWidgetScaffoldSize.entries.any { it.componentId == root.componentId }
+  }
+
+  /**
+   * The Kotlin the **native preview lane** compiles for a widget, or why there is none.
+   *
+   * A second entry point beside [generate] rather than a flag on it, because the two produce files
+   * with different contents for different readers, and the one place that could confuse them —
+   * "which of these does an export write?" — is answered by which function was called.
+   * [WearWidgetNativePreviewExporter] carries the full reasoning.
+   *
+   * Null when [document] is not a widget at all, matching [generate]'s "this is not mine" rather
+   * than refusing a caller that never asked about widgets.
+   */
+  fun nativePreview(
+    document: DesignDocumentV1,
+    packageName: String,
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): NativePreview? {
+    if (!isWearWidget(document)) return null
+    return runCatching {
+      when (
+        val result =
+          WearWidgetNativePreviewExporter.export(
+            document.toUiBuilderDocument(),
+            packageName,
+            assets,
+          )
+      ) {
+        is WearWidgetNativePreviewExporter.Result.Emitted ->
+          NativePreview.Emitted(result.source, result.name, result.widthDp, result.heightDp)
+        is WearWidgetNativePreviewExporter.Result.Refused -> NativePreview.Refused(result.reasons)
+      }
+    }
+      .getOrElse { failure ->
+        NativePreview.Refused(
+          listOf(
+            "this design could not be read as a builder document" +
+              (failure.message?.let { ": $it" } ?: "")
+          )
+        )
+      }
+  }
+
+  /** What a widget generates for the native preview lane, or why it does not. */
+  sealed interface NativePreview {
+    /**
+     * @param name the base identifier the file declares `<name>Content`, `<name>Background` and
+     *   `<name>Params` under.
+     * @param widthDp the container's whole frame — content plus padding — which is what the preview
+     *   is measured at and what the canvas beside it draws.
+     */
+    data class Emitted(
+      val source: String,
+      val name: String,
+      val widthDp: Int,
+      val heightDp: Int,
+    ) : NativePreview
+
+    data class Refused(val reasons: List<String>) : NativePreview
   }
 
   /** Whether [document]'s single root is one the emitters above accept. */

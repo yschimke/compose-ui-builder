@@ -115,7 +115,7 @@ public object InlineRemoteContentExporter {
             appendLine("package $packageName")
             appendLine()
           }
-          emitter.imports(previewParamsProvider = null).forEach { appendLine("import $it") }
+          emitter.imports(widget = null).forEach { appendLine("import $it") }
           appendLine()
           appendLine("@RemoteComposable")
           appendLine("@Composable")

@@ -82,6 +82,30 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
   )
 
 /**
+ * Which widget file a [RemoteContentEmitter] body is being written into, which decides its imports.
+ *
+ * The two are not variants of one file. [Exported] is the artifact a designer keeps: a
+ * `GlanceWearWidget`, the `WearWidgetDocument` it provides, and a `@Preview` driven by one of the
+ * shipped `WidgetPreviewParams` providers, because those are the only container specs a file
+ * somebody pastes into their own module can name. [NativePreview] is the source this server
+ * compiles and renders for the builder's Native pane, which names no widget class at all — it is
+ * the body, its brush and the container spec the *design* declares, and nothing downstream of it
+ * ever constructs a widget.
+ *
+ * Null is the third answer and it is not a widget: [InlineRemoteContentExporter] writes a
+ * `@RemoteComposable` fragment for somebody else's screen, so none of `androidx.glance.wear` is
+ * involved.
+ */
+internal sealed interface WidgetSourceShape {
+
+  /** @property previewParamsProvider the shipped provider the generated `@Preview` unrolls. */
+  data class Exported(val previewParamsProvider: String) : WidgetSourceShape
+
+  /** The native lane's source: body, brush and the design's own `WearWidgetParams`. */
+  data object NativePreview : WidgetSourceShape
+}
+
+/**
  * Writes a widget's designed content as Remote Compose source, and its background as a
  * `WearWidgetBrush`.
  *
@@ -94,6 +118,20 @@ internal class RemoteContentEmitter(
   private val document: UiBuilderDocument,
   private val refusals: MutableList<String>,
   private val assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  /**
+   * Whether a picture in the **content** carries its bytes rather than naming a parameter.
+   *
+   * Off for everything a designer keeps. A widget's content picture is application data — album
+   * art, an avatar — that changes long after the file is written, so the export asks for it as a
+   * parameter ([imageParameters]) rather than freezing today's bytes into source.
+   *
+   * On for the native preview lane, where the opposite is true. Nothing downstream of it can pass
+   * an argument: the lane compiles a body and renders it, so a parameter is a picture that can only
+   * arrive as the blank placeholder the widget class defaults to — a render showing a hole where
+   * the canvas beside it shows the artwork, which is the one disagreement between the two surfaces
+   * that is this lane's own fault. Inlined, the two draw the same picture.
+   */
+  private val inlineContentImages: Boolean = false,
 ) {
   /** True once a colour or type token has been written, which only reads inside a theme. */
   var usesTheme: Boolean = false
@@ -639,8 +677,25 @@ internal class RemoteContentEmitter(
           "resolve — pick an asset for it in the inspector"
       return null
     }
+    // The native preview lane wants the bytes here rather than a parameter — see
+    // [inlineContentImages]. A key with no bytes on this host is refused by name for the same
+    // reason a background one is: the lane has no argument to pass and a picture nothing can
+    // resolve would render as an empty box the designer cannot explain.
+    val bitmap =
+      if (!inlineContentImages) imageParameter(key)
+      else
+        when (val encoded = assets.base64(key)) {
+          null -> {
+            refusals +=
+              "the image `${node.id}` draws the asset `$key`, whose bytes this host could not " +
+                "read — a native render carries the picture inside the document, so there is " +
+                "nothing to draw it from"
+            return null
+          }
+          else -> inlineBitmap(key, encoded)
+        }
     usesRemoteImage = true
-    val arguments = mutableListOf("remoteBitmap = ${imageParameter(key)}")
+    val arguments = mutableListOf("remoteBitmap = $bitmap")
     val description = node.properties["contentDescription"]?.stringOrNull().orEmpty()
     arguments +=
       if (description.isEmpty()) "contentDescription = null"
@@ -748,10 +803,13 @@ internal class RemoteContentEmitter(
    * Gated on what was actually written rather than emitted wholesale: an unused import is a warning
    * in the reader's IDE the moment they paste this in, and "generated" is not a licence to hand
    * someone code they have to tidy.
+   *
+   * @param widget which widget file this body is going into, or null for a fragment that is not a
+   *   widget at all — see [WidgetSourceShape].
    */
-  fun imports(previewParamsProvider: String?): List<String> {
+  fun imports(widget: WidgetSourceShape?): List<String> {
     val imports = mutableSetOf<String>()
-    if (previewParamsProvider != null) imports += "android.content.Context"
+    if (widget is WidgetSourceShape.Exported) imports += "android.content.Context"
     if (usesBox) imports += "androidx.compose.remote.creation.compose.layout.RemoteBox"
     if (usesColumn) imports += "androidx.compose.remote.creation.compose.layout.RemoteColumn"
     imports += "androidx.compose.remote.creation.compose.layout.RemoteComposable"
@@ -788,38 +846,48 @@ internal class RemoteContentEmitter(
     if (usesColorLiteral) imports += "androidx.compose.ui.graphics.Color"
     if (usesContentScale) imports += "androidx.compose.ui.layout.ContentScale"
     if (usesTextAlign) imports += "androidx.compose.ui.text.style.TextAlign"
-    // The widget half. A Wear widget is delivered as a `WearWidgetDocument` and previewed through
-    // the Glance host tooling; inline remote content inside a phone or watch *screen* is neither,
-    // so it takes the vocabulary above and none of this. Gated rather than always-on for the reason
-    // every other import here is: an unused import is a warning in the reader's IDE on their first
-    // paste.
-    if (previewParamsProvider != null) {
-      imports += "androidx.compose.ui.tooling.preview.Preview"
-      imports += "androidx.glance.wear.GlanceWearWidget"
+    // The widget half. A Wear widget is delivered as a `WearWidgetDocument` and drawn inside the
+    // host's container; inline remote content inside a phone or watch *screen* is neither, so it
+    // takes the vocabulary above and none of this. Gated rather than always-on for the reason every
+    // other import here is: an unused import is a warning in the reader's IDE on their first paste.
+    if (widget != null) {
       imports += "androidx.glance.wear.WearWidgetBrush"
-      imports += "androidx.glance.wear.WearWidgetData"
-      imports += "androidx.glance.wear.WearWidgetDocument"
       if (usesBrushColor) imports += "androidx.glance.wear.color"
       if (usesBrushImage) imports += "androidx.glance.wear.image"
       if (usesHorizontalGradient) imports += "androidx.glance.wear.horizontalGradient"
       if (usesVerticalGradient) imports += "androidx.glance.wear.verticalGradient"
+      imports += "androidx.glance.wear.core.WearWidgetParams"
+      // A picture whose bytes this file carries decodes them itself, which is Android's decoder
+      // rather than a Compose one: the base64 becomes a `Bitmap` and then the `ImageBitmap` the
+      // `.rb` wraps. Gated on there being one rather than on which slot it fills, since the widget
+      // lane inlines a background and the preview lane inlines the content pictures too.
+      if (inlineAssets.isNotEmpty()) {
+        imports += "android.graphics.BitmapFactory"
+        imports += "android.util.Base64"
+        imports += "androidx.compose.remote.creation.compose.state.rb"
+        imports += "androidx.compose.ui.graphics.asImageBitmap"
+      }
+    }
+    if (widget is WidgetSourceShape.Exported) {
+      imports += "androidx.compose.ui.tooling.preview.Preview"
+      imports += "androidx.glance.wear.GlanceWearWidget"
+      imports += "androidx.glance.wear.WearWidgetData"
+      imports += "androidx.glance.wear.WearWidgetDocument"
       // The blank placeholder the generated widget class defaults an image parameter to, so the
       // `@Preview` beside it compiles without a bitmap only the application has.
       if (usesRemoteImage) {
         imports += "androidx.compose.remote.creation.compose.state.rb"
         imports += "androidx.compose.ui.graphics.ImageBitmap"
       }
-      // An inlined background decodes its own bytes, which is Android's decoder rather than a
-      // Compose one: the base64 becomes a `Bitmap` and then the `ImageBitmap` the `.rb` wraps.
-      if (usesBrushImage) {
-        imports += "android.graphics.BitmapFactory"
-        imports += "android.util.Base64"
-        imports += "androidx.compose.remote.creation.compose.state.rb"
-        imports += "androidx.compose.ui.graphics.asImageBitmap"
-      }
-      imports += "androidx.glance.wear.core.WearWidgetParams"
-      imports += "androidx.glance.wear.tooling.preview.$previewParamsProvider"
+      imports += "androidx.glance.wear.tooling.preview.${widget.previewParamsProvider}"
       imports += "androidx.glance.wear.tooling.preview.WearWidgetPreview"
+    }
+    if (widget is WidgetSourceShape.NativePreview) {
+      // The container spec this lane builds itself, from the design's own scaffold, rather than
+      // reading one of the shipped providers: a design authors its padding and radius and the
+      // providers only carry the published defaults.
+      imports += "androidx.glance.wear.core.ContainerInfo"
+      imports += "androidx.glance.wear.core.WidgetInstanceId"
     }
     if (usesRemoteColorScheme) {
       imports += "androidx.wear.compose.remote.material3.RemoteColorScheme"

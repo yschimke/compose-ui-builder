@@ -155,14 +155,58 @@ emitters by what they actually write:
 - **A Wear screen is Wear Compose.** `ScreenScaffold`, `TitleCard`, `Text` — ordinary Kotlin, which
   compiles against a bundle carrying `androidx.wear.compose:compose-material3` and renders on the
   Android daemon. It goes through.
-- **A Wear widget is Remote Compose.** A `WearWidgetDocument` is played rather than composed. It
-  still refuses, and now says *that* rather than something about Wear — but the reason is the
-  preview's **shape**, not its absence. The generated file does carry a `@Preview`, and it compiles
-  and renders in a Glance Wear module ([`:samples:wear-widget`](https://github.com/yschimke/compose-ai-tools/tree/main/samples/wear-widget)
-  is the fixture that does it). What this lane cannot drive is a preview whose canvas is a
-  `WearWidgetParams` from a preview-params provider rather than a screen spec. The refusal used to
-  say there was no `@Preview` at all, which sent an author to the wrong conclusion
-  ([#522](https://github.com/yschimke/compose-preview-server/issues/522)).
+- **A Wear widget is Remote Compose.** A `WearWidgetDocument` is played rather than composed, so
+  there is no screen here to call. It goes through too, by a road of its own — see
+  [below](#a-widget-renders-through-its-own-source).
+
+### A widget renders through its own source
+
+The widget half refused for a while, and the refusal was right about the *file* it was looking at.
+`WearWidgetCodeExporter` writes the artifact a designer keeps, and every choice in it is made for a
+reader who will paste it into their own module: a `GlanceWearWidget` class, a content picture asked
+for as a **parameter** because a widget's artwork is application data, and a `@Preview` driven by
+one of the shipped `WidgetPreviewParams` providers because those are the only container specs such a
+file can name. Submitting that to this lane draws a widget with a hole where the artwork goes — the
+class defaults each picture to a blank 1×1 bitmap and nothing downstream can pass another — and
+refuses outright any design that authored its own padding or corner radius, which no provider
+carries.
+
+So the lane submits a different file, written by `WearWidgetNativePreviewExporter`, holding the
+three things it actually needs and no ceremony:
+
+| Declaration | What it is |
+| --- | --- |
+| `<Name>Content()` | the `@RemoteComposable` body, with every picture's bytes **inlined** rather than asked for |
+| `<Name>Background()` | the widget's own `WearWidgetBrush` — what the host paints the squircle with |
+| `<Name>Params()` | the `WearWidgetParams` **this design** describes: its footprint, its padding, its radius |
+
+`UiBuilderGeneratedPreviewAdapter` hands the three to `androidx.glance.wear.tooling.preview`'s
+`WearWidgetPreview`, which builds the document and runs it through the same `WearWidgetContainer`
+the real widget pipeline does — the rounded background, the host padding, the content inset inside
+it. Not `CapturingWearWidgetPreview`: that compose-ai-tools wrapper additionally offers the encoded
+document to the render harness's `.rc` sidecar, and this lane wants a frame, not bytes. Requiring
+`ee.schimke.composeai:wear-preview-runtime` on a bundle to publish something nobody reads would be a
+deployment cost for nothing; producing a document is what the
+[inline-capture lane](UI_BUILDER_REMOTE_COMPOSE.md) exists for.
+
+Two consequences worth stating out loud:
+
+- **The frame is the container's, not the environment's.** A widget design's `environment` describes
+  a watch screen; the render is measured at the content box plus the padding the design authored —
+  216×124dp for a Large container at the shipped 8dp — which is exactly what the Wasm canvas draws
+  beside it.
+- **There is no clickable overlay.** A `testTag` is a Compose UI modifier and this body is Remote
+  Compose, recorded into a document rather than composed into a semantics tree, so the lane reports
+  no tagged nodes and no bounds. The layers panel still selects; a rectangle this lane could not
+  measure is one it must not draw.
+
+`remote-m3` also had to say which daemon draws it. Its body is
+`androidx.compose.remote.creation.compose` and its container is `androidx.glance.wear`, both Android
+AARs, so the catalog now declares `previewSurfaces.native.backend = "android"`; left undeclared it
+defaulted to `desktop` and the lane sent a widget to Skiko, where it failed on every import and read
+like the design was broken. Closes
+[#522](https://github.com/yschimke/compose-preview-server/issues/522)'s remaining half — the issue
+fixed the wording, this fixes the conclusion.
 
 Two things had to be true for the screen half to work, and neither was:
 
