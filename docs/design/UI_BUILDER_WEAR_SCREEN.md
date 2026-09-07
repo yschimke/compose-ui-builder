@@ -155,9 +155,14 @@ emitters by what they actually write:
 - **A Wear screen is Wear Compose.** `ScreenScaffold`, `TitleCard`, `Text` — ordinary Kotlin, which
   compiles against a bundle carrying `androidx.wear.compose:compose-material3` and renders on the
   Android daemon. It goes through.
-- **A Wear widget is Remote Compose.** A `WearWidgetDocument` is played rather than composed, so
-  there is no `@Preview` to discover and no frame at the end of compiling it. It still refuses, and
-  now says *that* rather than something about Wear.
+- **A Wear widget is Remote Compose.** A `WearWidgetDocument` is played rather than composed. It
+  still refuses, and now says *that* rather than something about Wear — but the reason is the
+  preview's **shape**, not its absence. The generated file does carry a `@Preview`, and it compiles
+  and renders in a Glance Wear module ([`:samples:wear-widget`](https://github.com/yschimke/compose-ai-tools/tree/main/samples/wear-widget)
+  is the fixture that does it). What this lane cannot drive is a preview whose canvas is a
+  `WearWidgetParams` from a preview-params provider rather than a screen spec. The refusal used to
+  say there was no `@Preview` at all, which sent an author to the wrong conclusion
+  ([#522](https://github.com/yschimke/compose-preview-server/issues/522)).
 
 Two things had to be true for the screen half to work, and neither was:
 
