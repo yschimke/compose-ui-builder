@@ -530,6 +530,45 @@ A design's catalog decides which rows appear — a catalog whose renderer cannot
 rows, and one that cannot render at all has no Export button. On a server running below Java 21
 there is no render lane, so there is no menu; the startup line says so.
 
+### From a shell: `compose-preview-server design`
+
+The menu is the browser's door. The shell's is `design`, a command on the server binary that is a
+**client**: it talks to a server that is already up and exits, rather than starting one
+([#529](https://github.com/yschimke/compose-preview-server/issues/529)).
+
+```shell
+compose-preview-server design list                       # what this credential can see
+compose-preview-server design render my-widget -o cover.png   # or --format svg
+compose-preview-server design export my-widget -o Widget.kt   # the generated Kotlin
+compose-preview-server design get    my-widget > design.json  # the document
+```
+
+`--server <url>` picks the host (a local one by default, `$COMPOSE_PREVIEW_SERVER` otherwise) and
+`--revision N` pins, exactly as `?revision=` does on the URLs above. Every verb runs the same
+export lane as the menu and the MCP tool: same gate, same renderer, same artifact.
+
+Three things it does deliberately:
+
+- **The credential comes from the environment**, `$COMPOSE_PREVIEW_TOKEN` or the older
+  `$COMPOSE_PREVIEW_UI_BUILDER_TOKEN`, and there is no `--token` flag — a credential on a command
+  line lands in a shell history and a CI log. Each verb asks the server for the least it needs:
+  `ui-builder-read` to list, get and render, `ui-builder-export` to export.
+- **With no credential it asks a human**, through the server's own device-code flow: it prints the
+  approval link and the code, waits, and carries on. So does a token a restart has invalidated,
+  which is otherwise the most confusing failure on this surface — an unauthorised caller and a
+  design that does not exist are deliberately indistinguishable
+  ([#509](https://github.com/yschimke/compose-preview-server/issues/509)). `--no-authorize` turns
+  that off for CI, where nobody is there to approve.
+- **A refusal is not an empty file.** When the generator cannot express a design — `asset/image`
+  has no Remote Compose counterpart, an image background needs a `RemoteImageBitmap` — those
+  diagnostics go to stderr, nothing is written, and the exit code is non-zero.
+
+It does **not** replace [`scripts/ui-builder/design-sync.mjs`](../scripts/ui-builder/design-sync.mjs),
+which moves a design's *document* between a live host and a committed operations fixture in both
+directions ([below](#keep-a-design-in-the-repository)). `design` gets artifacts out; the script
+versions the design itself. They read the same environment variables, so a shell set up for one
+works with the other.
+
 ## Letting somebody else in
 
 A design belongs to whoever created it, and nobody else can open it until you say so. Two doors,
