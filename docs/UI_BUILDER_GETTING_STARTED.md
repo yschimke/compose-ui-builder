@@ -563,6 +563,34 @@ Three things it does deliberately:
   has no Remote Compose counterpart, an image background needs a `RemoteImageBitmap` — those
   diagnostics go to stderr, nothing is written, and the exit code is non-zero.
 
+### When the server is the thing that is broken
+
+Everything above asks a host to render, which is no help when that host's render lane is what you
+are trying to debug: `exception: null` + `image: null` + a valid preview id is the identical
+observable for a missing sidecar, a render that timed out and a render that threw, and the reason
+only ever reaches the server's log
+([#481](https://github.com/yschimke/compose-preview-server/issues/481)). `--local` runs the same
+generator, compiler and daemon **in this process** instead, and says which of those it was
+([#551](https://github.com/yschimke/compose-preview-server/issues/551)):
+
+```shell
+compose-preview-server design get my-widget --server https://preview.coo.ee > doc.json
+compose-preview-server design render --document doc.json --local \
+  --catalog wear-m3.bundle --assets ./assets -o replay.png
+compose-preview-server design export my-widget --local --components m3-catalog=components.json
+```
+
+- `--document <file>` reads the design off disk, so a document captured from a broken host replays
+  against a known-good tree — or yesterday's bundle, or under a debugger. Without it, `--local`
+  still asks a server for the design, but only to **read** it; the render happens here.
+- `--catalog <bundle>` is the classpath a render compiles against, and its manifest picks the
+  daemon (an `android` bundle renders on Robolectric, a desktop one on Skiko). `--assets <dir>` is
+  the uploaded bytes a widget inlines; `--components <catalog>=<components.json>` is the record a
+  record-driven catalog's call sites are proven against. A local `export` needs none of the three.
+- **The output says why.** A missing frame prints the compiler's own diagnostics, the classpath
+  entry count and which daemon opener was built — being chattier than the HTTP surface is the point
+  of the mode rather than a slip.
+
 It does **not** replace [`scripts/ui-builder/design-sync.mjs`](../scripts/ui-builder/design-sync.mjs),
 which moves a design's *document* between a live host and a committed operations fixture in both
 directions ([below](#keep-a-design-in-the-repository)). `design` gets artifacts out; the script
