@@ -3489,8 +3489,15 @@ private fun NavigatorTab.icon(): ImageVector =
     NavigatorTab.Layers -> Icons.Filled.AccountTree
   }
 
+/**
+ * The design pinned in the workspace: framed or zoomed, scrolled, and hit-tested.
+ *
+ * Internal rather than private so a test can measure what the frame hands the design. How big that
+ * frame is depends on the density the design is drawn at, which is a fact about a *rendered*
+ * composition and not one any amount of reading the arithmetic below settles.
+ */
 @Composable
-private fun PinnedDesignCanvas(
+internal fun PinnedDesignCanvas(
   document: UiBuilderDocument,
   selectedNodeId: String?,
   onNodeSelected: (String) -> Unit,
@@ -3526,6 +3533,21 @@ private fun PinnedDesignCanvas(
   val sourceHeight =
     document.environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 800f
   val density = LocalDensity.current
+  // What one of the design's pixels is worth in the workspace's.
+  //
+  // The workspace is measured at the host's density — the browser's `devicePixelRatio`, which is
+  // usually 1 — while the design inside the frame is measured at the one its environment names: 2.0
+  // for a watch, 2.625 for a phone. So `240.dp` written here and `240.dp` written inside the design
+  // are not the same width, and sizing the frame with the workspace's dp handed a 240dp watch 240
+  // of the *workspace's* pixels, which the design then read as 120dp. Everything authored wider
+  // than that was clamped to it: a 216x124dp Wear widget came out 120dp wide against an unclamped
+  // 124dp tall, which is the square frame with the text column crushed out of it in #521.
+  //
+  // So the frame is sized in the design's pixels — every dp below multiplied through this — and
+  // drawn back down to the workspace by [drawScale], which leaves what is on screen exactly where
+  // the zoom says. It is 1 wherever the two densities agree, which is why the 1280x800-at-1.0
+  // fixture the harness drives never showed any of this.
+  val densityRatio = document.renderDensity(density).density / density.density
   var inspection by
     remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
   BoxWithConstraints(modifier.clipToBounds(), contentAlignment = contentAlignment) {
@@ -3556,6 +3578,11 @@ private fun PinnedDesignCanvas(
       minOf(workspaceWidth.value / pairWidth, workspaceHeight.value / expandedHeightDp)
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
     val scale = zoom ?: fitScale
+    // The frame is laid out in the design's pixels, so it is drawn back down by the same ratio it
+    // was sized up by. Equal to [scale] whenever the design's density is the host's, which is what
+    // keeps the zoom readout and the fit above honest: the frame still covers `sourceWidth * scale`
+    // of the workspace's dp.
+    val drawScale = scale / densityRatio
     // In dp, because that is what the metrics callback reports and what the frame is measured in.
     var measuredDp by remember(document.id) { mutableStateOf(0 to 0) }
     // Reported on every change of either, not just on a resize: the frame's own size does not move
@@ -3591,18 +3618,20 @@ private fun PinnedDesignCanvas(
                 // The frame's width, the content's height, never shorter than the frame — the
                 // extent. `requiredSize` here is what used to cut a long list off at the frame and
                 // leave the rest of it somewhere nobody could edit.
-                .requiredWidth(sourceWidth.dp)
-                .requiredHeightIn(min = sourceHeight.dp)
+                .requiredWidth((sourceWidth * densityRatio).dp)
+                .requiredHeightIn(min = (sourceHeight * densityRatio).dp)
+                // Back into the design's own dp — the unit the environment states the frame in and
+                // the one the extent is compared against above — rather than the workspace's.
                 .onSizeChanged { size ->
+                  val designDensity = document.renderDensity(density).density
                   measuredDp =
-                    with(density) {
-                      size.width.toDp().value.roundToInt() to size.height.toDp().value.roundToInt()
-                    }
-                  expandedHeightDp = with(density) { size.height.toDp().value }
+                    (size.width / designDensity).roundToInt() to
+                      (size.height / designDensity).roundToInt()
+                  expandedHeightDp = size.height / designDensity
                 }
                 .graphicsLayer {
-                  scaleX = scale
-                  scaleY = scale
+                  scaleX = drawScale
+                  scaleY = drawScale
                   transformOrigin = TransformOrigin(0f, 0f)
                   compositingStrategy = CompositingStrategy.Offscreen
                 }
@@ -3624,11 +3653,12 @@ private fun PinnedDesignCanvas(
                 Modifier.fillMaxSize().onSecondaryClick(document.id) { position ->
                   if (!showSelectionOverlay) return@onSecondaryClick
                   // The inspection reports each box in root pixels, which is the space this press
-                  // has to be asked in: the frame is offset in the workspace and drawn at [scale].
+                  // has to be asked in: the frame is offset in the workspace and its own pixels
+                  // reach the screen through [drawScale].
                   val point =
                     Offset(
-                      frameBounds.left + position.x * scale,
-                      frameBounds.top + position.y * scale,
+                      frameBounds.left + position.x * drawScale,
+                      frameBounds.top + position.y * drawScale,
                     )
                   // The design already reports every node's box, which is what the presence
                   // overlay and the catalog drop both hit-test against. Smallest box wins: the
@@ -3659,8 +3689,8 @@ private fun PinnedDesignCanvas(
                     offset =
                       with(density) {
                         DpOffset(
-                          ((menuAt?.x ?: 0f) * scale).toDp(),
-                          ((menuAt?.y ?: 0f) * scale).toDp(),
+                          ((menuAt?.x ?: 0f) * drawScale).toDp(),
+                          ((menuAt?.y ?: 0f) * drawScale).toDp(),
                         )
                       },
                   ) {
@@ -3710,6 +3740,7 @@ private fun PinnedDesignCanvas(
               widthDp = sourceWidth,
               heightDp = sourceHeight,
               scale = scale,
+              densityRatio = densityRatio,
             )
           }
         }
@@ -3773,17 +3804,21 @@ private fun ConstrainedFramePane(
   widthDp: Float,
   heightDp: Float,
   scale: Float,
+  /** The design's pixels per workspace pixel — see the same value in [PinnedDesignCanvas]. */
+  densityRatio: Float,
 ) {
   Box(Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)) {
     Surface(
       Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
-        .requiredSize(widthDp.dp, heightDp.dp)
+        // The device's frame in the design's own pixels, like the extent beside it: this pane
+        // exists to say what a device shows, and it can only say it at the density the device has.
+        .requiredSize((widthDp * densityRatio).dp, (heightDp * densityRatio).dp)
         // Clipped before it is scrolled: the frame is the device's edge, and content past it is
         // what the person scrolls to rather than something that spills onto the canvas.
         .clip(RoundedCornerShape(0.dp))
         .graphicsLayer {
-          scaleX = scale
-          scaleY = scale
+          scaleX = scale / densityRatio
+          scaleY = scale / densityRatio
           transformOrigin = TransformOrigin(0f, 0f)
           compositingStrategy = CompositingStrategy.Offscreen
         },

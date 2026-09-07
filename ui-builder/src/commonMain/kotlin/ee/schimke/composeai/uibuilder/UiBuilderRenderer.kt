@@ -268,6 +268,32 @@ public val LocalRemoteComposeCaptures:
  */
 internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
 
+/**
+ * The density the design is drawn at: the one its environment names, not the host's.
+ *
+ * Public to the module rather than inlined into [UiBuilderSurface], because the editor's canvas has
+ * to ask the same question. The canvas sizes the frame in *pixels* and this renderer then reads
+ * those pixels as dp at this density, so the frame is the size the design was authored for only
+ * while the two agree about what the density is. They used to each decide separately — the canvas
+ * simply did not ask, and used the host's — and a design whose density was not the browser's was
+ * handed a frame scaled by the ratio between them: a 240dp watch at 2.0 in a browser at 1.0 became
+ * 120dp of room, which is not enough for a 216dp widget. See `PinnedDesignCanvas`.
+ *
+ * [fallback] is the host's own density, which is what an environment that names neither field
+ * means.
+ */
+internal fun UiBuilderDocument.renderDensity(fallback: Density): Density =
+  Density(
+    density = environmentScale("density") ?: fallback.density,
+    fontScale = environmentScale("fontScale") ?: fallback.fontScale,
+  )
+
+/** A positive, finite number from the environment, or null for anything else — missing included. */
+private fun UiBuilderDocument.environmentScale(name: String): Float? =
+  environment[name]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()?.takeIf {
+    it.isFinite() && it > 0f
+  }
+
 fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
   else listOf(UiBuilderLayer.Design)
@@ -428,17 +454,7 @@ fun UiBuilderSurface(
   val theme = document.environment["theme"]?.jsonPrimitive?.contentOrNull
   val dark = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
   val platformDensity = LocalDensity.current
-  val density =
-    Density(
-      density =
-        document.environment["density"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()?.takeIf {
-          it.isFinite() && it > 0f
-        } ?: platformDensity.density,
-      fontScale =
-        document.environment["fontScale"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()?.takeIf {
-          it.isFinite() && it > 0f
-        } ?: platformDensity.fontScale,
-    )
+  val density = document.renderDensity(platformDensity)
   val layoutDirection =
     if (document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl")
       LayoutDirection.Rtl
