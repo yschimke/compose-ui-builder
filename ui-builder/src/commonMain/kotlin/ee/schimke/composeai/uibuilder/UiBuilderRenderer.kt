@@ -1346,7 +1346,12 @@ private fun UiBuilderNode.linearGradientBrush(): Brush {
   val end = color("endColor", Color.Transparent)
   return when (string("direction")) {
     "bottomToTop" -> Brush.verticalGradient(listOf(end, start))
-    "leftToRight" -> Brush.horizontalGradient(listOf(start, end))
+    // `horizontal`/`vertical` name the axis without a sense, which is what the widget templates
+    // write. Read here and identically by `RemoteContentEmitter`, so that a side scrim drawn on
+    // this canvas is the one the generated Kotlin paints — before this, both fell through to the
+    // vertical `else` and the design's own axis was silently discarded on the way in.
+    "leftToRight",
+    "horizontal" -> Brush.horizontalGradient(listOf(start, end))
     "rightToLeft" -> Brush.horizontalGradient(listOf(end, start))
     else -> Brush.verticalGradient(listOf(start, end))
   }

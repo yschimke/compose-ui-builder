@@ -61,8 +61,8 @@ class WearWidgetContainerCatalogTest {
    * brush, so the background could not be filled from the palette, from a drop, or from any
    * authored document the validator would accept, while `RemoteContentEmitter` was already writing
    * it (yschimke/compose-preview-server#428). `shape/linear-gradient` is the one the emitter turns
-   * into a `WearWidgetBrush` chain; `asset/image` is the one it refuses by name, telling the author
-   * which bitmap to supply in `provideWidgetData`.
+   * into a `WearWidgetBrush` chain; `asset/image` becomes `WearWidgetBrush.image` naming the bitmap
+   * by the design's asset key, which the widget supplies under that name in `provideWidgetData`.
    */
   @Test
   fun `the brushes the background slot names are in the catalog`() {

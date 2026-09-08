@@ -2828,6 +2828,86 @@ class PersistentUiBuilderServiceTest {
     }
   }
 
+  @Test
+  fun `a github grant matches its actor whatever case it was shared in`() {
+    val storage = MemoryStorage()
+    var service = service(storage = storage)
+    // The owner signs in, so the host presents the lowercased login it signs its session over.
+    val ghOwner = AuthenticatedUiBuilderActor("github:yschimke")
+    val ghCollaborator = AuthenticatedUiBuilderActor("github:ashleyingram")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, ghOwner, UiBuilderServiceRequest.CreateDesign(document()))
+    )
+
+    // Shared the way a human spells the login on GitHub, which is not how the login arrives.
+    val access =
+      assertIs<UiBuilderServiceResponse.DesignAccess>(
+        execute(
+          service,
+          ghOwner,
+          UiBuilderServiceRequest.UpdateDesignAccess(
+            "design",
+            0,
+            listOf(
+              GrantActorAccessMutationV1(
+                "github:AshleyIngram",
+                DesignAccessRoleV1.VIEWER,
+                listOf(DesignAccessActionV1.READ),
+              )
+            ),
+          ),
+        )
+      )
+    // Stored canonical, so the owner reading the access record sees the id that will match.
+    assertEquals(listOf("github:ashleyingram"), access.access.actorGrants.map { it.actorId })
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, ghCollaborator, UiBuilderServiceRequest.OpenDesign("design"))
+    )
+    assertEquals(
+      listOf("design"),
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(service, ghCollaborator, UiBuilderServiceRequest.ListDesigns(null, 50))
+        )
+        .designs
+        .map { it.designId },
+    )
+
+    // A mis-cased revoke still finds the grant it names.
+    assertIs<UiBuilderServiceResponse.DesignAccess>(
+      execute(
+        service,
+        ghOwner,
+        UiBuilderServiceRequest.UpdateDesignAccess(
+          "design",
+          1,
+          listOf(RevokeActorAccessMutationV1("github:ASHLEYINGRAM")),
+        ),
+      )
+    )
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, ghCollaborator, UiBuilderServiceRequest.OpenDesign("design"))).code,
+    )
+
+    // Survives a reload, and a non-github actor is still compared exactly: case is meaningful in
+    // an agent fingerprint, so folding one would make two distinct agents equal.
+    service = service(storage = storage)
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            AuthenticatedUiBuilderActor("agent:ABCD"),
+            UiBuilderServiceRequest.OpenDesign("design"),
+          )
+        )
+        .code,
+    )
+    assertIs<UiBuilderServiceResponse.DesignAccess>(
+      execute(service, ghOwner, UiBuilderServiceRequest.GetDesignAccess("design"))
+    )
+  }
+
   private fun service(
     storage: UiBuilderStateStorage = MemoryStorage(),
     retained: Int = 16,

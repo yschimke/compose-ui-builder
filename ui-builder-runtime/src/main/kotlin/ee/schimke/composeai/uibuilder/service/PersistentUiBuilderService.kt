@@ -928,7 +928,8 @@ public class PersistentUiBuilderService(
         // grant in the hands of the person who approved it — the alternative is what this fixes: a
         // design owned by an id that stops existing in an hour, which its own approver is then
         // refused when they open the link the agent sent them.
-        access = DesignAccessControlV1(0, actor.onBehalfOfActorId ?: actor.actorId),
+        access =
+          DesignAccessControlV1(0, canonicalActorId(actor.onBehalfOfActorId ?: actor.actorId)),
         revisionSnapshots = listOf(RevisionStateV1(document, 0)),
         positions = derivePositions(document),
         positionSnapshots = listOf(PositionStateV1(0, derivePositions(document))),
@@ -1042,7 +1043,8 @@ public class PersistentUiBuilderService(
     request.mutations.forEach { mutation ->
       when (mutation) {
         is GrantActorAccessMutationV1 -> {
-          if (mutation.actorId.isBlank() || mutation.actorId == access.ownerActorId) {
+          val target = canonicalActorId(mutation.actorId)
+          if (target.isBlank() || sameActor(target, access.ownerActorId)) {
             return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "invalid actor grant target")
           }
           if (mutation.role == DesignAccessRoleV1.OWNER) {
@@ -1053,36 +1055,35 @@ public class PersistentUiBuilderService(
           }
           val grant =
             DesignActorGrantV1(
-              mutation.actorId,
+              target,
               mutation.role,
               mutation.allowedActions.distinct(),
-              actor.actorId,
+              canonicalActorId(actor.actorId),
               now,
             )
           access =
             access.copy(
-              actorGrants = access.actorGrants.filterNot { it.actorId == mutation.actorId } + grant
+              actorGrants = access.actorGrants.filterNot { sameActor(it.actorId, target) } + grant
             )
         }
         is RevokeActorAccessMutationV1 -> {
-          if (mutation.actorId == access.ownerActorId) {
+          if (sameActor(mutation.actorId, access.ownerActorId)) {
             return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "the owner cannot be revoked")
           }
           access =
             access.copy(
-              actorGrants = access.actorGrants.filterNot { it.actorId == mutation.actorId }
+              actorGrants = access.actorGrants.filterNot { sameActor(it.actorId, mutation.actorId) }
             )
         }
         is TransferDesignOwnershipMutationV1 -> {
-          if (
-            mutation.newOwnerActorId.isBlank() || mutation.newOwnerActorId == access.ownerActorId
-          ) {
+          val newOwner = canonicalActorId(mutation.newOwnerActorId)
+          if (newOwner.isBlank() || sameActor(newOwner, access.ownerActorId)) {
             return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "invalid new owner")
           }
           val formerOwner = access.ownerActorId
           val formerOwnerGrant =
             DesignActorGrantV1(
-              actorId = formerOwner,
+              actorId = canonicalActorId(formerOwner),
               role = DesignAccessRoleV1.EDITOR,
               allowedActions =
                 listOf(
@@ -1090,15 +1091,15 @@ public class PersistentUiBuilderService(
                   DesignAccessActionV1.WRITE,
                   DesignAccessActionV1.EXPORT,
                 ),
-              grantedByActorId = actor.actorId,
+              grantedByActorId = canonicalActorId(actor.actorId),
               grantedAtEpochMillis = now,
             )
           access =
             access.copy(
-              ownerActorId = mutation.newOwnerActorId,
+              ownerActorId = newOwner,
               actorGrants =
                 access.actorGrants.filterNot {
-                  it.actorId == mutation.newOwnerActorId || it.actorId == formerOwner
+                  sameActor(it.actorId, newOwner) || sameActor(it.actorId, formerOwner)
                 } + formerOwnerGrant,
             )
         }
@@ -3298,9 +3299,31 @@ private fun rejected(
     environmentField,
   )
 
+private const val GITHUB_ACTOR_PREFIX = "github:"
+
+/**
+ * A GitHub login is case-insensitive, and the host signs its session over `login.lowercase()`, so
+ * the actor that arrives is always lowercase. A grant stored whatever the sharer typed: sharing
+ * with `github:AshleyIngram` was accepted, stored, shown back in the access record — and matched
+ * nobody, indistinguishable from either end from never having shared at all.
+ *
+ * Folding on the way in fixes new grants; comparing canonically fixes the ones already stored, so a
+ * grant written mis-cased before this starts working rather than staying quietly broken.
+ *
+ * Only `github:` folds. Case is meaningful in an `agent:<fingerprint>`, and folding one would make
+ * two distinct agents equal.
+ */
+private fun canonicalActorId(actorId: String): String =
+  if (actorId.startsWith(GITHUB_ACTOR_PREFIX))
+    GITHUB_ACTOR_PREFIX + actorId.removePrefix(GITHUB_ACTOR_PREFIX).lowercase()
+  else actorId
+
+private fun sameActor(left: String, right: String): Boolean =
+  canonicalActorId(left) == canonicalActorId(right)
+
 private fun PersistedDesignV1.allows(actorId: String, action: DesignAccessActionV1): Boolean =
-  actorId == access.ownerActorId ||
-    access.actorGrants.any { it.actorId == actorId && action in it.allowedActions }
+  sameActor(actorId, access.ownerActorId) ||
+    access.actorGrants.any { sameActor(it.actorId, actorId) && action in it.allowedActions }
 
 /**
  * The same question asked of a whole identity: an actor may act, or the human it acts for may.
@@ -3317,7 +3340,7 @@ private fun PersistedDesignV1.allows(
 
 /** True when this actor owns the design outright, or acts for the human who does. */
 private fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
-  access.ownerActorId in actor.accessIdentities
+  actor.accessIdentities.any { sameActor(it, access.ownerActorId) }
 
 private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): DesignListItemV1 {
   // Reported under the *actor's own* id — the caller asked what it may do here, and being told
@@ -3330,7 +3353,7 @@ private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): Desi
     else {
       val grant =
         actor.accessIdentities.firstNotNullOf { identity ->
-          access.actorGrants.firstOrNull { it.actorId == identity }
+          access.actorGrants.firstOrNull { sameActor(it.actorId, identity) }
         }
       DesignActorAccessV1(actorId, grant.role, grant.allowedActions)
     }

@@ -202,10 +202,28 @@ internal class RemoteContentEmitter(
           val reversed = "listOf(${end.argbLiteral()}.rc, ${start.argbLiteral()}.rc)"
           elements +=
             when (node.properties["direction"]?.stringOrNull()) {
-              "leftToRight" -> horizontal("horizontalGradient($stops)")
+              // `horizontal`/`vertical` name the axis without a sense, and they are what the widget
+              // templates write. Reading them here — and identically in the canvas — is what stops
+              // the silent case: an unknown direction fell through to `else`, so a side scrim drew
+              // vertically AND generated Kotlin that agreed with the wrong picture. The two were
+              // consistent, and consistently wrong.
+              "leftToRight",
+              "horizontal" -> horizontal("horizontalGradient($stops)")
               "rightToLeft" -> horizontal("horizontalGradient($reversed)")
               "bottomToTop" -> vertical("verticalGradient($reversed)")
-              else -> vertical("verticalGradient($stops)")
+              "topToBottom",
+              "vertical",
+              null,
+              "" -> vertical("verticalGradient($stops)")
+              // Refused rather than redrawn, for the same reason: a direction nobody reads should
+              // say so instead of picking an axis.
+              else -> {
+                refusals +=
+                  "the gradient `$id` names the direction " +
+                    "`${node.properties["direction"]?.stringOrNull()}`, which is not one this " +
+                    "generator or the canvas draws"
+                return@forEach
+              }
             }
         }
         // `WearWidgetBrush.image` takes a `RemoteImageBitmap`, and this lane inlines the bytes
