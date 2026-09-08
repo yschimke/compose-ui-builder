@@ -274,8 +274,16 @@ In order, with the first two done:
    than zero when the storage bounds nothing, so an alert can tell "not measured" from a measured
    0%. This is the stopgap; it buys the room to do the rest properly, and it does not shrink a state
    file that is already large — retention applies as designs are edited.
-3. **Never let persistence abort `serve`.** The main body of #568, and independent of everything
-   here.
+3. **Never let persistence abort `serve`.** *Done.* The main body of #568. Every failure after the
+   argument check — an unwritable state directory, a corrupt or oversize state file, a checksum
+   mismatch, a migration that cannot complete — now disables the UI-builder lane and prints a
+   warning naming the failure, the file and the three recovery paths, rather than propagating out of
+   `main`. `--ui-builder-migrate-state` passed where it cannot apply stays fatal: it is a flag the
+   operator typed on this invocation, and skipping it silently would be worse than refusing.
+
+   What is deliberately still missing is the issue's "keep `/admin/ui-builder` reachable enough to
+   diagnose": with no service there is nothing for those routes to talk to, and a degraded admin
+   surface is its own piece of work. The warning carries the diagnosis instead.
 4. **Per-design store, then keyframes.** In that order, because the first makes the second cheap and
    the second is the one that needs a byte-for-byte replay proof.
 
