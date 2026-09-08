@@ -1141,12 +1141,6 @@ object ScreenDocumentProjection {
             }
         VerticalScrollModifierV1 -> scrolls("androidx.compose.foundation.verticalScroll")
         HorizontalScrollModifierV1 -> scrolls("androidx.compose.foundation.horizontalScroll")
-        else ->
-          null.also {
-            reasons +=
-              "node `$nodeId` uses the modifier ${modifier::class.simpleName}, which this " +
-                "projection has no expression for"
-          }
       }
     }
 
@@ -1576,7 +1570,6 @@ object ScreenDocumentProjection {
             typeFqn = "androidx.compose.foundation.lazy.grid.GridCells",
           )
         }
-        else -> refuse("$where is a ${value::class.simpleName}, which is not projected")
       }
     }
 

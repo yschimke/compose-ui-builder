@@ -404,7 +404,7 @@ private class ComposeEmitter(
       "m3/radio-button" ->
         line(
           bodyLevel,
-          "RadioButton(selected = ${node.boolExpression("selected")}, onClick = { ${node.actionExpression("click", stateKotlinTypes)} }, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
+          "RadioButton(selected = ${node.boolExpression("selected")}, onClick = ${node.actionLambda("click", stateKotlinTypes)}, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
         )
       "m3/text-field" -> emitTextField(node, bodyLevel)
       "m3/slider" -> emitSlider(node, bodyLevel)
@@ -626,7 +626,7 @@ private class ComposeEmitter(
     line(level + 1, "selected = ${node.boolExpression("selected")},")
     line(
       level + 1,
-      "onClick = { ${node.actionExpression("click", stateKotlinTypes)} },",
+      "onClick = ${node.actionLambda("click", stateKotlinTypes)},",
     )
     line(level + 1, "enabled = ${node.boolValue("enabled", true)},")
     line(
@@ -808,7 +808,7 @@ private class ComposeEmitter(
       }
     line(
       level,
-      "$symbol(onClick = { ${node.actionExpression("click", stateKotlinTypes)} }, $colors${node.modifierArgument()}) {",
+      "$symbol(onClick = ${node.actionLambda("click", stateKotlinTypes)}, $colors${node.modifierArgument()}) {",
     )
     if (node.string("style") == "fab") {
       line(level + 1, "Box(Modifier.padding(horizontal = 16.dp)) {")
@@ -918,7 +918,7 @@ private class ComposeEmitter(
   private fun emitToggle(node: UiBuilderNode, level: Int, symbol: String) {
     line(
       level,
-      "$symbol(checked = ${node.boolExpression("checked")}, onCheckedChange = { ${node.actionExpression("click", stateKotlinTypes)} }, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
+      "$symbol(checked = ${node.boolExpression("checked")}, onCheckedChange = ${node.actionLambda("click", stateKotlinTypes)}, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
     )
   }
 
@@ -1114,6 +1114,16 @@ private fun UiBuilderNode.boolExpression(name: String): String {
 }
 
 /**
+ * One event handler as a lambda literal.
+ *
+ * `{}` rather than `{ Unit }` for a handler with no actions: the two are the same handler, but a
+ * bare `Unit` inside a lambda is an unused expression, and the generated fixture compiles under the
+ * same warning-free bar as the rest of the build.
+ */
+private fun UiBuilderNode.actionLambda(event: String, stateTypes: Map<String, String>): String =
+  actionExpression(event, stateTypes).let { if (it.isEmpty()) "{}" else "{ $it }" }
+
+/**
  * The body of one event handler.
  *
  * Every action, not the first: `eventBindings` is a list because a handler runs its actions in
@@ -1127,7 +1137,8 @@ private fun UiBuilderNode.boolExpression(name: String): String {
  */
 private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String, String>): String {
   val actions = (eventBindings[event] as? JsonArray).orEmpty()
-  if (actions.isEmpty()) return "Unit"
+  // Empty, not `Unit`: [actionLambda] turns this into `{}`.
+  if (actions.isEmpty()) return ""
   return actions.joinToString("; ") { element ->
     // A safe cast, because this now visits every entry rather than only the head. A malformed
     // later entry — a bare primitive or a null — used to sit unread behind the first action and

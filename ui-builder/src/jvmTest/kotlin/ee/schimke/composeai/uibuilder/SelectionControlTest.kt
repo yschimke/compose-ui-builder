@@ -67,11 +67,11 @@ class SelectionControlTest {
     val switch = exportOf("m3/switch")
 
     assertTrue(
-      "Checkbox(checked = true, onCheckedChange = { Unit }, enabled = true" in checkbox,
+      "Checkbox(checked = true, onCheckedChange = {}, enabled = true" in checkbox,
       checkbox,
     )
     assertTrue(
-      "Switch(checked = true, onCheckedChange = { Unit }, enabled = true" in switch,
+      "Switch(checked = true, onCheckedChange = {}, enabled = true" in switch,
       switch,
     )
   }

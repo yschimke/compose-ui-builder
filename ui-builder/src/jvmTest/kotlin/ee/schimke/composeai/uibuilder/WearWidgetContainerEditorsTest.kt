@@ -56,7 +56,7 @@ class WearWidgetContainerEditorsTest {
     // 999dp is the corner radius `RoundWidgetPreviewParams` uses for a fully round container, so a
     // bound short of it would make the round shape unauthorable.
     val radius = assertNotNull(properties.getValue("cornerRadiusDp").editor)
-    assertTrue(radius.maximum != null && radius.maximum!! >= 999.0, radius.maximum.toString())
+    assertTrue(radius.maximum != null && radius.maximum >= 999.0, radius.maximum.toString())
   }
 
   private companion object {

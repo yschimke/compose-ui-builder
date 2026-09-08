@@ -116,7 +116,7 @@ class TextInputTest {
   fun `a radio button exports with the click action it was wired to`() {
     val source = exportOf("m3/radio-button")
 
-    assertTrue("RadioButton(selected = true, onClick = { Unit }, enabled = true" in source, source)
+    assertTrue("RadioButton(selected = true, onClick = {}, enabled = true" in source, source)
     assertTrue("m3/radio-button" in COMPOSE_EMITTED_CLICK_COMPONENTS)
   }
 

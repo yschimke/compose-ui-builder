@@ -938,7 +938,7 @@ fun UiBuilderEditor(
   // than showing the frame the design used to have — a stale native render beside a live canvas is
   // the exact disagreement this pane exists to expose.
   LaunchedEffect(nativeRequested, state.document.revision) {
-    if (!nativeRequested || onRequestNativeRender == null) return@LaunchedEffect
+    if (!nativeRequested) return@LaunchedEffect
     nativePending = true
     nativeRender =
       try {

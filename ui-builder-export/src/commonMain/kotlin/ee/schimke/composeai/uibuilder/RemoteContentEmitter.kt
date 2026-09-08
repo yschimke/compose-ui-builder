@@ -422,7 +422,7 @@ internal class RemoteContentEmitter(
         arguments += "verticalArrangement = RemoteArrangement.spacedBy(${it.dpLiteral()})"
       }
     (crossAxisAlignment(node, "alignHorizontal") ?: node.canvasHorizontalAlignment())
-      ?.takeIf { it != "start" }
+      .takeIf { it != "start" }
       ?.let {
         usesAlignment = true
         arguments += "horizontalAlignment = RemoteAlignment.${it.remoteHorizontal()}"
@@ -455,7 +455,7 @@ internal class RemoteContentEmitter(
         arguments += "horizontalArrangement = RemoteArrangement.spacedBy(${it.dpLiteral()})"
       }
     (crossAxisAlignment(node, "alignVertical") ?: node.canvasVerticalAlignment())
-      ?.takeIf { it != "top" }
+      .takeIf { it != "top" }
       ?.let {
         usesAlignment = true
         arguments += "verticalAlignment = RemoteAlignment.${it.remoteVertical()}"

@@ -3635,7 +3635,6 @@ private fun DesignPredicateV1.stateReads(): List<String> =
     is AllPredicateV1 -> predicates.flatMap(DesignPredicateV1::stateReads)
     is AnyPredicateV1 -> predicates.flatMap(DesignPredicateV1::stateReads)
     is NotPredicateV1 -> predicate.stateReads()
-    else -> emptyList()
   }
 
 /** The variable an action writes, or null for the one action that writes no state at all. */

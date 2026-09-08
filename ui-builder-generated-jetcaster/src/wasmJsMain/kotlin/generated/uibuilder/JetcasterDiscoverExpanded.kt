@@ -1,4 +1,4 @@
-// Generator content SHA-256: 2d2f4ef4e39f6357702900523761f19bc1ea53e8273d9a35a1d275a63ac39b95
+// Generator content SHA-256: b7d74a01c48e8f51274deded353c185d2ca19f01ea5aff64bd2bda91080f1c96
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -826,7 +826,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                               // node:detail-follow component:m3/button symbol:Button
                               // typed-properties:{"selected":{"type":"bool","value":true},"style":{"type":"enum","value":"filledTonal"}}
                               FilledTonalButton(
-                                onClick = { Unit },
+                                onClick = {},
                                 modifier = Modifier.semantics { selected = true },
                               ) {
                                 // node:detail-follow-icon component:m3/icon symbol:Icon
@@ -887,7 +887,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                       // typed-properties:{"enabled":{"type":"bool","value":true},"selected":{"type":"bool","value":false}}
                       FilterChip(
                         selected = false,
-                        onClick = { Unit },
+                        onClick = {},
                         enabled = true,
                         shape = RoundedCornerShape(16.dp),
                         label = {

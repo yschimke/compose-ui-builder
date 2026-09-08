@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.js.ExperimentalWasmJsInterop::class)
+
 package ee.schimke.composeai.uibuilder
 
 import kotlin.coroutines.resume
