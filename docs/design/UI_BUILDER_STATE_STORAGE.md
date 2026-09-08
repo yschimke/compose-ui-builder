@@ -158,12 +158,19 @@ answering it — but the contract says how far back, never how the bytes are hel
 
 Two changes, in order of how much they cost to build:
 
-1. **Retain fewer, and by budget.** 1,025 whole documents per design is a default nobody chose for
-   the sizes designs actually reach. Retaining by bytes — keep revisions while the design's
-   `revisions/` directory is under its budget, never fewer than a floor of 64 — bounds a design's
-   history at a number an operator can reason about, and moves `retainedFromSequence` honestly as it
-   prunes. This needs no format work at all and is the mitigation available today (see *What to do
-   first*).
+1. **Retain fewer, and by budget.** *Done, ahead of the store.* 1,025 whole documents per design was
+   a default nobody chose for the sizes designs actually reach. `UiBuilderServiceLimits` now retains
+   at most `retainedRevisionSnapshots` (128) revisions and at most `retainedRevisionBytes` (2 MiB)
+   worth of them, whichever binds first, never cutting below `minimumRetainedRevisionSnapshots`
+   (32). The depth is measured from the canonical document bytes the commit already hashes, so it
+   costs nothing extra. This needed no format work, which is why it went first.
+
+   It also moved a floor that used to be quoted loosely. `SNAPSHOT_REQUIRED` raised for a missing
+   *revision* now answers with the oldest revision still retained, not with the operation log's
+   floor: the two were within one of each other while both were ~1,024, and retaining fewer
+   revisions than operations makes the difference real — a client told a floor 900 sequences below
+   what is actually retained would ask again for a revision that is still gone, and loop. A delta
+   still answers with the operation log's own floor, which is the right one for that question.
 2. **Keyframes and deltas.** `ChangeRecordV1` already carries `before` and `after` for every
    property, modifier, state variable, event binding, environment and structural change, which is
    exactly a forward-and-backward delta — it is what undo already replays. So a retained revision
@@ -226,10 +233,14 @@ The design above is a change to the store, and the store is at 73% now. In order
    `/config/ui-builder-state/ui-builder-service-v1.json` says which designs and which sections hold
    the 24.5 MB. Everything below assumes it says what the model above predicts; if it says something
    else — one design with 60 MB of tombstones, say — that is the thing to fix instead.
-2. **Cut retention, and warn.** Lowering `retainedRevisionSnapshots` and adding a headroom gauge to
-   `/status.json` are both small, need no format change, and take the store off the cliff at once:
-   at 64 retained revisions the modelled 15 MB store above is under 1 MB. This is the stopgap, and
-   it buys the room to do the rest properly.
+2. **Cut retention, and warn.** *Done.* Retention is now bounded by count and by bytes (above), and
+   the store reports its own headroom: `UiBuilderStateStorage.usage()` says what is held against the
+   ceiling that would refuse the next write, `/status.json`'s `uiBuilder` row carries
+   `storageBytes`, `storageMaximumBytes` and `storageUsedPercent`, and `serve` prints a warning at
+   startup from 80% naming the number, the consequence and the remedy. Both rows are null rather
+   than zero when the storage bounds nothing, so an alert can tell "not measured" from a measured
+   0%. This is the stopgap; it buys the room to do the rest properly, and it does not shrink a state
+   file that is already large — retention applies as designs are edited.
 3. **Never let persistence abort `serve`.** The main body of #568, and independent of everything
    here.
 4. **Per-design store, then keyframes.** In that order, because the first makes the second cheap and

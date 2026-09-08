@@ -289,6 +289,15 @@ public data class UiBuilderServiceDiagnostics(
    * operator learns they exist without opening one.
    */
   val unusableDesigns: Int = 0,
+  /**
+   * Bytes the durable state currently occupies, and the ceiling a write is refused at.
+   *
+   * Both 0 when the storage bounds nothing (in-memory, tests) or cannot be measured. This is the
+   * headroom an operator had no way to see: `preview.coo.ee` sat at 73% of its ceiling for weeks
+   * and the first signal would have been a refused save (yschimke/compose-preview-server#568).
+   */
+  val storageBytes: Long = 0,
+  val storageMaximumBytes: Long = 0,
 )
 
 public interface UiBuilderServiceDiagnosticsSource {

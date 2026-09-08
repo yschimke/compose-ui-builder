@@ -62,6 +62,7 @@ public final class ee/schimke/composeai/uibuilder/service/FileUiBuilderStateStor
 	public fun replaceForMigration ([B)V
 	public final fun restoreBackup ()Z
 	public fun restoreMigrationBackup ()Z
+	public fun usage ()Lee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage;
 }
 
 public final class ee/schimke/composeai/uibuilder/service/FileUiBuilderStateStorage$Companion {
@@ -138,6 +139,10 @@ public final class ee/schimke/composeai/uibuilder/service/ProtocolRequestMapping
 public abstract interface class ee/schimke/composeai/uibuilder/service/RecoverableUiBuilderMigrationStorage : ee/schimke/composeai/uibuilder/service/UiBuilderStateStorage {
 	public abstract fun replaceForMigration ([B)V
 	public abstract fun restoreMigrationBackup ()Z
+}
+
+public final class ee/schimke/composeai/uibuilder/service/RecoverableUiBuilderMigrationStorage$DefaultImpls {
+	public static fun usage (Lee/schimke/composeai/uibuilder/service/RecoverableUiBuilderMigrationStorage;)Lee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage;
 }
 
 public final class ee/schimke/composeai/uibuilder/service/RevisionPinnedUiBuilderExport {
@@ -469,8 +474,8 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceCall {
 }
 
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics {
-	public fun <init> (IJJJJJIJJJJJJIJI)V
-	public synthetic fun <init> (IJJJJJIJJJJJJIJIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (IJJJJJIJJJJJJIJIJJ)V
+	public synthetic fun <init> (IJJJJJIJJJJJJIJIJJILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component10 ()J
 	public final fun component11 ()J
@@ -479,6 +484,8 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagno
 	public final fun component14 ()I
 	public final fun component15 ()J
 	public final fun component16 ()I
+	public final fun component17 ()J
+	public final fun component18 ()J
 	public final fun component2 ()J
 	public final fun component3 ()J
 	public final fun component4 ()J
@@ -487,8 +494,8 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagno
 	public final fun component7 ()I
 	public final fun component8 ()J
 	public final fun component9 ()J
-	public final fun copy (IJJJJJIJJJJJJIJI)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
-	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;IJJJJJIJJJJJJIJIILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
+	public final fun copy (IJJJJJIJJJJJJIJIJJ)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;IJJJJJIJJJJJJIJIJJILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getActiveExports ()I
 	public final fun getActiveMutationBuckets ()I
@@ -504,6 +511,8 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagno
 	public final fun getRejectedPresenceLimit ()J
 	public final fun getRejectedSubscriberLimit ()J
 	public final fun getSlowSubscribersClosed ()J
+	public final fun getStorageBytes ()J
+	public final fun getStorageMaximumBytes ()J
 	public final fun getTimedOutExports ()J
 	public final fun getUnusableDesigns ()I
 	public fun hashCode ()I
@@ -538,32 +547,34 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceError 
 
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits {
 	public fun <init> ()V
-	public fun <init> (IIIIIIIIIIIIJIIJIIIJII)V
-	public synthetic fun <init> (IIIIIIIIIIIIJIIJIIIJIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (IIIIIJIIIIIIIIJIIJIIIJII)V
+	public synthetic fun <init> (IIIIIJIIIIIIIIJIIJIIIJIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component10 ()I
 	public final fun component11 ()I
 	public final fun component12 ()I
-	public final fun component13 ()J
+	public final fun component13 ()I
 	public final fun component14 ()I
-	public final fun component15 ()I
-	public final fun component16 ()J
+	public final fun component15 ()J
+	public final fun component16 ()I
 	public final fun component17 ()I
-	public final fun component18 ()I
+	public final fun component18 ()J
 	public final fun component19 ()I
 	public final fun component2 ()I
-	public final fun component20 ()J
+	public final fun component20 ()I
 	public final fun component21 ()I
-	public final fun component22 ()I
+	public final fun component22 ()J
+	public final fun component23 ()I
+	public final fun component24 ()I
 	public final fun component3 ()I
 	public final fun component4 ()I
 	public final fun component5 ()I
-	public final fun component6 ()I
+	public final fun component6 ()J
 	public final fun component7 ()I
 	public final fun component8 ()I
 	public final fun component9 ()I
-	public final fun copy (IIIIIIIIIIIIJIIJIIIJII)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;
-	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;IIIIIIIIIIIIJIIJIIIJIIILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;
+	public final fun copy (IIIIIJIIIIIIIIJIIJIIIJII)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;IIIIIJIIIIIIIIJIIJIIIJIIILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getExportTimeoutMillis ()J
 	public final fun getMaximumAssetBytes ()I
@@ -578,6 +589,7 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits
 	public final fun getMaximumSerializedDocumentBytes ()I
 	public final fun getMaximumSubscribers ()I
 	public final fun getMaximumSubscribersPerDesign ()I
+	public final fun getMinimumRetainedRevisionSnapshots ()I
 	public final fun getMutationBurstCapacity ()I
 	public final fun getMutationRefillAmount ()I
 	public final fun getMutationRefillIntervalMillis ()J
@@ -585,6 +597,7 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits
 	public final fun getRetainedAuditRecords ()I
 	public final fun getRetainedCommittedOperations ()I
 	public final fun getRetainedOperationOutcomes ()I
+	public final fun getRetainedRevisionBytes ()J
 	public final fun getRetainedRevisionSnapshots ()I
 	public final fun getSubscriberQueueCapacity ()I
 	public fun hashCode ()I
@@ -969,6 +982,25 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceUpdate
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderStateStorage {
 	public abstract fun load ()[B
 	public abstract fun replace ([B)V
+	public fun usage ()Lee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderStateStorage$DefaultImpls {
+	public static fun usage (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;)Lee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage {
+	public fun <init> (JJ)V
+	public final fun component1 ()J
+	public final fun component2 ()J
+	public final fun copy (JJ)Lee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage;JJILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderStorageUsage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBytes ()J
+	public final fun getMaximumBytes ()J
+	public final fun getUsedFraction ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderSubmission {

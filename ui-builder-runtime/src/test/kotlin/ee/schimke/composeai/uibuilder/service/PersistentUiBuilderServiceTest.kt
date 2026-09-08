@@ -2598,6 +2598,140 @@ class PersistentUiBuilderServiceTest {
     assertEquals("timed out after 30s", RuntimeException("timed out after 30s").clientMessage())
   }
 
+  @Test
+  fun `retention depth follows the byte budget, and never cuts below its floor`() {
+    // A budget too small for even one copy of the document: the floor is what is left, and the
+    // floor is what a client rebasing on a recent revision needs.
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            retainedCommittedOperations = 64,
+            retainedRevisionSnapshots = 64,
+            retainedRevisionBytes = 64,
+            minimumRetainedRevisionSnapshots = 2,
+          )
+      )
+    create(service)
+    editFourTimes(service)
+
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 4)),
+      "the current revision is retained",
+    )
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 3)),
+      "the floor keeps one revision behind the current one",
+    )
+    assertEquals(
+      ServiceErrorCodeV1.SNAPSHOT_REQUIRED,
+      error(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 2))).code,
+      "anything below the floor is dropped rather than kept for a thousand revisions",
+    )
+  }
+
+  @Test
+  fun `a dropped revision reports the snapshot floor, not the operation log's`() {
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            // The operation log keeps everything; only the whole-document snapshots are shallow.
+            retainedCommittedOperations = 64,
+            retainedRevisionSnapshots = 64,
+            retainedRevisionBytes = 64,
+            minimumRetainedRevisionSnapshots = 2,
+          )
+      )
+    create(service)
+    editFourTimes(service)
+
+    val refused = error(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 1)))
+
+    assertEquals(ServiceErrorCodeV1.SNAPSHOT_REQUIRED, refused.code)
+    // The delta path still reports 0 here, because every operation is retained. Quoting that floor
+    // for a missing snapshot would send the client back for a revision that is still gone.
+    assertEquals(
+      3,
+      refused.retainedFromSequence,
+      "the floor quoted is the oldest revision still retained",
+    )
+    assertEquals(
+      0,
+      delta(execute(service, owner, UiBuilderServiceRequest.GetDelta("design", 0, 50)))
+        .retainedFromSequence,
+      "the operation log's own floor is unchanged, and is what a delta answers with",
+    )
+  }
+
+  @Test
+  fun `the file storage reports what it holds against the ceiling that would refuse it`() {
+    val storage = FileUiBuilderStateStorage(temporaryDirectory, maximumBytes = 4_096)
+
+    val empty = assertNotNull(storage.usage())
+    assertEquals(0, empty.bytes, "nothing stored yet")
+    assertEquals(4_096, empty.maximumBytes)
+    assertEquals(0.0, empty.usedFraction)
+
+    storage.replace(ByteArray(1_024) { '.'.code.toByte() })
+
+    val used = assertNotNull(storage.usage())
+    assertEquals(1_024, used.bytes)
+    assertEquals(0.25, used.usedFraction)
+  }
+
+  @Test
+  fun `diagnostics carry the storage headroom, and omit it when nothing bounds the store`() {
+    val bounded =
+      service(storage = FileUiBuilderStateStorage(temporaryDirectory, maximumBytes = 1_048_576))
+    create(bounded)
+
+    val measured = bounded.diagnostics()
+    assertEquals(1_048_576, measured.storageMaximumBytes)
+    assertTrue(measured.storageBytes > 0, "a created design is bytes on disk")
+    assertTrue(measured.storageBytes < measured.storageMaximumBytes)
+
+    val unbounded = service()
+    create(unbounded)
+
+    assertEquals(
+      0,
+      unbounded.diagnostics().storageMaximumBytes,
+      "a storage that bounds nothing reports no ceiling rather than a made-up one",
+    )
+  }
+
+  /** A root and three children, so the design reaches revision 4 through four accepted commits. */
+  private fun editFourTimes(service: PersistentUiBuilderService) {
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+        ),
+      )
+    )
+    repeat(3) { index ->
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "insert-$index",
+              index + 1L,
+              InsertNodeMutationV1(
+                textNode("node-$index"),
+                NodeLocationV1(ParentSlotV1("root", "content")),
+              ),
+            )
+          ),
+        )
+      )
+    }
+  }
+
   private fun service(
     storage: UiBuilderStateStorage = MemoryStorage(),
     retained: Int = 16,
@@ -2854,6 +2988,9 @@ private fun <T> runSuspend(block: suspend () -> T): T {
 
 private fun error(response: UiBuilderServiceResponse): UiBuilderServiceError =
   assertIs<UiBuilderServiceResponse.Error>(response).error
+
+private fun delta(response: UiBuilderServiceResponse): ServiceDeltaV1 =
+  assertIs<UiBuilderServiceResponse.Delta>(response).delta
 
 private fun accepted(response: UiBuilderServiceResponse): AcceptedOutcomeV1 =
   assertIs<AcceptedOutcomeV1>(assertIs<UiBuilderServiceResponse.OperationOutcome>(response).outcome)

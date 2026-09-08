@@ -19,12 +19,38 @@ public data class UiBuilderPersistenceMigrationResult(
 )
 
 /**
+ * How much of a bounded storage is spent, so an operator learns before a save is refused.
+ *
+ * [FileUiBuilderStateStorage] bounds every write at `maximumBytes` and there has never been a way
+ * to see how close the file is to it: the first sign was a refused save, on a store that had been
+ * at 73% for weeks. `bytes` is what is stored now, `maximumBytes` the ceiling that would refuse it.
+ */
+public data class UiBuilderStorageUsage(val bytes: Long, val maximumBytes: Long) {
+  init {
+    require(maximumBytes > 0) { "maximumBytes must be positive" }
+  }
+
+  /** 0.0 when nothing is stored, 1.0 at the ceiling. */
+  public val usedFraction: Double
+    get() = bytes.toDouble() / maximumBytes.toDouble()
+}
+
+/**
  * Atomic opaque-state storage. Implementations must replace the complete value or write nothing.
  */
 public interface UiBuilderStateStorage {
   public fun load(): ByteArray?
 
   public fun replace(value: ByteArray)
+
+  /**
+   * What this storage is holding against its ceiling, or null when it has neither.
+   *
+   * Defaulted because an in-memory or test storage bounds nothing and has nothing to report, and
+   * because a new method on a published interface must not break the implementations outside this
+   * repository.
+   */
+  public fun usage(): UiBuilderStorageUsage? = null
 }
 
 /** Storage that can retain and explicitly restore the exact pre-migration generation. */
@@ -142,6 +168,22 @@ public class FileUiBuilderStateStorage(
       temporary?.let { Files.deleteIfExists(it) }
     }
     true
+  }
+
+  /**
+   * The primary state file's size against the ceiling every write is bounded by.
+   *
+   * Deliberately not under the lock and deliberately tolerant of a missing or unreadable file: this
+   * answers a gauge, and a status route must never be the thing that blocks a save or fails.
+   */
+  override fun usage(): UiBuilderStorageUsage {
+    val bytes =
+      try {
+        if (Files.exists(stateFile)) Files.size(stateFile) else 0L
+      } catch (_: IOException) {
+        0L
+      }
+    return UiBuilderStorageUsage(bytes, maximumBytes)
   }
 
   override fun replaceForMigration(value: ByteArray): Unit = replace(value)

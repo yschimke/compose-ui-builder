@@ -147,7 +147,45 @@ public data class UiBuilderServiceLimits(
   val maximumNodesPerDesign: Int = 10_000,
   val retainedCommittedOperations: Int = 1_024,
   val retainedOperationOutcomes: Int = 4_096,
-  val retainedRevisionSnapshots: Int = 1_025,
+  /**
+   * The most whole-document revisions one design may retain.
+   *
+   * This was 1,025, and a retained revision is a **whole copy** of the document and of the position
+   * map. A 40-node design serializes to about 9.5 KB and therefore occupied 11.5 MB of the one
+   * state file — 99.9% of a store whose live documents were 0.1% of it — which is how
+   * `preview.coo.ee` reached 24.5 MB against a 32 MiB ceiling with a handful of designs and nothing
+   * wrong with any of them (yschimke/compose-preview-server#568). Retention depth is not a protocol
+   * promise: `SNAPSHOT_REQUIRED` and the retained-from floor beside it exist precisely so the
+   * service can say how far back it still goes, which leaves this free to be a number chosen for
+   * the sizes designs actually reach. The store this is the stopgap for is
+   * `docs/design/UI_BUILDER_STATE_STORAGE.md`.
+   */
+  val retainedRevisionSnapshots: Int = 128,
+  /**
+   * The byte budget those retained revisions share, which binds first when documents are large.
+   *
+   * A count alone bounds nothing: at `maximumSerializedDocumentBytes` a design retaining 128
+   * revisions would want a gigabyte. The depth actually used is this budget divided by the size of
+   * the document being retained — measured, not guessed, from the canonical bytes the commit
+   * already hashes — clamped between [minimumRetainedRevisionSnapshots] and
+   * [retainedRevisionSnapshots]. Position snapshots follow the same depth and cost a fraction of
+   * it.
+   */
+  val retainedRevisionBytes: Long = 2L * 1_024 * 1_024,
+  /**
+   * The depth [retainedRevisionBytes] may never cut below.
+   *
+   * Below some depth collaboration breaks rather than degrades: a client editing against a
+   * `baseRevision` needs that revision's position snapshot to rebase onto, and undo replays through
+   * retained state. So a design whose documents are large enough to exhaust the budget keeps this
+   * many anyway and is reported through the storage gauge instead — still strictly better than the
+   * 1,025 the same design would have kept before.
+   *
+   * Never raises [retainedRevisionSnapshots]: a caller that deliberately sets a shallow ceiling
+   * means it, and a floor above it is read as "as deep as the ceiling allows" rather than as a
+   * contradiction to refuse construction over.
+   */
+  val minimumRetainedRevisionSnapshots: Int = 32,
   val retainedAuditRecords: Int = 4_096,
   val subscriberQueueCapacity: Int = 512,
   val maximumOperationsPerBatch: Int = 256,
@@ -180,6 +218,8 @@ public data class UiBuilderServiceLimits(
     require(retainedCommittedOperations > 0)
     require(retainedOperationOutcomes > 0)
     require(retainedRevisionSnapshots > 0)
+    require(retainedRevisionBytes > 0)
+    require(minimumRetainedRevisionSnapshots > 0)
     require(retainedAuditRecords > 0)
     require(subscriberQueueCapacity > 0)
     require(maximumOperationsPerBatch > 0)
@@ -348,8 +388,20 @@ public class PersistentUiBuilderService(
       activeMutationBuckets = mutationBuckets.size,
       persistenceMigrations = persistenceMigrations.get(),
       unusableDesigns = unusableDesigns.size,
+      storageBytes = storageUsage?.bytes ?: 0,
+      storageMaximumBytes = storageUsage?.maximumBytes ?: 0,
     )
   }
+
+  /**
+   * What the durable storage holds against its ceiling, or null when it reports neither.
+   *
+   * Read where every other gauge is read, under the service lock, and never allowed to fail a
+   * status route: a storage that throws while being asked how big it is reports nothing rather than
+   * taking down the answer it is one row of.
+   */
+  private val storageUsage: UiBuilderStorageUsage?
+    get() = runCatching { storage.usage() }.getOrNull()
 
   init {
     persisted.designs.forEach { (designId, _) -> runtime[designId] = RuntimeDesign() }
@@ -576,12 +628,14 @@ public class PersistentUiBuilderService(
         "asset bytes could not be stored: ${failure.message}",
       )
     }
+    val canonical = documentCanonicalBytes(document)
+    val retained = limits.retainedRevisionsFor(canonical.size)
     val outcome =
       AcceptedOutcomeV1(
         operationId,
         revision,
         sequence,
-        documentHash(document),
+        sha256(canonical),
         idempotentReplay = false,
         documentUpdatedAtEpochMillis = now,
       )
@@ -591,12 +645,10 @@ public class PersistentUiBuilderService(
         lastSequence = sequence,
         history = emptyList(),
         revisionSnapshots =
-          (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(
-            limits.retainedRevisionSnapshots
-          ),
+          (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained),
         positionSnapshots =
           (design.positionSnapshots + PositionStateV1(revision, design.positions)).takeLast(
-            limits.retainedRevisionSnapshots
+            retained
           ),
         updatedAtEpochMillis = now,
         audit =
@@ -902,7 +954,7 @@ public class PersistentUiBuilderService(
               code = ServiceErrorCodeV1.SNAPSHOT_REQUIRED,
               message = "revision $revision is no longer retained for $designId",
               currentRevision = design.document.revision,
-              retainedFromSequence = design.retainedFromSequence(),
+              retainedFromSequence = design.retainedSnapshotFromSequence(),
             )
           )
     val catalog =
@@ -1318,7 +1370,7 @@ public class PersistentUiBuilderService(
               ServiceErrorCodeV1.SNAPSHOT_REQUIRED,
               "export revision $revision is not retained",
               currentRevision = design.document.revision,
-              retainedFromSequence = design.retainedFromSequence(),
+              retainedFromSequence = design.retainedSnapshotFromSequence(),
             )
           )
       val catalog =
@@ -1679,12 +1731,14 @@ public class PersistentUiBuilderService(
     val sequence = design.lastSequence + 1
     val now = clock.millis()
     val document = working.document.copy(revision = revision, updatedAtEpochMillis = now)
+    val canonical = documentCanonicalBytes(document)
+    val retained = limits.retainedRevisionsFor(canonical.size)
     val outcome =
       AcceptedOutcomeV1(
         submission.operationId(),
         revision,
         sequence,
-        documentHash(document),
+        sha256(canonical),
         idempotentReplay = false,
         conflicts = conflicts,
         documentUpdatedAtEpochMillis = now,
@@ -1728,9 +1782,7 @@ public class PersistentUiBuilderService(
     val committed = CommittedOperationV1(submission, outcome)
     val history = (design.history + committed).takeLast(limits.retainedCommittedOperations)
     val snapshots =
-      (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(
-        limits.retainedRevisionSnapshots
-      )
+      (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained)
     val audit =
       (design.audit +
           AuditRecordV1(
@@ -1753,7 +1805,7 @@ public class PersistentUiBuilderService(
         positions = working.positions,
         positionSnapshots =
           (design.positionSnapshots + PositionStateV1(revision, working.positions)).takeLast(
-            limits.retainedRevisionSnapshots
+            retained
           ),
         acceptedOperations = accepted,
         tombstones = working.tombstones,
@@ -3255,6 +3307,19 @@ private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): Desi
 private fun PersistedDesignV1.retainedFromSequence(): Long =
   history.firstOrNull()?.outcome?.sequence?.minus(1) ?: lastSequence
 
+/**
+ * The oldest sequence a whole revision is still retained for, which is not [retainedFromSequence].
+ *
+ * That one is the operation log's floor (`retainedCommittedOperations`), and it is the right answer
+ * for a delta: it says how far back the *changes* go. A `SNAPSHOT_REQUIRED` raised because a
+ * revision's document is gone must answer with the snapshot floor instead. The two used to be
+ * within one of each other, so quoting either was harmless; retaining fewer revisions than
+ * operations makes the difference real, and a client told a floor 900 sequences below what is
+ * actually retained would ask again for a revision that is still missing and loop.
+ */
+private fun PersistedDesignV1.retainedSnapshotFromSequence(): Long =
+  revisionSnapshots.firstOrNull()?.sequence ?: lastSequence
+
 private fun PersistedDesignV1.deltaAfter(afterSequence: Long, limit: Int): ServiceDeltaV1 {
   val available = history.filter { it.outcome.sequence > afterSequence }
   val page = available.take(limit)
@@ -3972,11 +4037,32 @@ private fun notFound(designId: String): UiBuilderServiceError =
 private fun forbidden(action: String, designId: String): UiBuilderServiceError =
   UiBuilderServiceError(ServiceErrorCodeV1.FORBIDDEN, "actor may not $action design $designId")
 
+/**
+ * The exact bytes a document's hash is taken over, which are also the bytes retaining it costs.
+ *
+ * Kept as one function so the retention budget is measured on the same canonical form the hash is,
+ * and so a commit that needs both pays for the serialization once.
+ */
+private fun documentCanonicalBytes(document: DesignDocumentV1): ByteArray =
+  canonicalJson(PersistentUiBuilderServiceJson.json.encodeToJsonElement(document))
+    .encodeToByteArray()
+
 private fun documentHash(document: DesignDocumentV1): String =
-  sha256(
-    canonicalJson(PersistentUiBuilderServiceJson.json.encodeToJsonElement(document))
-      .encodeToByteArray()
-  )
+  sha256(documentCanonicalBytes(document))
+
+/**
+ * How many revisions of a document costing [documentBytes] this design may retain.
+ *
+ * The budget divided by the cost of one, held between the floor and the ceiling. A document large
+ * enough to make the division zero still retains the floor, deliberately: see
+ * [UiBuilderServiceLimits.minimumRetainedRevisionSnapshots].
+ */
+private fun UiBuilderServiceLimits.retainedRevisionsFor(documentBytes: Int): Int {
+  if (documentBytes <= 0) return retainedRevisionSnapshots
+  val floor = minimumRetainedRevisionSnapshots.coerceAtMost(retainedRevisionSnapshots)
+  val affordable = (retainedRevisionBytes / documentBytes).coerceAtMost(Int.MAX_VALUE.toLong())
+  return affordable.toInt().coerceIn(floor, retainedRevisionSnapshots)
+}
 
 private fun artifactDigest(artifact: ExportArtifactV1): String =
   sha256(
