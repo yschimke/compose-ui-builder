@@ -9,45 +9,64 @@ design's bytes.
 ## The problem is not the ceiling
 
 `FileUiBuilderStateStorage` holds every design in one file, `ui-builder-service-v1.json`, bounded at
-`maximumBytes` (32 MiB). On `preview.coo.ee` that file is ~24.5 MB. The obvious reading is that the
-ceiling is too low and designs are too big. Both halves are wrong.
+`maximumBytes`. On `preview.coo.ee` that file is 23.4 MB, and was at 73% of the 32 MiB ceiling it
+had before that ceiling was raised. The obvious reading is that the ceiling is too low and designs
+are too big. Both halves are wrong, and so was this document's first answer about which bytes are
+to blame.
 
-**Almost nothing in the file is a design.** `PersistedDesignV1` keeps
-`retainedRevisionSnapshots` — 1,025 by default — whole copies of the document in `revisionSnapshots`,
-and 1,025 whole copies of the position map in `positionSnapshots`. The live document is one of
-those 2,050 copies. Modelling a single 40-node design at full retention with
-[`scripts/ui-builder/state-size-report.mjs`](../../scripts/ui-builder/state-size-report.mjs):
+**The bytes are undo state, not retained revisions.** This section originally argued from a model:
+`retainedRevisionSnapshots` was 1,025 whole copies of the document and 1,025 of the position map,
+so a handful of long-lived designs had to be the whole store. Running
+[`scripts/ui-builder/state-size-report.mjs`](../../scripts/ui-builder/state-size-report.mjs) against
+the live file said otherwise — 36 designs, none past revision 20, so retention depth was never the
+binding constraint:
 
 ```
-format ui-builder-persistence-v2  15.13 MB of 32.00 MB (47.3%)  2 designs
+format compose-preview-ui-builder-service/v2  23.40 MB of 32.00 MB (73.1%)  36 designs
 
 by section (all designs)
-  revisionSnapshots      12.32 MB   81.4%
-  positionSnapshots       2.80 MB   18.5%
-  document                0.01 MB    0.1%
-  ...
+  acceptedOperations      7.00 MB   29.9%
+  positionSnapshots       4.79 MB   20.5%
+  revisionSnapshots       3.38 MB   14.4%
+  tombstones              2.58 MB   11.0%
+  operationOutcomes       1.82 MB    7.8%
+  history                 1.48 MB    6.3%
+  positions               1.24 MB    5.3%
+  document                1.02 MB    4.3%
 
-by design (top 2)
-  a                          11.47 MB   75.8%  rev 1025  40 nodes  largest: revisionSnapshots (1025 entries)
-  b                           3.66 MB   24.2%  rev 1025  12 nodes  largest: revisionSnapshots (1025 entries)
+by design (top 3)
+  claude-home                12.50 MB   53.4%  rev 10  386 nodes  largest: acceptedOperations (4.29 MB, 10 entries)
+  agent-welcome               1.51 MB    6.4%  rev 20  55 nodes   largest: acceptedOperations (0.44 MB, 20 entries)
+  ui-builder-code-pane        1.26 MB    5.4%  rev 1  219 nodes   largest: acceptedOperations (0.38 MB, 1 entries)
 ```
 
-A 40-node design serializes to about 9.5 KB and occupies 11.5 MB of the store. Two or three
-actively-edited designs reach 24.5 MB with no design being large and no design being wrong. The
-store is 99.9% history and it is stored as full copies.
+Undo bookkeeping — `acceptedOperations`, `tombstones`, `operationOutcomes`, `history` — is **55%**
+of the store. The two snapshot lists are 35%. The live documents everyone is actually editing are
+**4.3%**.
+
+**One design is half the store, and one operation is 430 KB.** `claude-home` holds 53.4% of the file
+across ten accepted operations. The cause is structural: `StructureChangeV1` carries `before` and
+`after` as whole `NodeTreeSnapshotV1` subtrees, so a single edit near the root of a 386-node design
+stores that subtree twice — and `acceptedOperations` was bounded only by `retainedOperationOutcomes`,
+a count of 4,096 with no relation to how large a record is. Four thousand records at 430 KB is a
+design that alone exceeds any ceiling. That gap is now closed by `retainedUndoBytes`, a per-design
+byte budget on `acceptedOperations` and `tombstones` with a floor of `minimumRetainedUndoOperations`
+undo steps, but it is a bound, not a fix: the subtrees are still stored twice per structural edit.
 
 **Every accepted edit rewrites all of it.** `commitPersisted` calls
 `storage.replace(encode(candidate, format))` on each applied batch, rename, asset write and
 compensation. `encode` builds a `JsonElement` tree of the entire service, walks it into one
 canonical string to checksum, then serializes the envelope into a second string. `replace` then
 reads the existing file back to write `.backup`, fsyncs it, writes the new file, and fsyncs that.
-So one designer nudging one padding value costs, today, at 24.5 MB: two full serializations of every
-design plus a whole-tree `JsonElement` in heap, and ~75 MB of file I/O with three fsyncs. It is
-`O(everything stored)` per keystroke-scale edit, and the constant is measured in tens of megabytes.
+So one designer nudging one padding value in the smallest of 36 designs costs two full
+serializations of all 23.4 MB — `claude-home`'s 12.5 MB included — plus a whole-tree `JsonElement`
+in heap, and ~70 MB of file I/O with three fsyncs. It is `O(everything stored)` per keystroke-scale
+edit, and the measurement makes it worse than the model did: the store is dominated by one design
+that most edits never touch.
 
-The 32 MiB ceiling is what makes that visible. Raising it makes each edit more expensive and moves
-the wall. The fix is to stop writing bytes that did not change and stop reading bytes nobody asked
-for.
+The ceiling is what makes that visible. Raising it — which has been done, to 128 MiB — buys room
+while the store is rebuilt and makes each edit no cheaper; a bigger file is a bigger rewrite. The
+fix is to stop writing bytes that did not change and stop reading bytes nobody asked for.
 
 ## The shape
 
@@ -92,7 +111,7 @@ Four properties follow from the layout, and they are the whole point:
   reported by `adminUnusableDesigns()`; every other design serves. The only files whose failure can
   still cost more than one design are `store.json` and the directory listing itself, and neither is
   written on an edit.
-- **The ceiling becomes a budget.** One 32 MiB cliff across all designs is replaced by limits that
+- **The ceiling becomes a budget.** One whole-store cliff across all designs is replaced by limits that
   name what they bound: `maximumSerializedDocumentBytes` (already 8 MiB) for `document.json`, a
   per-design byte budget covering `revisions/` and `log/`, and a store-level *soft* limit that warns
   rather than refuses. A design save can no longer fail because a different design grew.
@@ -163,7 +182,9 @@ Two changes, in order of how much they cost to build:
    at most `retainedRevisionSnapshots` (128) revisions and at most `retainedRevisionBytes` (2 MiB)
    worth of them, whichever binds first, never cutting below `minimumRetainedRevisionSnapshots`
    (32). The depth is measured from the canonical document bytes the commit already hashes, so it
-   costs nothing extra. This needed no format work, which is why it went first.
+   costs nothing extra. This needed no format work, which is why it went first — and, on the
+   measured store, why it changed nothing: no design there is deep enough for either bound to bite.
+   It is insurance against a design that keeps being edited, not a remedy for the file today.
 
    It also moved a floor that used to be quoted loosely. `SNAPSHOT_REQUIRED` raised for a missing
    *revision* now answers with the oldest revision still retained, not with the operation log's
@@ -176,8 +197,11 @@ Two changes, in order of how much they cost to build:
    exactly a forward-and-backward delta — it is what undo already replays. So a retained revision
    need not be a document: keep a whole document every 64 revisions and the change records between,
    and reconstruct on read by replaying forward from the nearest keyframe. That is a 30–60×
-   reduction on the section holding 81% of the store, and the file layout above already allows it
-   because a revision is already its own file. It is deliberately staged second: replay must
+   reduction on the snapshot sections, and the file layout above already allows it because a
+   revision is already its own file. Worth sizing against the measurement first: those sections are
+   35% of the live store, not the 81% the original model assumed, so the same technique applied to
+   `acceptedOperations` — whose `StructureChangeV1` records are themselves whole subtrees, stored
+   twice — is likely the larger prize. It is deliberately staged second: replay must
    reproduce the stored document byte-for-byte or `documentHash` and pinned export both lie, and
    proving that deserves its own change with the round-trip test to match.
 
@@ -202,7 +226,7 @@ tree and defaulted after.
   segment; segments roll at a size cap and are unlinked whole once every record in them is below
   `retainFromRevision`.
 - **The backup goes away, per design.** The single global `.backup` is what makes today's write read
-  and rewrite 24.5 MB to save a copy nobody has ever restored automatically. Retained revisions
+  and rewrite all 23.4 MB to save a copy nobody has ever restored automatically. Retained revisions
   under `revisions/` *are* the previous generations, per design, and `restoreBackup()` becomes
   "make revision r current", which is both a smaller operation and a more useful one. The
   `RecoverableUiBuilderMigrationStorage` pair stays only for the v2 reader.
@@ -227,14 +251,23 @@ migration work must never be able to abort `serve`, so the migration above runs 
 
 ## What to do first
 
-The design above is a change to the store, and the store is at 73% now. In order:
+In order, with the first two done:
 
-1. **Report before deciding.** `scripts/ui-builder/state-size-report.mjs` against the live
-   `/config/ui-builder-state/ui-builder-service-v1.json` says which designs and which sections hold
-   the 24.5 MB. Everything below assumes it says what the model above predicts; if it says something
-   else — one design with 60 MB of tombstones, say — that is the thing to fix instead.
-2. **Cut retention, and warn.** *Done.* Retention is now bounded by count and by bytes (above), and
-   the store reports its own headroom: `UiBuilderStateStorage.usage()` says what is held against the
+1. **Report before deciding.** *Done, and it changed the plan.*
+   `scripts/ui-builder/state-size-report.mjs` against the live
+   `/config/ui-builder-state/ui-builder-service-v1.json` was run, and it overturned the model this
+   document was first written from: the bytes are in undo state, not retained revisions, and one
+   design is half the store. The output is quoted at the top. Two things followed — a byte budget on
+   `acceptedOperations` and `tombstones`, which is the bound that was actually missing, and a fix to
+   the report's own projection line, which had assumed every design sat at full retention depth and
+   so offered a 7.66 MB saving that did not exist. Re-run it after any change here; the whole point
+   of the step is that the guess and the measurement disagreed.
+2. **Cut retention, and warn.** *Done, and it turned out not to be the lever.* Every design on the
+   live store is at revision 1-20, far under both the old 1,025 cap and the new 128, so the revision
+   cut changes nothing there — it is insurance for a design that accumulates revisions, not a
+   remedy for the file as it stands. The undo budget in step 1 is what reaches these bytes.
+
+   The store also reports its own headroom: `UiBuilderStateStorage.usage()` says what is held against the
    ceiling that would refuse the next write, `/status.json`'s `uiBuilder` row carries
    `storageBytes`, `storageMaximumBytes` and `storageUsedPercent`, and `serve` prints a warning at
    startup from 80% naming the number, the consequence and the remedy. Both rows are null rather

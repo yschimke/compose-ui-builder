@@ -77,7 +77,17 @@ public interface RecoverableUiBuilderMigrationStorage : UiBuilderStateStorage {
  */
 public class FileUiBuilderStateStorage(
   root: Path,
-  private val maximumBytes: Long = 32L * 1024L * 1024L,
+  /**
+   * The ceiling a write is refused at, raised from 32 MiB.
+   *
+   * 32 MiB was chosen when a design was small and there were few of them; the live store reached
+   * 73% of it with 36 designs and no single thing wrong. Raising it buys room rather than fixing
+   * anything — every accepted edit still rewrites the whole file, so a larger ceiling makes each
+   * edit more expensive, not less, and the per-design store in
+   * `docs/design/UI_BUILDER_STATE_STORAGE.md` is what removes that. What the headroom is for is not
+   * having saves start failing while that work happens.
+   */
+  private val maximumBytes: Long = 128L * 1024L * 1024L,
 ) : RecoverableUiBuilderMigrationStorage {
   private val directory = root.toAbsolutePath().normalize()
   private val stateFile = directory.resolve(STATE_FILE)

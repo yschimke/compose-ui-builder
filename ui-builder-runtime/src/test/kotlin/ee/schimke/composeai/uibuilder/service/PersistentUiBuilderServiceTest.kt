@@ -2701,6 +2701,102 @@ class PersistentUiBuilderServiceTest {
     )
   }
 
+  @Test
+  fun `undo records are bounded by bytes, and undoing past the floor is refused not broken`() {
+    // A budget too small for the records this design produces: the floor is all that survives.
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            retainedCommittedOperations = 64,
+            retainedOperationOutcomes = 64,
+            retainedRevisionSnapshots = 64,
+            retainedUndoBytes = 1,
+            minimumRetainedUndoOperations = 2,
+          )
+      )
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+        ),
+      )
+    )
+    repeat(5) { index ->
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "insert-$index",
+              index + 1L,
+              InsertNodeMutationV1(
+                textNode("node-$index"),
+                NodeLocationV1(ParentSlotV1("root", "content")),
+              ),
+            )
+          ),
+        )
+      )
+    }
+
+    // The newest operation is still undoable: the floor keeps the most recent records.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-latest", "browser", 6, "insert-4")
+        ),
+      )
+    )
+
+    // The first one has aged out of the budget, and says so rather than failing some other way.
+    val refused =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            UiBuilderSubmission.Undo("design", "undo-oldest", "browser", 7, "insert-root")
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.UNKNOWN_OPERATION, refused.code)
+  }
+
+  @Test
+  fun `a generous undo budget retains every record`() {
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            retainedCommittedOperations = 64,
+            retainedOperationOutcomes = 64,
+            retainedRevisionSnapshots = 64,
+            retainedUndoBytes = 8L * 1024 * 1024,
+            minimumRetainedUndoOperations = 2,
+          )
+      )
+    create(service)
+    editFourTimes(service)
+
+    // The oldest of the four is still undoable when nothing forced it out.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-oldest", "browser", 4, "insert-2")
+        ),
+      )
+    )
+  }
+
   /** A root and three children, so the design reaches revision 4 through four accepted commits. */
   private fun editFourTimes(service: PersistentUiBuilderService) {
     accepted(

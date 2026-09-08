@@ -114,26 +114,48 @@ test("a v1 envelope puts the service directly in payload and is read the same wa
 test("the retention projection scales only the two snapshot lists", () => {
   const report = analyzeUiBuilderState(envelopeV2({ one: design("one", { retained: 100 }) }));
 
-  const projection = projectRetention(report, { retained: 100, keep: 10 });
+  const projection = projectRetention(report, { keep: 10 });
 
   assert.equal(
     projection.snapshotBytes,
     report.sectionTotals.revisionSnapshots + report.sectionTotals.positionSnapshots,
   );
-  // A tenth of the snapshots, everything else untouched.
-  const expected = report.totalBytes - projection.snapshotBytes + Math.round(projection.snapshotBytes * 0.1);
-  assert.equal(projection.projectedTotalBytes, expected);
-  assert.equal(projection.savedBytes, report.totalBytes - expected);
-  assert.ok(projection.savedBytes > 0);
+  // Nine tenths of the snapshots go; everything else is untouched.
+  assert.equal(projection.projectedTotalBytes, report.totalBytes - projection.savedBytes);
+  assert.equal(projection.affectedDesigns, 1);
+  assert.ok(projection.savedBytes > projection.snapshotBytes * 0.8);
+  assert.ok(projection.savedBytes < projection.snapshotBytes);
 });
 
-test("keeping more revisions than are retained never projects growth", () => {
-  const report = analyzeUiBuilderState(envelopeV2({ one: design("one", { retained: 4 }) }));
+test("a store whose designs are all shallower than the cut saves nothing", () => {
+  // The bug this replaced: the projection scaled by keep/retained on the assumption that every
+  // design sat at the configured depth, and reported a 7.66 MB saving against a live store whose
+  // designs were at revision 1-20 and would have given back nothing.
+  const report = analyzeUiBuilderState(
+    envelopeV2({ one: design("one", { retained: 4 }), two: design("two", { retained: 20 }) }),
+  );
 
-  const projection = projectRetention(report, { retained: 4, keep: 64 });
+  const projection = projectRetention(report, { keep: 64 });
 
-  assert.equal(projection.projectedTotalBytes, report.totalBytes);
   assert.equal(projection.savedBytes, 0);
+  assert.equal(projection.projectedTotalBytes, report.totalBytes);
+  assert.equal(projection.affectedDesigns, 0);
+});
+
+test("only the designs deeper than the cut contribute to the saving", () => {
+  const report = analyzeUiBuilderState(
+    envelopeV2({ deep: design("deep", { retained: 80 }), shallow: design("shallow", { retained: 5 }) }),
+  );
+
+  const projection = projectRetention(report, { keep: 40 });
+
+  assert.equal(projection.affectedDesigns, 1, "the shallow design is untouched by the cut");
+  const deep = report.designs.find((it) => it.id === "deep");
+  const deepSnapshots =
+    deep.sections.revisionSnapshots.bytes + deep.sections.positionSnapshots.bytes;
+  // Half of the deep design's snapshots, and none of the shallow one's.
+  assert.ok(projection.savedBytes > deepSnapshots * 0.4);
+  assert.ok(projection.savedBytes < deepSnapshots * 0.6);
 });
 
 test("the printed report names the ceiling, the sections and the worst design", () => {
@@ -144,7 +166,7 @@ test("the printed report names the ceiling, the sections and the worst design", 
   assert.match(text, /of 32\.00 MB/);
   assert.match(text, /revisionSnapshots/);
   assert.match(text, /big\s+\d+\.\d\d MB/);
-  assert.match(text, /retaining 64 revisions instead of 1025/);
+  assert.match(text, /already retains fewer than 64 revisions, so cutting revision retention/);
 });
 
 test("a file that is not a state envelope is refused by name", () => {

@@ -7,12 +7,18 @@ import { pathToFileURL } from "node:url";
  * What is actually inside a `ui-builder-service-v1.json`, by design and by section.
  *
  * The store keeps every design in one file and rewrites the whole thing on every accepted edit, so
- * the only number an operator has today is the total — 24.5 MB against a 32 MiB ceiling, with no
- * way to see which design or which retained list is spending it
+ * the only number an operator had was the total — 23.4 MB against the ceiling, with no way to see
+ * which design or which retained list was spending it
  * ([#568](https://github.com/yschimke/compose-preview-server/issues/568)). This answers that, and
  * it is the measurement the per-design store in
  * [`docs/design/UI_BUILDER_STATE_STORAGE.md`](../../docs/design/UI_BUILDER_STATE_STORAGE.md)
  * argues from: run it before the migration and after it.
+ *
+ * Run against the live store it immediately overturned the guess it was written to check. The bytes
+ * are not in the revision snapshots: 36 designs sat at revision 1-20, and undo bookkeeping
+ * (`acceptedOperations`, `tombstones`, `operationOutcomes`, `history`) held 55% of the file against
+ * the snapshots' 35% and the live documents' 4%. One design held 53% of the store on its own. That
+ * is the whole argument for measuring rather than modelling.
  *
  * Sizes are the serialized length of each subtree in UTF-8 bytes. They sum to slightly less than
  * the file, because the envelope, the key names above a section and the punctuation between
@@ -33,7 +39,7 @@ export const DESIGN_SECTIONS = [
   "access",
 ];
 
-const DEFAULT_MAXIMUM_BYTES = 32 * 1024 * 1024;
+const DEFAULT_MAXIMUM_BYTES = 128 * 1024 * 1024;
 const DEFAULT_WARN_PERCENT = 80;
 
 function byteLength(value) {
@@ -116,23 +122,36 @@ export function analyzeUiBuilderState(root, { totalBytes } = {}) {
 }
 
 /**
- * What the store would hold if retained revisions were the only thing that changed.
+ * What a shallower revision retention would actually save, measured per design.
  *
- * The two snapshot lists are `retainedRevisionSnapshots` (1,025 by default) whole copies of the
- * document and of the position map, so their cost is very close to linear in the retention depth.
- * Scaling them by `keep / retained` is therefore a good estimate of a retention cut and a floor for
- * the per-design store, which additionally stops rewriting the sections it does not touch.
+ * This used to scale the two snapshot sections by `keep / retained`, assuming every design sat at
+ * the configured retention depth. Against a real store that was badly wrong: the live file's
+ * designs are at revision 1-20, nowhere near the 1,025 cap, so nothing would have been dropped and
+ * the reported saving of 7.66 MB did not exist. A design only gives bytes back for the snapshots it
+ * holds **beyond** [keep], so the count is what the arithmetic has to come from — and a store whose
+ * designs are all shallower than [keep] correctly projects a saving of zero.
  */
-export function projectRetention(report, { retained = 1025, keep = 64 } = {}) {
-  const scale = Math.min(1, keep / retained);
-  const snapshotBytes = report.sectionTotals.revisionSnapshots + report.sectionTotals.positionSnapshots;
-  const projected = report.totalBytes - snapshotBytes + Math.round(snapshotBytes * scale);
+export function projectRetention(report, { keep = 64 } = {}) {
+  let snapshotBytes = 0;
+  let savedBytes = 0;
+  for (const design of report.designs) {
+    for (const section of ["revisionSnapshots", "positionSnapshots"]) {
+      const { bytes, count } = design.sections[section];
+      snapshotBytes += bytes;
+      if (count > keep) savedBytes += Math.round(bytes * (1 - keep / count));
+    }
+  }
   return {
-    retained,
     keep,
     snapshotBytes,
-    projectedTotalBytes: projected,
-    savedBytes: report.totalBytes - projected,
+    projectedTotalBytes: report.totalBytes - savedBytes,
+    savedBytes,
+    // How many designs are actually deep enough for the cut to reach.
+    affectedDesigns: report.designs.filter((design) =>
+      ["revisionSnapshots", "positionSnapshots"].some(
+        (section) => design.sections[section].count > keep,
+      ),
+    ).length,
   };
 }
 
@@ -178,11 +197,19 @@ export function formatReport(report, { maximumBytes = DEFAULT_MAXIMUM_BYTES, top
 
   const projection = projectRetention(report);
   lines.push("");
-  lines.push(
-    `retaining ${projection.keep} revisions instead of ${projection.retained} would store about ` +
-      `${megabytes(projection.projectedTotalBytes)} (${percent(projection.projectedTotalBytes, maximumBytes)} ` +
-      `of the ceiling), saving ${megabytes(projection.savedBytes)}`,
-  );
+  if (projection.affectedDesigns === 0) {
+    lines.push(
+      `every design already retains fewer than ${projection.keep} revisions, so cutting revision ` +
+        `retention would save nothing here — the bytes are elsewhere in the table above`,
+    );
+  } else {
+    lines.push(
+      `capping retention at ${projection.keep} revisions would reach ${projection.affectedDesigns} ` +
+        `design(s) and store about ${megabytes(projection.projectedTotalBytes)} ` +
+        `(${percent(projection.projectedTotalBytes, maximumBytes)} of the ceiling), ` +
+        `saving ${megabytes(projection.savedBytes)}`,
+    );
+  }
   return lines.join("\n");
 }
 

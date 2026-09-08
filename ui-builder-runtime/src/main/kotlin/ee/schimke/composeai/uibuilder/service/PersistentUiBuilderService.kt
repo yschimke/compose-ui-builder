@@ -186,6 +186,33 @@ public data class UiBuilderServiceLimits(
    * contradiction to refuse construction over.
    */
   val minimumRetainedRevisionSnapshots: Int = 32,
+  /**
+   * The byte budget one design's undo state may hold, applied to `acceptedOperations` and to
+   * `tombstones` separately.
+   *
+   * Measuring the live store is what put this here. The guess was that retained revisions held the
+   * bytes; they held 35% of it. Undo bookkeeping held **55%** — `acceptedOperations` alone was
+   * 29.9% — and one 386-node design spent 4.29 MB across **ten** accepted operations, about 430 KB
+   * each. The cause is structural: `StructureChangeV1` carries `before` and `after` as whole node
+   * subtrees, so one edit near the root of a large design stores that subtree twice, and
+   * `acceptedOperations` was bounded only by [retainedOperationOutcomes] — a count of 4,096 with no
+   * relation to how big a record is. Four thousand records at that size is a design that alone
+   * exceeds any ceiling, and nothing stood between the store and it.
+   *
+   * A count cannot bound this because the records differ in size by three orders of magnitude. The
+   * budget is walked newest-first and stops as soon as it is exceeded, so the work one commit does
+   * is proportional to the budget rather than to the history behind it.
+   */
+  val retainedUndoBytes: Long = 4L * 1_024 * 1_024,
+  /**
+   * Undo steps kept regardless of [retainedUndoBytes], so undo never becomes unavailable.
+   *
+   * Pruning past this point degrades rather than breaks: `undo` and `redo` resolve their target
+   * through a lookup that answers `UNKNOWN_OPERATION` when it is gone, and a `restoreNode` whose
+   * tombstone has aged out is refused with `DELETED_NODE`. What a designer loses is depth, and only
+   * on a design whose individual operations are large enough to spend the budget.
+   */
+  val minimumRetainedUndoOperations: Int = 8,
   val retainedAuditRecords: Int = 4_096,
   val subscriberQueueCapacity: Int = 512,
   val maximumOperationsPerBatch: Int = 256,
@@ -220,6 +247,8 @@ public data class UiBuilderServiceLimits(
     require(retainedRevisionSnapshots > 0)
     require(retainedRevisionBytes > 0)
     require(minimumRetainedRevisionSnapshots > 0)
+    require(retainedUndoBytes > 0)
+    require(minimumRetainedUndoOperations > 0)
     require(retainedAuditRecords > 0)
     require(subscriberQueueCapacity > 0)
     require(maximumOperationsPerBatch > 0)
@@ -1183,7 +1212,21 @@ public class PersistentUiBuilderService(
     val recorded =
       reduction.design.copy(
         operationOutcomes = outcomes,
-        acceptedOperations = reduction.design.acceptedOperations.filterKeys { it in outcomes.keys },
+        // Two bounds, and the byte one is the load-bearing half: keeping `acceptedOperations` a
+        // subset of the retained outcomes preserves the invariant those two have always had, and
+        // the budget is what stops one design's undo records from being most of the store.
+        acceptedOperations =
+          reduction.design.acceptedOperations
+            .filterKeys { it in outcomes.keys }
+            .retainNewestWithinBytes(
+              limits.retainedUndoBytes,
+              limits.minimumRetainedUndoOperations,
+            ),
+        tombstones =
+          reduction.design.tombstones.retainNewestWithinBytes(
+            limits.retainedUndoBytes,
+            limits.minimumRetainedUndoOperations,
+          ),
       )
     val candidate = persisted.copy(designs = persisted.designs + (submission.designId to recorded))
     commitPersisted(candidate)
@@ -4057,6 +4100,37 @@ private fun documentHash(document: DesignDocumentV1): String =
  * enough to make the division zero still retains the floor, deliberately: see
  * [UiBuilderServiceLimits.minimumRetainedRevisionSnapshots].
  */
+/**
+ * The newest entries of [this] that fit in [budgetBytes], keeping at least [minimumEntries].
+ *
+ * Walks from the newest backwards and stops at the first entry that would exceed the budget, so a
+ * commit serializes at most the budget rather than the whole map — the cost is bounded by what is
+ * kept, not by what has accumulated. Insertion order is age order for both maps this is used on:
+ * `acceptedOperations` and `tombstones` are built by `+`, and re-adding an existing key (an undo
+ * marking its target compensated) keeps that key's original position, which is what makes the
+ * oldest entries the ones at the front.
+ *
+ * Returns [this] unchanged when everything fits, so the common case allocates nothing.
+ */
+private inline fun <reified V> Map<String, V>.retainNewestWithinBytes(
+  budgetBytes: Long,
+  minimumEntries: Int,
+): Map<String, V> {
+  if (size <= minimumEntries) return this
+  val ordered = entries.toList()
+  var total = 0L
+  var kept = 0
+  var index = ordered.lastIndex
+  while (index >= 0) {
+    total += PersistentUiBuilderServiceJson.json.encodeToString(ordered[index].value).length
+    if (total > budgetBytes && kept >= minimumEntries) break
+    kept++
+    index--
+  }
+  if (kept >= ordered.size) return this
+  return ordered.subList(ordered.size - kept, ordered.size).associate { it.key to it.value }
+}
+
 private fun UiBuilderServiceLimits.retainedRevisionsFor(documentBytes: Int): Int {
   if (documentBytes <= 0) return retainedRevisionSnapshots
   val floor = minimumRetainedRevisionSnapshots.coerceAtMost(retainedRevisionSnapshots)
