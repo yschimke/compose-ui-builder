@@ -153,6 +153,21 @@ object CapabilityComposeCodeExporter {
         )
     }
     val unboundAssetKeys = document.unboundAssetKeys(assetAdapter)
+    // A component's signature is derived before a line is generated, so what the emitter cannot
+    // print as an expression is refused by name here rather than exported as the component's own
+    // default — the difference between a screen that will not build and one that quietly draws the
+    // wrong thing.
+    val (signatures, componentRefusals) = document.componentSignatures()
+    (componentRefusals + document.placementRefusals(signatures)).forEach { refusal ->
+      diagnostics +=
+        ComposeExportDiagnostic(
+          code = refusal.code,
+          severity = ComposeExportSeverity.ERROR,
+          message = refusal.message,
+          nodeId = refusal.nodeId,
+          componentId = refusal.nodeId?.let { document.nodes[it]?.componentId },
+        )
+    }
     if (diagnostics.isNotEmpty()) {
       return diagnostics
     }
@@ -170,6 +185,12 @@ object CapabilityComposeCodeExporter {
       if (remoteScopes.isRemote(node.id)) return@forEach
       val capability = catalog.componentsById[node.componentId]
       when {
+        // A placement is a document construct rather than a catalog component: it is not on any
+        // catalog's palette, it has no properties or slots of its own, and where it may sit is the
+        // question of what its component's body root is — the capability the body already has.
+        // Declaring a synthetic entry in the m3 catalog would put a tile on the palette that draws
+        // nothing until a component exists, and would say `design/…` is part of Material 3.
+        node.componentId == DESIGN_COMPONENT_INSTANCE_ID -> Unit
         capability == null ->
           diagnostics += node.error("UNKNOWN_COMPONENT", "No catalog capability exists")
         // Named before the two generic refusals below, because both of them would be true of it and
@@ -299,6 +320,19 @@ private class ComposeEmitter(
 ) {
   private val out = StringBuilder()
 
+  /** Each component's generated name and parameters, derived once by the same code the gate ran. */
+  private val componentSignatures: Map<String, ComponentSignature> =
+    document.componentSignatures().first
+
+  /**
+   * The component whose body is being emitted, or null inside the screen function.
+   *
+   * A bound property prints the parameter it reads only inside the body that declares it. Outside
+   * one there is nothing to read, so a binding that reached the screen would have no expression to
+   * become — and the gate refuses such a document before this ever runs.
+   */
+  private var emittingComponent: ComponentSignature? = null
+
   fun emit(): String {
     val functionName = document.exportFunctionName()
     appendLine("@file:OptIn(ExperimentalMaterial3Api::class)")
@@ -331,6 +365,7 @@ private class ComposeEmitter(
     document.roots.forEach { rootId -> emitNode(rootId, 1) }
     appendLine("}")
     appendLine()
+    emitComponentFunctions()
     emitCompatibilityHelpers()
     return out.toString().trimEnd() + "\n"
   }
@@ -359,6 +394,83 @@ private class ComposeEmitter(
    * that asks `booleanOrNull` without checking `isString`. `valueType` and `nullable` are what the
    * document actually declares, so they decide.
    */
+  /**
+   * One `private @Composable fun` per component the design places, after the screen function.
+   *
+   * Only the ones actually placed: a component nobody uses is a definition the design carries, not
+   * a function the generated file has to explain. Parameter order is the sorted key order the
+   * signature fixed, so a re-export of an unchanged design is byte-identical.
+   */
+  private fun emitComponentFunctions() {
+    val placed =
+      document.nodes.values
+        .filter { it.componentId == DESIGN_COMPONENT_INSTANCE_ID }
+        .mapNotNull { it.component?.optionalString("componentKey") }
+        .toSet()
+    componentSignatures.entries
+      .filter { it.key in placed }
+      .sortedBy { it.key }
+      .forEach { (key, signature) ->
+        val parameters =
+          (signature.parameters.map { (name, kind) -> "${name.identifier()}: ${kind.kotlinType}" } +
+              "modifier: Modifier = Modifier")
+            .joinToString()
+        appendLine("// component:${key.escapeComment()} root:${signature.root.escapeComment()}")
+        appendLine("@Composable")
+        appendLine("private fun ${signature.functionName}($parameters) {")
+        // `Box(modifier)`, because the canvas draws a placement the same way: the modifiers a
+        // placement carries belong to the placement, not to the body, and a body root that took
+        // them would apply one design's padding to every other placement of the same component.
+        // The wrapper is what makes the preview and the generated screen agree about which box the
+        // modifier sized.
+        line(1, "Box(modifier) {")
+        emittingComponent = signature
+        emitNode(signature.root, 2)
+        emittingComponent = null
+        line(1, "}")
+        appendLine("}")
+        appendLine()
+      }
+  }
+
+  /**
+   * The call a placement becomes: every parameter the body reads, then the placement's modifier.
+   */
+  private fun emitPlacement(node: UiBuilderNode, level: Int) {
+    val key = node.component?.optionalString("componentKey").orEmpty()
+    val signature = componentSignatures[key] ?: return
+    val arguments = node.component?.get("arguments") as? JsonObject ?: JsonObject(emptyMap())
+    val passed =
+      signature.parameters.joinToString("") { (parameter, kind) ->
+        val value = arguments[parameter] as? JsonObject ?: return@joinToString ""
+        "${parameter.identifier()} = ${kind.argument(value)}, "
+      }
+    line(level, "${signature.functionName}($passed${node.modifierArgument()})")
+  }
+
+  /**
+   * A colour property, as a parameter reference where the body reads one.
+   *
+   * The reason a component function can have parameters at all: inside a body this prints `shade`
+   * where it would otherwise print `Color(0xFF39D353)`. Outside a body — and for any property
+   * [BINDABLE_PROPERTIES] does not carry — nothing changes, and the gate has already refused a
+   * binding that would land here.
+   */
+  private fun UiBuilderNode.boundColorExpression(name: String): String =
+    boundParameter(name) ?: colorExpression(name)
+
+  /** A text property, quoted as a literal or written as the parameter the body reads. */
+  private fun UiBuilderNode.boundStringExpression(name: String): String =
+    boundParameter(name) ?: "\"${string(name).escape()}\""
+
+  private fun UiBuilderNode.boundParameter(property: String): String? {
+    val signature = emittingComponent ?: return null
+    val key = bindingKey(property) ?: return null
+    return key
+      .takeIf { candidate -> signature.parameters.any { it.first == candidate } }
+      ?.identifier()
+  }
+
   private fun emitState(level: Int) {
     document.stateVariables.entries
       .sortedBy { entry -> entry.key }
@@ -375,13 +487,15 @@ private class ComposeEmitter(
 
   private fun emitNode(nodeId: String, level: Int) {
     val node = document.nodes.getValue(nodeId)
-    val capability = catalog.componentsById.getValue(node.componentId)
+    // Null for a placement, which no catalog declares — the located comment then names the
+    // component it places instead of a catalog symbol it does not have.
+    val capability = catalog.componentsById[node.componentId]
     val stableIdentity = node.string("stableKey").ifEmpty { node.string("scrollStateKey") }
     val bodyLevel = if (stableIdentity.isEmpty()) level else level + 1
     if (stableIdentity.isNotEmpty()) line(level, "key(\"${stableIdentity.escape()}\") {")
     line(
       bodyLevel,
-      "// node:${node.id.escapeComment()} component:${node.componentId.escapeComment()} symbol:${capability.code?.symbol?.escapeComment()}",
+      "// node:${node.id.escapeComment()} component:${node.componentId.escapeComment()} symbol:${capability?.code?.symbol?.escapeComment() ?: node.component?.optionalString("componentKey")?.escapeComment()}",
     )
     line(bodyLevel, "// typed-properties:${canonicalJson(node.properties).escapeComment()}")
     when (node.componentId) {
@@ -450,6 +564,7 @@ private class ComposeEmitter(
           "text",
           "selected = ${node.boolExpression("selected")}, onClick = ${node.actionLambda("click", stateKotlinTypes)}",
         )
+      DESIGN_COMPONENT_INSTANCE_ID -> emitPlacement(node, bodyLevel)
       "m3/list-item" -> emitListItem(node, bodyLevel)
       "shape/colour-dot" ->
         line(
@@ -603,6 +718,11 @@ private class ComposeEmitter(
         canonicalJson(node.properties),
         canonicalJson(node.modifiers),
         canonicalJson(node.eventBindings),
+        // What a placement passes is what makes two placements of one component different calls.
+        // Left out, four cells that differ only in the shade they pass folded into one `repeat`
+        // emitting the first one's colour four times — a fold that changed the screen rather than
+        // its spelling, which is the one thing this signature exists to prevent.
+        canonicalJson(node.component ?: JsonObject(emptyMap())),
         slots.toString(),
       )
       .joinToString("|")
@@ -816,7 +936,7 @@ private class ComposeEmitter(
       .joinToString(separator = "") { "$it, " }
     line(
       level,
-      "Text(text = \"${node.string("text").escape()}\", style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.colorExpression("color")}, fontWeight = ${node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
+      "Text(text = ${node.boundStringExpression("text")}, style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.boundColorExpression("color")}, fontWeight = ${node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
     )
   }
 
@@ -925,7 +1045,7 @@ private class ComposeEmitter(
   private fun emitSurface(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "Surface(${node.modifierArgument()}, shape = ${node.shapeExpression()}, color = ${node.colorExpression("containerColor")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}) {",
+      "Surface(${node.modifierArgument()}, shape = ${node.shapeExpression()}, color = ${node.boundColorExpression("containerColor")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}) {",
     )
     emitChildren(node.slot("content"), level + 1)
     line(level, "}")
@@ -934,7 +1054,7 @@ private class ComposeEmitter(
   private fun emitCard(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "Card(${node.modifierArgument()}, shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}), elevation = CardDefaults.cardElevation(defaultElevation = ${node.number("elevationDp").dpLiteral()}), colors = builderCardColors(${node.colorExpression("containerColor")})) {",
+      "Card(${node.modifierArgument()}, shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}), elevation = CardDefaults.cardElevation(defaultElevation = ${node.number("elevationDp").dpLiteral()}), colors = builderCardColors(${node.boundColorExpression("containerColor")})) {",
     )
     // The same decision the canvas makes — see [cardContentFill] — so the generated screen wraps
     // an unsized card exactly where the picture did.
@@ -1721,6 +1841,183 @@ private fun UiBuilderNode.error(code: String, message: String) =
 
 private fun UiBuilderNode.warning(code: String, message: String) =
   ComposeExportDiagnostic(code, ComposeExportSeverity.WARNING, message, id, componentId)
+
+/**
+ * Which property of which component this exporter can print as an **expression** rather than as a
+ * literal — the whole of what a generated component function can take as a parameter.
+ *
+ * A component body reads its arguments by key, and turning one into a parameter means the emitter
+ * for that property must write `shade` where it would write `Color(0xFF39D353)`. Every emitter here
+ * does; the rest still print constants, and a binding they would have swallowed is refused by name
+ * instead of silently exported as the component's default. That refusal is the reason this table is
+ * read by [CapabilityComposeCodeExporter.diagnose] as well as by the emitter: one statement of what
+ * is supported, checked before a line is generated.
+ *
+ * It grows a row at a time, each row paid for by an emitter that prints an expression.
+ */
+private val BINDABLE_PROPERTIES: Map<String, Map<String, BindingKind>> =
+  mapOf(
+    "m3/surface" to mapOf("containerColor" to BindingKind.COLOR),
+    "m3/card" to mapOf("containerColor" to BindingKind.COLOR),
+    "m3/text" to mapOf("text" to BindingKind.STRING, "color" to BindingKind.COLOR),
+  )
+
+/** What a bound key is, in Kotlin, and how a placement's value is written at the call site. */
+private enum class BindingKind(val kotlinType: String) {
+  COLOR("Color") {
+    override fun argument(value: JsonObject): String =
+      colorExpressionFor(value["value"]?.jsonPrimitive?.contentOrNull.orEmpty())
+  },
+  STRING("String") {
+    override fun argument(value: JsonObject): String =
+      "\"${(value["value"]?.jsonPrimitive?.contentOrNull.orEmpty()).escape()}\""
+  };
+
+  abstract fun argument(value: JsonObject): String
+}
+
+/**
+ * The signature this exporter would generate for each component the design defines, and everything
+ * it refuses on the way.
+ *
+ * Computed once and read twice — by the gate and by the emitter — because a signature the gate
+ * accepted and the emitter derived again is two statements of the same fact.
+ */
+private fun UiBuilderDocument.componentSignatures():
+  Pair<
+    Map<String, ComponentSignature>,
+    List<ExportRefusal>,
+  > {
+  val signatures = linkedMapOf<String, ComponentSignature>()
+  val refusals = mutableListOf<ExportRefusal>()
+  components.entries
+    .sortedBy { it.key }
+    .forEach { (key, declaration) ->
+      val component = declaration as? JsonObject ?: return@forEach
+      val root = component.optionalString("root")
+      if (root == null || root !in nodes) {
+        refusals += ExportRefusal("UNKNOWN_COMPONENT_ROOT", "component $key names no body", null)
+        return@forEach
+      }
+      val parameters = linkedMapOf<String, BindingKind>()
+      bodyNodes(root).forEach { node ->
+        node.bindingKinds().forEach { (property, bindingKey, kind) ->
+          if (kind == null) {
+            refusals +=
+              ExportRefusal(
+                "UNSUPPORTED_BINDING",
+                "property '$property' cannot be written as an expression, so component $key " +
+                  "cannot take '$bindingKey' as a parameter",
+                node.id,
+              )
+            return@forEach
+          }
+          val existing = parameters[bindingKey]
+          if (existing != null && existing != kind) {
+            refusals +=
+              ExportRefusal(
+                "CONFLICTING_BINDING",
+                "component $key reads '$bindingKey' as both ${existing.kotlinType} and " +
+                  "${kind.kotlinType}",
+                node.id,
+              )
+            return@forEach
+          }
+          parameters[bindingKey] = kind
+        }
+      }
+      signatures[key] =
+        ComponentSignature(
+          functionName = component.optionalString("name").orEmpty().componentFunctionName(key),
+          root = root,
+          // Sorted: the generated file must not reorder its own parameters between exports, and
+          // the document's key order is an authoring accident.
+          parameters = parameters.entries.sortedBy { it.key }.map { it.key to it.value },
+        )
+    }
+  return signatures to refusals
+}
+
+/** Everything a placement is refused for: an unknown component, or an argument it does not pass. */
+private fun UiBuilderDocument.placementRefusals(
+  signatures: Map<String, ComponentSignature>
+): List<ExportRefusal> =
+  nodes.values
+    .sortedBy(UiBuilderNode::id)
+    .filter { it.componentId == DESIGN_COMPONENT_INSTANCE_ID }
+    .flatMap { node ->
+      val key = node.component?.optionalString("componentKey").orEmpty()
+      val signature =
+        signatures[key]
+          ?: return@flatMap listOf(
+            ExportRefusal(
+              "UNKNOWN_COMPONENT_KEY",
+              "placement names no component of this design: ${key.ifEmpty { "(none)" }}",
+              node.id,
+            )
+          )
+      val arguments = node.component?.get("arguments")?.let { it as? JsonObject }
+      signature.parameters
+        .filter { (parameter, _) -> arguments?.get(parameter) !is JsonObject }
+        .map { (parameter, _) ->
+          ExportRefusal(
+            "MISSING_ARGUMENT",
+            "placement of ${signature.functionName} passes no '$parameter'",
+            node.id,
+          )
+        }
+    }
+
+/** A component body, root first, in the order the emitter walks it. */
+private fun UiBuilderDocument.bodyNodes(root: String): List<UiBuilderNode> {
+  val visited = linkedSetOf<String>()
+  fun walk(id: String) {
+    if (!visited.add(id)) return
+    val node = nodes[id] ?: return
+    node.slots.entries.sortedBy { it.key }.forEach { (_, children) -> children.forEach(::walk) }
+  }
+  walk(root)
+  return visited.mapNotNull(nodes::get)
+}
+
+/**
+ * A Kotlin function name for a component, from the name it declares.
+ *
+ * The declared name is what a designer typed, so it is sanitised rather than trusted; a component
+ * that declares nothing usable is named from its key, which the document guarantees is unique.
+ */
+private fun String.componentFunctionName(key: String): String {
+  val candidate = ifEmpty { key }.identifier().replaceFirstChar { it.uppercaseChar() }
+  return if (candidate.firstOrNull()?.isLetter() == true) candidate
+  else "Component${key.identifier().replaceFirstChar { it.uppercaseChar() }}"
+}
+
+private data class ExportRefusal(val code: String, val message: String, val nodeId: String?)
+
+/** The wire's own id for a node that places a component. */
+private const val DESIGN_COMPONENT_INSTANCE_ID = "design/component-instance"
+
+/** One generated component function: what it is called, and the parameters its body reads. */
+private data class ComponentSignature(
+  val functionName: String,
+  val root: String,
+  /** Sorted, because declaration order is the one thing that must not drift between exports. */
+  val parameters: List<Pair<String, BindingKind>>,
+)
+
+/** The binding this property is, or null when it holds a value of its own. */
+private fun UiBuilderNode.bindingKey(property: String): String? {
+  val value = properties[property] as? JsonObject ?: return null
+  if (value.optionalString("type") != "binding") return null
+  return value.optionalString("value")?.takeIf { it.isNotEmpty() }
+}
+
+/** Every key this node reads, with what each read needs it to be. */
+private fun UiBuilderNode.bindingKinds(): List<Triple<String, String, BindingKind?>> =
+  properties.keys.sorted().mapNotNull { property ->
+    val key = bindingKey(property) ?: return@mapNotNull null
+    Triple(property, key, BINDABLE_PROPERTIES[componentId]?.get(property))
+  }
 
 private data class HandledFields(
   val properties: Set<String> = emptySet(),

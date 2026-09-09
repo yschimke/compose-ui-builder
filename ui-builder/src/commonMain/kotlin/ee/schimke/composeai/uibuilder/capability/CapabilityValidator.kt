@@ -256,6 +256,12 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     node: UiBuilderNode,
     issues: MutableList<CapabilityValidationIssue>,
   ) {
+    // A placement is a document construct rather than a catalog component — see
+    // `CapabilityComposeCodeExporter`, which refuses the same node for the reasons that *are* its
+    // own: an unknown component key, a binding no emitter can write, a missing argument. Validating
+    // it here against a capability no catalog declares would report every component instance as an
+    // unknown component.
+    if (node.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) return
     val capability = catalog.componentsById[node.componentId]
     if (capability == null) {
       issues +=
@@ -497,6 +503,9 @@ private fun JsonElement.unwrapPropertyValue(): JsonElement =
  * The wrapper spellings that mean "read this from a declared state variable" rather than a value.
  */
 private val STATE_BINDING_WRAPPERS = setOf("state", "stateEquals")
+
+/** The wire's own id for a node that places a component defined by the design. */
+private const val DESIGN_COMPONENT_INSTANCE_COMPONENT_ID = "design/component-instance"
 
 /**
  * The line count a `minLines` / `maxLines` property states outright, or null when it does not state

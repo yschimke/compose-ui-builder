@@ -79,29 +79,112 @@ class ComponentPlacementTest {
   }
 
   /**
-   * A component body is reachable through the component that owns it, not through a slot.
+   * The point of a component: one function, called once per placement.
    *
-   * Counted as a graph entry point beside the document's own root, so validation neither reports
-   * every body as unreachable nor — once a second design places the same component — as referenced
-   * twice. Export itself still refuses a placement, and says why: the catalog declares no
-   * `design/component-instance`, and until it does there is nothing faithful to emit.
+   * The body's bound property becomes a parameter — the key each placement passes — so the
+   * generated file says what the design says: one cell, four shades. Parameter order is the sorted
+   * key order rather than the document's, because a re-export of an unchanged design has to be
+   * byte-identical.
    */
   @Test
-  fun `a component body is reachable, and export refuses the placement by name`() {
-    val catalog =
-      CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
-      )
+  fun `a placed component is exported as a function and four calls`() {
+    val source = exportSource(document())
 
-    val result = CapabilityComposeCodeExporter.export(document(), catalog)
+    assertTrue(
+      source.contains("private fun ContributionCell(containerColor: Color, modifier: Modifier"),
+      source,
+    )
+    assertEquals(
+      shades.size,
+      Regex("ContributionCell\\(containerColor = Color\\(0x").findAll(source).count(),
+      source,
+    )
+    // One body, emitted once: the `Surface` inside the function reads its parameter rather than a
+    // literal, which is what makes the four calls four cells.
+    assertTrue(source.contains("color = containerColor,"), source)
+    // The placement's modifier belongs to the placement: the body is wrapped in `Box(modifier)`,
+    // which is how the canvas draws it too.
+    assertTrue(source.contains("Box(modifier) {"), source)
+  }
 
-    assertTrue(result.diagnostics.none { it.code == "UNREACHABLE_NODE" }, "${result.diagnostics}")
+  /**
+   * A binding this exporter cannot print as an expression is refused by name, before a line is
+   * generated — never exported as the component's own default, which would build and draw the wrong
+   * thing.
+   */
+  @Test
+  fun `a binding no emitter can write is refused by name`() {
+    val unsupported =
+      document().let { base ->
+        base.copy(
+          nodes =
+            base.nodes +
+              ("cell-body" to
+                base.nodes.getValue("cell-body").let { body ->
+                  body.copy(
+                    properties =
+                      JsonObject(
+                        body.properties +
+                          ("tonalElevationDp" to
+                            JsonObject(
+                              mapOf(
+                                "type" to JsonPrimitive("binding"),
+                                "value" to JsonPrimitive("elevation"),
+                              )
+                            ))
+                      )
+                  )
+                })
+        )
+      }
+
+    val result = CapabilityComposeCodeExporter.export(unsupported, catalog())
+
     assertTrue(
       result.diagnostics.any {
-        it.code == "UNKNOWN_COMPONENT" && it.message.contains("design/component-instance")
+        it.code == "UNSUPPORTED_BINDING" && it.message.contains("tonalElevationDp")
       },
       "${result.diagnostics}",
     )
+  }
+
+  /** A placement that passes nothing for a parameter the body reads is refused, not defaulted. */
+  @Test
+  fun `a placement missing an argument is refused`() {
+    val missing =
+      document().let { base ->
+        base.copy(
+          nodes =
+            base.nodes +
+              ("cell-0" to
+                base.nodes.getValue("cell-0").let { placement ->
+                  placement.copy(
+                    component =
+                      JsonObject(mapOf("componentKey" to JsonPrimitive("contribution-cell")))
+                  )
+                })
+        )
+      }
+
+    val result = CapabilityComposeCodeExporter.export(missing, catalog())
+
+    assertTrue(
+      result.diagnostics.any {
+        it.code == "MISSING_ARGUMENT" && it.message.contains("containerColor")
+      },
+      "${result.diagnostics}",
+    )
+  }
+
+  private fun catalog() =
+    CapabilityCatalogParser.parse(
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+    )
+
+  private fun exportSource(document: UiBuilderDocument): String {
+    val result = CapabilityComposeCodeExporter.export(document, catalog())
+    assertTrue(result.successful, result.diagnostics.joinToString { "${it.code}:${it.message}" })
+    return checkNotNull(result.source)
   }
 
   private fun cellCentreX(index: Int) = index * CELL_PX + CELL_PX / 2
@@ -180,7 +263,15 @@ class ComponentPlacementTest {
       id = "contribution-graph",
       title = "Contribution graph",
       revision = 1,
-      catalogPin = JsonObject(emptyMap()),
+      catalogPin =
+        JsonObject(
+          mapOf(
+            "systemId" to JsonPrimitive("m3-catalog"),
+            "catalogRevision" to JsonPrimitive("candidate"),
+            "capabilityDigest" to JsonPrimitive("candidate"),
+            "nativeRuntimeId" to JsonPrimitive("candidate"),
+          )
+        ),
       environment =
         Json.parseToJsonElement(
             """

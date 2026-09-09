@@ -126,11 +126,44 @@ components/templates made from catalog nodes" — and the generated file shape a
 capability exporter writes the screen function and then appends supporting functions. A user
 component is another entry in that tail.
 
-**Built for the canvas (2026-09).** The document carries `components` and a node's `component`, the
-Wasm canvas draws a placement, and validation counts a body as reachable through the component that
-owns it. What is not built is the export: the catalog declares no `design/component-instance`, so
-`CapabilityComposeCodeExporter` refuses a placement by name rather than emitting a guess — the next
-step, and the one that turns a placement into `private @Composable fun ContributionCell(…)`.
+**Built (2026-09).** The document carries `components` and a node's `component`; the Wasm canvas
+draws a placement; validation counts a body as reachable through the component that owns it; and the
+Compose export writes one `private @Composable fun` per placed component, with the keys its body
+reads as parameters:
+
+```kotlin
+Row(…) {
+    ContributionCell(containerColor = Color(0xFFEBEDF0), modifier = Modifier)
+    ContributionCell(containerColor = Color(0xFF9BE9A8), modifier = Modifier)
+    …
+}
+
+@Composable
+private fun ContributionCell(containerColor: Color, modifier: Modifier = Modifier) {
+    Box(modifier) {
+        Surface(modifier = Modifier.size(width = 24.dp, height = 24.dp), color = containerColor, …) { }
+    }
+}
+```
+
+Three rules the export follows, each of them a refusal rather than a guess:
+
+- **A parameter exists only where an emitter can print an expression.** `BINDABLE_PROPERTIES` is the
+  one statement of which property of which component that is, read by the gate and by the emitter so
+  they cannot disagree; a binding on anything else is `UNSUPPORTED_BINDING`, named before a line is
+  generated rather than silently exported as the component's own default.
+- **Every placement passes every key the body reads**, or `MISSING_ARGUMENT`. A defaulted parameter
+  would compile and draw the wrong cell.
+- **Parameter order is sorted key order**, so a re-export of an unchanged design is byte-identical.
+
+`Box(modifier)` wraps the body because the modifiers a placement carries belong to the placement —
+the canvas draws it the same way, which is what keeps the preview and the generated screen agreeing
+about which box was sized.
+
+A placement is **not a catalog component**: no catalog declares `design/component-instance`, both
+validators exempt it by id, and where a placement may sit is the question of what its body root is.
+A synthetic catalog entry would put a tile on the m3 palette that draws nothing until a component
+exists, and would claim `design/…` is part of Material 3.
 
 A **symbol** in the document, its body reached from `components[*].root` while its nodes stay in the
 ordinary `nodes` map, so every existing reducer, validator and renderer path is reused:
@@ -165,10 +198,10 @@ that has never heard of components can see what the node is and draw a placehold
   The `ancestors` guard `RenderNode` already carries makes a recursive component draw nothing rather
   than take the composition down, and the placement opens a path scope
   (`UiBuilderInstancePath.placement()`) so the same body under two instances is two boxes.
-- **The export** emits one `private @Composable fun ContributionCell(level: Int, label: String? =
-  null, modifier: Modifier = Modifier, content: @Composable () -> Unit)` per symbol, after the
-  screen function, and the instance becomes a call. Parameter order is declaration order so the
-  generated file stays diff-stable.
+- **The export** emits one `private @Composable fun` per placed component, after the screen
+  function, and the instance becomes a call — built, and detailed above. A slot-typed parameter
+  (`content: @Composable () -> Unit`) is the one part not built: it needs a body to hold a slot the
+  placement fills, and waits for a design that needs one.
 - **Refusals**: no scaffold in a component body; a cycle through instances, refused at the reducer
   beside `validateTopology`; an instance only where the slot accepts the symbol's root component,
   which is the capability the symbol has.
@@ -217,8 +250,6 @@ only has to carry a symbol during the phase where it is still moving — the fai
 2. **Instance paths** for bounds, selection and comments — the prerequisite (1b) and (2) share.
    The canvas is done; the wire surfaces in the table above move with the first construct that
    draws a second copy.
-3. **Component symbols and instances**, in-document. The canvas half is built; the export half —
-   one `private @Composable fun` per component, the instance a call — is next, and needs the
-   catalog to declare `design/component-instance`.
+3. **Component symbols and instances**, in-document — built, canvas and export.
 4. **`ui-builder/components/`**, reusing the designs reader; graduation needs nothing new.
 5. **Data-driven loops**, last, against a design that needs one.
