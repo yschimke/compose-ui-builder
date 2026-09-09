@@ -196,9 +196,14 @@ kotlin {
  * and this module's own `wasmFrontendDist`. None of them matched, so the validation the block
  * exists to prevent failed the `visual-harness` job on `main` anyway. A case-sensitive match on a
  * name that appears in both cases is a check that does not check.
+ *
+ * `composePreviewBundle` is ordered too, not only `composePreviewDiscover`. It reads the same
+ * directories, and CI's `check` graph reported it as a second consumer of `wasmJsPublicPackageJson`
+ * / `wasmJsTestPublicPackageJson` in the same build the discover pair failed. Ordering one of two
+ * consumers of the same outputs fixes the half of the build whose graph you happened to reproduce.
  */
 tasks
-  .matching { it.name == "composePreviewDiscover" }
+  .matching { it.name == "composePreviewDiscover" || it.name == "composePreviewBundle" }
   .configureEach {
     mustRunAfter(
       tasks.matching { producer ->
