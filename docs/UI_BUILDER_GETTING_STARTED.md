@@ -220,9 +220,8 @@ preview-only until added explicitly (`--ui-builder-catalogs m3-catalog,remote-m3
 an adapter is a claim that what an author sees is what they get, and `wear-m3` has a render behind
 that claim — the Kotlin it generates is compiled by real Wear Compose in compose-ai-tools' `wear-m3`
 harness catalog, and the stitched capture matches the canvas to a dp. It left the default for a
-different reason: wear-m3-catalog's published `ui-builder.json` is not yet equivalent to the catalog
-this server synthesises, and `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4 says how far off
-it is.
+deployment reason rather than a capability one: it is the only builder catalog needing Robolectric
+and an Android SDK, and nobody was authoring Wear designs on the public box.
 
 ### Which renderer is telling you the truth
 

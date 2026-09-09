@@ -662,27 +662,45 @@ binary has never heard of. Items 15, 16, 17 and 19 remain: the platform word, th
 the canvas mapping and the `compose-preview-server ui` lane still read Kotlin, so a published catalog
 is served but a **Wear-shaped** one is not yet drawn from its own declarations.
 
-**The lever item 18 promised is now a flag, and `wear-m3` is off by default.** Item 18 says the
-cutover is "per catalog and reversible"; until now the only reversal available to an operator was
-`SERVE_UI_BUILDER_CATALOGS`, which withdraws the catalog from the builder entirely rather than
+**The lever item 18 promised is now a flag, and it defaults to `none`.** Item 18 says the cutover is
+"per catalog and reversible"; as shipped, the only reversal an operator had was
+`SERVE_UI_BUILDER_CATALOGS`, which withdraws a catalog from the builder entirely rather than
 returning it to its synthesised definition. `--ui-builder-published-catalogs` is the finer lever:
-`all` (the default, and the behaviour item 18 shipped with), `none`, or a subset of the served
-catalogs, refusing an id this host does not serve so a typo is a startup error rather than a silent
-no-op. It reads `SERVE_UI_BUILDER_PUBLISHED_CATALOGS` in the deployment image.
+`all`, `none`, or a subset of the served catalogs, refusing an id this host does not serve so a typo
+is a startup error rather than a silent no-op. `SERVE_UI_BUILDER_PUBLISHED_CATALOGS` reaches it from
+the deployment image.
 
-The catalog it was written for is `wear-m3`, which the image no longer serves by default. Once
-wear-m3-catalog bumped to compose-ai-tools 2.4.0 it began publishing a real 42 KB `ui-builder.json`
-— and that file is not equivalent to what this server synthesises. Its components carry no
-`@BuilderComponent` policy, so every id is derived from the prefix: `statusSemantics.components` is
-empty, 28 ids collide (`wear-m3/alert-dialog` is claimed by `ConfirmButton`, `DismissButton`,
-`EdgeButton` and `AlertDialogContent` at once) and 50 components claim no canvas adapter.
-`ui-builder-equivalence.sh --strict --catalog-id wear-m3` exits 1 with 23 differences. Serving the
-catalog would have swapped a curated shelf for a derived one, which is precisely the swap the
-phase-0 gate exists to catch — so the deployment stops serving `wear-m3` until the gate is green,
-which also stops paying for its Android/Robolectric dependency for a shelf nobody was authoring
-against. The `--ui-builder-native-catalog wear-m3=wear-m3-catalog` mapping stays in the entrypoint,
+**It defaults to `none` because neither catalog this image serves is ready, and one of them would
+have broken.** Measuring the two against their frozen goldens, rather than assuming:
+
+| Builder catalog | Served from | Publishes `ui-builder.json`? | Gate |
+| --- | --- | --- | --- |
+| `remote-m3` | `yschimke/wear-m3-catalog` `design-artifacts/remote-m3` | no — the cover sheet declares no `uiBuilderFile` | nothing to compare; the loader never engages |
+| `m3-catalog` | `yschimke/m3-catalog` `design-artifacts/m3-catalog` | yes, 48 KB, and the cover sheet declares it | **25 differences, exit 1** |
+
+`m3-catalog` is the dangerous one and it was on. Its published file declares **zero** components and
+**zero** builtins under `statusSemantics`: composing it against the 104-component record derives all
+104 ids from the `m3/` prefix in place of a curated shelf of 41, its 29 menu entries leave the rest
+ungrouped, and a catalog with no builtins has no screen root to put any component into. That is not
+a degraded catalog, it is an unusable one, and nothing in the loader would have said so — the file
+is well-formed, so `PublishedUiBuilderCatalog` composes it happily. Turning the published path off
+by default and naming a catalog to turn it on is the shape phase 4 should have shipped with.
+
+**`wear-m3` is out of the image's default allowlist, for a different and simpler reason.** It is a
+Wear/Android catalog — Robolectric previews, an Android SDK for its native lane — that nobody is
+authoring against on this deployment, so it stopped earning its dependency. Nothing about the
+catalog changed: the adapters, the frozen templates and the render behind the wear-m3 claim all
+still work, and `--ui-builder-native-catalog wear-m3=wear-m3-catalog` is kept in the entrypoint,
 inert, so putting `wear-m3` back is one variable rather than a catalog whose native render compiles
 against the wrong bundle.
+
+Worth recording because it was a wrong guess corrected by measurement: `wear-m3-catalog` *does*
+publish a `ui-builder.json` with 28 colliding derived ids, and it looked like the catalog at risk.
+It is not. The `wear-m3` **builder** catalog is served from `yschimke/compose-ai-tools`
+`design-artifacts/wear-m3`, which declares no `uiBuilderFile`; wear-m3-catalog's file rides the
+`wear-m3-catalog` system, which is not an enabled builder catalog and is never read. The loader
+resolves a published file by the **builder catalog id used as a served system id**, and that
+indirection is not obvious from either end of it.
 
 15. **Platform becomes a word.** `UiBuilderCatalogPlatform(wireValue, label)` over a string; `label`
     from `statusSemantics.platformLabel` with the three known words as fallback labels for one

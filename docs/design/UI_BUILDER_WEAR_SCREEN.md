@@ -458,10 +458,10 @@ viewport for an indicator to show a position within.
 contract's phase 4, `SERVE_UI_BUILDER_CATALOGS` defaults to `m3-catalog,remote-m3` in
 `deploy/image/entrypoint.sh`, so the chooser offers Wear Material 3 only where an operator asks for
 it (`SERVE_UI_BUILDER_CATALOGS=m3-catalog,remote-m3,wear-m3`). Nothing below changed — the adapter,
-the render behind it and the round trip are as they were. What changed is that wear-m3-catalog now
-publishes a `ui-builder.json` the equivalence gate scores 23 differences against the frozen catalog,
-so a default-on `wear-m3` would have quietly served a derived shelf in place of the curated one.
-`docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4 has the numbers and the way back.
+the render behind it and the round trip are as they were. What changed is the deployment's
+arithmetic: `wear-m3` is the one builder catalog whose previews need Robolectric and whose native
+lane needs an Android SDK, and nobody is authoring Wear designs on this box, so it stopped earning
+that. `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4 has the way back.
 
 `ServeWearScreenDeploymentIntegrationTest` walks the path a person walks, over HTTP, against a
 server given exactly that catalog list: `POST /ui-builder/wear-m3` with `template=wear-list` —
