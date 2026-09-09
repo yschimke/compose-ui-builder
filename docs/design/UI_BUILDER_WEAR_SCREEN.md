@@ -26,6 +26,40 @@ So `wear-m3/screen-scaffold` is faked only in the **drawing**. The generated Kot
 is a second generator rather than a flag on the widget one because "erase the stand-in" and "emit
 the stand-in" are different jobs that happen to share a shape.
 
+### The container shape is a view, not a design property
+
+The launcher draws the widget's frame from `WearWidgetParams`, and it ships more than one: the
+**squircle** every template is authored against, and a **rectangular** container whose spec is a
+genuinely different footprint rather than the squircle with square corners.
+
+| | content | padding (h/v) | radius |
+| --- | --- | --- | --- |
+| Squircle Small | 200×60dp | 8 / 8 | 26dp |
+| Squircle Large | 200×108dp | 8 / 8 | 26dp |
+| Rectangular Small | 192×60dp | 16 / 12 | 0dp |
+| Rectangular Large | 168×112dp | 32 / 16 | 0dp |
+
+Because the frame is the host's, the shape is **editor state and not document state**: switching it
+takes no revision, submits no operation and reaches nothing an export writes. A design saved while
+the rectangular frame is showing reopens exactly as it was, and the generated file previews every
+shape regardless of which one was last viewed
+([`WearWidgetCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearWidgetCodeExporter.kt)
+emits one `@Preview` per shape). What switching buys a designer is the answer to "does this survive
+the other frame" — a layout that just fits the squircle can clip in the rectangular box.
+
+Both surfaces read one table,
+[`hostSpec`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearWidgetHostShape.kt),
+and that is the point of it existing. The canvas used to hard-code 200×60 and 200×108 at its
+dispatch with the padding and radius as two private constants, while the native lane kept its own
+copy of the same four numbers; two copies of one spec are two ways for the picture and the render
+beside it to disagree, which is the disagreement the Native pane exists to *expose* rather than to
+contain. The canvas reads it through `LocalWearWidgetHostShape`, and the native lane is handed the
+shape on the render request so the two panes cannot be drawing different frames.
+
+`Round` is deliberately absent. Its spec moves the content box per size **and** per screen diameter
+(150×120dp inside 29/16dp at one, 160×136dp inside 35/16dp at the next), so a single canvas frame
+would have to pick a diameter and imply it was the only one.
+
 ## The hard constraint: the canvas has no Wear Compose
 
 `androidx.wear.compose:compose-material3` is an Android AAR. The builder's canvas is Compose

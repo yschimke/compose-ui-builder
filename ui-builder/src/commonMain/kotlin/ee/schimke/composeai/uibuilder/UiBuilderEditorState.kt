@@ -452,6 +452,20 @@ data class UiBuilderEditorState(
    */
   val previewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
   /**
+   * Which host container a Wear widget design is framed in, on the canvas and in the native render.
+   *
+   * Editor state rather than document state, for the reason the reference picture below is: the
+   * frame belongs to the **host**, not to the widget — the launcher draws it from
+   * `WearWidgetParams`, and the same `WearWidgetDocument` appears inside every shape the platform
+   * ships. So switching it takes no revision, submits no operation and reaches no export; a design
+   * saved while the rectangular frame is showing reopens exactly as it was, and the generated file
+   * previews every shape regardless of which one was last viewed.
+   *
+   * Ignored by every design whose root is not a widget container, which is why nothing gates on it
+   * except the control that offers it.
+   */
+  val wearWidgetHostShape: WearWidgetHostShape = WearWidgetHostShape.Default,
+  /**
    * The reference picture attached to this design, and how it is being drawn.
    *
    * Editor state rather than document state: it is scaffolding for the person doing the work, not
@@ -673,6 +687,14 @@ sealed interface UiBuilderEditorEvent {
 
   /** Chooses which renderer draws the design. */
   data class ShowPreviewSurface(val surface: EditorPreviewSurface) : UiBuilderEditorEvent
+
+  /**
+   * Chooses which host container a Wear widget design is framed in.
+   *
+   * A view over the design rather than an edit to it — see
+   * [UiBuilderEditorState.wearWidgetHostShape].
+   */
+  data class ShowWearWidgetHostShape(val shape: WearWidgetHostShape) : UiBuilderEditorEvent
 
   /**
    * Selects every row the layers filter matched.
@@ -1222,6 +1244,7 @@ class UiBuilderEditorReducer(
       previewMode = state.previewMode,
       codePaneVisible = state.codePaneVisible,
       previewSurface = state.previewSurface,
+      wearWidgetHostShape = state.wearWidgetHostShape,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
       // Tool modes, so they survive a document arriving for the same reason the selection and the
@@ -1257,6 +1280,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.TogglePreview -> state.copy(previewMode = !state.previewMode)
       is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
       is UiBuilderEditorEvent.ShowPreviewSurface -> state.copy(previewSurface = event.surface)
+      is UiBuilderEditorEvent.ShowWearWidgetHostShape ->
+        state.copy(wearWidgetHostShape = event.shape)
       is UiBuilderEditorEvent.SelectAllMatches -> selectAllMatches(state)
       is UiBuilderEditorEvent.SelectNode ->
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))

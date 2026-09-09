@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.CodeOff
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DragIndicator
@@ -391,7 +392,15 @@ fun UiBuilderEditor(
    * Null on a box with no compile lane, and in every preview and test — so the control is absent
    * rather than present and failing, which is the same rule the server applies to the route.
    */
-  onRequestNativeRender: (suspend () -> UiBuilderNativeRender)? = null,
+  /**
+   * Compiles this design on the host and draws it, in the host container frame it is handed.
+   *
+   * The shape is a parameter rather than something the host re-derives, because the pane must agree
+   * with the canvas beside it: both are drawing the frame the editor is currently viewing, and a
+   * render that picked its own would be the one disagreement this pane cannot be allowed to invent.
+   * Ignored for every design whose root is not a widget container.
+   */
+  onRequestNativeRender: (suspend (WearWidgetHostShape) -> UiBuilderNativeRender)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
   initialPreviewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
@@ -1153,12 +1162,14 @@ fun UiBuilderEditor(
   // Keyed on the revision as well as the request, so asking again after an edit re-renders rather
   // than showing the frame the design used to have — a stale native render beside a live canvas is
   // the exact disagreement this pane exists to expose.
-  LaunchedEffect(nativeRequested, state.document.revision) {
+  // Keyed on the host shape as well, so switching the frame re-renders rather than leaving the
+  // pane showing the widget in the container the canvas has stopped drawing.
+  LaunchedEffect(nativeRequested, state.document.revision, state.wearWidgetHostShape) {
     if (!nativeRequested) return@LaunchedEffect
     nativePending = true
     nativeRender =
       try {
-        onRequestNativeRender()
+        onRequestNativeRender(state.wearWidgetHostShape)
       } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
         throw cancelled
       } catch (failure: Throwable) {
@@ -1416,6 +1427,9 @@ fun UiBuilderEditor(
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
+    // Here for the same reason as the line above it: the canvas, the extent beside it and every
+    // variant pane draw the same widget, and all of them should draw the frame being viewed.
+    LocalWearWidgetHostShape provides state.wearWidgetHostShape,
   ) {
     MaterialTheme(colorScheme = EditorColors) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -1985,6 +1999,30 @@ private fun MobileEditorToolbar(
           Text("More")
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+          // The host container shapes, on a widget design. Rows rather than the wide toolbar's
+          // menu-inside-a-menu, because this is already the overflow: a second dropdown off one
+          // row is a worse thing to hit on a narrow screen than two rows that read as a pair. The
+          // wide toolbar's control is the same choice, and without these the whole rectangular
+          // frame — canvas and native render — would be unreachable under 840dp.
+          state.document.wearWidgetScaffoldSize()?.let { size ->
+            WearWidgetHostShape.entries.forEach { option ->
+              val spec = size.hostSpec(option)
+              DropdownMenuItem(
+                text = {
+                  Text("${option.label} container · ${spec.frameWidthDp}×${spec.frameHeightDp}dp")
+                },
+                onClick = {
+                  expanded = false
+                  dispatch(UiBuilderEditorEvent.ShowWearWidgetHostShape(option))
+                },
+                leadingIcon = {
+                  if (option == state.wearWidgetHostShape) {
+                    Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(18.dp))
+                  }
+                },
+              )
+            }
+          }
           if (onNewDesign != null) {
             DropdownMenuItem(
               text = { Text("New design") },
@@ -2216,6 +2254,11 @@ private fun EditorToolbar(
       if (exportHost != null) ExportMenu(exportHost)
       if (previewSurface != null) {
         RenderSurfaceMenu(previewSurface, previewSurfaces, dispatch)
+      }
+      // Beside the renderer menu, because they are the two "what am I looking at" choices: which
+      // renderer draws the design, and which host frame it is drawn inside.
+      state.document.wearWidgetScaffoldSize()?.let { size ->
+        WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
       }
       if (collaborators.isNotEmpty()) {
         Spacer(Modifier.width(6.dp))
@@ -2499,6 +2542,83 @@ private fun CanvasModeSwitch(
       modifier = Modifier.semantics { contentDescription = previewDescription }.width(112.dp),
     )
   }
+}
+
+/**
+ * Which host container a Wear widget is framed in, as a menu of the shapes the platform ships.
+ *
+ * Offered only on a widget design, and that is not a cosmetic gate: on anything else the choice
+ * would change nothing, and a control that does nothing is worse than no control.
+ *
+ * The shape is the **host's**, not the design's — the launcher draws the frame from
+ * `WearWidgetParams`, and the same `WearWidgetDocument` appears inside each one. So this switches a
+ * view rather than editing anything: no revision, no operation, nothing in the export. What it buys
+ * a designer is the answer to "does my widget survive the other frame", which for the rectangular
+ * container is a real question — its content box and padding both differ from the squircle's, so a
+ * layout that just fits in one can clip in the other.
+ *
+ * A menu rather than a segmented pair, matching [RenderSurfaceMenu] beside it: each position wants
+ * a sentence, and there is room for a third shape here if the round container's per-diameter
+ * footprint is ever worth drawing.
+ */
+@Composable
+private fun WidgetHostShapeMenu(
+  shape: WearWidgetHostShape,
+  size: WearWidgetScaffoldSize,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var open by remember { mutableStateOf(false) }
+  Box {
+    TextButton(
+      onClick = { open = true },
+      modifier = Modifier.semantics { contentDescription = "Host container (${shape.label})" },
+    ) {
+      Icon(Icons.Filled.Dashboard, contentDescription = null, modifier = Modifier.size(18.dp))
+      Text(shape.label, Modifier.padding(start = 6.dp))
+      Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+      WearWidgetHostShape.entries.forEach { option ->
+        val spec = size.hostSpec(option)
+        DropdownMenuItem(
+          text = {
+            Column {
+              Text(option.label)
+              // The footprint, because that is what the choice actually changes and a designer
+              // comparing two frames wants the numbers rather than an adjective.
+              Text(
+                "${spec.frameWidthDp}×${spec.frameHeightDp}dp frame · " +
+                  "${spec.contentWidthDp}×${spec.contentHeightDp}dp content",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
+          },
+          onClick = {
+            dispatch(UiBuilderEditorEvent.ShowWearWidgetHostShape(option))
+            open = false
+          },
+          leadingIcon = {
+            if (option == shape) {
+              Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(18.dp))
+            }
+          },
+        )
+      }
+    }
+  }
+}
+
+/**
+ * The widget container this design's root is, or null when it is not a widget design at all.
+ *
+ * Read from the root rather than from the catalog, because the frame follows the scaffold the
+ * design was created with and nothing else can change it.
+ */
+internal fun UiBuilderDocument.wearWidgetScaffoldSize(): WearWidgetScaffoldSize? {
+  val rootId = roots.singleOrNull() ?: return null
+  val componentId = nodes[rootId]?.componentId ?: return null
+  return WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == componentId }
 }
 
 /**

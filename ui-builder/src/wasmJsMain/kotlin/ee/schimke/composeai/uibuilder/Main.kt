@@ -1280,9 +1280,18 @@ private fun LiveSessionApp(
       // drawing Material 3 lookalikes under a banner naming a revision — not a rough picture of the
       // right document but a faithful picture of the wrong component library, which is the one
       // thing a historical view must not be. The route takes a revision for exactly this.
-      onRequestNativeRender = {
+      //
+      // The host container shape rides along for the same reason the revision does: the pane has to
+      // draw the frame the canvas beside it is drawing, and a render that picked its own would be
+      // the one disagreement this pane must not invent.
+      onRequestNativeRender = { hostShape ->
         if (config.localStorage) UiBuilderNativeRender(failure = LOCAL_NATIVE_RENDER_UNAVAILABLE)
-        else requestNativeRender(config.designId, revisionPin?.takeIf { it.pinned }?.requested)
+        else
+          requestNativeRender(
+            config.designId,
+            revisionPin?.takeIf { it.pinned }?.requested,
+            hostShape,
+          )
       },
       remoteComposeSources = remoteComposeSources,
       resolveRemoteComposeDocument = { source ->
@@ -1358,6 +1367,7 @@ private external fun publishDesignSelectors(
 private suspend fun requestNativeRender(
   designId: String,
   revision: Long? = null,
+  hostShape: WearWidgetHostShape = WearWidgetHostShape.Default,
 ): UiBuilderNativeRender {
   val response =
     BrowserUiBuilderHttpTransport()
@@ -1369,7 +1379,10 @@ private suspend fun requestNativeRender(
             "/api/ui-builder/v1/designs/$designId/native-preview" +
               (revision?.let { "?revision=$it" } ?: ""),
           contentType = "application/json",
-          body = "{}",
+          // The host container to frame a widget in. In the body rather than the query beside the
+          // revision, because it says what to draw rather than which version to read; a host that
+          // predates the field ignores it and draws the squircle, which is what it drew before.
+          body = "{\"hostShape\":\"${hostShape.id}\"}",
         )
       )
   if (response.statusCode == 422) {

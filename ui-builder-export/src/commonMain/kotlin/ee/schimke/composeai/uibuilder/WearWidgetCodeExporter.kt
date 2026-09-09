@@ -188,7 +188,7 @@ object WearWidgetCodeExporter {
         appendLine()
       }
       emitter
-        .imports(WidgetSourceShape.Exported(size.previewShapes.map { it.paramsProvider }))
+        .imports(WidgetSourceShape.Exported(size.previewShapes.map { it.paramsProviderFor(size) }))
         .forEach { appendLine("import $it") }
       appendLine()
       appendLine("@RemoteComposable")
@@ -234,7 +234,7 @@ object WearWidgetCodeExporter {
         appendLine("fun $name${shape.label}Preview() =")
         appendLine("${INDENT}WearWidgetPreview(")
         appendLine("$INDENT$INDENT$name(),")
-        appendLine("$INDENT$INDENT${shape.paramsProvider}().values.maxBy { it.widthDp },")
+        appendLine("$INDENT$INDENT${shape.paramsProviderFor(size)}().values.maxBy { it.widthDp },")
         appendLine("$INDENT)")
       }
       // The inlined pictures sit below the preview for the same reason the declarations do:
@@ -449,59 +449,39 @@ object WearWidgetCodeExporter {
 
   private const val MAX_LINE = 100
 
-  internal const val WEAR_WIDGET_SPEC_PADDING_DP = 8f
+  internal const val WEAR_WIDGET_SPEC_PADDING_DP = SQUIRCLE_PADDING_DP
 
-  internal const val WEAR_WIDGET_SPEC_CORNER_RADIUS_DP = 26f
+  internal const val WEAR_WIDGET_SPEC_CORNER_RADIUS_DP = SQUIRCLE_RADIUS_DP
 
   /** Where an Android module's `AssetManager` root is, which is what the archive has to name. */
   private const val ASSET_SOURCE_DIRECTORY = "assets"
 }
 
 /**
- * A host container shape the generated file previews the widget in.
+ * The shapes a generated widget file previews itself in, in the order it writes them.
  *
- * @property label the shape's own name, spelled the way `androidx.glance.wear.tooling.preview`
- *   spells it. It is both the `@Preview` name a reader reads in the preview pane and the middle of
- *   the function's identifier, so the two cannot drift apart.
- * @property paramsProvider the shipped `WidgetPreviewParams` provider carrying that shape's spec.
- */
-internal data class WearWidgetPreviewShape(val label: String, val paramsProvider: String)
-
-/**
- * The shapes a generated widget file previews itself in: the squircle it is authored against, and
- * the rectangular frame beside it.
- *
- * The squircle is the host's default and the frame the builder's canvas draws, so it stays first
+ * The squircle is the host's default and the frame the builder's canvas opens on, so it stays first
  * and it is what a reader compares against the design. The rectangular one is not a second opinion
- * about the same frame — its spec is genuinely different (Small 192×60dp content inside 16/12dp
- * padding, Large 168×112dp inside 32/16dp, corner radius 0 for both, against the squircle's 200×60
- * and 200×108 inside a uniform 8dp) — and it is the render the widget picker editor is meant to
- * show, which is the whole reason a designer needs it without leaving the generated file.
+ * about the same frame — its spec is genuinely different, see [hostSpec] — and it is the render the
+ * widget picker editor is meant to show, which is the whole reason a designer needs it without
+ * leaving the generated file.
  *
- * Both are size-specific rather than the samples' `…AllWidgetPreviewParams`, because a design is
- * authored at one container size: previewing a Small design at both sizes would show a Large frame
- * nobody drew. Each provider still yields the screen diameters it ships, which is the axis the
+ * Every shape [WearWidgetHostShape] knows, rather than a list maintained here: the editor draws its
+ * canvas from the same enum, so a shape that can be previewed in the editor is a shape the exported
+ * file previews too, and neither can quietly grow a case the other lacks.
+ *
+ * Each provider is size-specific rather than the samples' `…AllWidgetPreviewParams`, because a
+ * design is authored at one container size: previewing a Small design at both sizes would show a
+ * Large frame nobody drew. Each still yields the screen diameters it ships, which is the axis the
  * design does not fix.
  *
  * The widget itself is unchanged between them. A `GlanceWearWidget` describes content; the frame
  * around it is the host's, handed in as `WearWidgetParams` — so drawing the same widget in a second
  * container is a second `@Preview` and nothing else, and the design's authored padding and radius
- * (which the refusals above pin to the squircle spec) are not what either preview reads.
+ * (which the refusals above pin to the squircle spec) are not what any preview reads.
  */
-internal val WearWidgetScaffoldSize.previewShapes: List<WearWidgetPreviewShape>
-  get() =
-    when (this) {
-      WearWidgetScaffoldSize.Small ->
-        listOf(
-          WearWidgetPreviewShape("Squircle", "SquircleSmallWidgetPreviewParams"),
-          WearWidgetPreviewShape("Rectangular", "RectangularSmallWidgetPreviewParams"),
-        )
-      WearWidgetScaffoldSize.Large ->
-        listOf(
-          WearWidgetPreviewShape("Squircle", "SquircleLargeWidgetPreviewParams"),
-          WearWidgetPreviewShape("Rectangular", "RectangularLargeWidgetPreviewParams"),
-        )
-    }
+internal val WearWidgetScaffoldSize.previewShapes: List<WearWidgetHostShape>
+  get() = WearWidgetHostShape.entries
 
 /** `Hello widget · Small (216×76dp)` becomes `HelloWidget`. */
 internal fun UiBuilderDocument.widgetIdentifier(): String {

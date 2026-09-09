@@ -62,6 +62,47 @@ fun WeatherWearWidgetSamplePreview() {
 }
 
 /**
+ * The same Weather widget in both host container shapes, side by side.
+ *
+ * This is the canvas half of the host-shape view: the editor's control switches
+ * [LocalWearWidgetHostShape] and the canvas redraws the design inside the chosen frame, which is
+ * what this pair shows without needing the editor chrome around it.
+ *
+ * The two frames are genuinely different rather than one with its corners changed — at Large the
+ * rectangular container is 168×112dp of content inside 32/16dp of padding against the squircle's
+ * 200×108dp inside a uniform 8dp — so the design is laid out in a narrower, taller box on the
+ * right. That is the question a designer is asking when they switch: does this survive the other
+ * frame the host might draw it in.
+ *
+ * Sized to hold the wider of the two (232dp) twice over, plus the gap and a margin.
+ */
+@Preview(widthDp = 540, heightDp = 200)
+@Composable
+fun WearWidgetHostShapesPreview() {
+  val document =
+    weatherWidgetUiBuilderDocument(
+      designId = "weather-widget-shapes",
+      catalogPin = wearWidgetSampleCatalogPin,
+      environment = wearWidgetSampleEnvironment,
+    )
+  Row(
+    Modifier.fillMaxSize(),
+    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    WearWidgetHostShape.entries.forEach { shape ->
+      Box(Modifier.weight(1f).fillMaxHeight()) {
+        UiBuilderSurface(
+          document = document,
+          editorOverlay = false,
+          wearWidgetHostShape = shape,
+        )
+      }
+    }
+  }
+}
+
+/**
  * The empty Small and Large host frames, side by side, with no widget background declared.
  *
  * This is what the two blank templates open on, and the state the scaffold's default decides:

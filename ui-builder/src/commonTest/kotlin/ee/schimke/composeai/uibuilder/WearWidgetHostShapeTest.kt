@@ -1,0 +1,150 @@
+package ee.schimke.composeai.uibuilder
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
+
+/**
+ * The host container table, pinned against what `androidx.glance.wear:wear-tooling-preview` ships.
+ *
+ * These five numbers per shape and size are a transcription, not a policy: the launcher hands them
+ * to a widget as `WearWidgetParams`, and nothing in this repository is free to tune them. They are
+ * checked here because two surfaces now read the table — the editor canvas draws the frame and the
+ * native lane builds the params — and the whole point of one table is that those two cannot drift.
+ * A change to any of these is upstream changing its spec, and should be a deliberate edit with the
+ * provider re-read, not a number nudged until a render looked right.
+ */
+class WearWidgetHostShapeTest {
+
+  @Test
+  fun `the squircle spec is the published 240dp-screen footprint`() {
+    val small = WearWidgetScaffoldSize.Small.hostSpec(WearWidgetHostShape.Squircle)
+    assertEquals(200, small.contentWidthDp)
+    assertEquals(60, small.contentHeightDp)
+    assertEquals(8f, small.horizontalPaddingDp)
+    assertEquals(8f, small.verticalPaddingDp)
+    assertEquals(26f, small.cornerRadiusDp)
+
+    val large = WearWidgetScaffoldSize.Large.hostSpec(WearWidgetHostShape.Squircle)
+    assertEquals(200, large.contentWidthDp)
+    assertEquals(108, large.contentHeightDp)
+    assertEquals(8f, large.horizontalPaddingDp)
+    assertEquals(8f, large.verticalPaddingDp)
+    assertEquals(26f, large.cornerRadiusDp)
+  }
+
+  /**
+   * The rectangular container is a different frame, not the squircle with square corners.
+   *
+   * Worth asserting as its own fact because it is the assumption most likely to be made by someone
+   * adding the third shape: both the content box and the padding move, on both axes and differently
+   * per size.
+   */
+  @Test
+  fun `the rectangular spec moves the content box and the padding, not only the radius`() {
+    val small = WearWidgetScaffoldSize.Small.hostSpec(WearWidgetHostShape.Rectangular)
+    assertEquals(192, small.contentWidthDp)
+    assertEquals(60, small.contentHeightDp)
+    assertEquals(16f, small.horizontalPaddingDp)
+    assertEquals(12f, small.verticalPaddingDp)
+    assertEquals(0f, small.cornerRadiusDp)
+
+    val large = WearWidgetScaffoldSize.Large.hostSpec(WearWidgetHostShape.Rectangular)
+    assertEquals(168, large.contentWidthDp)
+    assertEquals(112, large.contentHeightDp)
+    assertEquals(32f, large.horizontalPaddingDp)
+    assertEquals(16f, large.verticalPaddingDp)
+    assertEquals(0f, large.cornerRadiusDp)
+
+    WearWidgetScaffoldSize.entries.forEach { size ->
+      assertNotEquals(
+        size.hostSpec(WearWidgetHostShape.Squircle).contentWidthDp,
+        size.hostSpec(WearWidgetHostShape.Rectangular).contentWidthDp,
+        "$size: the two shapes must not share a content box",
+      )
+    }
+  }
+
+  /**
+   * The frame is the content box plus padding on both edges — what a `@Preview` canvas measures.
+   */
+  @Test
+  fun `the frame is the content box plus twice the padding`() {
+    assertEquals(
+      216,
+      WearWidgetScaffoldSize.Small.hostSpec(WearWidgetHostShape.Squircle).frameWidthDp,
+    )
+    assertEquals(
+      76,
+      WearWidgetScaffoldSize.Small.hostSpec(WearWidgetHostShape.Squircle).frameHeightDp,
+    )
+    assertEquals(
+      216,
+      WearWidgetScaffoldSize.Large.hostSpec(WearWidgetHostShape.Squircle).frameWidthDp,
+    )
+    assertEquals(
+      124,
+      WearWidgetScaffoldSize.Large.hostSpec(WearWidgetHostShape.Squircle).frameHeightDp,
+    )
+    val rectangularLarge = WearWidgetScaffoldSize.Large.hostSpec(WearWidgetHostShape.Rectangular)
+    assertEquals(232, rectangularLarge.frameWidthDp)
+    assertEquals(144, rectangularLarge.frameHeightDp)
+  }
+
+  /**
+   * Every shape names a real provider per size, so the generated `@Preview` cannot cite one that
+   * does not exist — the failure mode being source that reads fine and does not compile.
+   */
+  @Test
+  fun `every shape and size names a shipped provider`() {
+    val expected =
+      mapOf(
+        (WearWidgetHostShape.Squircle to WearWidgetScaffoldSize.Small) to
+          "SquircleSmallWidgetPreviewParams",
+        (WearWidgetHostShape.Squircle to WearWidgetScaffoldSize.Large) to
+          "SquircleLargeWidgetPreviewParams",
+        (WearWidgetHostShape.Rectangular to WearWidgetScaffoldSize.Small) to
+          "RectangularSmallWidgetPreviewParams",
+        (WearWidgetHostShape.Rectangular to WearWidgetScaffoldSize.Large) to
+          "RectangularLargeWidgetPreviewParams",
+      )
+    expected.forEach { (key, provider) ->
+      assertEquals(provider, key.first.paramsProviderFor(key.second))
+    }
+    assertEquals(
+      expected.size,
+      WearWidgetHostShape.entries.size * WearWidgetScaffoldSize.entries.size,
+    )
+  }
+
+  /**
+   * An unknown or absent wire spelling is the default rather than a failure.
+   *
+   * The shape rides in a native-render request body, and a host that cannot parse one should draw
+   * the frame the editor opens on rather than leave the pane empty: it is a view over the design,
+   * and no view at all is the worse answer.
+   */
+  @Test
+  fun `an unknown shape id falls back to the squircle`() {
+    assertEquals(WearWidgetHostShape.Squircle, WearWidgetHostShape.fromId("squircle"))
+    assertEquals(WearWidgetHostShape.Rectangular, WearWidgetHostShape.fromId("rectangular"))
+    assertEquals(WearWidgetHostShape.Rectangular, WearWidgetHostShape.fromId(" Rectangular "))
+    assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId(null))
+    assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId(""))
+    assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId("round"))
+    assertEquals(WearWidgetHostShape.Squircle, WearWidgetHostShape.Default)
+  }
+
+  /**
+   * The label is what a designer reads twice: on the editor's control and in the `@Preview` name.
+   */
+  @Test
+  fun `the labels match the names the generated previews carry`() {
+    assertEquals("Squircle", WearWidgetHostShape.Squircle.label)
+    assertEquals("Rectangular", WearWidgetHostShape.Rectangular.label)
+    WearWidgetHostShape.entries.forEach {
+      assertTrue(it.id.isNotBlank() && it.id == it.label.lowercase(), "${it.name}: id vs label")
+    }
+  }
+}

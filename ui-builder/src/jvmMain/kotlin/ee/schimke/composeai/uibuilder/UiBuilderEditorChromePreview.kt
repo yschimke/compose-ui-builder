@@ -531,7 +531,7 @@ fun UiBuilderNativeRenderPreview() {
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialNativeRender = nativeRenderPreviewRefusal,
     initialPreviewSurface = EditorPreviewSurface.Native,
-    onRequestNativeRender = { nativeRenderPreviewRefusal },
+    onRequestNativeRender = { _ -> nativeRenderPreviewRefusal },
   )
 }
 
@@ -552,7 +552,7 @@ fun UiBuilderRenderComparisonPreview() {
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialNativeRender = nativeRenderPreviewRefusal,
     initialPreviewSurface = EditorPreviewSurface.Both,
-    onRequestNativeRender = { nativeRenderPreviewRefusal },
+    onRequestNativeRender = { _ -> nativeRenderPreviewRefusal },
   )
 }
 
@@ -580,7 +580,7 @@ fun UiBuilderNativeOverlayPreview() {
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialNativeRender = nativeOverlayPreviewRender,
     initialPreviewSurface = EditorPreviewSurface.Native,
-    onRequestNativeRender = { nativeOverlayPreviewRender },
+    onRequestNativeRender = { _ -> nativeOverlayPreviewRender },
   )
 }
 

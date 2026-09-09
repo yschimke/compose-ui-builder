@@ -197,6 +197,7 @@ object RecordFreeExport {
     document: DesignDocumentV1,
     packageName: String,
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    shape: WearWidgetHostShape = WearWidgetHostShape.Default,
   ): NativePreview? {
     if (!isWearWidget(document)) return null
     return runCatching {
@@ -206,6 +207,7 @@ object RecordFreeExport {
             document.toUiBuilderDocument(),
             packageName,
             assets,
+            shape,
           )
       ) {
         is WearWidgetNativePreviewExporter.Result.Emitted ->

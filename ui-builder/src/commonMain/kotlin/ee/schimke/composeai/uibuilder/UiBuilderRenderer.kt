@@ -204,6 +204,20 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
 /**
+ * Which host container a Wear widget design is drawn inside.
+ *
+ * A composition local rather than a document property, because the shape is not the design's: the
+ * launcher draws the frame from `WearWidgetParams`, and the same widget appears in every shape the
+ * platform ships. Switching it asks "what does this look like in the host's other frame", which is
+ * a view over the design rather than an edit to it — nothing here writes to the document, and a
+ * design saved while the rectangular frame is showing reopens exactly as it was.
+ *
+ * Defaults to the squircle, so every other host of this surface — the thumbnails, the JVM render
+ * port, the previews — draws the frame it always has.
+ */
+internal val LocalWearWidgetHostShape = staticCompositionLocalOf { WearWidgetHostShape.Default }
+
+/**
  * Remote Compose documents a host has fetched for the `documentUrl` of an embedded document node.
  *
  * A composition local rather than a renderer parameter, for the reason [LocalUiBuilderNativeOnly]
@@ -415,6 +429,11 @@ fun UiBuilderSurface(
    * what that swaps and what it costs.
    */
   unrolled: Boolean = LocalUiBuilderUnrolled.current,
+  /**
+   * Which host container a widget root is framed in. Only a Wear widget design reads it; every
+   * other root draws the same whatever it says. See [LocalWearWidgetHostShape].
+   */
+  wearWidgetHostShape: WearWidgetHostShape = LocalWearWidgetHostShape.current,
 ) {
   val bounds =
     remember(document.id, document.revision, renderSessionId) { mutableStateMapOf<String, Rect>() }
@@ -526,6 +545,7 @@ fun UiBuilderSurface(
     LocalUiBuilderCornerRadius provides cornerRadius,
     LocalUiBuilderNativeOnly provides nativeOnlyComponentIds,
     LocalUiBuilderUnrolled provides unrolled,
+    LocalWearWidgetHostShape provides wearWidgetHostShape,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
       Box(
@@ -665,32 +685,27 @@ private fun RenderNode(
   }
 
   when (node.componentId.wearScreenStandIn()) {
-    // The two container types on a 240dp screen: `CONTAINER_TYPE_SMALL` is 200x60dp of content and
-    // `CONTAINER_TYPE_LARGE` 200x108dp, per `SquircleSmallWidgetPreviewParams` /
-    // `SquircleLargeWidgetPreviewParams`. The scaffold adds the padding, so these are the content
-    // box rather than the canvas.
-    "remote-m3/widget-container-small" ->
+    // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
+    // from `hostSpec` rather than written here, so this canvas and the native render beside it
+    // cannot disagree about what the host reserves — see [WearWidgetHostSpec].
+    "remote-m3/widget-container-small",
+    "remote-m3/widget-container-large" -> {
+      // Never null in this branch — the two ids are the enum's own — and `Small` rather than `!!`
+      // for the reason every other lookup here refuses to throw: a canvas that crashes cannot draw
+      // the Issues panel that would explain why.
+      val size =
+        WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == node.componentId }
+          ?: WearWidgetScaffoldSize.Small
       WearWidgetContainerScaffold(
         node = node,
         modifier = measured,
-        contentWidthDp = 200,
-        contentHeightDp = 60,
+        spec = size.hostSpec(LocalWearWidgetHostShape.current),
         brushes = { next -> slot("background").forEach { child(it, next) } },
         hasBrushes = slot("background").isNotEmpty(),
       ) {
         slot("content").forEach { child(it, Modifier.fillMaxSize()) }
       }
-    "remote-m3/widget-container-large" ->
-      WearWidgetContainerScaffold(
-        node = node,
-        modifier = measured,
-        contentWidthDp = 200,
-        contentHeightDp = 108,
-        brushes = { next -> slot("background").forEach { child(it, next) } },
-        hasBrushes = slot("background").isNotEmpty(),
-      ) {
-        slot("content").forEach { child(it, Modifier.fillMaxSize()) }
-      }
+    }
     // The Wear screen. Unlike the widget container above, this stand-in is EMITTED rather than
     // erased: `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter` names
     // it. What is faked is only the drawing — the canvas has no Wear Compose to draw with.
@@ -1635,15 +1650,18 @@ private const val WEAR_EDGE_BUTTON_INSET = 0.04f
 private fun WearWidgetContainerScaffold(
   node: UiBuilderNode,
   modifier: Modifier,
-  contentWidthDp: Int,
-  contentHeightDp: Int,
+  spec: WearWidgetHostSpec,
   brushes: @Composable (Modifier) -> Unit,
   hasBrushes: Boolean,
   content: @Composable () -> Unit,
 ) {
-  val horizontalPadding = node.float("horizontalPaddingDp", WEAR_WIDGET_PADDING_DP)
-  val verticalPadding = node.float("verticalPaddingDp", WEAR_WIDGET_PADDING_DP)
-  val cornerRadius = node.float("cornerRadiusDp", WEAR_WIDGET_CORNER_RADIUS_DP)
+  // The viewed shape's published spec is the baseline; a design that authored its own padding or
+  // radius still overrides it, which is what it always did — only the number it overrides changed
+  // from "the squircle's" to "this shape's". The content box is not on that list and cannot be:
+  // it is the footprint the host reserves, not a value a widget holds.
+  val horizontalPadding = node.float("horizontalPaddingDp", spec.horizontalPaddingDp)
+  val verticalPadding = node.float("verticalPaddingDp", spec.verticalPaddingDp)
+  val cornerRadius = node.float("cornerRadiusDp", spec.cornerRadiusDp)
   val shape = RoundedCornerShape(cornerRadius.dp)
   // The default applies only when the chain is EMPTY, which is what `WearWidgetBrush.isEmpty()`
   // asks upstream. A widget that declares a gradient or an image and no colour has a one-element
@@ -1659,8 +1677,8 @@ private fun WearWidgetContainerScaffold(
         // The canvas the preview wrapper measures: the content box plus padding on all four
         // edges. `WearWidgetPreview` sizes its `RemoteDocumentPreview` exactly this way.
         .size(
-          (contentWidthDp + 2f * horizontalPadding).dp,
-          (contentHeightDp + 2f * verticalPadding).dp,
+          (spec.contentWidthDp + 2f * horizontalPadding).dp,
+          (spec.contentHeightDp + 2f * verticalPadding).dp,
         )
         // Drawn behind, not clipped. `WearWidgetContainer` paints the widget's background as a
         // round rect inside `drawWithContent` and then calls `drawContent()` — content that
@@ -1694,18 +1712,6 @@ private fun WearWidgetContainerScaffold(
  * light theme while the real host stayed this colour whatever the widget did.
  */
 private val WEAR_WIDGET_DEFAULT_BACKGROUND = Color(red = 39, green = 36, blue = 48)
-
-/**
- * `verticalPaddingDp` / `horizontalPaddingDp` and `cornerRadiusDp` from the shipped
- * `WidgetPreviewParams` providers.
- *
- * Every squircle, round and rectangular spec upstream publishes uses 8dp on both axes; only the
- * corner radius varies by shape (26dp squircle, 999dp round, 0dp rectangular), which is why the
- * radius is authored per design and the padding merely defaults.
- */
-private const val WEAR_WIDGET_PADDING_DP = 8f
-
-private const val WEAR_WIDGET_CORNER_RADIUS_DP = 26f
 
 private const val MAX_REMOTE_COMPOSE_BASE64_CHARS = 8 * 1024 * 1024
 

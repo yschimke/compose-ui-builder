@@ -57,10 +57,16 @@ internal object WearWidgetNativePreviewExporter {
     data class Refused(val reasons: List<String>) : Result
   }
 
+  /**
+   * @param shape which host container to build the params for. The design does not carry this — the
+   *   frame is the host's — so it arrives from whoever asked for the render, and the editor's
+   *   canvas is drawing the same shape beside this pane.
+   */
   fun export(
     document: UiBuilderDocument,
     packageName: String,
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    shape: WearWidgetHostShape = WearWidgetHostShape.Default,
   ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
@@ -102,19 +108,23 @@ internal object WearWidgetNativePreviewExporter {
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.widgetIdentifier()
-    val horizontalPadding = root.previewFloat("horizontalPaddingDp", WEAR_WIDGET_PADDING_DP)
-    val verticalPadding = root.previewFloat("verticalPaddingDp", WEAR_WIDGET_PADDING_DP)
-    val cornerRadius = root.previewFloat("cornerRadiusDp", WEAR_WIDGET_CORNER_RADIUS_DP)
+    // The selected shape's published spec is the baseline; a design that authored its own padding
+    // or radius overrides it, exactly as the canvas beside this render does. Content box is not on
+    // that list and cannot be: it is the footprint the host reserves, not a value a widget holds.
+    val spec = size.hostSpec(shape)
+    val horizontalPadding = root.previewFloat("horizontalPaddingDp", spec.horizontalPaddingDp)
+    val verticalPadding = root.previewFloat("verticalPaddingDp", spec.verticalPaddingDp)
+    val cornerRadius = root.previewFloat("cornerRadiusDp", spec.cornerRadiusDp)
     return Result.Emitted(
       name = name,
-      widthDp = (size.contentWidthDp + 2f * horizontalPadding).toInt(),
-      heightDp = (size.contentHeightDp + 2f * verticalPadding).toInt(),
+      widthDp = (spec.contentWidthDp + 2f * horizontalPadding).toInt(),
+      heightDp = (spec.contentHeightDp + 2f * verticalPadding).toInt(),
       source =
         buildString {
           appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
           appendLine(
             "// Native preview of design ${document.id.escapeComment()} revision " +
-              "${document.revision}."
+              "${document.revision}, in the ${shape.label.lowercase()} host container."
           )
           appendLine("@file:Suppress(\"RestrictedApi\")")
           appendLine()
@@ -155,8 +165,8 @@ internal object WearWidgetNativePreviewExporter {
             "$INDENT${INDENT}instanceId = WidgetInstanceId(\"tiles\", ${size.instanceId}),"
           )
           appendLine("$INDENT${INDENT}containerType = ContainerInfo.${size.containerType},")
-          appendLine("$INDENT${INDENT}widthDp = ${size.contentWidthDp.dpLiteral()},")
-          appendLine("$INDENT${INDENT}heightDp = ${size.contentHeightDp.dpLiteral()},")
+          appendLine("$INDENT${INDENT}widthDp = ${spec.contentWidthDp.dpLiteral()},")
+          appendLine("$INDENT${INDENT}heightDp = ${spec.contentHeightDp.dpLiteral()},")
           appendLine("$INDENT${INDENT}horizontalPaddingDp = ${horizontalPadding.dpLiteral()},")
           appendLine("$INDENT${INDENT}verticalPaddingDp = ${verticalPadding.dpLiteral()},")
           appendLine("$INDENT${INDENT}cornerRadiusDp = ${cornerRadius.dpLiteral()},")
@@ -188,36 +198,7 @@ internal object WearWidgetNativePreviewExporter {
   private fun Int.dpLiteral(): String = "${this}f"
 
   private const val INDENT = "    "
-
-  /**
-   * The padding and radius the shipped `WidgetPreviewParams` providers carry.
-   *
-   * The same two constants the canvas draws the container with, and they are defaults here rather
-   * than a spec: a design that authored either gets its own, which is what this lane can do and an
-   * exported file cannot.
-   */
-  private const val WEAR_WIDGET_PADDING_DP = 8f
-
-  private const val WEAR_WIDGET_CORNER_RADIUS_DP = 26f
 }
-
-/**
- * The container's content box, which is what `WearWidgetParams` is sized in.
- *
- * The label carries the *outer* frame — `Large (216×124dp)` — because that is the canvas a designer
- * lays out on; the params carry the content box inside the padding, which is upstream's own
- * spelling. 200×60 and 200×108 are the published squircle specs for a 240dp screen, the same pair
- * the Wasm canvas draws and `wear-m3-catalog`'s widget-container stickers hard-code.
- */
-internal val WearWidgetScaffoldSize.contentWidthDp: Int
-  get() = 200
-
-internal val WearWidgetScaffoldSize.contentHeightDp: Int
-  get() =
-    when (this) {
-      WearWidgetScaffoldSize.Small -> 60
-      WearWidgetScaffoldSize.Large -> 108
-    }
 
 /** `ContainerInfo`'s own name for this footprint. */
 internal val WearWidgetScaffoldSize.containerType: String
