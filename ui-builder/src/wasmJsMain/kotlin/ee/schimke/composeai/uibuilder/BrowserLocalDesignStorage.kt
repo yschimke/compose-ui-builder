@@ -1,0 +1,107 @@
+@file:OptIn(kotlin.js.ExperimentalWasmJsInterop::class)
+
+package ee.schimke.composeai.uibuilder
+
+import ee.schimke.composeai.uibuilder.local.LocalDesignStorage
+import ee.schimke.composeai.uibuilder.local.LocalDesignStorageException
+import ee.schimke.composeai.uibuilder.local.LocalDesignStore
+
+/**
+ * `localStorage`, as the local design mode's store.
+ *
+ * Three browser facts shape this, and each is handled here rather than being allowed upward:
+ * * **Storage can be absent.** A private window, an origin the reader has blocked, an embedded
+ *   context — `globalThis.localStorage` throws on *access*, not only on use. Every call is wrapped,
+ *   and a read that cannot happen answers "nothing stored" the way an empty store does.
+ * * **A write can fail.** The origin's quota is a few megabytes, shared with everything else this
+ *   host keeps here. A refusal is a [LocalDesignStorageException], which the session answers by
+ *   compacting the design's history and trying once more.
+ * * **Keys are shared.** This origin also serves the preview pages, whose theme and tab keys live
+ *   beside these. Enumeration is therefore filtered in the page to the builder's own prefixes, so
+ *   listing the designs in this browser can never be confused by somebody else's key.
+ *
+ * `localStorage` rather than IndexedDB because everything stored here is small, textual, and read
+ * once at open: a design's log, a catalog, two static files. IndexedDB buys asynchrony and a larger
+ * quota, and costs a schema, a migration story and an async seam through the reducer's front door.
+ * Neither is earned yet. When a design grows past the quota this store compacts, and if compaction
+ * stops being enough, that is the change that earns IndexedDB.
+ */
+class BrowserLocalDesignStorage : LocalDesignStorage {
+  override fun read(key: String): String? = readLocalStorage(key, MISSING).takeIf { it != MISSING }
+
+  override fun write(key: String, value: String) {
+    val failure = writeLocalStorage(key, value)
+    if (failure.isNotEmpty()) throw LocalDesignStorageException(failure)
+  }
+
+  override fun remove(key: String) {
+    removeLocalStorage(key)
+  }
+
+  override fun keys(): List<String> =
+    localStorageKeys(LocalDesignStore.DESIGN_KEY_PREFIX).split('\n').filter { it.isNotEmpty() }
+}
+
+/** Whether this page was asked for a design kept in the browser rather than on the server. */
+@JsFun("""() => new URLSearchParams(globalThis.location.search).get('storage') === 'local'""")
+external fun localDesignStorageRequested(): Boolean
+
+/**
+ * A sentinel rather than `null`, because a `null` crossing the wasmJs boundary as a `String?` and
+ * an empty stored value are the same answer here, and an empty value is one this store writes.
+ *
+ * Written as the `\u0000` escape rather than the byte itself: a raw NUL in a source file makes git
+ * read the whole file as binary, so it stops being reviewable in a diff.
+ */
+private const val MISSING = "\u0000ui-builder-missing"
+
+@JsFun(
+  """(key, missing) => {
+    try {
+      const value = globalThis.localStorage.getItem(key);
+      return value === null ? missing : value;
+    } catch (e) {
+      return missing;
+    }
+  }"""
+)
+private external fun readLocalStorage(key: String, missing: String): String
+
+/** Returns the refusal, or an empty string when the write landed. */
+@JsFun(
+  """(key, value) => {
+    try {
+      globalThis.localStorage.setItem(key, value);
+      return '';
+    } catch (e) {
+      return 'this browser refused to store ' + key + ': ' + (e && e.name ? e.name : 'unknown error');
+    }
+  }"""
+)
+private external fun writeLocalStorage(key: String, value: String): String
+
+@JsFun(
+  """(key) => {
+    try {
+      globalThis.localStorage.removeItem(key);
+    } catch (e) {}
+  }"""
+)
+private external fun removeLocalStorage(key: String)
+
+@JsFun(
+  """(prefix) => {
+    try {
+      const storage = globalThis.localStorage;
+      const keys = [];
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (key && key.indexOf(prefix) === 0) keys.push(key);
+      }
+      return keys.join('\n');
+    } catch (e) {
+      return '';
+    }
+  }"""
+)
+private external fun localStorageKeys(prefix: String): String

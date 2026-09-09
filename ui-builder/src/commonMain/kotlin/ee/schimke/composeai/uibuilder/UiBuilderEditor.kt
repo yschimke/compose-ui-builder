@@ -527,6 +527,22 @@ fun UiBuilderEditor(
     null,
   onHelp: (() -> Unit)? = null,
   /**
+   * Copies this design into the browser's own storage and opens it there, or null where it cannot.
+   *
+   * Null in every mode but a live server session: a design already kept in this browser has nowhere
+   * to be taken, and a host with no local mode has nothing to take it into. What it costs and what
+   * it keeps working is `docs/design/UI_BUILDER_LOCAL_STORAGE.md`; how it comes home again is
+   * `docs/design/UI_BUILDER_DESIGN_PORTABILITY.md`.
+   */
+  onTakeOffline: (() -> Unit)? = null,
+  /**
+   * Replays this browser's stored edits back onto the server the design was taken from.
+   *
+   * Null unless this design has a fork point — a design created here has no server to go home to,
+   * and publishing it is a create rather than a merge.
+   */
+  onSyncToServer: (() -> Unit)? = null,
+  /**
    * Copies, links and downloads the rendered design, or null where the host cannot.
    *
    * Null in every preview and test, where the toolbar then carries no Export menu rather than one
@@ -1436,6 +1452,8 @@ fun UiBuilderEditor(
                 } else null,
               onReconnect = onReconnect,
               onHelp = onHelp,
+              onTakeOffline = onTakeOffline,
+              onSyncToServer = onSyncToServer,
               exportHost = exportHost,
               onComponentPacks = onComponentPacks,
               dispatch = ::dispatch,
@@ -1452,6 +1470,8 @@ fun UiBuilderEditor(
                 } else null,
               onReconnect = onReconnect,
               onHelp = onHelp,
+              onTakeOffline = onTakeOffline,
+              onSyncToServer = onSyncToServer,
               exportHost = exportHost,
               onComponentPacks = onComponentPacks,
               // Absent where the host cannot draw: a project with no compile lane has exactly one
@@ -1941,6 +1961,8 @@ private fun MobileEditorToolbar(
   onNewDesign: (() -> Unit)?,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
+  onTakeOffline: (() -> Unit)?,
+  onSyncToServer: (() -> Unit)?,
   exportHost: UiBuilderExportHost?,
   onComponentPacks: (() -> Unit)? = null,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -2018,6 +2040,24 @@ private fun MobileEditorToolbar(
               onClick = {
                 expanded = false
                 onReconnect()
+              },
+            )
+          }
+          if (onTakeOffline != null) {
+            DropdownMenuItem(
+              text = { Text("Keep in this browser") },
+              onClick = {
+                expanded = false
+                onTakeOffline()
+              },
+            )
+          }
+          if (onSyncToServer != null) {
+            DropdownMenuItem(
+              text = { Text("Sync to the server") },
+              onClick = {
+                expanded = false
+                onSyncToServer()
               },
             )
           }
@@ -2103,6 +2143,8 @@ private fun EditorToolbar(
   onNewDesign: (() -> Unit)?,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
+  onTakeOffline: (() -> Unit)? = null,
+  onSyncToServer: (() -> Unit)? = null,
   /** Copies, links and downloads the render, or null where the host cannot; hides the menu. */
   exportHost: UiBuilderExportHost?,
   /** Opens the component-pack settings, or null where the catalog offers no pack. */
@@ -2203,6 +2245,24 @@ private fun EditorToolbar(
               onClick = {
                 overflowOpen = false
                 onReconnect()
+              },
+            )
+          }
+          if (onTakeOffline != null) {
+            DropdownMenuItem(
+              text = { Text("Keep in this browser") },
+              onClick = {
+                overflowOpen = false
+                onTakeOffline()
+              },
+            )
+          }
+          if (onSyncToServer != null) {
+            DropdownMenuItem(
+              text = { Text("Sync to the server") },
+              onClick = {
+                overflowOpen = false
+                onSyncToServer()
               },
             )
           }

@@ -89,7 +89,20 @@ const val DESIGN_URL_THREAD_KEY: String = "thread"
  * `token` is in it because the *page's own* URL keeps its credential across the rewrite.
  */
 val DESIGN_URL_IDENTITY_KEYS: List<String> =
-  listOf("token", "actor", "clientId", "displayName", "color", "endpoint", "updatesEndpoint")
+  listOf(
+    "token",
+    "actor",
+    "clientId",
+    "displayName",
+    "color",
+    "endpoint",
+    "updatesEndpoint",
+    // Not an identity, but it belongs here on both counts this list decides. The open page must
+    // keep it, because a rewrite that dropped it would move the tab from the design this browser
+    // holds to the *server's* design of the same id without saying so; and a shared link must not
+    // carry it, because the design it names does not exist in the browser that opens the link.
+    "storage",
+  )
 
 /**
  * Reads the three selectors out of one URL's query and fragment.

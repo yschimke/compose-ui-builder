@@ -77,3 +77,12 @@ The inspector's top-level Theme mode edits the design-wide Material colour schem
 shape radius. Theme metadata is stored as capability-declared properties on the root Material
 surface and submitted as one collaboration batch, so a theme application is persistent, shared,
 and one-step undoable without introducing a server-only mutation outside the released protocol.
+
+`?storage=local` on a design URL opens a design this browser holds instead of one the server holds.
+The editor above it is unchanged: the same protocol client reaches a `LocalUiBuilderService` in the
+page, which applies the same `CollaborationReducer` and persists a seed document plus its accepted
+command log to `localStorage` — so undo survives a reload, and the editing loop keeps working with
+the server unreachable. Export, native render, comments and reference pictures stay server-side and
+say so. The mode, the catalog fallback it depends on, the compaction rule and what "mostly offline"
+does and does not cover are in
+[`docs/design/UI_BUILDER_LOCAL_STORAGE.md`](../docs/design/UI_BUILDER_LOCAL_STORAGE.md).
