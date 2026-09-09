@@ -242,7 +242,7 @@ carrying that fix produces.
    writes a pack node from its record, and the native lane compiles the screen against the pack's
    Android bundle. See [A Wear pack](#a-wear-pack) for what Confetti's record offers and why.
 5. ~~**Discovery under Kotlin 2.3+ lambdas.**~~ Fixed in compose-ai-tools: `PreviewTargetInference`
-   used to descend into a preview's `Theme { … }` content lambda only when the compiler lifted it
+   descends into a preview's `Theme { … }` content lambda whether or not the compiler lifted it
    into a `ComposableSingletons$…$lambda$…` class; Kotlin 2.3+ emits a static method on the
    singletons class instead, so a `ConfettiThemeFixed { SessionCard() }` preview recorded the
    wrapper as its subject and the component never reached the record. The walker now reads both

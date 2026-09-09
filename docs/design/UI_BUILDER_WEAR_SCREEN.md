@@ -61,16 +61,16 @@ the other frame" — a layout that just fits the squircle can clip in the rectan
 
 Both surfaces read one table,
 [`hostSpec`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearWidgetHostShape.kt),
-and that is the point of it existing. The canvas used to hard-code 200×60 and 200×108 at its
-dispatch with the padding and radius as two private constants, while the native lane kept its own
-copy of the same four numbers; two copies of one spec are two ways for the picture and the render
+and that is the point of it existing. Hard-coding 200×60 and 200×108 at the canvas dispatch with
+the padding and radius as two private constants, while the native lane keeps its own copy of the
+same four numbers, makes two copies of one spec — and two ways for the picture and the render
 beside it to disagree, which is the disagreement the Native pane exists to *expose* rather than to
 contain. The canvas reads it through `LocalWearWidgetHostShape`, and the native lane is handed the
 shape on the render request so the two panes cannot be drawing different frames.
 
-Round was absent from the first version of this, on the stated grounds that its spec varies per
-screen diameter. It does — and so does the squircle's, which the widest-entry rule above had already
-resolved. The exclusion was wrong rather than conservative, and it is gone.
+Round is included, though its spec varies per screen diameter — so does the squircle's, which the
+widest-entry rule above already resolves. Excluding it on that ground would be wrong rather than
+conservative.
 
 ## The hard constraint: the canvas has no Wear Compose
 
@@ -176,7 +176,7 @@ The catalog now says which renderer may make that claim. `wear-m3`'s `statusSema
 | `wasm` | `approximate` | The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an Android AAR. Author on it; do not read a size, a colour or a shape off it. |
 | `native` | `authoritative`, backend `android` | Compiles this design's own generated Kotlin against real Wear Compose and renders it on Robolectric. |
 
-Three things read it, and each of them used to guess:
+Three things read it, and none of them may guess:
 
 - **The editor opens a Wear design on the host's renderer**, not on the canvas, where the host has
   one. Pressing **Preview** switches the render surface *before* the mode, so the first frame it
@@ -193,9 +193,9 @@ A catalog that says nothing gets the old behaviour exactly: authoritative canvas
 
 ## The native lane takes a Wear design
 
-`ScreenGeneratorComposeExportExecutor.generate` used to turn away every record-free design with one
-refusal, and the sentence it ended on — *"export it instead, and preview it on the canvas"* — sent a
-Wear author to the one surface that cannot answer their question. It now splits the two record-free
+`ScreenGeneratorComposeExportExecutor.generate` must not turn away every record-free design with one
+refusal: the sentence such a refusal ends on — *"export it instead, and preview it on the canvas"* —
+sends a Wear author to the one surface that cannot answer their question. It splits the two record-free
 emitters by what they actually write:
 
 - **A Wear screen is Wear Compose.** `ScreenScaffold`, `TitleCard`, `Text` — ordinary Kotlin, which
@@ -434,9 +434,9 @@ system long-screenshot and by the renderer for a `ScrollMode.LONG` capture, and 
 screenshot of a real app wants the same thing.
 
 **`wear-m3/list-header` is a component now, and it is the first one that is Wear's rather than
-borrowed.** The template used to fake `ListHeader`'s 48dp with a padded `m3/text`. The canvas
-matched the reference and the generated screen came out **31.5dp shorter**, because a padded Text is
-not a `ListHeader` and the generator was right not to pretend it was. Every other row already agreed
+borrowed.** Faking `ListHeader`'s 48dp with a padded `m3/text` makes the canvas match the reference
+while the generated screen comes out **31.5dp shorter**, because a padded Text is not a `ListHeader`
+and the generator is right not to pretend it is. Every other row already agreed
 to the dp; the header was the whole discrepancy, and there was no way to close it from the borrowed
 side.
 

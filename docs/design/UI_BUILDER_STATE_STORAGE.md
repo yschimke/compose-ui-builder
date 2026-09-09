@@ -220,7 +220,7 @@ Two changes, in order of how much they cost to build:
    measured store, why it changed nothing: no design there is deep enough for either bound to bite.
    It is insurance against a design that keeps being edited, not a remedy for the file today.
 
-   It also moved a floor that used to be quoted loosely. `SNAPSHOT_REQUIRED` raised for a missing
+   It also pins a floor that was previously quoted loosely. `SNAPSHOT_REQUIRED` raised for a missing
    *revision* now answers with the oldest revision still retained, not with the operation log's
    floor: the two were within one of each other while both were ~1,024, and retaining fewer
    revisions than operations makes the difference real — a client told a floor 900 sequences below
@@ -362,7 +362,7 @@ In order, with the first two done:
    the report's own projection line, which had assumed every design sat at full retention depth and
    so offered a 7.66 MB saving that did not exist. Re-run it after any change here; the whole point
    of the step is that the guess and the measurement disagreed.
-2. **Cut retention, and warn.** *Done, and it turned out not to be the lever.* Every design on the
+2. **Cut retention, and warn.** *Done, and not the lever.* Every design on the
    live store is at revision 1-20, far under both the old 1,025 cap and the new 128, so the revision
    cut changes nothing there — it is insurance for a design that accumulates revisions, not a
    remedy for the file as it stands. The undo budget in step 1 is what reaches these bytes.

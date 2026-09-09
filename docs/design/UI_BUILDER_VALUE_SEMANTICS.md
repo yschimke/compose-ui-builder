@@ -47,7 +47,7 @@ rules, applied in the two reducers and the renderer:
 3. **No node may fail the frame.** Whatever slips past validation — a design committed before the
    rule, a registry that changed underneath it — renders as a visible placeholder. The canvas draws
    a dashed frame naming the key for an asset nothing resolves, and a component's own default for a
-   colour role it does not know. It used to throw on both, and one node then failed every render
+   colour role it does not know. Throwing on either makes one node fail every render
    of the design.
 
 The editor's inspector follows the same rule: every colour property gets the colour control, and a
