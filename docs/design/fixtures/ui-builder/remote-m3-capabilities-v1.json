@@ -1,0 +1,1455 @@
+{
+    "benchmark": {
+        "catalogRevision": "wear-widget-scaffolds-v1",
+        "catalogSystemId": "remote-m3",
+        "id": "remote-m3-wear-widget-scaffolds",
+        "nativeRuntimeId": "candidate",
+        "sourceRevision": "wear-m3-catalog@d4e4e684e61d0657aad4ccb7752b8c0ab5d9dedf"
+    },
+    "components": [
+        {
+            "code": null,
+            "componentId": "remote-m3/widget-container-small",
+            "displayName": "Wear widget · Small (216×76dp)",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "background",
+                    "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalPaddingDp",
+                    "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalPaddingDp",
+                    "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "cornerRadiusDp",
+                    "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it.",
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawLayer",
+                        "ImageContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "background",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "The copied Wear widget host geometry has not yet passed structured SVG parity.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent",
+                "WearWidgetHost",
+                "RemoteContentHost"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/widget-container-large",
+            "displayName": "Wear widget · Large (216×124dp)",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "background",
+                    "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalPaddingDp",
+                    "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalPaddingDp",
+                    "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "cornerRadiusDp",
+                    "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it.",
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawLayer",
+                        "ImageContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "background",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "The copied Wear widget host geometry has not yet passed structured SVG parity.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent",
+                "WearWidgetHost",
+                "RemoteContentHost"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/lottie",
+            "displayName": "Lottie animation",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "url",
+                    "notes": "Where the animation was fetched from. Resolved into `json` once, in the builder; the generated widget never reaches the network.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "json",
+                    "notes": "The Lottie animation itself, as JSON text. This is what is compiled into the Remote Compose document, so it is what the export needs.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "progress",
+                    "notes": "Pins the animation to one frame, 0 (first) to 1 (last). Unset — the default — lets the document's animation clock run it in a loop.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with an animation.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Drawn as a named placeholder carrying the animation's source and size. The canvas has no Lottie renderer, and compiling the animation the way the export does — into Remote Compose operations — is Horologist's Android-only creation API, which a Wasm build cannot link. A lookalike would be an impression of an animation nobody could check; the picture comes from the native lane, which builds this design's own generated document.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Box"
+                ],
+                "symbol": "Box"
+            },
+            "componentId": "layout/box",
+            "displayName": "Box",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "propagateMinConstraints",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "OverlayContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "notes": null,
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Column"
+                ],
+                "symbol": "Column"
+            },
+            "componentId": "layout/column",
+            "displayName": "Column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": null,
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Row"
+                ],
+                "symbol": "Row"
+            },
+            "componentId": "layout/row",
+            "displayName": "Row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "The Row counterpart of a Column’s verticalArrangement, with the same relationship to horizontalSpacingDp.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalAlignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": null,
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.material3.Surface"
+                ],
+                "symbol": "Surface"
+            },
+            "componentId": "m3/surface",
+            "displayName": "Surface",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit. Painted across the area the surface is measured to, and no further. A root surface with no size modifier wraps its content, so its containerColor is the frame's ground only when the root fills the frame (fillMaxSize); the ground outside it comes from environment.theme. The export reports ROOT_SURFACE_DOES_NOT_FILL_FRAME when a coloured root does not.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "shapeDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "tonalElevationDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themePrimaryColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeBackgroundColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSurfaceColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeContentColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "themeTypeScale",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "themeCornerRadiusDp",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "ScreenContent",
+                "PaneContent",
+                "GridItem",
+                "ListItem",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": null,
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.material3.Text"
+                ],
+                "symbol": "Text"
+            },
+            "componentId": "m3/text",
+            "displayName": "Text",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [
+                        "displayLarge",
+                        "displayMedium",
+                        "displaySmall",
+                        "headlineLarge",
+                        "headlineMedium",
+                        "headlineSmall",
+                        "titleLarge",
+                        "titleMedium",
+                        "titleSmall",
+                        "bodyLarge",
+                        "bodyMedium",
+                        "bodySmall",
+                        "labelLarge",
+                        "labelMedium",
+                        "labelSmall"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "normal",
+                        "medium",
+                        "semiBold",
+                        "bold"
+                    ],
+                    "jsonType": "string",
+                    "name": "fontWeight",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "normal",
+                        "italic"
+                    ],
+                    "jsonType": "string",
+                    "name": "fontStyle",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fontSizeSp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "lineHeightSp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "letterSpacingSp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "minLines",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "maxLines",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "softWrap",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "clip",
+                        "ellipsis",
+                        "visible"
+                    ],
+                    "jsonType": "string",
+                    "name": "overflow",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "justify"
+                    ],
+                    "jsonType": "string",
+                    "name": "textAlign",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "none",
+                        "underline",
+                        "lineThrough"
+                    ],
+                    "jsonType": "string",
+                    "name": "textDecoration",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate.",
+                "status": "verified"
+            },
+            "traits": [
+                "TextContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Fidelity requires the pinned Jetcaster font assets and typography tokens.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcComposePlayer"
+                ],
+                "symbol": "RcComposePlayer"
+            },
+            "componentId": "remote-compose/document",
+            "displayName": "Remote Compose document",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentBase64",
+                    "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded. Not required on its own: a node carries either the bytes or a documentUrl, and the editor's own rule reports a node that carries neither.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentUrl",
+                    "notes": "Absolute http(s) URL the host resolves to the same wire document. Read only when documentBase64 is empty, so a design that carries its own bytes never depends on the network.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "inherit",
+                        "light",
+                        "dark",
+                        "system"
+                    ],
+                    "jsonType": "string",
+                    "name": "theme",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "namedValues",
+                    "notes": "Typed host values keyed by the Remote Compose named-variable name.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "OrderedContent",
+                "DynamicSlots"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry"
+                ],
+                "symbol": "RcCustomComponentRegistry"
+            },
+            "componentId": "remote-compose/custom",
+            "displayName": "Custom component",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "name",
+                    "notes": "The custom-component config name the document writes and the host registers a renderer under. Namespaced by convention (slot:, rc:, or an application domain) so two documents composed together cannot collide.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "widthDp",
+                    "notes": "The bounds the document reserves for host content it cannot measure. A player lays out a custom component from the document, not from the Compose content filling it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "heightDp",
+                    "notes": "See widthDp.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Host content inside a Remote Compose document has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable",
+                "OrderedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Draws the ordinary Compose content in its own slot, which is what a registered renderer draws on a real player too. A preview only draws it if a custom component of this name is registered; an unregistered one is a player support issue rather than silently borrowed content. The code mapping names the registry rather than a composable, because the composable is whatever the host registers under this name.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.background",
+                    "androidx.compose.ui.Modifier",
+                    "androidx.compose.ui.graphics.Brush"
+                ],
+                "symbol": "Modifier.background(Brush.linearGradient)"
+            },
+            "componentId": "shape/linear-gradient",
+            "displayName": "Linear gradient layer",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "startColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "endColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "direction",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The frozen benchmark usage records as vector gradient output.",
+                "status": "verified"
+            },
+            "traits": [
+                "DrawLayer",
+                "OverlayContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "notes": "Must remain a semantic brush layer, not persisted pixel geometry.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.Image",
+                    "androidx.compose.ui.layout.ContentScale"
+                ],
+                "symbol": "Image"
+            },
+            "componentId": "asset/image",
+            "displayName": "Image asset",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "assetKey",
+                    "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}: one of statusSemantics.assetRegistry.keys, or a key pinned in the design's own assets map by PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey} (raw PNG, JPEG, GIF or WebP body) or the ui_builder_put_asset MCP tool. Any other key is refused at commit, so put the picture before inserting the node. A pinned key whose bytes this lane cannot show renders as a placeholder naming it, and exports as Image(painter = ColorPainter(...)) with an ASSET_PLACEHOLDER warning.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "null"
+                    ],
+                    "name": "contentDescription",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "crop",
+                        "fit",
+                        "fillBounds",
+                        "inside"
+                    ],
+                    "jsonType": "string",
+                    "name": "contentScale",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "embedded-raster",
+                "notes": "The recorder embeds the pinned asset bytes, or the project-owned artwork, with source and payload provenance; a key with no bytes behind it is drawn as a vector placeholder rather than declared as a raster fallback.",
+                "status": "raster-fallback-required"
+            },
+            "traits": [
+                "ImageContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Draws the bytes the design's assets map pins under assetKey (content-addressed, hash-checked, stored by the host), the project-owned Jetcaster covers, or a visible placeholder carrying the key. External URLs are not accepted.",
+                "platformSupported": true
+            }
+        }
+    ],
+    "exportCapabilities": {
+        "bundle": false,
+        "composeCode": true,
+        "png": false,
+        "svg": false
+    },
+    "schema": "compose-ui-builder-capabilities/v1-candidate",
+    "statusSemantics": {
+        "adapterStatus": {
+            "planned": "The Compose API is available to Wasm but the catalog authoring adapter is not implemented yet.",
+            "supported": "Implemented by the current candidate document renderer.",
+            "unsupported": "No verified Wasm execution path exists; documents may retain the node but clean render and export must fail visibly."
+        },
+        "assetRegistry": {
+            "$comment": "Every assetKey the catalog itself ships, because these are the assets the canvas draws from its own resources: the two project-owned Jetcaster covers in :ui-builder-artwork, the generated gate-0 cover, and the editor's own insert placeholder. A design extends this set with the keys its assets map pins through the asset lane (PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey}, ui_builder_put_asset; yschimke/compose-preview-server#478). Both reducers refuse any other key at commit (#484).",
+            "keys": [
+                "jetcaster.cover.android-developers-backstage",
+                "jetcaster.cover.google-developers-podcast",
+                "ui-builder.gate0.cover",
+                "editor.placeholder"
+            ]
+        },
+        "colorTokens": {
+            "$comment": "The theme roles a colour property or a background modifier may name, which are the roles the canvas draws. A colour is otherwise a #RRGGBB or #AARRGGBB literal. Mirrored by PropertyValueKinds.CANVAS_COLOR_TOKENS in :ui-builder-export and by the runtime's catalog executor; a test pins the three to this list.",
+            "roles": [
+                "background",
+                "surface",
+                "surfaceContainer",
+                "surfaceContainerLow",
+                "surfaceContainerHigh",
+                "surfaceContainerHighest",
+                "primary",
+                "onPrimary",
+                "tertiary",
+                "onTertiary",
+                "onSurface",
+                "onSurfaceVariant",
+                "outlineVariant",
+                "transparent"
+            ]
+        },
+        "componentMenu": {
+            "$comment": "How the UI builder shelves this catalog in its insert panel. Read by ComponentMenu.from; see ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ComponentMenu.kt. Section names are m3-catalog's own @file:CatalogGroup(section = ...) vocabulary.",
+            "components": {
+                "asset/image": {
+                    "group": "Content"
+                },
+                "layout/box": {
+                    "group": "Layout"
+                },
+                "layout/column": {
+                    "group": "Layout"
+                },
+                "layout/horizontal-carousel": {
+                    "group": "Containment"
+                },
+                "layout/lazy-column": {
+                    "group": "Layout"
+                },
+                "layout/lazy-grid": {
+                    "group": "Layout"
+                },
+                "layout/lazy-row": {
+                    "group": "Layout"
+                },
+                "layout/row": {
+                    "group": "Layout"
+                },
+                "layout/scaffold": {
+                    "group": "Scaffolds"
+                },
+                "layout/supporting-pane-scaffold": {
+                    "group": "Scaffolds"
+                },
+                "m3/button": {
+                    "group": "Actions",
+                    "variantProperty": "style"
+                },
+                "m3/card": {
+                    "group": "Containment",
+                    "variantProperty": "variant"
+                },
+                "m3/center-aligned-top-app-bar": {
+                    "group": "Navigation"
+                },
+                "m3/checkbox": {
+                    "group": "Selection"
+                },
+                "m3/date-picker": {
+                    "group": "Selection",
+                    "variantProperty": "mode"
+                },
+                "m3/dialog": {
+                    "group": "Containment"
+                },
+                "m3/filter-chip": {
+                    "group": "Selection"
+                },
+                "m3/horizontal-divider": {
+                    "group": "Containment"
+                },
+                "m3/horizontal-floating-toolbar": {
+                    "group": "Actions"
+                },
+                "m3/icon": {
+                    "group": "Content"
+                },
+                "m3/icon-button": {
+                    "group": "Actions",
+                    "variantProperty": "variant"
+                },
+                "m3/list-item": {
+                    "group": "Containment"
+                },
+                "m3/primary-tab-row": {
+                    "group": "Navigation"
+                },
+                "m3/progress-indicator": {
+                    "group": "Communication",
+                    "variantProperty": "variant"
+                },
+                "m3/radio-button": {
+                    "group": "Selection"
+                },
+                "m3/search-bar": {
+                    "group": "Navigation"
+                },
+                "m3/search-input-field": {
+                    "group": "Navigation"
+                },
+                "m3/slider": {
+                    "group": "Selection"
+                },
+                "m3/snackbar-host": {
+                    "group": "Communication"
+                },
+                "m3/surface": {
+                    "group": "Layout"
+                },
+                "m3/switch": {
+                    "group": "Selection"
+                },
+                "m3/tab": {
+                    "group": "Navigation"
+                },
+                "m3/text": {
+                    "group": "Content"
+                },
+                "m3/text-field": {
+                    "group": "Text inputs",
+                    "variantProperty": "variant"
+                },
+                "m3/time-picker": {
+                    "group": "Selection",
+                    "variantProperty": "mode"
+                },
+                "remote-compose/custom": {
+                    "group": "Embedded"
+                },
+                "remote-compose/document": {
+                    "group": "Embedded"
+                },
+                "remote-compose/inline": {
+                    "group": "Embedded"
+                },
+                "remote-m3/lottie": {
+                    "group": "Content"
+                },
+                "shape/colour-dot": {
+                    "group": "Styles"
+                },
+                "shape/linear-gradient": {
+                    "group": "Styles"
+                },
+                "shape/radial-gradient": {
+                    "group": "Styles"
+                }
+            },
+            "groupOrder": [
+                "Scaffolds",
+                "Layout",
+                "Navigation",
+                "Actions",
+                "Selection",
+                "Text inputs",
+                "Containment",
+                "Communication",
+                "Content",
+                "Styles",
+                "Embedded"
+            ]
+        },
+        "platform": "remote-compose",
+        "previewSurfaces": {
+            "native": {
+                "backend": "android",
+                "fidelity": "authoritative"
+            }
+        },
+        "svgStatus": {
+            "raster-fallback-required": "The component may export only as a named embedded raster fallback.",
+            "unsupported": "No honest SVG or declared fallback exists; export must fail.",
+            "unverified": "The composite SVG spike has not proved this dynamic component; export remains gated.",
+            "verified": "Proved for this frozen benchmark's authored usage through the pinned same-runtime JVM Skia recorder; this does not verify unused variants or other environments."
+        }
+    }
+}

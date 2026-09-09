@@ -1,5 +1,6 @@
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.tasks.PathSensitivity
 
 plugins {
   alias(libs.plugins.kotlin.jvm)
@@ -89,6 +90,29 @@ tasks.withType<Test>().configureEach {
   providers.gradleProperty("uiBuilderSlotAcceptanceUpdate").orNull?.let {
     systemProperty("uiBuilderSlotAcceptanceUpdate", it)
   }
+  // `SynthesisedCatalogGoldenTest` rewrites the frozen `wear-m3` / `remote-m3` catalogs when asked;
+  // see the class for what a failure means and why reading the diff is the point. A Gradle property
+  // rather than a bare `-D` for the same reason as the line above: `-D` on the command line reaches
+  // the Gradle JVM, not the forked test JVM, and the silent no-op that follows is a confusing half
+  // hour.
+  providers.gradleProperty("uiBuilderGoldens").orNull?.let {
+    systemProperty("ui.builder.goldens", it)
+  }
+  // The committed goldens those two tests READ, declared so their contents are part of this task's
+  // key. They live at the repository root and are opened by path at execution time, so without this
+  // Gradle has no idea they exist: a commit that changes only a golden leaves the task up to date —
+  // or restores it from the build cache, which CI has enabled — and the assertion never runs. A
+  // stale or corrupted golden would then pass `check`, which is the one thing a golden cannot be
+  // allowed to do.
+  inputs
+    .files(
+      rootProject.fileTree("docs/design/fixtures/ui-builder") {
+        include("*-capabilities-v1.json")
+        include("slot-acceptance-v1.json")
+      }
+    )
+    .withPropertyName("uiBuilderGoldenFixtures")
+    .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {

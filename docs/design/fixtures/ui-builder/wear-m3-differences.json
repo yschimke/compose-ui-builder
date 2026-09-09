@@ -1,0 +1,96 @@
+[
+  {
+    "field": "componentMenu.groupOrder",
+    "why": "Deliberate, and the first substantive thing the contract changes rather than moves. The frozen order — Screens, Layout, Lists, Actions, Selection, Containment, Communication, Content, Embedded — is a taxonomy this repository invented for a catalog whose components it has never compiled; 'Lists', 'Content' and 'Embedded' are not words wear-m3-catalog uses about itself. The policy states that catalog's own @file:CatalogGroup(section = ...) vocabulary instead, which is the same vocabulary its published sticker sheet is already organised by, so the builder's insert panel and the catalog's own site stop disagreeing about what a component is filed under. Expect the shelves to move at cutover; that is the change, not a regression.",
+    "policy": [
+      "Layout",
+      "Navigation",
+      "Actions",
+      "Selection",
+      "Text",
+      "Containment",
+      "Communication",
+      "Motion",
+      "Styles",
+      "Horologist"
+    ],
+    "frozen": [
+      "Screens",
+      "Layout",
+      "Lists",
+      "Actions",
+      "Selection",
+      "Containment",
+      "Communication",
+      "Content",
+      "Embedded"
+    ]
+  },
+  {
+    "field": "previewSurfaces",
+    "why": "Prose only, and the load-bearing halves agree exactly: native is authoritative/android and wasm is approximate on both sides. What differs is the `reason` each states, and the catalog's is the one that should survive — the frozen text was written here, about a catalog this repository has never compiled, and says 'drawn by its nearest Material 3 lookalike' where the catalog can say which of its components actually claim an adapter and which fall back to a placeholder. That is a fact only the catalog holds. Pinned rather than waived by field name: both exact values are recorded, so if either side's fidelity or backend ever moves, this entry stops applying and the difference comes back — which is the whole reason previewSurfaces is compared at all rather than carried.",
+    "policy": {
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "The builder's canvas is Compose Multiplatform for Wasm, which cannot link an Android AAR and therefore cannot call Wear Compose Material 3 at all. It draws the screen frame from the measured geometry below, and every component as a placeholder or — where this catalog claims one — through a Material 3 adapter the builder already ships. It is a drawing aid; it is not what a watch shows."
+      },
+      "native": {
+        "fidelity": "authoritative",
+        "backend": "android",
+        "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric: the same lane that produces this catalog's stickers."
+      }
+    },
+    "frozen": {
+      "native": {
+        "backend": "android",
+        "fidelity": "authoritative"
+      },
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an Android AAR, so every Wear component here is drawn by its nearest Material 3 lookalike. Author on it; do not read a size, a colour or a shape off it. The Android preview compiles this design's own generated Kotlin against real Wear Compose."
+      }
+    }
+  },
+  {
+    "field": "platformLabel",
+    "why": "The frozen catalog carries no platformLabel at all — the synthesised Wear catalog was never asked for one, and the builder derives a label from the platform word today. 'Wear' is what the catalog calls itself and what its own published sticker sheet is titled, so it is the string a person recognises. Nothing here can check it; this entry is somebody having read it.",
+    "policy": "Wear",
+    "frozen": null
+  },
+  {
+    "field": "frame.adapter",
+    "why": "The frozen catalog names no adapter: the server picks the Wear frame from `when (catalogSystemId)`, so the fact exists only as a branch and never as data. `frame/round-screen` is the adapter this build already ships and already draws this catalog with, which is what makes the move a transcription rather than a change. Reviewed against the renderer's own Wear branch.",
+    "policy": "frame/round-screen",
+    "frozen": null
+  },
+  {
+    "field": "frame.seedDevice",
+    "why": "The device a new design opens on, which the frozen catalog does not carry because the server picks the Wear frame from `when (catalogSystemId)` and never states a seed. Reviewed against two things that already agree on it rather than against the golden: `id:wearos_small_round` is the FIRST breakpoint in wear-m3-catalog's own `catalog.spec.json` (192dp), which is the documented default for this field, and it is the frame this build already opens a new Wear screen on — `UiBuilderTemplates` seeds the small-round canvas and `WearScreenCodeExporter.WEAR_PARITY_DEVICE` is the same id. So this states existing behaviour rather than choosing anything.",
+    "policy": "id:wearos_small_round",
+    "frozen": null
+  },
+  {
+    "field": "frame.geometry",
+    "why": "The measured contentPadding table, which the frozen catalog does not carry because the server holds these three numbers as transcribed constants in UiBuilderRenderer rather than in the catalog. They are the SAME three pairs, and the catalog's copy is the one written by a test — ScreenScaffoldContentPaddingTest composes a real ScreenScaffold at each round size and asserts the committed file equals its measurement, in both directions. So this is reviewed against a probe rather than against the golden, which is the stronger check of the two and the entire reason the block moved.",
+    "policy": {
+      "contentPadding": [
+        {
+          "screenDp": 192,
+          "horizontalDp": 10,
+          "verticalDp": 20
+        },
+        {
+          "screenDp": 227,
+          "horizontalDp": 12,
+          "verticalDp": 23
+        },
+        {
+          "screenDp": 240,
+          "horizontalDp": 13,
+          "verticalDp": 24
+        }
+      ]
+    },
+    "frozen": null
+  }
+]

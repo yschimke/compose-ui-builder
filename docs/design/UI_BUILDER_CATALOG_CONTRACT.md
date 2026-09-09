@@ -1,11 +1,17 @@
 # The UI builder on a catalog contract
 
-Status: **plan** (2026-09). The successor to
+Status: **plan** (2026-09; sequence revised 2026-09-08). The successor to
 [`UI_BUILDER_ON_THE_COMPONENT_RECORD.md`](UI_BUILDER_ON_THE_COMPONENT_RECORD.md), which generates the
 *components* of a catalog from its record. This document is about everything else a catalog tells
 the builder — its platform, its shelves, its templates, its screen frame, how its screens are written
 and where they are rendered — and about moving that out of this repository's Kotlin and into the
 catalogs that own it.
+
+The 2026-09-08 revision changed two things and no decisions: the phases are ordered so the **catalog
+repositories publish before this repository reads** ([Sequence](#sequence)), and the generator moved
+from the design-artifacts pipeline into the Gradle plugin's discovery task so a builder catalog is
+reachable by every consumer rather than only by a deployment reading a delivery branch
+([One artifact, many builders](#one-artifact-many-builders)).
 
 ## The problem, in one sentence
 
@@ -103,9 +109,11 @@ it synthesises none. Concretely:
 
 1. **The catalog declares itself in one file, `ui-builder.json`**, published beside `catalog.json` and
    `components.json` on the delivery branch and named on `catalog.json` as `uiBuilderFile`, the way
-   `componentsFile` and `tokensFile` are. It is *generated* by the design-artifacts pipeline from three
-   inputs the catalog repository owns: the component record, the cover sheet, and an authored
-   policy file. Nothing in it is typed twice.
+   `componentsFile` and `tokensFile` are. It is *generated* by the Gradle plugin's discovery task from
+   three inputs the catalog repository owns — the component record, the cover sheet, and an authored
+   policy file — and the design-artifacts pipeline publishes it the way it already publishes the
+   record. Nothing in it is typed twice, and the same file reaches a local
+   `compose-preview-server ui` with no delivery branch involved.
 2. **A platform is a word, not an enum.** Compatibility is declared equality: a pack lands in a
    catalog whose `platform` matches its own; the chooser groups by the word and labels the group with
    the catalog's own `platformLabel`. `UiBuilderCatalogPlatform` becomes a value class over a string
@@ -152,7 +160,9 @@ catalog repo        ui-builder.policy.json   authored: what no signature can say
                     @CatalogComponent…       the inventory (exists)
                     a Robolectric probe      measured frame geometry → written into the policy
         │
-        ▼  ./gradlew composePreviewDiscover + design-artifacts pipeline   (compose-ai-tools, layer 1)
+        ▼  ./gradlew composePreviewDiscover                               (compose-ai-tools, layer 1)
+        │      writes build/compose-previews/ui-builder.json — also what `ui` reads locally
+        ▼  design-artifacts pipeline: publish + stamp uiBuilderFile
         │
 delivery branch     catalog.json             + "uiBuilderFile": "ui-builder.json"
                     components.json          the record (exists)
@@ -257,16 +267,17 @@ Three rules keep this from becoming a second hand-written catalog:
   asserts the committed file equals its measurement, the way this repository's goldens work, so the
   numbers cannot be edited by hand without the test saying so.
 
-### `ui-builder.json` — what the pipeline generates
+### `ui-builder.json` — what the generator produces
 
-The full `CatalogCapabilityV1` the runtime loads today, produced by one function in the
-design-artifacts pipeline from the three inputs, with the generation rules of
+The full `CatalogCapabilityV1` the runtime loads today, produced by one function in the Gradle
+plugin's discovery task from the three inputs, with the generation rules of
 `UI_BUILDER_ON_THE_COMPONENT_RECORD.md` §1 (parameter roles, `jsonType` from the Kotlin type,
 `allowedValues` from enum constants, `code.symbol`/`code.imports` from the record's callable) and the
 policy layered on top. `ComponentRecordPacks.derive` in this repository is the existing prototype of
-that function for the no-policy case; it moves upstream into the pipeline, where the catalog is
-built, and this repository keeps only the pack case that has to run at server startup against a
-record with no policy.
+that function for the no-policy case; it moves upstream into discovery, where the catalog is built
+and where a local `compose-preview-server ui` can reach it without a delivery branch, and this
+repository keeps only the pack case that has to run at server startup against a record with no
+policy.
 
 Until compose-preview-contracts can carry the fields, `platform`, `previewSurfaces`, `componentMenu`,
 `frame`, `code` and `templates` ride in `statusSemantics` exactly as the first three do now. Moving
@@ -281,7 +292,55 @@ startup fact and catalogs load for minutes. `ProductionUiBuilderRuntime` takes a
 `List<CatalogCapabilityV1>` and validates them; it constructs none. The runtime's authoring
 allowlist stays exactly `--ui-builder-catalogs` — operator policy, per §4 of the component-record
 plan — and a catalog on the allowlist that publishes no `ui-builder.json` is refused by name at
-startup, with the packaged `m3-catalog` as the one exception the fallback exists for.
+startup, with the packaged `m3-catalog` as the one exception the fallback exists for. That refusal
+is the *end* state; through the cutover a catalog with no published file falls back to the frozen
+golden and a startup line says which source it came from, so the migration is reversible per
+catalog.
+
+### One artifact, many builders
+
+`components.json` was designed for one reader and has four, and `ui-builder.json` will have the
+same four from the day it exists. Naming them changes what the file may contain and where it has to
+be generated:
+
+| Consumer | How it reaches the file | Which build reads it |
+| --- | --- | --- |
+| the deployed server | `ServeCatalogStore` fetches the delivery branch | whatever the deployment is pinned to |
+| a `serve` on a laptop, against the same branch | the same fetch | usually older than the deployment |
+| `compose-preview-server ui`, against a local Gradle project | the module's own build output, the way [`LocalUiBuilder.publishRecord`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/LocalUiBuilder.kt) already copies `build/compose-previews/components.json` | whatever `brew` or the wrapper last installed |
+| the VS Code extension, an agent over MCP | through one of the above | not its own |
+
+A catalog repository publishes **once**; every one of those reads the same bytes, and none of them
+can be asked to upgrade first. Four rules follow, and they are the reason this section exists rather
+than being left implicit:
+
+1. **The file is a claim, not an instruction.** A reader takes the fields it understands, ignores
+   the ones it does not, and never fails a load over an unknown key — the catalog is published by a
+   pipeline that will run ahead of the oldest builder reading it, permanently. `schema` is there to
+   refuse a *future major*, not to pin a minor.
+2. **Adapters and template roles are negotiated, never required.** A catalog naming
+   `frame/round-screen` on a build that ships no such adapter gets the placeholder and a startup line
+   naming the adapter and the catalog — the rule already written for the canvas below, restated here
+   because the multi-consumer case is what makes it load-bearing rather than tidy. A structural
+   template naming a role the engine does not know refuses *that export*, with the role in the
+   message; it does not cost the catalog its palette. The failure a builder must never produce is
+   "this catalog does not load", because the operator of that builder cannot fix it.
+3. **The generator belongs in the Gradle plugin, and the pipeline only publishes.** The original
+   sketch put `generate-ui-builder-catalog.mjs` in the design-artifacts workflow, which is a lane
+   that exists only in CI and only for a catalog with a delivery branch. `compose-preview-server ui`
+   has neither, and it is the consumer that most wants the file: pointed at wear-m3-catalog's
+   `:catalog` module, it should offer that module's own components, frame and templates rather than
+   the packaged Material 3 palette it falls back to today. So `ui-builder.json` is written by the
+   same discovery task that writes `components.json`, into `build/compose-previews/`, from the same
+   scan plus `ui-builder.policy.json` and `catalog.spec.json` in the checkout; the pipeline's job is
+   the one `catalog-component-record.mjs` already does for the record — copy it to the branch root
+   and stamp `uiBuilderFile` on the manifest. One generator, two lanes, and the local lane is not a
+   reimplementation that can disagree.
+4. **The revision, not the version, is the compatibility unit.** A design pins a catalog revision
+   ([`UI_BUILDER_PROJECT_DESIGNS.md`](UI_BUILDER_PROJECT_DESIGNS.md)); two builders resolving that
+   revision must read the same bytes, which is true for the delivery branch and is *not* true for a
+   local build output. A locally generated builder catalog is therefore unpinned by construction and
+   says so — the same status a locally discovered component record already carries.
 
 ## The hard parts, stated honestly
 
@@ -364,100 +423,329 @@ ids — is the one place the *export* names that catalog, and it becomes the `va
 
 ## Sequence
 
-Each phase is releasable on its own and leaves every catalog working. The proof at the end is
-mechanical: **a fourth catalog reaches the builder by publishing files, with no change to this
-repository.**
+**The catalogs get ready first; this repository cuts over once they are.** A catalog repository can
+publish a builder catalog that nothing reads yet, and that file can be proved byte-equal to what the
+server synthesises today *before* a single reader here changes. So the risky half — the platform
+word, the emitter routing, the canvas mapping, the loader — is written last, against files that
+already exist, rather than first, against a contract that is still only this document.
 
-### Phase 0 — this repository: load, don't synthesise (no behaviour change)
+That inverts the order this plan was originally written in, where phase 0 rewired every reader here
+to load-instead-of-synthesise and the catalogs followed. Both orders end in the same place; this one
+is reversible for longer. At the end of phase 3 the catalogs publish, nothing consumes it, and
+abandoning the plan costs two policy files. Under the old order the same point was reached with
+every reader in the builder already rewritten.
+
+One thing must still happen here first, and it is small: the **freeze**. wear-m3-catalog cannot
+reduce its policy from a description that exists only as Kotlin in this repository, and the
+equivalence gate needs something to compare against.
+
+Each phase is releasable on its own and leaves every catalog working.
+
+### Phase 0 — this repository: freeze what is synthesised, change no reader
 
 1. **Freeze the synthesised catalogs as JSON.** A test writes `wearM3Catalog(base)` and
    `remoteM3Catalog(base)` to `docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json` and
-   `remote-m3-capabilities-v1.json` and asserts the checked-in files match. The runtime loads all
-   three from resources. The Kotlin generators stay only as the thing the goldens are checked
-   against, and are deleted in phase 4. `WearM3ScreenCatalogTest` and `WearWidgetContainerCatalogTest`
-   read the JSON.
-2. **Platform becomes a word.** `UiBuilderCatalogPlatform(wireValue, label)` over a string;
-   `label` read from `statusSemantics.platformLabel` with the three known words as fallback labels
-   for one release. The chooser's `when` in `Main.kt:1529-1620` becomes: group the enabled catalogs
-   by platform word, label each group by its catalogs' label, list each catalog's declared
-   templates. `--ui-builder-packs` validates the word against the enabled catalogs.
-3. **Templates become documents.** `wearScreenUiBuilderDocument`, the widget samples and the blank
-   seeds are serialised to `ui-builder/designs/*.json` fixtures with a `template` marker and the
-   seed device in `environment`; `UiBuilderNewDesignSeed` looks a template up by id in the
-   catalog's declared list. The Kotlin builders become the golden generators, then go.
-4. **The emitter is chosen by declaration.** `RecordFreeExport` routes by
-   `statusSemantics.code.strategy` (`record` | `templates`) rather than by root component id; the
-   Wear and widget emitters register under `templates` with their catalog's id for now.
-5. **The canvas reads a mapping.** `wearScreenStandIn`, the `WEAR_NATIVE_ONLY` set, the root
-   alignment rule and the frame choice become lookups on `statusSemantics.components[id].canvas` and
-   `statusSemantics.frame`; the geometry constants move into the frozen `wear-m3` JSON. The adapter
-   registry is the existing `when`, keyed by adapter id instead of component id.
-   `WearCanvasStandInTest` pins that the frozen JSON names exactly three `material3/*` stand-ins.
-6. **A grep gate.** `.github/scripts/ui-builder-catalog-literals.sh` fails a pull request that
-   introduces `wear-m3`, `remote-m3` or `wear-m3-catalog` into main sources of `:ui-builder`,
-   `:ui-builder-export`, `:ui-builder-runtime` or `:server` outside an allowlist that shrinks every
-   phase and is empty at phase 4. The same shape as `ui-builder-project-boundary.sh`, for the same
-   reason: an undrawn line rots.
+   `remote-m3-capabilities-v1.json` and asserts the checked-in files match. **The runtime keeps
+   constructing them** — this is the one change from the original phase 0, and it is what makes the
+   phase free: no loader, no fallback, no rollback. The goldens exist to be read by people and by
+   the equivalence gate.
+2. **The equivalence gate**, `.github/scripts/ui-builder-equivalence.sh`: fetch a catalog's published
+   `ui-builder.json` from its delivery branch, normalise both sides (key order, formatting, and a
+   checked-in list of reviewed differences), diff it against the frozen golden, and report. It lives
+   here because the golden lives here, and because "is wear-m3-catalog ready?" is a question this
+   repository has to answer before it deletes anything. Non-blocking until phase 4: a catalog that
+   publishes nothing reports "not yet", not red.
 
-### Phase 1 — compose-ai-tools: the pipeline publishes a builder catalog
+   Under `--strict` — what the cutover PR turns on — seven things fail: an unaccepted difference, a
+   fact the frozen catalog states that the catalog is silent about, **a fact the catalog states that
+   the frozen one cannot check**, a stale exemption, a missing policy file, **a policy that is not
+   this catalog's**, and a schema this gate cannot vouch for.
 
-7. **Annotation, schema and generator.** `@BuilderComponent` in `preview-annotations`, read by
-   `PreviewDiscovery` into the record's authored fields; `scripts/design-artifacts/ui-builder.policy.schema.json`;
-   `generate-ui-builder-catalog.mjs` (record + cover sheet + policy → `ui-builder.json`), wired into
-   the reusable design-artifacts workflow beside `catalog-component-record.mjs`; `catalog.json`
-   gains `uiBuilderFile`. The generation rules are the record plan's, and `ComponentRecordPacks`'s
-   exclusion reasons are the no-annotation default. The catalog repositories change nothing for
-   this step: the reusable workflow is theirs by `uses:`, and a catalog with no policy publishes no
-   builder file.
-8. **The structural template engine**, in `screen/generator` beside `ScreenGenerator`, so the browser
+   The third is the mirror of the second and was informational for too long: `platformLabel`,
+   `frame.adapter`, `frame.seedDevice`, `frame.geometry`, `code` and `templates` are absent from
+   every frozen catalog — the server holds them as `when (catalogSystemId)` branches and transcribed
+   constants rather than as data — and phase 4 *consumes* all of them. An arbitrary label or a wrong
+   padding table would have reached the cutover with the gate reporting ready. They are accepted per
+   catalog with `"frozen": null`, which is somebody recording that they read a value nothing here
+   can check; wear-m3's geometry is reviewed against its own Robolectric probe, which is a stronger
+   check than the golden could have been, and both seed devices against the frame this build already
+   opens a new design on.
+
+   **Read that table as a checklist.** Seven fields have now been added to this comparison one review
+   round at a time — `previewSurfaces`, `code`, `templates`, `frame.seedDevice`,
+   `componentMenu.components`, `componentPacks` and `assetRegistry.keys` — every one of them a fact
+   a surface reads that nothing was comparing.
+
+   Two of them are compared as **sets** rather than as arrays: `colorTokens.roles` and
+   `assetRegistry.keys` are read by one `declaredStrings` helper in both the runtime and the export,
+   and it returns a `Set<String>`, so a reordering no consumer can observe must not block a cutover.
+   And `assetRegistry.keys` is compared only when the *catalog* states one: the frozen registry
+   holds the packaged catalog's artwork and the editor's own insert placeholder, so treating a
+   catalog's silence as a gap would demand it declare the builder's assets — and a gap cannot be
+   waived, which would have left all three catalogs permanently not-ready with no route through. No frozen catalog carries a
+   `componentPacks` and the generator emits none, so that last one is silent today; a field that
+   cannot differ is cheapest to fix while nothing states it and dearest once something does.
+
+   The last three of the six were added late, and the reason is worth keeping: a field left out of
+   the comparison **cannot differ**, so `code`, `templates` and `frame.seedDevice` were carried past
+   the gate unread while the platform word and the shelf order agreed. `componentMenu.components`
+   arrived the same way and for the same reason: `groupOrder` names the sections, and only the
+   sections were compared, so a generated catalog could move every component to a different shelf or
+   drop every `variantProperty` and still report ready — the insert panel at cutover bearing no
+   resemblance to the frozen one while the headings matched. It is compared as a **subset**, in both directions: the
+   frozen catalog's menu also carries the builder's own components (`asset/image`, `layout/box`,
+   `remote-compose/*`), so what is checked is the entries whose id carries the catalog's
+   `componentIdPrefix` — each stated entry against the frozen one, *and* each frozen one against the
+   catalog's. Sweeping only the catalog's keys caught a shelf that moved and not one that vanished,
+   so a generated menu omitting a component — an empty map included — reached no comparison at all
+   and passed while that component lost its shelf and its variant control. Which ids are the catalog's is asserted by the caller with
+   `--component-id-prefix`, exactly as its identity is asserted with `--catalog-id` and for the same
+   reason: corroborating the document's own prefix against the golden proves it matches *something*,
+   not that it is this catalog's. The remote-m3 golden carries both `m3/…` (the packaged Material 3
+   catalog's) and a single `remote-m3/…` of its own, so a generated Remote catalog declaring `m3/`
+   named a real, corroborated prefix, reproduced those entries, dropped its own component and
+   passed. `--strict` requires the assertion wherever the frozen catalog has a per-component menu
+   for it to scope. The document's own prefix is read from the
+   **published** `componentIdPrefix` and never derived from the catalog id — m3-catalog's components
+   are `m3/…` while its id is `m3-catalog`, so a derived prefix would match none of its 25 frozen
+   entries and disable the sweep as surely as a wrong one. A prefix the frozen catalog has never
+   heard of blocks, as does one that disagrees with the caller's. A capability document publishes
+   none at all — its builtins are materialised in — which is what `--component-id-prefix` supplies.
+   A missing entry is a
+   difference rather than a gap, and reviewable: the catalog publishes a menu and that menu does not
+   list the id, which is an assertion that the component is gone, not the silence of a catalog that
+   has not been written yet. An authored policy states none of them — a component's shelf comes from
+   its `@CatalogGroup`, not from the policy — so this asks nothing of the three catalogs today and
+   everything of the generated files they will publish. That is the same omission
+   `previewSurfaces` was fixed for. What the gate does *not* do is validate them — whether
+   `code.strategy` names a strategy that exists, or a `templates` path resolves to a document, is
+   compose-ai-tools' `validate-ui-builder-policy.mjs` and a second implementation here would
+   disagree with the real one exactly where it matters.
+
+   A builtin the frozen catalog carries no component for lands on that same path, as
+   `builtins.<id>` — one field per builtin. It used to be counted straight into the difference
+   total, outside the model, so it could not be waived at all: the failure told the reader to record
+   the decision in `--differences` and the sweep for waivers naming no compared field then reported
+   that entry a second time. Per id rather than one entry for the set, because a catalog that
+   deliberately adds one builtin has reviewed *that* builtin.
+
+   Two of the seven read wider than their names suggest. "A policy that is not this catalog's" also
+   covers a document that names **two** catalogs: a capability document is identified by
+   `benchmark.catalogSystemId` while carrying `catalog.id` as ordinary payload, so reading the
+   identifiers in a fixed order rather than by shape let the payload shadow the identity and the
+   gate approve the wrong catalog. "A schema this gate cannot vouch for" also covers a **known
+   family on the wrong shape**: the shape is detected structurally, so an authored policy labelled
+   `compose-ui-builder-catalog/v1` was read as a policy and compared field by field. A document
+   whose label and whose contents disagree has one of the two wrong, and which one is not for this
+   gate to guess. `--catalog-id` states which catalog
+   the caller MEANT, and is checked against the golden's id and the policy's alike — so asking for
+   one catalog while holding another's policy *and* its matching golden fails, which no comparison
+   of those two files against each other can catch. Required for a catalog whose policy defaults its
+   id from the cover sheet (`:remote-catalog` and m3-catalog both do; wear-m3-catalog declares
+   `catalogId` because its builder id and its delivery system differ), and worth passing always.
+   Semantics never identify a catalog: a second `wear` catalog can agree on every compared field, so
+   without an id the gate cannot tell "ready" from "you fetched the wrong file". The three
+   invocations that pass today:
+
+   ```
+   .github/scripts/ui-builder-equivalence.sh --strict \
+     --policy <wear-m3-catalog>/ui-builder.policy.json \
+     --golden docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json \
+     --differences docs/design/fixtures/ui-builder/wear-m3-differences.json --catalog-id wear-m3
+   # …/remote-catalog/ui-builder.policy.json  → remote-m3
+   # <m3-catalog>/ui-builder.policy.json      → m3-catalog
+   ```
+
+Everything else that was phase 0 — the platform word, the emitter routing, the canvas mapping, the
+loader — is now phase 4.
+
+**Freezing the seed documents is NOT phase 0**, and the earlier draft of this list was wrong to put
+it here. `UiBuilderNewDesignSeed` builds the Wear screen, the widget samples and the blank seeds in
+Kotlin, and serialising them to `ui-builder/designs/*.json` with a `template` marker is the same
+kind of freeze as step 1 — but it freezes a different artifact for a different consumer, and phase 0
+delivers neither the fixtures nor the assertions. Saying otherwise made phase 0 look complete while
+one of its three steps had not been done.
+
+It belongs immediately before a catalog authors its first `templates` entry, which is a real
+dependency rather than a preference: a catalog repository is told to *copy* these documents, and
+without a frozen reference there is nothing for phase 2 or 3 to be checked against — the same
+argument that put the catalog goldens in phase 0. Neither wear-m3-catalog nor m3-catalog declares a
+template today (both policies carry a `$comment_templates` saying the seeds are still Kotlin here),
+so nothing is blocked by the ordering; what was blocked was the claim.
+
+Sequenced as **phase 3a**, below.
+
+### Phase 1 — compose-ai-tools: a catalog *can* publish a builder catalog
+
+4. **The annotation.** `@BuilderComponent` in `preview-annotations`, read by `PreviewDiscovery` into
+   the record's authored fields, beside `@CatalogComponent`'s existing ClassGraph scan. Ships in the
+   train both catalog repositories are moved onto.
+5. **The schema and the generator.** `ui-builder.policy.schema.json`, and the generator **in the
+   Gradle plugin's discovery task**, writing `build/compose-previews/ui-builder.json` beside
+   `components.json` from the same scan plus the checkout's `ui-builder.policy.json` and
+   `catalog.spec.json`. The design-artifacts pipeline copies it to the branch root and stamps
+   `uiBuilderFile` on `catalog.json`, exactly as `catalog-component-record.mjs` already does for the
+   record — see [One artifact, many builders](#one-artifact-many-builders) for why the generator is
+   not in the pipeline. A catalog with no policy file publishes no builder file, so the catalog
+   repositories change nothing for this step.
+6. **The structural template engine**, in `screen/generator` beside `ScreenGenerator`, so the browser
    and the server share it the way they share the call-site printer. Proven by a functional test that
    renders the frozen `wear-m3` templates over the `wear-list` document and compiles the result
    against real Wear Compose — `samples/design-catalog-wear-m3` already compiles that exact output.
-9. **Contracts.** `platform`, `platformLabel`, `previewSurfaces`, `frame`, `code` and `templates` as
+7. **Contracts.** `platform`, `platformLabel`, `previewSurfaces`, `frame`, `code` and `templates` as
    typed fields on `CatalogCapabilityV1` in compose-preview-contracts, with `statusSemantics` read as
-   the fallback for one contracts major. Not a prerequisite for phases 2–4.
+   the fallback for one contracts major. Not a prerequisite for anything below.
 
-### Phase 2 — wear-m3-catalog: the Wear and Remote Compose catalogs come home
+### Phase 2 — wear-m3-catalog: the Wear and Remote Compose catalogs describe themselves
 
-10. `@BuilderComponent` on the `:catalog` stickers and `ui-builder.policy.json` beside the cover
-    sheet (`wear`) — the frozen `wear-m3` JSON of phase 0 is the starting point, reduced to what the
-    record cannot say. Shelves come from `@CatalogGroup` sections already; what is authored is the
-    frame, the stand-in mapping, the structural templates, starter content, controlled-state
-    declarations and slot policy. Both catalogs also bump to one compose-ai-tools train first:
-    m3-catalog is on 1.85.0 and wear-m3-catalog on 2.0.0, and the annotation ships in one of them.
-11. `ScreenScaffoldContentPaddingTest` writes the `frame.geometry` block and asserts the committed
-    policy matches. The canvas here stops carrying the numbers.
-12. `ui-builder.policy.json` for `:remote-catalog` (`remote-compose`): the widget host frame, the
+Nothing here reads the result yet. The output of the phase is a green equivalence gate.
+
+8. `@BuilderComponent` on the `:catalog` stickers and `ui-builder.policy.json` beside the cover
+   sheet (`wear`) — the frozen `wear-m3` golden of phase 0 is the starting point, reduced to what
+   the record cannot say. Shelves come from `@CatalogGroup` sections already; what is authored is
+   the frame, the stand-in mapping, the structural templates, starter content, controlled-state
+   declarations and slot policy. Both catalogs bump to one compose-ai-tools train first: m3-catalog
+   is on 1.85.0 and wear-m3-catalog on 2.0.0, and the annotation ships in one of them.
+9. `ScreenScaffoldContentPaddingTest` writes the `frame.geometry` block and asserts the committed
+   policy matches. The canvas here still carries its own copy; phase 4 deletes it.
+10. `ui-builder.policy.json` for `:remote-catalog` (`remote-compose`): the widget host frame, the
     reviewed subset, the Lottie element, the creation-DSL templates.
-13. A round-trip test in that repository: every template design → `ui-builder.json` → generated
+11. A round-trip test in that repository: every template design → `ui-builder.json` → generated
     Kotlin → compiles against the module's own classpath → renders on Robolectric. It consumes the
     published `ui-builder-export` and `screen-model` coordinates, which the layer rule allows (a leaf
-    depends down). `samples/design-catalog-wear-m3` in compose-ai-tools becomes redundant and is
-    retired.
+    depends down).
+12. **Readiness:** the equivalence gate is green for `wear-m3` and `remote-m3` — the generated file
+    equals the frozen golden modulo a reviewed difference list checked in beside it. That list is
+    the deliverable of the phase as much as the policy is: every entry is a decision someone made
+    about a discrepancy, and an empty list is the ideal rather than the requirement.
 
 ### Phase 3 — m3-catalog: the served Material 3 catalog describes itself
 
-14. `@BuilderComponent` on the `:catalog` stickers and `ui-builder.policy.json` (`mobile`): the
-    variant table, editor bounds and colour suggestions from
-    `CapabilityCatalogParser.EDITOR_OVERRIDES`, starter content, `frame/rect` with
-    `seedDevice: id:pixel_6`, and the three non-composable builtins (`shape/*`, `asset/image`)
-    declared as such. The generated `ui-builder.json` is diffed against the packaged Jetcaster catalog once,
-    as the record plan's phase 2 asks, and the differences are reviewed rather than reconciled.
-15. The deployed `m3-catalog` switches to the published file; the packaged JSON stays as the
-    standalone fallback under its compatibility name.
+13. `@BuilderComponent` on the `:catalog` stickers and `ui-builder.policy.json` (`mobile`): the
+    variant table, editor bounds and colour suggestions from `CapabilityCatalogParser.EDITOR_OVERRIDES`,
+    starter content, `frame/rect` with `seedDevice: id:pixel_6`, and the three non-composable
+    builtins (`shape/*`, `asset/image`) declared as such.
+14. The equivalence gate for `m3-catalog` compares against the *packaged Jetcaster* catalog, which
+    is a different kind of comparison: the two describe different component sets on purpose
+    (fifty-nine rendered components against twenty-five transcribed ones), so here the reviewed
+    difference list is the point and a byte-equal result would be the surprising outcome. The record
+    plan's phase 2 asks for exactly this diff; the gate is where it gets written down.
 
-### Phase 4 — this repository: delete
+### Phase 3a — this repository: freeze the seed documents
 
-16. `wearM3Catalog`, `remoteM3Catalog`, `wearComponentMenu`, `wearNativeOnlyComponents`,
+Only needed before a catalog authors its first `templates` entry, and no catalog does yet. Listed as
+its own step because it was previously miscounted as part of phase 0, which made that phase look
+finished while this was not done.
+
+15. **Templates become documents.** `UiBuilderNewDesignSeed`'s Wear screen, the widget samples and
+    the blank seeds are serialised to `ui-builder/designs/*.json` fixtures — one per
+    `templateIds(catalog)` entry, per catalog — with a `template` marker and the seed device in
+    `environment`, and a golden test asserts the Kotlin builders still produce them. The same
+    `-PuiBuilderGoldens=write` mechanism and the same input declaration as the catalog goldens, for
+    the same reason: a golden the build can skip reading is not a golden.
+16. `UiBuilderNewDesignSeed` keeps reading the Kotlin. The documents are what a catalog repository
+    copies onto its delivery branch and names in `templates`, and what the gate can then check a
+    catalog's copies against — without a frozen reference, "did wear-m3-catalog reproduce the seed?"
+    has no answer, which is the argument that put the catalog goldens in phase 0.
+
+### Phase 4 — this repository: read the published file
+
+Everything deferred from the original phase 0, now written against three files that exist and are
+proven equivalent:
+
+15. **Platform becomes a word.** `UiBuilderCatalogPlatform(wireValue, label)` over a string; `label`
+    from `statusSemantics.platformLabel` with the three known words as fallback labels for one
+    release. The chooser groups the enabled catalogs by platform word and labels each group by its
+    catalogs' label. `--ui-builder-packs` validates the word against the enabled catalogs.
+16. **The emitter is chosen by declaration.** `RecordFreeExport` routes by
+    `statusSemantics.code.strategy` (`record` | `templates`) rather than by root component id.
+17. **The canvas reads a mapping.** `wearScreenStandIn`, the `WEAR_NATIVE_ONLY` set, the root
+    alignment rule and the frame choice become lookups on `statusSemantics.components[id].canvas`
+    and `statusSemantics.frame`. The adapter registry is the existing `when`, keyed by adapter id
+    instead of component id, and an adapter this build lacks draws a placeholder and logs.
+18. **The loader.** `ServeCatalogStore` stages `ui-builder.json` ahead of the load;
+    `ProductionUiBuilderRuntime` takes a `List<CatalogCapabilityV1>` and constructs none. The
+    cutover is **per catalog and reversible**: a published file is preferred, the synthesised
+    catalog is the fallback, and a startup line says which one each catalog came from. The frozen
+    goldens of phase 0 serve the same catalog with no reachable branch **for the duration of the
+    cutover only** — they go with the synthesisers in phase 5, and from there the packaged
+    `m3-catalog` is the one offline catalog (§ *A builder catalog is a served catalog*, item 7) and
+    an unreachable branch refuses that catalog by name rather than serving a stale copy of it.
+19. **`compose-preview-server ui` publishes the local file.** The lane that copies
+    `build/compose-previews/components.json` also copies `ui-builder.json` when discovery wrote one,
+    and the local project becomes a builder catalog rather than a record hanging off a packaged
+    palette. This is the consumer that pays for the contract most visibly, and it needs no delivery
+    branch at all.
+
+    Two things about that lane are *not* free, and are written down here because both are easy to
+    discover only after implementing the easy half:
+
+    - **The catalog is chosen before the module is known.** `commandLane` resolves
+      `LocalUiBuilder.catalog(args)` and builds the whole `serve` argument list up front, because
+      options are constructed before any Gradle work runs; the discovery callback can only fill in a
+      path that was *pre-declared*, which is exactly the trick `--ui-builder-components` and the
+      temporary `components.json` already use. A pre-declared path is not enough for a catalog,
+      because the enabled catalog's **id** is also fixed up front and is not knowable from a file
+      that does not exist yet. The way out is that `ui-builder.policy.json` is committed source: it
+      is in the checkout before anything is built, so `ui` can read `catalogId` (or the cover
+      sheet's `system`) from it at startup, enable *that* id, and pre-declare the path discovery
+      will fill. Without this step, `ui` pointed at wear-m3-catalog still opens packaged Material 3
+      and looks like the feature landed.
+    - **A template design is a second file, and there is no branch to fetch it from.** A policy's
+      `templates` are branch-relative paths (`ui-builder/designs/wear-list.json`); locally there is
+      no delivery branch and no `--ui-builder-designs` source, so a catalog whose New-design chooser
+      offers templates would load and then fail to open any of them. Either `ui` stages the
+      referenced documents beside the record in the same per-invocation directory, or — better, and
+      the option this plan prefers — the generator **inlines template documents into
+      `ui-builder.json` when it writes the local copy**, which makes the artifact self-contained and
+      is the same property [One artifact, many builders](#one-artifact-many-builders) asks of it
+      everywhere else.
+20. **The grep gate.** `.github/scripts/ui-builder-catalog-literals.sh` fails a pull request that
+    introduces `wear-m3`, `remote-m3` or `wear-m3-catalog` into main sources of `:ui-builder`,
+    `:ui-builder-export`, `:ui-builder-runtime` or `:server` outside an allowlist that shrinks every
+    step and is empty at phase 5. The same shape as `ui-builder-project-boundary.sh`, for the same
+    reason: an undrawn line rots.
+
+### Phase 5 — this repository: delete
+
+21. `wearM3Catalog`, `remoteM3Catalog`, `wearComponentMenu`, `wearNativeOnlyComponents`,
     `WearScreenCodeExporter`, `WearWidgetCodeExporter`'s structural half, the Wear entries in
-    `StarterContent`, the Wear constants in `UiBuilderRenderer`, the frozen fixtures, and
-    `--ui-builder-native-catalog` as a required flag. The entrypoint's `SERVE_UI_BUILDER_CATALOGS`
-    default stays as the allowlist.
-17. The grep gate's allowlist is empty.
-18. **The proof.** A fourth catalog — Confetti's Wear module, or a TV catalog under `platform: "tv"`
-    with `frame/rect` — publishes a policy and appears in the chooser under its own label, with its
-    own templates, exporting and rendering natively, against a server binary that has never heard of
-    it. That is the acceptance test for the whole plan, and it is a deployment, not a unit test.
+    `StarterContent`, the Wear constants in `UiBuilderRenderer`, the frozen fixtures, the
+    equivalence gate they existed for, and `--ui-builder-native-catalog` as a required flag. The
+    entrypoint's `SERVE_UI_BUILDER_CATALOGS` default stays as the allowlist.
+22. The grep gate's allowlist is empty.
+23. **The proof: Material 4 arrives without a release of this repository.** A `material4-catalog`
+    publishes a policy and appears in the chooser, is drawn on, exports, and renders natively,
+    against a server binary that has never heard of it. It is a deployment, not a unit test, and
+    its cheaper twin is available from phase 4: the same catalog opened locally with
+    `compose-preview-server ui`, against a binary that has never heard of it either.
+
+    Material 4 rather than a TV catalog on purpose. A new *platform* exercises the one cost this
+    plan accepts — a frame adapter here, once — and so proves the least interesting thing. Material 4
+    shares `mobile` and `frame/rect`, needs no adapter, and lands squarely on every hardcoded
+    Material 3 fact instead:
+
+    - **Two catalogs under one platform word.** `m3-catalog` and `material4-catalog` are both
+      `mobile`, both in the chooser's Mobile group, each with its own label and its own templates.
+      Today's `when (catalogSystemId)` cannot express that at all: the chooser's three branches
+      *are* the three catalogs.
+    - **A variant table that is not Material 3's.** The sixteen
+      `m3-catalog/androidx.compose.material3.…` literals in `ScreenDocumentProjection` are the only
+      place the export names a catalog, and a Material 4 button's variants are not among them.
+    - **Starter content, colour roles and editor bounds that are not Material 3's.** Every one is a
+      `StarterContent` entry or a `CapabilityCatalogParser.EDITOR_OVERRIDES` row today.
+    - **Canvas adapters this build does not ship.** A Material 4 catalog would name `material4/*`,
+      and drawing it through `material3/*` would be a lookalike of an upstream nobody here
+      compiles — the thing the never-fake rule forbids. So it draws in placeholders, and **the
+      acceptance is that it is usable and honest that way**: the palette, the tree, the properties,
+      the export and the native render all work while the canvas says "not drawn here". A builder
+      that instead refuses the catalog, or silently draws it as Material 3, has failed this test
+      even though every file loaded.
+
+    The last bullet is the one to watch, because it is the tempting failure. "Material 4 works" must
+    not come to mean "we added `material4/*` adapters", which is a release of this repository per
+    catalog — precisely what the plan exists to end. Adapters are welcome afterwards, on their own
+    merits, and only afterwards.
 
 ## Success criteria
 
@@ -466,9 +754,13 @@ repository.**
 - A catalog's frame geometry lives beside the test that measures it, and nowhere else.
 - The New design chooser, the palette, the Code pane, the export and the native lane read one file
   per catalog, and that file is generated from inputs the catalog repository owns.
-- The three existing catalogs render, export and round-trip byte-identically across phase 0 and
-  within a dp across phases 2–3 (the geometry is the same numbers, moved).
+- The three existing catalogs render, export and round-trip byte-identically across the cutover, and
+  within a dp once the geometry is read from the catalog rather than compiled in (the same numbers,
+  moved). The equivalence gate is what says so, per catalog, before any of it is deleted.
 - Adding a platform costs at most one frame adapter here; adding a catalog costs nothing here.
+- **Material 4 is the test of that sentence.** A second `mobile` catalog, with its own ids,
+  variants, starter content and colour roles, reaches a person through a server binary released
+  before it existed — drawn in placeholders where this build has no adapter for it, and usable.
 
 ## What this deliberately does not do
 
@@ -495,9 +787,9 @@ repository.**
   republishes reads `rev2`. The pin exists; what does not exist is retention of old generations for
   the builder file, the same gap `ComponentRecordSource` records for the record. Out of scope here,
   named so it is not discovered.
-- **Two contract versions.** compose-ai-tools pins contracts 2.5.0 and this repository 2.9.0. Phase
-  9 lands in contracts first and both consumers bump; until then `statusSemantics` carries the
-  fields, which is why phase 9 is not on the critical path.
+- **Two contract versions.** compose-ai-tools pins contracts 2.5.0 and this repository 2.9.0. The contracts
+  step lands in contracts first and both consumers bump; until then `statusSemantics` carries the
+  fields, which is why it is not on the critical path.
 - **The `remote-m3` id.** The builder's `remote-m3` and wear-m3-catalog's published `remote-m3` are
   the same id by convention today; under this plan they are the same catalog by construction. A
   deployment serving the system under a different id would need `--ui-builder-native-catalog`

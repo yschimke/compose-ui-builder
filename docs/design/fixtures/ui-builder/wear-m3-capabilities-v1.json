@@ -1,0 +1,2440 @@
+{
+    "benchmark": {
+        "catalogRevision": "wear-screen-scaffold-v1",
+        "catalogSystemId": "wear-m3",
+        "id": "wear-m3-screen-scaffold",
+        "nativeRuntimeId": "candidate",
+        "sourceRevision": "compose-ai-tools:samples/design-catalog-wear-m3"
+    },
+    "components": [
+        {
+            "code": null,
+            "componentId": "wear-m3/screen-scaffold",
+            "displayName": "Wear screen · ScreenScaffold",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "timeText",
+                    "notes": "The curved status strip's text. Frozen rather than live: a design whose render changed every minute could not be diffed. Empty draws no strip, which is `ScreenScaffold` without a `timeText` argument.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "scrollIndicator",
+                    "notes": "Whether the generated screen gives `ScreenScaffold` a scroll indicator. The canvas draws none either way: an indicator shows where a viewport sits in the content, and the long-screenshot extent has no viewport. The real capture agrees — a `ScrollMode.LONG` render sets `LocalScrollCaptureInProgress` and the emitted scaffold suppresses the indicator while it is set, which is what keeps a stitched capture free of the dashes an indicator drawn per frame leaves down the edge.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "background",
+                    "notes": "The screen's background. Wear is dark-first, so it defaults to the Wear Material 3 `background` — pure black — rather than to the editor theme's surface.",
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "Action"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "edgeButton",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "Overlay"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "overlays",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "The stadium screen frame has not been through structured SVG parity.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent",
+                "WearScreenHost"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/transforming-lazy-column",
+            "displayName": "Transforming lazy column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": "`Arrangement.spacedBy` between items; 4dp is the Wear list default.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "spec",
+                        "none"
+                    ],
+                    "jsonType": "string",
+                    "name": "transformation",
+                    "notes": "Whether each item carries `SurfaceTransformation(spec)` and `transformedHeight`. The canvas cannot draw either — see the wasm note — so this says what the generated Kotlin emits, not what you are looking at.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "items",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "An untransformed stand-in must not claim structured SVG parity with the real list.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "ScrollableContent",
+                "RepeatedContent",
+                "WearListContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/list-header",
+            "displayName": "List header",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "maxLines",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "clip",
+                        "ellipsis",
+                        "visible"
+                    ],
+                    "jsonType": "string",
+                    "name": "overflow",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate.",
+                "status": "verified"
+            },
+            "traits": [
+                "TextContent",
+                "RemoteAuthorable",
+                "ListItem"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `ListHeader`: a 48dp item whose label sits low in it, drawn on the screen's own background rather than on a surface. The height is upstream's and is what makes a generated screen's first row land where the canvas puts it.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/text",
+            "displayName": "Text",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [
+                        "displayLarge",
+                        "displayMedium",
+                        "displaySmall",
+                        "headlineLarge",
+                        "headlineMedium",
+                        "headlineSmall",
+                        "titleLarge",
+                        "titleMedium",
+                        "titleSmall",
+                        "bodyLarge",
+                        "bodyMedium",
+                        "bodySmall",
+                        "labelLarge",
+                        "labelMedium",
+                        "labelSmall"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "normal",
+                        "medium",
+                        "semiBold",
+                        "bold"
+                    ],
+                    "jsonType": "string",
+                    "name": "fontWeight",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "normal",
+                        "italic"
+                    ],
+                    "jsonType": "string",
+                    "name": "fontStyle",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fontSizeSp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "lineHeightSp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "letterSpacingSp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "minLines",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "maxLines",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "softWrap",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "clip",
+                        "ellipsis",
+                        "visible"
+                    ],
+                    "jsonType": "string",
+                    "name": "overflow",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "justify"
+                    ],
+                    "jsonType": "string",
+                    "name": "textAlign",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "none",
+                        "underline",
+                        "lineThrough"
+                    ],
+                    "jsonType": "string",
+                    "name": "textDecoration",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate.",
+                "status": "verified"
+            },
+            "traits": [
+                "TextContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `Text`. Drawn on the canvas as a Material 3 Text, because the Wasm canvas cannot link `androidx.wear.compose:compose-material3`; the generated screen names the Wear composable.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/card",
+            "displayName": "Card",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "stableKey",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "elevationDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "object",
+                        "null"
+                    ],
+                    "name": "onClickAction",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "title",
+                        "app",
+                        "outlined",
+                        "plain"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "Which card is written: `TitleCard`, `AppCard`, `OutlinedCard` or `Card`. `title` is the default and is the one a Wear list is mostly made of.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 1
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "GridItem",
+                "CarouselItem",
+                "ListItem",
+                "OverlayContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "notes": "Wear Material 3's `TitleCard`. Drawn on the canvas as a Material 3 Card, because the Wasm canvas cannot link `androidx.wear.compose:compose-material3`; the generated screen names the Wear composable.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/button",
+            "displayName": "Button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "enabled",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "string",
+                        "object"
+                    ],
+                    "name": "selected",
+                    "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "object",
+                        "null"
+                    ],
+                    "name": "onClickAction",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "filled",
+                        "filled-tonal",
+                        "outlined",
+                        "child"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or `ChildButton`. There is no `fab` — a watch has no floating action button, which is one of the things a borrowed `m3/button` was quietly offering.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Leaf",
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 1
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "Action",
+                "ToolbarItem"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "notes": "Wear Material 3's `Button`. Drawn on the canvas as a Material 3 Button, because the Wasm canvas cannot link `androidx.wear.compose:compose-material3`; the generated screen names the Wear composable.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/icon",
+            "displayName": "Icon",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "accessTime",
+                        "accountCircle",
+                        "add",
+                        "addCircle",
+                        "arrowBack",
+                        "arrowForward",
+                        "bookmark",
+                        "bookmarkBorder",
+                        "calendarMonth",
+                        "cameraAlt",
+                        "check",
+                        "checkCircle",
+                        "chevronRight",
+                        "close",
+                        "coffee",
+                        "delete",
+                        "download",
+                        "edit",
+                        "email",
+                        "expandMore",
+                        "favorite",
+                        "genres",
+                        "home",
+                        "image",
+                        "info",
+                        "locationOn",
+                        "lock",
+                        "menu",
+                        "moreVert",
+                        "notifications",
+                        "pauseCircle",
+                        "person",
+                        "phone",
+                        "playCircle",
+                        "playlistAdd",
+                        "refresh",
+                        "remove",
+                        "search",
+                        "settings",
+                        "share",
+                        "star",
+                        "stopCircle",
+                        "upload",
+                        "videoLibrary",
+                        "visibility",
+                        "warning"
+                    ],
+                    "jsonType": "string",
+                    "name": "iconKey",
+                    "notes": "A Material icon key, resolved to `Icons.…` by the same table `m3/icon` uses. The vectors are `androidx.compose.material.icons`, which both platforms share, so this key means the same thing on a watch as on a phone.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "sizeDp",
+                    "notes": "The icon's box. Wear's own default is 24dp inside a button.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with Icon.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "Adornment"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `Icon`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/icon-button",
+            "displayName": "Icon button",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "filled",
+                        "filled-tonal",
+                        "filled-variant",
+                        "outlined",
+                        "standard"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "Which of the five `IconButton` overloads is written: `FilledIconButton`, `FilledTonalIconButton`, `FilledVariantIconButton`, `OutlinedIconButton` or plain `IconButton`. A variant selects the composable rather than tinting one, the way `m3/button`'s style does.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "Adornment"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with IconButton.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "Action",
+                "ListItem"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `IconButton`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/text-button",
+            "displayName": "Text button",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "filled",
+                        "filled-tonal",
+                        "filled-variant",
+                        "outlined",
+                        "standard"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "As `wear-m3/icon-button`'s: the variant names the composable — `FilledTextButton` and the rest — rather than recolouring one.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with TextButton.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "Action",
+                "ListItem"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `TextButton`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/list-sub-header",
+            "displayName": "List sub-header",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The sub-header's label.",
+                    "required": true
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with ListSubHeader.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ListItem",
+                "WearListContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `ListSubHeader`. The second level of list heading, under `wear-m3/list-header`: smaller, start-aligned, and the one used to divide a long list into named runs. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/checkbox-button",
+            "displayName": "Checkbox button",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "label",
+                    "notes": "The row's primary label. Wear's selection controls are labelled rows, not bare boxes.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "secondaryLabel",
+                    "notes": "The second line, where there is one. Empty emits no `secondaryLabel` argument.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "checked",
+                    "notes": "Whether the box is ticked. Bindable to a state variable.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with CheckboxButton.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ListItem",
+                "WearListContent",
+                "Selection"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `CheckboxButton`. A full-width labelled row with the checkbox at its end — not the mobile 20dp square, which is the whole reason `m3/checkbox` could never have been borrowed for it. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/switch-button",
+            "displayName": "Switch button",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "label",
+                    "notes": "The row's primary label. Wear's selection controls are labelled rows, not bare boxes.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "secondaryLabel",
+                    "notes": "The second line, where there is one. Empty emits no `secondaryLabel` argument.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "checked",
+                    "notes": "Whether the switch is on. Bindable to a state variable.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with SwitchButton.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ListItem",
+                "WearListContent",
+                "Selection"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `SwitchButton`. The same labelled row as `wear-m3/checkbox-button`, with a switch as its control. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/radio-button",
+            "displayName": "Radio button",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "label",
+                    "notes": "The row's primary label. Wear's selection controls are labelled rows, not bare boxes.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "secondaryLabel",
+                    "notes": "The second line, where there is one. Empty emits no `secondaryLabel` argument.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "selected",
+                    "notes": "Whether this row is the chosen one of its group.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with RadioButton.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ListItem",
+                "WearListContent",
+                "Selection"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `RadioButton`. The same labelled row again, with a radio control and single-choice semantics. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/slider",
+            "displayName": "Slider",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "value",
+                    "notes": "The current value, between `valueFrom` and `valueTo`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "valueFrom",
+                    "notes": "The low end of the range. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "valueTo",
+                    "notes": "The high end of the range. 1 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "steps",
+                    "notes": "How many discrete stops sit between the ends. 0 is continuous.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "segmented",
+                        "continuous"
+                    ],
+                    "jsonType": "string",
+                    "name": "segmented",
+                    "notes": "Whether the track is drawn as separated segments, which is what Wear's stepped slider looks like.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with Slider.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ListItem",
+                "WearListContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `Slider`. Wear's slider is a row with a decrement and an increment button around the track, not a bare thumb on a line. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/stepper",
+            "displayName": "Stepper",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "value",
+                    "notes": "The current value.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "valueFrom",
+                    "notes": "The low end of the range. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "valueTo",
+                    "notes": "The high end of the range. 1 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "steps",
+                    "notes": "How many discrete stops sit between the ends. 0 is continuous.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with Stepper.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `Stepper`. A full-screen control: increment and decrement buttons at the top and bottom of the round display with the current value between them. It is not a list row, which is why it carries `ScreenContent` rather than `ListItem`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/progress-indicator",
+            "displayName": "Progress indicator",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "circular",
+                        "segmented-circular",
+                        "linear",
+                        "arc"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "Which indicator is written: `CircularProgressIndicator`, `SegmentedCircularProgressIndicator`, `LinearProgressIndicator` or `ArcProgressIndicator`. The circular ones ring the whole display; the linear one is a list row.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "progress",
+                    "notes": "0..1. Absent is the indeterminate form, which takes no progress.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "segments",
+                    "notes": "How many segments the segmented circular form is divided into.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with CircularProgressIndicator.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ListItem",
+                "WearListContent",
+                "ScreenContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `CircularProgressIndicator`. Wear publishes four, and which one you get is the `variant`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/edge-button",
+            "displayName": "Edge button",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "extra-small",
+                        "small",
+                        "medium",
+                        "large"
+                    ],
+                    "jsonType": "string",
+                    "name": "size",
+                    "notes": "`EdgeButtonSize`. The button's shape comes from the screen's bottom curve, so its size is chosen from upstream's four rather than set in dp.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with EdgeButton.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "Action"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `EdgeButton`. The button that hugs the bottom of a round screen. It belongs in the scaffold's `edgeButton` slot, where `ScreenScaffold` reveals it from the scroll state; it is a component of its own now rather than a `wear-m3/button` placed there, because `EdgeButton` is a different composable with a different shape and a size enum. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/button-group",
+            "displayName": "Button group",
+            "modifierCapabilities": [],
+            "properties": [],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "Action"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with ButtonGroup.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ListItem",
+                "WearListContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `ButtonGroup`. A row of buttons that share the width and grow the one being pressed. Its children are buttons; anything else has no `ButtonGroupScope` to be laid out in. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/alert-dialog",
+            "displayName": "Alert dialog",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "title",
+                    "notes": "The dialog's title.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The supporting line under the title. Empty emits no `text` argument.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "visible",
+                    "notes": "Whether the dialog is showing. A dialog is a screen state rather than a place in the layout, so this is what the generated `AlertDialog(visible = …)` reads.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "Action"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "confirmButton",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [
+                        "Action"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "dismissButton",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with AlertDialog.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "Overlay"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `AlertDialog`. Wear's own, which is a full-screen scrolling dialog with its buttons on the bottom curve — not a card floating over a scrim. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/confirmation-dialog",
+            "displayName": "Confirmation dialog",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The line shown under the icon.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [
+                        "generic",
+                        "success",
+                        "failure"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "`ConfirmationDialog`, `SuccessConfirmationDialog` or `FailureConfirmationDialog`. The two named ones bring their own icon and curved text; the generic one takes the text alone.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "visible",
+                    "notes": "Whether it is showing, as for `wear-m3/alert-dialog`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with ConfirmationDialog.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "Overlay"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `ConfirmationDialog`. The brief full-screen acknowledgement Wear shows after an action and then dismisses. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/open-on-phone-dialog",
+            "displayName": "Open on phone dialog",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The curved line under the animation. Empty takes upstream's own.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "visible",
+                    "notes": "Whether it is showing, as for `wear-m3/alert-dialog`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with OpenOnPhoneDialog.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "Overlay"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `OpenOnPhoneDialog`. The one Wear surface with no mobile analogue at all: it tells the wearer the rest of this journey happens on their phone. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/date-picker",
+            "displayName": "Date picker",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "initialDate",
+                    "notes": "ISO-8601 `yyyy-MM-dd`. Empty picks upstream's own initial date.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "year-month-day",
+                        "day-month-year",
+                        "month-day-year"
+                    ],
+                    "jsonType": "string",
+                    "name": "type",
+                    "notes": "`DatePickerType`, which is field order rather than formatting.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with DatePicker.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `DatePicker`. A full-screen three-column picker, driven by the rotary side button. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": null,
+            "componentId": "wear-m3/time-picker",
+            "displayName": "Time picker",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "initialTime",
+                    "notes": "ISO-8601 `HH:mm[:ss]`. Empty picks upstream's own initial time.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "hours-minutes-seconds",
+                        "hours-minutes-am-pm",
+                        "hours-minutes-24h"
+                    ],
+                    "jsonType": "string",
+                    "name": "type",
+                    "notes": "`TimePickerType`, which decides both the columns and the clock.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A placeholder on the canvas must not claim structured SVG parity with TimePicker.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `TimePicker`. The time counterpart of `wear-m3/date-picker`, and the same full-screen shape. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Box"
+                ],
+                "symbol": "Box"
+            },
+            "componentId": "layout/box",
+            "displayName": "Box",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "propagateMinConstraints",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "OverlayContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Column"
+                ],
+                "symbol": "Column"
+            },
+            "componentId": "layout/column",
+            "displayName": "Column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Row"
+                ],
+                "symbol": "Row"
+            },
+            "componentId": "layout/row",
+            "displayName": "Row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "The Row counterpart of a Column’s verticalArrangement, with the same relationship to horizontalSpacingDp.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalAlignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.Image",
+                    "androidx.compose.ui.layout.ContentScale"
+                ],
+                "symbol": "Image"
+            },
+            "componentId": "asset/image",
+            "displayName": "Image asset",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "assetKey",
+                    "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}: one of statusSemantics.assetRegistry.keys, or a key pinned in the design's own assets map by PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey} (raw PNG, JPEG, GIF or WebP body) or the ui_builder_put_asset MCP tool. Any other key is refused at commit, so put the picture before inserting the node. A pinned key whose bytes this lane cannot show renders as a placeholder naming it, and exports as Image(painter = ColorPainter(...)) with an ASSET_PLACEHOLDER warning.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "null"
+                    ],
+                    "name": "contentDescription",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "crop",
+                        "fit",
+                        "fillBounds",
+                        "inside"
+                    ],
+                    "jsonType": "string",
+                    "name": "contentScale",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "embedded-raster",
+                "notes": "The recorder embeds the pinned asset bytes, or the project-owned artwork, with source and payload provenance; a key with no bytes behind it is drawn as a vector placeholder rather than declared as a raster fallback.",
+                "status": "raster-fallback-required"
+            },
+            "traits": [
+                "ImageContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcComposePlayer"
+                ],
+                "symbol": "RcComposePlayer"
+            },
+            "componentId": "remote-compose/document",
+            "displayName": "Remote Compose document",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentBase64",
+                    "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded. Not required on its own: a node carries either the bytes or a documentUrl, and the editor's own rule reports a node that carries neither.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentUrl",
+                    "notes": "Absolute http(s) URL the host resolves to the same wire document. Read only when documentBase64 is empty, so a design that carries its own bytes never depends on the network.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "inherit",
+                        "light",
+                        "dark",
+                        "system"
+                    ],
+                    "jsonType": "string",
+                    "name": "theme",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "namedValues",
+                    "notes": "Typed host values keyed by the Remote Compose named-variable name.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "OrderedContent",
+                "DynamicSlots"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.remote.creation.compose.capture.captureSingleRemoteDocument",
+                    "androidx.compose.remote.player.compose.RemoteDocumentPlayer"
+                ],
+                "symbol": "RemoteDocumentPlayer"
+            },
+            "componentId": "remote-compose/inline",
+            "displayName": "Remote Compose content",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "inherit",
+                        "light",
+                        "dark",
+                        "system"
+                    ],
+                    "jsonType": "string",
+                    "name": "theme",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "The subtree becomes a Remote Compose document at export; SVG export of one needs an explicit renderer, exactly as remote-compose/document does.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "OrderedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "notes": "The subtree is drawn with the ordinary Compose stand-ins remote-m3 already uses, inside a marked frame. The canvas has no Remote Compose writer, so until the subtree is captured these are the shapes the generated @RemoteComposable body describes rather than the pixels a player produces. A host that captures it - compiling the generated body and running captureSingleRemoteDocument on the Android daemon - answers with a document, and the same frame then plays it through the player that draws an embedded remote-compose/document, with the design's own custom components registered by name.",
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry"
+                ],
+                "symbol": "RcCustomComponentRegistry"
+            },
+            "componentId": "remote-compose/custom",
+            "displayName": "Custom component",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "name",
+                    "notes": "The custom-component config name the document writes and the host registers a renderer under. Namespaced by convention (slot:, rc:, or an application domain) so two documents composed together cannot collide.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "widthDp",
+                    "notes": "The bounds the document reserves for host content it cannot measure. A player lays out a custom component from the document, not from the Compose content filling it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "heightDp",
+                    "notes": "See widthDp.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Host content inside a Remote Compose document has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable",
+                "OrderedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": "Draws the ordinary Compose content in its own slot, which is what a registered renderer draws on a real player too. A preview only draws it if a custom component of this name is registered; an unregistered one is a player support issue rather than silently borrowed content. The code mapping names the registry rather than a composable, because the composable is whatever the host registers under this name.",
+                "platformSupported": true
+            }
+        }
+    ],
+    "exportCapabilities": {
+        "bundle": false,
+        "composeCode": true,
+        "png": false,
+        "svg": false
+    },
+    "schema": "compose-ui-builder-capabilities/v1-candidate",
+    "statusSemantics": {
+        "adapterStatus": {
+            "planned": "The Compose API is available to Wasm but the catalog authoring adapter is not implemented yet.",
+            "supported": "Implemented by the current candidate document renderer.",
+            "unsupported": "No verified Wasm execution path exists; documents may retain the node but clean render and export must fail visibly."
+        },
+        "assetRegistry": {
+            "$comment": "Every assetKey the catalog itself ships, because these are the assets the canvas draws from its own resources: the two project-owned Jetcaster covers in :ui-builder-artwork, the generated gate-0 cover, and the editor's own insert placeholder. A design extends this set with the keys its assets map pins through the asset lane (PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey}, ui_builder_put_asset; yschimke/compose-preview-server#478). Both reducers refuse any other key at commit (#484).",
+            "keys": [
+                "jetcaster.cover.android-developers-backstage",
+                "jetcaster.cover.google-developers-podcast",
+                "ui-builder.gate0.cover",
+                "editor.placeholder"
+            ]
+        },
+        "colorTokens": {
+            "$comment": "The theme roles a colour property or a background modifier may name, which are the roles the canvas draws. A colour is otherwise a #RRGGBB or #AARRGGBB literal. Mirrored by PropertyValueKinds.CANVAS_COLOR_TOKENS in :ui-builder-export and by the runtime's catalog executor; a test pins the three to this list.",
+            "roles": [
+                "background",
+                "surface",
+                "surfaceContainer",
+                "surfaceContainerLow",
+                "surfaceContainerHigh",
+                "surfaceContainerHighest",
+                "primary",
+                "onPrimary",
+                "tertiary",
+                "onTertiary",
+                "onSurface",
+                "onSurfaceVariant",
+                "outlineVariant",
+                "transparent"
+            ]
+        },
+        "componentMenu": {
+            "components": {
+                "asset/image": {
+                    "group": "Content"
+                },
+                "layout/box": {
+                    "group": "Layout"
+                },
+                "layout/column": {
+                    "group": "Layout"
+                },
+                "layout/row": {
+                    "group": "Layout"
+                },
+                "remote-compose/custom": {
+                    "group": "Embedded"
+                },
+                "remote-compose/document": {
+                    "group": "Embedded"
+                },
+                "remote-compose/inline": {
+                    "group": "Embedded"
+                },
+                "wear-m3/alert-dialog": {
+                    "group": "Containment"
+                },
+                "wear-m3/button": {
+                    "group": "Actions",
+                    "variantProperty": "variant"
+                },
+                "wear-m3/button-group": {
+                    "group": "Actions"
+                },
+                "wear-m3/card": {
+                    "group": "Containment",
+                    "variantProperty": "variant"
+                },
+                "wear-m3/checkbox-button": {
+                    "group": "Selection"
+                },
+                "wear-m3/confirmation-dialog": {
+                    "group": "Containment",
+                    "variantProperty": "variant"
+                },
+                "wear-m3/date-picker": {
+                    "group": "Selection",
+                    "variantProperty": "type"
+                },
+                "wear-m3/edge-button": {
+                    "group": "Actions",
+                    "variantProperty": "size"
+                },
+                "wear-m3/icon": {
+                    "group": "Content"
+                },
+                "wear-m3/icon-button": {
+                    "group": "Actions",
+                    "variantProperty": "variant"
+                },
+                "wear-m3/list-header": {
+                    "group": "Lists"
+                },
+                "wear-m3/list-sub-header": {
+                    "group": "Lists"
+                },
+                "wear-m3/open-on-phone-dialog": {
+                    "group": "Containment"
+                },
+                "wear-m3/progress-indicator": {
+                    "group": "Communication",
+                    "variantProperty": "variant"
+                },
+                "wear-m3/radio-button": {
+                    "group": "Selection"
+                },
+                "wear-m3/screen-scaffold": {
+                    "group": "Screens"
+                },
+                "wear-m3/slider": {
+                    "group": "Selection"
+                },
+                "wear-m3/stepper": {
+                    "group": "Selection"
+                },
+                "wear-m3/switch-button": {
+                    "group": "Selection"
+                },
+                "wear-m3/text": {
+                    "group": "Content"
+                },
+                "wear-m3/text-button": {
+                    "group": "Actions",
+                    "variantProperty": "variant"
+                },
+                "wear-m3/time-picker": {
+                    "group": "Selection",
+                    "variantProperty": "type"
+                },
+                "wear-m3/transforming-lazy-column": {
+                    "group": "Lists"
+                }
+            },
+            "groupOrder": [
+                "Screens",
+                "Layout",
+                "Lists",
+                "Actions",
+                "Selection",
+                "Containment",
+                "Communication",
+                "Content",
+                "Embedded"
+            ]
+        },
+        "platform": "wear",
+        "previewSurfaces": {
+            "native": {
+                "backend": "android",
+                "fidelity": "authoritative"
+            },
+            "wasm": {
+                "fidelity": "approximate",
+                "reason": "The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an Android AAR, so every Wear component here is drawn by its nearest Material 3 lookalike. Author on it; do not read a size, a colour or a shape off it. The Android preview compiles this design's own generated Kotlin against real Wear Compose."
+            }
+        },
+        "svgStatus": {
+            "raster-fallback-required": "The component may export only as a named embedded raster fallback.",
+            "unsupported": "No honest SVG or declared fallback exists; export must fail.",
+            "unverified": "The composite SVG spike has not proved this dynamic component; export remains gated.",
+            "verified": "Proved for this frozen benchmark's authored usage through the pinned same-runtime JVM Skia recorder; this does not verify unused variants or other environments."
+        }
+    }
+}

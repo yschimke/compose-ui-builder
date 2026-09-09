@@ -1,0 +1,62 @@
+[
+  {
+    "field": "componentMenu.groupOrder",
+    "why": "Deliberate, and narrower than it looks: the policy's seven shelves are the frozen eleven minus Scaffolds, Layout, Content and Embedded, in the same relative order. Those four hold `layout/*`, `asset/image`, `shape/*` and `remote-compose/*` — components of the BUILDER, not of yschimke/m3-catalog, which renders no Column and ships no Remote Compose embed. A catalog cannot state a shelf order for components it does not publish, and the builder supplies its own builtins' shelves as it always has. Every group the catalog does publish keeps its place.",
+    "policy": [
+      "Navigation",
+      "Actions",
+      "Selection",
+      "Text inputs",
+      "Containment",
+      "Communication",
+      "Styles"
+    ],
+    "frozen": [
+      "Scaffolds",
+      "Layout",
+      "Navigation",
+      "Actions",
+      "Selection",
+      "Text inputs",
+      "Containment",
+      "Communication",
+      "Content",
+      "Styles",
+      "Embedded"
+    ]
+  },
+  {
+    "field": "platformLabel",
+    "why": "The frozen catalog carries no label. 'Mobile' is the title-cased platform word and the one the chooser shows today, so this states the existing behaviour rather than changing it.",
+    "policy": "Mobile",
+    "frozen": null
+  },
+  {
+    "field": "frame.adapter",
+    "why": "The frozen catalog names no adapter; the server selects the rectangular phone frame for the packaged Material 3 catalog in code. `frame/rect` with `seedDevice: id:pixel_6` is that same selection stated as data, reviewed against the renderer's default branch.",
+    "policy": "frame/rect",
+    "frozen": null
+  },
+  {
+    "field": "frame.seedDevice",
+    "why": "Already reviewed in prose by the `frame.adapter` entry beside it — which says `frame/rect` with `seedDevice: id:pixel_6` — and now pinned as a value, because a fact argued in somebody else's `why` is not a fact anything checks. m3-catalog's breakpoints carry no `device`, so the documented default (the first breakpoint's) cannot supply one and the catalog states it outright. `id:pixel_6` is what this build already opens a new mobile screen on: `UiBuilderTemplates` seeds that frame deliberately, and names it over a newer id because four catalog entries share its geometry, so the frame stays matched as the device catalog grows.",
+    "policy": "id:pixel_6",
+    "frozen": null
+  },
+  {
+    "field": "previewSurfaces",
+    "why": "The frozen m3-catalog capabilities carry no previewSurfaces block, unlike the two Wear goldens. The catalog's own statement is the more informative one and is consistent with the Wear catalogs' native lane: authoritative under Robolectric against this module's classpath, approximate on the Wasm canvas which links its own Material 3 rather than these Android artifacts. Reviewed as a description of the two lanes that actually exist, since the frozen side cannot check it.",
+    "policy": {
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "The builder's canvas is Compose Multiplatform for Wasm and links its own Material 3, not this catalog's Android artifacts. For the components it has an adapter for the picture is close; where it has none it draws a placeholder. Layout, spacing and typography are near enough to design with and are not what ships."
+      },
+      "native": {
+        "fidelity": "authoritative",
+        "backend": "android",
+        "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric — the same lane that produces this catalog's stickers."
+      }
+    },
+    "frozen": null
+  }
+]

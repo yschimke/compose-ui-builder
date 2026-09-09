@@ -1,0 +1,87 @@
+[
+  {
+    "field": "componentMenu.groupOrder",
+    "why": "Deliberate, and here the frozen side is not even a Remote Compose taxonomy: `remoteM3Catalog` never declares a componentMenu of its own, so it inherits the packaged Material 3 one wholesale — Scaffolds, Layout, Navigation, Text inputs — shelf names for a catalog of widget containers, shaders and typefaces. The policy states :remote-catalog's own @CatalogComponent(group = ...) vocabulary, led by Widget Container and Scaffold templates because a Remote design starts from a container and everything else goes inside one.",
+    "policy": [
+      "Widget Container",
+      "Scaffold templates",
+      "Containment",
+      "Buttons",
+      "Text",
+      "Iconography",
+      "Communication",
+      "Position indicators",
+      "Shapes",
+      "Shaders",
+      "Typeface",
+      "Theme",
+      "Wear M3",
+      "Confetti"
+    ],
+    "frozen": [
+      "Scaffolds",
+      "Layout",
+      "Navigation",
+      "Actions",
+      "Selection",
+      "Text inputs",
+      "Containment",
+      "Communication",
+      "Content",
+      "Styles",
+      "Embedded"
+    ]
+  },
+  {
+    "field": "previewSurfaces",
+    "why": "The catalog states a `wasm` surface the frozen catalog omits entirely, and native agrees on fidelity/backend with only the `reason` rewritten. The addition is the point rather than a discrepancy to tolerate: the builder's Wasm canvas has no Remote Compose player, so a design drawn there is a widget-host frame with placeholders inside it and NOT a picture of what the player will produce. The frozen catalog says nothing about that, which leaves a person reading an approximate canvas with no statement that it is approximate — precisely the silence this contract moves into the repository that can answer it. Both values are pinned, so a later change to either side re-surfaces this for review.",
+    "policy": {
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "A Remote Compose document is played, not composed. The builder's Wasm canvas has no player, so it draws the widget host frame and placeholders inside it; what the player would draw is a different picture, produced by a different program from the same document."
+      },
+      "native": {
+        "fidelity": "authoritative",
+        "backend": "android",
+        "reason": "The generated creation-DSL Kotlin compiled against this module's own alpha Remote Compose trio and rasterised by the real player — the same lane that produces every sticker in this catalog."
+      }
+    },
+    "frozen": {
+      "native": {
+        "backend": "android",
+        "fidelity": "authoritative"
+      }
+    }
+  },
+  {
+    "field": "platformLabel",
+    "why": "As with wear-m3, the frozen catalog carries no label. 'RemoteCompose' is the name the catalog and its documents use; the platform word `remote-compose` would title-case to 'Remote-compose', which is not what anybody calls it.",
+    "policy": "RemoteCompose",
+    "frozen": null
+  },
+  {
+    "field": "frame.adapter",
+    "why": "The frozen catalog names no adapter, and this is the one place the two Wear catalogs genuinely differ: a Remote Compose widget is drawn into a host container of fixed size, not onto a watch face, so `frame/widget-host` rather than the sibling's `frame/round-screen`. Reviewed against the renderer's own remote branch, which draws exactly that.",
+    "policy": "frame/widget-host",
+    "frozen": null
+  },
+  {
+    "field": "frame.geometry",
+    "why": "The two host sizes, which the server carries as constants (216x76 and 216x124) and the frozen catalog does not state. Unlike the Wear padding these are DECLARED rather than measured: remote-catalog/src/main/kotlin/.../WidgetContainerPreviews.kt pins @Preview(widthDp = 216, heightDp = 76) and (216, 124), and every widget sticker renders at one of them. Reviewed against those annotations — the preview contract is the source, so a drift would break the stickers before it reached a design.",
+    "policy": {
+      "sizesDp": [
+        {
+          "widthDp": 216,
+          "heightDp": 76,
+          "label": "Small container"
+        },
+        {
+          "widthDp": 216,
+          "heightDp": 124,
+          "label": "Large container"
+        }
+      ]
+    },
+    "frozen": null
+  }
+]
