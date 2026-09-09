@@ -651,7 +651,16 @@ finished while this was not done.
 ### Phase 4 — this repository: read the published file
 
 Everything deferred from the original phase 0, now written against three files that exist and are
-proven equivalent:
+proven equivalent.
+
+**Items 18 and 20 have landed.** `ServeCatalogStore` stages a catalog's declared `uiBuilderFile` and
+fetches it at startup; `PublishedUiBuilderCatalog` composes it with the component record into a
+`CatalogCapabilityV1`; `CurrentM3UiBuilderCatalogExecutor` takes those as `published` and prefers
+them per catalog, with `catalogSources` saying where each came from. A catalog id nothing here
+synthesises is servable, which `PublishedUiBuilderCatalogTest` proves against a `test-catalog` this
+binary has never heard of. Items 15, 16, 17 and 19 remain: the platform word, the emitter routing,
+the canvas mapping and the `compose-preview-server ui` lane still read Kotlin, so a published catalog
+is served but a **Wear-shaped** one is not yet drawn from its own declarations.
 
 15. **Platform becomes a word.** `UiBuilderCatalogPlatform(wireValue, label)` over a string; `label`
     from `statusSemantics.platformLabel` with the three known words as fallback labels for one
@@ -659,7 +668,13 @@ proven equivalent:
     catalogs' label. `--ui-builder-packs` validates the word against the enabled catalogs.
 16. **The emitter is chosen by declaration.** `RecordFreeExport` routes by
     `statusSemantics.code.strategy` (`record` | `templates`) rather than by root component id.
-17. **The canvas reads a mapping.** `wearScreenStandIn`, the `WEAR_NATIVE_ONLY` set, the root
+17. **The canvas reads a mapping.** *(Also `WearWidgetHostShape`'s geometry table, added by #605
+    after this list was written: the widget host's content box, padding and radius per shape and
+    size. Its own docstring records that `wear-m3-catalog`'s stickers hard-code the same numbers,
+    which is the transcription this phase ends — and per §3 the catalog's own Robolectric probe is
+    what should measure them, exactly as it already measures `ScreenScaffold`'s content padding.
+    #605 collapsed the canvas's and the native lane's separate copies into one table, so the move
+    is now a single call site rather than two.)* `wearScreenStandIn`, the `WEAR_NATIVE_ONLY` set, the root
     alignment rule and the frame choice become lookups on `statusSemantics.components[id].canvas`
     and `statusSemantics.frame`. The adapter registry is the existing `when`, keyed by adapter id
     instead of component id, and an adapter this build lacks draws a placeholder and logs.

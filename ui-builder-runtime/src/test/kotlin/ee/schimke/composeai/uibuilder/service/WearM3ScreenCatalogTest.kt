@@ -1,10 +1,17 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
+import ee.schimke.composeai.uibuilder.protocol.WasmAdapterStatusV1
+import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -177,8 +184,75 @@ class WearM3ScreenCatalogTest {
       }
 
     assertTrue("wear-m3-catalog" in failure.message.orEmpty(), failure.message.orEmpty())
-    assertTrue("no packaged adapter" in failure.message.orEmpty(), failure.message.orEmpty())
+    // "neither published nor synthesised", not "no packaged adapter": since the catalog contract's
+    // loader, a servable catalog can also arrive as a published `ui-builder.json`, so the refusal
+    // has to name both routes or it sends an operator looking for the wrong fix.
+    assertTrue(
+      "neither published nor synthesised" in failure.message.orEmpty(),
+      failure.message.orEmpty(),
+    )
   }
+
+  @Test
+  fun `a published catalog is served under an id nothing here synthesises`() {
+    // The contract's own test, at this seam: `test-catalog` has no synthesiser, no enum value and
+    // no `when` branch, and is servable because it was handed in. Composing the published file is
+    // `:server`'s job; what this pins is that the executor's set of possible catalogs is open.
+    val published =
+      CurrentM3UiBuilderCatalogExecutor(
+          catalogSystemIds = setOf("test-catalog"),
+          published = mapOf("test-catalog" to testCatalog()),
+        )
+        .listCatalogs()
+
+    assertEquals(listOf("test-catalog"), published.map { it.benchmark.catalogSystemId })
+  }
+
+  @Test
+  fun `a published catalog wins over the synthesised one of the same id, and says so`() {
+    val executor =
+      CurrentM3UiBuilderCatalogExecutor(
+        catalogSystemIds = setOf("wear-m3", "remote-m3"),
+        published = mapOf("wear-m3" to testCatalog(id = "wear-m3")),
+      )
+
+    // Per catalog and reversible: `wear-m3` reads its published file, `remote-m3` keeps the Kotlin,
+    // and the source of each is answerable rather than inferred from the shelf's contents.
+    assertEquals(
+      mapOf("wear-m3" to "published", "remote-m3" to "synthesised"),
+      executor.catalogSources,
+    )
+    val wear = executor.listCatalogs().first { it.benchmark.catalogSystemId == "wear-m3" }
+    assertEquals(listOf("test-catalog/only"), wear.components.map { it.componentId })
+  }
+
+  /** The smallest thing that is a catalog: one component and an id. */
+  private fun testCatalog(id: String = "test-catalog") =
+    CatalogCapabilityV1(
+      schema = "compose-catalog-capabilities/v1",
+      benchmark =
+        CatalogBenchmarkV1(
+          catalogRevision = "sha256:test",
+          sourceRevision = "ui-builder.json",
+          catalogSystemId = id,
+          nativeRuntimeId = "candidate",
+          id = id,
+        ),
+      components =
+        listOf(
+          ComponentCapabilityV1(
+            componentId = "test-catalog/only",
+            displayName = "Only",
+            role = "Leaf",
+            wasm =
+              WasmCapabilityV1(
+                platformSupported = JsonPrimitive(false),
+                adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+              ),
+          )
+        ),
+      exportCapabilities = ExportCapabilitiesV1(composeCode = false, svg = false, png = false),
+    )
 
   /**
    * Every Wear component the generator writes is a component the palette offers.

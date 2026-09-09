@@ -27,8 +27,9 @@ public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCata
 	public static final field RESOURCE Ljava/lang/String;
 	public static final field WEAR_M3_CATALOG_SYSTEM_ID Ljava/lang/String;
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Lee/schimke/composeai/uibuilder/protocol/ExportCapabilitiesV1;Lkotlin/jvm/functions/Function1;Ljava/util/List;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCatalogSources ()Ljava/util/Map;
 	public fun listCatalogs ()Ljava/util/List;
 	public fun reference (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;
 	public fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;

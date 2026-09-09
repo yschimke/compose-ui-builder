@@ -96,18 +96,37 @@ public class CurrentM3UiBuilderCatalogExecutor(
    * let an author switch it on and off.
    */
   packs: List<UiBuilderComponentPackSource> = emptyList(),
+  /**
+   * Catalogs composed from what a catalog repository PUBLISHED, keyed by system id.
+   *
+   * The cutover of `docs/design/UI_BUILDER_CATALOG_CONTRACT.md`, and the reason this class can stop
+   * being the place a catalog is written. An entry here is preferred over the synthesised catalog
+   * of the same id, and an id with no synthesiser is served from here alone — which is what lets a
+   * catalog this binary has never heard of appear in the chooser.
+   *
+   * Per catalog and reversible on purpose: a catalog that publishes nothing, or whose published
+   * file will not compose, keeps the synthesised one and a startup line says which source each came
+   * from. Composing the file is `:server`'s job (it needs the component record reader, which
+   * `checkUiBuilderRuntimeBoundary` keeps off this module's classpath), so this takes the finished
+   * catalogs rather than the files.
+   */
+  published: Map<String, CatalogCapabilityV1> = emptyMap(),
 ) : UiBuilderCatalogExecutor {
   private val baseCatalog =
     json
       .decodeFromString<CatalogCapabilityV1>(source)
       .let(::validateCatalog)
       .copy(exportCapabilities = exportCapabilities)
-  private val availableCatalogs =
+  private val synthesisedCatalogs =
     mapOf(
       DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
       REMOTE_M3_CATALOG_SYSTEM_ID to remoteM3Catalog(baseCatalog),
       WEAR_M3_CATALOG_SYSTEM_ID to wearM3Catalog(baseCatalog),
     )
+  // A published catalog wins over the synthesised one of the same id. The map is the union rather
+  // than an overlay of the synthesised keys, so an id nothing here synthesises is servable — that
+  // is the whole point, and an overlay would have quietly kept the set of possible catalogs closed.
+  private val availableCatalogs = synthesisedCatalogs + published
   private val catalogs =
     catalogSystemIds
       .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }
@@ -126,7 +145,7 @@ public class CurrentM3UiBuilderCatalogExecutor(
         require(SAFE_SYSTEM_ID.matches(systemId)) { "invalid UI-builder catalog id: $systemId" }
         val catalog =
           requireNotNull(availableCatalogs[systemId]) {
-            "UI-builder catalog $systemId has no packaged adapter"
+            "UI-builder catalog $systemId is neither published nor synthesised by this build"
           }
         catalog
           .copy(
@@ -135,6 +154,16 @@ public class CurrentM3UiBuilderCatalogExecutor(
           )
           .withPacks(packs.filter { it.platform == catalog.platform })
       }
+  /**
+   * Where each enabled catalog came from — `published` or `synthesised` — for the startup line.
+   *
+   * Exposed rather than logged here because the cutover is the thing an operator most needs to be
+   * able to see: "the shelf changed" and "this catalog started reading its own published file" are
+   * the same event, and a host that switched sources silently would make that undiagnosable.
+   */
+  public val catalogSources: Map<String, String> =
+    catalogs.keys.associateWith { if (it in published) "published" else "synthesised" }
+
   private val references = catalogs.mapValues { (_, catalog) ->
     CatalogReferenceV1(
       systemId = catalog.benchmark.catalogSystemId,
