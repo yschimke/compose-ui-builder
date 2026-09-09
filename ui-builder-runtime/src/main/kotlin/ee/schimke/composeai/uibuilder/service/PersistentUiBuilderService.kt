@@ -1074,7 +1074,9 @@ public class PersistentUiBuilderService(
     if (!design.ownedBy(actor)) {
       return serviceError(forbidden("manage access for", designId))
     }
-    return LockedExecution(UiBuilderServiceResponse.DesignAccess(designId, design.access))
+    return LockedExecution(
+      UiBuilderServiceResponse.DesignAccess(designId, design.access.collapsed())
+    )
   }
 
   /**
@@ -1116,7 +1118,9 @@ public class PersistentUiBuilderService(
     if (request.mutations.isEmpty()) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "access mutation list is empty")
     }
-    var access = design.access
+    // Collapsed first, so a mutation lands on the record that governs rather than on a list that
+    // still carries a legacy case-variant beside it — which also heals what is stored.
+    var access = design.access.collapsed()
     val now = clock.millis()
     request.mutations.forEach { mutation ->
       when (mutation) {
@@ -2675,7 +2679,7 @@ public class PersistentUiBuilderService(
       catalog = catalog,
       retainedFromSequence = design.retainedFromSequence(),
       presence = presence,
-      access = design.access.takeIf { design.ownedBy(actor) },
+      access = design.access.collapsed().takeIf { design.ownedBy(actor) },
     )
 
   private fun catchUp(
@@ -2778,7 +2782,10 @@ public class PersistentUiBuilderService(
       revision = design.document.revision,
       catalogPin = design.document.catalogPin,
       ownerActorId = design.access.ownerActorId,
-      collaborators = design.access.actorGrants.count { it.actorId != design.access.ownerActorId },
+      collaborators =
+        design.access.effectiveGrants().count {
+          !sameActor(it.actorId, design.access.ownerActorId)
+        },
       createdAtEpochMillis = design.createdAtEpochMillis,
       updatedAtEpochMillis = design.updatedAtEpochMillis,
       activeSubscribers = runtime[design.document.id]?.subscribers?.size ?: 0,
@@ -3270,9 +3277,50 @@ private fun canonicalActorId(actorId: String): String =
 private fun sameActor(left: String, right: String): Boolean =
   canonicalActorId(left) == canonicalActorId(right)
 
+/**
+ * The grants that actually govern: one per actor, the last one written.
+ *
+ * Folding on the way in only fixes grants written since it started working. A record persisted
+ * before that can hold `github:Alice` AND `github:alice`, because the replacement it went through
+ * compared exact strings — a mixed-case EDITOR share followed by a lowercase VIEWER downgrade left
+ * both. Asking `any` of that list is a UNION of the two, so the downgrade did not take away WRITE;
+ * and [listItem] answering with `firstOrNull` picked whichever came first, so the role the reader
+ * was *shown* could disagree with the one being enforced.
+ *
+ * Latest wins, read off [DesignActorGrantV1.grantedAtEpochMillis] rather than off list position:
+ * the grant carries when it was made, so the rule is a fact about the grants rather than about how
+ * they happen to be ordered. Position breaks a tie, because a mutation appends after filtering the
+ * actor out and the newest entry is therefore last.
+ *
+ * Read-time rather than a migration, so a record is correct the first time it is consulted rather
+ * than the first time it is rewritten — and the access-mutation path starts from this, so the next
+ * grant change on a design also heals what is stored.
+ */
+internal fun DesignAccessControlV1.effectiveGrants(): List<DesignActorGrantV1> {
+  if (actorGrants.size < 2) return actorGrants
+  // Every record written since the fold started working already has one grant per actor, and this
+  // runs on every authorization check — so establish that there is something to collapse before
+  // building a second list. A record with no duplicates is returned as it is.
+  val canonical = actorGrants.mapTo(HashSet(actorGrants.size), { canonicalActorId(it.actorId) })
+  if (canonical.size == actorGrants.size) return actorGrants
+  return actorGrants
+    .groupingBy { canonicalActorId(it.actorId) }
+    .reduce { _, kept, next ->
+      if (next.grantedAtEpochMillis >= kept.grantedAtEpochMillis) next else kept
+    }
+    .values
+    .toList()
+}
+
+/**
+ * [effectiveGrants] applied, for anywhere an access record is read rather than asked a question.
+ */
+private fun DesignAccessControlV1.collapsed(): DesignAccessControlV1 =
+  effectiveGrants().let { if (it.size == actorGrants.size) this else copy(actorGrants = it) }
+
 private fun PersistedDesignV1.allows(actorId: String, action: DesignAccessActionV1): Boolean =
   sameActor(actorId, access.ownerActorId) ||
-    access.actorGrants.any { sameActor(it.actorId, actorId) && action in it.allowedActions }
+    access.effectiveGrants().any { sameActor(it.actorId, actorId) && action in it.allowedActions }
 
 /**
  * The same question asked of a whole identity: an actor may act, or the human it acts for may.
@@ -3302,7 +3350,7 @@ private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): Desi
     else {
       val grant =
         actor.accessIdentities.firstNotNullOf { identity ->
-          access.actorGrants.firstOrNull { sameActor(it.actorId, identity) }
+          access.effectiveGrants().firstOrNull { sameActor(it.actorId, identity) }
         }
       DesignActorAccessV1(actorId, grant.role, grant.allowedActions)
     }
