@@ -517,7 +517,7 @@
         { "name": "tabs", "cardinality": { "min": 1, "max": null }, "ordered": true, "acceptedRoles": ["Container"], "acceptedTraits": ["TabItem"] }
       ],
       "properties": [
-        { "name": "selectedIndex", "jsonType": "integer", "required": true }
+        { "name": "selectedIndex", "jsonType": ["integer", "object"], "required": true, "notes": "An index, or a `state` read of a declared `int` variable \u2014 which is an object, and why `object` is one of the accepted types. It is the variable the tabs write." }
       ],
       "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
@@ -681,7 +681,7 @@
         { "name": "text", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Leaf"], "acceptedTraits": ["TextContent"] }
       ],
       "properties": [
-        { "name": "selected", "jsonType": "boolean", "required": true }
+        { "name": "selected", "jsonType": ["boolean", "string", "object"], "required": true, "notes": "A flag, or a `stateEquals` read of a declared state variable \u2014 the same shapes `m3/filter-chip` accepts, and for the same reason: a tab whose selection cannot be read from state is a tab that cannot be selected." }
       ],
       "modifierCapabilities": ["padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },

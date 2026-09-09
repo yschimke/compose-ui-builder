@@ -437,15 +437,18 @@ private class ComposeEmitter(
           bodyLevel,
           "PrimaryTabRow",
           "tabs",
-          "selectedTabIndex = ${node.integer("selectedIndex")}",
+          "selectedTabIndex = ${node.integerExpression("selectedIndex", stateKotlinTypes)}",
         )
+      // A tab that cannot be clicked is a picture of a tab. The wire has carried the binding all
+      // along — the renderer dispatches it — and the export dropped it, so a generated screen
+      // showed a tab row whose selection could never move.
       "m3/tab" ->
         emitSimpleContainer(
           node,
           bodyLevel,
           "Tab",
           "text",
-          "selected = ${node.boolExpression("selected")}, onClick = {}",
+          "selected = ${node.boolExpression("selected")}, onClick = ${node.actionLambda("click", stateKotlinTypes)}",
         )
       "m3/list-item" -> emitListItem(node, bodyLevel)
       "shape/colour-dot" ->
@@ -1250,6 +1253,25 @@ private fun JsonObject.number(name: String, fallback: Float = 0f): Float =
 
 private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
   obj(name)["value"]?.jsonPrimitive?.intOrNull ?: fallback
+
+/**
+ * An integer property, read from state where the document says so.
+ *
+ * `selectedTabIndex` is the one place an `Int` decides what the user sees change, so a literal
+ * there exported a tab row frozen at whichever index the design was saved with, however the
+ * handlers moved the variable. A declared type that is not `Int` is refused rather than coerced:
+ * the alternatives — `toInt()` on a `String`, `0` on a `Boolean` — are both a guess about what the
+ * author meant, and `TODO` is the refusal the action emitter already uses for the same question.
+ */
+private fun UiBuilderNode.integerExpression(name: String, stateTypes: Map<String, String>): String {
+  val value = obj(name)
+  if (value.optionalString("type") != "state") return integer(name).toString()
+  val variable = value.optionalString("variable") ?: return "TODO(\"Missing state variable\")"
+  val declared =
+    stateTypes[variable] ?: return "TODO(\"Undeclared state variable ${variable.escape()}\")"
+  return if (declared == "Int") variable.identifier()
+  else "TODO(\"State variable ${variable.escape()} is declared $declared, not Int\")"
+}
 
 private fun UiBuilderNode.boolValue(name: String, fallback: Boolean = false): Boolean =
   obj(name)["value"]?.jsonPrimitive?.booleanOrNull ?: fallback
@@ -2183,7 +2205,7 @@ private val HANDLED_FIELDS =
         setOf("content"),
       ),
     "m3/switch" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),
-    "m3/tab" to HandledFields(setOf("selected"), setOf("text")),
+    "m3/tab" to HandledFields(setOf("selected"), setOf("text"), setOf("click")),
     "m3/text-field" to
       HandledFields(
         setOf("variant", "value", "enabled", "readOnly", "singleLine", "isError"),

@@ -1054,13 +1054,17 @@ private fun RenderNode(
             { ids.forEach { child(it, Modifier) } }
           },
       )
+    // Both read state, because a tab row is the one place where clicking is the whole point. The
+    // click already reached the reducer; the row drew its indicator from the literal the design was
+    // saved with and the tab drew its own selection the same way, so the press moved the variable
+    // and nothing on the canvas moved with it.
     "m3/primary-tab-row" ->
-      PrimaryTabRow(node.integer("selectedIndex"), measured) {
+      PrimaryTabRow(node.resolvedInteger("selectedIndex", state), measured) {
         slot("tabs").forEach { child(it, Modifier) }
       }
     "m3/tab" ->
       Tab(
-        node.bool("selected"),
+        node.resolvedBool("selected", state),
         activate,
         measured,
         enabled = enabled,
@@ -2929,6 +2933,26 @@ internal fun uiBuilderStateWrite(
     // failure, and a visible one: the control does nothing when pressed.
     else -> null
   }
+}
+
+/**
+ * An integer property, read from state where the document says so.
+ *
+ * State is held in its string form here, so `2` arrives as `"2"`. A variable a handler drove
+ * through a fractional step reads as `"2.0"`, which is the same index; anything else is not an
+ * index at all and leaves the row on its fallback rather than throwing the preview away.
+ */
+private fun UiBuilderNode.resolvedInteger(
+  name: String,
+  state: Map<String, String?>,
+  fallback: Int = 0,
+): Int {
+  val value = obj(name)
+  if (value.optionalString("type") != "state") {
+    return value["value"]?.jsonPrimitive?.intOrNull ?: fallback
+  }
+  val held = state[value.optionalString("variable")] ?: return fallback
+  return held.toIntOrNull() ?: held.toDoubleOrNull()?.toInt() ?: fallback
 }
 
 private fun UiBuilderNode.resolvedBool(name: String, state: Map<String, String?>): Boolean {
