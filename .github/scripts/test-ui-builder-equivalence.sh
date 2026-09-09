@@ -1102,12 +1102,348 @@ JSON
     { echo "FAIL malformed components map (${shape}) not reported"; failures=$((failures + 1)); }
 done
 
+# DECODE BEFORE COMPARING. Three shapes the reader's typed decode rejects and a raw JSON traversal
+# reads as ordinary data. All reported by Codex on #655 in one round, and all one mistake: the gate
+# was comparing where the reader was decoding.
+
+# 1. A policy VALUE that is not an object.
+cat >"${work}/rec-badvalue.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "wear-m3/unused": null },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+"${gate}" --policy "${work}/rec-badvalue.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "a policy value that is not an object is refused" 1 $?
+grep -q 'components\["wear-m3/unused"\] is not an object' "${work}/out" ||
+  { echo "FAIL non-object policy value not reported"; failures=$((failures + 1)); }
+
+# 2. An AUTHORED policy cannot answer the component-id question: per-component ids live in
+#    @BuilderComponent annotations, which only the generator resolves. Deriving from it ignores
+#    every id an annotation overrides, and can agree with the golden by luck.
+cat >"${work}/rec-authored.json" <<'JSON'
+{ "schema": "compose-ui-builder-policy/v1", "catalogId": "wear-m3", "platform": "wear",
+  "componentIdPrefix": "wear-m3/",
+  "menu": { "groupOrder": ["A"],
+    "components": { "wear-m3/button": { "group": "A" }, "wear-m3/card": { "group": "A" } } } }
+JSON
+"${gate}" --policy "${work}/rec-authored.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "an authored policy cannot answer --record" 1 $?
+grep -q "needs the GENERATED ui-builder.json" "${work}/out" ||
+  { echo "FAIL authored policy accepted for component ids"; failures=$((failures + 1)); }
+
+# 3. A record that is valid JSON but not a `ComponentRecordFile`. A `componentIds` STRING is the
+#    dangerous shape: `[0]` reads a character and `.split("/").pop()` makes a plausible id out of it.
+cat >"${work}/rec-badrecord.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": "Button",
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-badrecord.json" \
+  --strict >"${work}/out" 2>&1
+check "a record the reader could not decode is refused" 1 $?
+grep -q "componentIds is not a list of strings" "${work}/out" ||
+  { echo "FAIL malformed record shape not reported"; failures=$((failures + 1)); }
+
 # A record path that does not exist is a usage error, not a pass. The same argument as the missing
 # golden: a caller asserting readiness against a file nobody could read has asserted nothing.
 "${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
   --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/nope.json" --strict \
   >"${work}/out" 2>&1
 check "a missing record is a usage error, not a pass" 2 $?
+
+# The same family, one level in. Round nine closed "the CONTAINER is the wrong type"; these are the
+# three shapes that got through it because the container was right and something inside it was not.
+# Each asserts the MESSAGE as well as the exit code: a refusal for an unrelated reason is how a
+# self-test passes while verifying nothing, which is exactly how the authored-policy case first
+# went green.
+
+# 4. A CAPABILITY document standing in for a generated one. It carries `statusSemantics` too, so the
+#    `published` flag the guard used to test is true for it — and its `components` are the OUTPUT of
+#    the very composition --record predicts, so it would be compared against itself.
+cat >"${work}/rec-capability.json" <<'JSON'
+{ "schema": "compose-ui-builder-capabilities/v1-candidate",
+  "benchmark": { "catalogSystemId": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } },
+  "components": [ { "componentId": "wear-m3/button" }, { "componentId": "wear-m3/card" } ] }
+JSON
+"${gate}" --policy "${work}/rec-capability.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "a capability document cannot answer --record" 1 $?
+grep -q "this is a capability document" "${work}/out" ||
+  { echo "FAIL capability document not named as the reason"; failures=$((failures + 1)); }
+
+# 5. A policy value that IS an object, whose `record` member is a number. `UiBuilderComponentPolicy`
+#    declares it `String` and the reader is not lenient, so this fails its decode.
+cat >"${work}/rec-badmember.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "wear-m3/button": { "record": 7 } },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+"${gate}" --policy "${work}/rec-badmember.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "a policy member of the wrong type is refused" 1 $?
+grep -q 'components\["wear-m3/button"\].record is not a string' "${work}/out" ||
+  { echo "FAIL wrong-typed policy member not named"; failures=$((failures + 1)); }
+
+# 6. `traits` is a `List<String>` with a default, so it may be ABSENT — but not null, and not a list
+#    of something else. Absent and null are different questions and only a table keeps them apart.
+cat >"${work}/rec-badtraits.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "wear-m3/button": { "record": ":w/A.Button", "traits": [1] } },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+"${gate}" --policy "${work}/rec-badtraits.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "a policy list of the wrong element type is refused" 1 $?
+grep -q 'traits is not a list of strings' "${work}/out" ||
+  { echo "FAIL wrong-typed traits not named"; failures=$((failures + 1)); }
+
+# 7. A record field the DERIVATION never reads. `parameters` is `List<TargetParameter>` with an
+#    `emptyList()` default and neither reader sets `coerceInputValues`, so an explicit null throws
+#    and the catalog has no record at all — not one component short.
+cat >"${work}/rec-nullparams.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": null, "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-nullparams.json" \
+  --strict >"${work}/out" 2>&1
+check "a record field that is null where Kotlin is not nullable is refused" 1 $?
+grep -q "record.components\[0\].parameters is null" "${work}/out" ||
+  { echo "FAIL null non-nullable record field not named"; failures=$((failures + 1)); }
+
+# 8. A record property with NO default. `symbol` is required, and a record missing it fails the
+#    decode with MissingFieldException — while the derivation, which reads `symbol.name` only as a
+#    fallback, would have happily used `componentIds` and never noticed.
+cat >"${work}/rec-nosymbol.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-nosymbol.json" \
+  --strict >"${work}/out" 2>&1
+check "a record property with no default cannot be absent" 1 $?
+grep -q "record.components\[0\].symbol is missing" "${work}/out" ||
+  { echo "FAIL missing required record property not named"; failures=$((failures + 1)); }
+
+# 9. And one level further in still: `origin` is an ENUM, so a string that is not one of its
+#    constants fails the decode as surely as a number would.
+cat >"${work}/rec-badorigin.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "VENDORED" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-badorigin.json" \
+  --strict >"${work}/out" 2>&1
+check "a record enum outside its constants is refused" 1 $?
+grep -q "symbol.origin is not one of PROJECT, LIBRARY" "${work}/out" ||
+  { echo "FAIL out-of-range enum not named"; failures=$((failures + 1)); }
+
+# 10. The file's own required properties, which nothing in the derivation reads at all. A record
+#     without `module` decodes no further than its first field.
+cat >"${work}/rec-nomodule.json" <<'JSON'
+{ "schemaVersion": 1, "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-nomodule.json" \
+  --strict >"${work}/out" 2>&1
+check "a record file missing a required property is refused" 1 $?
+grep -q "record.module is missing" "${work}/out" ||
+  { echo "FAIL missing record-file property not named"; failures=$((failures + 1)); }
+
+# 11. An UNKNOWN key is not an error. Both readers set `ignoreUnknownKeys`, so a catalog newer than
+#     this gate must still pass — a shape table that refuses what the reader skips would fail
+#     catalogs for being ahead of it.
+cat >"${work}/rec-newer.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "somethingNewer": { "x": 1 },
+  "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"], "futureField": [1, 2],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-newer.json" --strict \
+  >"${work}/out" 2>&1
+check "a record carrying keys the gate does not know still passes" 0 $?
+
+# Round eleven. Three more of the same family — the container was checked, what it CONTAINED was
+# not; and one report that pointed at the wrong remedy.
+
+# 12. A null ELEMENT inside a real array. `Array.isArray` passes, so the loop reached
+#     `component.canonicalId` and died with a Node stack trace — which without --strict turned a
+#     report-only run into exit 1. Report-only must stay exit 0 and diagnostic.
+cat >"${work}/rec-nullelem.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [ null,
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-nullelem.json" \
+  >"${work}/out" 2>&1
+check "a null record entry is reported, not crashed on" 0 $?
+grep -q "record.components\[0\] is not an object" "${work}/out" ||
+  { echo "FAIL null record entry not named"; failures=$((failures + 1)); }
+grep -qi "at evalTypeScript\|TypeError" "${work}/out" &&
+  { echo "FAIL a stack trace reached the report"; failures=$((failures + 1)); }
+
+# 13. And the refusal is the WHOLE answer. A record the reader rejects used to go on producing an
+#     empty-shelf refusal, a `0 record entries` summary, and a `not offered` difference per frozen
+#     component — differences a reviewer could waive, filing a considered decision against an
+#     artefact of the first failure.
+grep -q "not offered" "${work}/out" &&
+  { echo "FAIL an undecodable record still produced waivable differences"; failures=$((failures + 1)); }
+grep -q "yields no components at all" "${work}/out" &&
+  { echo "FAIL an undecodable record still reported an empty shelf"; failures=$((failures + 1)); }
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-nullelem.json" \
+  --strict >"${work}/out" 2>&1
+check "an undecodable record still fails --strict" 1 $?
+
+# 14. A member of a NESTED serialized type. `parameters` was validated as a list of arbitrary
+#     objects, so `TargetParameter.name` being a number decoded here and not in Kotlin.
+cat >"${work}/rec-badparam.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [ { "name": 7, "type": "String" } ], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-badparam.json" \
+  --strict >"${work}/out" 2>&1
+check "a nested subobject member of the wrong type is refused" 1 $?
+grep -q "record.components\[0\].parameters\[0\].name is not a string" "${work}/out" ||
+  { echo "FAIL nested member not named"; failures=$((failures + 1)); }
+
+# 15. `ComponentSlot.required` has no default, one level in — absent is a MissingFieldException.
+cat >"${work}/rec-badslot.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [ { "name": "content" } ], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-badslot.json" \
+  --strict >"${work}/out" 2>&1
+check "a nested property with no default cannot be absent" 1 $?
+grep -q "slots\[0\].required is missing" "${work}/out" ||
+  { echo "FAIL missing nested required property not named"; failures=$((failures + 1)); }
+
+# 16. The epilogue states the remedy for what actually failed. Every refusal shared one closing
+#     paragraph about declaring `statusSemantics.components` to stop ids colliding, so a run that
+#     failed on a malformed record closed by advising a fix for a problem it never reported.
+grep -q "Correct the record fields named above" "${work}/out" ||
+  { echo "FAIL the record remedy was not stated"; failures=$((failures + 1)); }
+grep -q "collisions are the catalog's to resolve" "${work}/out" &&
+  { echo "FAIL a decode failure closed with the collision remedy"; failures=$((failures + 1)); }
+
+# And the converse: a genuine collision failure must still state the collision remedy.
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-overcollide.json" \
+  --strict >"${work}/out" 2>&1
+check "a collision failure still states the collision remedy" 1 $?
+grep -q "collisions are the catalog's to resolve" "${work}/out" ||
+  { echo "FAIL the collision remedy was lost"; failures=$((failures + 1)); }
+
+# Round twelve. The table stopped being hand-written, because a hand-written one drifted exactly
+# as predicted: it was transcribed from a sibling checkout OLDER than the artifact :server
+# resolves, so it missed six fields the published TargetParameter and BuilderPolicy carry.
+# `DecoderShapeFixtureTest` now generates it from the live descriptors and fails on drift; these
+# cases check that the gate reads it and uses it.
+
+# 17. A field that exists only in the PUBLISHED artifact — absent from the checkout the old table
+#     was typed from, and present in the real m3-catalog record.
+cat >"${work}/rec-scopedsl.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [ { "name": "x", "type": "String", "scopeDslReceiver": 7 } ],
+    "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-scopedsl.json" \
+  --strict >"${work}/out" 2>&1
+check "a field only the published artifact carries is validated" 1 $?
+grep -q "parameters\[0\].scopeDslReceiver is not a string" "${work}/out" ||
+  { echo "FAIL generated-table field not validated"; failures=$((failures + 1)); }
+
+# 18. Kotlin's Int is 32-bit and kotlinx refuses a JSON number outside it, so integrality alone is
+#     not the test.
+cat >"${work}/rec-bigint.json" <<'JSON'
+{ "schemaVersion": 2147483648, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-bigint.json" \
+  --strict >"${work}/out" 2>&1
+check "an integer outside Kotlin's Int range is refused" 1 $?
+grep -q "schemaVersion is outside the range of a Kotlin Int" "${work}/out" ||
+  { echo "FAIL Int overflow not named"; failures=$((failures + 1)); }
+# 2147483647 is the largest that decodes, and must still pass.
+sed 's/2147483648/2147483647/' "${work}/rec-bigint.json" >"${work}/rec-maxint.json"
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-maxint.json" \
+  --strict >"${work}/out" 2>&1
+check "the largest Kotlin Int still decodes" 0 $?
+
+# 19. The table is an input now, so its absence is a usage error — never a quiet pass. A gate that
+#     certified records with no shape table would be the "check that does not check" this file
+#     keeps being about.
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  --shapes "${work}/no-such-table.json" >"${work}/out" 2>&1
+check "a missing shape table is a usage error, not a pass" 2 $?
+grep -q "cannot read the decoder shape table" "${work}/out" ||
+  { echo "FAIL missing shape table not reported"; failures=$((failures + 1)); }
 
 set -e
 
