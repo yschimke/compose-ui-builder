@@ -150,10 +150,10 @@ internal class BrowserReferenceHost(
    * design, with none of the editor's chrome, selection outlines or overlay in it — which is what
    * makes it usable as the *next* reference rather than a picture of the last one.
    */
-  suspend fun snapshotDesign(): ReferenceImportOutcome {
+  suspend fun snapshotDesign(revision: Long? = null): ReferenceImportOutcome {
     val result =
       http.execute(
-        ExportDesignRequestV1(designId = designId, revision = null, format = ExportFormatV1.PNG)
+        ExportDesignRequestV1(designId = designId, revision = revision, format = ExportFormatV1.PNG)
       )
     val artifact =
       when (result) {

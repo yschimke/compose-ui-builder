@@ -41,6 +41,15 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 internal class BrowserExportHost(
   private val designId: String,
   override val formats: List<EditorExportFormat>,
+  /**
+   * The committed revision every route this host builds is pinned to, or null for the head.
+   *
+   * Set only where the editor itself is pinned. The export routes render on request, so a host left
+   * unpinned answers a historical page with the picture of the current design; a reader who copied
+   * that link, or pasted that PNG into a review, would be showing the wrong revision under a banner
+   * naming the right one.
+   */
+  private val revision: Long? = null,
 ) : UiBuilderExportHost {
 
   override suspend fun copyPicture(format: EditorExportFormat): String {
@@ -65,11 +74,12 @@ internal class BrowserExportHost(
       } catch (failure: Exception) {
         return "Copy link failed: ${failure.message?.trimJsError() ?: "unknown error"}"
       }
-    return if (outcome.isEmpty()) "Live ${format.label} link copied" else outcome
+    val what = if (revision == null) "Live" else "Revision $revision"
+    return if (outcome.isEmpty()) "$what ${format.label} link copied" else outcome
   }
 
   override suspend fun download(format: EditorExportFormat): String {
-    val url = sameOriginRequestUrl("${livePath(format)}?download=1")
+    val url = sameOriginRequestUrl(livePath(format, download = true))
     val outcome =
       try {
         awaitJsString(downloadPromise(url, "$designId.${format.extension}"))
@@ -79,14 +89,51 @@ internal class BrowserExportHost(
     return if (outcome.isEmpty()) "Downloading $designId.${format.extension}" else outcome
   }
 
-  /** The live route, relative to the page; see [UI_BUILDER_LIVE_EXPORT_PATH]. */
-  internal fun livePath(format: EditorExportFormat): String =
-    "$UI_BUILDER_LIVE_EXPORT_PATH/${encodeUriComponent(designId)}/export.${format.extension}"
+  /**
+   * The export route for one format, relative to the page; see [UI_BUILDER_LIVE_EXPORT_PATH].
+   *
+   * The query is assembled from a list rather than concatenated, because there are now two things
+   * that can go in it and `?download=1` written twice — once as the first parameter and once after
+   * a revision — is how that becomes a broken URL.
+   */
+  internal fun livePath(format: EditorExportFormat, download: Boolean = false): String {
+    val path =
+      "$UI_BUILDER_LIVE_EXPORT_PATH/${encodeUriComponent(designId)}/export.${format.extension}"
+    val query = buildList {
+      revision?.let { add("revision=$it") }
+      if (download) add("download=1")
+    }
+    return if (query.isEmpty()) path else "$path?${query.joinToString("&")}"
+  }
 
   private fun String.trimJsError(): String = removePrefix("Error: ").removePrefix("JsError: ")
 }
 
 internal const val UI_BUILDER_LIVE_EXPORT_PATH = "/api/ui-builder/v1/designs"
+
+/**
+ * Copies one design link — a node, a thread, a revision — and answers with a sentence.
+ *
+ * Beside the export host rather than inside it, because it is not an export: the address it copies
+ * names a place in the *editor*, not a rendered picture, and it is offered from a layer's menu and
+ * a thread's card rather than from the Export menu. What it shares with that host is the two rules
+ * that matter — the link goes through [shareableUrl], so the page's `?token=` never rides along,
+ * and a browser that refuses the clipboard is reported in a sentence rather than thrown.
+ *
+ * The address is shown as well as copied. A link is the one thing on this page whose value a person
+ * checks before pasting it into a pull request, and a bare "Copied" makes them paste it somewhere
+ * to find out what they have.
+ */
+internal suspend fun copyDesignLink(path: String): String {
+  val link = shareableUrl(path)
+  val outcome =
+    try {
+      awaitJsString(copyTextPromise(link))
+    } catch (failure: Exception) {
+      return "Copy link failed: ${failure.message ?: "unknown error"}"
+    }
+  return if (outcome.isEmpty()) "Link copied · $link" else outcome
+}
 
 /**
  * An absolute URL for sharing: resolved against the page, with no credential on it.

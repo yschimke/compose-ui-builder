@@ -78,6 +78,7 @@ import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.GetSnapshotRequestV1
 import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
@@ -359,6 +360,14 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
 private data class LiveSessionConfig(
   val catalogSystemId: String,
   val designId: String,
+  /**
+   * What in the design this URL means: a revision, a node, a thread.
+   *
+   * Parsed once, here, by [parseDesignUrlSelectors] in common code rather than by a `@JsFun` of its
+   * own, so the grammar a link is written in has one definition and a test that does not need a
+   * browser.
+   */
+  val selectors: DesignUrlSelectors,
   val actorId: String,
   val clientId: String,
   val httpEndpoint: String,
@@ -405,7 +414,33 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
   var authoritativeGeneration by remember { mutableStateOf(0) }
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
-  var selectedNodeId by remember { mutableStateOf<String?>(null) }
+  var selectedNodeId by remember { mutableStateOf(config.selectors.nodeId) }
+  // What `?revision=` did, once the answer is known: null until the design has been asked for, and
+  // afterwards both the revision the link named and whether it could be shown.
+  var revisionPin by remember(config.designId) { mutableStateOf<DesignRevisionPin?>(null) }
+  // Which panel is showing and which conversation is open in it. Held here only so the page can
+  // publish what the URL's selectors actually did — the editor owns both, and neither is
+  // authoritative state this host reads back.
+  var inspectorMode by remember(config.designId) { mutableStateOf(EditorInspectorMode.Properties) }
+  var openThreadId by remember(config.designId) { mutableStateOf(config.selectors.threadId) }
+  // The thread the *address bar* names right now, which is not the same as the one parsed at
+  // startup: a fragment-only navigation never re-enters this app. Held as state so the editor can
+  // follow it, and re-read from `location` on every change rather than from the event, so Back and
+  // Forward are answered by the same path as a link press.
+  var linkedThreadId by remember(config.designId) { mutableStateOf(config.selectors.threadId) }
+  // How many times the *browser* has changed the fragment, which is a different question from what
+  // the fragment now says. This host clears [linkedThreadId] itself when the reader opens another
+  // thread — the address bar has to stop naming the old one — and the editor must not read that
+  // housekeeping as a navigation and undo the selection that caused it. Only the loop below counts,
+  // and `replaceState` fires no `hashchange`, so nothing this host does can reach it.
+  var threadNavigations by remember(config.designId) { mutableStateOf(0) }
+  LaunchedEffect(config.designId) {
+    while (true) {
+      val hash = awaitHashChange()
+      linkedThreadId = parseDesignUrlSelectors(null, hash).threadId
+      threadNavigations += 1
+    }
+  }
   var catalogQuery by remember { mutableStateOf("") }
   // Which component packs are on, remembered per catalog in this browser. A setting rather than
   // document state: the same design opened by a collaborator shows their palette, not yours.
@@ -576,6 +611,10 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
   // when the design changes, because a discussion is addressed to one design.
   val commentHost = remember(config.designId) { BrowserCommentHost(config.designId) }
   var commentBoard by remember(config.designId) { mutableStateOf(DesignCommentBoard()) }
+  // Whether the discussion has been delivered at all, which is not the same question as whether it
+  // has anything in it. A design nobody has commented on answers with an empty board, so an empty
+  // board cannot be read as "the thread this link names is gone" until something has arrived.
+  var commentBoardLoaded by remember(config.designId) { mutableStateOf(false) }
   var commentStatus by remember(config.designId) { mutableStateOf<String?>(null) }
 
   // One socket for the life of the design. It sends the current board on connect, so there is no
@@ -586,6 +625,7 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       commentHost.watch(
         onBoard = { board ->
           commentBoard = board
+          commentBoardLoaded = true
           commentStatus = null
         },
         onDropped = {
@@ -599,6 +639,7 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       // Only if the socket has not already delivered something newer: the two race by design and
       // the sequence is what settles it, rather than whichever answer happened to arrive last.
       if (board.sequence > commentBoard.sequence) commentBoard = board
+      commentBoardLoaded = true
     }
   }
 
@@ -643,19 +684,53 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
     val selectedCatalog =
       availableCatalogs.singleOrNull { it.benchmark.catalogSystemId == config.catalogSystemId }
         ?: error("UI builder is not enabled for catalog ${config.catalogSystemId}")
-    catalog =
-      CapabilityCatalogParser.parse(
-        Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), selectedCatalog)
-      )
-    exportHost =
-      BrowserExportHost(
-        designId = config.designId,
-        formats =
-          exportFormatsFor(
-            svg = selectedCatalog.exportCapabilities.svg,
-            png = selectedCatalog.exportCapabilities.png,
-          ),
-      )
+    fun installCatalog(capability: CatalogCapabilityV1, revision: Long?) {
+      catalog =
+        CapabilityCatalogParser.parse(
+          Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
+        )
+      // Pinned to the same revision the canvas is drawing, because the export routes render on
+      // request: without it the Export menu would answer a question about history with the
+      // picture of the head, which is the one thing the banner promises it is not showing.
+      exportHost =
+        BrowserExportHost(
+          designId = config.designId,
+          formats =
+            exportFormatsFor(
+              svg = capability.exportCapabilities.svg,
+              png = capability.exportCapabilities.png,
+            ),
+          revision = revision,
+        )
+    }
+    installCatalog(selectedCatalog, null)
+    // `?revision=` first, because a design pinned to a committed revision is a different opening:
+    // one snapshot, no socket, no presence. A revision the service will not answer for — trimmed
+    // out of the retained window, or one this design never reached — is *not* a failure to open.
+    // The link is stale, the design is not, so the editor falls through to the live design and the
+    // banner says which of the two happened. See [DesignRevisionPin].
+    config.selectors.revision?.let { requested ->
+      val pinned =
+        (http.execute(GetSnapshotRequestV1(designId = config.designId, revision = requested))
+            as? UiBuilderHttpResult.Response)
+          ?.response as? SnapshotResponseV1
+      revisionPin = DesignRevisionPin(requested = requested, pinned = pinned != null)
+      if (pinned != null) {
+        // The catalog the *pinned* document was resolved against, not the one the catalog list
+        // offers today. A design whose catalog pin moved between revisions is validated and drawn
+        // with the capabilities it actually had, which is the whole claim a historical view makes.
+        installCatalog(pinned.snapshot.catalog, requested)
+        // Presence belongs to the living design. This page holds no socket and never will, so the
+        // avatars and selection outlines the snapshot happens to carry are other people editing a
+        // document this canvas is not showing — drawn over history for as long as they take to
+        // expire, and pointing at node ids from the head revision.
+        acceptSnapshot(pinned.copy(snapshot = pinned.snapshot.copy(presence = emptyList())))
+        canonicalizeUiBuilderUrl(config.catalogSystemId, config.designId, config.selectors)
+        sessionStatus = "Revision $requested · read-only"
+        markReady()
+        return@LaunchedEffect
+      }
+    }
     val openResult = UiBuilderLiveSessionApi(config.designId, http).open()
     when (val result = openResult) {
       is UiBuilderHttpResult.Response -> {
@@ -665,7 +740,14 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
           return@LaunchedEffect
         }
         acceptSnapshot(response)
-        canonicalizeUiBuilderUrl(config.catalogSystemId, config.designId)
+        // Without the revision: the page opened at head, whatever the link asked for, and an
+        // address bar still naming an unavailable revision would be the one lie the banner is
+        // there to prevent.
+        canonicalizeUiBuilderUrl(
+          config.catalogSystemId,
+          config.designId,
+          config.selectors.copy(revision = null),
+        )
         val client =
           UiBuilderProtocolUpdateClient(
             designId = config.designId,
@@ -849,6 +931,25 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
     return
   }
   if (loadedDocument != null && loadedCatalog != null) {
+    // A `#thread=` naming no conversation on this board, once the board is in a position to say so.
+    // Answered the way `?node=` answers an unknown layer — a sentence rather than a failure — but
+    // it needs the wait: the discussion arrives over its own socket well after the design does, so
+    // asking earlier would call every thread link stale for the first moments of every page.
+    val staleThreadId = linkedThreadId?.takeIf {
+      commentBoardLoaded && commentBoard.threads.none { thread -> thread.id == it }
+    }
+    // The address bar stops naming it, and so does the state this page publishes for the harness
+    // and the extension. A fragment pointing at a conversation that is not there is the same lie
+    // an unavailable `?revision=` is not allowed to tell.
+    // Deliberately not clearing [linkedThreadId] here, unlike the close path below: the notice is
+    // derived from it, and a link naming a thread that does not exist has no card to keep on screen
+    // anyway — the exemption that path is protecting against needs a card to exempt.
+    LaunchedEffect(staleThreadId) {
+      if (staleThreadId != null) {
+        dropDesignUrlFragment()
+        openThreadId = null
+      }
+    }
     val collaborators = presenceState.collaborators(config.actorId)
     LaunchedEffect(collaborators) {
       publishPresenceManifest(
@@ -863,10 +964,18 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       clientId = config.clientId,
       operationIdPrefix = config.operationIdPrefix,
       sessionLabel = sessionStatus,
-      onReconnect = {
-        updates?.reconnect()
-        refreshSnapshot("Reconnecting…")
-      },
+      // No Reconnect while a revision is pinned. There is no session to reconnect: the pinned page
+      // opened one snapshot and holds no socket, and the button's own handler would fetch the head
+      // and replace the document under a banner still naming the revision — the exact lie the
+      // banner exists to prevent.
+      onReconnect =
+        if (revisionPin?.pinned == true) null
+        else {
+          {
+            updates?.reconnect()
+            refreshSnapshot("Reconnecting…")
+          }
+        },
       onSubmission = { submission ->
         // Queued rather than sent: the revision this command claims, and the order it reaches the
         // server in, are the drain loop's to decide.
@@ -877,7 +986,55 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
         }
       },
       authoritativeGeneration = authoritativeGeneration,
+      authoritativeRevisionFor = { nodeId ->
+        authoritativeDocument?.takeIf { it.nodes.containsKey(nodeId) }?.revision
+      },
       initialSelectedNodeId = selectedNodeId,
+      // `#thread=` wins the panel where a link names both: one dock is open at a time, and a link
+      // that names a conversation is a link to read it. `?node=` still selects the layer, which is
+      // what makes "the thread about this button, beside the button" one URL.
+      initialInspectorMode =
+        if (config.selectors.threadId != null) EditorInspectorMode.Comments
+        else EditorInspectorMode.Properties,
+      initialInspectorOpen = config.selectors.nodeId != null || config.selectors.threadId != null,
+      linkedThreadId = linkedThreadId,
+      threadNavigations = threadNavigations,
+      onSelectedThreadChanged = {
+        openThreadId = it
+        // The fragment stops naming a thread as soon as the reader closes it or opens another, and
+        // the state that mirrors it has to go with it. `replaceState` fires no `hashchange`, so
+        // nothing else would clear this — and a stale value here keeps feeding the panel a
+        // `revealThreadId`, which is what exempts a resolved card from being hidden. The card would
+        // then stay on screen for the rest of the session, after the URL had stopped naming it.
+        if (it != linkedThreadId) {
+          dropDesignUrlFragment()
+          linkedThreadId = null
+        }
+      },
+      revisionPin = revisionPin,
+      // Only where there is somewhere to go. A revision that could not be shown left the page on
+      // the latest design already, and a button offering to take you where you are is a button
+      // that teaches the banner cannot be trusted.
+      onGoToLatest = revisionPin?.takeIf { it.pinned }?.let { { goToLatestRevision() } },
+      openingNotice =
+        listOfNotNull(
+            config.selectors.nodeId
+              ?.takeIf { !loadedDocument.nodes.containsKey(it) }
+              ?.let { "This link names a layer this design does not have: $it" },
+            staleThreadId?.let { "This link names a conversation this design does not have: $it" },
+          )
+          .takeIf { it.isNotEmpty() }
+          ?.joinToString(" "),
+      // Withheld for a design the path form cannot name. The service stores any id that is not
+      // blank, while this editor refuses to start on a design named in the path unless the id is
+      // path-safe, so such a design is reachable only through the legacy query form — and a link
+      // to it would hand its recipient a page that will not open. See [isDesignUrlPathSafe].
+      onCopyDesignLink =
+        if (!isDesignUrlPathSafe(config.catalogSystemId, config.designId)) null
+        else
+          { selectors ->
+            copyDesignLink(designUrlPath(config.catalogSystemId, config.designId, selectors))
+          },
       initialCatalogQuery = catalogQuery,
       initialEnabledPacks = enabledPacks,
       collaborators = collaborators,
@@ -890,7 +1047,12 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       exportHost = exportHost,
       restoredReference = restoredReference,
       onPickReference = { references.pickFile() },
-      onSnapshotDesign = { references.snapshotDesign() },
+      // The third lane that renders on request, and the one easiest to miss: this one *keeps* what
+      // it renders, as the reference the canvas is traced against. Snapshotting a pinned page
+      // without the revision would lay the head over history and then persist it.
+      onSnapshotDesign = {
+        references.snapshotDesign(revisionPin?.takeIf { it.pinned }?.requested)
+      },
       referenceStatus = referenceStatus,
       pastedReference = pastedReference,
       comments = commentBoard,
@@ -902,7 +1064,14 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
         scope.launch { commentStatus = commentHost.resolve(threadId, resolved) }
       },
       onStateChanged = {
+        // The address bar stops naming a node the moment the selection moves off it, so a URL
+        // copied later — or restored by the browser tomorrow — cannot point at a layer nobody has
+        // been looking at.
+        if (config.selectors.nodeId != null && it.selectedNodeId != config.selectors.nodeId) {
+          dropDesignUrlQuery(DESIGN_URL_NODE_KEY)
+        }
         selectedNodeId = it.selectedNodeId
+        inspectorMode = it.inspectorMode
         catalogQuery = it.catalogQuery
         if (it.enabledPacks != enabledPacks) {
           enabledPacks = it.enabledPacks
@@ -919,7 +1088,14 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       onInspectionInvalidated = { collector ->
         inspectionPublisher.offer(collector, loadedDocument.revision)
       },
-      onRequestNativeRender = { requestNativeRender(config.designId) },
+      // Pinned like the export lane rather than withheld, which is what it has to be on a catalog
+      // whose Wasm canvas is only a stand-in. Withholding it left `wear-m3` drawing Material 3
+      // lookalikes under a banner naming a revision — not a rough picture of the right document but
+      // a faithful picture of the wrong component library, which is the one thing a historical view
+      // must not be. The route now takes a revision for exactly this.
+      onRequestNativeRender = {
+        requestNativeRender(config.designId, revisionPin?.takeIf { it.pinned }?.requested)
+      },
       remoteComposeSources = remoteComposeSources,
       resolveRemoteComposeDocument = { source ->
         fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${source.id}.rc"))
@@ -943,8 +1119,41 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
       loadLottieAnimation = { url -> fetchText(url) },
     )
     LaunchedEffect(loadedDocument.revision) { markReady() }
+    // What the URL's selectors resolved to, for the harness and for anybody debugging a link that
+    // did not do what its author expected. Published rather than inferred from pixels: "the node
+    // is selected" and "the node is drawn with an outline" are different claims, and only the
+    // first one is what a selector promises.
+    LaunchedEffect(revisionPin, selectedNodeId, openThreadId, inspectorMode) {
+      publishDesignSelectors(
+        revision = revisionPin?.requested?.toString().orEmpty(),
+        revisionPinned = revisionPin?.pinned == true,
+        nodeId = selectedNodeId.orEmpty(),
+        threadId = openThreadId.orEmpty(),
+        inspectorMode = inspectorMode.name,
+      )
+    }
   }
 }
+
+@JsFun(
+  """(revision, revisionPinned, nodeId, threadId, inspectorMode) => {
+    globalThis.__uiBuilderDesignSelectors = {
+      revision, revisionPinned, nodeId, threadId, inspectorMode
+    };
+    const dataset = document.documentElement.dataset;
+    dataset.uiBuilderSelectedNode = nodeId;
+    dataset.uiBuilderSelectedThread = threadId;
+    dataset.uiBuilderInspectorMode = inspectorMode;
+    dataset.uiBuilderPinnedRevision = revisionPinned ? revision : '';
+  }"""
+)
+private external fun publishDesignSelectors(
+  revision: String,
+  revisionPinned: Boolean,
+  nodeId: String,
+  threadId: String,
+  inspectorMode: String,
+)
 
 /**
  * One native render of a design: the host compiles it and draws it with real Compose.
@@ -958,12 +1167,19 @@ private fun LiveSessionApp(config: LiveSessionConfig) {
  * and a 200 with no frame means the compile lane answered without one, which the editor says
  * plainly rather than showing an empty box.
  */
-private suspend fun requestNativeRender(designId: String): UiBuilderNativeRender {
+private suspend fun requestNativeRender(
+  designId: String,
+  revision: Long? = null,
+): UiBuilderNativeRender {
   val response =
     BrowserUiBuilderHttpTransport()
       .post(
         UiBuilderHttpRequest(
-          endpoint = "/api/ui-builder/v1/designs/$designId/native-preview",
+          // The revision rides in the query, as it does on the export routes: absent means the
+          // current committed revision, which is what an unpinned editor asks for.
+          endpoint =
+            "/api/ui-builder/v1/designs/$designId/native-preview" +
+              (revision?.let { "?revision=$it" } ?: ""),
           contentType = "application/json",
           body = "{}",
         )
@@ -1403,6 +1619,7 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
   val designNamedInPath = pathDesignId.isNotEmpty()
   return LiveSessionConfig(
       catalogSystemId = catalogSystemId,
+      selectors = parseDesignUrlSelectors(locationSearch(), locationHash()),
       designId =
         if (designNamedInPath) pathDesignId else liveConfigValue("designId", defaultDesignId),
       actorId = liveConfigValue("actor", serverActorId ?: "browser-user"),
@@ -1648,24 +1865,144 @@ private external fun uiBuilderDesignFromPath(): String
  * *what*. `session`, `create`, `designId`, `template` and `state` do not: the first three are
  * implied by the path, and the last two only ever described how a design that now exists was
  * seeded.
+ *
+ * The selectors survive too, and they are the reason this takes arguments rather than reading the
+ * URL for itself. They say **what in the design** the link means, so a legacy `?designId=` URL that
+ * also named a node has to arrive at the path form still naming it — a rewrite that dropped them
+ * would silently turn a link to one layer into a link to the design. `revision` and `node` are set
+ * from the values the page opened with; the fragment is carried across verbatim, because it never
+ * left the browser to begin with.
  */
 @JsFun(
-  """(catalogSystemId, designId) => {
+  """(catalogSystemId, designId, carried, revision, node) => {
     const current = new URL(globalThis.location.href);
     const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
       encodeURIComponent(designId);
     const next = new URL(path, current.origin);
-    ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
-      .forEach((name) => {
-        const value = current.searchParams.get(name);
-        if (value !== null) next.searchParams.set(name, value);
-      });
+    carried.split(',').forEach((name) => {
+      const value = current.searchParams.get(name);
+      if (value !== null) next.searchParams.set(name, value);
+    });
+    if (revision) next.searchParams.set('revision', revision);
+    if (node) next.searchParams.set('node', node);
+    next.hash = current.hash;
     if (next.toString() !== current.toString()) {
       globalThis.history.replaceState(null, '', next.toString());
     }
   }"""
 )
-private external fun canonicalizeUiBuilderUrl(catalogSystemId: String, designId: String)
+private external fun canonicalizeUiBuilderUrlWith(
+  catalogSystemId: String,
+  designId: String,
+  carried: String,
+  revision: String,
+  node: String,
+)
+
+/**
+ * The identity query this page keeps, named once in [DESIGN_URL_IDENTITY_KEYS] rather than twice
+ * here — the rewrite that keeps it and the link builder that refuses it have to agree, and the way
+ * two hand-kept lists disagree is a token in a link somebody pasted into a chat.
+ */
+private fun canonicalizeUiBuilderUrl(
+  catalogSystemId: String,
+  designId: String,
+  selectors: DesignUrlSelectors,
+) =
+  canonicalizeUiBuilderUrlWith(
+    catalogSystemId = catalogSystemId,
+    designId = designId,
+    carried = DESIGN_URL_IDENTITY_KEYS.joinToString(","),
+    revision = selectors.revision?.toString().orEmpty(),
+    node = selectors.nodeId.orEmpty(),
+  )
+
+@JsFun("() => globalThis.location.search") private external fun locationSearch(): String
+
+@JsFun("() => globalThis.location.hash") private external fun locationHash(): String
+
+/**
+ * The next time the address bar's fragment changes, whatever changed it.
+ *
+ * A fragment-only navigation — a second `#thread=` link followed from inside the open design, or
+ * Back over one — is a *same-document* navigation: the browser does not reload, the Wasm app is
+ * never re-entered, and the config parsed at startup keeps naming the thread that was open. Without
+ * this the address bar and the panel disagree, which is the one failure a permalink cannot have.
+ *
+ * One promise per change rather than a persistent callback, because that is what a Kotlin/Wasm
+ * caller can await, and it is the shape the paste listener already uses: re-armed by the loop that
+ * consumed the last one.
+ */
+@JsFun(
+  """() => new Promise((resolve) => {
+    globalThis.addEventListener(
+      'hashchange',
+      () => resolve(globalThis.location.hash),
+      { once: true },
+    );
+  })"""
+)
+private external fun awaitHashChangePromise(): Promise<JsString>
+
+private suspend fun awaitHashChange(): String = suspendCancellableCoroutine { continuation ->
+  awaitHashChangePromise()
+    .then { value ->
+      if (continuation.isActive) continuation.resume(value.toString())
+      null
+    }
+    .catch { error ->
+      if (continuation.isActive) {
+        continuation.resumeWithException(IllegalStateException(error.toString()))
+      }
+      null
+    }
+}
+
+/**
+ * Takes one selector back out of the address bar, without a round trip and without a history entry.
+ *
+ * The address bar has to stop naming a node the moment somebody selects a different one, or the URL
+ * they copy next — or that their browser restores tomorrow — points at a layer they have not been
+ * looking at. `replaceState` rather than `pushState` for the same reason the canonical rewrite uses
+ * it: changing selection is not navigation, and Back should leave the design.
+ */
+@JsFun(
+  """(name) => {
+    const current = new URL(globalThis.location.href);
+    if (!current.searchParams.has(name)) return;
+    current.searchParams.delete(name);
+    globalThis.history.replaceState(null, '', current.toString());
+  }"""
+)
+private external fun dropDesignUrlQuery(name: String)
+
+/** The same, for `#thread=`. Setting an empty hash drops the `#` with it. */
+@JsFun(
+  """() => {
+    const current = new URL(globalThis.location.href);
+    if (!current.hash) return;
+    current.hash = '';
+    globalThis.history.replaceState(null, '', current.toString());
+  }"""
+)
+private external fun dropDesignUrlFragment()
+
+/**
+ * Leaves a pinned revision for the design as it stands.
+ *
+ * A real navigation rather than a `replaceState`: the pinned page holds a snapshot of one committed
+ * revision and no socket, so the head has to be fetched and subscribed to from a clean start. The
+ * identity query rides along untouched, which is what makes this the same session rather than a
+ * second sign-in.
+ */
+@JsFun(
+  """() => {
+    const current = new URL(globalThis.location.href);
+    current.searchParams.delete('revision');
+    globalThis.location.assign(current.toString());
+  }"""
+)
+private external fun goToLatestRevision()
 
 /**
  * Submit the New design form: a real `POST`, whose `303` the browser follows to the permalink.
@@ -1676,17 +2013,16 @@ private external fun canonicalizeUiBuilderUrl(catalogSystemId: String, designId:
  * reads it to authenticate the write and to carry it into the permalink it redirects to.
  */
 @JsFun(
-  """(catalogSystemId, designId, templateId, state) => {
+  """(catalogSystemId, designId, templateId, state, carried) => {
     const current = new URL(globalThis.location.href);
     const action = new URL(
       '/ui-builder/' + encodeURIComponent(catalogSystemId),
       current.origin,
     );
-    ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
-      .forEach((name) => {
-        const value = current.searchParams.get(name);
-        if (value !== null) action.searchParams.set(name, value);
-      });
+    carried.split(',').forEach((name) => {
+      const value = current.searchParams.get(name);
+      if (value !== null) action.searchParams.set(name, value);
+    });
     const form = globalThis.document.createElement('form');
     form.method = 'post';
     form.action = action.toString();
@@ -1704,12 +2040,28 @@ private external fun canonicalizeUiBuilderUrl(catalogSystemId: String, designId:
     form.submit();
   }"""
 )
-private external fun navigateToNewDesign(
+private external fun navigateToNewDesignWith(
   catalogSystemId: String,
   designId: String,
   templateId: String,
   state: String,
+  carried: String,
 )
+
+/** See [canonicalizeUiBuilderUrl]: one list of identity keys, read by both rewrites. */
+private fun navigateToNewDesign(
+  catalogSystemId: String,
+  designId: String,
+  templateId: String,
+  state: String,
+) =
+  navigateToNewDesignWith(
+    catalogSystemId = catalogSystemId,
+    designId = designId,
+    templateId = templateId,
+    state = state,
+    carried = DESIGN_URL_IDENTITY_KEYS.joinToString(","),
+  )
 
 @JsFun(
   """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""

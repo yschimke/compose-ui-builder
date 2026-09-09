@@ -5,6 +5,7 @@
 
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,14 +30,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -79,8 +84,20 @@ internal fun CommentsInspector(
   nodeLabel: (String) -> String,
   selectedThreadId: String?,
   onSelectThread: (String?) -> Unit,
+  /**
+   * The thread a `#thread=` link named, brought into view once as the panel opens.
+   *
+   * Once, and only for a thread the URL named: scrolling to a thread somebody just clicked would
+   * move a panel they are already looking at, and re-scrolling later would take the page away from
+   * whatever they read next.
+   */
+  revealThreadId: String? = null,
+  /** The scroll the panel sits in, so [revealThreadId] can be brought into view. */
+  scrollState: ScrollState? = null,
   onPost: ((DesignCommentDraft) -> Unit)?,
   onResolve: ((String, Boolean) -> Unit)?,
+  /** Copies a link that opens this design on one thread. Null where the host has no clipboard. */
+  onCopyLink: ((DesignCommentThread) -> Unit)? = null,
   /** A sentence from the host — a refusal, a socket that dropped. */
   hostStatus: String?,
   onTextInputFocusChanged: (Boolean) -> Unit,
@@ -88,6 +105,17 @@ internal fun CommentsInspector(
   var draft by remember { mutableStateOf("") }
   var reply by remember(selectedThreadId) { mutableStateOf("") }
   var showResolved by remember { mutableStateOf(false) }
+  // Where each thread card sits in the scrolled content, recorded on layout so the one a link
+  // named can be scrolled to once its position is known — which is a frame or two after the panel
+  // first draws, and is why this is state rather than something read at the call.
+  val threadOffsets = remember { mutableStateMapOf<String, Int>() }
+  var revealed by remember(revealThreadId) { mutableStateOf(revealThreadId == null) }
+  val revealOffset = if (revealed) null else revealThreadId?.let(threadOffsets::get)
+  LaunchedEffect(revealOffset) {
+    val target = revealOffset ?: return@LaunchedEffect
+    scrollState?.animateScrollTo(target)
+    revealed = true
+  }
   val lastMark = reference.marks.lastOrNull()
   var anchorChoice by remember { mutableStateOf(CommentAnchorChoice.Design) }
   // A chip that no longer applies must not stay selected: rubbing out the last mark, or clearing
@@ -213,7 +241,14 @@ internal fun CommentsInspector(
 
   HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
 
-  val shown = if (showResolved) board.threads else board.openThreads
+  // A thread the URL named is shown whether or not it is resolved, and without turning "Show
+  // resolved" on for everything else. A permalink to a conversation that was settled is exactly the
+  // link somebody sends to explain a decision, and hiding it behind a toggle the reader does not
+  // know to press makes that link open a panel with nothing in it — the reveal below would also
+  // wait forever for an offset no card ever records.
+  val shown =
+    if (showResolved) board.threads
+    else board.threads.filterNot { it.resolved && it.id != revealThreadId }
   if (shown.isEmpty()) {
     Text(
       if (board.threads.isEmpty()) "Nothing has been said about this design yet."
@@ -233,6 +268,8 @@ internal fun CommentsInspector(
         marks = reference.marks,
         nodeLabel = nodeLabel,
         expanded = thread.id == selectedThreadId,
+        onPositioned = { top -> threadOffsets[thread.id] = top },
+        onCopyLink = onCopyLink?.let { copy -> { copy(thread) } },
         onToggle = { onSelectThread(if (thread.id == selectedThreadId) null else thread.id) },
         reply = reply,
         onReplyChanged = { reply = it },
@@ -259,6 +296,8 @@ private fun CommentThreadCard(
   marks: List<ReferenceMark>,
   nodeLabel: (String) -> String,
   expanded: Boolean,
+  onPositioned: (Int) -> Unit,
+  onCopyLink: (() -> Unit)?,
   onToggle: () -> Unit,
   reply: String,
   onReplyChanged: (String) -> Unit,
@@ -270,6 +309,14 @@ private fun CommentThreadCard(
   Column(
     Modifier.fillMaxWidth()
       .padding(top = 8.dp)
+      .onGloballyPositioned { coordinates ->
+        // Where this card sits inside the scrolled column, asked of the parent rather than of the
+        // root: the panel's own position on screen moves with the window, and the number the
+        // scroll takes is an offset into the content.
+        coordinates.parentLayoutCoordinates?.let {
+          onPositioned(it.localPositionOf(coordinates, Offset.Zero).y.roundToInt())
+        }
+      }
       .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
       .padding(10.dp)
   ) {
@@ -329,6 +376,18 @@ private fun CommentThreadCard(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
       TextButton(onClick = onToggle) { Text(if (expanded) "Collapse" else "Open") }
+      // The reason this panel needed a link at all: a thread is the one thing in a design a
+      // person quotes somewhere else, and until now the only way to say which one was to describe
+      // it. Every row carries it, open or collapsed — you do not have to expand a thread to point
+      // at it.
+      onCopyLink?.let {
+        TextButton(
+          onClick = it,
+          modifier = Modifier.semantics { contentDescription = "Copy link to this thread" },
+        ) {
+          Text("Copy link")
+        }
+      }
       onResolve?.let {
         TextButton(onClick = it) { Text(if (thread.resolved) "Reopen" else "Resolve") }
       }
