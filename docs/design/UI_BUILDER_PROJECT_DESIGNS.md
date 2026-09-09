@@ -52,13 +52,29 @@ The index:
       "id": "checkout",
       "title": "Checkout",
       "file": "checkout.json",
-      "description": "Two-step, being reworked for the 4.2 nav"
+      "description": "Two-step, being reworked for the 4.2 nav",
+      "links": {
+        "issue": "https://github.com/yschimke/compose-preview-server/issues/12",
+        "reference": "https://www.figma.com/design/abc/Checkout?node-id=1-2",
+        "pr": "https://github.com/yschimke/compose-preview-server/pull/34",
+        "thread": "https://example.slack.com/archives/C1/p1700000000",
+        "previous": "checkout-v1"
+      }
     }
   ]
 }
 ```
 
 `file` defaults to `<id>.json`, `title` to the id, and `description` is optional.
+
+`links` is optional and additive: it says what the design is **for**, and it is written into this
+host's links store when the design is opened from the library, so the checked-in index is where a
+project records the join to its tracker rather than something re-typed per host. `issue`,
+`reference`, `pr` and `thread` are absolute `http(s)` URLs, at most 2 KB each; `previous` is a design
+id. An index published before the field existed reads exactly as it did, and an entry publishing a
+link this host will not keep loses its links rather than its design — the index is read against the
+same rule the routes are, so it is not a way around it. [`UI_BUILDER_LINKS.md`](UI_BUILDER_LINKS.md)
+has the record, the routes and why it is kept beside the design rather than in it.
 
 ## The two sources, and which half of the loop each is
 

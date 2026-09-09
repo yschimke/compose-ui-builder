@@ -27,6 +27,15 @@ full in `ServeUiBuilderCommentStore`'s KDoc:
 Losing the comments directory loses the discussion and no design content, which is the correct blast
 radius.
 
+## Links, next door
+
+The same shelf holds one more record: five typed back-links per design — the issue it is for, the
+frame it reproduces, the pull request that implemented it, the thread it is discussed in, and the
+design it continues. It is stored beside the design in its own directory for the three reasons above,
+which hold for it unchanged, and it is read the same way: its own routes, its own two MCP tools, and
+a `links` object spliced onto `ui_builder_get_design` beside the `comments` block.
+[`UI_BUILDER_LINKS.md`](UI_BUILDER_LINKS.md) has it.
+
 ## The board, and its one cursor
 
 One file per design, holding a `StoredCommentBoard`: a list of threads, and a `sequence` that rises
