@@ -36,6 +36,12 @@ which hold for it unchanged, and it is read the same way: its own routes, its ow
 a `links` object spliced onto `ui_builder_get_design` beside the `comments` block.
 [`UI_BUILDER_LINKS.md`](UI_BUILDER_LINKS.md) has it.
 
+The two sidecars part company on one point, and on purpose: changing a design's overlay or its links
+record takes that design's own `WRITE` action, while commenting takes only `READ`. A reviewer who
+may see a screen is exactly the person the board exists for, so being a viewer must not be a reason
+they cannot say the icon looks wrong. [`UI_BUILDER_SIDECAR_ACCESS.md`](UI_BUILDER_SIDECAR_ACCESS.md)
+sets out both gates and why this row differs.
+
 ## The board, and its one cursor
 
 One file per design, holding a `StoredCommentBoard`: a list of threads, and a `sequence` that rises

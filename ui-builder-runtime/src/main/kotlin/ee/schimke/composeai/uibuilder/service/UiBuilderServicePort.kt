@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.CommandOutcomeV1
+import ee.schimke.composeai.uibuilder.protocol.DesignAccessActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignAccessControlV1
 import ee.schimke.composeai.uibuilder.protocol.DesignAccessMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
@@ -68,6 +69,24 @@ public sealed interface UiBuilderServiceRequest {
   public data class OpenDesign(val designId: String) : UiBuilderServiceRequest
 
   public data class GetDesignAccess(val designId: String) : UiBuilderServiceRequest
+
+  /**
+   * What this actor may do to one design — the design's own answer, asked without doing anything.
+   *
+   * [GetDesignAccess] answers a neighbouring question and cannot serve this one: it is owner-only,
+   * because the whole access list names every collaborator, and a grantee has no business reading
+   * who else was shared in. A snapshot cannot either, since it carries `access` only for the owner.
+   * So an actor holding a grant had no way to learn its own actions short of attempting the write,
+   * and a caller outside the operation log — the sidecars beside a design, which are not the
+   * document and so never reach [ApplyOperation] — had no way at all.
+   *
+   * Answers only for a design this actor may read, and is otherwise indistinguishable from a design
+   * that does not exist: the point is to describe an actor's own reach, never to confirm an id.
+   *
+   * Has no `ui-builder-protocol` request shape, and deliberately so — this is a host asking its own
+   * service a question, not a wire message; see [RenameDesign] for the same argument.
+   */
+  public data class GetDesignActions(val designId: String) : UiBuilderServiceRequest
 
   public data class UpdateDesignAccess(
     val designId: String,
@@ -196,6 +215,18 @@ public sealed interface UiBuilderServiceResponse {
 
   public data class Designs(val designs: List<DesignListItemV1>, val nextCursor: String?) :
     UiBuilderServiceResponse
+
+  /**
+   * The actions [actor][UiBuilderServiceCall.actor] may take on one design, resolved through its
+   * principal where it has one, exactly as every other authorisation here is.
+   *
+   * An owner is reported as holding every action rather than as an owner: callers of this ask "may
+   * I write", and answering with a role would make each of them re-derive what a role permits.
+   */
+  public data class DesignActions(
+    val designId: String,
+    val actions: List<DesignAccessActionV1>,
+  ) : UiBuilderServiceResponse
 
   public data class DesignAccess(val designId: String, val access: DesignAccessControlV1) :
     UiBuilderServiceResponse

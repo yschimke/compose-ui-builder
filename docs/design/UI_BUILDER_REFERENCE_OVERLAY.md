@@ -96,8 +96,12 @@ than inside it: that file is one blob rewritten on every accepted operation, and
 into it would rewrite every reference on the host on every keystroke.
 
 Routes, all gated twice — the route capability decides whether this caller may use the builder at
-all, and then the design is read *through the service as that actor*, so the design's own access
-control decides whether there is anything here to attach to:
+all, and then the design's own access control decides what this actor may do to *this* design: its
+READ action to see what the design reproduces, its WRITE action to change it. So an actor shared in
+as a viewer is refused with a 403 even holding `ui-builder-write` on the host, because a capability
+is permission to use the door and not permission to re-aim somebody else's design. Both gates, and
+why the comment board deliberately stops at READ, are in
+[`UI_BUILDER_SIDECAR_ACCESS.md`](UI_BUILDER_SIDECAR_ACCESS.md):
 
 | Route | Capability | Carries |
 | --- | --- | --- |

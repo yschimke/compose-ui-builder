@@ -711,6 +711,17 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceReques
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$GetDesignActions : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$GetDesignActions;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$GetDesignActions;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$GetDesignActions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesignId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$GetSnapshot : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
 	public fun <init> (Ljava/lang/String;Ljava/lang/Long;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -860,6 +871,19 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRespon
 	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignAccess;Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/DesignAccessControlV1;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignAccess;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAccess ()Lee/schimke/composeai/uibuilder/protocol/DesignAccessControlV1;
+	public final fun getDesignId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignActions : ee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignActions;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignActions;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceResponse$DesignActions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActions ()Ljava/util/List;
 	public final fun getDesignId ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

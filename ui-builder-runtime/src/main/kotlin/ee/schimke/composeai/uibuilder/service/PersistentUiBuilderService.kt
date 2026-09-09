@@ -559,6 +559,7 @@ public class PersistentUiBuilderService(
     when (this) {
       is UiBuilderServiceRequest.OpenDesign -> designId
       is UiBuilderServiceRequest.GetDesignAccess -> designId
+      is UiBuilderServiceRequest.GetDesignActions -> designId
       is UiBuilderServiceRequest.UpdateDesignAccess -> designId
       is UiBuilderServiceRequest.PreviewCatalogUpgrade -> designId
       is UiBuilderServiceRequest.ApplyOperation -> submission.designId
@@ -843,6 +844,7 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.ListDesigns -> list(call.actor, request)
       is UiBuilderServiceRequest.OpenDesign -> open(call.actor, request.designId, revision = null)
       is UiBuilderServiceRequest.GetDesignAccess -> access(call.actor, request.designId)
+      is UiBuilderServiceRequest.GetDesignActions -> actions(call.actor, request.designId)
       is UiBuilderServiceRequest.UpdateDesignAccess -> updateAccess(call.actor, request)
       is UiBuilderServiceRequest.PreviewCatalogUpgrade ->
         serviceError(
@@ -1073,6 +1075,24 @@ public class PersistentUiBuilderService(
       return serviceError(forbidden("manage access for", designId))
     }
     return LockedExecution(UiBuilderServiceResponse.DesignAccess(designId, design.access))
+  }
+
+  /**
+   * What [actor] may do here, or a not-found that does not say whether the design exists.
+   *
+   * A design this actor cannot read answers exactly as a design that is not here does. That is the
+   * whole reason this is safe to expose to a grantee where [access] is not: it describes only the
+   * caller's own reach, and an actor learns nothing it could not learn by opening the design.
+   */
+  private fun actions(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
+    val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
+    if (!design.allows(actor, DesignAccessActionV1.READ)) {
+      return serviceError(notFound(designId))
+    }
+    val actions =
+      if (design.ownedBy(actor)) DesignAccessActionV1.entries
+      else DesignAccessActionV1.entries.filter { design.allows(actor, it) }
+    return LockedExecution(UiBuilderServiceResponse.DesignActions(designId, actions))
   }
 
   private fun updateAccess(

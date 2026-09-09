@@ -43,6 +43,74 @@ class PersistentUiBuilderServiceTest {
   private val outsider = AuthenticatedUiBuilderActor("outsider")
 
   @Test
+  fun `a design says what an actor may do to it, and says nothing to a stranger`() {
+    val service = service()
+    create(service)
+    val viewer = AuthenticatedUiBuilderActor("github:viewer")
+    val stranger = AuthenticatedUiBuilderActor("github:stranger")
+
+    // The owner holds everything, reported as actions rather than as a role: a caller asking "may
+    // I write" should not have to re-derive what OWNER permits.
+    assertEquals(
+      DesignAccessActionV1.entries,
+      assertIs<UiBuilderServiceResponse.DesignActions>(
+          execute(service, owner, UiBuilderServiceRequest.GetDesignActions("design"))
+        )
+        .actions,
+    )
+
+    execute(
+      service,
+      owner,
+      UiBuilderServiceRequest.UpdateDesignAccess(
+        "design",
+        0,
+        listOf(
+          GrantActorAccessMutationV1(
+            viewer.actorId,
+            DesignAccessRoleV1.VIEWER,
+            listOf(DesignAccessActionV1.READ, DesignAccessActionV1.EXPORT),
+          )
+        ),
+      ),
+    )
+
+    // A viewer learns its own reach — which is the point: before this, a grantee could only find
+    // out by attempting the write, and `GetDesignAccess` is owner-only because it names everybody.
+    assertEquals(
+      listOf(DesignAccessActionV1.READ, DesignAccessActionV1.EXPORT),
+      assertIs<UiBuilderServiceResponse.DesignActions>(
+          execute(service, viewer, UiBuilderServiceRequest.GetDesignActions("design"))
+        )
+        .actions,
+    )
+
+    // And an actor with no access is told what a caller asking about a design that is not here is
+    // told, so this cannot be used to confirm an id exists.
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(service, stranger, UiBuilderServiceRequest.GetDesignActions("design"))).code,
+    )
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(execute(service, owner, UiBuilderServiceRequest.GetDesignActions("no-such"))).code,
+    )
+
+    // A delegate is answered with its principal's reach, as every other authorisation here is.
+    assertEquals(
+      DesignAccessActionV1.entries,
+      assertIs<UiBuilderServiceResponse.DesignActions>(
+          execute(
+            service,
+            AuthenticatedUiBuilderActor("agent:abc123", onBehalfOfActorId = owner.actorId),
+            UiBuilderServiceRequest.GetDesignActions("design"),
+          )
+        )
+        .actions,
+    )
+  }
+
+  @Test
   fun `an agent acting for a person reaches the designs that person owns`() {
     val service = service()
     create(service)

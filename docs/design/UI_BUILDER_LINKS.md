@@ -51,8 +51,12 @@ saga but the back-links that let one be assembled from the outside. This is thos
 ## The routes
 
 Every one of them is authorised twice: the route capability decides whether the caller may use the
-UI-builder at all, and then the design is read *through the service, as that actor*, so a design the
-caller cannot open is a 404 and nothing is enumerable.
+UI-builder at all, and then the *design's own* access control decides what this actor may do to
+this design. Reading takes its READ action, so a design the caller cannot open is a 404 and nothing
+is enumerable; changing the record takes its WRITE action, so an actor shared in as a viewer is
+refused with a 403 even when the credential that reached the route carries `ui-builder-write`. A
+host capability is permission to use the door, never permission to edit somebody else's design —
+see [`UI_BUILDER_SIDECAR_ACCESS.md`](UI_BUILDER_SIDECAR_ACCESS.md).
 
 | Route | Capability | What it does |
 | --- | --- | --- |
