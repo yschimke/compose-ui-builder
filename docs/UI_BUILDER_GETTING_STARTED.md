@@ -312,10 +312,11 @@ Two Adds it will not do:
   record-free emitters route on the root component, so an item that stopped being the root would
   lose its emitter and its native preview lane.
 
-Those two refuse differently, which is worth knowing when a row will not add. Refusing to *wrap* the
-current root is explained on the destination line, in place of the text above. Refusing a
-**component** — the Wear and widget case, on a design that already has a board — only disables that
-row's **Add** button, with no message; the reason is in the component, not on the panel.
+Both say why, in the place that matches what is being refused. Refusing to *wrap* the current root
+is about the design, so it replaces the destination line above the switch. Refusing a **component**
+is about that component, so it appears on that component's row, where its id normally sits — the row
+keeps its disabled **Add** and explains itself. Screen readers get the same sentence on the Add
+button's label, since a disabled button is not always reachable by touch exploration.
 
 A root board **cannot be unwrapped**: Unwrap needs the selected container to have a parent, and a
 board is the document root. **Delete** on it is a different action and takes the whole subtree, its

@@ -792,6 +792,97 @@ fun UiBuilderVariantStripPreview() {
   )
 }
 
+/**
+ * The wear catalog on a board, with the catalog filtered to the one component it must refuse.
+ *
+ * `wear-m3/screen-scaffold` is in [RecordFreeExport.ROOT_ONLY_COMPONENT_IDS]: its emitter routes on
+ * the root component, so a scaffold that became one item of a board would quietly lose its emitter
+ * and its native preview lane. The Add is therefore disabled — and until this change that was the
+ * whole of what the panel said about it.
+ *
+ * The pair is one preview apart in one respect, [refusalPreviewCatalogQuery] aside: the before is
+ * rendered against the panel that only disabled the button. Read the scaffold row's second line.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderBesideRefusalPreview() {
+  UiBuilderEditor(
+    document = wearBoardDocument,
+    catalog = editorChromePreviewWearCatalog,
+    initialCatalogQuery = refusalPreviewCatalogQuery,
+    initialAddBeside = true,
+    initialComponentsOpen = true,
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/** The catalog filter both refusal previews use, so the pair differs only by the panel's code. */
+private const val refusalPreviewCatalogQuery: String = "scaffold"
+
+/** The wear catalog, for the one preview that needs a component a board cannot hold. */
+internal val editorChromePreviewWearCatalog: CapabilityCatalog by lazy {
+  CapabilityCatalogParser.parse(previewResource("/wear-m3-capabilities-v1.json"))
+}
+
+/**
+ * A wear design that is already a board: a root `layout/column` holding two items.
+ *
+ * Built rather than replayed because no wear fixture is a board, and the scenario needs one — with
+ * no board the document-level refusal fires instead, and that one has always been shown on the
+ * destination line. A root `layout/column` *is* the board (`UiBuilderDocument.boardRootId`), so
+ * this is the case where the only thing left to refuse is the component.
+ */
+private val wearBoardDocument: UiBuilderDocument by lazy {
+  val items = mapOf("board-item-1" to "Now playing", "board-item-2" to "Up next")
+  UiBuilderDocument(
+    schema = "ui-builder/v1",
+    id = "wear-board",
+    title = "Wear board",
+    revision = 1,
+    catalogPin = JsonObject(mapOf("catalogId" to JsonPrimitive("wear-m3"))),
+    environment =
+      JsonObject(
+        mapOf(
+          "widthDp" to JsonPrimitive(900),
+          "heightDp" to JsonPrimitive(1400),
+          "density" to JsonPrimitive(2.0),
+          "theme" to JsonPrimitive("dark"),
+        )
+      ),
+    stateVariables = JsonObject(emptyMap()),
+    roots = listOf("board"),
+    nodes =
+      buildMap {
+        put(
+          "board",
+          UiBuilderBoard.node("board")
+            .copy(slots = mapOf(UiBuilderBoard.SLOT to items.keys.toList())),
+        )
+        items.forEach { (id, label) ->
+          put(
+            id,
+            UiBuilderNode(
+              id = id,
+              componentId = "wear-m3/text",
+              properties =
+                JsonObject(
+                  mapOf(
+                    "text" to
+                      JsonObject(
+                        mapOf(
+                          "type" to JsonPrimitive("string"),
+                          "value" to JsonPrimitive(label),
+                        )
+                      )
+                  )
+                ),
+            ),
+          )
+        }
+      },
+  )
+}
+
 /** The two Adds [UiBuilderBoardPreview] is a picture of, applied through the ordinary reducer. */
 private val boardPreviewEdits: List<UiBuilderEditorEvent> =
   listOf(
