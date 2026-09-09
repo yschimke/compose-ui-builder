@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -255,6 +256,42 @@ class BoardInsertTest {
     // one had to exist.
     assertNull(reducer.besideRefusal(onBoard))
     assertNull(reducer.besideRefusal(onBoard, "m3/card"))
+  }
+
+  /**
+   * Asking for a component's refusal on a design the *document* refuses answers about the document.
+   *
+   * `besideRefusal(state, componentId)` is two questions behind one name: it checks the component
+   * first, then falls through to the document. So on a Wear screen that is not yet a board it
+   * returns the wrap refusal for every component id it is handed, including ones with nothing wrong
+   * with them.
+   *
+   * That is fine for the call that gates the insert — the Add is refused either way, and the
+   * message is right — and a trap for any caller that wants to say something *per component*. The
+   * insert panel fell into it: it put this answer on every catalog row, so all 41 rows carried one
+   * sentence the destination line was already showing. A caller wanting only the component's own
+   * answer has to ask `besideRefusal(state)` first, and this test is here so that stays visible.
+   */
+  @Test
+  fun `a component refusal falls through to the document's, so a per-component caller must ask both`() {
+    val wearScreen =
+      reducer.initial(
+        document.copy(
+          roots = listOf("screen"),
+          nodes =
+            mapOf(
+              "screen" to
+                UiBuilderNode(id = "screen", componentId = WearScreenCodeExporter.SCAFFOLD)
+            ),
+        )
+      )
+    assertFalse(wearScreen.document.isBoard)
+
+    val documentRefusal = reducer.besideRefusal(wearScreen)
+    assertNotNull(documentRefusal)
+    // An ordinary component with nothing wrong with it gets the document's answer, not its own.
+    assertEquals(documentRefusal, reducer.besideRefusal(wearScreen, "m3/card"))
+    assertEquals(documentRefusal, reducer.besideRefusal(wearScreen, "m3/text"))
   }
 
   /**

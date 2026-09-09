@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -1004,9 +1005,16 @@ fun UiBuilderEditor(
           if (state.addBeside) reducer.besideRefusal(state, it) == null
           else reducer.dropTarget(state, it) != null
         },
-        // Only in beside mode: outside it a disabled row means "no compatible slot is selected",
-        // which the destination line already says once for the whole panel.
-        catalogAddRefusal = { if (state.addBeside) reducer.besideRefusal(state, it) else null },
+        // Only in beside mode, and only what is specific to the component. `besideRefusal` falls
+        // through to the document's own answer when the component has nothing to say, so asking it
+        // per row on a non-board Wear design returned the *wrap* refusal for every component in the
+        // catalog — the same sentence on all 41 rows, under a destination line already carrying it.
+        // The document's refusal belongs to the panel; only a component's belongs to a row.
+        catalogAddRefusal = {
+          if (state.addBeside && reducer.besideRefusal(state) == null)
+            reducer.besideRefusal(state, it)
+          else null
+        },
         besideRefusal = reducer.besideRefusal(state),
         onCatalogAdd = { componentId, variant ->
           focusEditor()
@@ -4956,10 +4964,17 @@ private fun CatalogRow(
   onToggleVariants: () -> Unit,
 ) {
   Row(
-    // `heightIn` rather than `height`: a refused row carries a sentence where an addable one
-    // carries an id, and only the refused ones grow. Every row keeping 44 dp would truncate the
-    // one piece of text on the row that the reader needs.
-    Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(end = 4.dp),
+    // Exactly 44 dp unless this row is refused. `heightIn` alone was applied to every row, and in a
+    // LazyColumn — which measures with an unbounded maximum — that let every row size to its text
+    // instead, moving the whole catalog and leaving `IndentGuide`'s `fillMaxHeight` with no bound
+    // to fill. A refused row still has to grow, so it takes its height from its content with
+    // `IntrinsicSize.Min`, which is bounded and so keeps the guide drawn.
+    Modifier.fillMaxWidth()
+      .then(
+        if (refusal == null) Modifier.height(44.dp)
+        else Modifier.heightIn(min = 44.dp).height(IntrinsicSize.Min)
+      )
+      .padding(end = 4.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     IndentGuide(depth = 1)
@@ -5002,7 +5017,10 @@ private fun CatalogRow(
         // clipping one costs exactly the clause that says what to do instead. An id still gets one
         // line, because an id that does not fit is no less identifiable for being cut.
         maxLines = if (refusal != null) Int.MAX_VALUE else 1,
-        overflow = TextOverflow.Ellipsis,
+        // Ellipsis only where something is elided. An id has always been clipped here, and
+        // switching it to "…" changed every row that carries a long one — a restyle nobody asked
+        // for, riding in on a change about refusals.
+        overflow = if (refusal != null) TextOverflow.Ellipsis else TextOverflow.Clip,
       )
     }
     if (unexportable) UnexportableBadge(item.displayName)
