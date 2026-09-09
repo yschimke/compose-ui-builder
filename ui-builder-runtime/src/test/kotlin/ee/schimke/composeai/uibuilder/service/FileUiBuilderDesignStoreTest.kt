@@ -300,6 +300,83 @@ class FileUiBuilderDesignStoreTest {
   }
 
   @Test
+  fun `a refused commit leaves no journal bytes behind it`() {
+    val root = createTempDirectory("ui-builder-store")
+    val store = FileUiBuilderDesignStore(root, UiBuilderStoreLimits(maximumDesignBytes = 8_192))
+    val first = design("checkout")
+    store.commit("checkout", null, first)
+    val settled = directorySize(root)
+    val settledUsage = store.usage().bytes
+
+    // The refusal comes after the journal has been written — appended, or compacted into a whole
+    // new generation — and `written` names neither. Left there, those bytes are on the disk and
+    // outside the gauge until this design commits again or the host restarts.
+    val overBudget =
+      first.copy(
+        document =
+          first.document.copy(
+            revision = 1,
+            nodes = (0 until 400).associate { "node-$it" to node("node-$it") },
+          ),
+        lastSequence = 1,
+        history = first.history + committed("op-2"),
+        operationOutcomes = first.operationOutcomes + ("op-2" to outcome("op-2")),
+      )
+    assertFailsWith<UiBuilderPersistenceException> { store.commit("checkout", first, overBudget) }
+
+    assertEquals(settled, directorySize(root), "the disk is where the refusal found it")
+    assertEquals(settledUsage, store.usage().bytes, "and so is the gauge")
+  }
+
+  @Test
+  fun `a refused first commit leaves nothing for the next open to quarantine`() {
+    val root = createTempDirectory("ui-builder-store")
+    val store = FileUiBuilderDesignStore(root, UiBuilderStoreLimits(maximumDesignBytes = 4_096))
+    val base = design("checkout")
+    val overBudget =
+      base.copy(
+        document =
+          base.document.copy(nodes = (0 until 400).associate { "node-$it" to node("node-$it") })
+      )
+
+    assertFailsWith<UiBuilderPersistenceException> { store.commit("checkout", null, overBudget) }
+
+    // A headerless directory is worse than the failure: the next open reads it as a corrupt design,
+    // quarantines it under the directory's name, and holds the id against whoever tries to create
+    // it. The discard renames into the store's own deleted directory before unlinking, so what is
+    // left is the store's garbage rather than a phantom design.
+    val canonical = root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout"))
+    assertFalse(Files.exists(canonical))
+    // The rename is the point, and this is what says it happened rather than the unlink that used
+    // to be the whole of it: a recursive delete can stop halfway, and only the rename cannot. The
+    // failure it guards against — an unlink that does not finish — is not reproducible in-process,
+    // so what is asserted is that the path taken was the one that does not have that failure mode.
+    assertTrue(
+      Files.exists(root.resolve("designs").resolve(FileUiBuilderDesignStore.DELETED_DIRECTORY)),
+      "the discard went through the store's own deleted directory",
+    )
+    val reopened = FileUiBuilderDesignStore(root)
+    assertEquals(emptyMap(), reopened.load().quarantined)
+    assertEquals(null, reopened.quarantineHolding("checkout"), "and the id is free")
+  }
+
+  @Test
+  fun `removing a design that is not on the disk is not reported as a deletion of one`() {
+    val root = createTempDirectory("ui-builder-store")
+    val store = FileUiBuilderDesignStore(root)
+    store.commit("checkout", null, design("checkout"))
+    val canonical = root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout"))
+    Files.walk(canonical).sorted(Comparator.reverseOrder()).forEach { Files.delete(it) }
+
+    // The rename is attempted rather than guarded by `Files.exists`, which cannot tell "not there"
+    // from "could not look". Here it really is not there, and that has to stay quiet rather than
+    // throwing at a caller who asked for exactly this outcome.
+    store.remove("checkout")
+
+    assertEquals(emptyMap(), FileUiBuilderDesignStore(root).load().designs)
+  }
+
+  @Test
   fun `a quarantined design is still counted and can still be retired`() {
     val root = createTempDirectory("ui-builder-store")
     FileUiBuilderDesignStore(root).commit("checkout", null, design("checkout"))

@@ -8,6 +8,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -384,6 +385,15 @@ internal class FileUiBuilderDesignStore(
       val current = files[designId]
       val known = if (current == null) null else previous
       val written = mutableListOf<Path>()
+      // What a refused commit has to undo in the journal, which [written] cannot express. A
+      // compaction wrote a whole generation nothing references yet, and an append put bytes past
+      // the length the current header commits to — and the appended file is not one this commit may
+      // delete, because every committed record is still in front of those bytes. So the undo is
+      // recorded per case as it is written. Left undone, a refusal leaves bytes on the disk that
+      // the
+      // gauge does not know about, and `/status.json` under-reports the store until that design's
+      // next journal-changing commit or a restart.
+      val journalUndo = mutableListOf<() -> Unit>()
       try {
         val documentFile =
           if (known != null && known.document == next.document && current != null) {
@@ -419,19 +429,25 @@ internal class FileUiBuilderDesignStore(
             shouldCompact(previousJournalBytes, compactedBytes) -> {
               compacted = true
               compactJournal(
-                designDirectory,
-                next,
-                generation = journalGeneration(previousJournal) + 1,
-              )
+                  designDirectory,
+                  next,
+                  generation = journalGeneration(previousJournal) + 1,
+                )
+                .also { journalUndo.add { discardJournal(designDirectory.resolve(it.file)) } }
             }
             else ->
               appendJournal(
-                designDirectory,
-                previousJournal,
-                previousJournalBytes,
-                entry,
-                compactedBytes,
-              )
+                  designDirectory,
+                  previousJournal,
+                  previousJournalBytes,
+                  entry,
+                  compactedBytes,
+                )
+                .also {
+                  journalUndo.add {
+                    truncateJournal(designDirectory.resolve(previousJournal), previousJournalBytes)
+                  }
+                }
           }
         fun headerFor(written: JournalWrite) =
           StoredDesignHeaderV3(
@@ -466,17 +482,18 @@ internal class FileUiBuilderDesignStore(
           // rewrite rather than refusing on the strength of bytes nothing needs to keep.
           journal =
             compactJournal(
-              designDirectory,
-              next,
-              generation = journalGeneration(journal.file) + 1,
-            )
+                designDirectory,
+                next,
+                generation = journalGeneration(journal.file) + 1,
+              )
+              .also { journalUndo.add { discardJournal(designDirectory.resolve(it.file)) } }
           compacted = true
           header = headerFor(journal)
           encodedHeader = encodeHeader(header)
           bytes = referencedBytes(designDirectory, header) + encodedHeader.size
         }
         if (bytes > limits.maximumDesignBytes) {
-          discardUncommitted(designDirectory, current, written)
+          discardUncommitted(designDirectory, current, written, journalUndo)
           throw UiBuilderPersistenceException(
             "UI-builder design $designId is $bytes bytes; limit is ${limits.maximumDesignBytes}"
           )
@@ -503,7 +520,7 @@ internal class FileUiBuilderDesignStore(
       } catch (failure: UiBuilderPersistenceException) {
         throw failure
       } catch (failure: IOException) {
-        discardUncommitted(designDirectory, current, written)
+        discardUncommitted(designDirectory, current, written, journalUndo)
         throw UiBuilderPersistenceException(
           "cannot store UI-builder design $designId under $designDirectory",
           failure,
@@ -526,9 +543,46 @@ internal class FileUiBuilderDesignStore(
     designDirectory: Path,
     current: DesignFiles?,
     written: List<Path>,
+    journalUndo: List<() -> Unit> = emptyList(),
   ) {
-    if (current == null) runCatching { deleteRecursively(designDirectory) }
-    else written.forEach { runCatching { Files.deleteIfExists(it) } }
+    if (current == null) {
+      // Renamed rather than unlinked, and only then unlinked, for the same reason `remove` renames:
+      // the rename is one operation that either happened or did not, while a recursive unlink can
+      // stop halfway. Best-effort deletion is what leaves the phantom this exists to avoid — a
+      // headerless directory the next open quarantines under a hash, holding an id nobody can
+      // create until an operator retires it. Everything under the deleted directory is the store's
+      // own garbage, so a rename there needs nothing else to be true.
+      val discarded = runCatching {
+        val tombstone = tombstoneFor(designDirectory)
+        Files.createDirectories(tombstone.parent)
+        Files.move(designDirectory, tombstone, StandardCopyOption.ATOMIC_MOVE)
+        tombstone
+      }
+        .getOrNull()
+      runCatching { deleteRecursively(discarded ?: designDirectory) }
+    } else {
+      written.forEach { runCatching { Files.deleteIfExists(it) } }
+      journalUndo.forEach { runCatching { it() } }
+    }
+  }
+
+  /** A journal generation this commit wrote and no header will ever name. */
+  private fun discardJournal(path: Path) {
+    Files.deleteIfExists(path)
+  }
+
+  /**
+   * Cuts an appended journal back to the length the current header commits to.
+   *
+   * Not a delete: every committed record is in front of these bytes, and the header that names them
+   * is the one still current. The read side would ignore the tail either way — it reads the
+   * committed prefix — so this is about the bytes on the disk and the gauge that counts them.
+   */
+  private fun truncateJournal(path: Path, length: Long) {
+    FileChannel.open(path, StandardOpenOption.WRITE).use {
+      it.truncate(length)
+      it.force(true)
+    }
   }
 
   /**
@@ -567,10 +621,23 @@ internal class FileUiBuilderDesignStore(
         // a restart would then lose or quarantine a design it had been told still existed. Renaming
         // out of the way is atomic, so after it the design is gone whatever happens next; the
         // unlink of the tombstone is cleanup, and a failure there costs disk rather than truth.
-        if (Files.exists(designDirectory)) {
-          val tombstone = tombstoneFor(designDirectory)
-          Files.createDirectories(tombstone.parent)
-          Files.move(designDirectory, tombstone, StandardCopyOption.ATOMIC_MOVE)
+        // Attempted rather than guarded by `Files.exists`, which answers false both for a design
+        // that is not there and for one it could not look at: a permission that changed under the
+        // host, a transient failure on the filesystem. Guarded, the second case skipped the rename,
+        // reported a successful delete, and dropped the design from the map — and the directory it
+        // never touched came back at the next open. Only the filesystem saying the source is not
+        // there means the design is already gone; the parent is created first so that answer can
+        // only be about the design.
+        val tombstone = tombstoneFor(designDirectory)
+        Files.createDirectories(tombstone.parent)
+        val moved =
+          try {
+            Files.move(designDirectory, tombstone, StandardCopyOption.ATOMIC_MOVE)
+            true
+          } catch (_: NoSuchFileException) {
+            false
+          }
+        if (moved) {
           forceDirectory(designsDirectory)
           // The design is gone either way; the disk is only given back when the unlink finishes, so
           // the gauge follows the disk rather than the design.
