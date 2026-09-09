@@ -448,6 +448,37 @@ class CollaborationConvergenceTest {
     assertNoDesignMutation(loaded, touched.state)
   }
 
+  /**
+   * The other half of the rule above, and the reason it is asked once per command rather than once
+   * per operation: wrapping a root takes an insert beside it and a move inside it, so the document
+   * has two roots in between. A command is what commits, so a command is what a document-level
+   * invariant answers to — `PersistentUiBuilderService` has always checked it exactly here.
+   */
+  @Test
+  fun `a command may pass through two roots on its way to one`() {
+    val initial = CollaborationState(document())
+
+    val wrapped =
+      CollaborationReducer.apply(
+        initial,
+        command(
+          "wrap-the-root",
+          "actor-a",
+          "browser-a",
+          4,
+          DesignOperation.InsertNode(UiBuilderNode("board", "column")),
+          DesignOperation.MoveNode("container", ParentSlot("board", "items")),
+        ),
+      )
+
+    assertIs<CommandOutcome.Accepted>(wrapped.outcome, wrapped.outcome.toString())
+    assertEquals(listOf("board"), wrapped.state.document.roots)
+    assertEquals(
+      listOf("container"),
+      wrapped.state.document.nodes.getValue("board").slots.getValue("items"),
+    )
+  }
+
   @Test
   fun `a rejected operation id replays its rejection after the target becomes valid`() {
     val initiallyRejected =

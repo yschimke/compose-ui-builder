@@ -40,6 +40,23 @@ object RecordFreeExport {
     }
 
   /**
+   * Components their emitters will only write when they are the document's **root**.
+   *
+   * [generate] routes on the root component id, so one of these anywhere else — a Wear screen
+   * scaffold that has become one item of a board, say — falls through to the record-driven
+   * generator instead, losing the emitter and the authoritative native preview lane that go with
+   * it. An authoring surface that can place a component somewhere other than the root asks this
+   * first.
+   *
+   * Derived from the same two sources [CATALOG_SYSTEM_IDS] is derived from, and for its reason: a
+   * hand-kept list drifts towards claiming a component is placeable while its emitter still demands
+   * the root.
+   */
+  val ROOT_ONLY_COMPONENT_IDS: Set<String> =
+    (WearWidgetScaffoldSize.entries.map { it.componentId } + WearScreenCodeExporter.SCAFFOLD)
+      .toSet()
+
+  /**
    * The Kotlin [document] generates on its own, or null when it is an ordinary screen the record
    * -driven generator owns.
    *

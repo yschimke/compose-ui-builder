@@ -10,6 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
@@ -718,4 +719,114 @@ private val historyPreviewEdits: List<UiBuilderEditorEvent> =
       editorChromePreviewDocument.screenEnvironmentSettings().copy(density = 2.0)
     ),
     UiBuilderEditorEvent.Undo,
+  )
+
+/**
+ * A design of several top-level items, before it has any: the seed the pair below starts from.
+ *
+ * Rendered with the Add beside switch already on, so the two pictures differ by exactly the thing
+ * under test — two Adds — rather than by which panel is open or which mode the editor is in.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderBoardBeforePreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument.onCanvasFrame(),
+    catalog = editorChromePreviewCatalog,
+    initialAddBeside = true,
+    initialComponentsOpen = true,
+    initialInspectorOpen = true,
+    initialInspectorMode = EditorInspectorMode.Screen,
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/**
+ * The same design after two Adds beside: a board of three items, one tree, one root.
+ *
+ * Three of the change's claims in one picture, which is why the docks are open. The canvas draws a
+ * `layout/column` the renderer already knew how to draw — nothing in it is synthetic, and the
+ * layers panel lists the board as the ordinary node it is. The insert panel says where the next Add
+ * lands. The Frame inspector says what is being looked at without claiming a device for it.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderBoardPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument.onCanvasFrame(),
+    catalog = editorChromePreviewCatalog,
+    initialEdits = boardPreviewEdits,
+    initialAddBeside = true,
+    initialComponentsOpen = true,
+    initialInspectorOpen = true,
+    initialInspectorMode = EditorInspectorMode.Screen,
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/**
+ * The variant strip: one document, drawn beside itself under two other frames.
+ *
+ * The design claims a tablet — the same `exportDevices` the Compose export writes as
+ * `@Preview(device = …)`, which until now nothing drew — and the Dark axis is switched on. So the
+ * workspace holds the editing pane at the design's own frame, the tablet it says it works on, and
+ * the question being asked of it. Exactly one of them takes edits.
+ *
+ * The before is [UiBuilderCanvasForwardPreview], which is the same editor on a design claiming no
+ * devices: one pane, which is what every design drew before this.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderVariantStripPreview() {
+  UiBuilderEditor(
+    // Light, deliberately: the fixture's own environment is `"theme": "dark"`, so a Dark axis over
+    // it drew a third pane identical in theme to the first two — a picture that proves a pane is
+    // laid out and nothing about the override reaching the colours. A before/after pair whose two
+    // images match is a finding, and so is a variant that matches the design it varies.
+    document =
+      editorChromePreviewDocument.onDevice(PREVIEW_PHONE).claiming(PREVIEW_TABLET).inLightTheme(),
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "discover-grid",
+    initialVariantAxes = setOf(EditorVariantAxis.Dark),
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/** The two Adds [UiBuilderBoardPreview] is a picture of, applied through the ordinary reducer. */
+private val boardPreviewEdits: List<UiBuilderEditorEvent> =
+  listOf(
+    UiBuilderEditorEvent.InsertComponentBeside("m3/card"),
+    UiBuilderEditorEvent.InsertComponentBeside("m3/text"),
+  )
+
+/**
+ * A frame wide and long enough to hold several items, which is what a board is measured in.
+ *
+ * Not a device, and that is the point of the pair it serves: the items are laid out down the middle
+ * of this width at this density, and no preset claims to be it.
+ */
+private fun UiBuilderDocument.onCanvasFrame(): UiBuilderDocument =
+  copy(
+    environment =
+      JsonObject(
+        environment +
+          mapOf(
+            "widthDp" to JsonPrimitive(900),
+            "heightDp" to JsonPrimitive(1400),
+            "density" to JsonPrimitive(2.0),
+          )
+      )
+  )
+
+/** This design under the light scheme, so a Dark variant beside it is visibly a variant. */
+private fun UiBuilderDocument.inLightTheme(): UiBuilderDocument =
+  copy(environment = JsonObject(environment + mapOf("theme" to JsonPrimitive("light"))))
+
+/** This design claiming it also works on [preset] — the stored set the variant strip draws. */
+private fun UiBuilderDocument.claiming(preset: UiBuilderDevicePreset): UiBuilderDocument =
+  copy(
+    environment =
+      JsonObject(
+        environment + mapOf("exportDevices" to JsonArray(listOf(JsonPrimitive(preset.id))))
+      )
   )

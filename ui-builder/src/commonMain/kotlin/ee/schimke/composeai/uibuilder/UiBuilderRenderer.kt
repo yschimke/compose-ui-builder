@@ -490,10 +490,11 @@ fun UiBuilderSurface(
       dark -> darkColorScheme()
       else -> lightColorScheme()
     }
-  val themeHost =
-    document.roots.asSequence().mapNotNull(document.nodes::get).firstOrNull {
-      it.componentId == "m3/surface"
-    }
+  // `topLevelNodes`, not `roots`: a board is a container the editor put there when a second item
+  // was added, and the themed surface under it is still the top of the design. Scanning roots alone
+  // dropped the palette, the type scale and the corner radius the moment a themed screen joined a
+  // board. `UiBuilderEditorState.themeHost` asks this the same way.
+  val themeHost = document.topLevelNodes.firstOrNull { it.componentId == "m3/surface" }
   val primaryColor = themeHost?.themeColor(THEME_PRIMARY)
   val backgroundColor = themeHost?.themeColor(THEME_BACKGROUND)
   val surfaceColor = themeHost?.themeColor(THEME_SURFACE)

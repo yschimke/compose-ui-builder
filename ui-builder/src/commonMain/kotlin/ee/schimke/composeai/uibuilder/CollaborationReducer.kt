@@ -600,7 +600,7 @@ object CollaborationReducer {
             baseRevision = command.baseRevision,
             trace = trace,
           )
-        trace.state.document.requireValidTopology()
+        trace.state.document.requireValidPlacement()
       } catch (failure: ReducerFailure) {
         return state.rejected(
           failure.code,
@@ -610,6 +610,15 @@ object CollaborationReducer {
           failure.field,
         )
       }
+    }
+    // Once, after the command, for the reason [requireSingleRoot] gives: it is the one topology
+    // rule
+    // about the document rather than about a node, and a command is what commits. The half-applied
+    // states inside the loop above are nobody's document.
+    try {
+      trace.state.document.requireSingleRoot()
+    } catch (failure: ReducerFailure) {
+      return state.rejected(failure.code, failure.message.orEmpty(), nodeId = failure.nodeId)
     }
     documentValidator?.validate(trace.state.document)?.let { issue ->
       return state.rejected(
@@ -2152,11 +2161,42 @@ private const val POSITION_STEP = 1024
  * takes an empty document and the first insert names no parent (`NodeLocation` with a null parent
  * is the root list) — and that state is one insert from being exportable. Two roots is the state
  * that is one *deletion of everything* from being exportable, so it is the one refused.
+ *
+ * Kept for the callers that hold a whole document and ask one question of it. The reducer asks the
+ * two halves separately, and [requireSingleRoot] says why.
  */
 internal fun UiBuilderDocument.requireValidTopology() {
+  requireSingleRoot()
+  requireValidPlacement()
+}
+
+/**
+ * At most one root — the bound [requireValidTopology] describes, asked on its own.
+ *
+ * Separate because it is the one rule in that function that is about the *document* rather than
+ * about a node, and so it is the one rule a half-applied command may legitimately break. Wrapping
+ * an existing root in a board takes an insert beside it and a move inside it
+ * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)),
+ * and the document has two roots in between — a state no reader ever sees, because a command is
+ * what commits.
+ *
+ * So the reducer runs this once, after the command, which is what `PersistentUiBuilderService` has
+ * always done with its own `validateTopology`. A command that *ends* with two roots is refused with
+ * the code and the message it was always refused with; only the moment of asking moved.
+ */
+internal fun UiBuilderDocument.requireSingleRoot() {
   if (roots.size > 1) {
     fail(RejectionCode.INVALID_DOCUMENT, "a design has at most one root; found ${roots.size}")
   }
+}
+
+/**
+ * Every node placed exactly once, every placed node known, and nothing cycling.
+ *
+ * Every rule here is about a node, so every one of them holds after each operation: a node placed
+ * twice or missing is wrong the instant it happens, whatever the rest of the command intended.
+ */
+internal fun UiBuilderDocument.requireValidPlacement() {
   val locations = mutableMapOf<String, Int>()
   fun record(nodeId: String) {
     if (nodeId !in nodes) {
