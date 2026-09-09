@@ -454,11 +454,14 @@ viewport for an indicator to show a position within.
 
 ### On a deployed box
 
-`wear-m3` is in the packaged image's authoring allowlist —
-`SERVE_UI_BUILDER_CATALOGS` defaults to `m3-catalog,remote-m3,wear-m3` in
-`deploy/image/entrypoint.sh` — so the chooser offers Wear Material 3 without an operator flag.
-Enabling an adapter is a claim that what an author sees is what they get, and it joined the default
-only once the round trip above put a render behind that claim.
+`wear-m3` was in the packaged image's authoring allowlist, and is no longer: as of the catalog
+contract's phase 4, `SERVE_UI_BUILDER_CATALOGS` defaults to `m3-catalog,remote-m3` in
+`deploy/image/entrypoint.sh`, so the chooser offers Wear Material 3 only where an operator asks for
+it (`SERVE_UI_BUILDER_CATALOGS=m3-catalog,remote-m3,wear-m3`). Nothing below changed — the adapter,
+the render behind it and the round trip are as they were. What changed is that wear-m3-catalog now
+publishes a `ui-builder.json` the equivalence gate scores 23 differences against the frozen catalog,
+so a default-on `wear-m3` would have quietly served a derived shelf in place of the curated one.
+`docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4 has the numbers and the way back.
 
 `ServeWearScreenDeploymentIntegrationTest` walks the path a person walks, over HTTP, against a
 server given exactly that catalog list: `POST /ui-builder/wear-m3` with `template=wear-list` —

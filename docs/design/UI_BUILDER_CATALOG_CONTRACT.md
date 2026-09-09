@@ -662,6 +662,28 @@ binary has never heard of. Items 15, 16, 17 and 19 remain: the platform word, th
 the canvas mapping and the `compose-preview-server ui` lane still read Kotlin, so a published catalog
 is served but a **Wear-shaped** one is not yet drawn from its own declarations.
 
+**The lever item 18 promised is now a flag, and `wear-m3` is off by default.** Item 18 says the
+cutover is "per catalog and reversible"; until now the only reversal available to an operator was
+`SERVE_UI_BUILDER_CATALOGS`, which withdraws the catalog from the builder entirely rather than
+returning it to its synthesised definition. `--ui-builder-published-catalogs` is the finer lever:
+`all` (the default, and the behaviour item 18 shipped with), `none`, or a subset of the served
+catalogs, refusing an id this host does not serve so a typo is a startup error rather than a silent
+no-op. It reads `SERVE_UI_BUILDER_PUBLISHED_CATALOGS` in the deployment image.
+
+The catalog it was written for is `wear-m3`, which the image no longer serves by default. Once
+wear-m3-catalog bumped to compose-ai-tools 2.4.0 it began publishing a real 42 KB `ui-builder.json`
+— and that file is not equivalent to what this server synthesises. Its components carry no
+`@BuilderComponent` policy, so every id is derived from the prefix: `statusSemantics.components` is
+empty, 28 ids collide (`wear-m3/alert-dialog` is claimed by `ConfirmButton`, `DismissButton`,
+`EdgeButton` and `AlertDialogContent` at once) and 50 components claim no canvas adapter.
+`ui-builder-equivalence.sh --strict --catalog-id wear-m3` exits 1 with 23 differences. Serving the
+catalog would have swapped a curated shelf for a derived one, which is precisely the swap the
+phase-0 gate exists to catch — so the deployment stops serving `wear-m3` until the gate is green,
+which also stops paying for its Android/Robolectric dependency for a shelf nobody was authoring
+against. The `--ui-builder-native-catalog wear-m3=wear-m3-catalog` mapping stays in the entrypoint,
+inert, so putting `wear-m3` back is one variable rather than a catalog whose native render compiles
+against the wrong bundle.
+
 15. **Platform becomes a word.** `UiBuilderCatalogPlatform(wireValue, label)` over a string; `label`
     from `statusSemantics.platformLabel` with the three known words as fallback labels for one
     release. The chooser groups the enabled catalogs by platform word and labels each group by its
