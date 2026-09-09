@@ -2365,18 +2365,6 @@ private fun JsonElement?.kotlinLiteral(): String =
         }
   }
 
-private fun canonicalJson(element: JsonElement): String =
-  when (element) {
-    is JsonObject ->
-      element.entries
-        .sortedBy { it.key }
-        .joinToString(",", "{", "}") { (key, value) ->
-          "${JsonPrimitive(key)}:${canonicalJson(value)}"
-        }
-    is JsonArray -> element.joinToString(",", "[", "]") { canonicalJson(it) }
-    is JsonPrimitive -> element.toString()
-  }
-
 private fun String.identifier(): String {
   val words = split(Regex("[^A-Za-z0-9_]+")).filter(String::isNotEmpty)
   val candidate =

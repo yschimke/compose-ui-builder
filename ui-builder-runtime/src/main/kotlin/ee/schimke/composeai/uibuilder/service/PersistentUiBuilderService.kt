@@ -32,7 +32,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 
 public data class UiBuilderCatalogIssue(
   val code: String,
@@ -280,7 +279,7 @@ public class UiBuilderSubscriptionRejectedException(public val error: UiBuilderS
  * multi-replica deployment.
  */
 public class PersistentUiBuilderService(
-  private val storage: UiBuilderStateStorage,
+  private val designStore: UiBuilderDesignStateStore,
   private val catalogs: UiBuilderCatalogExecutor,
   private val exporter: UiBuilderExportExecutor,
   private val subscriberFailureHandler: UiBuilderSubscriberFailureHandler =
@@ -294,6 +293,33 @@ public class PersistentUiBuilderService(
   private val assets: UiBuilderAssetStore? = null,
 ) :
   UiBuilderServicePort, UiBuilderServiceDiagnosticsSource, UiBuilderAdminPort, UiBuilderAssetPort {
+  /**
+   * The single-file storage this service was built on, behind the per-design port.
+   *
+   * Kept for the hosts that never had a directory to write into — an in-memory storage, a test, a
+   * caller outside this repository — and for `migratePersistenceToLatest`, which is about that
+   * format and only that format. A host with a state directory opens [UiBuilderDesignStateStore]
+   * instead, and pays per design rather than per store on every edit.
+   */
+  public constructor(
+    storage: UiBuilderStateStorage,
+    catalogs: UiBuilderCatalogExecutor,
+    exporter: UiBuilderExportExecutor,
+    subscriberFailureHandler: UiBuilderSubscriberFailureHandler =
+      UiBuilderSubscriberFailureHandler {},
+    clock: Clock = Clock.systemUTC(),
+    limits: UiBuilderServiceLimits = UiBuilderServiceLimits(),
+    assets: UiBuilderAssetStore? = null,
+  ) : this(
+    UiBuilderDesignStateStore(LegacyStateStorageDesignStore(storage)),
+    catalogs,
+    exporter,
+    subscriberFailureHandler,
+    clock,
+    limits,
+    assets,
+  )
+
   private data class MutationBucket(var tokens: Int, var refilledAtMillis: Long)
 
   private data class RuntimeDesign(
@@ -366,20 +392,10 @@ public class PersistentUiBuilderService(
     val mailboxes: List<SubscriberMailbox> = emptyList(),
   )
 
-  private data class LoadedPersistence(
-    val value: PersistedServiceV1,
-    val format: PersistenceFormat,
-  )
-
-  private enum class PersistenceFormat(val wire: String) {
-    V1("compose-preview-ui-builder-service/v1"),
-    V2("compose-preview-ui-builder-service/v2"),
-  }
-
   private val lock = ReentrantLock()
-  private val loadedPersistence = loadPersistence()
-  private var persisted: PersistedServiceV1 = loadedPersistence.value
-  private var persistenceFormat: PersistenceFormat = loadedPersistence.format
+  private val store: UiBuilderDesignStore = designStore.store
+  private val loadedPersistence = store.load()
+  private var persisted: PersistedServiceV1 = PersistedServiceV1(loadedPersistence.designs)
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
@@ -430,7 +446,7 @@ public class PersistentUiBuilderService(
    * taking down the answer it is one row of.
    */
   private val storageUsage: UiBuilderStorageUsage?
-    get() = runCatching { storage.usage() }.getOrNull()
+    get() = runCatching { store.usage() }.getOrNull()
 
   init {
     persisted.designs.forEach { (designId, _) -> runtime[designId] = RuntimeDesign() }
@@ -461,7 +477,17 @@ public class PersistentUiBuilderService(
    * layer before any of this runs, and `restoreBackup` is the recovery. Trusting a file that failed
    * those checks would be worse than not starting; carrying a design the catalog outgrew is not.
    */
-  private data class UnusableDesign(val code: ServiceErrorCodeV1, val reason: String)
+  private data class UnusableDesign(
+    val code: ServiceErrorCodeV1,
+    val reason: String,
+    /**
+     * True when the *store* could not read this design, rather than the catalog refusing a document
+     * it read fine. The two are unusable for different reasons and recover differently: a document
+     * the catalog outgrew can be downloaded and repaired, and one the store cannot decode can only
+     * be retired.
+     */
+    val storeQuarantine: Boolean = false,
+  )
 
   /**
    * Computed once at load and then maintained, rather than fixed for the life of the process.
@@ -481,7 +507,18 @@ public class PersistentUiBuilderService(
         .mapNotNull { (designId, design) ->
           unusableReason(designId, design)?.let { designId to it }
         }
-        .toMap()
+        .toMap() +
+        // A design whose own files could not be read. The single-file store could not have this
+        // entry: its checksum covered every design at once, so one bad byte was the whole lane
+        // rather than one design. Reported like any other unusable design, and repaired the same
+        // way — by an operator who can now see which one it is.
+        loadedPersistence.quarantined.mapValues { (_, reason) ->
+          UnusableDesign(
+            ServiceErrorCodeV1.INTERNAL,
+            "stored design cannot be read: $reason",
+            storeQuarantine = true,
+          )
+        }
     )
 
   private fun unusableReason(designId: String, design: PersistedDesignV1): UnusableDesign? {
@@ -694,7 +731,7 @@ public class PersistentUiBuilderService(
               ))
             .takeLast(limits.retainedAuditRecords),
       )
-    commitPersisted(persisted.copy(designs = persisted.designs + (write.designId to updated)))
+    commitDesign(write.designId, updated)
     // One snapshot for every subscriber, so it carries no access list: `snapshot` includes one
     // for the owner, and the writer being the owner must not show it to the viewers.
     val broadcast =
@@ -864,7 +901,7 @@ public class PersistentUiBuilderService(
           },
         updatedAtEpochMillis = now,
       )
-    commitPersisted(persisted.copy(designs = persisted.designs + (request.designId to updated)))
+    commitDesign(request.designId, updated)
     return LockedExecution(UiBuilderServiceResponse.DesignRenamed(updated.listItem(actor)))
   }
 
@@ -894,6 +931,27 @@ public class PersistentUiBuilderService(
     }
     if (requested.id.isBlank() || requested.id in persisted.designs) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design id is blank or already exists")
+    }
+    // A design whose files could not be read is absent from the map above but present on the disk,
+    // under the directory this id resolves to. Creating over it would write into somebody else's
+    // design — and the id would then answer every request with the stale quarantine, while a delete
+    // aimed at the quarantine took the new design with it. Retiring the old one is the door.
+    //
+    // Asked of the store by place rather than by id, because a quarantine is not always reported
+    // under the id it holds: a design whose header will not parse has no id to be read out of it
+    // and is reported under its directory, and one restored under another name is reported under
+    // that name. Either still occupies the directory this id resolves to.
+    val holder =
+      store.quarantineHolding(requested.id)
+        ?: requested.id.takeIf { unusableDesigns[it]?.storeQuarantine == true }
+    if (holder != null) {
+      val reason = unusableDesigns[holder]?.reason ?: "the stored design could not be read"
+      val named = if (holder == requested.id) "" else " (reported as $holder)"
+      return serviceError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "design ${requested.id} is quarantined$named and must be retired before the id is reused: " +
+          reason,
+      )
     }
     if (requested.revision != 0L) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "new designs must start at revision 0")
@@ -936,7 +994,7 @@ public class PersistentUiBuilderService(
         createdAtEpochMillis = now,
         updatedAtEpochMillis = now,
       )
-    commitPersisted(persisted.copy(designs = persisted.designs + (document.id to design)))
+    commitDesign(document.id, design)
     runtime[document.id] = RuntimeDesign()
     return LockedExecution(
       UiBuilderServiceResponse.Snapshot(snapshot(design, actor, catalog, emptyList()))
@@ -1113,7 +1171,7 @@ public class PersistentUiBuilderService(
     }
     access = access.copy(accessRevision = access.accessRevision + 1)
     val updated = design.copy(access = access, updatedAtEpochMillis = now)
-    commitPersisted(persisted.copy(designs = persisted.designs + (request.designId to updated)))
+    commitDesign(request.designId, updated)
 
     val closed = mutableListOf<SubscriberMailbox>()
     runtime.getValue(request.designId).subscribers.entries.removeIf { (_, subscriber) ->
@@ -1229,8 +1287,7 @@ public class PersistentUiBuilderService(
             limits.minimumRetainedUndoOperations,
           ),
       )
-    val candidate = persisted.copy(designs = persisted.designs + (submission.designId to recorded))
-    commitPersisted(candidate)
+    commitDesign(submission.designId, recorded)
     if (reduction.outcome !is AcceptedOutcomeV1) {
       return LockedExecution(UiBuilderServiceResponse.OperationOutcome(reduction.outcome))
     }
@@ -1510,7 +1567,7 @@ public class PersistentUiBuilderService(
         )
       val updated =
         design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
-      commitPersisted(persisted.copy(designs = persisted.designs + (request.designId to updated)))
+      commitDesign(request.designId, updated)
     }
     return UiBuilderServiceResponse.Export(artifact)
   }
@@ -2702,6 +2759,9 @@ public class PersistentUiBuilderService(
       }
   }
 
+  override fun adminUnreadableDesigns(): Set<String> =
+    unusableDesigns.filterValues { it.storeQuarantine }.keys.toSet()
+
   override fun adminUnusableDesigns(): Map<String, String> =
     unusableDesigns.mapValues { (_, unusable) ->
       unusable.reason
@@ -2790,7 +2850,7 @@ public class PersistentUiBuilderService(
           positionSnapshots = listOf(PositionStateV1(document.revision, positions)),
           updatedAtEpochMillis = now,
         )
-      commitPersisted(persisted.copy(designs = persisted.designs + (designId to repaired)))
+      commitDesign(designId, repaired)
       unusableDesigns.remove(designId)
       runtime.getOrPut(designId) { RuntimeDesign() }
       UiBuilderAdminRepair.Repaired(designId, document.revision, unusable.reason)
@@ -2798,7 +2858,17 @@ public class PersistentUiBuilderService(
 
   override fun adminDeleteDesign(designId: String): Boolean {
     val closed: List<SubscriberMailbox> = lock.withLock {
-      if (designId !in persisted.designs) return false
+      // A design whose stored files could not be read is not in the design map — there is no
+      // document to put there — but it is still on the disk, still counted against the store, and
+      // still the operator's to retire. Retiring it is the one action that has to keep working when
+      // reading it does not; download and repair genuinely cannot, because both need the document
+      // the store could not decode.
+      if (designId !in persisted.designs) {
+        if (unusableDesigns[designId]?.storeQuarantine != true) return false
+        store.remove(designId)
+        unusableDesigns.remove(designId)
+        return@withLock emptyList()
+      }
       removeLocked(designId)
     }
     closed.forEach(SubscriberMailbox::close)
@@ -2812,7 +2882,7 @@ public class PersistentUiBuilderService(
   private fun removeLocked(designId: String): List<SubscriberMailbox> {
     // Durable first: a subscriber whose stream closes has lost the design, not merely the
     // connection, and must not observe that before the removal is on disk.
-    commitPersisted(persisted.copy(designs = persisted.designs - designId))
+    removeDesign(designId)
     // The design is gone, so its quarantine goes with it: leaving the entry would answer this id
     // with a catalog error rather than "not found", and would follow a re-created design here.
     unusableDesigns.remove(designId)
@@ -2821,77 +2891,45 @@ public class PersistentUiBuilderService(
     return removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
   }
 
-  private fun commitPersisted(candidate: PersistedServiceV1) {
-    storage.replace(encode(candidate, persistenceFormat))
-    persisted = candidate
+  /**
+   * Stores one design's new value, and only that design's.
+   *
+   * The whole-store candidate this replaced is what made an edit cost `O(everything stored)`: a
+   * padding value nudged in the smallest of 36 designs re-serialized all 23.4 MB, including the
+   * 12.5 MB belonging to a design the edit never touched (yschimke/compose-preview-server#578). The
+   * store is handed the value before and after so it can write only the parts that differ.
+   */
+  private fun commitDesign(designId: String, updated: PersistedDesignV1) {
+    store.commit(designId, persisted.designs[designId], updated)
+    persisted = persisted.copy(designs = persisted.designs + (designId to updated))
+  }
+
+  private fun removeDesign(designId: String) {
+    store.remove(designId)
+    persisted = persisted.copy(designs = persisted.designs - designId)
   }
 
   /**
    * Explicitly upgrades a validated v1 envelope to v2 with an envelope-level catalog-pin manifest.
    * No migration is attempted during startup. The storage must retain the exact v1 generation and
    * support explicit restore; a failed durable readback is rolled back before this method fails.
+   *
+   * A host on the per-design store has nothing to do here: that store migrates a v2 file the first
+   * time it opens one, so this answers "already at the latest" rather than refusing, which is what
+   * `--ui-builder-migrate-state` on such a host should hear.
    */
   public fun migratePersistenceToLatest(): UiBuilderPersistenceMigrationResult = lock.withLock {
-    if (persistenceFormat == PersistenceFormat.V2) {
-      val bytes = encode(persisted, PersistenceFormat.V2)
-      return UiBuilderPersistenceMigrationResult(
-        migrated = false,
-        fromFormat = PersistenceFormat.V2.wire,
-        toFormat = PersistenceFormat.V2.wire,
-        persistedBytes = bytes.size,
-      )
-    }
-    val migrationStorage =
-      storage as? RecoverableUiBuilderMigrationStorage
-        ?: throw UiBuilderPersistenceException(
-          "persistence migration requires recoverable migration storage"
+    val legacy =
+      store as? LegacyStateStorageDesignStore
+        ?: return UiBuilderPersistenceMigrationResult(
+          migrated = false,
+          fromFormat = FileUiBuilderDesignStore.STORE_FORMAT,
+          toFormat = FileUiBuilderDesignStore.STORE_FORMAT,
+          persistedBytes = (store.usage()?.bytes ?: 0L).toInt(),
         )
-    // Deliberately not gated on every stored design being servable. This rewrites the envelope
-    // format and does not reinterpret a single document, so a design the current catalog cannot
-    // serve is no reason to refuse — and refusing would put back, in an operator's one recovery
-    // path, exactly the trap that moving validation off startup removed: one design pinned to a
-    // withdrawn catalog and the migration can never be run. What this step does need is proved
-    // below and is about the bytes: the preflight round trip, the durable readback, and the
-    // rollback if either disagrees.
-    val migratedBytes = encode(persisted, PersistenceFormat.V2)
-    val preflight = decode(migratedBytes)
-    check(preflight.format == PersistenceFormat.V2 && preflight.value == persisted) {
-      "v2 persistence migration preflight did not round trip"
-    }
-    migrationStorage.replaceForMigration(migratedBytes)
-    try {
-      val durable = loadPersistence()
-      if (durable.format != PersistenceFormat.V2 || durable.value != persisted) {
-        throw UiBuilderPersistenceException("migrated persistence readback mismatch")
-      }
-    } catch (failure: Throwable) {
-      val restored =
-        try {
-          migrationStorage.restoreMigrationBackup() &&
-            loadPersistence().let { it.format == PersistenceFormat.V1 && it.value == persisted }
-        } catch (rollbackFailure: Throwable) {
-          failure.addSuppressed(rollbackFailure)
-          false
-        }
-      if (!restored) {
-        throw UiBuilderPersistenceException(
-          "persistence migration failed and rollback could not be confirmed",
-          failure,
-        )
-      }
-      throw UiBuilderPersistenceException(
-        "persistence migration failed; the v1 backup was restored",
-        failure,
-      )
-    }
-    persistenceFormat = PersistenceFormat.V2
-    persistenceMigrations.incrementAndGet()
-    UiBuilderPersistenceMigrationResult(
-      migrated = true,
-      fromFormat = PersistenceFormat.V1.wire,
-      toFormat = PersistenceFormat.V2.wire,
-      persistedBytes = migratedBytes.size,
-    )
+    val result = legacy.migrateToLatest()
+    if (result.migrated) persistenceMigrations.incrementAndGet()
+    result
   }
 
   private fun serviceError(code: ServiceErrorCodeV1, message: String): LockedExecution =
@@ -2899,100 +2937,6 @@ public class PersistentUiBuilderService(
 
   private fun serviceError(error: UiBuilderServiceError): LockedExecution =
     LockedExecution(UiBuilderServiceResponse.Error(error))
-
-  private fun loadPersistence(): LoadedPersistence {
-    val bytes = storage.load()
-    return if (bytes == null) LoadedPersistence(PersistedServiceV1(), PersistenceFormat.V2)
-    else decode(bytes)
-  }
-
-  private fun decode(bytes: ByteArray): LoadedPersistence {
-    val encoded =
-      try {
-        bytes.decodeToString()
-      } catch (failure: Exception) {
-        throw UiBuilderPersistenceException("invalid UI-builder persistence UTF-8", failure)
-      }
-    val root =
-      try {
-        json.parseToJsonElement(encoded).jsonObject
-      } catch (failure: Exception) {
-        throw UiBuilderPersistenceException("invalid UI-builder persistence JSON", failure)
-      }
-    val format =
-      (root["format"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-        ?: throw UiBuilderPersistenceException("UI-builder persistence format is missing")
-    // The checksum covers the payload AS STORED — this parsed tree — and never a re-encode of the
-    // decoded value. Re-encoding checksums the CURRENT model rather than the bytes on disk, which
-    // gets both halves of the job wrong. It cannot see corruption that still decodes (the whole
-    // point of the checksum), and it fails on a file that is perfectly intact whenever the model
-    // has merely grown: `encodeDefaults = true` emits every field a data class declares, so one new
-    // property with a default re-encodes to a JSON tree the stored checksum was never taken over.
-    // That is not hypothetical — `DesignEnvironmentV1.typeface` (compose-ai-contracts 2.8.0, server
-    // 3.4.0) turned every existing deployment's state file into an unreadable one, and the server
-    // exits at construction when persistence fails to load, so the release crash-looped instead of
-    // starting. The stored tree, by contrast, is exactly what the writer checksummed: a field the
-    // model gained since is simply absent from it, and `decode` fills the default in afterwards.
-    val storedPayload =
-      root["payload"]
-        ?: throw UiBuilderPersistenceException("UI-builder persistence payload is missing")
-    return when (format) {
-      PersistenceFormat.V1.wire -> {
-        val envelope = decodeEnvelope<PersistenceEnvelopeV1>(encoded)
-        verifyChecksum(envelope.checksumSha256, storedPayload)
-        LoadedPersistence(envelope.payload, PersistenceFormat.V1)
-      }
-      PersistenceFormat.V2.wire -> {
-        val envelope = decodeEnvelope<PersistenceEnvelopeV2>(encoded)
-        verifyChecksum(envelope.checksumSha256, storedPayload)
-        val expectedPins = catalogPins(envelope.payload.service)
-        if (envelope.payload.catalogPins != expectedPins) {
-          throw UiBuilderPersistenceException(
-            "UI-builder persistence catalog pin manifest mismatch"
-          )
-        }
-        LoadedPersistence(envelope.payload.service, PersistenceFormat.V2)
-      }
-      else ->
-        throw UiBuilderPersistenceException("unsupported UI-builder persistence format $format")
-    }
-  }
-
-  private inline fun <reified T> decodeEnvelope(encoded: String): T =
-    try {
-      json.decodeFromString<T>(encoded)
-    } catch (failure: Exception) {
-      throw UiBuilderPersistenceException("invalid UI-builder persistence JSON", failure)
-    }
-
-  private fun verifyChecksum(expected: String, payload: JsonElement) {
-    val actual = sha256(canonicalJson(payload).encodeToByteArray())
-    if (actual != expected) {
-      throw UiBuilderPersistenceException("UI-builder persistence checksum mismatch")
-    }
-  }
-
-  // The write side of the pairing [decode] documents: the tree checksummed here is the tree
-  // serialized on the next line, so the number on disk always describes the bytes beside it.
-  private fun encode(value: PersistedServiceV1, format: PersistenceFormat): ByteArray {
-    val encoded =
-      when (format) {
-        PersistenceFormat.V1 -> {
-          val checksum = sha256(canonicalJson(json.encodeToJsonElement(value)).encodeToByteArray())
-          json.encodeToString(PersistenceEnvelopeV1(format.wire, checksum, value))
-        }
-        PersistenceFormat.V2 -> {
-          val payload = PersistencePayloadV2(value, catalogPins(value))
-          val checksum =
-            sha256(canonicalJson(json.encodeToJsonElement(payload)).encodeToByteArray())
-          json.encodeToString(PersistenceEnvelopeV2(format.wire, checksum, payload))
-        }
-      }
-    return encoded.encodeToByteArray()
-  }
-
-  private fun catalogPins(value: PersistedServiceV1): Map<String, CatalogReferenceV1> =
-    value.designs.mapValues { (_, design) -> design.document.catalogPin }
 
   public companion object {
     private val json = Json { encodeDefaults = true }
@@ -3052,31 +2996,10 @@ private data class ReductionResult(
 )
 
 @Serializable
-private data class PersistenceEnvelopeV1(
-  val format: String,
-  val checksumSha256: String,
-  val payload: PersistedServiceV1,
-)
+internal data class PersistedServiceV1(val designs: Map<String, PersistedDesignV1> = emptyMap())
 
 @Serializable
-private data class PersistenceEnvelopeV2(
-  val format: String,
-  val checksumSha256: String,
-  val payload: PersistencePayloadV2,
-)
-
-@Serializable
-private data class PersistencePayloadV2(
-  val service: PersistedServiceV1,
-  /** Redundant by design: startup fails if a design pin and the envelope manifest ever diverge. */
-  val catalogPins: Map<String, CatalogReferenceV1>,
-)
-
-@Serializable
-private data class PersistedServiceV1(val designs: Map<String, PersistedDesignV1> = emptyMap())
-
-@Serializable
-private data class PersistedDesignV1(
+internal data class PersistedDesignV1(
   val document: DesignDocumentV1,
   val lastSequence: Long,
   val access: DesignAccessControlV1,
@@ -3092,22 +3015,23 @@ private data class PersistedDesignV1(
   val audit: List<AuditRecordV1> = emptyList(),
 )
 
-@Serializable private data class RevisionStateV1(val document: DesignDocumentV1, val sequence: Long)
+@Serializable
+internal data class RevisionStateV1(val document: DesignDocumentV1, val sequence: Long)
 
 @Serializable
-private data class PositionStateV1(
+internal data class PositionStateV1(
   val revision: Long,
   val positions: Map<String, StableNodePositionV1>,
 )
 
 @Serializable
-private data class StableNodePositionV1(
+internal data class StableNodePositionV1(
   val parent: ParentSlotV1? = null,
   val key: StablePositionKeyV1,
 )
 
 @Serializable
-private data class StablePositionKeyV1(
+internal data class StablePositionKeyV1(
   val path: List<Int>,
   val tieBreaker: String,
 ) : Comparable<StablePositionKeyV1> {
@@ -3127,20 +3051,20 @@ private data class StablePositionKeyV1(
 }
 
 @Serializable
-private data class OperationOutcomeRecordV1(
+internal data class OperationOutcomeRecordV1(
   val fingerprint: String,
   val outcome: CommandOutcomeV1,
 )
 
 @Serializable
-private enum class AcceptedKindV1 {
+internal enum class AcceptedKindV1 {
   BATCH,
   UNDO,
   REDO,
 }
 
 @Serializable
-private data class AcceptedOperationRecordV1(
+internal data class AcceptedOperationRecordV1(
   val operationId: String,
   val actorId: String,
   val kind: AcceptedKindV1,
@@ -3151,11 +3075,11 @@ private data class AcceptedOperationRecordV1(
   val compensatedBy: String? = null,
 )
 
-@Serializable private sealed interface ChangeRecordV1
+@Serializable internal sealed interface ChangeRecordV1
 
 @Serializable
 @SerialName("property")
-private data class PropertyChangeV1(
+internal data class PropertyChangeV1(
   val nodeId: String,
   val property: String,
   val beforePresent: Boolean,
@@ -3178,7 +3102,7 @@ private data class PropertyChangeV1(
  */
 @Serializable
 @SerialName("modifiers")
-private data class ModifierChangeV1(
+internal data class ModifierChangeV1(
   val nodeId: String,
   val before: List<DesignModifierV1>,
   val after: List<DesignModifierV1>,
@@ -3193,7 +3117,7 @@ private data class ModifierChangeV1(
  */
 @Serializable
 @SerialName("stateVariable")
-private data class StateVariableChangeV1(
+internal data class StateVariableChangeV1(
   val name: String,
   val before: StateVariableV1?,
   val after: StateVariableV1?,
@@ -3208,7 +3132,7 @@ private data class StateVariableChangeV1(
  */
 @Serializable
 @SerialName("eventBinding")
-private data class EventBindingChangeV1(
+internal data class EventBindingChangeV1(
   val nodeId: String,
   val event: String,
   val before: List<DesignActionV1>?,
@@ -3217,7 +3141,7 @@ private data class EventBindingChangeV1(
 
 @Serializable
 @SerialName("environment")
-private data class EnvironmentChangeRecordV1(
+internal data class EnvironmentChangeRecordV1(
   val fields: List<EnvironmentFieldV1>,
   val before: DesignEnvironmentV1,
   val after: DesignEnvironmentV1,
@@ -3225,7 +3149,7 @@ private data class EnvironmentChangeRecordV1(
 
 @Serializable
 @SerialName("structure")
-private data class StructureChangeV1(
+internal data class StructureChangeV1(
   val nodeId: String,
   val before: NodeTreeSnapshotV1?,
   val after: NodeTreeSnapshotV1?,
@@ -3235,7 +3159,7 @@ private data class StructureChangeV1(
 }
 
 @Serializable
-private data class NodeTreeSnapshotV1(
+internal data class NodeTreeSnapshotV1(
   val rootNodeId: String,
   val nodes: Map<String, DesignNodeV1>,
   val location: NodeLocationV1,
@@ -3243,13 +3167,13 @@ private data class NodeTreeSnapshotV1(
 )
 
 @Serializable
-private enum class AuditKindV1 {
+internal enum class AuditKindV1 {
   COMMIT,
   EXPORT,
 }
 
 @Serializable
-private data class AuditRecordV1(
+internal data class AuditRecordV1(
   val kind: AuditKindV1,
   val actorId: String,
   val designId: String,
@@ -4183,10 +4107,10 @@ private object PersistentUiBuilderServiceAdminJson {
   }
 }
 
-private fun sha256(bytes: ByteArray): String =
+internal fun sha256(bytes: ByteArray): String =
   MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
-private fun canonicalJson(element: JsonElement): String =
+internal fun canonicalJson(element: JsonElement): String =
   when (element) {
     is JsonObject ->
       element.entries

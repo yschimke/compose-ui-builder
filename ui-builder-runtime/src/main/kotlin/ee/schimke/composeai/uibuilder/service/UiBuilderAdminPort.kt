@@ -58,6 +58,21 @@ public interface UiBuilderAdminPort {
   public fun adminUnusableDesigns(): Map<String, String> = emptyMap()
 
   /**
+   * Of those, the designs whose stored **files** could not be read.
+   *
+   * The two kinds of unusable design recover differently and the difference is not cosmetic. A
+   * design the catalog outgrew has a document the host read fine: it can be downloaded, edited and
+   * put back. A design whose files would not decode has no document to hand anybody — download and
+   * repair both answer "not found" — and retiring it is the only move. Telling an operator to
+   * download a design that cannot be read sends them somewhere there is nothing, during an
+   * incident, which is the worst moment to be sent there.
+   *
+   * Defaulted empty for the same reason [adminUnusableDesigns] is: a new method is additive where a
+   * changed return type would be binary-breaking.
+   */
+  public fun adminUnreadableDesigns(): Set<String> = emptySet()
+
+  /**
    * The stored design document as JSON, or null when no design has this id.
    *
    * The recovery path for a design [adminUnusableDesigns] names, and the reason it is here rather

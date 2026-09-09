@@ -1,10 +1,25 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
   DESIGN_SECTIONS,
   analyzeUiBuilderState,
+  analyzeUiBuilderStore,
+  defaultMaximumBytes,
   formatReport,
+  isDesignStore,
   projectRetention,
 } from "./state-size-report.mjs";
 
@@ -173,4 +188,284 @@ test("a file that is not a state envelope is refused by name", () => {
   assert.throws(() => analyzeUiBuilderState({ hello: "world" }), /no payload/);
   assert.throws(() => analyzeUiBuilderState({ payload: {} }), /no designs map/);
   assert.throws(() => analyzeUiBuilderState(null), /not a JSON object/);
+});
+
+/** `FileUiBuilderDesignStore.slug`: the directory a design id addresses. */
+function slugOf(id) {
+  return createHash("sha256").update(id).digest("hex").slice(0, 32);
+}
+
+/** A per-design store on disk, written the way `FileUiBuilderDesignStore` writes one. */
+function storeDirectory(designs) {
+  const root = mkdtempSync(join(tmpdir(), "ui-builder-store-"));
+  writeFileSync(join(root, "store.json"), JSON.stringify({ format: "ui-builder-store-v3" }));
+  for (const [id, spec] of Object.entries(designs)) {
+    const slug = slugOf(id);
+    const designDirectory = join(root, "designs", slug);
+    mkdirSync(join(designDirectory, "revisions"), { recursive: true });
+    const part = (name, payload) => {
+      writeFileSync(join(designDirectory, name), JSON.stringify({ checksumSha256: "x", payload }));
+      return name;
+    };
+    const documentFile = part("document-aaaa.json", spec.document);
+    const positionsFile = part("positions-aaaa.json", { positions: {} });
+    const revisionFiles = {};
+    spec.revisions.forEach((revision, index) => {
+      const name = `revisions/${index}-aaaa.json`;
+      part(name, { revision: index, sequence: index, document: revision, positions: {} });
+      revisionFiles[String(index)] = name;
+    });
+    // Two records where the second supersedes the first: the slack a compaction would reclaim.
+    const record = (entry) => `${JSON.stringify({ checksumSha256: "x", entry })}\n`;
+    const journal =
+      record({ outcomesPut: { "op-1": { fingerprint: "a", outcome: spec.outcome } } }) +
+      record({ outcomesPut: { "op-1": { fingerprint: "b", outcome: spec.outcome } } }) +
+      (spec.journalTail ?? "");
+    writeFileSync(join(designDirectory, "journal-1.jsonl"), journal);
+    writeFileSync(
+      join(designDirectory, "design.json"),
+      JSON.stringify({
+        checksumSha256: "x",
+        payload: {
+          designId: id,
+          title: id,
+          revision: spec.document.revision,
+          lastSequence: spec.document.revision,
+          access: { accessRevision: 0, ownerActorId: "owner" },
+          catalogPin: { systemId: "m3" },
+          createdAtEpochMillis: 0,
+          updatedAtEpochMillis: 0,
+          documentFile,
+          positionsFile,
+          revisionFiles,
+          journalFile: "journal-1.jsonl",
+          journalBytes: Buffer.byteLength(journal, "utf8"),
+          journalCompactedBytes: 64,
+        },
+      }),
+    );
+  }
+  return root;
+}
+
+test("the per-design store reports the same sections the one file did", () => {
+  const root = storeDirectory({
+    checkout: {
+      document: document("checkout", 12, 20),
+      revisions: [document("checkout", 10, 20), document("checkout", 11, 20)],
+      outcome: { operationId: "op-1", revision: 12 },
+    },
+    settings: {
+      document: document("settings", 2, 3),
+      revisions: [document("settings", 1, 3)],
+      outcome: { operationId: "op-1", revision: 2 },
+    },
+  });
+
+  assert.ok(isDesignStore(root), "a directory with a marker is read as the store");
+  const report = analyzeUiBuilderStore(root);
+
+  assert.equal(report.format, "ui-builder-store-v3");
+  assert.equal(report.designCount, 2);
+  assert.equal(report.designs[0].id, "checkout", "the largest design is reported first");
+  assert.equal(report.designs[0].sections.revisionSnapshots.count, 2);
+  assert.equal(report.designs[0].sections.positionSnapshots.count, 2);
+  assert.equal(
+    report.designs[0].sections.operationOutcomes.count,
+    1,
+    "the journal is replayed, so a superseded record is not counted twice",
+  );
+  assert.ok(
+    report.designs[0].otherBytes > 0,
+    "and what the journal spends beyond what it still says is visible as slack",
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a state directory with no marker is not mistaken for the store", () => {
+  const root = mkdtempSync(join(tmpdir(), "ui-builder-store-"));
+  assert.equal(isDesignStore(root), false);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a store with a marker and no designs yet reports an empty deployment", () => {
+  const root = mkdtempSync(join(tmpdir(), "ui-builder-store-"));
+  writeFileSync(join(root, "store.json"), JSON.stringify({ format: "ui-builder-store-v3" }));
+
+  const report = analyzeUiBuilderStore(root);
+
+  assert.equal(report.designCount, 0);
+  assert.equal(report.designBytes, 0);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a history trimmed to nothing is counted as nothing", () => {
+  // An asset write clears the history: the store encodes that as an empty append with keep 0, and
+  // both are falsy — read as booleans the report would go on counting every superseded record.
+  const root = storeDirectory({
+    checkout: {
+      document: document("checkout", 3, 2),
+      revisions: [],
+      outcome: { operationId: "op-1", revision: 3 },
+      journalTail:
+        `${JSON.stringify({
+          checksumSha256: "x",
+          entry: { historySet: [{ big: "x".repeat(500) }] },
+        })}\n` +
+        `${JSON.stringify({ checksumSha256: "x", entry: { historyAppend: [], historyKeep: 0 } })}\n`,
+    },
+  });
+
+  const report = analyzeUiBuilderStore(root);
+
+  assert.equal(report.designs[0].sections.history.count, 0);
+  assert.equal(report.designs[0].sections.history.bytes, 2, "an empty list, and nothing else");
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("each store is measured against its own ceiling", () => {
+  // 128 MiB is what the single file refused a write at; the per-design store is gauged at 1 GiB, and
+  // reporting one against the other calls an ordinary deployment 80% full.
+  assert.equal(defaultMaximumBytes({ format: "ui-builder-store-v3" }), 1024 * 1024 * 1024);
+  assert.equal(
+    defaultMaximumBytes({ format: "compose-preview-ui-builder-service/v2" }),
+    128 * 1024 * 1024,
+  );
+});
+
+test("a tombstone is charged for its bytes and not tabulated as a design", () => {
+  const root = storeDirectory({
+    checkout: {
+      document: document("checkout", 2, 4),
+      revisions: [],
+      outcome: { operationId: "op-1", revision: 2 },
+    },
+  });
+  // A delete commits by renaming the design out of the way; the unlink that follows is cleanup and
+  // can be interrupted. What is left is not a design — the store retries the unlink on the next
+  // open — so counting it as one would double a recreated id and report deleted designs as live.
+  const live = join(root, "designs", readdirSync(join(root, "designs"))[0]);
+  const tombstone = join(root, "designs", ".deleted", "checkout-1700000000000");
+  cpSync(live, tombstone, { recursive: true });
+  writeFileSync(join(tombstone, "leftover.json"), "x".repeat(4096));
+
+  const report = analyzeUiBuilderStore(root);
+
+  assert.equal(report.designCount, 1, "the tombstone is not a design");
+  assert.deepEqual(
+    report.designs.map((design) => design.id),
+    ["checkout"],
+    "and the id it holds is not reported twice",
+  );
+  assert.ok(
+    report.totalBytes > report.designBytes + 4000,
+    "but the disk it still holds is charged",
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a quarantined design is counted but not tabulated, header or no header", () => {
+  const root = storeDirectory({
+    checkout: {
+      document: document("checkout", 2, 4),
+      revisions: [],
+      outcome: { operationId: "op-1", revision: 2 },
+    },
+    settings: {
+      document: document("settings", 1, 2),
+      revisions: [],
+      outcome: { operationId: "op-2", revision: 1 },
+    },
+  });
+  // The usual quarantine is a missing or corrupt part under a header that still reads: the store
+  // excludes any directory carrying the record, so a report that only checked the header would
+  // tabulate a design the host does not serve, with whatever sections survived.
+  const broken = join(root, "designs", slugOf("settings"));
+  writeFileSync(join(broken, "quarantine.json"), JSON.stringify({ reason: "document missing" }));
+
+  const report = analyzeUiBuilderStore(root);
+
+  assert.deepEqual(
+    report.designs.map((design) => design.id),
+    ["checkout"],
+    "the quarantined design is not a row",
+  );
+  assert.ok(report.overheadBytes > 0, "but its bytes are still charged");
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a design under a name that is not its address is not a second row", () => {
+  const root = storeDirectory({
+    checkout: {
+      document: document("checkout", 2, 4),
+      revisions: [],
+      outcome: { operationId: "op-1", revision: 2 },
+    },
+  });
+  // The slug is the address: the store quarantines a design restored or copied under another
+  // basename, and decides that from the name rather than by writing a record. Trusting the header
+  // here would report the same designId twice, once from a directory the host does not serve.
+  const canonical = join(root, "designs", slugOf("checkout"));
+  cpSync(canonical, join(root, "designs", "restored-checkout"), { recursive: true });
+
+  const report = analyzeUiBuilderStore(root);
+
+  assert.deepEqual(
+    report.designs.map((design) => design.id),
+    ["checkout"],
+    "one design, from the directory that addresses it",
+  );
+  assert.ok(report.overheadBytes > 0, "and the copy's bytes are still charged");
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a header claiming a journal larger than a design may be is not allocated", () => {
+  const root = storeDirectory({
+    checkout: {
+      document: document("checkout", 2, 4),
+      revisions: [],
+      outcome: { operationId: "op-1", revision: 2 },
+    },
+  });
+  // The length comes out of a header, so a corrupt or hand-edited one can ask for more memory than
+  // there is. The store bounds it against the per-design limit before reading; a diagnostic that
+  // died on a store the host quarantines calmly would be no diagnostic.
+  const designDirectory = join(root, "designs", slugOf("checkout"));
+  const headerPath = join(designDirectory, "design.json");
+  const stored = JSON.parse(readFileSync(headerPath, "utf8"));
+  stored.payload.journalBytes = 64 * 1024 * 1024 + 1;
+  writeFileSync(headerPath, JSON.stringify(stored));
+
+  const report = analyzeUiBuilderStore(root);
+
+  assert.equal(report.designCount, 1, "the design is still reported");
+  assert.equal(
+    report.designs[0].sections.history.count,
+    0,
+    "with nothing replayed out of a journal it will not read",
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("a design whose header will not parse is still counted", () => {
+  const root = storeDirectory({
+    checkout: {
+      document: document("checkout", 2, 4),
+      revisions: [],
+      outcome: { operationId: "op-1", revision: 2 },
+    },
+  });
+  const broken = join(root, "designs", "0".repeat(32));
+  mkdirSync(broken, { recursive: true });
+  writeFileSync(join(broken, "design.json"), "not json");
+  writeFileSync(join(broken, "document-aaaa.json"), "x".repeat(4096));
+
+  const report = analyzeUiBuilderStore(root);
+
+  assert.equal(report.designCount, 1, "it has no sections to tabulate");
+  assert.ok(
+    report.totalBytes > report.designBytes + 4000,
+    "but its bytes are on the disk and are counted",
+  );
+  rmSync(root, { recursive: true, force: true });
 });
