@@ -202,9 +202,17 @@ that has never heard of components can see what the node is and draw a placehold
   function, and the instance becomes a call — built, and detailed above. A slot-typed parameter
   (`content: @Composable () -> Unit`) is the one part not built: it needs a body to hold a slot the
   placement fills, and waits for a design that needs one.
-- **Refusals**: no scaffold in a component body; a cycle through instances, refused at the reducer
-  beside `validateTopology`; an instance only where the slot accepts the symbol's root component,
-  which is the capability the symbol has.
+- **Refusals**, all built and all named before a line is generated: a scaffold in a body
+  (`SCAFFOLD_IN_COMPONENT_BODY`); a component that places itself at any depth (`COMPONENT_CYCLE`) —
+  the canvas stops that with its ancestor guard, generated source has none; a body that reads state
+  or handles an event (`COMPONENT_BODY_READS_STATE`, `COMPONENT_BODY_HANDLES_EVENT`), because a body
+  is a function of its arguments and the screen's variables are not in scope in its function; a
+  placement that handles an event, which its call cannot carry; an argument of the wrong shape,
+  which would otherwise become `Color.Unspecified` and paint nothing; two components that generate
+  one function name, or a key that generates a parameter name the wrapper already has; and a binding
+  on a node no body reaches, where there is no dictionary to read. A placement sits where its body
+  would sit: it has no capability of its own, so the validator resolves it to its body root's, and
+  the slot that would refuse the body refuses the placement.
 
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.

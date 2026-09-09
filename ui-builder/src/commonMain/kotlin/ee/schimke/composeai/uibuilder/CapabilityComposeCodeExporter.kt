@@ -158,16 +158,19 @@ object CapabilityComposeCodeExporter {
     // default — the difference between a screen that will not build and one that quietly draws the
     // wrong thing.
     val (signatures, componentRefusals) = document.componentSignatures()
-    (componentRefusals + document.placementRefusals(signatures)).forEach { refusal ->
-      diagnostics +=
-        ComposeExportDiagnostic(
-          code = refusal.code,
-          severity = ComposeExportSeverity.ERROR,
-          message = refusal.message,
-          nodeId = refusal.nodeId,
-          componentId = refusal.nodeId?.let { document.nodes[it]?.componentId },
-        )
-    }
+    (componentRefusals +
+        document.placementRefusals(signatures) +
+        document.strayBindingRefusals(signatures))
+      .forEach { refusal ->
+        diagnostics +=
+          ComposeExportDiagnostic(
+            code = refusal.code,
+            severity = ComposeExportSeverity.ERROR,
+            message = refusal.message,
+            nodeId = refusal.nodeId,
+            componentId = refusal.nodeId?.let { document.nodes[it]?.componentId },
+          )
+      }
     if (diagnostics.isNotEmpty()) {
       return diagnostics
     }
@@ -1865,15 +1868,27 @@ private val BINDABLE_PROPERTIES: Map<String, Map<String, BindingKind>> =
 /** What a bound key is, in Kotlin, and how a placement's value is written at the call site. */
 private enum class BindingKind(val kotlinType: String) {
   COLOR("Color") {
-    override fun argument(value: JsonObject): String =
-      colorExpressionFor(value["value"]?.jsonPrimitive?.contentOrNull.orEmpty())
+    override fun argument(value: JsonObject): String = colorExpressionFor(value.scalar().orEmpty())
+
+    override fun refusalFor(value: JsonObject): String? {
+      val scalar = value.scalar() ?: return "holds no value"
+      // The same question `colorExpressionFor` answers, asked before it answers it with
+      // `Color.Unspecified` — a colour that compiles and paints nothing.
+      return if (scalar.startsWith("#") || colorExpressionFor(scalar) != "Color.Unspecified") null
+      else "is neither a #RRGGBB colour nor a colour token"
+    }
   },
   STRING("String") {
-    override fun argument(value: JsonObject): String =
-      "\"${(value["value"]?.jsonPrimitive?.contentOrNull.orEmpty()).escape()}\""
+    override fun argument(value: JsonObject): String = "\"${value.scalar().orEmpty().escape()}\""
+
+    override fun refusalFor(value: JsonObject): String? =
+      if (value.scalar() == null) "holds no value" else null
   };
 
   abstract fun argument(value: JsonObject): String
+
+  /** Why this argument cannot be written as this kind, or null when it can. */
+  abstract fun refusalFor(value: JsonObject): String?
 }
 
 /**
@@ -1900,7 +1915,51 @@ private fun UiBuilderDocument.componentSignatures():
         return@forEach
       }
       val parameters = linkedMapOf<String, BindingKind>()
-      bodyNodes(root).forEach { node ->
+      val body = bodyNodes(root)
+      // A component that places itself — directly or through another — would export a composable
+      // that calls itself, and rendering that recurses until the stack is gone. The canvas stops
+      // the same shape with its ancestor guard; generated source has no guard to stop it with, so
+      // it is refused rather than emitted.
+      if (placesItself(key, body)) {
+        refusals += ExportRefusal("COMPONENT_CYCLE", "component $key places itself", root)
+        return@forEach
+      }
+      body.forEach { node ->
+        // The design record's own refusal: a scaffold is a screen, and a screen inside a component
+        // is a claim about the whole frame made from inside one box of it.
+        if (node.componentId in SCAFFOLD_COMPONENT_IDS) {
+          refusals +=
+            ExportRefusal(
+              "SCAFFOLD_IN_COMPONENT_BODY",
+              "component $key holds ${node.componentId}, which lays out a whole screen",
+              node.id,
+            )
+        }
+        // A body is a function of its arguments and nothing else. A `state` read or an event
+        // handler names a variable declared inside the screen function, which the component
+        // function cannot see: the export would compile in the editor's head and not in Kotlin.
+        if (
+          node.properties.values.any {
+            it is JsonObject && it.optionalString("type") in COMPONENT_STATE_VALUE_TYPES
+          }
+        ) {
+          refusals +=
+            ExportRefusal(
+              "COMPONENT_BODY_READS_STATE",
+              "component $key reads a state variable, which its function cannot see",
+              node.id,
+            )
+        }
+        if (node.eventBindings.isNotEmpty()) {
+          refusals +=
+            ExportRefusal(
+              "COMPONENT_BODY_HANDLES_EVENT",
+              "component $key handles an event, which writes state its function cannot see",
+              node.id,
+            )
+        }
+      }
+      body.forEach { node ->
         node.bindingKinds().forEach { (property, bindingKey, kind) ->
           if (kind == null) {
             refusals +=
@@ -1926,13 +1985,43 @@ private fun UiBuilderDocument.componentSignatures():
           parameters[bindingKey] = kind
         }
       }
+      val functionName = component.optionalString("name").orEmpty().componentFunctionName(key)
+      // Two components that generate one function name, or a key that generates the name the
+      // wrapper already uses, are duplicate declarations and shadowed parameters — source that
+      // looks right and does not compile. Named here rather than discovered by the Kotlin compiler
+      // in whatever project the file was pasted into.
+      signatures.entries
+        .firstOrNull { it.value.functionName == functionName }
+        ?.let { existing ->
+          refusals +=
+            ExportRefusal(
+              "COLLIDING_COMPONENT_NAME",
+              "components ${existing.key} and $key both generate $functionName",
+              root,
+            )
+          return@forEach
+        }
+      val sortedParameters = parameters.entries.sortedBy { it.key }.map { it.key to it.value }
+      val identifiers = mutableSetOf(RESERVED_COMPONENT_PARAMETER)
+      sortedParameters.forEach { (parameterKey, _) ->
+        val identifier = parameterKey.identifier()
+        if (!identifiers.add(identifier)) {
+          refusals +=
+            ExportRefusal(
+              "COLLIDING_PARAMETER_NAME",
+              "component $key reads '$parameterKey', which generates the parameter name " +
+                "'$identifier' something else already has",
+              root,
+            )
+        }
+      }
       signatures[key] =
         ComponentSignature(
-          functionName = component.optionalString("name").orEmpty().componentFunctionName(key),
+          functionName = functionName,
           root = root,
           // Sorted: the generated file must not reorder its own parameters between exports, and
           // the document's key order is an authoring accident.
-          parameters = parameters.entries.sortedBy { it.key }.map { it.key to it.value },
+          parameters = sortedParameters,
         )
     }
   return signatures to refusals
@@ -1957,16 +2046,75 @@ private fun UiBuilderDocument.placementRefusals(
             )
           )
       val arguments = node.component?.get("arguments")?.let { it as? JsonObject }
-      signature.parameters
-        .filter { (parameter, _) -> arguments?.get(parameter) !is JsonObject }
-        .map { (parameter, _) ->
-          ExportRefusal(
-            "MISSING_ARGUMENT",
-            "placement of ${signature.functionName} passes no '$parameter'",
-            node.id,
-          )
+      buildList {
+        // The canvas dispatches a click bound to a placement; the call this exporter writes has
+        // nowhere to put one, and a dropped interaction is exactly the divergence between preview
+        // and generated screen that this builder exists not to have.
+        if (node.eventBindings.isNotEmpty()) {
+          this +=
+            ExportRefusal(
+              "PLACEMENT_HANDLES_EVENT",
+              "a placement of ${signature.functionName} handles an event, which its call cannot " +
+                "carry",
+              node.id,
+            )
         }
+        signature.parameters.forEach { (parameter, kind) ->
+          val argument = arguments?.get(parameter) as? JsonObject
+          if (argument == null) {
+            this +=
+              ExportRefusal(
+                "MISSING_ARGUMENT",
+                "placement of ${signature.functionName} passes no '$parameter'",
+                node.id,
+              )
+            return@forEach
+          }
+          // Checked against the kind the body reads it as, before the emitter formats it: a value
+          // of the wrong shape would otherwise become `Color.Unspecified` — which compiles, and
+          // draws the wrong cell — or reach `jsonPrimitive` and throw out of `export()`.
+          kind.refusalFor(argument)?.let { why ->
+            this +=
+              ExportRefusal(
+                "INVALID_ARGUMENT",
+                "placement of ${signature.functionName} passes a '$parameter' that $why",
+                node.id,
+              )
+          }
+        }
+      }
     }
+
+/**
+ * Bindings on a node no component body reaches.
+ *
+ * A binding is a read of the dictionary in scope, and outside a body there is no scope to read: the
+ * emitter would print the property's literal value — a colour that is not a colour becomes
+ * `Color.Unspecified`, a text becomes the key itself — and report success. Capability validation
+ * cannot catch it either, because it unwraps a binding to the string inside it.
+ */
+private fun UiBuilderDocument.strayBindingRefusals(
+  signatures: Map<String, ComponentSignature>
+): List<ExportRefusal> {
+  val inABody =
+    signatures.values.flatMapTo(mutableSetOf()) { signature ->
+      bodyNodes(signature.root).map(UiBuilderNode::id)
+    }
+  return nodes.values
+    .sortedBy(UiBuilderNode::id)
+    .filter { it.id !in inABody }
+    .flatMap { node ->
+      node.properties.keys.sorted().mapNotNull { property ->
+        val key = node.bindingKey(property) ?: return@mapNotNull null
+        ExportRefusal(
+          "BINDING_OUTSIDE_COMPONENT",
+          "property '$property' reads '$key' from a component's arguments, and this node is not " +
+            "in a component body",
+          node.id,
+        )
+      }
+    }
+}
 
 /** A component body, root first, in the order the emitter walks it. */
 private fun UiBuilderDocument.bodyNodes(root: String): List<UiBuilderNode> {
@@ -1994,8 +2142,44 @@ private fun String.componentFunctionName(key: String): String {
 
 private data class ExportRefusal(val code: String, val message: String, val nodeId: String?)
 
+/** The property-value shapes that read a state variable rather than holding a value. */
+private val COMPONENT_STATE_VALUE_TYPES = setOf("state", "stateEquals")
+
+/** A screen, laid out. Refused inside a component body — see the design record. */
+private val SCAFFOLD_COMPONENT_IDS = setOf("layout/scaffold", "layout/supporting-pane-scaffold")
+
+/** The parameter every generated component function already has. */
+private const val RESERVED_COMPONENT_PARAMETER = "modifier"
+
+/** Whether this component's body reaches a placement of itself, at any depth. */
+private fun UiBuilderDocument.placesItself(key: String, body: List<UiBuilderNode>): Boolean {
+  val seen = mutableSetOf(key)
+  var frontier = body
+  while (frontier.isNotEmpty()) {
+    val placed =
+      frontier
+        .filter { it.componentId == DESIGN_COMPONENT_INSTANCE_ID }
+        .mapNotNull { it.component?.optionalString("componentKey") }
+    if (placed.any { it == key }) return true
+    val fresh = placed.filter(seen::add)
+    frontier = fresh.flatMap { placedKey ->
+      val root = (components[placedKey] as? JsonObject)?.optionalString("root")
+      if (root != null && root in nodes) bodyNodes(root) else emptyList()
+    }
+  }
+  return false
+}
+
 /** The wire's own id for a node that places a component. */
 private const val DESIGN_COMPONENT_INSTANCE_ID = "design/component-instance"
+
+/**
+ * The scalar a value wrapper holds, or null when it holds an object, an array or nothing.
+ *
+ * Read with a safe cast rather than `jsonPrimitive`, which throws: an argument arrives over the
+ * wire, and a malformed one is a diagnostic rather than an exception out of `export()`.
+ */
+private fun JsonObject.scalar(): String? = (this["value"] as? JsonPrimitive)?.contentOrNull
 
 /** One generated component function: what it is called, and the parameters its body reads. */
 private data class ComponentSignature(

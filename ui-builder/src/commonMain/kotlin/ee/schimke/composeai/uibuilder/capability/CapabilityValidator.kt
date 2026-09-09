@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.capability
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
+import ee.schimke.composeai.uibuilder.optionalString
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -256,13 +257,21 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     node: UiBuilderNode,
     issues: MutableList<CapabilityValidationIssue>,
   ) {
-    // A placement is a document construct rather than a catalog component — see
-    // `CapabilityComposeCodeExporter`, which refuses the same node for the reasons that *are* its
-    // own: an unknown component key, a binding no emitter can write, a missing argument. Validating
-    // it here against a capability no catalog declares would report every component instance as an
-    // unknown component.
-    if (node.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) return
-    val capability = catalog.componentsById[node.componentId]
+    // A placement is a document construct rather than a catalog component: no catalog declares
+    // `design/component-instance`, so it has no capability of its own. What it does have is the
+    // capability of the body it places — that is what decides which modifiers it may carry, and
+    // (through [placedCapability], read by `validateSlotChild`) which slots will accept it. A
+    // placement of a body no component defines is the export's refusal to make, not this one's:
+    // `CapabilityComposeCodeExporter` names the unknown key, the binding no emitter can write and
+    // the missing argument.
+    val capability =
+      if (node.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) {
+        val placed = document.placedCapability(node, catalog) ?: return
+        validateModifiers(node, placed, issues)
+        return
+      } else {
+        catalog.componentsById[node.componentId]
+      }
     if (capability == null) {
       issues +=
         issue(
@@ -457,7 +466,10 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
         )
       return
     }
-    val childCapability = catalog.componentsById[child.componentId] ?: return
+    val childCapability =
+      (if (child.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID)
+        document.placedCapability(child, catalog)
+      else catalog.componentsById[child.componentId]) ?: return
     if (!slot.accepts(childCapability)) {
       issues +=
         issue(
@@ -506,6 +518,24 @@ private val STATE_BINDING_WRAPPERS = setOf("state", "stateEquals")
 
 /** The wire's own id for a node that places a component defined by the design. */
 private const val DESIGN_COMPONENT_INSTANCE_COMPONENT_ID = "design/component-instance"
+
+/**
+ * What a placement draws, as a capability: the component's body root.
+ *
+ * A placement occupies exactly the space its body root does, so a slot that would refuse the body
+ * refuses the placement, and a modifier the body root cannot carry the placement cannot either.
+ * Null when the design defines no such component, which the export reports by name — reporting it
+ * twice, in two vocabularies, is how two validators come to disagree.
+ */
+private fun UiBuilderDocument.placedCapability(
+  node: UiBuilderNode,
+  catalog: CapabilityCatalog,
+): ComponentCapability? {
+  val key = node.component?.optionalString("componentKey") ?: return null
+  val root = (components[key] as? JsonObject)?.optionalString("root") ?: return null
+  val body = nodes[root] ?: return null
+  return catalog.componentsById[body.componentId]
+}
 
 /**
  * The line count a `minLines` / `maxLines` property states outright, or null when it does not state

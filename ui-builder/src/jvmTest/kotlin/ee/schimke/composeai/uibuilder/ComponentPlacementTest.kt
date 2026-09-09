@@ -176,6 +176,193 @@ class ComponentPlacementTest {
     )
   }
 
+  /**
+   * Everything the export refuses, and why each would otherwise ship.
+   *
+   * All of these produce a document the canvas draws and the gate used to pass. What they generate
+   * is source that does not compile, or worse, source that compiles and draws the wrong thing —
+   * which is why each is named before a line is written rather than discovered by whoever pasted
+   * the file into a project.
+   */
+  @Test
+  fun `the export refuses what it cannot generate faithfully`() {
+    fun codes(document: UiBuilderDocument) =
+      CapabilityComposeCodeExporter.export(document, catalog()).diagnostics.map { it.code }.toSet()
+
+    // A composable that calls itself recurses until the stack is gone; the canvas has an ancestor
+    // guard, generated source has none.
+    assertTrue(
+      "COMPONENT_CYCLE" in
+        codes(withBody { body -> body.copy(slots = mapOf("content" to listOf("cell-0"))) })
+    )
+    // A body is a function of its arguments: a state read names a variable declared inside the
+    // screen function, which the component function cannot see.
+    assertTrue(
+      "COMPONENT_BODY_READS_STATE" in
+        codes(
+          withBody { body ->
+            body.copy(
+              properties =
+                JsonObject(
+                  body.properties +
+                    ("shape" to
+                      JsonObject(
+                        mapOf(
+                          "type" to JsonPrimitive("state"),
+                          "variable" to JsonPrimitive("expanded"),
+                        )
+                      ))
+                )
+            )
+          }
+        )
+    )
+    // A scaffold is a screen, and a screen inside one box of a screen is a claim about the frame.
+    assertTrue(
+      "SCAFFOLD_IN_COMPONENT_BODY" in
+        codes(withBody { body -> body.copy(componentId = "layout/scaffold") })
+    )
+    // The canvas dispatches a click bound to a placement; the call has nowhere to put one.
+    assertTrue(
+      "PLACEMENT_HANDLES_EVENT" in
+        codes(
+          withPlacement { placement ->
+            placement.copy(eventBindings = JsonObject(mapOf("click" to JsonArray(emptyList()))))
+          }
+        )
+    )
+    // A colour that is not a colour becomes `Color.Unspecified` — which compiles, and paints
+    // nothing.
+    assertTrue(
+      "INVALID_ARGUMENT" in
+        codes(
+          withPlacement { placement ->
+            placement.copy(
+              component =
+                JsonObject(
+                  mapOf(
+                    "componentKey" to JsonPrimitive("contribution-cell"),
+                    "arguments" to
+                      JsonObject(
+                        mapOf(
+                          "containerColor" to
+                            JsonObject(mapOf("value" to JsonPrimitive("chartreuse")))
+                        )
+                      ),
+                  )
+                )
+            )
+          }
+        )
+    )
+    // Outside a body there is no dictionary to read, so the emitter would print the key itself.
+    assertTrue(
+      "BINDING_OUTSIDE_COMPONENT" in
+        codes(
+          document().let { base ->
+            base.copy(
+              nodes =
+                base.nodes +
+                  ("root" to
+                    base.nodes.getValue("root").let { root ->
+                      root.copy(
+                        properties =
+                          JsonObject(
+                            mapOf(
+                              "horizontalSpacingDp" to
+                                JsonObject(
+                                  mapOf(
+                                    "type" to JsonPrimitive("binding"),
+                                    "value" to JsonPrimitive("gap"),
+                                  )
+                                )
+                            )
+                          )
+                      )
+                    })
+            )
+          }
+        )
+    )
+  }
+
+  /**
+   * A placement sits where its body would sit.
+   *
+   * It has no capability of its own — no catalog declares one — so a slot that would refuse the
+   * body has to refuse the placement, or a design draws a surface in a slot that accepts only tabs
+   * and exports source that does not typecheck.
+   */
+  @Test
+  fun `a placement is refused by a slot that would refuse its body`() {
+    val inATabRow =
+      document().let { base ->
+        base.copy(
+          roots = listOf("tab-row"),
+          nodes =
+            base.nodes +
+              ("tab-row" to
+                UiBuilderNode(
+                  id = "tab-row",
+                  componentId = "m3/primary-tab-row",
+                  properties =
+                    JsonObject(
+                      mapOf("selectedIndex" to JsonObject(mapOf("value" to JsonPrimitive(0))))
+                    ),
+                  slots = mapOf("tabs" to listOf("cell-0")),
+                )),
+        )
+      }
+
+    val result = CapabilityComposeCodeExporter.export(inATabRow, catalog())
+
+    assertTrue(
+      result.diagnostics.any { it.code == "INCOMPATIBLE_SLOT_CHILD" },
+      "${result.diagnostics.map { it.code }}",
+    )
+  }
+
+  /**
+   * A key that generates a parameter name the wrapper already has would shadow it, so the body's
+   * own `modifier` would silently be the placement's.
+   */
+  @Test
+  fun `a key that collides with the modifier parameter is refused`() {
+    val shadowed = withBody { body ->
+      body.copy(
+        properties =
+          JsonObject(
+            mapOf(
+              "containerColor" to
+                JsonObject(
+                  mapOf(
+                    "type" to JsonPrimitive("binding"),
+                    "value" to JsonPrimitive("modifier"),
+                  )
+                )
+            )
+          )
+      )
+    }
+
+    val result = CapabilityComposeCodeExporter.export(shadowed, catalog())
+
+    assertTrue(
+      result.diagnostics.any { it.code == "COLLIDING_PARAMETER_NAME" },
+      "${result.diagnostics.map { it.code }}",
+    )
+  }
+
+  private fun withBody(edit: (UiBuilderNode) -> UiBuilderNode): UiBuilderDocument =
+    document().let { base ->
+      base.copy(nodes = base.nodes + ("cell-body" to edit(base.nodes.getValue("cell-body"))))
+    }
+
+  private fun withPlacement(edit: (UiBuilderNode) -> UiBuilderNode): UiBuilderDocument =
+    document().let { base ->
+      base.copy(nodes = base.nodes + ("cell-0" to edit(base.nodes.getValue("cell-0"))))
+    }
+
   private fun catalog() =
     CapabilityCatalogParser.parse(
       checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
