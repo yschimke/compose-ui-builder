@@ -187,15 +187,22 @@ kotlin {
  * depends on which tasks share the graph: `check` surfaced five, a narrower invocation five
  * different ones. The real fix belongs in the plugin, which should declare what it reads for every
  * target rather than for the desktop one — this keeps the build green until it does.
+ *
+ * The wasm match is CASE-INSENSITIVE, and that is the whole point of it. The first version of this
+ * looked for `WasmJs` — the shape a task name takes when the target is a *suffix*
+ * (`compileKotlinWasmJs`). Tasks whose name *starts* with the target spell it `wasmJs…` with a
+ * lower-case w, and three of those write into the same directories:
+ * `wasmJsCopyHierarchicalMultiplatformResources`, `wasmJsZipMultiplatformResourcesForPublication`
+ * and this module's own `wasmFrontendDist`. None of them matched, so the validation the block
+ * exists to prevent failed the `visual-harness` job on `main` anyway. A case-sensitive match on a
+ * name that appears in both cases is a check that does not check.
  */
 tasks
   .matching { it.name == "composePreviewDiscover" }
   .configureEach {
     mustRunAfter(
       tasks.matching { producer ->
-        producer.name.contains("WasmJs") ||
-          producer.name.contains("WasmRuntime") ||
-          producer.name.contains("ForKWasm") ||
+        producer.name.contains("wasm", ignoreCase = true) ||
           producer.name.startsWith("prepareComposeResourcesTaskFor") ||
           producer.name.startsWith("copyNonXmlValueResourcesFor") ||
           producer.name.startsWith("convertXmlValueResourcesFor")
