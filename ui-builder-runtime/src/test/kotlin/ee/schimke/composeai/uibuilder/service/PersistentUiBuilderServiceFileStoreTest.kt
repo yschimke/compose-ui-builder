@@ -71,6 +71,50 @@ class PersistentUiBuilderServiceFileStoreTest {
   }
 
   @Test
+  fun `conflict history survives a restart`() {
+    // Every staleness check reads `conflictTouches` and nothing else, so a collection the journal
+    // does not carry is a collection that is empty after the first restart — and an empty one
+    // answers "nobody wrote this" to every question. The in-memory store hides that entirely; this
+    // is the production one.
+    val root = createTempDirectory("ui-builder-service-store")
+    val first = service(root)
+    create(first, "checkout")
+    apply(first, "checkout", "op-1", 0, InsertNodeMutationV1(node("node-1"), NodeLocationV1()))
+    apply(
+      first,
+      "checkout",
+      "op-2",
+      1,
+      SetPropertyMutationV1("node-1", "text", StringValueV1("first")),
+    )
+
+    val reopened = service(root)
+    // Submitted against revision 1 — before `op-2` wrote this property — so it is stale.
+    val response =
+      execute(
+        reopened,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Batch(
+            "checkout",
+            "op-3",
+            "browser",
+            1,
+            listOf(SetPropertyMutationV1("node-1", "text", StringValueV1("second"))),
+          )
+        ),
+      )
+
+    val outcome = assertIs<UiBuilderServiceResponse.OperationOutcome>(response)
+    val accepted = assertIs<AcceptedOutcomeV1>(outcome.outcome)
+    assertEquals(
+      listOf(ConflictCodeV1.STALE_PROPERTY_WRITE),
+      accepted.conflicts.map { it.code },
+      "the touch recorded before the restart has to still be there after it",
+    )
+  }
+
+  @Test
   fun `an edit writes nothing belonging to another design`() {
     val root = createTempDirectory("ui-builder-service-store")
     val service = service(root)

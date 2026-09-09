@@ -157,6 +157,39 @@ test("a store whose designs are all shallower than the cut saves nothing", () =>
   assert.equal(projection.affectedDesigns, 0);
 });
 
+test("a growing design's saving is the prefix that goes, not an average of the whole", () => {
+  // Retention removes the OLDEST snapshots. On a design that grew, those are the small ones, so
+  // scaling the whole section by `keep / count` charged the cut for bytes it would never reclaim —
+  // and the overstatement is worst on exactly the designs a cut is aimed at.
+  const growing = design("growing", { retained: 20 });
+  growing.revisionSnapshots = Array.from({ length: 20 }, (_, index) => ({
+    // One node at revision 0 up to twenty at revision 19.
+    document: document("growing", index, index + 1),
+    sequence: index,
+  }));
+  const report = analyzeUiBuilderState(envelopeV2({ growing }));
+  const section = report.designs[0].sections.revisionSnapshots;
+
+  const projection = projectRetention(report, { keep: 15 });
+
+  // The five oldest revision snapshots, summed exactly, plus the five position snapshots (which
+  // are uniform, so both readings agree there).
+  const droppedRevisions = section.entryBytes
+    .slice(0, 5)
+    .reduce((sum, it) => sum + it, 0);
+  const positions = report.designs[0].sections.positionSnapshots;
+  const droppedPositions = positions.entryBytes.slice(0, 5).reduce((sum, it) => sum + it, 0);
+  assert.equal(projection.savedBytes, droppedRevisions + droppedPositions);
+
+  // And it is materially less than what scaling by the average claimed, which is the whole point.
+  const averaged =
+    Math.round(section.bytes * (1 - 15 / 20)) + Math.round(positions.bytes * (1 - 15 / 20));
+  assert.ok(
+    projection.savedBytes < averaged * 0.8,
+    `prefix ${projection.savedBytes} should be well under the averaged ${averaged}`,
+  );
+});
+
 test("only the designs deeper than the cut contribute to the saving", () => {
   const report = analyzeUiBuilderState(
     envelopeV2({ deep: design("deep", { retained: 80 }), shallow: design("shallow", { retained: 5 }) }),
@@ -278,6 +311,54 @@ test("the per-design store reports the same sections the one file did", () => {
   assert.ok(
     report.designs[0].otherBytes > 0,
     "and what the journal spends beyond what it still says is visible as slack",
+  );
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("the store's own revisions are measured per entry, oldest first", () => {
+  // The per-design store is the production format, so a projection that falls back to the average
+  // here is one that is wrong everywhere it is actually run.
+  const root = storeDirectory({
+    growing: {
+      document: document("growing", 6, 24),
+      // Five revisions, growing: the oldest are the small ones retention would drop.
+      revisions: [
+        document("growing", 1, 2),
+        document("growing", 2, 6),
+        document("growing", 3, 12),
+        document("growing", 4, 18),
+        document("growing", 5, 24),
+      ],
+      outcome: { operationId: "op-1", revision: 6 },
+    },
+  });
+
+  const report = analyzeUiBuilderStore(root);
+  const section = report.designs[0].sections.revisionSnapshots;
+
+  assert.equal(section.entryBytes.length, 5, "one measurement per retained revision");
+  assert.deepEqual(
+    [...section.entryBytes].sort((left, right) => left - right),
+    section.entryBytes,
+    "recorded oldest-first, so the prefix a cut drops is the front of this list",
+  );
+  assert.equal(
+    section.entryBytes.reduce((sum, it) => sum + it, 0),
+    section.bytes,
+    "and the per-entry sizes still add up to the section",
+  );
+
+  // Keeping three drops the two smallest, which is well under two fifths of the section.
+  const projection = projectRetention(report, { keep: 3 });
+  const dropped = section.entryBytes[0] + section.entryBytes[1];
+  const positions = report.designs[0].sections.positionSnapshots;
+  assert.equal(
+    projection.savedBytes,
+    dropped + positions.entryBytes[0] + positions.entryBytes[1],
+  );
+  assert.ok(
+    projection.savedBytes < Math.round((section.bytes + positions.bytes) * (2 / 5)),
+    "the averaged reading would have claimed two fifths of both sections",
   );
   rmSync(root, { recursive: true, force: true });
 });

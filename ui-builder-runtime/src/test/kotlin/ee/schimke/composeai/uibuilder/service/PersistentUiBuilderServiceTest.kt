@@ -2838,6 +2838,252 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `an operation stays redoable the moment it is undone, at the budget floor`() {
+    // The pruning window is age-ordered and an undo does NOT move its target to the back: the
+    // target keeps its original position while the undo record joins at the front's far end. So
+    // undoing the OLDEST retained operation used to push its own target out of the window on the
+    // same commit, and the redo that follows resolved through `acceptedOperations` and found
+    // nothing. Losing depth at the far end of history is what the budget is for; an operation
+    // becoming non-redoable the instant it is undone is not.
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            retainedCommittedOperations = 64,
+            retainedOperationOutcomes = 64,
+            retainedRevisionSnapshots = 64,
+            // A budget nothing fits in, so the floor is the whole window: exactly three records.
+            retainedUndoBytes = 1,
+            minimumRetainedUndoOperations = 3,
+          )
+      )
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+        ),
+      )
+    )
+    repeat(4) { index ->
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "insert-$index",
+              index + 1L,
+              InsertNodeMutationV1(
+                textNode("node-$index"),
+                NodeLocationV1(ParentSlotV1("root", "content")),
+              ),
+            )
+          ),
+        )
+      )
+    }
+
+    // Retained at this point: insert-1, insert-2, insert-3. Undo the oldest of the three.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-oldest-kept", "browser", 5, "insert-1")
+        ),
+      )
+    )
+
+    // Without the target being pinned this is UNKNOWN_OPERATION: the undo record displaced the
+    // very operation it names.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Redo("design", "redo-oldest-kept", "browser", 6, "undo-oldest-kept")
+        ),
+      )
+    )
+  }
+
+  @Test
+  fun `a stale write is reported even after its record has left the undo budget`() {
+    // Two bounds over the same window. A submission is accepted while its `baseRevision` has a
+    // retained POSITION snapshot — a count — but the staleness checks used to read
+    // `acceptedOperations`, which is bounded by BYTES. On a design with large records the second
+    // window closes long before the first, and every check then answered "nobody wrote this" from
+    // a history that had been thrown away: a silent overwrite, reported as clean.
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            retainedCommittedOperations = 64,
+            retainedOperationOutcomes = 64,
+            // Deep enough that every revision below stays acceptable…
+            retainedRevisionSnapshots = 64,
+            retainedRevisionBytes = 8L * 1024 * 1024,
+            // …while the undo records themselves are pruned to three.
+            retainedUndoBytes = 1,
+            minimumRetainedUndoOperations = 3,
+          )
+      )
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+        ),
+      )
+    )
+    // The write a later submission is going to be stale against, at revision 2.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("set-text", 1, SetPropertyMutationV1("root", "text", StringValueV1("first")))
+        ),
+      )
+    )
+    // Four more commits, which push `set-text` out of the three-record undo window while its
+    // revision stays perfectly acceptable as a base.
+    repeat(4) { index ->
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "insert-$index",
+              index + 2L,
+              InsertNodeMutationV1(
+                textNode("node-$index"),
+                NodeLocationV1(ParentSlotV1("root", "content")),
+              ),
+            )
+          ),
+        )
+      )
+    }
+
+    // Submitted against revision 1 — before `set-text` — so this write is stale and must say so.
+    val outcome =
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "set-text-again",
+              1,
+              SetPropertyMutationV1("root", "text", StringValueV1("second")),
+            )
+          ),
+        )
+      )
+
+    assertEquals(
+      listOf(ConflictCodeV1.STALE_PROPERTY_WRITE),
+      outcome.conflicts.map { it.code },
+      "the overwritten write is outside the undo budget but inside the accepted window",
+    )
+    assertEquals("text", outcome.conflicts.single().field)
+  }
+
+  @Test
+  fun `the undo budget counts the bytes the file receives, not UTF-16 units`() {
+    // `String.length` counts UTF-16 code units. A design whose text is three-byte characters
+    // therefore kept about three times the budget it was told to keep — the budget did not bound
+    // the bytes it names. Same character count on both sides here, so the only thing that differs
+    // is what a character costs once encoded, and the deeper retention is the bug.
+    // Same character count on both, 200 apiece, so only the encoded cost differs.
+    val ascii = retentionDepthForText("a".repeat(200))
+    val wide = retentionDepthForText("あ".repeat(200))
+
+    assertTrue(
+      wide > ascii,
+      "three-byte characters must exhaust the byte budget sooner: ascii kept from $ascii, " +
+        "wide from $wide",
+    )
+  }
+
+  /**
+   * How far back the undo budget still reaches, as the index of the oldest operation that can still
+   * be undone. Higher means shallower retention.
+   *
+   * A refused undo commits nothing, so probing from the oldest forwards leaves the design untouched
+   * until the first one that succeeds.
+   */
+  private fun retentionDepthForText(text: String): Int {
+    val service =
+      service(
+        limits =
+          UiBuilderServiceLimits(
+            retainedCommittedOperations = 64,
+            retainedOperationOutcomes = 64,
+            retainedRevisionSnapshots = 64,
+            // Sized so several — but not all — of the records below fit when they are ASCII.
+            retainedUndoBytes = 5_000,
+            minimumRetainedUndoOperations = 1,
+          )
+      )
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("insert-root", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+        ),
+      )
+    )
+    // Distinct nodes rather than repeated writes to one property: a second write to the same
+    // property is refused for reasons of its own, which would measure that instead of retention.
+    repeat(8) { index ->
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "insert-$index",
+              index + 1L,
+              InsertNodeMutationV1(
+                textNode("node-$index")
+                  .copy(properties = mapOf("text" to StringValueV1("$text$index"))),
+                NodeLocationV1(ParentSlotV1("root", "content")),
+              ),
+            )
+          ),
+        )
+      )
+    }
+
+    for (index in 0 until 8) {
+      val outcome =
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            UiBuilderSubmission.Undo("design", "undo-probe-$index", "browser", 9, "insert-$index")
+          ),
+        )
+      if (
+        outcome is UiBuilderServiceResponse.OperationOutcome && outcome.outcome is AcceptedOutcomeV1
+      ) {
+        return index
+      }
+    }
+    return 8
+  }
+
+  @Test
   fun `a generous undo budget retains every record`() {
     val service =
       service(

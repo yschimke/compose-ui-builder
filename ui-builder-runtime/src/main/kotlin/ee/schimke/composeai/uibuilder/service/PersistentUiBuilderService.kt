@@ -1304,6 +1304,7 @@ public class PersistentUiBuilderService(
             .retainNewestWithinBytes(
               limits.retainedUndoBytes,
               limits.minimumRetainedUndoOperations,
+              AcceptedOperationRecordV1::targetOperationId,
             ),
         tombstones =
           reduction.design.tombstones.retainNewestWithinBytes(
@@ -1921,6 +1922,8 @@ public class PersistentUiBuilderService(
             now,
           ))
         .takeLast(limits.retainedAuditRecords)
+    val positionSnapshots =
+      (design.positionSnapshots + PositionStateV1(revision, working.positions)).takeLast(retained)
     val updated =
       design.copy(
         document = document,
@@ -1928,11 +1931,16 @@ public class PersistentUiBuilderService(
         history = history,
         revisionSnapshots = snapshots,
         positions = working.positions,
-        positionSnapshots =
-          (design.positionSnapshots + PositionStateV1(revision, working.positions)).takeLast(
-            retained
-          ),
+        positionSnapshots = positionSnapshots,
         acceptedOperations = accepted,
+        // Pruned against the oldest revision a submission can still name, NOT by a count of its
+        // own. `reduceCommand` refuses a `baseRevision` with no retained position snapshot, so that
+        // is exactly the window a staleness check can be asked about, and matching the two here is
+        // what keeps the answer "nobody wrote this" from meaning "we no longer know".
+        conflictTouches =
+          (design.conflictTouches +
+              ConflictTouchRecordV1(revision, changes.flatMap(ChangeRecordV1::touchKeys).toSet()))
+            .filter { it.committedRevision >= positionSnapshots.first().revision },
         tombstones = working.tombstones,
         updatedAtEpochMillis = now,
         audit = audit,
@@ -2022,12 +2030,7 @@ public class PersistentUiBuilderService(
           val conflicts =
             if (
               command.baseRevision < original.document.revision &&
-                original.acceptedOperations.values.any {
-                  it.committedRevision > command.baseRevision &&
-                    it.changes.any { change ->
-                      change is StructureChangeV1 && change.nodeId == mutation.nodeId
-                    }
-                }
+                original.touchedSince(command.baseRevision, touchKey("s", mutation.nodeId))
             )
               listOf(
                 CommandConflictV1(
@@ -2148,15 +2151,10 @@ public class PersistentUiBuilderService(
           }
           val conflicts = fields.mapNotNull { environmentField ->
             val overwrittenRevision =
-              original.acceptedOperations.values
-                .asSequence()
-                .filter { it.committedRevision > command.baseRevision }
-                .filter { accepted ->
-                  accepted.changes.any { change ->
-                    change is EnvironmentChangeRecordV1 && environmentField in change.fields
-                  }
-                }
-                .maxOfOrNull(AcceptedOperationRecordV1::committedRevision)
+              original.lastTouchSince(
+                command.baseRevision,
+                touchKey("e", environmentField.name),
+              )
             overwrittenRevision?.let {
               CommandConflictV1(
                 code = ConflictCodeV1.STALE_ENVIRONMENT_WRITE,
@@ -2195,12 +2193,7 @@ public class PersistentUiBuilderService(
           val conflicts =
             if (
               command.baseRevision < original.document.revision &&
-                original.acceptedOperations.values.any {
-                  it.committedRevision > command.baseRevision &&
-                    it.changes.any { change ->
-                      change is ModifierChangeV1 && change.nodeId == mutation.nodeId
-                    }
-                }
+                original.touchedSince(command.baseRevision, touchKey("m", mutation.nodeId))
             )
               listOf(
                 CommandConflictV1(
@@ -2320,14 +2313,10 @@ public class PersistentUiBuilderService(
           val conflicts =
             if (
               command.baseRevision < original.document.revision &&
-                original.acceptedOperations.values.any {
-                  it.committedRevision > command.baseRevision &&
-                    it.changes.any { change ->
-                      change is EventBindingChangeV1 &&
-                        change.nodeId == mutation.nodeId &&
-                        change.event == mutation.event
-                    }
-                }
+                original.touchedSince(
+                  command.baseRevision,
+                  touchKey("b", mutation.nodeId, mutation.event),
+                )
             )
               listOf(
                 CommandConflictV1(
@@ -2400,12 +2389,7 @@ public class PersistentUiBuilderService(
     val conflicts =
       if (
         command.baseRevision < original.document.revision &&
-          original.acceptedOperations.values.any {
-            it.committedRevision > command.baseRevision &&
-              it.changes.any { change ->
-                change is PropertyChangeV1 && change.nodeId == nodeId && change.property == property
-              }
-          }
+          original.touchedSince(command.baseRevision, touchKey("p", nodeId, property))
       )
         listOf(
           CommandConflictV1(
@@ -3039,6 +3023,14 @@ internal data class PersistedDesignV1(
   val revisionSnapshots: List<RevisionStateV1>,
   val operationOutcomes: Map<String, OperationOutcomeRecordV1> = emptyMap(),
   val acceptedOperations: Map<String, AcceptedOperationRecordV1> = emptyMap(),
+  /**
+   * The conflict history [acceptedOperations] used to serve — see [ConflictTouchRecordV1].
+   *
+   * Defaulted empty, so a state file written before this existed loads. Such a design answers
+   * "nobody wrote this" until enough operations land to refill the window, which is the behaviour
+   * it already had; the coverage this field restores begins from the next commit.
+   */
+  val conflictTouches: List<ConflictTouchRecordV1> = emptyList(),
   val tombstones: Map<String, NodeTreeSnapshotV1> = emptyMap(),
   val positions: Map<String, StableNodePositionV1>,
   val positionSnapshots: List<PositionStateV1>,
@@ -3105,6 +3097,39 @@ internal data class AcceptedOperationRecordV1(
   val changes: List<ChangeRecordV1>,
   val targetOperationId: String? = null,
   val compensatedBy: String? = null,
+)
+
+/**
+ * What one accepted operation TOUCHED, with none of what it wrote.
+ *
+ * Conflict detection asks one question of history — "did anyone write this same thing after the
+ * revision my client last saw?" — and every check that asks it used to scan
+ * [PersistedDesignV1.acceptedOperations]. That map is bounded by
+ * [UiBuilderServiceLimits.retainedUndoBytes], because the records in it are enormous:
+ * `StructureChangeV1` carries whole node subtrees on both sides, ~430 KB apiece on the design that
+ * motivated the budget. A submission is accepted whenever its `baseRevision` still has a POSITION
+ * snapshot (see the `REVISION_NOT_RETAINED` refusal in `reduceCommand`), and that set is bounded by
+ * a count. Two different bounds over the same window: on a design with large records the byte
+ * budget could prune to eight operations while thirty-two-plus revisions stayed acceptable, and a
+ * client submitting against one of the uncovered ones got every staleness check answering "nobody
+ * wrote this" from a history that had simply been thrown away. Not a missing conflict notice — a
+ * silent overwrite reported as clean.
+ *
+ * Splitting the question from the payload is what fixes it. A touch record is a revision and a set
+ * of short keys, so retaining one per accepted operation for the whole acceptance window costs
+ * kilobytes where retaining the operations themselves cost megabytes. [conflictTouches] is pruned
+ * against the oldest retained position snapshot rather than by a count of its own, which is the
+ * invariant stated directly: history covers exactly what the service will accept.
+ *
+ * The keys are opaque and internal — see `touchKeys`. They are `\u0000`-separated rather than
+ * joined on a printable character because node ids, property names and event names are all
+ * caller-supplied, and any printable separator is one a caller can put inside a segment to make two
+ * different touches collide.
+ */
+@Serializable
+internal data class ConflictTouchRecordV1(
+  val committedRevision: Long,
+  val keys: Set<String>,
 )
 
 @Serializable internal sealed interface ChangeRecordV1
@@ -3790,10 +3815,7 @@ private fun staleStateWrites(
 ): List<CommandConflictV1> =
   if (
     command.baseRevision < original.document.revision &&
-      original.acceptedOperations.values.any {
-        it.committedRevision > command.baseRevision &&
-          it.changes.any { change -> change is StateVariableChangeV1 && change.name == name }
-      }
+      original.touchedSince(command.baseRevision, touchKey("v", name))
   )
     listOf(
       CommandConflictV1(
@@ -4121,7 +4143,8 @@ private fun documentHash(document: DesignDocumentV1): String =
  * [UiBuilderServiceLimits.minimumRetainedRevisionSnapshots].
  */
 /**
- * The newest entries of [this] that fit in [budgetBytes], keeping at least [minimumEntries].
+ * The newest entries of [this] that fit in [budgetBytes], keeping at least [minimumEntries], plus
+ * whatever those entries [pin].
  *
  * Walks from the newest backwards and stops at the first entry that would exceed the budget, so a
  * commit serializes at most the budget rather than the whole map — the cost is bounded by what is
@@ -4130,11 +4153,25 @@ private fun documentHash(document: DesignDocumentV1): String =
  * marking its target compensated) keeps that key's original position, which is what makes the
  * oldest entries the ones at the front.
  *
+ * **That last property is exactly why [pin] exists.** An undo is a new record at the back; the
+ * operation it compensates keeps its ORIGINAL position at the front. So undoing the oldest of eight
+ * retained records adds a ninth at the back and pushes its own target out of the window — and
+ * `reduceRedo` resolves through `acceptedOperations`, so an immediate redo of a just-accepted undo
+ * answered `UNKNOWN_OPERATION`. Losing undo depth at the far end of history is the degradation the
+ * budget is willing to pay for; an operation becoming non-redoable the instant it is undone is not.
+ * Entries reachable from a kept entry through [pin] are therefore retained regardless of position,
+ * to a fixpoint, because a redo record names an undo which names the original.
+ *
+ * Bytes are measured as the UTF-8 the state file actually receives, key included. `String.length`
+ * counted UTF-16 code units, so a design whose text is three-byte characters kept about three times
+ * the budget it was told to keep, and the keys — an operation id apiece — were not counted at all.
+ *
  * Returns [this] unchanged when everything fits, so the common case allocates nothing.
  */
 private inline fun <reified V> Map<String, V>.retainNewestWithinBytes(
   budgetBytes: Long,
   minimumEntries: Int,
+  noinline pin: (V) -> String? = { null },
 ): Map<String, V> {
   if (size <= minimumEntries) return this
   val ordered = entries.toList()
@@ -4142,14 +4179,69 @@ private inline fun <reified V> Map<String, V>.retainNewestWithinBytes(
   var kept = 0
   var index = ordered.lastIndex
   while (index >= 0) {
-    total += PersistentUiBuilderServiceJson.json.encodeToString(ordered[index].value).length
+    val entry = ordered[index]
+    total +=
+      PersistentUiBuilderServiceJson.json.encodeToString(entry.value).utf8Size() +
+        entry.key.utf8Size()
     if (total > budgetBytes && kept >= minimumEntries) break
     kept++
     index--
   }
   if (kept >= ordered.size) return this
-  return ordered.subList(ordered.size - kept, ordered.size).associate { it.key to it.value }
+  val window = ordered.subList(ordered.size - kept, ordered.size)
+  val retained = window.associateTo(LinkedHashMap(window.size)) { it.key to it.value }
+  // To a fixpoint: a redo record pins the undo it compensates, and that undo pins the original.
+  var frontier: Collection<V> = window.map { it.value }
+  while (frontier.isNotEmpty()) {
+    val next = mutableListOf<V>()
+    for (value in frontier) {
+      val pinned = pin(value) ?: continue
+      if (pinned in retained) continue
+      val target = this[pinned] ?: continue
+      retained[pinned] = target
+      next += target
+    }
+    frontier = next
+  }
+  if (retained.size >= ordered.size) return this
+  // Rebuilt in the original order rather than in `retained`'s, so age order — which is what makes
+  // the front of this map the oldest entries on the next pass — survives the pinning.
+  return ordered.filter { it.key in retained }.associate { it.key to it.value }
 }
+
+private fun String.utf8Size(): Int = toByteArray(Charsets.UTF_8).size
+
+/** The touches [this] records — see [ConflictTouchRecordV1]. */
+private fun ChangeRecordV1.touchKeys(): List<String> =
+  when (this) {
+    // Node-and-property granular, matching what a `setProperty` conflict is about: two actors
+    // writing different properties of the same node do not conflict.
+    is PropertyChangeV1 -> listOf(touchKey("p", nodeId, property))
+    // Node granular, because the chain is one value — see [ModifierChangeV1].
+    is ModifierChangeV1 -> listOf(touchKey("m", nodeId))
+    is StateVariableChangeV1 -> listOf(touchKey("v", name))
+    is EventBindingChangeV1 -> listOf(touchKey("b", nodeId, event))
+    is EnvironmentChangeRecordV1 -> fields.map { touchKey("e", it.name) }
+    // `nodeId` rather than `affectedNodeIds`: the move check asks about the node that moved, and
+    // widening it to the whole subtree would report a conflict for every descendant carried along.
+    is StructureChangeV1 -> listOf(touchKey("s", nodeId))
+  }
+
+private fun touchKey(kind: String, vararg parts: String): String =
+  parts.joinToString("\u0000", prefix = "${kind}\u0000")
+
+/** Whether anyone wrote [key] after [baseRevision] — the question every staleness check asks. */
+private fun PersistedDesignV1.touchedSince(baseRevision: Long, key: String): Boolean =
+  conflictTouches.any {
+    it.committedRevision > baseRevision && key in it.keys
+  }
+
+/** The newest revision that wrote [key] after [baseRevision], or null if none did. */
+private fun PersistedDesignV1.lastTouchSince(baseRevision: Long, key: String): Long? =
+  conflictTouches
+    .asSequence()
+    .filter { it.committedRevision > baseRevision && key in it.keys }
+    .maxOfOrNull(ConflictTouchRecordV1::committedRevision)
 
 private fun UiBuilderServiceLimits.retainedRevisionsFor(documentBytes: Int): Int {
   if (documentBytes <= 0) return retainedRevisionSnapshots

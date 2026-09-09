@@ -115,7 +115,17 @@ export function analyzeUiBuilderState(root, { totalBytes } = {}) {
   const designs = Object.entries(service.designs).map(([id, design]) => {
     const sections = {};
     for (const section of DESIGN_SECTIONS) {
-      sections[section] = { bytes: byteLength(design[section]), count: countOf(design[section]) };
+      sections[section] = {
+        bytes: byteLength(design[section]),
+        count: countOf(design[section]),
+        // The individual entry sizes, for the two array sections retention trims — see
+        // `projectRetention`, which sums the prefix it would drop rather than assuming the
+        // entries are all the same size. Undefined for the object sections, which retention
+        // does not touch.
+        entryBytes: Array.isArray(design[section])
+          ? design[section].map((entry) => byteLength(entry))
+          : undefined,
+      };
     }
     const sectionBytes = Object.values(sections).reduce((sum, it) => sum + it.bytes, 0);
     const designBytes = byteLength(design);
@@ -164,9 +174,17 @@ export function projectRetention(report, { keep = 64 } = {}) {
   let savedBytes = 0;
   for (const design of report.designs) {
     for (const section of ["revisionSnapshots", "positionSnapshots"]) {
-      const { bytes, count } = design.sections[section];
+      const { bytes, count, entryBytes } = design.sections[section];
       snapshotBytes += bytes;
-      if (count > keep) savedBytes += Math.round(bytes * (1 - keep / count));
+      if (count <= keep) continue;
+      // Retention drops the OLDEST entries, and a design's snapshots are not all the same size —
+      // a document that grew across its revisions makes the dropped prefix the small end and the
+      // retained tail the large one. Scaling the section by `keep / count` assumed otherwise and
+      // overstated the saving for exactly the growing designs the cut is aimed at, so sum the
+      // prefix that would actually go.
+      savedBytes += entryBytes
+        ? entryBytes.slice(0, count - keep).reduce((sum, it) => sum + it, 0)
+        : Math.round(bytes * (1 - keep / count));
     }
   }
   return {
@@ -245,22 +263,40 @@ export function analyzeUiBuilderStore(directory) {
     };
     sections.access = { bytes: byteLength(header.access), count: 1 };
 
-    for (const file of Object.values(header.revisionFiles ?? {})) {
+    sections.revisionSnapshots.entryBytes = [];
+    sections.positionSnapshots.entryBytes = [];
+    // Sorted by revision, the way `readDesign` sorts them. Object key order is not the store's
+    // ordering, and `projectRetention` drops a PREFIX — so an unordered list would sum an
+    // arbitrary five files rather than the five oldest.
+    const revisionFiles = Object.entries(header.revisionFiles ?? {}).sort(
+      ([left], [right]) => (Number(left) || 0) - (Number(right) || 0),
+    );
+    for (const [, file] of revisionFiles) {
       const retained = payloadOf(join(designDirectory, file));
       if (!retained) continue;
       if (retained.document) {
-        sections.revisionSnapshots.bytes += byteLength(retained.document);
+        const bytes = byteLength(retained.document);
+        sections.revisionSnapshots.bytes += bytes;
         sections.revisionSnapshots.count += 1;
+        // Per entry as well as in total: retention drops the oldest, and on a design that grew
+        // those are the small ones, so the average this used to scale by overstated the saving.
+        sections.revisionSnapshots.entryBytes.push(bytes);
       }
       if (retained.positions) {
-        sections.positionSnapshots.bytes += byteLength(retained.positions);
+        const bytes = byteLength(retained.positions);
+        sections.positionSnapshots.bytes += bytes;
         sections.positionSnapshots.count += 1;
+        sections.positionSnapshots.entryBytes.push(bytes);
       }
     }
 
     const journal = replayJournal(designDirectory, header);
     for (const [section, value] of Object.entries(journal.live)) {
-      sections[section] = { bytes: byteLength(value), count: countOf(value) };
+      sections[section] = {
+        bytes: byteLength(value),
+        count: countOf(value),
+        entryBytes: Array.isArray(value) ? value.map((entry) => byteLength(entry)) : undefined,
+      };
     }
 
     const designBytes = directoryBytes(designDirectory);

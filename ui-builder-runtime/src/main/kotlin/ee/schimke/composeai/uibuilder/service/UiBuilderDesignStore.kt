@@ -206,6 +206,16 @@ internal data class JournalEntryV3(
   val acceptedRemoved: List<String>? = null,
   val tombstonesPut: Map<String, NodeTreeSnapshotV1>? = null,
   val tombstonesRemoved: List<String>? = null,
+  /**
+   * The conflict touches — appended to and trimmed from the front, so the same three fields
+   * `history` uses describe it.
+   *
+   * Absent from entries written before this existed, which replay to an empty list: the same
+   * position a design loaded from an older store starts in, and it refills from the next commit.
+   */
+  val conflictTouchesAppend: List<ConflictTouchRecordV1>? = null,
+  val conflictTouchesKeep: Int? = null,
+  val conflictTouchesSet: List<ConflictTouchRecordV1>? = null,
 )
 
 /**
@@ -732,6 +742,7 @@ internal class FileUiBuilderDesignStore(
         },
       operationOutcomes = journal.outcomes,
       acceptedOperations = journal.accepted,
+      conflictTouches = journal.conflictTouches,
       tombstones = journal.tombstones,
       positions = positions.positions,
       positionSnapshots =
@@ -747,6 +758,7 @@ internal class FileUiBuilderDesignStore(
   private data class JournalState(
     val history: List<CommittedOperationV1> = emptyList(),
     val audit: List<AuditRecordV1> = emptyList(),
+    val conflictTouches: List<ConflictTouchRecordV1> = emptyList(),
     val outcomes: Map<String, OperationOutcomeRecordV1> = emptyMap(),
     val accepted: Map<String, AcceptedOperationRecordV1> = emptyMap(),
     val tombstones: Map<String, NodeTreeSnapshotV1> = emptyMap(),
@@ -757,6 +769,7 @@ internal class FileUiBuilderDesignStore(
     header: StoredDesignHeaderV3,
   ): JournalState {
     val file = header.journalFile ?: return JournalState()
+    var conflictTouches: List<ConflictTouchRecordV1> = emptyList()
     val path = designDirectory.resolve(file)
     if (!Files.exists(path)) {
       throw UiBuilderPersistenceException("UI-builder journal $file is missing")
@@ -824,8 +837,20 @@ internal class FileUiBuilderDesignStore(
         entry.acceptedRemoved?.let { removed -> accepted = accepted - removed.toSet() }
         entry.tombstonesPut?.let { tombstones = tombstones + it }
         entry.tombstonesRemoved?.let { removed -> tombstones = tombstones - removed.toSet() }
+        entry.conflictTouchesSet?.let { conflictTouches = it }
+        entry.conflictTouchesAppend?.let { appended ->
+          conflictTouches =
+            (conflictTouches + appended).let { it.takeLast(entry.conflictTouchesKeep ?: it.size) }
+        }
       }
-    return JournalState(history, audit, outcomes, accepted, tombstones)
+    return JournalState(
+      history = history,
+      audit = audit,
+      conflictTouches = conflictTouches,
+      outcomes = outcomes,
+      accepted = accepted,
+      tombstones = tombstones,
+    )
   }
 
   private inline fun <reified T> decodeChecked(path: Path, description: String): T {
@@ -940,10 +965,19 @@ internal class FileUiBuilderDesignStore(
     val outcomes = mapDelta(previous?.operationOutcomes.orEmpty(), next.operationOutcomes)
     val accepted = mapDelta(previous?.acceptedOperations.orEmpty(), next.acceptedOperations)
     val tombstones = mapDelta(previous?.tombstones.orEmpty(), next.tombstones)
+    val touchesTail =
+      if (previous != null && previous.conflictTouches == next.conflictTouches) null
+      else appendedTail(previous?.conflictTouches.orEmpty(), next.conflictTouches)
     val historyChanged = previous == null || previous.history != next.history
     val auditChanged = previous == null || previous.audit != next.audit
+    val touchesChanged = previous == null || previous.conflictTouches != next.conflictTouches
     if (
-      !historyChanged && !auditChanged && outcomes == null && accepted == null && tombstones == null
+      !historyChanged &&
+        !auditChanged &&
+        !touchesChanged &&
+        outcomes == null &&
+        accepted == null &&
+        tombstones == null
     ) {
       return null
     }
@@ -960,6 +994,11 @@ internal class FileUiBuilderDesignStore(
       acceptedRemoved = accepted?.second,
       tombstonesPut = tombstones?.first,
       tombstonesRemoved = tombstones?.second,
+      conflictTouchesAppend = if (touchesChanged) touchesTail else null,
+      conflictTouchesKeep =
+        if (touchesChanged && touchesTail != null) next.conflictTouches.size else null,
+      conflictTouchesSet =
+        if (touchesChanged && touchesTail == null) next.conflictTouches else null,
     )
   }
 
@@ -1000,6 +1039,7 @@ internal class FileUiBuilderDesignStore(
         outcomesPut = next.operationOutcomes.takeIf { it.isNotEmpty() },
         acceptedPut = next.acceptedOperations.takeIf { it.isNotEmpty() },
         tombstonesPut = next.tombstones.takeIf { it.isNotEmpty() },
+        conflictTouchesSet = next.conflictTouches,
       )
     val line = journalLine(entry)
     val name = "$JOURNAL_PREFIX$generation$JOURNAL_SUFFIX"
