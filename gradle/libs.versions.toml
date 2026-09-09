@@ -50,7 +50,14 @@ maven-publish = "0.37.0"
 # .screenSizes` here. 2.1.0 is the first release carrying `ScreenGenerator.Preview.devices`
 # (compose-ai-tools#5248), which is what turns a design's export-device set into one
 # `@Preview(device = …)` per id rather than a multipreview that discards which devices it named.
-composeai-tools = "2.4.0"
+composeai-tools = "2.4.1"
+# The `data-*` modules are released on their OWN line and lag the tools version. Each release
+# publishes `compose-preview-maven-ready-<version>.json` beside its artifacts stating both — v2.4.1
+# carries `{"pluginVersion":"2.4.1","dataVersion":"2.4.0"}` — and only the tools line reached Maven
+# Central at 2.4.1. Read that file before bumping either: moving `composeai-tools` alone resolves
+# every module but these three, and the build fails at `Could not find …:data-preview-overrides
+# -runtime:<version>` rather than at anything that names the split.
+composeai-data = "2.4.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in.
 composeai-contracts = "2.13.0"
@@ -111,8 +118,8 @@ composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-se
 # command and `:mcp`'s `render_matrix` tool. Lifted out of compose-ai-tools' `:mcp` before the
 # module moved here, precisely so the offline CLI command did not have to follow it (#5188 there).
 composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix", version.ref = "composeai-tools" }
-composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-tools" }
-composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-tools" }
+composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-data" }
+composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-data" }
 
 composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol", version.ref = "composeai-contracts" }
 composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol", version.ref = "composeai-contracts" }
@@ -120,7 +127,7 @@ composeai-common-io = { module = "ee.schimke.composeai:common-io", version.ref =
 composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core", version.ref = "composeai-contracts" }
 composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core", version.ref = "composeai-contracts" }
 composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-preview-overrides-core", version.ref = "composeai-contracts" }
-composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime", version.ref = "composeai-tools" }
+composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime", version.ref = "composeai-data" }
 composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core", version.ref = "composeai-contracts" }
 composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol", version.ref = "composeai-contracts" }
 composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose", version.ref = "rc-players" }
