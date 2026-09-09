@@ -182,30 +182,51 @@ public class CurrentM3UiBuilderCatalogExecutor(
       }
     if (missing.isEmpty()) return catalog
     val registryKey = CurrentM3UiBuilderCatalogExecutor.ASSET_REGISTRY_KEY
-    val donorRegistry = donor.statusSemantics[registryKey]
-    var semantics =
-      if (
-        missing.any { it.componentId.startsWith("asset/") } &&
-          catalog.statusSemantics[registryKey] == null &&
-          donorRegistry != null
-      )
-        JsonObject(catalog.statusSemantics + (registryKey to donorRegistry))
-      else catalog.statusSemantics
+    var semantics = catalog.statusSemantics
+    // The donor's asset keys travel with `asset/image`, UNIONED into whatever the catalog states
+    // rather than only filling an absent registry.
+    //
+    // Filling only the absent case was half of it: the editor seeds a newly inserted image with
+    // `editor.placeholder`, a builder-owned key, so a catalog that declares a registry of its own
+    // and does not happen to list that key gets an image component it cannot insert — both write
+    // validators reject it. A catalog's own keys win a collision; it is describing its own assets.
+    if (missing.any { it.componentId.startsWith("asset/") }) {
+      val donorKeys = (donor.statusSemantics[registryKey] as? JsonObject)?.get("keys") as? JsonArray
+      if (donorKeys != null) {
+        val own = semantics[registryKey] as? JsonObject
+        val ownKeys = (own?.get("keys") as? JsonArray).orEmpty()
+        val ownNames = ownKeys.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.toSet()
+        val merged =
+          JsonArray(
+            ownKeys +
+              donorKeys.filterNot { key -> (key as? JsonPrimitive)?.contentOrNull in ownNames }
+          )
+        semantics =
+          JsonObject(
+            semantics +
+              (registryKey to JsonObject((own ?: JsonObject(emptyMap())) + ("keys" to merged)))
+          )
+      }
+    }
     // A component's shelf comes with it. The insert panel groups by `componentMenu`, and an entry
     // with no group falls back to a generic role heading — so injecting `layout/box` without the
     // donor's "Layout" would put the whole builder vocabulary under "Container"/"Leaf" instead of
-    // the shelves it was written for. `withMenuEntry` adds the group to `groupOrder` too, which is
-    // what stops a carried entry naming a shelf the panel does not render.
+    // the shelves it was written for.
+    //
+    // The ORDER is the donor's, not the order the components happen to be injected in. Appending
+    // as they came put `Layout` and `Scaffolds` — the builder's primary shelves — at the BOTTOM of
+    // the insert panel, below every catalog group, because those components are iterated last.
+    // Catalog-owned groups keep their relative order; a donor group is inserted where the donor
+    // puts it relative to the groups already present.
     val donorGroups = donor.statusSemantics.menuGroups()
+    val donorOrder = donor.statusSemantics.menuGroupOrder()
     for (component in missing) {
       val group = donorGroups[component.componentId] ?: continue
       if (semantics.menuGroups()[component.componentId] != null) continue
-      // `withMenuEntry` returns the MENU, not the semantics carrying it — every other caller
-      // spells that `("componentMenu" to …)`. Assigning its result to `semantics` replaced the
-      // whole block with just the menu and took `assetRegistry` with it.
       semantics =
         JsonObject(
-          semantics + ("componentMenu" to semantics.withMenuEntry(component.componentId, group))
+          semantics +
+            ("componentMenu" to semantics.withMenuEntry(component.componentId, group, donorOrder))
         )
     }
     return catalog.copy(components = catalog.components + missing, statusSemantics = semantics)
@@ -817,15 +838,43 @@ private fun JsonObject.menuGroups(): Map<String, String> {
     .toMap()
 }
 
-private fun JsonObject.withMenuEntry(componentId: String, group: String): JsonObject {
+/** The shelf order a `statusSemantics` block states. */
+private fun JsonObject.menuGroupOrder(): List<String> =
+  ((this["componentMenu"] as? JsonObject)?.get("groupOrder") as? JsonArray).orEmpty().mapNotNull {
+    (it as? JsonPrimitive)?.contentOrNull
+  }
+
+/**
+ * The componentMenu with one more entry, and its group in `groupOrder`.
+ *
+ * @param reference where a NEW group belongs, when the caller knows: the donor's own order, so an
+ *   injected `layout/box` puts "Layout" where the donor has it rather than wherever the injection
+ *   loop reached it. Appending was how `Layout` and `Scaffolds` — the builder's primary shelves —
+ *   ended up below every catalog group. Empty for callers with no opinion, which appends as before.
+ */
+private fun JsonObject.withMenuEntry(
+  componentId: String,
+  group: String,
+  reference: List<String> = emptyList(),
+): JsonObject {
   val menu = (this["componentMenu"] as? JsonObject) ?: JsonObject(emptyMap())
   val order = (menu["groupOrder"] as? JsonArray) ?: JsonArray(emptyList())
+  val names = order.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+  val placed =
+    when {
+      group in names -> names
+      // The last reference group that is already present decides the insertion point, so the
+      // donor's relative order is reproduced while the catalog's own groups keep theirs.
+      else -> {
+        val before = reference.takeWhile { it != group }.filter { it in names }
+        val at = before.lastOrNull()?.let { names.indexOf(it) + 1 } ?: 0
+        if (reference.isEmpty()) names + group else names.take(at) + group + names.drop(at)
+      }
+    }
   val entries = (menu["components"] as? JsonObject) ?: JsonObject(emptyMap())
   return JsonObject(
     menu +
-      ("groupOrder" to
-        if (order.any { (it as? JsonPrimitive)?.contentOrNull == group }) order
-        else JsonArray(order + JsonPrimitive(group))) +
+      ("groupOrder" to JsonArray(placed.map(::JsonPrimitive))) +
       ("components" to
         JsonObject(entries + (componentId to buildJsonObject { put("group", group) })))
   )
