@@ -190,6 +190,115 @@ the caller acts on by asking again with the same cursor. It is the same
 `ServeUiBuilderCommentStore.subscribe` the browser socket is built on, so neither surface can learn
 about a comment the other does not.
 
+## Telling the room
+
+Everything above is event-driven *inside* the product: a browser holds a socket, an agent holds a
+tool call, and one write wakes both. What none of it reaches is somebody who is not in the editor. A
+designer's "the gap above the card is wrong", left in Talk on a Friday afternoon, is invisible to
+the PM in the chat thread and to the engineer on the PR until one of them opens the design.
+[`MULTIPLAYER_WORKFLOW.md`](MULTIPLAYER_WORKFLOW.md) names that as the one missing direction of its
+review loop, and `--ui-builder-comment-webhook <url>` (container
+`SERVE_UI_BUILDER_COMMENT_WEBHOOK`) is it: one URL, told when a board moves.
+
+**What fires** is what somebody *said* — four events, each carrying the author, their `authorKind`,
+the excerpt trimmed by the same 160-character rule the `comments` notice uses, where the thread is
+pinned, the design's id and title, and the thread permalink
+`https://<host>/ui-builder/<catalog>/<designId>#thread=<threadId>`:
+
+| event | when |
+| --- | --- |
+| `thread` | a new thread |
+| `reply` | a comment under an existing one |
+| `resolved` | a thread closed — quoting the *opening* comment, because what was settled is the question rather than the "done" under it |
+| `reopened` | a thread opened again; it names no author, because the store clears `resolvedBy` and inferring the actor from the acknowledgement map would be a guess dressed as a fact |
+
+**What does not fire** is a reaction, an acknowledgement or a deletion, and that is the load-bearing
+decision rather than an omission. The rule three sections up already draws the line for the board's
+own cursor — *one actor catching up is not news the others have to catch up with* — and a
+notification is the same claim made louder. A webhook that posted on every 👀 would fire three times
+for one comment an agent picked up, answered and closed, and a channel that posts noise is a channel
+people mute. A deleted thread is silent for a different reason: the news would link to a thread that
+is gone.
+
+**It cannot drift from what the editor sees.** It is a third subscriber to the same
+`ServeUiBuilderCommentStore` feed the socket and `ui_builder_await_comments` are built on, announced
+from the same statement, so it can neither learn about a comment they miss nor stay quiet about one
+they show. What it receives is a whole board twice — as it was and as it is — and *what changed* is
+a diff of the two rather than a field the store would have to carry. Same trade the board itself
+makes: replaying a few kilobytes of text costs less than the bookkeeping a per-thread change log
+would need, and a write shape added later cannot forget to announce itself.
+
+**Delivery never touches the write.** The comment is already accepted and durable when the webhook
+hears about it, so the listener does an in-memory diff and hands the events to a bounded queue that
+one background coroutine drains. A slow, wedged or 503-ing chat platform therefore costs the person
+who typed the comment nothing. The queue drops the **oldest** on overflow, with one log line: a full
+queue means the far end is behind, and in that state the newest comment is the one worth having.
+Timeouts are seconds, and there is exactly one retry — a chat platform's hook is up or it is not,
+and a longer ladder turns one wedged host into a queue that never drains.
+
+**What a notification says is fixed when the comment is written, not when it is delivered.** The
+design's title and catalog are resolved on the thread accepting the comment and travel with it on
+the queue. A design id is not a stable name for a design — ids come from the client and are free
+again once one is deleted — so metadata resolved at delivery time, or remembered from an earlier
+event, can put one design's title and permalink on another design's comment. That is why
+`adminDesignSummary` exists: a keyed read under the service's lock rather than the scan of every
+design that listing them would pay, small beside the disk write the comment already does. Delivery
+staying off that thread is a separate promise, and the one that matters for latency: a slow or dead
+webhook host never touches the write.
+
+Shutdown gives the queue a couple of seconds to drain and says out loud what it abandons: nothing
+replays a notification, so an event dropped at SIGTERM is a comment that stays in the board and is
+never announced.
+
+**Nothing on the wire is markup.** Every string in a notification was typed by whoever left the
+comment, so each adapter renders it as characters: Slack and Google Chat escape the three
+characters they read as markup, and the Teams card carries its text in `TextRun` inlines, which do
+not interpret Adaptive Card Markdown at all. Without that, a comment body of
+`[Open the design](https://attacker.example)` arrives in a shared channel as a clickable link to
+somewhere nobody chose, under a headline naming a colleague as its author.
+
+**The name shown is not the identity carried.** A comment's `displayName` arrives in the request
+body while its `authorId` is established by the authorization layer, so anyone who may comment can
+put a colleague's name on one. The event carries both: `author` is the cosmetic label a channel
+shows, and `authorId` is the authenticated actor a relay can check it against. Only the label would
+have let a chat window state as fact that somebody said a thing they did not.
+
+**A permalink is only worth sending to somebody who can open it.** The browse token travels as a
+header or `?token=`, never a cookie, so on a host gated by `--token` with no GitHub sign-in a
+recipient lands on the shell and the design behind it stays refused. Starting with a webhook in that
+configuration prints a note saying so. The token is deliberately *not* put in the link: it is a far
+stronger credential than the hook URL this feature refuses to log, and a chat channel is long-lived
+and widely readable. It is a note rather than a refusal because a local `serve` posting to a
+loopback receiver is legitimate, and so is a proxy that authenticates in front of the box.
+
+**The URL is a credential.** A Slack or Teams hook URL carries its secret in its path: anybody
+holding the string can post into that channel. So it is never logged — not on success, not on
+failure, not in the banner — and everything that has to name it names a short digest of it instead,
+which tells two configured hooks apart and is useless to whoever reads the log. For the same reason
+only `https` is accepted, refused at startup rather than at the first delivery, with `http://` on
+loopback the one exception: that is the test receiver and the local relay, and there is no network
+to eavesdrop on.
+
+**The bodies.** `--ui-builder-comment-webhook-format` picks one of four, and each adapter is a pure
+function from the plain event, so what Slack receives is checked by a unit test rather than by an
+operator with a real channel:
+
+| format | body |
+| --- | --- |
+| `plain` | this server's own event JSON — `{"event", "design", "thread", "comment", "url"}` |
+| `slack` | `{"text": …}` in mrkdwn, the permalink as the title's link, the excerpt quoted under it |
+| `teams` | a minimal Adaptive Card in the `message` envelope, the permalink as an **Open the thread** action — a card rather than `text` because the Workflows hooks that replaced Office 365 connectors take only the card |
+| `google-chat` | `{"text": …}` in Chat's markup, which is Slack's for the two things used here |
+
+The format is named rather than sniffed from the hostname: a hook behind a relay or a workflow
+runner has a host that says nothing about what parses the body at the far end, and guessing wrong is
+a channel that silently receives nothing readable.
+
+The `#thread=` selector the permalink carries is a separate build item and may not have landed on
+the host reading the link. That is why it is a fragment: an editor that does not understand it opens
+the design and ignores it, which is the right degraded behaviour — the reader still lands on the
+thing being discussed rather than on a 404.
+
 ## The panel
 
 `CommentsInspector`, behind its own switch on the right-hand rail — **Talk**, badged with the number
@@ -220,3 +329,12 @@ one, a reaction as the lightest acknowledgement, and the notice's shape and boun
 `ServeUiBuilderCommentsIntegrationTest` starts the real server and plays both parts — a browser
 posting while an agent waits, an agent replying while a page is open, and a comment from somebody
 else riding along on the reply the agent was already reading until it acknowledges or reacts.
+
+`ServeUiBuilderCommentWebhookTest` pins the outbound half's two pure pieces: the board diff (a new
+thread, a reply, a resolve, a reopen; a reaction, an acknowledgement and a deletion producing
+nothing) and each format adapter, including that markup typed into a comment is escaped rather than
+interpreted — `<!channel>` in a design review must reach the channel as those characters.
+`ServeUiBuilderCommentWebhookIntegrationTest` puts a real receiver on the other end of the real
+server: a comment posted over HTTP arrives with its permalink, a reaction between two events that
+*are* news arrives nowhere, and three comments written against a receiver that never answers are
+accepted at once rather than one timeout apart.

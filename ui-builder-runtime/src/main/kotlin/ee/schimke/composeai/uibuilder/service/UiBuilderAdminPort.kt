@@ -36,6 +36,17 @@ public interface UiBuilderAdminPort {
   public fun adminListDesigns(): List<UiBuilderAdminDesignSummary>
 
   /**
+   * One design by id, or null where the host holds no such design.
+   *
+   * Separate from [adminListDesigns] because a caller that wants a single design should not pay a
+   * scan of every design to get it, and because a scan cannot be taken atomically with anything
+   * else the caller is doing. The default is that scan, so an implementation that has nothing
+   * cheaper stays correct; a store that keys designs by id overrides it with the lookup.
+   */
+  public fun adminDesignSummary(designId: String): UiBuilderAdminDesignSummary? =
+    adminListDesigns().firstOrNull { it.designId == designId }
+
+  /**
    * Remove a design and everything the service holds for it: its history, snapshots, presence and
    * subscribers (whose streams are closed). Durable before it returns. False when no such design
    * exists.

@@ -67,6 +67,18 @@ Both modes are `serve` with flags added, and every flag stays available:
   `ui-builder-state` beside `--catalogs-file`, or `~/.compose-preview/ui-builder-state` standalone.
   `none` serves the builder's assets with no editable design API at all.
 - **`--ui-builder-dir <dir>`** — the bundle to serve. Defaults to the one packaged beside the binary.
+- **`--ui-builder-comment-webhook <url>`** — announce a design's **Talk** activity outward. A new
+  thread, a reply and a resolution are posted to one incoming-webhook URL with the thread's
+  permalink, so somebody reading a chat window hears about a comment without opening the builder.
+  Reactions and acknowledgements deliberately do not fire. Only `https` is accepted (`http://` on
+  loopback aside, for a test receiver), because a Slack or Teams hook URL is a credential — it is
+  never logged, and the server names it by a digest. Off unless you set it. Set
+  `--github-auth-callback-base-url` too on any host behind a proxy: the permalink is built from it,
+  and without it the links carry the bind address. The deployed image derives it from `DOMAIN`.
+- **`--ui-builder-comment-webhook-format plain|slack|teams|google-chat`** — which body that hook
+  receives. `plain` is this server's own event JSON and is the default; the other three are the
+  incoming-webhook shapes those platforms accept. Named rather than guessed from the hostname: a
+  hook behind a relay has a host that says nothing about what parses the body.
 - **`--catalogs <system>[@<owner>/<repo>][,…]`** is **not** part of this. It fetches published
   catalogs from their `design-artifacts/<system>` branches and serves them as browsable preview
   sites at `/<system>/`. Publishing a catalog never enables authoring for it, and authoring against

@@ -2740,24 +2740,29 @@ public class PersistentUiBuilderService(
     }
   }
 
+  override fun adminDesignSummary(designId: String): UiBuilderAdminDesignSummary? = lock.withLock {
+    persisted.designs[designId]?.let(::adminSummaryOf)
+  }
+
   override fun adminListDesigns(): List<UiBuilderAdminDesignSummary> = lock.withLock {
     persisted.designs.values
       .sortedWith(compareBy({ it.createdAtEpochMillis }, { it.document.id }))
-      .map { design ->
-        UiBuilderAdminDesignSummary(
-          designId = design.document.id,
-          title = design.document.title,
-          revision = design.document.revision,
-          catalogPin = design.document.catalogPin,
-          ownerActorId = design.access.ownerActorId,
-          collaborators =
-            design.access.actorGrants.count { it.actorId != design.access.ownerActorId },
-          createdAtEpochMillis = design.createdAtEpochMillis,
-          updatedAtEpochMillis = design.updatedAtEpochMillis,
-          activeSubscribers = runtime[design.document.id]?.subscribers?.size ?: 0,
-        )
-      }
+      .map(::adminSummaryOf)
   }
+
+  /** One stored design as the operator's view of it. Callers hold [lock]. */
+  private fun adminSummaryOf(design: PersistedDesignV1): UiBuilderAdminDesignSummary =
+    UiBuilderAdminDesignSummary(
+      designId = design.document.id,
+      title = design.document.title,
+      revision = design.document.revision,
+      catalogPin = design.document.catalogPin,
+      ownerActorId = design.access.ownerActorId,
+      collaborators = design.access.actorGrants.count { it.actorId != design.access.ownerActorId },
+      createdAtEpochMillis = design.createdAtEpochMillis,
+      updatedAtEpochMillis = design.updatedAtEpochMillis,
+      activeSubscribers = runtime[design.document.id]?.subscribers?.size ?: 0,
+    )
 
   override fun adminUnreadableDesigns(): Set<String> =
     unusableDesigns.filterValues { it.storeQuarantine }.keys.toSet()
