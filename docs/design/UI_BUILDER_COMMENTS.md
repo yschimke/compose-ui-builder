@@ -269,6 +269,21 @@ put a colleague's name on one. The event carries both: `author` is the cosmetic 
 shows, and `authorId` is the authenticated actor a relay can check it against. Only the label would
 have let a chat window state as fact that somebody said a thing they did not.
 
+**One destination, and the design's own thread carried rather than posted to.** Build item 3 of
+[`MULTIPLAYER_WORKFLOW.md`](MULTIPLAYER_WORKFLOW.md) originally asked for a per-design override in
+`links.thread`. The event carries that value instead — `design.thread` on every notification — so a
+relay that knows the chat platform can put the message in the right conversation, and the host keeps
+posting to the one URL its operator configured.
+
+Two reasons, and the second decides it. A `links.thread` is the permalink you get from "copy link to
+message", which is a thing a person opens; an incoming webhook is a secret endpoint that accepts a
+POST, so posting to a permalink achieves nothing. And `links` is written by any actor holding WRITE
+on the design, while `ServeUiBuilderLinksStore` states its own contract plainly: nothing there is
+ever fetched, and this host holds no credential for the systems those URLs name. Making the server
+POST to a collaborator-supplied URL would turn a design grant into the power to point the host at
+any address that resolves, and to receive the design's discussion there. A per-design destination
+has to be a credential the operator controls; `links` is deliberately not that.
+
 **A permalink is only worth sending to somebody who can open it.** The browse token travels as a
 header or `?token=`, never a cookie, so on a host gated by `--token` with no GitHub sign-in a
 recipient lands on the shell and the design behind it stays refused. Starting with a webhook in that

@@ -75,6 +75,10 @@ Both modes are `serve` with flags added, and every flag stays available:
   never logged, and the server names it by a digest. Off unless you set it. Set
   `--github-auth-callback-base-url` too on any host behind a proxy: the permalink is built from it,
   and without it the links carry the bind address. The deployed image derives it from `DOMAIN`.
+  There is one destination for the whole host. Where a design has a `links.thread`, the event
+  carries it as `design.thread` so a relay can thread the message; the server never posts to it,
+  because a chat permalink is not an endpoint and `links` is written by anyone who can edit the
+  design.
 - **`--ui-builder-comment-webhook-format plain|slack|teams|google-chat`** — which body that hook
   receives. `plain` is this server's own event JSON and is the default; the other three are the
   incoming-webhook shapes those platforms accept. Named rather than guessed from the hostname: a
