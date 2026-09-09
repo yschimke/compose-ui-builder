@@ -458,6 +458,153 @@ private class ComposeEmitter(
     if (stableIdentity.isNotEmpty()) line(level, "}")
   }
 
+  /**
+   * Whether the `kotlin` a folded run qualifies through still means the package.
+   *
+   * A folded run is written `kotlin.repeat(n) { _ -> … }`, and both halves of that are the point:
+   * `repeat` is a name like any other and so is the `it` it would otherwise bind.
+   * `exportedStateIdentifier` leaves both alone, so a design declaring state called either gets a
+   * local of that name — and an unqualified call would resolve to it, while the lambda's implicit
+   * parameter would shadow a read of it. Qualifying and binding nothing settles both without asking
+   * what else is in scope, which is the honest position for an exporter whose imports include one
+   * the caller supplies (`ComposeAssetAdapter.renderer`).
+   *
+   * That leaves one name to protect rather than two, and both ways it can be taken are: a design
+   * whose state is called `kotlin` gets a local that captures the qualifier, and an adapter whose
+   * renderer *binds* that name captures it too — by its last segment, or by an `as` alias, which is
+   * what the import statement actually puts in scope. Either has its cells printed the long way.
+   * Spent on the fold rather than on a refusal — the design is legal, the canvas draws it, and the
+   * adapter is the caller's to supply.
+   */
+  private val foldsRepeatedSiblings: Boolean by lazy {
+    document.stateVariables.keys.none { it.identifier() == "kotlin" } &&
+      assetAdapter?.renderer?.importName?.importedSimpleName() != "kotlin"
+  }
+
+  /**
+   * A slot's children, with runs of identical siblings written as one `repeat`.
+   *
+   * A design says a twelve-cell contribution row by holding twelve nodes, because that is the only
+   * thing the document can say: there is no loop in the format, and the canvas draws what is there.
+   * Printing it back as twelve identical `Surface` calls is faithful and unreadable, and the person
+   * reading the generated screen is the one this export exists for.
+   *
+   * The fold is purely how the same composition is *spelled*. The run emits the calls it replaced,
+   * in the same order, in the same parent scope; nothing about what is drawn moves. So the rule for
+   * what may fold is the rule for what is genuinely interchangeable — see [foldSignature], which
+   * refuses a subtree asserting an identity the fold would erase.
+   *
+   * The comment above a run names the folded **siblings**; the body carries the located node
+   * comments of the first of them, and a copy's descendants are found through the sibling id that
+   * stands for them. Naming every descendant of every copy would put back, as comments, the text
+   * the fold just removed — and the copies are identical, which is the whole premise.
+   *
+   * Only in the non-lazy containers — the carousel included, whose helper is a `Row` and whose
+   * items carry no key. `LazyColumn` and the grid wrap each child in `item(key = …)`, and a folded
+   * run would have to invent one key for what were separate keys — laziness is where item identity
+   * has consequences, so the readability trade is not obviously worth it there and is not taken.
+   *
+   * [emitOne] is how a container that wraps each child — the carousel's `Box` — folds without the
+   * wrapper being written n times: the run emits the wrapper too, because it is the same expression
+   * for every child it stands for.
+   */
+  private fun emitChildren(
+    children: List<String>,
+    level: Int,
+    emitOne: (String, Int) -> Unit = ::emitNode,
+  ) {
+    // A list too short to hold a run is emitted without asking any of the questions below. Not an
+    // optimisation of the common case but of the *deep* one: a signature walks a whole subtree, so
+    // a chain of single-child containers would have serialised its tail once per level on the way
+    // down, for an answer — "one child cannot be three" — that the length already gives.
+    if (children.size < MINIMUM_FOLDED_RUN) {
+      children.forEach { emitOne(it, level) }
+      return
+    }
+    var index = 0
+    while (index < children.size) {
+      val signature = if (foldsRepeatedSiblings) foldSignature(children[index]) else null
+      var end = index + 1
+      if (signature != null) {
+        while (end < children.size && foldSignature(children[end]) == signature) end++
+      }
+      val run = end - index
+      if (run < MINIMUM_FOLDED_RUN) {
+        children.subList(index, end).forEach { emitOne(it, level) }
+      } else {
+        val folded = children.subList(index, end)
+        line(level, "// repeated:$run nodes:${folded.joinToString(",").escapeComment()}")
+        line(level, "kotlin.repeat($run) { _ ->")
+        emitOne(folded.first(), level + 1)
+        line(level, "}")
+      }
+      index = end
+    }
+  }
+
+  /**
+   * What makes two sibling subtrees the same drawing, or `null` for one that may not be folded.
+   *
+   * Everything the emitters read is in it — the component, its properties, its modifiers, its event
+   * bindings, and the same question asked of every child, per slot — so two subtrees with equal
+   * signatures generate byte-identical Kotlin. Node ids are the one thing left out, since being
+   * different nodes is exactly what a run of identical siblings is.
+   *
+   * `null` for a subtree carrying `stableKey` or `scrollStateKey`, at any depth. Those are the
+   * design's own claim that this node is a particular one — [emitNode] spends them on a `key(…)`
+   * wrapper — and a `repeat` would emit that claim n times over. A design that wants its cells
+   * distinguishable says so, and is then printed the long way.
+   */
+  /**
+   * One answer per node for the life of an export.
+   *
+   * A signature contains its children's signatures, so an unmemoised walk costs the subtree once
+   * per level of nesting above it — and the emitter descends every level. Nothing in a document
+   * changes while it is being emitted, so the second answer is always the first.
+   *
+   * Holds nulls too: "this subtree may not fold" is as reusable as any other answer, and the
+   * refusals ([stableKey], a missing node) are what a deep design hits most.
+   */
+  private val foldSignatures = mutableMapOf<String, String?>()
+
+  private fun foldSignature(nodeId: String, ancestors: Set<String> = emptySet()): String? {
+    if (nodeId in foldSignatures) return foldSignatures.getValue(nodeId)
+    val signature = computeFoldSignature(nodeId, ancestors)
+    // Not cached under a cycle: the answer there is "this node is its own ancestor *on this path*",
+    // which is a fact about the path rather than about the node. The export gate refuses
+    // `GRAPH_CYCLE` long before emission, so this is a guard rather than a case.
+    if (ancestors.isEmpty() || signature != null) foldSignatures[nodeId] = signature
+    return signature
+  }
+
+  private fun computeFoldSignature(nodeId: String, ancestors: Set<String>): String? {
+    // The export gate refuses `GRAPH_CYCLE` before any of this runs; the guard is here so that a
+    // future caller cannot turn a malformed document into a stack overflow inside the emitter.
+    if (nodeId in ancestors) return null
+    val node = document.nodes[nodeId] ?: return null
+    if (node.string("stableKey").isNotEmpty() || node.string("scrollStateKey").isNotEmpty()) {
+      return null
+    }
+    val slots = StringBuilder()
+    node.slots.entries
+      .sortedBy { it.key }
+      .forEach { (slot, children) ->
+        slots.append(slot).append("=[")
+        children.forEach { child ->
+          slots.append(foldSignature(child, ancestors + nodeId) ?: return null).append(",")
+        }
+        slots.append("],")
+      }
+    return listOf(
+        node.componentId,
+        canonicalJson(node.properties),
+        canonicalJson(node.modifiers),
+        canonicalJson(node.eventBindings),
+        slots.toString(),
+      )
+      .joinToString("|")
+  }
+
   private fun emitSupportingPane(node: UiBuilderNode, level: Int) {
     line(level, "BuilderSupportingPaneScaffold(")
     line(level + 1, "modifier = ${node.modifierExpression()},")
@@ -471,10 +618,10 @@ private class ComposeEmitter(
     line(level + 1, "mainPaneVisible = ${node.boolValue("mainPaneVisible", true)},")
     line(level + 1, "supportingPaneVisible = ${node.boolValue("supportingPaneVisible", true)},")
     line(level + 1, "mainPane = {")
-    node.slot("mainPane").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("mainPane"), level + 2)
     line(level + 1, "},")
     line(level + 1, "supportingPane = {")
-    node.slot("supportingPane").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("supportingPane"), level + 2)
     line(level + 1, "},")
     line(level, ")")
   }
@@ -485,12 +632,12 @@ private class ComposeEmitter(
     line(level + 1, "containerColor = ${node.colorExpression("containerColor")},")
     listOf("topBar", "snackbarHost").forEach { slot ->
       line(level + 1, "$slot = {")
-      node.slot(slot).forEach { emitNode(it, level + 2) }
+      emitChildren(node.slot(slot), level + 2)
       line(level + 1, "},")
     }
     line(level, ") { contentPadding ->")
     line(level + 1, "Box(Modifier.padding(contentPadding)) {")
-    node.slot("content").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("content"), level + 2)
     if ("loading" in node.properties) {
       line(
         level + 2,
@@ -510,7 +657,7 @@ private class ComposeEmitter(
   ) {
     val prefix = arguments?.let { "$it, " }.orEmpty()
     line(level, "$symbol(${prefix}${node.modifierArgument()}) {")
-    node.slot(slot).forEach { emitNode(it, level + 1) }
+    emitChildren(node.slot(slot), level + 1)
     line(level, "}")
   }
 
@@ -528,7 +675,7 @@ private class ComposeEmitter(
       level,
       "Column(${node.modifierArgument()}, verticalArrangement = ${node.verticalArrangementExpression()}$horizontalAlignment) {",
     )
-    node.slot("children").forEach { emitNode(it, level + 1) }
+    emitChildren(node.slot("children"), level + 1)
     line(level, "}")
   }
 
@@ -543,7 +690,7 @@ private class ComposeEmitter(
       level,
       "Row(${node.modifierArgument()}, horizontalArrangement = ${node.horizontalArrangementExpression()}, verticalAlignment = $verticalAlignment) {",
     )
-    node.slot("children").forEach { emitNode(it, level + 1) }
+    emitChildren(node.slot("children"), level + 1)
     line(level, "}")
   }
 
@@ -590,10 +737,14 @@ private class ComposeEmitter(
       level,
       "BuilderHorizontalCarousel(kind = \"${node.string("kind").escape()}\", itemWidth = ${node.number("itemWidthDp", 128f).dpLiteral()}, spacing = ${node.number("itemSpacingDp").dpLiteral()}, contentPaddingStart = ${node.number("contentPaddingStartDp").dpLiteral()}) { itemWidth ->",
     )
-    node.slot("items").forEach {
-      line(level + 1, "Box(Modifier.width(itemWidth)) {")
-      emitNode(it, level + 2)
-      line(level + 1, "}")
+    // Through the fold like any other non-lazy container, per-item wrapper and all: the carousel
+    // helper is a `Row`, its items carry no key, and the `Box` this puts around each one is the
+    // same expression every time — so a run of identical items is as interchangeable here as
+    // anywhere else.
+    emitChildren(node.slot("items"), level + 1) { id, itemLevel ->
+      line(itemLevel, "Box(Modifier.width(itemWidth)) {")
+      emitNode(id, itemLevel + 1)
+      line(itemLevel, "}")
     }
     line(level, "}")
   }
@@ -603,7 +754,7 @@ private class ComposeEmitter(
       level,
       "BuilderSearchBar(expanded = ${node.boolValue("expanded")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}, ${node.modifierArgument()}) {",
     )
-    node.slot("inputField").forEach { emitNode(it, level + 1) }
+    emitChildren(node.slot("inputField"), level + 1)
     line(level, "}")
   }
 
@@ -615,7 +766,7 @@ private class ComposeEmitter(
     line(level + 1, "enabled = ${node.boolValue("enabled", true)},")
     listOf("leadingIcon", "placeholder", "trailingIcon").forEach { slot ->
       line(level + 1, "$slot = {")
-      node.slot(slot).forEach { emitNode(it, level + 2) }
+      emitChildren(node.slot(slot), level + 2)
       line(level + 1, "},")
     }
     line(level, ")")
@@ -634,11 +785,11 @@ private class ComposeEmitter(
       "shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}),",
     )
     line(level + 1, "label = {")
-    node.slot("label").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("label"), level + 2)
     line(level + 1, "},")
     if (node.slot("leadingIcon").isNotEmpty()) {
       line(level + 1, "leadingIcon = {")
-      node.slot("leadingIcon").forEach { emitNode(it, level + 2) }
+      emitChildren(node.slot("leadingIcon"), level + 2)
       line(level + 1, "},")
     }
     line(level, ")")
@@ -700,7 +851,7 @@ private class ComposeEmitter(
       level,
       "IconButton(onClick = {}, modifier = ${node.modifierExpression()}$selectedBackground) {",
     )
-    node.slot("content").forEach { emitNode(it, level + 1) }
+    emitChildren(node.slot("content"), level + 1)
     line(level, "}")
   }
 
@@ -738,7 +889,7 @@ private class ComposeEmitter(
   private fun emitTopAppBar(node: UiBuilderNode, level: Int) {
     line(level, "CenterAlignedTopAppBar(")
     line(level + 1, "title = {")
-    node.slot("title").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("title"), level + 2)
     line(level + 1, "},")
     line(
       level + 1,
@@ -753,7 +904,7 @@ private class ComposeEmitter(
     line(level, "ListItem(")
     listOf("headline", "supporting", "trailing").forEach { slot ->
       line(level + 1, "${slot}Content = {")
-      node.slot(slot).forEach { emitNode(it, level + 2) }
+      emitChildren(node.slot(slot), level + 2)
       line(level + 1, "},")
     }
     // The leading accent bar the canvas draws. It is a `drawBehind` rather than a parameter because
@@ -773,7 +924,7 @@ private class ComposeEmitter(
       level,
       "Surface(${node.modifierArgument()}, shape = ${node.shapeExpression()}, color = ${node.colorExpression("containerColor")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}) {",
     )
-    node.slot("content").forEach { emitNode(it, level + 1) }
+    emitChildren(node.slot("content"), level + 1)
     line(level, "}")
   }
 
@@ -793,7 +944,7 @@ private class ComposeEmitter(
         else -> "Box {"
       }
     line(level + 1, box)
-    node.slot("content").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("content"), level + 2)
     line(level + 1, "}")
     line(level, "}")
   }
@@ -812,10 +963,10 @@ private class ComposeEmitter(
     )
     if (node.string("style") == "fab") {
       line(level + 1, "Box(Modifier.padding(horizontal = 16.dp)) {")
-      node.slot("content").forEach { emitNode(it, level + 2) }
+      emitChildren(node.slot("content"), level + 2)
       line(level + 1, "}")
     } else {
-      node.slot("content").forEach { emitNode(it, level + 1) }
+      emitChildren(node.slot("content"), level + 1)
     }
     line(level, "}")
   }
@@ -825,7 +976,7 @@ private class ComposeEmitter(
       level,
       "BuilderHorizontalFloatingToolbar(expanded = ${node.boolValue("expanded", true)}, containerColor = ${node.colorExpression("containerColor")}, contentPadding = ${node.toolbarContentPaddingExpression()}, ${node.modifierArgument()}) {",
     )
-    node.slot("content").forEach { emitNode(it, level + 1) }
+    emitChildren(node.slot("content"), level + 1)
     line(level, "}")
   }
 
@@ -901,7 +1052,7 @@ private class ComposeEmitter(
       .forEach { (slot, parameter) ->
         if (node.slot(slot).isNotEmpty()) {
           line(level + 1, "$parameter = {")
-          node.slot(slot).forEach { emitNode(it, level + 2) }
+          emitChildren(node.slot(slot), level + 2)
           line(level + 1, "},")
         }
       }
@@ -948,20 +1099,20 @@ private class ComposeEmitter(
     line(level + 1, "hasText = ${node.slot("text").isNotEmpty()},")
     line(level + 1, "${node.modifierArgument()},")
     line(level + 1, "icon = {")
-    node.slot("icon").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("icon"), level + 2)
     line(level + 1, "},")
     line(level + 1, "title = {")
-    node.slot("title").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("title"), level + 2)
     line(level + 1, "},")
     line(level + 1, "text = {")
-    node.slot("text").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("text"), level + 2)
     line(level + 1, "},")
     line(level + 1, ") {")
     // The dismissing action first, then the confirming one: Material's order, and the order the
     // canvas draws, so a screenshot and its generated source cannot disagree about which button is
     // on the end.
-    node.slot("dismissButton").forEach { emitNode(it, level + 2) }
-    node.slot("confirmButton").forEach { emitNode(it, level + 2) }
+    emitChildren(node.slot("dismissButton"), level + 2)
+    emitChildren(node.slot("confirmButton"), level + 2)
     line(level, "}")
   }
 
@@ -1767,10 +1918,30 @@ private fun shapeDp(value: String?): Float =
 // implementation of it, in `:ui-builder-export` beside the export projection.
 private fun String.identifier(): String = exportedStateIdentifier(this)
 
+/**
+ * The name an import statement actually binds: its alias where it has one, its last segment where
+ * it does not.
+ *
+ * `import app.artwork.Renderer as kotlin` binds `kotlin`, and reading the last dotted segment of
+ * that string answers `Renderer as kotlin` — a name nothing can collide with, which is the wrong
+ * answer twice over. The renderer import is written verbatim into the generated file, so whatever
+ * it binds is what the file's own names have to be checked against.
+ */
+private fun String.importedSimpleName(): String =
+  substringAfterLast(" as ").trim().substringAfterLast('.')
+
 private fun String.escape(): String =
   replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
 
 private fun String.escapeComment(): String = replace("\n", " ").replace("\r", " ")
+
+/**
+ * How many identical siblings it takes before a `repeat` reads better than the calls themselves.
+ *
+ * Two of anything is still a list a reader takes in at a glance, and folding a pair costs two lines
+ * to save one. Three is where the pattern starts being the point.
+ */
+private const val MINIMUM_FOLDED_RUN = 3
 
 private val EMITTER_IDS =
   setOf(
