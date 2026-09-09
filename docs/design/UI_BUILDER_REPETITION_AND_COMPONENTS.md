@@ -126,34 +126,45 @@ components/templates made from catalog nodes" — and the generated file shape a
 capability exporter writes the screen function and then appends supporting functions. A user
 component is another entry in that tail.
 
+**Built for the canvas (2026-09).** The document carries `components` and a node's `component`, the
+Wasm canvas draws a placement, and validation counts a body as reachable through the component that
+owns it. What is not built is the export: the catalog declares no `design/component-instance`, so
+`CapabilityComposeCodeExporter` refuses a placement by name rather than emitting a guess — the next
+step, and the one that turns a placement into `private @Composable fun ContributionCell(…)`.
+
 A **symbol** in the document, its body reached from `components[*].root` while its nodes stay in the
 ordinary `nodes` map, so every existing reducer, validator and renderer path is reused:
 
 ```jsonc
 "components": {
-  "contribution-cell": {
-    "name": "ContributionCell",
-    "params": [
-      { "name": "level",   "valueType": "int",    "default": 0 },
-      { "name": "label",   "valueType": "string", "nullable": true },
-      { "name": "content", "valueType": "slot" }
-    ],
-    "root": "cell-root"
-  }
+  "contribution-cell": { "name": "ContributionCell", "root": "cell-root" }
 }
 ```
 
-An **instance** is an ordinary node: `componentId: "design/component-instance"`, a `symbolId`
-property, arguments under the parameter names in the existing value wrappers, and `slots` for
-slot-typed parameters.
+No parameter list — [compose-preview-contracts#57](https://github.com/yschimke/compose-preview-contracts/pull/57)
+settled that. What an instance passes is a dictionary and what a body reads is a key of it
+(`{"type":"binding","value":"shade"}`), so a generator derives the signature from those keys rather
+than from a second statement of the same fact, free to disagree with the bodies and instances it
+describes.
 
-- **Parameter types** are exactly the kinds the format already types — string, bool, int, float,
-  colour, enum — plus `slot`, which is a `@Composable () -> Unit`. No domain types: a component
-  taking an application's `Episode` is what a component pack is for
-  ([`UI_BUILDER_COMPONENT_PACKS.md`](UI_BUILDER_COMPONENT_PACKS.md)).
-- **The canvas** gains an argument scope and recurses into the symbol root on an instance. The
-  `ancestors` guard `RenderNode` already carries makes a recursive component draw nothing rather
-  than take the composition down.
+An **instance** is an ordinary node: `componentId: "design/component-instance"` and a `component`
+field carrying `componentKey` and `arguments`. Its own field rather than a property key, so a reader
+that has never heard of components can see what the node is and draw a placeholder.
+
+- **Argument values** are the value wrappers the format already types — string, bool, int, float,
+  colour, enum. No domain types: a component taking an application's `Episode` is what a component
+  pack is for ([`UI_BUILDER_COMPONENT_PACKS.md`](UI_BUILDER_COMPONENT_PACKS.md)). A slot-typed
+  parameter — a `@Composable () -> Unit` — is not yet expressible and waits for a design that needs
+  one.
+- **Bindings resolve once, at the placement.** `RenderNode` substitutes a bound property from the
+  arguments in scope before any accessor reads it, so colour, text, dimension and the modifier chain
+  see an ordinary value and know nothing about placements. A key the placement did not pass is left
+  as it stands, so the accessor's own fallback draws the component's default rather than the design
+  refusing to draw.
+- **The canvas** gains an argument scope and recurses into the symbol root on an instance — built.
+  The `ancestors` guard `RenderNode` already carries makes a recursive component draw nothing rather
+  than take the composition down, and the placement opens a path scope
+  (`UiBuilderInstancePath.placement()`) so the same body under two instances is two boxes.
 - **The export** emits one `private @Composable fun ContributionCell(level: Int, label: String? =
   null, modifier: Modifier = Modifier, content: @Composable () -> Unit)` per symbol, after the
   screen function, and the instance becomes a call. Parameter order is declaration order so the
@@ -206,6 +217,8 @@ only has to carry a symbol during the phase where it is still moving — the fai
 2. **Instance paths** for bounds, selection and comments — the prerequisite (1b) and (2) share.
    The canvas is done; the wire surfaces in the table above move with the first construct that
    draws a second copy.
-3. **Component symbols and instances**, in-document.
+3. **Component symbols and instances**, in-document. The canvas half is built; the export half —
+   one `private @Composable fun` per component, the instance a call — is next, and needs the
+   catalog to declare `design/component-instance`.
 4. **`ui-builder/components/`**, reusing the designs reader; graduation needs nothing new.
 5. **Data-driven loops**, last, against a design that needs one.

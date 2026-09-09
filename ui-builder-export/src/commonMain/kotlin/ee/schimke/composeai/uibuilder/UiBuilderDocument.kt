@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -12,6 +14,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class UiBuilderDocument(
   val schema: String,
@@ -32,8 +35,25 @@ data class UiBuilderDocument(
    * here draws it, and one that does not draws a placeholder.
    */
   val assets: JsonObject = JsonObject(emptyMap()),
+  /**
+   * The components this design defines, keyed the way an instance names them: the protocol's
+   * `DesignComponentV1` shape, carried untyped as `catalogPin` and `assets` are. Each value has a
+   * `name` — what the generated function is called — the `root` node its body starts at, and an
+   * optional `description`.
+   *
+   * There is deliberately **no parameter list**. What an instance passes is a dictionary and what
+   * the body reads is a key of it, so a generator derives the signature from those keys rather than
+   * from a second statement of the same fact, free to disagree with the bodies and instances it
+   * describes.
+   *
+   * Never encoded when empty, even by a writer that asks for defaults: the cross-language document
+   * hash is taken over this shape, and a design that defines no component must canonicalize to
+   * exactly what it did before the field existed.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val components: JsonObject = JsonObject(emptyMap()),
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class UiBuilderNode(
   val id: String,
@@ -42,6 +62,17 @@ data class UiBuilderNode(
   val modifiers: JsonArray = JsonArray(emptyList()),
   val slots: Map<String, List<String>> = emptyMap(),
   val eventBindings: JsonObject = JsonObject(emptyMap()),
+  /**
+   * The component this node places, if it places one: `componentKey`, and the `arguments`
+   * dictionary the body reads through `{"type":"binding","value":"<key>"}`.
+   *
+   * Its own field rather than a reserved property key, so a reader that has never heard of
+   * components can still see what the node is and draw a placeholder, instead of reading a
+   * component with properties nobody declared.
+   *
+   * Never encoded when absent, for the reason [UiBuilderDocument.components] is not.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val component: JsonObject? = null,
 )
 
 data class ReplayResult(val document: UiBuilderDocument, val operationRevisions: Map<String, Int>)
@@ -72,6 +103,7 @@ object UiBuilderReducer {
               roots = emptyList(),
               nodes = emptyMap(),
               assets = operation.obj("assets"),
+              components = operation.obj("components"),
             )
           outcomes[operationId] = 0
         }
@@ -89,6 +121,7 @@ object UiBuilderReducer {
                   value.jsonArray.map { it.jsonPrimitive.content }
                 },
               eventBindings = nodeObject.obj("eventBindings"),
+              component = nodeObject["component"] as? JsonObject,
             )
           require(node.id !in current.nodes) { "node already exists: ${node.id}" }
 

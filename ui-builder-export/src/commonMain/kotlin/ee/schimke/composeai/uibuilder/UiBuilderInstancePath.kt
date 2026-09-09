@@ -34,16 +34,23 @@ package ee.schimke.composeai.uibuilder
  */
 class UiBuilderInstancePath private constructor(internal val segments: List<Segment>) {
 
-  /** One step of a path: a node, and which copy of it if it is drawn more than once. */
-  internal data class Segment(val nodeId: String, val occurrence: Int? = null)
+  /**
+   * One step of a path: a node, which copy of it if a run draws it more than once, and whether it
+   * opens a scope — a component body, whose nodes are drawn once per placement rather than once.
+   */
+  internal data class Segment(
+    val nodeId: String,
+    val occurrence: Int? = null,
+    val placement: Boolean = false,
+  )
 
   /** The document node this box drew, exactly as the document spells it. */
   val nodeId: String
     get() = segments.last().nodeId
 
-  /** Whether any repeat stands between this box and the root. */
+  /** Whether this box is drawn once, so that its node id already identifies it. */
   val isAuthored: Boolean
-    get() = segments.none { it.occurrence != null }
+    get() = segments.size == 1 && segments.single().let { it.occurrence == null && !it.placement }
 
   /**
    * A rendering, for a log line or a tag — `cell#3/label`. Two different paths can only be told
@@ -73,6 +80,17 @@ class UiBuilderInstancePath private constructor(internal val segments: List<Segm
    */
   fun occurrence(index: Int): UiBuilderInstancePath =
     UiBuilderInstancePath(segments.dropLast(1) + segments.last().copy(occurrence = index))
+
+  /**
+   * The scope a component body is drawn in, opened by the node that places it.
+   *
+   * A body carries no copy index because there is nothing to count: it is drawn once per placement,
+   * and the placing node's id is unique. What it does need is that its nodes stop identifying
+   * themselves — the same body under two instances is two boxes — which is exactly what opening a
+   * scope means for every path below it.
+   */
+  fun placement(): UiBuilderInstancePath =
+    UiBuilderInstancePath(segments.dropLast(1) + segments.last().copy(placement = true))
 
   override fun equals(other: Any?): Boolean =
     this === other || (other is UiBuilderInstancePath && segments == other.segments)

@@ -109,4 +109,29 @@ class UiBuilderInstancePathTest {
     assertEquals("cell", copy.nodeId)
     assertEquals("cell#3", punctuatedId.nodeId)
   }
+
+  /**
+   * A component body is drawn once per placement, so its nodes stop identifying themselves the
+   * moment the placing node opens a scope — with no copy index, because there is nothing to count.
+   */
+  @Test
+  fun `a component body is named by the node that places it`() {
+    val first = UiBuilderInstancePath.of("cell-a").placement().child("body")
+    val second = UiBuilderInstancePath.of("cell-b").placement().child("body")
+
+    assertEquals("cell-a/body", first.value)
+    assertEquals("body", first.nodeId)
+    assertTrue(first != second)
+    assertFalse(first.isAuthored)
+  }
+
+  /** A placement inside a copy carries both, for the same reason a nested repeat does. */
+  @Test
+  fun `a placement inside a copy keeps the copy`() {
+    val deep =
+      UiBuilderInstancePath.of("row").occurrence(2).child("cell").placement().child("label")
+
+    assertEquals("row#2/cell/label", deep.value)
+    assertEquals("label", deep.nodeId)
+  }
 }

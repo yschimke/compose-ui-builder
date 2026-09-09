@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.floatOrNull
 
@@ -102,6 +103,22 @@ private fun validateCatalogPin(
   return mismatches + unexpected
 }
 
+/**
+ * Where each component's body starts, by component key.
+ *
+ * A body is an ordinary subtree in the ordinary `nodes` map — that is what lets every walk here
+ * treat it as one — reached from the component rather than from a slot, so it is named among the
+ * graph's entry points beside the document's own root.
+ */
+private fun UiBuilderDocument.componentRoots(): Map<String, String> =
+  components.entries
+    .sortedBy { it.key }
+    .mapNotNull { (key, value) ->
+      val root = (value as? JsonObject)?.optionalString("root") ?: return@mapNotNull null
+      if (root in nodes) key to root else null
+    }
+    .toMap()
+
 private fun validateGraph(document: UiBuilderDocument): List<ExportValidationIssue> {
   val issues = mutableListOf<ExportValidationIssue>()
   if (document.roots.size != 1) {
@@ -128,6 +145,12 @@ private fun validateGraph(document: UiBuilderDocument): List<ExportValidationIss
       }
   }
   document.roots.forEach { root -> references.getOrPut(root) { mutableListOf() } += "<root>" }
+  // A component body is referenced by the component that owns it, not by a slot. Counted here so
+  // it is neither unreachable — it is drawn wherever the component is placed — nor a duplicate the
+  // moment a second design places the same component.
+  document.componentRoots().forEach { (key, root) ->
+    references.getOrPut(root) { mutableListOf() } += "<component:$key>"
+  }
   references.entries
     .sortedBy { it.key }
     .forEach { (nodeId, parents) ->
@@ -162,6 +185,7 @@ private fun validateGraph(document: UiBuilderDocument): List<ExportValidationIss
     active -= nodeId
   }
   document.roots.forEach(::visit)
+  document.componentRoots().values.forEach(::visit)
   (document.nodes.keys - visited).sorted().forEach { nodeId ->
     issues +=
       ExportValidationIssue(

@@ -668,14 +668,23 @@ private fun RenderNode(
   semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
   modifier: Modifier = Modifier,
   ancestors: Set<String> = emptySet(),
+  /**
+   * The dictionary a `binding` value reads, which is the arguments of the component placement this
+   * box is drawn inside — empty for a node the design placed itself.
+   */
+  arguments: JsonObject = JsonObject(emptyMap()),
 ) {
   // A reference to a node that is not there, and a reference to one already on this path, are both
   // things the export gate reports — `UNKNOWN_CHILD`, `GRAPH_CYCLE`. `requireNotNull` and an
   // unbounded recursion took the whole composition down instead, which meant the editor could not
   // draw the document its own Issues panel exists to describe. Drawing nothing for the bad
   // reference and everything else as usual is what leaves the diagnostic to the panel.
-  val node = document.nodes[nodeId]
-  if (node == null || nodeId in ancestors) return
+  val authored = document.nodes[nodeId]
+  if (authored == null || nodeId in ancestors) return
+  // Bindings are resolved once, here, rather than at each accessor: below this line a bound
+  // property is an ordinary value, so every reader — colour, text, dimension, the modifier chain —
+  // sees what the placement passed without knowing a placement happened.
+  val node = authored.withArguments(arguments)
   val enabled = node.bool("enabled", true)
   val activate = { node.dispatch("click", state, onState) }
   if (node.eventBindings["click"] != null) {
@@ -703,6 +712,7 @@ private fun RenderNode(
       semanticActions,
       next,
       here,
+      arguments,
     )
   }
 
@@ -1369,8 +1379,77 @@ private fun RenderNode(
       NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
         node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
       }
+    // One body, placed. The body's nodes live in the ordinary `nodes` map, so every reducer,
+    // validator and renderer path below this point is the one a design's own nodes take — what the
+    // placement adds is a scope: the instance's arguments, which the body reads by key, and a path
+    // segment, because the same body under two instances is two boxes rather than one.
+    DESIGN_COMPONENT_INSTANCE -> {
+      val root = document.componentRoot(node)
+      if (root == null) {
+        UnsupportedComponentDiagnostic(
+          "${node.componentId} → ${node.componentKey().ifEmpty { "(none)" }}",
+          measured,
+        )
+      } else {
+        Box(measured) {
+          RenderNode(
+            document = document,
+            nodeId = root,
+            path = path.placement().child(root),
+            state = state,
+            onState = onState,
+            onBounds = onBounds,
+            onTextLayout = onTextLayout,
+            semanticActions = semanticActions,
+            // `here`, so a component that places itself — directly or through another — draws
+            // nothing rather than taking the composition down, which is the rule every other
+            // reference in this renderer follows.
+            ancestors = here,
+            arguments = node.componentArguments(),
+          )
+        }
+      }
+    }
     else -> UnsupportedComponentDiagnostic(node.componentId, measured)
   }
+}
+
+/** The wire's own id for a node that places a component. */
+private const val DESIGN_COMPONENT_INSTANCE = "design/component-instance"
+
+private fun UiBuilderNode.componentKey(): String =
+  component?.optionalString("componentKey").orEmpty()
+
+private fun UiBuilderNode.componentArguments(): JsonObject =
+  component?.get("arguments")?.objectOrEmpty() ?: JsonObject(emptyMap())
+
+/** Where the placed component's body starts, or null when the design defines no such component. */
+private fun UiBuilderDocument.componentRoot(node: UiBuilderNode): String? {
+  val key = node.componentKey().takeIf { it.isNotEmpty() } ?: return null
+  val root = components[key]?.objectOrEmpty()?.optionalString("root") ?: return null
+  return root.takeIf { it in nodes }
+}
+
+/**
+ * This node with its bound properties replaced by what the placement passed.
+ *
+ * A binding names one key of the dictionary in scope, and the value under that key is an ordinary
+ * property value — so resolving one is a substitution rather than an evaluation. A key the
+ * placement did not pass is left as it stands: the accessors then read their own fallback, which
+ * draws the component's default rather than refusing to draw the design.
+ */
+private fun UiBuilderNode.withArguments(arguments: JsonObject): UiBuilderNode {
+  if (arguments.isEmpty() || properties.isEmpty()) return this
+  var substituted = false
+  val resolved = properties.mapValues { (_, value) ->
+    val binding = value as? JsonObject ?: return@mapValues value
+    if (binding.optionalString("type") != "binding") return@mapValues value
+    val key = binding.optionalString("value") ?: return@mapValues value
+    val argument = arguments[key] ?: return@mapValues value
+    substituted = true
+    argument
+  }
+  return if (substituted) copy(properties = JsonObject(resolved)) else this
 }
 
 /**
