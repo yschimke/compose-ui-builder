@@ -10,11 +10,12 @@ package ee.schimke.composeai.uibuilder
  * "what does this widget look like in the other frame the host might draw", which is a question
  * about the host and not an edit.
  *
- * Two of the three upstream shapes. `Round` is deliberately absent: its spec moves the content box
- * per size *and* per screen diameter (150×120dp inside 29/16dp at one, 160×136dp inside 35/16dp at
- * the next), so a single canvas frame would have to pick a diameter and imply it was the only one.
- * Squircle and rectangular each ship one footprint per container size, which is a frame this editor
- * can draw honestly.
+ * All three shapes upstream ships. Round was left out when this enum was written, on the stated
+ * grounds that its spec moves per screen diameter as well as per size — but so does the squircle's
+ * (166×60dp and 200×60dp at Small; 166×96dp and 200×108dp at Large), and this editor has always
+ * drawn the widest of those without anyone calling it a problem. The rule that already resolves the
+ * squircle resolves the round container too, so the exclusion was answering a question the table
+ * had answered from the start. See [hostSpec] for what "widest" means and why.
  *
  * @property id the wire spelling, which is what a native-render request carries and what a stored
  *   editor preference would hold. Lowercase and stable; the label is free to be re-worded.
@@ -33,7 +34,17 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
    * it is the render recommended as the image for the widget picker editor
    * (yschimke/compose-preview-server#587), which is why a designer needs to see their widget in it.
    */
-  Rectangular("rectangular", "Rectangular");
+  Rectangular("rectangular", "Rectangular"),
+
+  /**
+   * Fully round: a corner radius of 999dp, which every renderer clamps to a stadium.
+   *
+   * The most cramped of the three by a distance — at Large it reserves only 160×136dp of content
+   * inside 35/16dp of padding, against the squircle's 200×108dp inside a uniform 8dp — because the
+   * frame has to fit inside a circle rather than beside one. A widget that fills the squircle
+   * comfortably is the one most likely to clip here, which is the case worth being able to look at.
+   */
+  Round("round", "Round");
 
   /** The shipped `WidgetPreviewParams` provider carrying this shape's spec at [size]. */
   fun paramsProviderFor(size: WearWidgetScaffoldSize): String =
@@ -47,6 +58,11 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
         when (size) {
           WearWidgetScaffoldSize.Small -> "RectangularSmallWidgetPreviewParams"
           WearWidgetScaffoldSize.Large -> "RectangularLargeWidgetPreviewParams"
+        }
+      Round ->
+        when (size) {
+          WearWidgetScaffoldSize.Small -> "RoundSmallWidgetPreviewParams"
+          WearWidgetScaffoldSize.Large -> "RoundLargeWidgetPreviewParams"
         }
     }
 
@@ -89,22 +105,45 @@ data class WearWidgetHostSpec(
  * What the host draws around a widget of this size in this shape.
  *
  * The numbers are `androidx.glance.wear:wear-tooling-preview`'s own, read out of the
- * `WidgetPreviewParams` providers rather than guessed: the squircle pair is the 240dp-screen spec
- * the Wasm canvas has always drawn and `wear-m3-catalog`'s widget-container stickers hard-code, and
- * the rectangular pair is the single footprint each rectangular provider ships.
+ * `WidgetPreviewParams` providers rather than guessed.
  *
- * |                   | content | padding (h/v) | radius |
- * |-------------------|---------|---------------|--------|
- * | Squircle Small    | 200×60  | 8 / 8         | 26     |
- * | Squircle Large    | 200×108 | 8 / 8         | 26     |
- * | Rectangular Small | 192×60  | 16 / 12       | 0      |
- * | Rectangular Large | 168×112 | 32 / 16       | 0      |
+ * ## Why one footprint per shape and size, when a provider ships two
  *
- * One table read by both surfaces, which is the point of it existing. The canvas used to hard-code
- * 200×60 and 200×108 at its dispatch and keep the padding and radius as two private constants; the
- * native lane kept its own copy of the same four numbers. Two copies of one spec are two ways for
- * the picture and the render beside it to disagree, which is the disagreement the Native pane
- * exists to expose rather than to contain.
+ * Most providers yield **two** entries — one per screen diameter.
+ * `SquircleSmallWidgetPreviewParams` carries 166×60dp and 200×60dp; `RoundLargeWidgetPreviewParams`
+ * carries 150×120dp and 160×136dp. The rectangular pair is the exception, shipping one each.
+ *
+ * This table takes the **widest**, which is the same choice the generated `@Preview` makes with
+ * `.maxBy { it.widthDp }`, and for the same reason: a design is authored against one frame, and
+ * showing it in the constrained diameter as well would be two pictures where the question is "does
+ * it fit". Widest is also the honest default — the frame a design is drawn in on the largest screen
+ * the shape ships for — and picking by width rather than by position means the choice does not rest
+ * on the order a provider happens to yield.
+ *
+ * Round was excluded from this table at first, on the grounds that its spec varies per diameter. It
+ * does; so does the squircle's, and this rule had already resolved that. The exclusion was wrong
+ * rather than conservative, and it is gone.
+ *
+ * |                   | content | padding (h/v) | radius | frame   |
+ * |-------------------|---------|---------------|--------|---------|
+ * | Squircle Small    | 200×60  | 8 / 8         | 26     | 216×76  |
+ * | Squircle Large    | 200×108 | 8 / 8         | 26     | 216×124 |
+ * | Rectangular Small | 192×60  | 16 / 12       | 0      | 224×84  |
+ * | Rectangular Large | 168×112 | 32 / 16       | 0      | 232×144 |
+ * | Round Small       | 200×60  | 15 / 8        | 999    | 230×76  |
+ * | Round Large       | 160×136 | 35 / 16       | 999    | 230×168 |
+ *
+ * Round Small reserves the same 200×60dp content box as the squircle and pads it wider, so the two
+ * differ by frame and radius rather than by room for content. Round Large is where the shapes part
+ * company: 160×136dp is the least width any container gives a widget, because that frame has to fit
+ * inside a circle rather than beside one.
+ *
+ * ## One table, read everywhere
+ *
+ * The canvas used to hard-code 200×60 and 200×108 at its dispatch and keep the padding and radius
+ * as two private constants; the native lane kept its own copy of the same four numbers. Two copies
+ * of one spec are two ways for the picture and the render beside it to disagree, which is the
+ * disagreement the Native pane exists to expose rather than to contain.
  */
 fun WearWidgetScaffoldSize.hostSpec(shape: WearWidgetHostShape): WearWidgetHostSpec =
   when (shape) {
@@ -120,6 +159,11 @@ fun WearWidgetScaffoldSize.hostSpec(shape: WearWidgetHostShape): WearWidgetHostS
         WearWidgetScaffoldSize.Small -> WearWidgetHostSpec(192, 60, 16f, 12f, RECTANGULAR_RADIUS_DP)
         WearWidgetScaffoldSize.Large ->
           WearWidgetHostSpec(168, 112, 32f, 16f, RECTANGULAR_RADIUS_DP)
+      }
+    WearWidgetHostShape.Round ->
+      when (this) {
+        WearWidgetScaffoldSize.Small -> WearWidgetHostSpec(200, 60, 15f, 8f, ROUND_RADIUS_DP)
+        WearWidgetScaffoldSize.Large -> WearWidgetHostSpec(160, 136, 35f, 16f, ROUND_RADIUS_DP)
       }
   }
 
@@ -137,3 +181,14 @@ const val SQUIRCLE_RADIUS_DP: Float = 26f
 
 /** Square corners, which is the whole of what makes the rectangular container rectangular. */
 private const val RECTANGULAR_RADIUS_DP: Float = 0f
+
+/**
+ * Upstream's own spelling for "fully round", and deliberately not `frame / 2`.
+ *
+ * `WidgetPreviewConstants.CORNER_RADIUS_ROUND_DP` is 999: a radius no frame can reach, left to the
+ * renderer to clamp to a stadium. Copying the literal keeps this table a transcription — a widget
+ * that reads its `cornerRadiusDp` off the params sees the number the host actually sends — and it
+ * is the value the inspector's radius editor already had to admit, which is why its range runs well
+ * past any radius a frame could use (`CapabilityCatalog`).
+ */
+private const val ROUND_RADIUS_DP: Float = 999f

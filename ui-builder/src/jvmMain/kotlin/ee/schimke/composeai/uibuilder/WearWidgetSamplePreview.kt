@@ -62,21 +62,22 @@ fun WeatherWearWidgetSamplePreview() {
 }
 
 /**
- * The same Weather widget in both host container shapes, side by side.
+ * The same Weather widget in every host container shape, side by side.
  *
  * This is the canvas half of the host-shape view: the editor's control switches
  * [LocalWearWidgetHostShape] and the canvas redraws the design inside the chosen frame, which is
  * what this pair shows without needing the editor chrome around it.
  *
- * The two frames are genuinely different rather than one with its corners changed — at Large the
- * rectangular container is 168×112dp of content inside 32/16dp of padding against the squircle's
- * 200×108dp inside a uniform 8dp — so the design is laid out in a narrower, taller box on the
- * right. That is the question a designer is asking when they switch: does this survive the other
- * frame the host might draw it in.
+ * The frames are genuinely different rather than one with its corners changed. At Large the
+ * squircle gives a widget 200×108dp inside a uniform 8dp; the rectangular container gives 168×112dp
+ * inside 32/16dp; the round one gives 160×136dp inside 35/16dp, the least width of the three,
+ * because that frame has to fit inside a circle rather than beside one. So the design is laid out
+ * in a progressively narrower, taller box from left to right. That is the question a designer is
+ * asking when they switch: does this survive the other frames the host might draw it in.
  *
- * Sized to hold the wider of the two (232dp) twice over, plus the gap and a margin.
+ * Sized to hold all three Large frames (216, 232 and 230dp) plus the gaps and a margin.
  */
-@Preview(widthDp = 540, heightDp = 200)
+@Preview(widthDp = 780, heightDp = 220)
 @Composable
 fun WearWidgetHostShapesPreview() {
   val document =

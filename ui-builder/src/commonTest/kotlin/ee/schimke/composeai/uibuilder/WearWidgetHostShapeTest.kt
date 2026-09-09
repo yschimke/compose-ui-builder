@@ -61,9 +61,73 @@ class WearWidgetHostShapeTest {
       assertNotEquals(
         size.hostSpec(WearWidgetHostShape.Squircle).contentWidthDp,
         size.hostSpec(WearWidgetHostShape.Rectangular).contentWidthDp,
-        "$size: the two shapes must not share a content box",
+        "$size: the squircle and rectangular content boxes differ",
       )
     }
+  }
+
+  /**
+   * The round container, at the widest footprint its providers ship.
+   *
+   * Round was left out of the first version of this table on the stated grounds that its spec
+   * varies per screen diameter. It does — and so does the squircle's, which this table has always
+   * resolved by taking the widest entry, exactly as the generated `@Preview` does with `.maxBy {
+   * it.widthDp }`. The exclusion was wrong rather than conservative, and these are the numbers it
+   * was hiding.
+   */
+  @Test
+  fun `the round spec is the widest footprint its providers ship`() {
+    val small = WearWidgetScaffoldSize.Small.hostSpec(WearWidgetHostShape.Round)
+    assertEquals(200, small.contentWidthDp)
+    assertEquals(60, small.contentHeightDp)
+    assertEquals(15f, small.horizontalPaddingDp)
+    assertEquals(8f, small.verticalPaddingDp)
+    assertEquals(999f, small.cornerRadiusDp)
+
+    val large = WearWidgetScaffoldSize.Large.hostSpec(WearWidgetHostShape.Round)
+    assertEquals(160, large.contentWidthDp)
+    assertEquals(136, large.contentHeightDp)
+    assertEquals(35f, large.horizontalPaddingDp)
+    assertEquals(16f, large.verticalPaddingDp)
+    assertEquals(999f, large.cornerRadiusDp)
+  }
+
+  /**
+   * Round Small shares the squircle's content box and differs by padding and radius.
+   *
+   * Asserted because it is the counter-example to "every shape reserves a different box", which is
+   * what the rectangular case would otherwise suggest: at Small the round host gives a widget the
+   * same 200×60dp and simply pads it wider, so the two frames differ (216×76 against 230×76) while
+   * the room for content does not.
+   */
+  @Test
+  fun `round small shares the squircle content box but not its frame`() {
+    val squircle = WearWidgetScaffoldSize.Small.hostSpec(WearWidgetHostShape.Squircle)
+    val round = WearWidgetScaffoldSize.Small.hostSpec(WearWidgetHostShape.Round)
+
+    assertEquals(squircle.contentWidthDp, round.contentWidthDp)
+    assertEquals(squircle.contentHeightDp, round.contentHeightDp)
+    assertNotEquals(squircle.frameWidthDp, round.frameWidthDp)
+    assertNotEquals(squircle.cornerRadiusDp, round.cornerRadiusDp)
+    assertEquals(216, squircle.frameWidthDp)
+    assertEquals(230, round.frameWidthDp)
+  }
+
+  /**
+   * Round Large is the tightest container any shape offers, which is the case worth looking at.
+   *
+   * A widget that fills the squircle comfortably is the one most likely to clip here: the frame has
+   * to fit inside a circle rather than beside one, so it reserves the least width of the six.
+   */
+  @Test
+  fun `round large reserves the least content width of any container`() {
+    val widths =
+      WearWidgetHostShape.entries.associateWith {
+        WearWidgetScaffoldSize.Large.hostSpec(it).contentWidthDp
+      }
+
+    assertEquals(WearWidgetHostShape.Round, widths.minByOrNull { it.value }?.key)
+    assertEquals(160, widths[WearWidgetHostShape.Round])
   }
 
   /**
@@ -108,6 +172,10 @@ class WearWidgetHostShapeTest {
           "RectangularSmallWidgetPreviewParams",
         (WearWidgetHostShape.Rectangular to WearWidgetScaffoldSize.Large) to
           "RectangularLargeWidgetPreviewParams",
+        (WearWidgetHostShape.Round to WearWidgetScaffoldSize.Small) to
+          "RoundSmallWidgetPreviewParams",
+        (WearWidgetHostShape.Round to WearWidgetScaffoldSize.Large) to
+          "RoundLargeWidgetPreviewParams",
       )
     expected.forEach { (key, provider) ->
       assertEquals(provider, key.first.paramsProviderFor(key.second))
@@ -132,7 +200,8 @@ class WearWidgetHostShapeTest {
     assertEquals(WearWidgetHostShape.Rectangular, WearWidgetHostShape.fromId(" Rectangular "))
     assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId(null))
     assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId(""))
-    assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId("round"))
+    assertEquals(WearWidgetHostShape.Round, WearWidgetHostShape.fromId("round"))
+    assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId("stadium"))
     assertEquals(WearWidgetHostShape.Squircle, WearWidgetHostShape.Default)
   }
 
@@ -143,6 +212,7 @@ class WearWidgetHostShapeTest {
   fun `the labels match the names the generated previews carry`() {
     assertEquals("Squircle", WearWidgetHostShape.Squircle.label)
     assertEquals("Rectangular", WearWidgetHostShape.Rectangular.label)
+    assertEquals("Round", WearWidgetHostShape.Round.label)
     WearWidgetHostShape.entries.forEach {
       assertTrue(it.id.isNotBlank() && it.id == it.label.lowercase(), "${it.name}: id vs label")
     }

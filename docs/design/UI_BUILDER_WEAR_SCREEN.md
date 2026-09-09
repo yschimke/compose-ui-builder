@@ -28,16 +28,28 @@ the stand-in" are different jobs that happen to share a shape.
 
 ### The container shape is a view, not a design property
 
-The launcher draws the widget's frame from `WearWidgetParams`, and it ships more than one: the
-**squircle** every template is authored against, and a **rectangular** container whose spec is a
-genuinely different footprint rather than the squircle with square corners.
+The launcher draws the widget's frame from `WearWidgetParams`, and it ships three: the **squircle**
+every template is authored against, a **rectangular** container, and a fully **round** one. None is
+the squircle with different corners — each reserves its own content box and pads it its own way.
 
-| | content | padding (h/v) | radius |
-| --- | --- | --- | --- |
-| Squircle Small | 200×60dp | 8 / 8 | 26dp |
-| Squircle Large | 200×108dp | 8 / 8 | 26dp |
-| Rectangular Small | 192×60dp | 16 / 12 | 0dp |
-| Rectangular Large | 168×112dp | 32 / 16 | 0dp |
+| | content | padding (h/v) | radius | frame |
+| --- | --- | --- | --- | --- |
+| Squircle Small | 200×60dp | 8 / 8 | 26dp | 216×76dp |
+| Squircle Large | 200×108dp | 8 / 8 | 26dp | 216×124dp |
+| Rectangular Small | 192×60dp | 16 / 12 | 0dp | 224×84dp |
+| Rectangular Large | 168×112dp | 32 / 16 | 0dp | 232×144dp |
+| Round Small | 200×60dp | 15 / 8 | 999dp | 230×76dp |
+| Round Large | 160×136dp | 35 / 16 | 999dp | 230×168dp |
+
+Most providers ship **two** footprints, one per screen diameter — `SquircleSmallWidgetPreviewParams`
+carries 166×60dp and 200×60dp, `RoundLargeWidgetPreviewParams` 150×120dp and 160×136dp — and the
+table takes the widest, the same choice the generated `@Preview` makes with
+`.maxBy { it.widthDp }`. A design is authored against one frame, so showing the constrained diameter
+as well would be two pictures where the question is "does it fit".
+
+Round Large is the tightest container of the six at 160dp of content width, which makes it the case
+a designer most wants to look at: a widget that fills the squircle comfortably is the one most
+likely to clip there.
 
 Because the frame is the host's, the shape is **editor state and not document state**: switching it
 takes no revision, submits no operation and reaches nothing an export writes. A design saved while
@@ -56,9 +68,9 @@ beside it to disagree, which is the disagreement the Native pane exists to *expo
 contain. The canvas reads it through `LocalWearWidgetHostShape`, and the native lane is handed the
 shape on the render request so the two panes cannot be drawing different frames.
 
-`Round` is deliberately absent. Its spec moves the content box per size **and** per screen diameter
-(150×120dp inside 29/16dp at one, 160×136dp inside 35/16dp at the next), so a single canvas frame
-would have to pick a diameter and imply it was the only one.
+Round was absent from the first version of this, on the stated grounds that its spec varies per
+screen diameter. It does — and so does the squircle's, which the widest-entry rule above had already
+resolved. The exclusion was wrong rather than conservative, and it is gone.
 
 ## The hard constraint: the canvas has no Wear Compose
 
