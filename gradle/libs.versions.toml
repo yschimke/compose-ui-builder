@@ -51,13 +51,14 @@ maven-publish = "0.37.0"
 # (compose-ai-tools#5248), which is what turns a design's export-device set into one
 # `@Preview(device = …)` per id rather than a multipreview that discards which devices it named.
 composeai-tools = "2.4.1"
-# The `data-*` modules are released on their OWN line and lag the tools version. Each release
-# publishes `compose-preview-maven-ready-<version>.json` beside its artifacts stating both — v2.4.1
-# carries `{"pluginVersion":"2.4.1","dataVersion":"2.4.0"}` — and only the tools line reached Maven
-# Central at 2.4.1. Read that file before bumping either: moving `composeai-tools` alone resolves
-# every module but these three, and the build fails at `Could not find …:data-preview-overrides
-# -runtime:<version>` rather than at anything that names the split.
-composeai-data = "2.4.0"
+# The render daemons, the renderers, the preview annotations and data API, and the data extractors,
+# published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
+# in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
+# compose-ai-tools, on a release line of its own — so `daemon-core`, `daemon-client`,
+# `preview-data-api`, `renderer-desktop`, `daemon-desktop` and the `data-*` runtimes below no
+# longer move with `composeai-tools`. (`composeai-data`, the tools repository's separately-versioned
+# data line, went with the move.) A point pin, for the same reason as the two above.
+composeai-preview-daemon = "3.0.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in.
 composeai-contracts = "2.13.0"
@@ -102,7 +103,7 @@ composeai-render-host = { module = "ee.schimke.composeai:render-host", version.r
 # what lets `checkServeModuleBoundary` keep holding while the server gains the capability
 # yschimke/compose-preview-server#9 asked for.
 composeai-build-host-protocol = { module = "ee.schimke.composeai:build-host-protocol", version.ref = "composeai-tools" }
-composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api", version.ref = "composeai-tools" }
+composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api", version.ref = "composeai-preview-daemon" }
 composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery", version.ref = "composeai-tools" }
 # `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
 # browser editor reach the same `ScreenGenerator` the server exports with.
@@ -110,16 +111,16 @@ composeai-screen-model = { module = "ee.schimke.composeai:screen-model", version
 composeai-common-image-crop = { module = "ee.schimke.composeai:common-image-crop", version.ref = "composeai-tools" }
 composeai-bundle-format = { module = "ee.schimke.composeai:bundle-format", version.ref = "composeai-tools" }
 composeai-bundle-coordinates = { module = "ee.schimke.composeai:bundle-coordinates", version.ref = "composeai-tools" }
-composeai-daemon-core = { module = "ee.schimke.composeai:daemon-core", version.ref = "composeai-tools" }
-composeai-daemon-client = { module = "ee.schimke.composeai:daemon-client", version.ref = "composeai-tools" }
+composeai-daemon-core = { module = "ee.schimke.composeai:daemon-core", version.ref = "composeai-preview-daemon" }
+composeai-daemon-client = { module = "ee.schimke.composeai:daemon-client", version.ref = "composeai-preview-daemon" }
 composeai-render-session-api = { module = "ee.schimke.composeai:render-session-api", version.ref = "composeai-tools" }
 composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-session-subprocess", version.ref = "composeai-tools" }
 # Render-matrix axis expansion and contact-sheet composition, shared by the CLI's `render-matrix`
 # command and `:mcp`'s `render_matrix` tool. Lifted out of compose-ai-tools' `:mcp` before the
 # module moved here, precisely so the offline CLI command did not have to follow it (#5188 there).
 composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix", version.ref = "composeai-tools" }
-composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-data" }
-composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-data" }
+composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-preview-daemon" }
+composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-preview-daemon" }
 
 composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol", version.ref = "composeai-contracts" }
 composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol", version.ref = "composeai-contracts" }
@@ -127,7 +128,7 @@ composeai-common-io = { module = "ee.schimke.composeai:common-io", version.ref =
 composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core", version.ref = "composeai-contracts" }
 composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core", version.ref = "composeai-contracts" }
 composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-preview-overrides-core", version.ref = "composeai-contracts" }
-composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime", version.ref = "composeai-data" }
+composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime", version.ref = "composeai-preview-daemon" }
 composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core", version.ref = "composeai-contracts" }
 composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol", version.ref = "composeai-contracts" }
 composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose", version.ref = "rc-players" }
