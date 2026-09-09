@@ -223,8 +223,40 @@ class WearM3ScreenCatalogTest {
       executor.catalogSources,
     )
     val wear = executor.listCatalogs().first { it.benchmark.catalogSystemId == "wear-m3" }
-    assertEquals(listOf("test-catalog/only"), wear.components.map { it.componentId })
+    // The catalog's own component is the published one, and only that one: nothing of the
+    // synthesised Wear shelf survives, which is what "wins over" means.
+    assertEquals(
+      listOf("test-catalog/only"),
+      wear.components.map { it.componentId }.filterNot { it in builderVocabulary },
+    )
+    // Plus the builder's own vocabulary, which is not the catalog's to publish and so not the
+    // catalog's to lose. A published shelf with no `layout/box` on it would be a shelf no existing
+    // design opens.
+    assertEquals(
+      builderVocabulary,
+      wear.components.map { it.componentId }.filter { it in builderVocabulary }.toSortedSet(),
+    )
   }
+
+  /**
+   * The ids a published `wear-m3` is handed — the SYNTHESISED Wear catalog's builder vocabulary,
+   * not the mobile one.
+   *
+   * Computed from the Wear catalog rather than written down, because the point is that the two
+   * differ: Wear borrows `layout/box`, `layout/column`, `layout/row` and `asset/image` and none of
+   * the lazy layouts, scaffolds or shapes, since `WearScreenCodeExporter` refuses those. A literal
+   * list here would pass while the donor logic pointed anywhere.
+   */
+  private val builderVocabulary =
+    CurrentM3UiBuilderCatalogExecutor(
+        catalogSystemIds = setOf(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
+      )
+      .listCatalogs()
+      .single()
+      .components
+      .map { it.componentId }
+      .filter { id -> listOf("layout/", "shape/", "asset/", "remote-compose/").any(id::startsWith) }
+      .toSortedSet()
 
   /** The smallest thing that is a catalog: one component and an id. */
   private fun testCatalog(id: String = "test-catalog") =

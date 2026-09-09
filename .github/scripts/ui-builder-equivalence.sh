@@ -738,6 +738,11 @@ if (recordPath) {
           if (!Array.isArray(entry) || entry.some((item) => typeof item !== "string"))
             errors.push(`${path} is not a list of strings`);
           break;
+        // A list whose ELEMENTS are free-form (`List<JsonElement>`): the list-ness is all the
+        // reader constrains, so demanding more here would refuse documents it decodes.
+        case "anyList":
+          if (!Array.isArray(entry)) errors.push(`${path} is not a list`);
+          break;
         case "objectList":
           if (!Array.isArray(entry)) errors.push(`${path} is not a list`);
           else
