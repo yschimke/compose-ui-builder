@@ -100,24 +100,31 @@ print an expression where they currently print a literal, which is a narrow chan
 `ScreenGenerator` and a wider one in the capability exporter, whose value accessors have no emitter
 context to consult.
 
-### 1b. A loop in the document — deliberately not yet
+### 1b. A loop in the document — built for the canvas (2026-09)
 
-A genuine loop needs data, and the format has none: `stateVariables` declares `Boolean`, `Int`,
-`Double` and `String` (`StateDeclaration`), and the canvas threads state as `Map<String, String?>`.
-Three things, not one:
+A loop needs data, a node, and a way for a template to read a row. All three exist now, and only one
+of them was new:
 
-1. a list-valued declaration — `valueType: "list"` with an `itemType` of named scalar fields — whose
-   rows live **in the document**, or the canvas has nothing deterministic to draw;
-2. a `layout/for-each` node: a `dataRef` and a `template` slot holding exactly one child;
-3. property values that can be bindings — `{"type":"binding","path":"item.title"}` beside the
-   existing `color` / `colorToken` / `string` wrappers, checked where the value is written, the rule
-   [`UI_BUILDER_VALUE_SEMANTICS.md`](UI_BUILDER_VALUE_SEMANTICS.md) settled.
+1. **The rows live in the document**, as the `data` property of the loop: a `list` value whose
+   entries are `object` values. `ObjectValueV1` and `ListValueV1` were already on the wire, so
+   nothing was added for this — the canvas has something deterministic to draw because the design
+   carries it.
+2. **`layout/for-each`** — a catalog component with a `data` property and a `template` slot holding
+   exactly one child, on the Layout shelf, inserted with three starter rows so a fresh one draws
+   three cells rather than nothing.
+3. **A binding reads the row** — `{"type":"binding","value":"shade"}`, the same reader a component
+   body uses for its arguments, resolved by the same substitution at the same point in `RenderNode`.
+   That was the fear in this section's earlier draft ("the document stops being a scene graph"), and
+   it turned out to cost nothing extra: the reader arrived with components, and a loop only changes
+   where the dictionary comes from.
 
-Export is then `items(rows, key = { it.id }) { item -> … }` in a lazy container and `rows.forEach`
-elsewhere. But (3) is the moment the document stops being a scene graph and becomes a small
-expression language whose interpreter is the canvas, and every id-anchored surface above needs the
-instance path first. Hold it until a design needs data-driven repetition; take 1a, which is most of
-the readability, for none of that.
+Instance paths carry the copies (`loop#2/cell`), which is why this needed step 2 first.
+
+**The export is not built**: `CapabilityComposeCodeExporter` refuses a loop by name
+(`UNSUPPORTED_CODE_COMPONENT`). A faithful `forEach` needs a generated data class for the row, its
+properties derived from the keys the template binds — the same derivation that gives a component its
+parameters — and `items(rows, key = { … })` where the loop sits inside a lazy container. That is the
+next step rather than a guess made here.
 
 ## 2. A reusable component that becomes its own composable
 
@@ -260,4 +267,5 @@ only has to carry a symbol during the phase where it is still moving — the fai
    draws a second copy.
 3. **Component symbols and instances**, in-document — built, canvas and export.
 4. **`ui-builder/components/`**, reusing the designs reader; graduation needs nothing new.
-5. **Data-driven loops**, last, against a design that needs one.
+5. **Data-driven loops** — the canvas is built; the export (a row data class and a `forEach`) is
+   what remains.

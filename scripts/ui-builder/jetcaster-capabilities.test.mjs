@@ -44,6 +44,9 @@ test("Jetcaster benchmark capabilities are deterministic and generic", () => {
   );
 });
 
+/** Components that generate a Kotlin construct rather than a call, and so name no symbol. */
+const CONTROL_STRUCTURES = new Set(["layout/for-each"]);
+
 test("every capability declares slots, Wasm support, code mapping, and SVG policy", () => {
   for (const component of capabilities().components) {
     assert.ok(["Scaffold", "Container", "Leaf"].includes(component.role));
@@ -54,7 +57,15 @@ test("every capability declares slots, Wasm support, code mapping, and SVG polic
     );
     assert.ok(["supported", "planned", "unsupported"].includes(component.wasm.adapterStatus));
     assert.equal(typeof component.code.symbol, "string");
-    assert.ok(component.code.symbol.length > 0);
+    // Every component the generator *calls* names the symbol it calls. A control structure names
+    // none: `layout/for-each` becomes a `forEach` around its template's call, and `forEach` is not
+    // the component — writing it here would tell every reader of this catalog that a loop is a
+    // composable to invoke. The empty string is the claim, and this list is where it is made.
+    if (!CONTROL_STRUCTURES.has(component.componentId)) {
+      assert.ok(component.code.symbol.length > 0);
+    } else {
+      assert.equal(component.code.symbol, "");
+    }
     assert.ok(Array.isArray(component.code.imports));
     assert.ok(
       ["verified", "unverified", "raster-fallback-required", "unsupported"].includes(

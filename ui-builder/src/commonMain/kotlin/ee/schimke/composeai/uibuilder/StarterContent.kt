@@ -245,6 +245,10 @@ internal object StarterContent {
         mapOf("items" to itemCards("Item one", "Item two", "Item three", "Item four")),
       "layout/horizontal-carousel" to
         mapOf("items" to itemCards("Item one", "Item two", "Item three")),
+      // One template, and it reads the row rather than holding a literal: an inserted loop that
+      // drew the same words three times would look like a bug in the loop rather than like a
+      // design waiting for its data.
+      "layout/for-each" to mapOf("template" to listOf(rowTemplate())),
       "m3/horizontal-floating-toolbar" to
         mapOf(
           "content" to
@@ -256,6 +260,32 @@ internal object StarterContent {
         ),
     )
 }
+
+/** A card holding one text bound to the row's `label` — what a starter loop draws per row. */
+private fun rowTemplate(): StarterNode =
+  StarterNode(
+    componentId = "m3/card",
+    slots =
+      mapOf(
+        "content" to
+          listOf(
+            StarterNode(
+              componentId = "m3/text",
+              properties =
+                mapOf(
+                  "text" to
+                    JsonObject(
+                      mapOf(
+                        "type" to JsonPrimitive("binding"),
+                        "value" to JsonPrimitive("label"),
+                      )
+                    ),
+                  "style" to starterLiteral("enum", "bodyMedium"),
+                ),
+            )
+          )
+      ),
+  )
 
 private fun text(value: String, style: String): StarterNode =
   StarterNode(

@@ -1299,6 +1299,9 @@
                 "layout/column": {
                     "group": "Layout"
                 },
+                "layout/for-each": {
+                    "group": "Layout"
+                },
                 "layout/horizontal-carousel": {
                     "group": "Containment"
                 },

@@ -1379,6 +1379,37 @@ private fun RenderNode(
       NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
         node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
       }
+    // One template, drawn once per row. The rows live in the design — `data` is a `list` of
+    // `object` values — and each row is the dictionary the template reads by key, which is the same
+    // reader and the same substitution a component placement uses for its arguments. What differs
+    // is only where the dictionary comes from, which is why this needed no new machinery.
+    "layout/for-each" -> {
+      val rows = node.forEachRows()
+      Column(
+        modifier = measured,
+        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+      ) {
+        val template = slot("template").firstOrNull()
+        if (template != null) {
+          rows.forEachIndexed { index, row ->
+            RenderNode(
+              document = document,
+              nodeId = template,
+              // The copy, then the node: two rows draw the same template node as two boxes, which
+              // is what an instance path is for.
+              path = path.occurrence(index).child(template),
+              state = state,
+              onState = onState,
+              onBounds = onBounds,
+              onTextLayout = onTextLayout,
+              semanticActions = semanticActions,
+              ancestors = here,
+              arguments = row,
+            )
+          }
+        }
+      }
+    }
     // One body, placed. The body's nodes live in the ordinary `nodes` map, so every reducer,
     // validator and renderer path below this point is the one a design's own nodes take — what the
     // placement adds is a scope: the instance's arguments, which the body reads by key, and a path
@@ -1416,6 +1447,25 @@ private fun RenderNode(
 
 /** The wire's own id for a node that places a component. */
 private const val DESIGN_COMPONENT_INSTANCE = "design/component-instance"
+
+/**
+ * The rows this loop draws: the `object` values inside its `data` list.
+ *
+ * Read leniently, the way every other accessor on this canvas is: a `data` that is not a list, or a
+ * row that is not an object, draws nothing rather than taking the composition down. What is wrong
+ * with the document is the export gate's to say, and it says it in a panel the canvas has to stay
+ * alive to show.
+ */
+private fun UiBuilderNode.forEachRows(): List<JsonObject> {
+  val data = obj("data")
+  if (data.optionalString("type") != "list") return emptyList()
+  val values = data["values"] as? JsonArray ?: return emptyList()
+  return values.mapNotNull { row ->
+    val value = row as? JsonObject ?: return@mapNotNull null
+    if (value.optionalString("type") != "object") return@mapNotNull null
+    value["fields"] as? JsonObject
+  }
+}
 
 private fun UiBuilderNode.componentKey(): String =
   component?.optionalString("componentKey").orEmpty()

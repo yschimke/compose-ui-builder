@@ -37,7 +37,7 @@
         "layout/box": { "group": "Layout" },
         "layout/column": { "group": "Layout" },
         "layout/horizontal-carousel": { "group": "Containment" },
-        "layout/lazy-column": { "group": "Layout" },
+        "layout/for-each": { "group": "Layout" }, "layout/lazy-column": { "group": "Layout" },
         "layout/lazy-grid": { "group": "Layout" },
         "layout/lazy-row": { "group": "Layout" },
         "layout/row": { "group": "Layout" },
@@ -142,6 +142,23 @@
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Column", "imports": ["androidx.compose.foundation.layout.Column"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "layout/for-each",
+      "displayName": "For each",
+      "role": "Container",
+      "traits": ["OrderedContent", "RepeatedContent"],
+      "slots": [
+        { "name": "template", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
+      ],
+      "properties": [
+        { "name": "data", "jsonType": "object", "required": true, "notes": "The rows: a `list` value whose entries are `object` values \u2014 one dictionary per row, read by the template through `{\"type\":\"binding\",\"value\":\"<key>\"}`, the same reader a component body uses for its arguments." },
+        { "name": "verticalSpacingDp", "jsonType": "number", "required": false }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "", "imports": [] },
+      "svg": { "status": "unverified", "fallback": "none", "blocksExport": false, "notes": "Repeated rows draw the template more than once, and the structured recorder correlates a text element by authored node id \u2014 so only the last row's measurements survive and the typography annotation cannot be matched. Unverified until the recorder reads instance paths, which makes an SVG export of a design holding a loop refuse by name rather than emit an unannotated one." }
     },
     {
       "componentId": "layout/horizontal-carousel",

@@ -2100,6 +2100,13 @@ private fun UiBuilderDocument.strayBindingRefusals(
     signatures.values.flatMapTo(mutableSetOf()) { signature ->
       bodyNodes(signature.root).map(UiBuilderNode::id)
     }
+  // A loop's template is the other scope: there the dictionary is the row rather than a placement's
+  // arguments, which is the whole point of one reader serving both. Left out, every bound template
+  // was refused as a stray.
+  nodes.values
+    .filter { it.componentId == FOR_EACH_COMPONENT_ID }
+    .flatMap { loop -> loop.slots["template"].orEmpty() }
+    .forEach { template -> inABody += bodyNodes(template).map(UiBuilderNode::id) }
   return nodes.values
     .sortedBy(UiBuilderNode::id)
     .filter { it.id !in inABody }
@@ -2172,6 +2179,9 @@ private fun UiBuilderDocument.placesItself(key: String, body: List<UiBuilderNode
 
 /** The wire's own id for a node that places a component. */
 private const val DESIGN_COMPONENT_INSTANCE_ID = "design/component-instance"
+
+/** The catalog's own id for a loop over the design's rows, whose template reads one. */
+private const val FOR_EACH_COMPONENT_ID = "layout/for-each"
 
 /**
  * The scalar a value wrapper holds, or null when it holds an object, an array or nothing.
