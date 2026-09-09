@@ -48,7 +48,7 @@
 #
 # Usage:
 #   .github/scripts/ui-builder-equivalence.sh --policy <path> --golden <path> [--differences <path>]
-#                                             [--catalog-id <id>] [--strict]
+#                                             [--catalog-id <id>] [--record <path>] [--strict]
 #
 #   --policy       a catalog's authored ui-builder.policy.json, or its generated ui-builder.json
 #                  (a local checkout, or fetched from the delivery branch)
@@ -70,6 +70,11 @@
 #                  the cover sheet (:remote-catalog and m3-catalog both do). Semantics never
 #                  identify a catalog — a second `wear` catalog can agree on every compared field —
 #                  so without an id `--strict` cannot tell "ready" from "you read the wrong file".
+#   --record       the catalog's components.json. Turns on the COMPONENT ID comparison: which ids
+#                  the catalog would put on the shelf, how many collided, and which the frozen
+#                  catalog has that this one would not. Off without it, so a caller who omits it
+#                  gets the catalog-level checks only and can read `--strict` success for a shelf
+#                  that shares almost nothing with the frozen one. Pass it at the cutover.
 #   --differences  a JSON array of {"field": …, "why": …, "policy": …} — differences somebody has,
 #                  each field named at most ONCE: a second entry for a field would silently replace
 #                  the first, leaving a review decision nothing ever judged.
@@ -119,6 +124,7 @@ golden=""
 differences=""
 catalog_id=""
 component_id_prefix=""
+record=""
 strict=0
 
 while [[ $# -gt 0 ]]; do
@@ -128,6 +134,7 @@ while [[ $# -gt 0 ]]; do
     --differences) differences="$2"; shift 2 ;;
     --catalog-id) catalog_id="$2"; shift 2 ;;
     --component-id-prefix) component_id_prefix="$2"; shift 2 ;;
+    --record) record="$2"; shift 2 ;;
     --strict) strict=1; shift ;;
     # The whole leading comment block, not a hardcoded line range: the range was `2,40p` and every
     # paragraph added above `Usage:` pushed the flags further out of it, so `--help` had quietly
@@ -138,7 +145,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "${policy}" || -z "${golden}" ]]; then
-  echo "usage: $0 --policy <ui-builder.policy.json> --golden <…-capabilities-v1.json> [--differences <json>] [--catalog-id <id>] [--component-id-prefix <prefix>] [--strict]" >&2
+  echo "usage: $0 --policy <ui-builder.policy.json> --golden <…-capabilities-v1.json> [--differences <json>] [--catalog-id <id>] [--component-id-prefix <prefix>] [--record <components.json>] [--strict]" >&2
   exit 2
 fi
 
@@ -161,10 +168,24 @@ if [[ ! -f "${policy}" ]]; then
   exit 0
 fi
 
-node - "${policy}" "${golden}" "${differences}" "${strict}" "${catalog_id}" "${component_id_prefix}" <<'NODE'
+if [[ -n "${record}" && ! -f "${record}" ]]; then
+  echo "ui-builder-equivalence: no component record at ${record}." >&2
+  exit 2
+fi
+
+node - "${policy}" "${golden}" "${differences}" "${strict}" "${catalog_id}" "${component_id_prefix}" "${record}" <<'NODE'
 const { readFileSync } = require("node:fs");
-const [, , policyPath, goldenPath, differencesPath, strictFlag, expectedId, expectedPrefixArg] =
-  process.argv;
+const [
+  ,
+  ,
+  policyPath,
+  goldenPath,
+  differencesPath,
+  strictFlag,
+  expectedId,
+  expectedPrefixArg,
+  recordPath,
+] = process.argv;
 const expectedPrefix = expectedPrefixArg || "";
 const strict = strictFlag === "1";
 
@@ -469,9 +490,297 @@ for (const id of unknownBuiltins) {
 // one into the other is the phase-4 loader this gate declines to reimplement in bash. Comparing
 // them would report a permanent difference nobody could fix, which is the failure mode this file
 // has now been corrected for twice.
+let unservable = 0;
+
 const frozenComponents = new Map(
   (golden.components ?? []).map((component) => [component.componentId, component]),
 );
+
+// ---------------------------------------------------------------------------------------------
+// Which COMPONENTS the catalog would put on the shelf (--record).
+//
+// The header says this gate does not compare components, because composing a policy with a record
+// is the loader's job and a second implementation in bash would disagree with the real one where it
+// mattered. That still holds and this is not that: it compares component **ids**, which need no
+// composition — an id is either declared by the policy or derived from the record entry, and
+// nothing else about the component is read.
+//
+// It exists because a catalog can agree about every catalog-level fact above and still put a
+// completely different shelf in front of an author. Measured on a real published file: 63 of 104
+// record components collided on a derived id, and the 41 that survived shared exactly ONE id with
+// the frozen catalog's 41. Note what passes there: any check comparing COUNTS. 41 against 41.
+//
+// One field per id, not one for the set, for the same reason the builtins above are: a catalog that
+// deliberately adds one component has reviewed THAT component, and a waiver naming the whole set
+// would approve the next one nobody looked at. Routed through `fields` rather than counted
+// straight into `differences`, also for the reason recorded above — a discrepancy the gate reports
+// but gives no way to record a decision about is a check that cannot be satisfied.
+//
+// `slug` is the one piece of the loader duplicated here, and it is trusted ONLY on ASCII.
+//
+// Six rounds of review found five ways a JavaScript port of a Kotlin `Char` loop diverges — a case
+// conversion for a case property, a code point for a code unit, an ASCII digit class for a Unicode
+// category, that category at one of two call sites — and each was fixed. The sixth has no fix in
+// that style: Node and the JVM simply disagree about a character.
+//
+//   U+0295  ʕ   Java isLowerCase() = true    Node \p{Lowercase} = false
+//   U+02B0  ʰ   Java isLowerCase() = true    Node \p{Lowercase} = true
+//
+// Measured on this box, Java 17 against Node 22. There is no property regex that fixes that,
+// because it is not a wrong predicate — it is two different Unicode tables, and chasing them would
+// mean shipping a copy of the JVM's in bash.
+//
+// So the derivation is REFUSED where it cannot be trusted rather than guessed at. A record leaf
+// that is not pure ASCII is reported and blocks, and the reason says the gate cannot reproduce the
+// reader's id for it. Every id this gate does derive is one the two implementations provably agree
+// on; the alternative is an id that is silently wrong, which is the failure this whole comparison
+// exists to prevent. Component leaves come from Kotlin identifiers and `componentIds`, so in
+// practice this refuses nothing — and when it does fire, a human should look.
+//
+// `SLUG_PINS` stay, and the non-ASCII ones now document the divergences rather than guarantee the
+// behaviour: they are unreachable in the comparison, because a non-ASCII leaf never gets that far.
+// The four ASCII pins are the live contract, checked against the Kotlin in
+// `PublishedUiBuilderCatalogTest`.
+const SLUG_PINS = [
+  ["RTLText", "rtl-text"],
+  ["CheckboxButton", "checkbox-button"],
+  ["Button2", "button2"],
+  ["TopAppBar", "top-app-bar"],
+  // Kotlin's `lowercaseChar()` is a SINGLE-character mapping; JavaScript's `toLowerCase()` is not,
+  // and expands U+0130 to `i` + a combining dot. Taking the first code unit matches the Kotlin, and
+  // this pin is what proves it — the ASCII cases above cannot see the difference.
+  ["\u0130Button", "i-button"],
+  // Above the BMP: Kotlin's `Char` loop sees two surrogates, neither a letter, so both separate.
+  ["A\u{10400}B", "a-b"],
+  // A numeric character outside the decimal category: `isDigit()` is false, so it separates.
+  ["Widget\u00B2X", "widget-x"],
+  // A decimal digit outside ASCII: `isDigit()` is true, so the letter after it starts a word.
+  ["A\u0662B", "a\u0662-b"],
+  // A letter that is lowercase by PROPERTY and has no distinct case conversion.
+  ["\u02B0A", "\u02B0-a"],
+];
+
+// Single-character lowercase, matching Kotlin's `Char.lowercaseChar()`. JavaScript's
+// `toLowerCase()` is not single-character — it expands U+0130 to `i` plus a combining dot — and the
+// first code unit is what Kotlin produces. Safe because the loop below hands this ONE code unit.
+const lowerChar = (ch) => {
+  const lowered = ch.toLowerCase();
+  return lowered.length > 0 ? lowered[0] : ch;
+};
+
+// Iterated by UTF-16 CODE UNIT, not by code point, because `String.forEachIndexed` in Kotlin walks
+// `Char`s and a `Char` is a code unit. The difference is only visible above the BMP and it is not
+// cosmetic: for `A𐐀B` Kotlin sees two surrogate `Char`s, neither of which is a letter, so both
+// become separators and the id is `a-b`. A code-point loop sees one letter and keeps it — and
+// `lowerChar` then truncates the surrogate pair to its high half, putting an unpaired surrogate in
+// the id. Two divergences, both from iterating the string the way JavaScript makes natural rather
+// than the way the reader does.
+const slug = (name) => {
+  let out = "";
+  for (let index = 0; index < name.length; index += 1) {
+    const ch = name[index];
+    // `\p{Nd}`, not `\p{N}`. Kotlin's `isLetterOrDigit()` is `isLetter() || isDigit()`, and
+    // `isDigit()` is the DECIMAL digit category alone — so `Widget²` loses the superscript there
+    // and would keep it under the broader `\p{N}`.
+    if (/[\p{L}\p{Nd}]/u.test(ch)) {
+      const previous = index > 0 ? name[index - 1] : null;
+      const next = index + 1 < name.length ? name[index + 1] : null;
+      // The Unicode case PROPERTIES, not a round-trip heuristic. Kotlin asks `isUpperCase()` and
+      // `isLowerCase()`, which are the `Uppercase`/`Lowercase` properties — and those include
+      // characters with no distinct case conversion at all. U+02B0 MODIFIER LETTER SMALL H is
+      // lowercase to the JVM while both JavaScript conversions return it unchanged, so
+      // `c === c.toLowerCase() && c !== c.toUpperCase()` called it neither: `ʰA` slugged `ʰa` here
+      // and `ʰ-a` in the reader.
+      const isUpper = (c) => c !== null && /\p{Uppercase}/u.test(c);
+      const isLower = (c) => c !== null && /\p{Lowercase}/u.test(c);
+      const startsWord =
+        previous !== null &&
+        isUpper(ch) &&
+        // `\p{Nd}` here too, and for the same reason as the admission test above: Kotlin's
+        // `previous.isDigit()` is the decimal category, not `[0-9]`. An Arabic-Indic two before an
+        // uppercase letter starts a word in the reader and did not here.
+        (isLower(previous) || /\p{Nd}/u.test(previous) || (isUpper(previous) && isLower(next)));
+      if (startsWord && out.length > 0 && !out.endsWith("-")) out += "-";
+      out += lowerChar(ch);
+    } else if (out.length > 0 && !out.endsWith("-")) {
+      out += "-";
+    }
+  }
+  return out.replace(/^-+|-+$/g, "");
+};
+
+for (const [name, expected] of SLUG_PINS) {
+  if (slug(name) !== expected) {
+    console.log("");
+    console.log(
+      `  x slug: this gate derives ${JSON.stringify(slug(name))} from ${JSON.stringify(name)}, ` +
+        `but the reader derives ${JSON.stringify(expected)} — the two have drifted and every ` +
+        `component comparison would be measuring the wrong ids.`,
+    );
+    process.exit(2);
+  }
+}
+
+if (recordPath) {
+  const recordFile = read(recordPath);
+  // The prefix the POLICY declares, falling back to the caller's assertion — never the frozen
+  // catalog's. Deriving with the golden's prefix guarantees the derived ids carry the prefix they
+  // are about to be compared against, so a policy declaring the WRONG prefix passes: the ids line
+  // up and nothing else here reads the field for an authored document. `facts` is the policy's
+  // block, `semantics` the golden's; I reached for the wrong one.
+  const prefix = (facts.componentIdPrefix ?? expectedPrefix ?? "").trim();
+  // A plain object, or the artifact is refused. The reader decodes this field as
+  // `Map<String, UiBuilderComponentPolicy>`, so `null` or an array fails its decode and returns
+  // `Unusable` — while `?? {}` read `null` as "no policy" and `Object.entries([])` read an array as
+  // an empty one, both of which let the gate compare ids for an artifact the server will not load.
+  // The same rule as the collision and empty-shelf cases: where the reader refuses, so does this.
+  const rawComponents = facts.components;
+  const componentsIsMap =
+    rawComponents === undefined ||
+    (typeof rawComponents === "object" && rawComponents !== null && !Array.isArray(rawComponents));
+  if (!componentsIsMap) {
+    unservable += 1;
+    console.log("");
+    console.log(
+      `  x components: statusSemantics.components is ${
+        Array.isArray(rawComponents) ? "an array" : JSON.stringify(rawComponents)
+      }, which is not a map of component id to policy — the reader fails to decode this file and ` +
+        `refuses it, so the ids below cannot be compared and this cannot be waived.`,
+    );
+  }
+  const declaredComponents = componentsIsMap ? (rawComponents ?? {}) : {};
+  const policyByRecordId = new Map(
+    Object.entries(declaredComponents).map(([componentId, entry]) => [
+      entry?.record,
+      [componentId, entry],
+    ]),
+  );
+
+  const takenSet = new Set();
+  const underivable = [];
+  let collisions = 0;
+  let eligible = 0;
+  for (const component of recordFile.components ?? []) {
+    const declared = policyByRecordId.get(component.canonicalId);
+    // An excluded component never enters the shelf, so it can neither claim an id nor collide with
+    // one — the loader skips it before its collision check and so must this. Counting it would
+    // report a surplus id for a component the server will never offer.
+    if (declared?.[1]?.excluded != null) continue;
+    eligible += 1;
+    let componentId = declared?.[0];
+    if (componentId === undefined) {
+      const first = (component.componentIds ?? [])[0];
+      const candidate = first ? first.split("/").pop() : "";
+      const leaf = candidate && candidate.trim() ? candidate : (component.symbol?.name ?? "");
+      // See the note above `SLUG_PINS`: outside ASCII this port and the reader are not provably the
+      // same function, so the id is refused rather than derived.
+      if (/[^\x20-\x7E]/.test(leaf)) {
+        underivable.push(`${component.canonicalId} (leaf ${JSON.stringify(leaf)})`);
+        continue;
+      }
+      componentId = prefix + slug(leaf);
+    }
+    if (takenSet.has(componentId)) collisions += 1;
+    else takenSet.add(componentId);
+  }
+  for (const builtinId of Object.keys(facts.builtins ?? {})) takenSet.add(builtinId);
+
+  // The prefix scopes ONE side, the frozen catalog's. It says which of the frozen ids this catalog
+  // is answerable for — the golden also carries the BUILDER's own, `layout/box`, `asset/image`,
+  // `remote-compose/*`, which no catalog states — and it must not be used to filter what the
+  // COMPOSITION produced. A policy is free to map a record entry to an id outside its own prefix,
+  // and the reader puts that id on the shelf; filtering it out here reported "the same ids on both
+  // sides" for a shelf carrying a component the frozen catalog has never heard of. A gate that
+  // narrows the evidence to the shape it expects only ever confirms itself.
+  const goldenOwned = [...frozenIds].filter((componentId) =>
+    prefix ? componentId.startsWith(prefix) : true,
+  );
+  const composedSet = takenSet;
+  const shared = goldenOwned.filter((componentId) => composedSet.has(componentId));
+  // Declared builtins outside the frozen catalog are already reported per id by `builtins.<id>`
+  // above; excluded here so one mistake is not two findings.
+  const declaredBuiltinIds = new Set(Object.keys(facts.builtins ?? {}));
+  // Measured against the ids this catalog is ANSWERABLE FOR, not against every id the frozen
+  // catalog happens to carry. A policy mapping a record entry to `layout/box` produces an id the
+  // reader puts on the shelf and the catalog has no business publishing — and `frozenIds.has()`
+  // waved it through, because the golden does contain it as a BUILDER component. Neither missing
+  // nor surplus, so the "same ids on both sides" line printed over it.
+  const ownedSet = new Set(goldenOwned);
+  const surplus = [...takenSet].filter(
+    (componentId) => !ownedSet.has(componentId) && !declaredBuiltinIds.has(componentId),
+  );
+
+  // A composition yielding nothing is refused by the reader outright — `taken.isEmpty()` returns
+  // `Unusable` — so it cannot be waived here either. Without this the missing frozen ids each go
+  // down the ordinary retirement path, and a differences file accepting them all made an EMPTY
+  // catalog pass readiness.
+  if (underivable.length > 0) {
+    unservable += 1;
+    console.log("");
+    console.log(
+      `  x components: ${underivable.length} record component(s) have a non-ASCII name, and this ` +
+        `gate cannot reproduce the reader's id for them — Node and the JVM disagree about some ` +
+        `characters, so a derived id here would be a guess. Declare these in ` +
+        `\`statusSemantics.components\` and the gate reads the id instead of deriving it.`,
+    );
+    for (const entry of underivable.slice(0, 10)) console.log(`      ${entry}`);
+    if (underivable.length > 10) console.log(`      … and ${underivable.length - 10} more`);
+  }
+  if (takenSet.size === 0 && underivable.length === 0) {
+    unservable += 1;
+    console.log("");
+    console.log(
+      `  x components: composing this policy with the record yields no components at all — the ` +
+        `server refuses that outright, so it cannot be waived.`,
+    );
+  }
+
+  console.log("");
+  console.log(
+    `  components: ${recordFile.components?.length ?? 0} record entries, ${eligible} eligible -> ` +
+      `${takenSet.size} id(s)${collisions > 0 ? `, ${collisions} collided` : ""}; ` +
+      `${shared.length} of the frozen catalog's ${goldenOwned.length} matched`,
+  );
+
+  // The collision rate is over ELIGIBLE entries, not the whole record: an excluded entry never
+  // competes for an id, so counting it inflates the denominator and lets a policy that excludes
+  // most of its record hide a shelf where everything left collides.
+  //
+  // Above the reader's own threshold this is NOT waivable, and that is the difference between a
+  // readiness gate and a rubber stamp: `PublishedUiBuilderCatalog` refuses such a file outright, so
+  // there is no decision for anybody to record — a waiver would have this gate certify a catalog
+  // the server categorically will not serve. Mirrors the reader's `maxOf(1, eligible * 0.10)`
+  // exactly; below it the server composes, so it is reported and left alone.
+  const collisionAllowance = Math.max(1, Math.trunc(eligible * 0.1));
+  if (collisions > collisionAllowance) {
+    unservable += 1;
+    console.log(
+      `  x components: ${collisions} of ${eligible} eligible record component(s) collided on an ` +
+        `already-taken id, over the reader's allowance of ${collisionAllowance} — the server ` +
+        `refuses a file this far from naming its components, so this cannot be waived.`,
+    );
+  } else if (collisions > 0) {
+    console.log(
+      `  ! components: ${collisions} of ${eligible} eligible record component(s) collided on an ` +
+        `already-taken id. Under the reader's allowance of ${collisionAllowance}, so the server ` +
+        `composes and skips them — but each one is a component this catalog does not offer.`,
+    );
+  }
+  // BOTH sides asserted, never `undefined`. An absence spelled `undefined` lands on the
+  // policy-silent path, which counts a gap and returns before any waiver is read — so a catalog
+  // deliberately retiring one component could not record that decision anywhere, and an exact
+  // `--differences` entry for it was reported obsolete on top. Stating "not offered" makes it an
+  // ordinary difference between two known values, which is what it is.
+  for (const componentId of goldenOwned.filter((id) => !composedSet.has(id))) {
+    fields.push([`components.${componentId}`, "not offered", "offered by the frozen catalog"]);
+  }
+  for (const componentId of surplus) {
+    fields.push([`components.${componentId}`, "offered by this catalog", "not offered"]);
+  }
+  if (collisions === 0 && surplus.length === 0 && shared.length === goldenOwned.length) {
+    console.log(`  = components: the same ${shared.length} id(s) on both sides`);
+  }
+}
 if (!capabilities) {
   for (const id of declaredBuiltins.filter((builtin) => frozenIds.has(builtin))) {
     const frozenSlots = (frozenComponents.get(id)?.slots ?? []).map((slot) => slot?.name);
@@ -951,7 +1260,7 @@ if (goldenId === null) {
 }
 
 const id = declaredId ?? expectedId ?? "(unidentified)";
-const blocking = differences + gaps + stale + misidentified + misprefixed + unstated;
+const blocking = differences + gaps + stale + misidentified + misprefixed + unstated + unservable;
 console.log("");
 console.log(
   `ui-builder-equivalence: ${id} — ${differences} difference(s), ${gaps} unstated fact(s) the ` +
@@ -969,6 +1278,13 @@ if (misprefixed > 0 && strict) {
   console.log("asserted while the two files disagree about which components this catalog owns.");
   console.log("Pass --component-id-prefix to state it, and publish `componentIdPrefix` so a reader");
   console.log("with no caller to ask can find it too.");
+  process.exit(1);
+}
+if (unservable > 0 && strict) {
+  console.log("A file whose ids collide past the reader's allowance is refused by the server, so");
+  console.log("this is not a difference anybody can accept — `--differences` cannot make a catalog");
+  console.log("servable. The collisions are the catalog's to resolve, by declaring");
+  console.log("`statusSemantics.components` rather than leaving every id to be derived.");
   process.exit(1);
 }
 if (blocking > 0 && strict) {

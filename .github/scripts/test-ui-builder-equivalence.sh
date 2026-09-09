@@ -807,6 +807,308 @@ grep -q "Pass --catalog-id when the policy" "${work}/out" &&
 grep -q '= catalog id (declared: "wear-m3")' "${work}/out" ||
   { echo "FAIL a correct id was not confirmed under a prefix failure"; failures=$((failures + 1)); }
 
+# --record: the component IDS the catalog would put on a shelf.
+#
+# The gate's other checks are catalog-LEVEL facts, and a catalog can agree about every one of them
+# while offering an entirely different set of components. m3-catalog is that case in the field: 63
+# of its 104 record components collided on a derived id and the 41 survivors shared ONE id with the
+# frozen catalog's 41. A check comparing counts reports 41 against 41 and passes.
+cat >"${work}/rec-golden.json" <<'JSON'
+{ "benchmark": { "catalogSystemId": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" },
+                      "layout/box": { "group": "A" } } } },
+  "components": [ { "componentId": "wear-m3/button" }, { "componentId": "wear-m3/card" },
+                  { "componentId": "layout/box" } ] }
+JSON
+cat >"${work}/rec-policy.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+# Distinct leaves: the two ids the frozen catalog owns, derived. `layout/box` is the BUILDER's and
+# is out of scope by prefix, which is what stops the comparison demanding a catalog publish it.
+cat >"${work}/rec-ok.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "a record deriving the frozen catalog's ids passes --strict" 0 $?
+grep -q "= components: the same 2 id(s) on both sides" "${work}/out" ||
+  { echo "FAIL matching component ids not confirmed"; failures=$((failures + 1)); }
+
+# The m3-catalog shape, minimised: a `Group/Variant` taxonomy whose LEAF is the variant, so both
+# components derive `wear-m3/filled` and one collides. The shelf is then one id the frozen catalog
+# has never heard of, and neither of the two it does.
+cat >"${work}/rec-collide.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.FilledButton", "componentIds": ["Button/Filled"],
+    "symbol": { "name": "FilledButton", "callable": "a.FilledButton", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.FilledCard", "componentIds": ["Card/Filled"],
+    "symbol": { "name": "FilledCard", "callable": "a.FilledCard", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-collide.json" --strict \
+  >"${work}/out" 2>&1
+check "a record whose derived ids collide fails --strict" 1 $?
+grep -q "1 of 2 eligible record component(s) collided" "${work}/out" ||
+  { echo "FAIL collision not reported"; failures=$((failures + 1)); }
+grep -q "wear-m3/button" "${work}/out" ||
+  { echo "FAIL missing frozen component not named"; failures=$((failures + 1)); }
+grep -q "wear-m3/filled" "${work}/out" ||
+  { echo "FAIL surplus derived component not named"; failures=$((failures + 1)); }
+
+# Without --record the gate must behave exactly as it did before this flag existed. A new input
+# that changes the answer for every existing caller is not an addition.
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --strict >"${work}/out" 2>&1
+check "no --record leaves the component comparison out entirely" 0 $?
+grep -q "components:" "${work}/out" &&
+  { echo "FAIL component line printed without --record"; failures=$((failures + 1)); }
+
+# A component the catalog deliberately retires must be WAIVABLE. Spelling the absence `undefined`
+# put it on the policy-silent path, which counts a gap and returns before any waiver is read — so
+# the decision could not be recorded anywhere, and an exact `--differences` entry for it was
+# reported obsolete on top. Reported by Codex on #655; the same bug this file already carries a
+# correction for under `builtins`.
+cat >"${work}/rec-retire.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-retire.json" --strict \
+  >"${work}/out" 2>&1
+check "a retired component fails --strict when nobody has reviewed it" 1 $?
+grep -q "components.wear-m3/card" "${work}/out" ||
+  { echo "FAIL retired component not named"; failures=$((failures + 1)); }
+
+cat >"${work}/rec-waiver.json" <<'JSON'
+[ { "field": "components.wear-m3/card", "why": "retired on purpose",
+    "policy": "not offered", "frozen": "offered by the frozen catalog" } ]
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --differences "${work}/rec-waiver.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-retire.json" --strict \
+  >"${work}/out" 2>&1
+check "a reviewed retirement passes --strict" 0 $?
+grep -q "no such compared field" "${work}/out" &&
+  { echo "FAIL the waiver was reported as naming nothing"; failures=$((failures + 1)); }
+
+# Collisions past the READER's allowance cannot be waived. The gate certifying a catalog the
+# server categorically refuses is worse than not checking at all — a readiness gate whose pass does
+# not mean the thing can be served. Reported by Codex on #655, with the exact reproduction below.
+cat >"${work}/rec-overcollide.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.B1", "componentIds": ["Button/Filled"],
+    "symbol": { "name": "B1", "callable": "a.B1", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.B2", "componentIds": ["Card/Filled"],
+    "symbol": { "name": "B2", "callable": "a.B2", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.B3", "componentIds": ["Dialog/Filled"],
+    "symbol": { "name": "B3", "callable": "a.B3", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+cat >"${work}/rec-anywaiver.json" <<'JSON'
+[ { "field": "components.collisions", "why": "trying to wave this through",
+    "policy": "anything", "frozen": "anything" },
+  { "field": "components.wear-m3/button", "why": "trying to wave this through",
+    "policy": "not offered", "frozen": "offered by the frozen catalog" },
+  { "field": "components.wear-m3/card", "why": "trying to wave this through",
+    "policy": "not offered", "frozen": "offered by the frozen catalog" },
+  { "field": "components.wear-m3/filled", "why": "trying to wave this through",
+    "policy": "offered by this catalog", "frozen": "not offered" } ]
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --differences "${work}/rec-anywaiver.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-overcollide.json" \
+  --strict >"${work}/out" 2>&1
+check "collisions past the reader's allowance cannot be waived" 1 $?
+grep -q "this cannot be waived" "${work}/out" ||
+  { echo "FAIL unwaivable collision not reported as such"; failures=$((failures + 1)); }
+grep -q "declaring" "${work}/out" ||
+  { echo "FAIL the remedy does not say what to do instead"; failures=$((failures + 1)); }
+
+# The prefix used for derivation is the POLICY's, never the frozen catalog's. Taking it from the
+# golden makes the derived ids carry the prefix they are about to be compared against, so a policy
+# declaring a WRONG prefix lines up and passes.
+cat >"${work}/rec-wrongprefix.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wrong/",
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+"${gate}" --policy "${work}/rec-wrongprefix.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "a policy declaring the wrong prefix cannot pass on the golden's" 1 $?
+grep -q "wrong/button" "${work}/out" ||
+  { echo "FAIL derivation did not use the policy's prefix"; failures=$((failures + 1)); }
+
+# An id the policy maps OUTSIDE its own prefix is still on the shelf. The prefix scopes which
+# FROZEN ids this catalog answers for; using it to filter the composition too hid a component the
+# server would offer and let the gate report "the same ids on both sides". Reported by Codex on #655.
+cat >"${work}/rec-outside.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "other/extra": { "record": ":w/A.Extra" } },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+cat >"${work}/rec-outside-record.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Card", "componentIds": ["Containers/Card"],
+    "symbol": { "name": "Card", "callable": "a.Card", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Extra", "componentIds": ["Extras/Extra"],
+    "symbol": { "name": "Extra", "callable": "a.Extra", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-outside.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-outside-record.json" \
+  --strict >"${work}/out" 2>&1
+check "an id mapped outside the prefix is still compared" 1 $?
+grep -q "components.other/extra" "${work}/out" ||
+  { echo "FAIL out-of-prefix id not reported"; failures=$((failures + 1)); }
+grep -q "the same 2 id(s) on both sides" "${work}/out" &&
+  { echo "FAIL claimed agreement while offering an extra component"; failures=$((failures + 1)); }
+
+# An id outside the prefix that the FROZEN catalog does happen to carry — `layout/box` is the
+# builder's own — is still not this catalog's to publish. Checking surplus against every frozen id
+# rather than the owned ones waved it through and printed agreement. Reported by Codex on #655, the
+# same prefix-scoping mistake one predicate along.
+cat >"${work}/rec-builderid.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "layout/box": { "record": ":w/A.Extra" } },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+"${gate}" --policy "${work}/rec-builderid.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-outside-record.json" \
+  --strict >"${work}/out" 2>&1
+check "a builder-owned id the catalog publishes is still surplus" 1 $?
+grep -q "components.layout/box" "${work}/out" ||
+  { echo "FAIL builder-owned surplus id not reported"; failures=$((failures + 1)); }
+grep -q "the same 2 id(s) on both sides" "${work}/out" &&
+  { echo "FAIL claimed agreement while publishing a builder id"; failures=$((failures + 1)); }
+
+# A policy excluding every record component composes to nothing, which the reader refuses outright.
+# Waiving each missing frozen id must not make an EMPTY catalog pass readiness.
+cat >"${work}/rec-empty.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "wear-m3/button": { "record": ":w/A.Button", "excluded": "gone" },
+                    "wear-m3/card": { "record": ":w/A.Card", "excluded": "gone" } },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+cat >"${work}/rec-emptywaiver.json" <<'JSON'
+[ { "field": "components.wear-m3/button", "why": "retired", "policy": "not offered",
+    "frozen": "offered by the frozen catalog" },
+  { "field": "components.wear-m3/card", "why": "retired", "policy": "not offered",
+    "frozen": "offered by the frozen catalog" } ]
+JSON
+"${gate}" --policy "${work}/rec-empty.json" --golden "${work}/rec-golden.json" \
+  --differences "${work}/rec-emptywaiver.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+  >"${work}/out" 2>&1
+check "an empty composition cannot be waived through" 1 $?
+grep -q "no components at all" "${work}/out" ||
+  { echo "FAIL empty composition not reported"; failures=$((failures + 1)); }
+
+# A non-ASCII leaf is REFUSED, not derived. Node and the JVM disagree about some characters
+# (U+0295 is lowercase to Java 17 and not to Node 22), so an id derived here would be a guess —
+# and a guessed id produces exactly the false missing/surplus pair this comparison exists to
+# detect. Reported by Codex on #655 as the sixth Unicode divergence, and the first with no fix in
+# the same style.
+cat >"${work}/rec-nonascii.json" <<'JSON'
+{ "schemaVersion": 1, "module": ":w", "variant": "debug", "components": [
+  { "canonicalId": ":w/A.Button", "componentIds": ["Controls/Button"],
+    "symbol": { "name": "Button", "callable": "a.Button", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } },
+  { "canonicalId": ":w/A.Odd", "componentIds": ["Controls/\u0295Card"],
+    "symbol": { "name": "Odd", "callable": "a.Odd", "jvmOwner": "A", "origin": "PROJECT" },
+    "parameters": [], "slots": [], "code": { "imports": [] } } ] }
+JSON
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-nonascii.json" \
+  --strict >"${work}/out" 2>&1
+check "a non-ASCII leaf is refused rather than derived" 1 $?
+grep -q "cannot reproduce the reader's id" "${work}/out" ||
+  { echo "FAIL undecidable derivation not reported"; failures=$((failures + 1)); }
+grep -q "statusSemantics.components" "${work}/out" ||
+  { echo "FAIL the remedy does not say how to resolve it"; failures=$((failures + 1)); }
+
+# Declaring the id makes it decidable again: the gate READS the id instead of deriving one, so
+# nothing about the character matters. The escape hatch has to actually work or the refusal is a
+# dead end rather than a redirection.
+cat >"${work}/rec-declared.json" <<'JSON'
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "wear-m3/card": { "record": ":w/A.Odd" } },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+"${gate}" --policy "${work}/rec-declared.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-nonascii.json" \
+  --strict >"${work}/out" 2>&1
+check "a declared id needs no derivation and passes" 0 $?
+grep -q "= components: the same 2 id(s) on both sides" "${work}/out" ||
+  { echo "FAIL declared non-ASCII component not compared"; failures=$((failures + 1)); }
+
+# `statusSemantics.components` must be a MAP. The reader decodes it as
+# `Map<String, UiBuilderComponentPolicy>`, so `null` or an array fails its decode and it refuses the
+# file — while `?? {}` read null as "no policy" and `Object.entries([])` read an array as an empty
+# one, letting the gate compare ids for an artifact the server will not load. Reported by Codex on
+# #655; third instance of "where the reader refuses, so must this".
+for shape in 'null' '[]'; do
+  cat >"${work}/rec-badmap.json" <<JSON
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": ${shape},
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+  "${gate}" --policy "${work}/rec-badmap.json" --golden "${work}/rec-golden.json" \
+    --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+    >"${work}/out" 2>&1
+  check "a components map that is ${shape} is refused under --record" 1 $?
+  grep -q "not a map of component id to policy" "${work}/out" ||
+    { echo "FAIL malformed components map (${shape}) not reported"; failures=$((failures + 1)); }
+done
+
+# A record path that does not exist is a usage error, not a pass. The same argument as the missing
+# golden: a caller asserting readiness against a file nobody could read has asserted nothing.
+"${gate}" --policy "${work}/rec-policy.json" --golden "${work}/rec-golden.json" \
+  --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/nope.json" --strict \
+  >"${work}/out" 2>&1
+check "a missing record is a usage error, not a pass" 2 $?
+
 set -e
 
 if [[ ${failures} -gt 0 ]]; then

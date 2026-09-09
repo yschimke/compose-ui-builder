@@ -694,6 +694,45 @@ still work, and `--ui-builder-native-catalog wear-m3=wear-m3-catalog` is kept in
 inert, so putting `wear-m3` back is one variable rather than a catalog whose native render compiles
 against the wrong bundle.
 
+**Corrected again, by running the server rather than reading the file.** The paragraph above said
+m3-catalog's published file "declares zero components, so 104 ids are derived from the `m3/` prefix
+in place of a curated shelf of 41". The first half is right and the conclusion was wrong in a way
+worth keeping, because the wrong step is a recurring one. Composing the real file against the real
+104-component record yields **41** components — the frozen catalog's count exactly — and that
+coincidence is what the earlier text mistook for agreement. The id sets share **one** entry.
+
+What actually happens: `derivedId` takes the leaf of a record entry's first `componentIds` value,
+and m3-catalog's are a `Group/Variant` taxonomy — `Dialog/Basic`, `TopAppBar/Small`,
+`Buttons/Filled`. The leaf is the **variant**. `Filled` alone is claimed by 15 components,
+`Standard` by 9, `Small` by 5; 63 of 104 collide, and the 41 that survive are named `m3/filled`,
+`m3/small`, `m3/standard`, `m3/on`, `m3/checked`. Every builder-owned id — `layout/*`,
+`asset/image`, `shape/*`, `remote-compose/*` — is absent too, because the file declares no builtins.
+
+So the shelf a default-on `m3-catalog` would have served is not a degraded version of the curated
+one; it shares a single component with it. Two things follow, and both have landed:
+
+1. **The reader refuses a file whose ids collide in bulk.** `PublishedUiBuilderCatalog` returns
+   `Unusable` naming the numbers when collisions exceed a tenth of the record, with a floor of one
+   so a single stray duplicate is still a skip rather than a withdrawn catalog. wear-m3-catalog's
+   28-of-78 would trip it too.
+2. **The equivalence gate compares component ids.** `--record <components.json>` makes it report
+   how many ids the catalog would offer, how many collided, and which the frozen catalog has that
+   this one would not — the check that answers "is this catalog ready?" without running a server.
+   It compares ids only and composes nothing, so the header's objection to reimplementing the
+   loader in bash still stands; the one shared piece, `slug`, is pinned to the same four cases
+   `PublishedUiBuilderCatalogTest` pins against the Kotlin.
+
+**And the real gap is phase 3's.** m3-catalog's authored `ui-builder.policy.json` declares
+`componentIdPrefix`, `frame`, `menu`, `platform` and `colorTokens` — and no `components` at all. The
+contract's § *What the catalog authors* has each catalog declaring its components; m3-catalog never
+did, and until it does no derivation heuristic recovers the curated shelf. Taking the group instead
+of the variant would raise the overlap from 1 to 10 of 25, which is the measurement that settles it:
+this is authoring work in the catalog, not a derivation to be tuned here.
+
+**The lesson, since it is the third time in this document.** A count is not an identity. The
+composition produced 41 against a frozen 41, and every check comparing sizes — including the
+sentence in the previous revision of this section — reported a match.
+
 Worth recording because it was a wrong guess corrected by measurement: `wear-m3-catalog` *does*
 publish a `ui-builder.json` with 28 colliding derived ids, and it looked like the catalog at risk.
 It is not. The `wear-m3` **builder** catalog is served from `yschimke/compose-ai-tools`
