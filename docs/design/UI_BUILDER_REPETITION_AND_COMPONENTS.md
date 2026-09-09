@@ -40,9 +40,28 @@ and three separate walks agree with it one-for-one:
 
 So **one node id is one drawn box is one emitted call**, and it is load-bearing far outside the
 renderer. Any construct where one node draws *n* boxes — a loop over data, an instance of a
-component whose body is defined once — needs an **instance path** (`nodeId#3`,
-`nodeId/childId#3`) wherever a bare node id is used today. That is the real cost of both, it is the
-same cost twice, and it is worth paying once rather than half-paying it in two places.
+component whose body is defined once — needs an **instance path** (`cell#3`, `cell#3/label`)
+wherever a bare node id is used today. That is the real cost of both, it is the same cost twice, and
+it is worth paying once rather than half-paying it in two places.
+
+[`UiBuilderInstancePath`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderInstancePath.kt)
+is that identity, and the canvas measures against it now. A path is deliberately no longer than it
+has to be: with no repeat above a box the path **is** the node id, so every key written today is
+character-for-character the one that was written before, and the chain — `row#2/cell#4/label` —
+begins at the outermost repeat rather than at the root. That is what let the seam land before
+anything draws a second copy.
+
+What still carries a bare node id, and why:
+
+| Surface | Carries | What moving it costs |
+| --- | --- | --- |
+| Canvas bounds, the selection hit-test | the path | done; a selected node outlines **every** box it drew |
+| `compose-ui-builder-inspection/v1` snapshot | the node id | a published wire schema |
+| Semantic actions (`CatalogRuntimeAction.nodeId`) | the node id | a wire field: the action names the box to press |
+| The native lane's `testTag` | the node id | `ScreenDocumentProjection` tags, and `ServeSemanticsTags.index` drops a duplicated tag rather than guessing — which is exactly what a second copy would produce |
+
+Each of those is a change whose reviewer needs a second copy in front of them to judge, so each
+belongs with the construct that first draws one.
 
 ## 1. Loops
 
@@ -185,6 +204,8 @@ only has to carry a symbol during the phase where it is still moving — the fai
 
 1. **The export fold** — done, both generators.
 2. **Instance paths** for bounds, selection and comments — the prerequisite (1b) and (2) share.
+   The canvas is done; the wire surfaces in the table above move with the first construct that
+   draws a second copy.
 3. **Component symbols and instances**, in-document.
 4. **`ui-builder/components/`**, reusing the designs reader; graduation needs nothing new.
 5. **Data-driven loops**, last, against a design that needs one.

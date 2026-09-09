@@ -435,10 +435,17 @@ fun UiBuilderSurface(
    */
   wearWidgetHostShape: WearWidgetHostShape = LocalWearWidgetHostShape.current,
 ) {
+  // Keyed by the box that drew, not by the node that describes it — see [UiBuilderInstancePath].
+  // With nothing in the format able to draw a node twice, every key here is still exactly the node
+  // id it was, and the two are only free to diverge once a loop or a component instance lands.
   val bounds =
-    remember(document.id, document.revision, renderSessionId) { mutableStateMapOf<String, Rect>() }
+    remember(document.id, document.revision, renderSessionId) {
+      mutableStateMapOf<UiBuilderInstancePath, Rect>()
+    }
   val overlayBounds =
-    remember(document.id, document.revision, renderSessionId) { mutableStateMapOf<String, Rect>() }
+    remember(document.id, document.revision, renderSessionId) {
+      mutableStateMapOf<UiBuilderInstancePath, Rect>()
+    }
   val semanticActions = mutableMapOf<String, UiBuilderSemanticActionEntry>()
   var surfaceCoordinates by
     remember(document.id, document.revision, renderSessionId) {
@@ -576,32 +583,39 @@ fun UiBuilderSurface(
           RenderNode(
             document = document,
             nodeId = root,
+            path = UiBuilderInstancePath.of(root),
             state = state,
             onState = { key, value ->
               state[key] = value
               inspection.updateState(state)
             },
-            onBounds = { id, coordinates ->
+            onBounds = { path, coordinates ->
               val rootBounds = coordinates.boundsInRoot()
-              bounds[id] = rootBounds
+              bounds[path] = rootBounds
               surfaceCoordinates?.let { surface ->
-                overlayBounds[id] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
+                overlayBounds[path] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
               }
+              // The inspection snapshot is a published wire shape keyed by authored node id
+              // (`compose-ui-builder-inspection/v1`), so it is told which node drew rather than
+              // which box. Carrying copies there is a schema change, and belongs with whatever
+              // first draws one.
               inspection.recordNodeBounds(
-                id,
+                path.nodeId,
                 rootBounds.left,
                 rootBounds.top,
                 rootBounds.right,
                 rootBounds.bottom,
               )
             },
-            onTextLayout = { id, result ->
+            onTextLayout = { path, result ->
               inspection.recordTextLayout(
-                id,
+                path.nodeId,
                 result.lineCount,
                 result.firstBaseline,
                 result.lastBaseline,
-                with(density) { document.nodes.getValue(id).textContentTopPaddingDp().dp.toPx() },
+                with(density) {
+                  document.nodes.getValue(path.nodeId).textContentTopPaddingDp().dp.toPx()
+                },
               )
             },
             semanticActions = semanticActions,
@@ -609,7 +623,10 @@ fun UiBuilderSurface(
           )
         }
         if (editorOverlay) {
-          val selected = selectedNodeId?.let(overlayBounds::get)
+          // Every box the selected node drew, not one: a node id is what the editor selects, and
+          // once a node can draw more than once the outline follows all of them rather than
+          // whichever copy the map happened to answer with.
+          val selected = overlayBounds.filterKeys { it.nodeId == selectedNodeId }.values.toList()
           Canvas(
             Modifier.fillMaxSize().pointerInput(overlayBounds.toMap(), onNodeSelected) {
               detectTapGestures { position ->
@@ -617,11 +634,13 @@ fun UiBuilderSurface(
                   .filterValues { it.contains(position) }
                   .minByOrNull { (_, rect) -> rect.width * rect.height }
                   ?.key
-                  ?.let { onNodeSelected?.invoke(it) }
+                  // The editor selects a node, because a node is what its inspector edits. Which
+                  // copy was tapped is the question the selection model has yet to be asked.
+                  ?.let { onNodeSelected?.invoke(it.nodeId) }
               }
             }
           ) {
-            selected?.let { rect ->
+            selected.forEach { rect ->
               drawRect(
                 Color(0xff6750a4),
                 rect.topLeft,
@@ -640,10 +659,12 @@ fun UiBuilderSurface(
 private fun RenderNode(
   document: UiBuilderDocument,
   nodeId: String,
+  /** Which drawn box this composition is — the node id itself, until something draws one twice. */
+  path: UiBuilderInstancePath,
   state: Map<String, String?>,
   onState: (String, String?) -> Unit,
-  onBounds: (String, LayoutCoordinates) -> Unit,
-  onTextLayout: (String, TextLayoutResult) -> Unit,
+  onBounds: (UiBuilderInstancePath, LayoutCoordinates) -> Unit,
+  onTextLayout: (UiBuilderInstancePath, TextLayoutResult) -> Unit,
   semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
   modifier: Modifier = Modifier,
   ancestors: Set<String> = emptySet(),
@@ -664,7 +685,7 @@ private fun RenderNode(
   val nativeOnly = LocalUiBuilderNativeOnly.current
   val measured =
     node.modifiers
-      .fold(modifier.onGloballyPositioned { onBounds(node.id, it) }) { result, value ->
+      .fold(modifier.onGloballyPositioned { onBounds(path, it) }) { result, value ->
         result.applyModifier(value.objectOrEmpty(), themeCornerRadius)
       }
       .then(node.actionModifier(activate, enabled))
@@ -674,6 +695,7 @@ private fun RenderNode(
     RenderNode(
       document,
       id,
+      path.child(id),
       state,
       onState,
       onBounds,
@@ -1299,7 +1321,7 @@ private fun RenderNode(
         softWrap = node.bool("softWrap", true),
         overflow = node.textOverflow(),
         textAlign = node.textAlign(),
-        onTextLayout = { onTextLayout(node.id, it) },
+        onTextLayout = { onTextLayout(path, it) },
       )
     "asset/image" -> AssetImage(document, node, measured)
     "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
