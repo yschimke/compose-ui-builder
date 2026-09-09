@@ -70,28 +70,127 @@ class ForEachRowsTest {
   }
 
   /**
-   * The export refuses a loop by name, because there is nothing faithful to emit yet.
+   * The rows become a list of a generated row type, walked once.
    *
-   * A `forEach` around the template's call needs a data class for the row — its properties derived
-   * from the keys the template binds, the same derivation a component's parameters already use —
-   * and that is the next change rather than a guess made here. Pinned so the refusal is a decision
-   * and not a discovery.
+   * The data class's properties are the keys the template binds, typed by the emitter that prints
+   * them — the same derivation that gives a component its parameters, because a row and a
+   * placement's arguments are the same dictionary seen from two sides.
    */
   @Test
-  fun `the export refuses a loop by name`() {
-    val catalog =
-      CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
-      )
+  fun `a loop is exported as a row type and one forEach`() {
+    val source = exportSource(document())
 
-    val result = CapabilityComposeCodeExporter.export(document(), catalog)
+    assertTrue(source.contains("private data class LoopRow(val shade: Color)"), source)
+    assertTrue(
+      source.contains("kotlin.collections.listOf(LoopRow(shade = Color(0xFF9BE9A8)"),
+      source,
+    )
+    assertTrue(source.contains(".forEach { row ->"), source)
+    // The template reads the row rather than a literal, which is what makes one template n cells.
+    assertTrue(source.contains("color = row.shade,"), source)
+    // One template, emitted once.
+    assertEquals(1, Regex("// node:cell ").findAll(source).count(), source)
+  }
+
+  /**
+   * A row missing a key its template reads is refused, not defaulted.
+   *
+   * The generated call would have a parameter unfilled; a default would compile and draw a cell
+   * that is not the one the design describes.
+   */
+  @Test
+  fun `a row missing a key the template reads is refused`() {
+    val short =
+      document().let { base ->
+        val loop = base.nodes.getValue("loop")
+        val data = loop.properties["data"] as JsonObject
+        val values = (data["values"] as JsonArray).drop(1)
+        base.copy(
+          nodes =
+            base.nodes +
+              ("loop" to
+                loop.copy(
+                  properties =
+                    JsonObject(
+                      mapOf(
+                        "data" to
+                          JsonObject(
+                            mapOf(
+                              "type" to JsonPrimitive("list"),
+                              "values" to
+                                JsonArray(
+                                  listOf(
+                                    JsonObject(
+                                      mapOf(
+                                        "type" to JsonPrimitive("object"),
+                                        "fields" to JsonObject(emptyMap()),
+                                      )
+                                    )
+                                  ) + values
+                                ),
+                            )
+                          )
+                      )
+                    )
+                ))
+        )
+      }
+
+    val result = CapabilityComposeCodeExporter.export(short, catalog())
 
     assertTrue(
-      result.diagnostics.any {
-        it.code == "UNSUPPORTED_CODE_COMPONENT" && it.componentId == "layout/for-each"
-      },
-      "${result.diagnostics.map { it.code to it.componentId }}",
+      result.diagnostics.any { it.code == "MISSING_ROW_VALUE" && it.message.contains("shade") },
+      "${result.diagnostics.map { it.code }}",
     )
+  }
+
+  /**
+   * A loop inside a lazy container is refused rather than emitted as a `forEach` inside an `item`.
+   *
+   * That would compose every row as a single item — one key, one recycling unit — where rows belong
+   * in `items(rows, key = { … })`. Refused until that emitter exists.
+   */
+  @Test
+  fun `a loop inside a lazy container is refused by name`() {
+    val lazy =
+      document().let { base ->
+        base.copy(
+          roots = listOf("list"),
+          nodes =
+            base.nodes +
+              ("list" to
+                UiBuilderNode(
+                  id = "list",
+                  componentId = "layout/lazy-column",
+                  properties =
+                    JsonObject(
+                      mapOf(
+                        "scrollStateKey" to
+                          JsonObject(mapOf("value" to JsonPrimitive("list-scroll")))
+                      )
+                    ),
+                  slots = mapOf("items" to listOf("loop")),
+                )),
+        )
+      }
+
+    val result = CapabilityComposeCodeExporter.export(lazy, catalog())
+
+    assertTrue(
+      result.diagnostics.any { it.code == "LOOP_IN_LAZY_CONTAINER" },
+      "${result.diagnostics.map { it.code }}",
+    )
+  }
+
+  private fun catalog() =
+    CapabilityCatalogParser.parse(
+      checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+    )
+
+  private fun exportSource(document: UiBuilderDocument): String {
+    val result = CapabilityComposeCodeExporter.export(document, catalog())
+    assertTrue(result.successful, result.diagnostics.joinToString { "${it.code}:${it.message}" })
+    return checkNotNull(result.source)
   }
 
   /**

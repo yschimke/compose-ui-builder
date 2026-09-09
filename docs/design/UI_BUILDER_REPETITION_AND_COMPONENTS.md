@@ -120,11 +120,29 @@ of them was new:
 
 Instance paths carry the copies (`loop#2/cell`), which is why this needed step 2 first.
 
-**The export is not built**: `CapabilityComposeCodeExporter` refuses a loop by name
-(`UNSUPPORTED_CODE_COMPONENT`). A faithful `forEach` needs a generated data class for the row, its
-properties derived from the keys the template binds — the same derivation that gives a component its
-parameters — and `items(rows, key = { … })` where the loop sits inside a lazy container. That is the
-next step rather than a guess made here.
+**The export**, built with the same derivation a component's parameters use — because a row and a
+placement's arguments are the same dictionary seen from two sides:
+
+```kotlin
+Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+    kotlin.collections.listOf(LoopRow(shade = Color(0xFF9BE9A8)), LoopRow(shade = Color(0xFF40C463))).forEach { row ->
+        Surface(…, color = row.shade, …) { }
+    }
+}
+
+private data class LoopRow(val shade: Color)
+```
+
+The rows are checked at the gate rather than at each use, because the design carries them: a row
+missing a key its template reads is `MISSING_ROW_VALUE`, and one holding the wrong shape is
+`INVALID_ROW_VALUE` — a defaulted parameter and a `Color.Unspecified` both compile and draw the
+wrong cell. `kotlin.collections.listOf` is qualified and the lambda binds a named `row` (never `it`)
+for the capture reason the sibling fold names.
+
+**A loop inside a lazy container is refused** (`LOOP_IN_LAZY_CONTAINER`). Its children are emitted
+as `item(key = …)` blocks, and rows belong in `items(rows, key = { … })` — a different call, with a
+key per row rather than one for the loop; a `forEach` inside an `item` would compose every row as a
+single recycling unit. That emitter is the remaining piece.
 
 ## 2. A reusable component that becomes its own composable
 
@@ -267,5 +285,5 @@ only has to carry a symbol during the phase where it is still moving — the fai
    draws a second copy.
 3. **Component symbols and instances**, in-document — built, canvas and export.
 4. **`ui-builder/components/`**, reusing the designs reader; graduation needs nothing new.
-5. **Data-driven loops** — the canvas is built; the export (a row data class and a `forEach`) is
-   what remains.
+5. **Data-driven loops** — built, canvas and export. `items(rows, key = { … })` for a loop inside a
+   lazy container is the one emitter still refused by name.

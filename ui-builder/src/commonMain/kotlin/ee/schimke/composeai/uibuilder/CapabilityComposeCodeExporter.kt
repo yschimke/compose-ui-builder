@@ -158,8 +158,12 @@ object CapabilityComposeCodeExporter {
     // default — the difference between a screen that will not build and one that quietly draws the
     // wrong thing.
     val (signatures, componentRefusals) = document.componentSignatures()
+    val (loops, loopRefusals) =
+      document.loopSignatures(signatures.values.mapTo(mutableSetOf()) { it.functionName })
     (componentRefusals +
+        loopRefusals +
         document.placementRefusals(signatures) +
+        document.loopPlacementRefusals() +
         document.strayBindingRefusals(signatures))
       .forEach { refusal ->
         diagnostics +=
@@ -336,6 +340,22 @@ private class ComposeEmitter(
    */
   private var emittingComponent: ComponentSignature? = null
 
+  /** Each loop's generated row type, derived once by the same code the gate ran. */
+  private val loopSignatures: Map<String, LoopSignature> by lazy {
+    document
+      .loopSignatures(componentSignatures.values.mapTo(mutableSetOf()) { it.functionName })
+      .first
+  }
+
+  /**
+   * The row being drawn, inside a loop's template: the lambda's parameter, and what it holds.
+   *
+   * A bound property prints `row.shade` here, exactly as it prints a parameter name inside a
+   * component body. A nested loop replaces it rather than stacking, because a template's bindings
+   * read its own row — an inner loop's rows are the design's, not the outer row's fields.
+   */
+  private var emittingRow: Pair<String, LoopSignature>? = null
+
   fun emit(): String {
     val functionName = document.exportFunctionName()
     appendLine("@file:OptIn(ExperimentalMaterial3Api::class)")
@@ -369,6 +389,7 @@ private class ComposeEmitter(
     appendLine("}")
     appendLine()
     emitComponentFunctions()
+    emitRowClasses()
     emitCompatibilityHelpers()
     return out.toString().trimEnd() + "\n"
   }
@@ -437,6 +458,73 @@ private class ComposeEmitter(
   }
 
   /**
+   * The rows a loop draws, as the list the generated `forEach` walks.
+   *
+   * A `Column` with the spacing the canvas lays the rows out with, so the preview and the generated
+   * screen agree about the gaps. `kotlin.collections.listOf` is qualified for the reason the
+   * sibling fold qualifies `kotlin.repeat`: a design may declare a state variable that shadows the
+   * bare name, and a generator cannot know what the file it is pasted into already means by it.
+   */
+  private fun emitLoop(node: UiBuilderNode, level: Int) {
+    val loop = loopSignatures[node.id] ?: return
+    val parameter = rowParameterName(loop)
+    line(
+      level,
+      "Column(${node.modifierArgument()}, verticalArrangement = Arrangement.spacedBy(${node.number("verticalSpacingDp").dpLiteral()})) {",
+    )
+    val rows =
+      loop.rows.joinToString { row ->
+        val arguments =
+          loop.properties.joinToString { (key, kind) ->
+            val value = row[key] as? JsonObject ?: return@joinToString ""
+            "${key.identifier()} = ${kind.argument(value)}"
+          }
+        "${loop.className}($arguments)"
+      }
+    line(level + 1, "kotlin.collections.listOf($rows).forEach { $parameter ->")
+    val outer = emittingRow
+    emittingRow = parameter to loop
+    emitNode(loop.template, level + 2)
+    emittingRow = outer
+    line(level + 1, "}")
+    line(level, "}")
+  }
+
+  /**
+   * A name for the row the lambda binds, which nothing else in scope already means.
+   *
+   * `row` reads best and is almost always free; a design declaring a state variable called `row`
+   * would otherwise have every read of it inside the template silently answer the lambda's
+   * parameter instead — the capture the sibling fold refuses `it` for.
+   */
+  private fun rowParameterName(loop: LoopSignature): String {
+    val taken = document.stateVariables.keys.mapTo(mutableSetOf()) { it.identifier() }
+    taken += loop.properties.map { it.first.identifier() }
+    if ("row" !in taken) return "row"
+    var index = 2
+    while ("row$index" in taken) index++
+    return "row$index"
+  }
+
+  /** One `private data class` per loop, after the screen and the component functions. */
+  private fun emitRowClasses() {
+    loopSignatures.entries
+      .sortedBy { it.key }
+      .forEach { (loopId, loop) ->
+        val properties =
+          loop.properties.joinToString { (key, kind) ->
+            "val ${key.identifier()}: ${kind.kotlinType}"
+          }
+        appendLine("// loop:${loopId.escapeComment()} rows:${loop.rows.size}")
+        // A loop whose template reads nothing is legitimate — the same cell n times — and
+        // `data class ()` is not a declaration Kotlin accepts, so it becomes a plain class.
+        if (properties.isEmpty()) appendLine("private class ${loop.className}")
+        else appendLine("private data class ${loop.className}($properties)")
+        appendLine()
+      }
+  }
+
+  /**
    * The call a placement becomes: every parameter the body reads, then the placement's modifier.
    */
   private fun emitPlacement(node: UiBuilderNode, level: Int) {
@@ -467,8 +555,11 @@ private class ComposeEmitter(
     boundParameter(name) ?: "\"${string(name).escape()}\""
 
   private fun UiBuilderNode.boundParameter(property: String): String? {
-    val signature = emittingComponent ?: return null
     val key = bindingKey(property) ?: return null
+    emittingRow?.let { (parameter, loop) ->
+      if (loop.properties.any { it.first == key }) return "$parameter.${key.identifier()}"
+    }
+    val signature = emittingComponent ?: return null
     return key
       .takeIf { candidate -> signature.parameters.any { it.first == candidate } }
       ?.identifier()
@@ -568,6 +659,7 @@ private class ComposeEmitter(
           "selected = ${node.boolExpression("selected")}, onClick = ${node.actionLambda("click", stateKotlinTypes)}",
         )
       DESIGN_COMPONENT_INSTANCE_ID -> emitPlacement(node, bodyLevel)
+      FOR_EACH_COMPONENT_ID -> emitLoop(node, bodyLevel)
       "m3/list-item" -> emitListItem(node, bodyLevel)
       "shape/colour-dot" ->
         line(
@@ -2123,6 +2215,166 @@ private fun UiBuilderDocument.strayBindingRefusals(
     }
 }
 
+/**
+ * The data class and rows this exporter would generate for each loop, and what it refuses.
+ *
+ * Derived by the same reading as a component's parameters — the keys the template binds, typed by
+ * the emitter that can print them — because a row and a placement's arguments are the same
+ * dictionary seen from two sides. What differs is where the values come from: the design carries a
+ * loop's rows, so they are checked here rather than at each placement.
+ */
+private fun UiBuilderDocument.loopSignatures(
+  taken: Set<String>
+): Pair<Map<String, LoopSignature>, List<ExportRefusal>> {
+  val signatures = linkedMapOf<String, LoopSignature>()
+  val refusals = mutableListOf<ExportRefusal>()
+  val names = taken.toMutableSet()
+  nodes.values
+    .filter { it.componentId == FOR_EACH_COMPONENT_ID }
+    .sortedBy(UiBuilderNode::id)
+    .forEach { loop ->
+      val template = loop.slots["template"].orEmpty().singleOrNull()
+      if (template == null || template !in nodes) {
+        refusals +=
+          ExportRefusal("EMPTY_LOOP_TEMPLATE", "loop ${loop.id} holds no template", loop.id)
+        return@forEach
+      }
+      val rows = loop.loopRows()
+      if (rows == null) {
+        refusals +=
+          ExportRefusal(
+            "INVALID_LOOP_DATA",
+            "loop ${loop.id} has no `data` list of row dictionaries to draw",
+            loop.id,
+          )
+        return@forEach
+      }
+      val properties = linkedMapOf<String, BindingKind>()
+      bodyNodes(template).forEach { node ->
+        node.bindingKinds().forEach { (property, key, kind) ->
+          if (kind == null) {
+            refusals +=
+              ExportRefusal(
+                "UNSUPPORTED_BINDING",
+                "property '$property' cannot be written as an expression, so loop ${loop.id} " +
+                  "cannot read '$key' from its rows",
+                node.id,
+              )
+            return@forEach
+          }
+          val existing = properties[key]
+          if (existing != null && existing != kind) {
+            refusals +=
+              ExportRefusal(
+                "CONFLICTING_BINDING",
+                "loop ${loop.id} reads '$key' as both ${existing.kotlinType} and " +
+                  "${kind.kotlinType}",
+                node.id,
+              )
+            return@forEach
+          }
+          properties[key] = kind
+        }
+      }
+      // Every row answers every key, and answers it in the shape the template reads it: a row
+      // missing one would generate a call with a parameter unfilled, and one holding the wrong
+      // shape would become `Color.Unspecified` — which compiles and paints nothing.
+      rows.forEachIndexed { index, row ->
+        properties.forEach { (key, kind) ->
+          val value = row[key] as? JsonObject
+          if (value == null) {
+            refusals +=
+              ExportRefusal(
+                "MISSING_ROW_VALUE",
+                "row $index of loop ${loop.id} has no '$key', which its template reads",
+                loop.id,
+              )
+            return@forEach
+          }
+          kind.refusalFor(value)?.let { why ->
+            refusals +=
+              ExportRefusal(
+                "INVALID_ROW_VALUE",
+                "row $index of loop ${loop.id} has a '$key' that $why",
+                loop.id,
+              )
+          }
+        }
+      }
+      val className = loop.id.rowClassName(names)
+      names += className
+      signatures[loop.id] =
+        LoopSignature(
+          className = className,
+          template = template,
+          // Sorted, for the reason a component's parameters are: the document's key order is an
+          // authoring accident and a re-export must not reorder a declaration.
+          properties = properties.entries.sortedBy { it.key }.map { it.key to it.value },
+          rows = rows,
+        )
+    }
+  return signatures to refusals
+}
+
+/** One generated row type: what it is called, the template it fills, and the rows themselves. */
+private data class LoopSignature(
+  val className: String,
+  val template: String,
+  val properties: List<Pair<String, BindingKind>>,
+  val rows: List<JsonObject>,
+)
+
+/** The `fields` of each row, or null when `data` is not a list of row dictionaries. */
+private fun UiBuilderNode.loopRows(): List<JsonObject>? {
+  val data = obj("data")
+  if (data.optionalString("type") != "list") return null
+  val values = data["values"] as? JsonArray ?: return null
+  return values.map { row ->
+    val value = row as? JsonObject ?: return null
+    if (value.optionalString("type") != "object") return null
+    value["fields"] as? JsonObject ?: return null
+  }
+}
+
+/** A Kotlin type name for a loop's rows, from the node that draws them. */
+private fun String.rowClassName(taken: Set<String>): String {
+  val base = identifier().replaceFirstChar { it.uppercaseChar() }
+  val candidate = (if (base.firstOrNull()?.isLetter() == true) base else "Loop$base") + "Row"
+  if (candidate !in taken) return candidate
+  var index = 2
+  while ("$candidate$index" in taken) index++
+  return "$candidate$index"
+}
+
+/**
+ * Where a loop may sit, in the generated file's terms.
+ *
+ * A lazy container's children are emitted as `item(key = …)` blocks, and rows inside one belong in
+ * `items(rows, key = { … })` — a different call with a key per row rather than one key for the
+ * loop. Emitting a `forEach` inside an `item` would compose every row as a single item, which
+ * scrolls and recycles as one. Refused until that emitter exists.
+ */
+private fun UiBuilderDocument.loopPlacementRefusals(): List<ExportRefusal> =
+  nodes.values
+    .sortedBy(UiBuilderNode::id)
+    .filter { it.componentId in LAZY_CONTAINER_IDS }
+    .flatMap { container ->
+      container.slots.values
+        .flatten()
+        .filter { child -> nodes[child]?.componentId == FOR_EACH_COMPONENT_ID }
+        .map { child ->
+          ExportRefusal(
+            "LOOP_IN_LAZY_CONTAINER",
+            "a loop inside ${container.componentId} needs `items(rows, key = { … })`, which this " +
+              "exporter does not write yet",
+            child,
+          )
+        }
+    }
+
+/** The containers whose children are emitted as lazy items. */
+private val LAZY_CONTAINER_IDS = setOf("layout/lazy-column", "layout/lazy-row", "layout/lazy-grid")
+
 /** A component body, root first, in the order the emitter walks it. */
 private fun UiBuilderDocument.bodyNodes(root: String): List<UiBuilderNode> {
   val visited = linkedSetOf<String>()
@@ -2459,6 +2711,9 @@ private const val MINIMUM_FOLDED_RUN = 3
 private val EMITTER_IDS =
   setOf(
     "asset/image",
+    // Its "typed call" is the `forEach` this exporter writes around its template, which is why
+    // the catalog entry names no symbol of its own.
+    FOR_EACH_COMPONENT_ID,
     "layout/box",
     "layout/column",
     "layout/horizontal-carousel",
