@@ -1342,11 +1342,21 @@ private fun UiBuilderNode.horizontalArrangementExpression(): String {
   }
 }
 
+/**
+ * The `Brush` for a `shape/linear-gradient`, in the same vocabulary [UiBuilderRenderer] draws.
+ *
+ * `horizontal` names the axis without a sense, and it is what the widget templates write.
+ * `UiBuilderRenderer` reads it; this did not, so `direction: horizontal` fell through to the
+ * vertical `else` and the generated Compose visibly disagreed with the canvas it was generated
+ * from. The property is an unrestricted optional string on a base-catalog component, so such a
+ * design is perfectly valid rather than malformed — the two readers simply have to agree.
+ */
 private fun UiBuilderNode.linearGradientExpression(): String =
   when (string("direction")) {
     "bottomToTop" ->
       "Brush.verticalGradient(listOf(${colorExpression("endColor")}, ${colorExpression("startColor")}))"
-    "leftToRight" ->
+    "leftToRight",
+    "horizontal" ->
       "Brush.horizontalGradient(listOf(${colorExpression("startColor")}, ${colorExpression("endColor")}))"
     "rightToLeft" ->
       "Brush.horizontalGradient(listOf(${colorExpression("endColor")}, ${colorExpression("startColor")}))"

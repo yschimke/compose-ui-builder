@@ -6,6 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -318,6 +319,70 @@ class WearWidgetCodeExporterTest {
     assertTrue(
       source.indexOf("private val COVER_PNG") < source.indexOf("private val cover:"),
       source,
+    )
+  }
+
+  /**
+   * A background is a fill, not a child, so an authored modifier on one is refused by name.
+   *
+   * `asset/image` carries the base catalog's whole `modifierCapabilities` list — `alpha`, `offset`,
+   * `rotate`, `size` and the rest — and the canvas draws a background node through the ordinary
+   * child path, so it applies them. `WearWidgetBrush` chains a fill across the entire frame and has
+   * nowhere to put any of it, and this read only the image's properties: the picture on the canvas
+   * and the picture the widget draws disagreed, and the export said it had succeeded.
+   */
+  @Test
+  fun `a background carrying a drawing modifier is refused rather than silently flattened`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(
+          backgroundWithModifiers(
+            JsonObject(mapOf("type" to JsonPrimitive("alpha"), "alpha" to JsonPrimitive(0.5))),
+            JsonObject(
+              mapOf(
+                "type" to JsonPrimitive("offset"),
+                "xDp" to JsonPrimitive(4),
+                "yDp" to JsonPrimitive(-2),
+              )
+            ),
+          ),
+          assets = { key -> if (key == "cover") "QUJD" else null },
+        )
+      )
+
+    val reason = refused.reasons.single { "bg-art" in it }
+    assertTrue("`alpha`" in reason && "`offset`" in reason, reason)
+    assertTrue("no geometry" in reason, reason)
+  }
+
+  /**
+   * `testTag` is the exception: a semantics label draws nothing, so dropping it moves no pixels and
+   * refusing the export over one would be noise.
+   */
+  @Test
+  fun `a background's testTag is not a refusal`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            backgroundWithModifiers(
+              JsonObject(
+                mapOf("type" to JsonPrimitive("testTag"), "tag" to JsonPrimitive("cover-art"))
+              )
+            ),
+            assets = { key -> if (key == "cover") "QUJD" else null },
+          )
+        )
+        .source
+
+    assertTrue(".image(cover)" in source, source)
+  }
+
+  /** [imageBackgroundDocument] with [modifiers] authored on its background node. */
+  private fun backgroundWithModifiers(vararg modifiers: JsonObject): UiBuilderDocument {
+    val base = imageBackgroundDocument()
+    val art = base.nodes.getValue("bg-art")
+    return base.copy(
+      nodes = base.nodes + ("bg-art" to art.copy(modifiers = JsonArray(modifiers.toList())))
     )
   }
 

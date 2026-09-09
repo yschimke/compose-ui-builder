@@ -190,6 +190,30 @@ internal class RemoteContentEmitter(
     }
     container.slots["background"].orEmpty().forEach { id ->
       val node = document.nodes[id] ?: return@forEach
+      // A brush is a fill, not a child. `WearWidgetBrush` chains colours, gradients and images
+      // across the whole frame and has nowhere to hang a size, an alpha, an offset or a rotation —
+      // but the canvas draws a background node through the ordinary child path, so it applies every
+      // one of them, and `asset/image` carries the base catalog's full `modifierCapabilities`. The
+      // pair is the silent case this file keeps naming: an authored modifier changed the picture in
+      // the editor, vanished from the generated widget, and the export said it had succeeded.
+      // `testTag` is the one exception — a semantics label draws nothing, so dropping it changes no
+      // pixels.
+      val drawing =
+        node.modifiers
+          .mapNotNull { (it as? JsonObject)?.get("type")?.stringValue() }
+          .filter { it != "testTag" }
+          .distinct()
+      if (drawing.isNotEmpty()) {
+        val plural = drawing.size > 1
+        refusals +=
+          "the widget background `$id` carries the modifier${if (plural) "s" else ""} " +
+            drawing.joinToString(", ") { "`$it`" } +
+            " — a widget background is a `WearWidgetBrush` filling the whole frame, with no " +
+            "geometry to apply ${if (plural) "them" else "it"} to; clear " +
+            "${if (plural) "them" else "it"} here, or move the node into the content slot where " +
+            "it is laid out"
+        return@forEach
+      }
       when (node.componentId) {
         "shape/linear-gradient" -> {
           val start = node.properties["startColor"]?.stringOrNull().orEmpty()
@@ -1250,7 +1274,20 @@ internal class RemoteContentEmitter(
           "has no argument for — it always fills the space it is given"
       return emptyList()
     }
+    // A weight is a share of the space left over, so zero or less is not a share of anything.
+    // `UiBuilderRenderer` already drops one (`takeIf { it > 0f }`) because Compose throws on it, so
+    // the canvas draws the child unweighted — and emitting it anyway generated `weight(0f)`, which
+    // fails while the document is being BUILT, long after the export reported success. The design
+    // that produces this looks unweighted in the editor, which is why it has to be said out loud
+    // rather than silently normalised to 1.
     val weight = modifier["weight"]?.numberValue() ?: 1f
+    if (weight <= 0f) {
+      refusals +=
+        "the `weight` modifier on `$id` asks for `${weight.floatLiteral()}`; a weight divides the " +
+          "space a row or column has left over, so it has to be greater than zero — the canvas " +
+          "ignores this one and Remote Compose refuses it, so give it a positive weight or drop it"
+      return emptyList()
+    }
     return listOf("weight(${weight.floatLiteral()})")
   }
 

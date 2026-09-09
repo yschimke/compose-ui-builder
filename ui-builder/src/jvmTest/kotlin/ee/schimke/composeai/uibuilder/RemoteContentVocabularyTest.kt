@@ -108,6 +108,32 @@ class RemoteContentVocabularyTest {
   }
 
   /**
+   * A weight of zero or less is refused, not emitted.
+   *
+   * The editor's numeric field stores whatever is typed, and `UiBuilderRenderer` drops a
+   * non-positive weight (`takeIf { it > 0f }`) because Compose throws on one — so the canvas draws
+   * the child unweighted and looks fine. Emitting it anyway produced `weight(0f)`, which fails
+   * while the Remote Compose document is being built, long after this export reported success. The
+   * two readers now agree that it is not a weight, and this one says so.
+   */
+  @Test
+  fun `a weight of zero or less is refused rather than generating a document that fails to build`() {
+    listOf(0, -1).forEach { value ->
+      val refused =
+        assertIs<WearWidgetCodeExporter.Result.Refused>(
+          WearWidgetCodeExporter.export(
+            widgetWith(
+              JsonObject(mapOf("type" to JsonPrimitive("weight"), "weight" to JsonPrimitive(value)))
+            )
+          )
+        )
+      val reason = refused.reasons.single()
+      assertTrue("`weight`" in reason, reason)
+      assertTrue("greater than zero" in reason, reason)
+    }
+  }
+
+  /**
    * A picture in the content slot: the call, and the bitmap the application supplies.
    *
    * The key stays in the design and the bytes stay out of the source, which is the whole shape of
