@@ -13,6 +13,15 @@
 # `ui-builder-project-boundary.sh` is a text scan for the same reason and this is deliberately the
 # same shape.
 #
+# WHAT THIS DOES NOT SEE, said plainly so nobody reads a green run as more than it is. The rule is
+# about a catalog NAME appearing in a module, which is a proxy for catalog KNOWLEDGE living there —
+# and the proxy leaks. `WearWidgetHostShape.kt` was allowlisted when it named `wear-m3-catalog` in a
+# comment; #609 rewrote that comment away and grew its transcribed geometry table from four rows to
+# six, so the file is now invisible here while carrying more of exactly what this gate exists to
+# push out. A name is cheap to detect and knowledge is not, which is why the shrinking allowlist is
+# only half the instrument: the other half is item 17 actually moving the geometry into
+# `statusSemantics.frame.geometry`, after which there is nothing left to detect.
+#
 # The allowlist is the phase-0 state, captured when the gate was written. Every item of phases 4 and
 # 5 shrinks it; at phase 5 it is empty and this script's `allowed` array goes with it. A file that
 # no longer carries a catalog name is reported as a stale entry rather than left to rot, because an
@@ -34,13 +43,6 @@ modules=(ui-builder ui-builder-export ui-builder-runtime server)
 
 # Files that carried a catalog name when this gate was written. SHRINKS EVERY STEP.
 allowed=(
-  # Landed in #605, after this gate was written, and allowlisted rather than refused: it carries the
-  # Wear widget host geometry, which is catalog knowledge and is item 17's to move into
-  # `statusSemantics.frame.geometry`. #605 halved the debt already — the canvas and the native lane
-  # kept separate copies of these four rows and now share one — so the remaining move is a single
-  # call site rather than two. Its own docstring records the rest: wear-m3-catalog's stickers
-  # hard-code the same spec, which is the transcription this contract ends.
-  ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearWidgetHostShape.kt
   server/src/main/kotlin/ee/schimke/composeai/cli/serve/CatalogLiveRouting.kt
   server/src/main/kotlin/ee/schimke/composeai/cli/serve/ComponentRecordPacks.kt
   server/src/main/kotlin/ee/schimke/composeai/cli/serve/ComponentRecordSource.kt

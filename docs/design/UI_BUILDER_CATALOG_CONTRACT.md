@@ -668,13 +668,16 @@ is served but a **Wear-shaped** one is not yet drawn from its own declarations.
     catalogs' label. `--ui-builder-packs` validates the word against the enabled catalogs.
 16. **The emitter is chosen by declaration.** `RecordFreeExport` routes by
     `statusSemantics.code.strategy` (`record` | `templates`) rather than by root component id.
-17. **The canvas reads a mapping.** *(Also `WearWidgetHostShape`'s geometry table, added by #605
-    after this list was written: the widget host's content box, padding and radius per shape and
-    size. Its own docstring records that `wear-m3-catalog`'s stickers hard-code the same numbers,
-    which is the transcription this phase ends — and per §3 the catalog's own Robolectric probe is
-    what should measure them, exactly as it already measures `ScreenScaffold`'s content padding.
-    #605 collapsed the canvas's and the native lane's separate copies into one table, so the move
-    is now a single call site rather than two.)* `wearScreenStandIn`, the `WEAR_NATIVE_ONLY` set, the root
+17. **The canvas reads a mapping.** *(Also `WearWidgetHostShape`'s geometry table — the widget
+    host's content box, padding and radius per shape and size — which per §3 the catalog's own
+    Robolectric probe should measure, exactly as it already measures `ScreenScaffold`'s content
+    padding. It is worth watching rather than merely listing: #605 added it with four transcribed
+    rows and #609 grew it to six with per-diameter selection, while removing the `wear-m3-catalog`
+    mention that made `ui-builder-catalog-literals.sh` able to see it at all. That gate matches
+    catalog NAMES, and the debt is catalog KNOWLEDGE, so this table is now invisible to it and
+    growing. Nothing is wrong with either change — both consolidated copies that were previously
+    duplicated between the canvas and the native lane — but the trajectory is the argument for
+    doing this item sooner rather than later.)* `wearScreenStandIn`, the `WEAR_NATIVE_ONLY` set, the root
     alignment rule and the frame choice become lookups on `statusSemantics.components[id].canvas`
     and `statusSemantics.frame`. The adapter registry is the existing `when`, keyed by adapter id
     instead of component id, and an adapter this build lacks draws a placeholder and logs.
