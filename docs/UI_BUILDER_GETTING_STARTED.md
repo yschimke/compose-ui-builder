@@ -360,6 +360,7 @@ import androidx.glance.wear.WearWidgetData
 import androidx.glance.wear.WearWidgetDocument
 import androidx.glance.wear.color
 import androidx.glance.wear.core.WearWidgetParams
+import androidx.glance.wear.tooling.preview.RectangularSmallWidgetPreviewParams
 import androidx.glance.wear.tooling.preview.SquircleSmallWidgetPreviewParams
 import androidx.glance.wear.tooling.preview.WearWidgetPreview
 import androidx.wear.compose.remote.material3.RemoteColorScheme
@@ -399,15 +400,31 @@ fun HelloWidgetSquirclePreview() =
         HelloWidget(),
         SquircleSmallWidgetPreviewParams().values.maxBy { it.widthDp },
     )
+
+@Preview(name = "Rectangular Preview")
+@Composable
+fun HelloWidgetRectangularPreview() =
+    WearWidgetPreview(
+        HelloWidget(),
+        RectangularSmallWidgetPreviewParams().values.maxBy { it.widthDp },
+    )
 ```
 
 Read what is *not* there: the host container. `remote-m3/widget-container-*` is this builder's
 stand-in for `WearWidgetContainer`, and on-device the launcher draws that around widget content from
 `WearWidgetParams`. So the scaffold's background becomes the `WearWidgetBrush` handed to
-`WearWidgetDocument`, its size picks the preview-params provider, and its padding and radius are
+`WearWidgetDocument`, its size picks the preview-params providers, and its padding and radius are
 checked against the shipped spec rather than emitted — a widget cannot choose them, and a design
 that moved them is refused by name rather than generating a preview that draws a frame it does not
 have.
+
+Read what *is* there twice: the widget is previewed in both host container shapes. The squircle is
+the host's default and the frame the builder's canvas draws, so it is the one to compare the design
+against; the rectangular frame is a genuinely different spec — 192×60dp of content inside 16/12dp of
+padding at the Small size, against the squircle's 200×60 inside a uniform 8dp — and it is the render
+recommended as the image for the widget picker editor. Both come from the shipped size-specific
+providers, so neither invents a frame, and the widget itself is the same in both: a
+`GlanceWearWidget` describes content, and the container around it is the host's.
 
 The `@Preview` carries **no `device`**, and that is deliberate rather than an omission. A widget's
 canvas is its `WearWidgetParams`, so a screen spec beside it says nothing the params do not, and a

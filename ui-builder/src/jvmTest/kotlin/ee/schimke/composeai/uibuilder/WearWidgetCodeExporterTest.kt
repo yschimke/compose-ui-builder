@@ -32,6 +32,11 @@ class WearWidgetCodeExporterTest {
     )
     assertTrue("fun HelloWidgetContent()" in source, source)
     assertTrue("SquircleSmallWidgetPreviewParams().values.maxBy { it.widthDp }" in source, source)
+    // The rectangular frame beside it: the render recommended as the widget picker editor's image.
+    assertTrue(
+      "RectangularSmallWidgetPreviewParams().values.maxBy { it.widthDp }" in source,
+      source,
+    )
   }
 
   @Test
@@ -46,6 +51,10 @@ class WearWidgetCodeExporterTest {
     assertTrue("WearWidgetBrush.color(Color(0xFF2196F3).rc)" in source, source)
     assertTrue("RemoteColumn(" in source, source)
     assertTrue("SquircleLargeWidgetPreviewParams().values.maxBy { it.widthDp }" in source, source)
+    assertTrue(
+      "RectangularLargeWidgetPreviewParams().values.maxBy { it.widthDp }" in source,
+      source,
+    )
   }
 
   /**

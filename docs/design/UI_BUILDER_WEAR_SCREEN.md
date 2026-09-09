@@ -164,12 +164,12 @@ emitters by what they actually write:
 The widget half refused for a while, and the refusal was right about the *file* it was looking at.
 `WearWidgetCodeExporter` writes the artifact a designer keeps, and every choice in it is made for a
 reader who will paste it into their own module: a `GlanceWearWidget` class, a content picture asked
-for as a **parameter** because a widget's artwork is application data, and a `@Preview` driven by
-one of the shipped `WidgetPreviewParams` providers because those are the only container specs such a
-file can name. Submitting that to this lane draws a widget with a hole where the artwork goes — the
-class defaults each picture to a blank 1×1 bitmap and nothing downstream can pass another — and
-refuses outright any design that authored its own padding or corner radius, which no provider
-carries.
+for as a **parameter** because a widget's artwork is application data, and a `@Preview` per host
+container shape driven by the shipped `WidgetPreviewParams` providers because those are the only
+container specs such a file can name. Submitting that to this lane draws a widget with a hole where
+the artwork goes — the class defaults each picture to a blank 1×1 bitmap and nothing downstream can
+pass another — and refuses outright any design that authored its own padding or corner radius, which
+no provider carries.
 
 So the lane submits a different file, written by `WearWidgetNativePreviewExporter`, holding the
 three things it actually needs and no ceremony:

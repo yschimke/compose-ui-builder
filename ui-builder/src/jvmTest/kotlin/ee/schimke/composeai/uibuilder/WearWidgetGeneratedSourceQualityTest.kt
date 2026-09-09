@@ -55,16 +55,16 @@ class WearWidgetGeneratedSourceQualityTest {
   }
 
   /**
-   * One preview, not one per footprint.
+   * One preview per shape, not one per footprint.
    *
-   * `@PreviewParameter` unrolls a preview per value the provider yields — for the Large container a
+   * `@PreviewParameter` unrolls a preview per value the provider yields — for the Large squircle a
    * constrained 182×112dp beside the 216×124dp the design is authored against — and a scaffold does
    * not need both to show what it looks like. The provider is still where the numbers come from, so
-   * the preview keeps the shipped spec rather than inventing a frame; only the fan-out goes. Picked
-   * by width, so the choice does not rest on the order a provider happens to yield.
+   * each preview keeps the shipped spec rather than inventing a frame; only the fan-out goes.
+   * Picked by width, so the choice does not rest on the order a provider happens to yield.
    */
   @Test
-  fun `the generated preview is one, at the container's own footprint`() {
+  fun `each generated preview is one, at the container's own footprint`() {
     val source = generate()
 
     assertFalse("@PreviewParameter" in source, source)
@@ -73,6 +73,40 @@ class WearWidgetGeneratedSourceQualityTest {
       "SquircleLargeWidgetPreviewParams().values.maxBy { it.widthDp }" in source,
       source,
     )
+    assertTrue(
+      "RectangularLargeWidgetPreviewParams().values.maxBy { it.widthDp }" in source,
+      source,
+    )
+  }
+
+  /**
+   * The rectangular frame is generated beside the squircle, imported and all.
+   *
+   * The squircle is the host default and the frame the builder's canvas draws, so it is what a
+   * designer compares against the design; the rectangular render is the one recommended as the
+   * widget picker editor's image (yschimke/compose-preview-server#587), and a designer who has to
+   * hand-write a second `@Preview` to see it will not see it. Both come from the shipped
+   * size-specific providers, so neither invents a frame.
+   */
+  @Test
+  fun `the file previews the widget in both host container shapes`() {
+    val source = generate()
+
+    assertTrue("@Preview(name = \"Squircle Preview\")" in source, source)
+    assertTrue("fun ActivitySummaryWidgetSquirclePreview() =" in source, source)
+    assertTrue("@Preview(name = \"Rectangular Preview\")" in source, source)
+    assertTrue("fun ActivitySummaryWidgetRectangularPreview() =" in source, source)
+    assertTrue(
+      "import androidx.glance.wear.tooling.preview.SquircleLargeWidgetPreviewParams" in source,
+      source,
+    )
+    assertTrue(
+      "import androidx.glance.wear.tooling.preview.RectangularLargeWidgetPreviewParams" in source,
+      source,
+    )
+    // The all-sizes providers stay out: a design is authored at one container size, and previewing
+    // a Large design at the Small footprint would show a frame nobody drew.
+    assertFalse("AllWidgetPreviewParams" in source, source)
   }
 
   /**

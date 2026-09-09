@@ -85,12 +85,12 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
  * Which widget file a [RemoteContentEmitter] body is being written into, which decides its imports.
  *
  * The two are not variants of one file. [Exported] is the artifact a designer keeps: a
- * `GlanceWearWidget`, the `WearWidgetDocument` it provides, and a `@Preview` driven by one of the
- * shipped `WidgetPreviewParams` providers, because those are the only container specs a file
- * somebody pastes into their own module can name. [NativePreview] is the source this server
- * compiles and renders for the builder's Native pane, which names no widget class at all — it is
- * the body, its brush and the container spec the *design* declares, and nothing downstream of it
- * ever constructs a widget.
+ * `GlanceWearWidget`, the `WearWidgetDocument` it provides, and a `@Preview` per host container
+ * shape driven by the shipped `WidgetPreviewParams` providers, because those are the only container
+ * specs a file somebody pastes into their own module can name. [NativePreview] is the source this
+ * server compiles and renders for the builder's Native pane, which names no widget class at all —
+ * it is the body, its brush and the container spec the *design* declares, and nothing downstream of
+ * it ever constructs a widget.
  *
  * Null is the third answer and it is not a widget: [InlineRemoteContentExporter] writes a
  * `@RemoteComposable` fragment for somebody else's screen, so none of `androidx.glance.wear` is
@@ -98,8 +98,11 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
  */
 internal sealed interface WidgetSourceShape {
 
-  /** @property previewParamsProvider the shipped provider the generated `@Preview` unrolls. */
-  data class Exported(val previewParamsProvider: String) : WidgetSourceShape
+  /**
+   * @property previewParamsProviders the shipped providers the generated `@Preview`s unroll, one
+   *   per host container shape the file previews the widget in.
+   */
+  data class Exported(val previewParamsProviders: List<String>) : WidgetSourceShape
 
   /** The native lane's source: body, brush and the design's own `WearWidgetParams`. */
   data object NativePreview : WidgetSourceShape
@@ -1015,7 +1018,9 @@ internal class RemoteContentEmitter(
         imports += "androidx.compose.remote.creation.compose.state.rb"
         imports += "androidx.compose.ui.graphics.ImageBitmap"
       }
-      imports += "androidx.glance.wear.tooling.preview.${widget.previewParamsProvider}"
+      widget.previewParamsProviders.forEach {
+        imports += "androidx.glance.wear.tooling.preview.$it"
+      }
       imports += "androidx.glance.wear.tooling.preview.WearWidgetPreview"
     }
     if (widget is WidgetSourceShape.NativePreview) {

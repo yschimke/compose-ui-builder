@@ -8,17 +8,18 @@ package ee.schimke.composeai.uibuilder
  * [WearWidgetCodeExporter] writes the artifact a designer keeps, and every choice in it is made for
  * a reader who will paste it into their own module: a `GlanceWearWidget` class, the
  * `WearWidgetDocument` it provides, a content picture asked for as a **parameter** because it is
- * application data, and a `@Preview` driven by one of the shipped `WidgetPreviewParams` providers
- * because those are the only container specs such a file can name.
+ * application data, and a `@Preview` per host container shape driven by the shipped
+ * `WidgetPreviewParams` providers because those are the only container specs such a file can name.
  *
  * Each of those is exactly wrong for a lane whose whole job is to draw *this design*:
  *
  * 1. nothing downstream can pass an argument, so a picture asked for as a parameter arrives as the
  *    blank 1×1 placeholder the widget class defaults to — a render with a hole in it where the
  *    canvas beside it shows the album art;
- * 2. the shipped providers carry only the published 8dp padding and 26dp squircle radius, so a
- *    design that authored either is refused by the exporter rather than drawn — a refusal that is
- *    true of a pasteable file and not of a render this host builds its own params for; and
+ * 2. the shipped providers carry only the specs upstream publishes — for the shape a design is
+ *    authored against, the squircle's 8dp padding and 26dp radius — so a design that moved either
+ *    is refused by the exporter rather than drawn, a refusal that is true of a pasteable file and
+ *    not of a render this host builds its own params for; and
  * 3. the widget class and its `provideWidgetData` are ceremony around a body nobody here calls
  *    through them.
  *
