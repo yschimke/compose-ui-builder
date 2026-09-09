@@ -40,6 +40,25 @@ One JSON file per design, named by the SHA-256 of the design id, written through
 and moved into place. A design id is caller-supplied text and never becomes a path segment. Losing
 the directory loses the back-links and no design content, which is the correct blast radius.
 
+## Where the shape lives
+
+The *record's shape* is published, as `DesignLinksV1` in `ui-builder-protocol`, alongside the
+reference overlay's and the comment board's. It belongs there for the reason
+[`REPOSITORY_LAYERS.md`](https://github.com/yschimke/compose-ai-tools/blob/main/docs/design/REPOSITORY_LAYERS.md)
+gives: this record is a wire shape three times over — the response body of the routes below, the
+payload of `ui_builder_get_links`, and the file on disk — and a browser, an agent or a second
+implementation needs a versioned contract to agree on rather than a declaration hidden in one
+server. `StoredLinks` here is an alias for it, kept because the name says what this server does
+with the record.
+
+Nothing about the JSON changed when it moved: the same field names and the same `@SerialName`, so a
+host reads the records it wrote before the move. `ServeUiBuilderLinksStoreTest` pins that with a
+record in the pre-move bytes.
+
+What did **not** move is everything that is not shape. The contracts module is shape and never
+behaviour, so the URL rules, the size cap, the digest that names the file and the "is this record
+empty" question all stay here.
+
 ## Why not a saga object
 
 Because the team already has one, and it is the issue.

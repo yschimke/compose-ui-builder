@@ -95,6 +95,12 @@ design id is caller-supplied text and never becomes a path segment). Beside the 
 than inside it: that file is one blob rewritten on every accepted operation, and folding references
 into it would rewrite every reference on the host on every keystroke.
 
+The overlay's *shape* is published as `DesignReferenceV1` and its parts in `ui-builder-protocol`,
+with the links record's and the comment board's — a wire shape belongs where wire shapes live, and
+this one is a response body, an MCP payload and a file on disk at once. `StoredReference` here is
+an alias. The JSON is unchanged by the move, and the clamping stayed here, because the contracts
+module is shape and never behaviour.
+
 Routes, all gated twice — the route capability decides whether this caller may use the builder at
 all, and then the design's own access control decides what this actor may do to *this* design: its
 READ action to see what the design reproduces, its WRITE action to change it. So an actor shared in

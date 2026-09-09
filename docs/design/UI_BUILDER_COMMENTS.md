@@ -42,6 +42,12 @@ may see a screen is exactly the person the board exists for, so being a viewer m
 they cannot say the icon looks wrong. [`UI_BUILDER_SIDECAR_ACCESS.md`](UI_BUILDER_SIDECAR_ACCESS.md)
 sets out both gates and why this row differs.
 
+The board's *shape* is published as `DesignCommentBoardV1` and its parts in `ui-builder-protocol`,
+alongside the reference overlay's and the links record's. `StoredCommentBoard` here is an alias for
+it. The request bodies the routes accept are not published — a `POST` body is this host's API
+rather than a record anybody stores — and neither is the acknowledgement question below, because
+the contracts module is shape and never behaviour.
+
 ## The board, and its one cursor
 
 One file per design, holding a `StoredCommentBoard`: a list of threads, and a `sequence` that rises
