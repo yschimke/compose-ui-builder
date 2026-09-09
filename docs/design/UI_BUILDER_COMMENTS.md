@@ -312,10 +312,22 @@ operator with a real channel:
 
 | format | body |
 | --- | --- |
-| `plain` | this server's own event JSON — `{"event", "design", "thread", "comment", "url"}` |
+| `plain` | the published event JSON — `{"event", "design", "thread", "comment", "url"}` |
 | `slack` | `{"text": …}` in mrkdwn, the permalink as the title's link, the excerpt quoted under it |
 | `teams` | a minimal Adaptive Card in the `message` envelope, the permalink as an **Open the thread** action — a card rather than `text` because the Workflows hooks that replaced Office 365 connectors take only the card |
 | `google-chat` | `{"text": …}` in Chat's markup, which is Slack's for the two things used here |
+
+`plain` is the only one of the four anybody parses, and it is therefore the only one that is a
+contract: the other three are one-way renderings for a chat client. So its shape is published, as
+`DesignCommentWebhookEventV1` in `ui-builder-protocol`, and a receiver can compile against it rather
+than against this table. The `schema` field is always on the wire so a receiver can branch on the
+version. The format enum, the three adapters, the delivery queue and the URL rules stay here, being
+behaviour rather than shape.
+
+Note what the event is **not**: it is a notification about one change, not the board. It carries an
+excerpt rather than a body, a sentence rather than the anchor's three fields, and a count rather
+than the comments, because its reader is a person deciding whether to click. A receiver that wants
+the discussion reads the board.
 
 The format is named rather than sniffed from the hostname: a hook behind a relay or a workflow
 runner has a host that says nothing about what parses the body at the far end, and guessing wrong is
