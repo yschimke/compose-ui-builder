@@ -353,6 +353,22 @@ fun UiBuilderEditor(
   initialPreviewMode: Boolean = false,
   initialCodePaneVisible: Boolean = false,
   /**
+   * Whether the strip of revision thumbnails is open when the design opens.
+   *
+   * Off everywhere a person is editing — the strip is a question about the design's history, and
+   * the History rail is where it is asked. It exists for the same caller [initialEdits] does: one
+   * *picturing* the editor, which cannot press the control it wants a picture of.
+   */
+  initialHistoryBarVisible: Boolean = false,
+  /**
+   * The revision the strip is looking at, and the other end of a comparison, when the design opens.
+   *
+   * Applied after [initialEdits], because a peek is a view over a history and the seeded edits are
+   * what the history is. Both null everywhere a person is editing.
+   */
+  initialRevisionPeek: Int? = null,
+  initialRevisionCompare: Int? = null,
+  /**
    * The component packs switched on when the design opens, by id — what the host remembered from
    * the last time this catalog's settings were changed. Ids the catalog has no pack for are
    * ignored, so a remembered pack an operator has since withdrawn does nothing.
@@ -632,6 +648,7 @@ fun UiBuilderEditor(
             variantAxes = initialVariantAxes,
             previewMode = initialPreviewMode,
             codePaneVisible = initialCodePaneVisible,
+            historyBarVisible = initialHistoryBarVisible,
             enabledPacks =
               initialEnabledPacks.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
             // A catalog whose canvas is only a stand-in opens on the host's renderer instead, where
@@ -664,9 +681,23 @@ fun UiBuilderEditor(
   // was gone before anything drew. Once per design, and never at all in the empty default.
   var seeded by remember(document.id) { mutableStateOf(false) }
   LaunchedEffect(document.id) {
-    if (!seeded && initialEdits.isNotEmpty()) {
+    if (!seeded && (initialEdits.isNotEmpty() || initialRevisionPeek != null)) {
       seeded = true
-      state = initialEdits.fold(state, reducer::reduce)
+      // The peek goes on last, and through the same events a press dispatches: an edit ends a peek,
+      // so one applied before the seeded edits would be gone before anything drew.
+      var seededState = initialEdits.fold(state, reducer::reduce)
+      if (initialRevisionPeek != null) {
+        seededState =
+          reducer.reduce(seededState, UiBuilderEditorEvent.ShowRevision(initialRevisionPeek))
+        if (initialRevisionCompare != null) {
+          seededState =
+            reducer.reduce(
+              seededState,
+              UiBuilderEditorEvent.CompareRevision(initialRevisionCompare),
+            )
+        }
+      }
+      state = seededState
     }
   }
   // Applied once, and only over an editor that has nothing of its own: the host delivers this
@@ -1142,6 +1173,30 @@ fun UiBuilderEditor(
     remember(reducer, state.operationSequence, state.document.revision) {
       reducer.operationHistory(state)
     }
+  // The same history as a strip of pictures, and only while the strip is open: each row costs a
+  // rebuilt document held in memory and a composed thumbnail on screen, and a session nobody is
+  // reviewing should not pay for either. Keyed exactly as the list above is, for the same reason —
+  // an undo puts the document back to one the strip has already drawn, and the row it moved the
+  // marker to is the point.
+  val revisionEntries =
+    remember(
+      reducer,
+      state.operationSequence,
+      state.document.revision,
+      state.historyBarVisible,
+      operationHistory,
+    ) {
+      if (state.historyBarVisible) revisionTimeline(state, operationHistory) else emptyList()
+    }
+  val revisionComparison =
+    remember(state.operationSequence, state.revisionPeek, state.revisionCompare) {
+      val peeked = state.revisionPeek
+      val compared = state.revisionCompare
+      if (peeked == null || compared == null) null
+      else revisionDiff(state, catalog, peeked, compared)
+    }
+  val peekedRevision = revisionEntries.firstOrNull { it.revision == state.revisionPeek }
+  val comparedRevision = revisionEntries.firstOrNull { it.revision == state.revisionCompare }
   /**
    * The slot a piece would be built into, hit-tested at its own centre.
    *
@@ -1571,36 +1626,77 @@ fun UiBuilderEditor(
                       selectionMenu = selectionMenu,
                     )
                   }
-                  Row(Modifier.fillMaxWidth().weight(1f)) {
-                    // One renderer or the other, normally. A CMP project that targets Wasm is best
-                    // previewed in the browser; a project that targets only Android or desktop has
-                    // no browser renderer at all, and the host's is not an extra pane but the whole
-                    // preview. `Both` is the deliberate third case — comparing them — rather than
-                    // the layout everything else is squeezed into.
-                    if (state.previewSurface != EditorPreviewSurface.Native || !nativeRequested) {
-                      canvas(
-                        Modifier.weight(1f)
-                          .fillMaxHeight()
-                          .background(Color(0xff0d0e11))
-                          .padding(24.dp),
-                        // Centred now that the canvas has the window rather than the strip between
-                        // two nailed-open panels. A design pinned to the top-left of a workspace it
-                        // does not fill reads as a page that failed to load.
-                        Alignment.Center,
-                      )
+                  // An old revision replaces the editing surface rather than being drawn over it:
+                  // a canvas that took a drop at revision 12 of a design that is at revision 40
+                  // would be editing a picture, and not composing the editing surface at all is
+                  // that rule holding itself rather than being enforced by an overlay.
+                  if (peekedRevision != null) {
+                    RevisionReviewPane(
+                      peeked = peekedRevision,
+                      compared = comparedRevision,
+                      diff = revisionComparison,
+                      onBackToNow = {
+                        focusEditor()
+                        dispatch(UiBuilderEditorEvent.ShowRevision(null))
+                      },
+                      modifier = Modifier.fillMaxWidth().weight(1f),
+                    )
+                  } else {
+                    Row(Modifier.fillMaxWidth().weight(1f)) {
+                      // One renderer or the other, normally. A CMP project that targets Wasm is
+                      // best
+                      // previewed in the browser; a project that targets only Android or desktop
+                      // has
+                      // no browser renderer at all, and the host's is not an extra pane but the
+                      // whole
+                      // preview. `Both` is the deliberate third case — comparing them — rather than
+                      // the layout everything else is squeezed into.
+                      if (state.previewSurface != EditorPreviewSurface.Native || !nativeRequested) {
+                        canvas(
+                          Modifier.weight(1f)
+                            .fillMaxHeight()
+                            .background(Color(0xff0d0e11))
+                            .padding(24.dp),
+                          // Centred now that the canvas has the window rather than the strip
+                          // between
+                          // two nailed-open panels. A design pinned to the top-left of a workspace
+                          // it
+                          // does not fill reads as a page that failed to load.
+                          Alignment.Center,
+                        )
+                      }
+                      if (nativeRequested) {
+                        NativeRenderPane(
+                          render = nativeRender,
+                          pending = nativePending,
+                          selectedNodeId = state.selectedNodeId,
+                          onNodeSelected = {
+                            focusEditor()
+                            dispatch(UiBuilderEditorEvent.SelectNode(it))
+                          },
+                          modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                      }
                     }
-                    if (nativeRequested) {
-                      NativeRenderPane(
-                        render = nativeRender,
-                        pending = nativePending,
-                        selectedNodeId = state.selectedNodeId,
-                        onNodeSelected = {
-                          focusEditor()
-                          dispatch(UiBuilderEditorEvent.SelectNode(it))
-                        },
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                      )
-                    }
+                  }
+                  if (state.historyBarVisible) {
+                    RevisionHistoryBar(
+                      entries = revisionEntries,
+                      peeked = state.revisionPeek,
+                      compared = state.revisionCompare,
+                      onPeek = {
+                        focusEditor()
+                        dispatch(UiBuilderEditorEvent.ShowRevision(it))
+                      },
+                      onCompare = {
+                        focusEditor()
+                        dispatch(UiBuilderEditorEvent.CompareRevision(it))
+                      },
+                      onClose = {
+                        focusEditor()
+                        dispatch(UiBuilderEditorEvent.ToggleHistoryBar)
+                      },
+                    )
                   }
                   CanvasStatusBar(
                     state = state,
@@ -1667,6 +1763,14 @@ fun UiBuilderEditor(
                           }
                           inspectorOpen = dock != entry
                           if (inspectorOpen) dispatch(UiBuilderEditorEvent.ShowInspector(mode))
+                          // The panel and the strip are one control. They are the same history
+                          // asked two questions — what was done, and what it looked like — and a
+                          // second switch would only let somebody have half of it.
+                          if (
+                            entry == EditorDock.History && inspectorOpen != state.historyBarVisible
+                          ) {
+                            dispatch(UiBuilderEditorEvent.ToggleHistoryBar)
+                          }
                         }
                       },
                     )

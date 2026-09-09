@@ -2452,3 +2452,104 @@ private fun fail(
   nodeId: String? = null,
   field: String? = null,
 ): Nothing = throw ReducerFailure(code, message, nodeId, field)
+
+/**
+ * The document at every revision from [oldest] up to the current one, newest first.
+ *
+ * Nothing new is stored to answer this. Every mutation the reducer accepted already carries the
+ * compensating changes that undo replays — the before and after of every property, modifier chain,
+ * environment field and structural move — so a rewind is those same changes applied in reverse
+ * order, which is what [compensate] already does one change at a time. Keeping a copy of the
+ * document per revision instead would be a second account of the history that can disagree with the
+ * first, and on a long session the largest thing in the editor's memory.
+ *
+ * One walk for the whole range rather than one per revision, because the walk back to revision *n*
+ * passes through every revision above it: a history bar drawing forty pictures asks forty
+ * questions, and answering each from the current document would redo the same work forty times.
+ *
+ * **Read-only.** What comes back is a picture, not a place to edit from: the version stamps that
+ * make undo safe are deliberately not rewound, because nothing submits from here. Committing at an
+ * old revision is what undo is for, and it has guards this does not.
+ *
+ * The map stops early rather than approximating — at a revision this state's record does not cover
+ * (a design reopened from a stored snapshot has history the client never saw), or at a compensation
+ * that refuses. A thumbnail that cannot be drawn is better absent than wrong.
+ */
+internal fun CollaborationState.documentsBackTo(oldest: Int): Map<Int, UiBuilderDocument> {
+  val documents = linkedMapOf(document.revision to document)
+  if (oldest >= document.revision) return documents
+  val inverses = inverseByRevision()
+  var state = withStablePositions()
+  for (target in document.revision downTo oldest + 1) {
+    val inverse = inverses[target] ?: break
+    state =
+      try {
+        inverse(state)
+      } catch (failure: ReducerFailure) {
+        break
+      }
+    documents[target - 1] = state.document.copy(revision = target - 1)
+  }
+  return documents
+}
+
+/** The document as it stood at [revision], or null where [documentsBackTo] cannot reach it. */
+internal fun CollaborationState.documentAtRevision(revision: Int): UiBuilderDocument? =
+  if (revision > document.revision) null else documentsBackTo(revision)[revision]
+
+/**
+ * The oldest revision [documentsBackTo] can reach: the one below this state's unbroken run of
+ * recorded mutations.
+ *
+ * The run has to be unbroken back from the current revision, not merely present somewhere. A client
+ * that opened a design from a stored snapshot holds the mutations made since it connected and none
+ * of the ones that built the document it was handed, so its timeline starts where its record does —
+ * and says so, rather than offering rows it cannot picture.
+ */
+internal fun CollaborationState.reconstructableFromRevision(): Int {
+  val recorded = inverseByRevision().keys
+  var oldest = document.revision
+  while (oldest > 0 && oldest in recorded) oldest--
+  return oldest
+}
+
+/**
+ * Every recorded mutation as the change that takes the document back over it, keyed by the revision
+ * it committed.
+ *
+ * All three kinds, because all three moved the document and a rewind that skipped one would replay
+ * the others onto a state they were never applied to. An undo is inverted by replaying its target
+ * forwards — which is precisely a redo — and a redo by taking that target back again.
+ */
+private fun CollaborationState.inverseByRevision():
+  Map<Int, (CollaborationState) -> CollaborationState> {
+  val inverses = mutableMapOf<Int, (CollaborationState) -> CollaborationState>()
+  acceptedCommands.values.forEach { accepted ->
+    inverses[accepted.committedRevision] = { state ->
+      accepted.compensationChanges.asReversed().fold(state) { carried, change ->
+        carried.compensate(change, undo = true)
+      }
+    }
+  }
+  undoRecords.values.forEach { undone ->
+    inverses[undone.committedRevision] = { state ->
+      undone.target.compensationChanges.fold(state) { carried, change ->
+        carried.compensate(change, undo = false)
+      }
+    }
+  }
+  redoRecords.values.forEach { redone ->
+    inverses[redone.committedRevision] = { state ->
+      val target =
+        undoRecords[redone.targetUndoOperationId]?.target
+          ?: fail(
+            RejectionCode.UNKNOWN_OPERATION,
+            "redo ${redone.command.operationId} has no undo record to reverse",
+          )
+      target.compensationChanges.asReversed().fold(state) { carried, change ->
+        carried.compensate(change, undo = true)
+      }
+    }
+  }
+  return inverses
+}

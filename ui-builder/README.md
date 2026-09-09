@@ -86,3 +86,14 @@ the server unreachable. Export, native render, comments and reference pictures s
 say so. The mode, the catalog fallback it depends on, the compaction rule and what "mostly offline"
 does and does not cover are in
 [`docs/design/UI_BUILDER_LOCAL_STORAGE.md`](../docs/design/UI_BUILDER_LOCAL_STORAGE.md).
+
+A **History** rail item opens two things at once, because they are the same history asked two
+questions: the panel listing what has been done, and a strip of revision thumbnails under the
+canvas showing what each of it looked like. The pictures are rebuilt from the compensating changes
+the reducer already records and drawn through the renderer drawing the canvas — nothing is stored
+per revision, and a revision the record cannot reach keeps its words and loses its picture rather
+than being approximated. Clicking a row looks at that revision read-only, replacing the editing
+canvas rather than covering it; picking a second row compares the two, side by side, with the
+differences read off the two documents. Why that is a separate surface from the viewer's
+published-render versions, and where the two meet, is in
+[`docs/design/UI_BUILDER_REVISION_HISTORY.md`](../docs/design/UI_BUILDER_REVISION_HISTORY.md).

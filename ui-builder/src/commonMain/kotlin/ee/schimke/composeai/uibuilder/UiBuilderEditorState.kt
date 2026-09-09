@@ -447,6 +447,32 @@ data class UiBuilderEditorState(
    */
   val codePaneVisible: Boolean = false,
   /**
+   * Whether the strip of revision thumbnails is drawn under the canvas.
+   *
+   * Off by default and view-only, like [codePaneVisible]: it costs a rebuilt document and a
+   * composed picture per revision, which a session nobody is reviewing should not pay for. It
+   * travels to nobody and takes no revision — see [revisionPeek] for why looking at an old revision
+   * is not the same as being at one.
+   */
+  val historyBarVisible: Boolean = false,
+  /**
+   * The older revision being *looked at*, or null while the canvas is showing the design as it is.
+   *
+   * Looking is not going back. The document is untouched, nothing is submitted, and the editing
+   * surface is not composed at all while this is set — a peek draws the rebuilt document read-only,
+   * because a canvas that accepted a drop at revision 12 of a design that is at revision 40 would
+   * be editing a picture. Undo is how a design *moves* back, and it has guards this does not need.
+   */
+  val revisionPeek: Int? = null,
+  /**
+   * The other end of a comparison, or null when one revision is being looked at on its own.
+   *
+   * Always paired with [revisionPeek]: two revisions is a diff, one is a peek, and neither is the
+   * canvas. Which of the two is older is worked out when the diff is computed rather than by the
+   * order they were picked, so comparing forwards and backwards give the same answer.
+   */
+  val revisionCompare: Int? = null,
+  /**
    * Which renderer draws the design. [EditorPreviewSurface.Wasm] unless a host offers another — the
    * editor's own canvas is the one that always exists.
    */
@@ -684,6 +710,25 @@ sealed interface UiBuilderEditorEvent {
 
   /** Shows or hides the generated-Kotlin pane under the canvas. */
   data object ToggleCodePane : UiBuilderEditorEvent
+
+  /** Shows or hides the strip of revision thumbnails under the canvas. */
+  data object ToggleHistoryBar : UiBuilderEditorEvent
+
+  /**
+   * Looks at one revision, or comes back to the design with null.
+   *
+   * Also the way out of a comparison: picking a revision replaces both ends, because a third click
+   * on a two-ended control otherwise has to guess which end the person meant.
+   */
+  data class ShowRevision(val revision: Int?) : UiBuilderEditorEvent
+
+  /**
+   * Adds the other end of a comparison, against whatever [ShowRevision] is looking at.
+   *
+   * Ignored while nothing is being looked at: there is no comparison to add an end to, and the
+   * living design is not the second end — the strip's newest row is, and it names a revision.
+   */
+  data class CompareRevision(val revision: Int) : UiBuilderEditorEvent
 
   /** Chooses which renderer draws the design. */
   data class ShowPreviewSurface(val surface: EditorPreviewSurface) : UiBuilderEditorEvent
@@ -1243,6 +1288,11 @@ class UiBuilderEditorReducer(
       layerQuery = state.layerQuery,
       previewMode = state.previewMode,
       codePaneVisible = state.codePaneVisible,
+      // The strip survives an authoritative document; what it was *showing* does not. The rebuilt
+      // collaboration state carries none of the mutations that built the arriving document, so the
+      // revision somebody was looking at is one this editor can no longer picture — the strip
+      // honestly restarts at the new document rather than holding a peek it cannot redraw.
+      historyBarVisible = state.historyBarVisible,
       previewSurface = state.previewSurface,
       wearWidgetHostShape = state.wearWidgetHostShape,
       operationSequence = state.operationSequence,
@@ -1257,7 +1307,30 @@ class UiBuilderEditorReducer(
     )
   }
 
-  fun reduce(state: UiBuilderEditorState, event: UiBuilderEditorEvent): UiBuilderEditorState =
+  /**
+   * The state after [event], with one rule this reducer applies to every event rather than to some
+   * of them: **an edit ends a peek**.
+   *
+   * The panels stay live while an old revision is on screen — the layers tree, the inspector and
+   * every chord still act on the design, because they are acting on the *document*, which the peek
+   * never touched. What must not happen is the edit landing invisibly behind a picture of revision
+   * 12. So any event that moves the document brings the canvas back to it, and the strip gains the
+   *     row the edit just made.
+   */
+  fun reduce(state: UiBuilderEditorState, event: UiBuilderEditorEvent): UiBuilderEditorState {
+    val next = reduceEvent(state, event)
+    val moved = next.document.revision != state.document.revision
+    return if (moved && next.revisionPeek != null) {
+      next.copy(revisionPeek = null, revisionCompare = null)
+    } else {
+      next
+    }
+  }
+
+  private fun reduceEvent(
+    state: UiBuilderEditorState,
+    event: UiBuilderEditorEvent,
+  ): UiBuilderEditorState =
     when (event) {
       is UiBuilderEditorEvent.SearchCatalog -> state.copy(catalogQuery = event.query)
       is UiBuilderEditorEvent.ToggleCatalogGroup ->
@@ -1279,6 +1352,19 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
       is UiBuilderEditorEvent.TogglePreview -> state.copy(previewMode = !state.previewMode)
       is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
+      is UiBuilderEditorEvent.ToggleHistoryBar ->
+        // Shutting the strip ends whatever it was showing. A peek that outlived the control it was
+        // started from is a canvas stuck at an old revision with nothing on screen saying why.
+        state.copy(
+          historyBarVisible = !state.historyBarVisible,
+          revisionPeek = null,
+          revisionCompare = null,
+        )
+      is UiBuilderEditorEvent.ShowRevision ->
+        state.copy(revisionPeek = event.revision, revisionCompare = null)
+      is UiBuilderEditorEvent.CompareRevision ->
+        if (state.revisionPeek == null || state.revisionPeek == event.revision) state
+        else state.copy(revisionCompare = event.revision)
       is UiBuilderEditorEvent.ShowPreviewSurface -> state.copy(previewSurface = event.surface)
       is UiBuilderEditorEvent.ShowWearWidgetHostShape ->
         state.copy(wearWidgetHostShape = event.shape)
@@ -4629,7 +4715,7 @@ private fun defaultChildFor(
  */
 private val IDENTITY_PROPERTY_SUFFIXES = listOf("Key", "Id", "Base64", "Url")
 
-private fun UiBuilderNode.contentLabel(capability: ComponentCapability): String? {
+internal fun UiBuilderNode.contentLabel(capability: ComponentCapability): String? {
   fun freeText(property: PropertyCapability) =
     property.allowedValues.isEmpty() &&
       property.typeNames() - "null" == setOf("string") &&
@@ -5362,7 +5448,7 @@ private fun ParentSlot.readable(): String = "$nodeId.$slot"
  * the storage rather than the change. Anything that is not that shape is printed as it stands,
  * because guessing is worse than being literal about an unfamiliar value.
  */
-private fun JsonElement.displayValue(): String {
+internal fun JsonElement.displayValue(): String {
   val value = (this as? JsonObject)?.get("value") ?: this
   return value.primitiveOrNull()?.content ?: value.toString()
 }
@@ -5374,7 +5460,7 @@ private fun JsonElement.displayValue(): String {
  * somebody just changed from the padding they had. Empty is stated rather than left blank: "no
  * layout modifiers" is a real end of a change and an empty cell reads as missing information.
  */
-private fun JsonArray.modifierSummary(): String {
+internal fun JsonArray.modifierSummary(): String {
   if (isEmpty()) return "none"
   return joinToString(", ") { element ->
     val modifier = element as? JsonObject ?: return@joinToString element.toString()

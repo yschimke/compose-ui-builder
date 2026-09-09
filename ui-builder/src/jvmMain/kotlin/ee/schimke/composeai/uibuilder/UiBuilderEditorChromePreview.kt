@@ -700,6 +700,57 @@ fun UiBuilderHistoryDockPreview() {
 }
 
 /**
+ * The history strip, under the canvas, over the same session the dock preview reads.
+ *
+ * The dock says what was done; the strip says what each of it looked like, and the two are one
+ * control — so this preview opens both, which is what pressing History actually does. What it
+ * exists to diff is the half a list of words cannot show: that every revision has a picture, that
+ * the pictures differ from each other, that the newest row is marked as the one on the canvas, and
+ * that the row an undo committed is on the strip beside the change it took back.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderHistoryBarPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialInspectorOpen = true,
+    initialInspectorMode = EditorInspectorMode.History,
+    initialHistoryBarVisible = true,
+    initialEdits = historyPreviewEdits,
+    exportHost = PREVIEW_EXPORT_HOST,
+  )
+}
+
+/**
+ * Two revisions of one design, compared.
+ *
+ * The editing canvas is not composed at all here, which is the point rather than a side effect: a
+ * canvas that took a drop at an old revision would be editing a picture. What replaces it is the
+ * two revisions side by side and the list of what moved between them — read off the two documents,
+ * so the undo in the seeded history cancels the text edit it took back instead of being counted as
+ * a second change.
+ *
+ * Pinned to revisions 1 and 3 rather than to whatever the seeding happens to end at: a preview that
+ * renamed its own subject every time an edit was added to the list ahead of it would diff nothing.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderRevisionComparePreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialHistoryBarVisible = true,
+    initialEdits = historyPreviewEdits,
+    initialRevisionPeek = editorChromePreviewDocument.revision + 1,
+    initialRevisionCompare = editorChromePreviewDocument.revision + 3,
+    exportHost = PREVIEW_EXPORT_HOST,
+  )
+}
+
+/**
  * Three changes and their undo, chosen to put a different *kind* of entry on each row.
  *
  * A modifier chain, a property and the screen itself, each with a different before: a chain that
