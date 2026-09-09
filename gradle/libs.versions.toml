@@ -60,8 +60,12 @@ composeai-tools = "2.4.1"
 # data line, went with the move.) A point pin, for the same reason as the two above.
 composeai-preview-daemon = "3.0.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
-# changes, which is the field a design names its export devices in.
-composeai-contracts = "2.13.0"
+# changes, which is the field a design names its export devices in. 2.14.0 adds the components a
+# design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
+# that reads the dictionary in scope (compose-preview-contracts#57) — which is the wire behind the
+# component placements and loop rows this repository's canvas and exporter already draw from its
+# own document model.
+composeai-contracts = "2.14.0"
 rc-players = "1.60.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"

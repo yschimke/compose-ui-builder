@@ -15,6 +15,7 @@ import ee.schimke.composeai.uibuilder.protocol.AlphaModifierV1
 import ee.schimke.composeai.uibuilder.protocol.AspectRatioModifierV1
 import ee.schimke.composeai.uibuilder.protocol.AssetKeyValueV1
 import ee.schimke.composeai.uibuilder.protocol.BackgroundModifierV1
+import ee.schimke.composeai.uibuilder.protocol.BindingValueV1
 import ee.schimke.composeai.uibuilder.protocol.BooleanValueV1
 import ee.schimke.composeai.uibuilder.protocol.BorderModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ClipModifierV1
@@ -1527,6 +1528,17 @@ object ScreenDocumentProjection {
             )
         }
         is EnumValueV1 -> enum(value.value, node.componentId, property, where)
+        // A read of the dictionary in scope — a component placement's arguments, or a loop's row.
+        // Refused rather than read as a literal: this lane projects a node into a call against a
+        // component record, and a binding is an argument of the enclosing *generated* function,
+        // which this projection does not write. The capability exporter does, and names the same
+        // key as a parameter; until this lane grows components, saying so is the whole of what it
+        // can honestly do.
+        is BindingValueV1 ->
+          refuse(
+            "$where reads `${value.value}` from the arguments of the component or loop around it, " +
+              "which this projection does not generate"
+          )
         is StateValueV1 ->
           refuse(
             "$where reads the state variable `${value.variable}`, which needs a " +
