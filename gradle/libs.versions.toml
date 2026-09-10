@@ -25,6 +25,7 @@ kotlin = "2.4.10"
 ktfmt = "0.27.0"
 ktfmt-cli = "0.64"
 compose-multiplatform = "1.11.1"
+material-icons-extended = "1.7.3"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
 # One ref for every compose-ai-tools coordinate, and for the Gradle plugin id it also drives.
@@ -168,6 +169,9 @@ snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-hi
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
+material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "material-icons-extended" }
+material-icons-extended-desktop = { module = "org.jetbrains.compose.material:material-icons-extended-desktop", version.ref = "material-icons-extended" }
+material-icons-core-desktop = { module = "org.jetbrains.compose.material:material-icons-core-desktop", version.ref = "material-icons-extended" }
 ktfmt-cli = { module = "com.facebook:ktfmt", version.ref = "ktfmt-cli" }
 
 [plugins]

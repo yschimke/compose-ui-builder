@@ -9,6 +9,87 @@ plugins {
   alias(libs.plugins.maven.publish) apply false
 }
 
+val materialIconGeneratorClasspath =
+  configurations.create("materialIconGeneratorClasspath") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    isTransitive = false
+  }
+
+dependencies {
+  materialIconGeneratorClasspath(libs.material.icons.extended.desktop)
+  materialIconGeneratorClasspath(libs.material.icons.core.desktop)
+}
+
+val generateMaterialIconInventory =
+  tasks.register<GenerateMaterialIconInventory>("generateMaterialIconInventory") {
+    group = "code generation"
+    description = "Indexes every vector in the shipped Compose Material Icons artifact."
+    iconClasspath.from(materialIconGeneratorClasspath)
+    output.set(layout.buildDirectory.file("generated/materialIcons/material-icon-inventory.tsv"))
+  }
+
+val generateMaterialIconUiSources =
+  tasks.register<GenerateMaterialIconUiSources>("generateMaterialIconUiSources") {
+    group = "code generation"
+    inventory.set(generateMaterialIconInventory.flatMap { it.output })
+    outputDirectory.set(layout.buildDirectory.dir("generated/materialIcons/ui-builder"))
+  }
+
+val generateMaterialIconExportSource =
+  tasks.register<GenerateMaterialIconExportSource>("generateMaterialIconExportSource") {
+    group = "code generation"
+    inventory.set(generateMaterialIconInventory.flatMap { it.output })
+    outputDirectory.set(layout.buildDirectory.dir("generated/materialIcons/ui-builder-export"))
+  }
+
+val m3MaterialIconCatalogFixture =
+  layout.projectDirectory.file("docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json")
+val wearMaterialIconCatalogFixture =
+  layout.projectDirectory.file("docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json")
+
+val generateMaterialIconCatalogFixture =
+  tasks.register<GenerateMaterialIconCatalogFixture>("generateMaterialIconCatalogFixture") {
+    inventory.set(generateMaterialIconInventory.flatMap { it.output })
+    catalog.set(m3MaterialIconCatalogFixture)
+    output.set(
+      layout.buildDirectory.file("generated/materialIcons/m3-catalog-capabilities-v1.json")
+    )
+  }
+
+val generateWearMaterialIconCatalogFixture =
+  tasks.register<GenerateMaterialIconCatalogFixture>("generateWearMaterialIconCatalogFixture") {
+    inventory.set(generateMaterialIconInventory.flatMap { it.output })
+    catalog.set(wearMaterialIconCatalogFixture)
+    output.set(layout.buildDirectory.file("generated/materialIcons/wear-m3-capabilities-v1.json"))
+  }
+
+tasks.register<UpdateMaterialIconCatalogFixtures>("updateMaterialIconCatalogFixture") {
+  group = "code generation"
+  description =
+    "Updates the m3 and wear-m3 icon allowlists from the shipped Material Icons artifact."
+  generatedM3.set(generateMaterialIconCatalogFixture.flatMap { it.output })
+  generatedWear.set(generateWearMaterialIconCatalogFixture.flatMap { it.output })
+  checkedInM3.set(m3MaterialIconCatalogFixture)
+  checkedInWear.set(wearMaterialIconCatalogFixture)
+}
+
+val checkMaterialIconCatalogFixture =
+  tasks.register<VerifyMatchingFile>("checkMaterialIconCatalogFixture") {
+    checkedIn.set(m3MaterialIconCatalogFixture)
+    expected.set(generateMaterialIconCatalogFixture.flatMap { it.output })
+  }
+
+val checkWearMaterialIconCatalogFixture =
+  tasks.register<VerifyMatchingFile>("checkWearMaterialIconCatalogFixture") {
+    checkedIn.set(wearMaterialIconCatalogFixture)
+    expected.set(generateWearMaterialIconCatalogFixture.flatMap { it.output })
+  }
+
+tasks.named("check") {
+  dependsOn(checkMaterialIconCatalogFixture, checkWearMaterialIconCatalogFixture)
+}
+
 tasks.named("check") {
   group = "verification"
   dependsOn(

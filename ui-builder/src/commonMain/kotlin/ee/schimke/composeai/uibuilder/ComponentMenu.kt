@@ -41,10 +41,10 @@ import kotlinx.serialization.json.jsonPrimitive
  * presentation: a wrong one must never be the reason a component cannot be inserted.
  *
  * That is also why [variantProperty] is declared rather than inferred. Every heuristic is wrong
- * somewhere in m3-catalog: `m3/icon.iconKey` is an enum of forty-seven icons and no more a variant
- * than `layout/row.horizontalArrangement` is, and `m3/text.style` is fifteen type scales, which is
- * a property of a text rather than a kind of Text — while `m3/card.variant` and `m3/button.style`
- * are the same idea under two names.
+ * somewhere in m3-catalog: `m3/icon.iconKey` is a large icon enum and no more a variant than
+ * `layout/row.horizontalArrangement` is, and `m3/text.style` is fifteen type scales, which is a
+ * property of a text rather than a kind of Text — while `m3/card.variant` and `m3/button.style` are
+ * the same idea under two names.
  */
 data class ComponentMenu(
   /** The shelves, most useful to a person building a screen first. */

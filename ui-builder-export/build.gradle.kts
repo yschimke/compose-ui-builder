@@ -62,6 +62,7 @@ kotlin {
   @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class) wasmJs { browser() }
 
   sourceSets {
+    commonMain { kotlin.srcDir(rootProject.tasks.named("generateMaterialIconExportSource")) }
     commonMain.dependencies {
       api(libs.composeai.screen.model)
       api(libs.composeai.ui.builder.protocol)

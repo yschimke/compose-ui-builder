@@ -106,6 +106,7 @@ kotlin {
 
   sourceSets {
     commonMain {
+      kotlin.srcDir(rootProject.tasks.named("generateMaterialIconUiSources"))
       kotlin.srcDir(
         embedComponentRecord.map { layout.buildDirectory.dir("generated/componentRecord") }
       )
@@ -114,7 +115,7 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.runtime)
       @Suppress("DEPRECATION") implementation(compose.foundation)
       @Suppress("DEPRECATION") implementation(compose.material3)
-      @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
+      implementation(libs.material.icons.extended)
       @Suppress("DEPRECATION") implementation(compose.ui)
       implementation(libs.composeai.ui.builder.protocol)
       // The real `ScreenGenerator`, compiled for wasmJs as well as the JVM. Before this the editor

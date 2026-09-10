@@ -99,6 +99,37 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
+  fun `style-qualified icon export names the exact member and only ships used vectors`() {
+    val icon = document.nodes.getValue("search-leading-icon")
+    val styled =
+      document.copy(
+        nodes =
+          document.nodes +
+            (icon.id to
+              icon.copy(
+                properties =
+                  JsonObject(
+                    icon.properties +
+                      ("iconKey" to
+                        JsonObject(
+                          mapOf(
+                            "type" to JsonPrimitive("enum"),
+                            "value" to JsonPrimitive("twoTone/palette"),
+                          )
+                        ))
+                  )
+              ))
+      )
+
+    val source =
+      CapabilityComposeCodeExporter.export(styled, catalog, artworkAdapter).requireSource()
+
+    assertTrue("\"twoTone/palette\" -> Icons.TwoTone.Palette" in source, source)
+    assertFalse("Icons.Sharp.Devices" in source, source)
+    assertFalse("Icons.Filled.Chat" in source, source)
+  }
+
+  @Test
   fun `multiple roots are explicitly rejected instead of silently producing an empty screen`() {
     val secondRoot =
       document.nodes

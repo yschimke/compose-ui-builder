@@ -157,8 +157,8 @@ class CatalogMenuTest {
 
   @Test
   fun `a component the catalog names no variant property for offers none`() {
-    // `m3/icon.iconKey` is an enum of forty-seven icons, and forty-seven rows under Icon is what
-    // declaring the variant property rather than guessing at it avoids.
+    // `m3/icon.iconKey` is a large icon inventory, not a component variant. Declaring the variant
+    // property rather than guessing from any enum is what keeps thousands of icons out of here.
     assertEquals(emptyList(), component(rows(state), "m3/icon").item.variants)
     assertEquals(emptyList(), component(rows(state), "layout/row").item.variants)
   }

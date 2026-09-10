@@ -2706,70 +2706,15 @@ object ScreenDocumentProjection {
   /**
    * Which icon each catalog `iconKey` names, as the member path under `Icons`.
    *
-   * The same 46 keys `GoogleMaterialIconCatalog` renders with, in the same spellings, and that is
-   * the point: the builder's canvas already holds a wire-to-Kotlin mapping for every key it can
-   * draw — `GoogleMaterialIcon.composeExpression` — and a second one written from the catalog's
-   * `allowedValues` would be a second chance to disagree about which vector `genres` is (it is
-   * `Category`, which no derivation from the key would ever produce). `:ui-builder-export` cannot
-   * read that catalog, because it holds real `ImageVector`s and this module deliberately has no
-   * Compose dependency, so the mapping is restated here and `GoogleMaterialIconExportMappingTest`
-   * fails if the two ever drift.
+   * Generated from the exact Material Icons artifact the canvas compiles against. This module
+   * deliberately has no Compose dependency; generation gives it the same wire-to-Kotlin mapping
+   * without making projection depend on rendering. The original bare keys remain compatibility
+   * aliases, including the non-derivable `genres -> Filled.Category` mapping.
    *
-   * **These need `material-icons-extended` on the consumer's classpath.** Only a minority of the 46
-   * are in `material-icons-core`, and nothing in a generated file can add a dependency to the
-   * project it lands in. Stated here rather than discovered at compile time because it is the one
-   * thing about this table a reader has to know: an export that names `Icons.Filled.Coffee` is
-   * correct Kotlin and does not compile against `-core` alone.
+   * Exports using these vectors need `material-icons-extended` on the consumer's classpath. A
+   * generated file cannot add that dependency to the project it lands in.
    */
-  val ICON_MEMBERS: Map<String, String> =
-    mapOf(
-      "accessTime" to "Filled.AccessTime",
-      "accountCircle" to "Filled.AccountCircle",
-      "add" to "Filled.Add",
-      "addCircle" to "Filled.AddCircle",
-      "arrowBack" to "AutoMirrored.Filled.ArrowBack",
-      "arrowForward" to "AutoMirrored.Filled.ArrowForward",
-      "bookmark" to "Filled.Bookmark",
-      "bookmarkBorder" to "Outlined.BookmarkBorder",
-      "calendarMonth" to "Filled.CalendarMonth",
-      "cameraAlt" to "Filled.CameraAlt",
-      "check" to "Filled.Check",
-      "checkCircle" to "Filled.CheckCircle",
-      "chevronRight" to "Filled.ChevronRight",
-      "close" to "Filled.Close",
-      "coffee" to "Filled.Coffee",
-      "delete" to "Filled.Delete",
-      "download" to "Filled.Download",
-      "edit" to "Filled.Edit",
-      "email" to "Filled.Email",
-      "expandMore" to "Filled.ExpandMore",
-      "favorite" to "Filled.Favorite",
-      "genres" to "Filled.Category",
-      "home" to "Filled.Home",
-      "image" to "Filled.Image",
-      "info" to "Filled.Info",
-      "locationOn" to "Filled.LocationOn",
-      "lock" to "Filled.Lock",
-      "menu" to "Filled.Menu",
-      "moreVert" to "Filled.MoreVert",
-      "notifications" to "Filled.Notifications",
-      "pauseCircle" to "Filled.PauseCircle",
-      "person" to "Filled.Person",
-      "phone" to "Filled.Phone",
-      "playCircle" to "Filled.PlayCircle",
-      "playlistAdd" to "AutoMirrored.Filled.PlaylistAdd",
-      "refresh" to "Filled.Refresh",
-      "remove" to "Filled.Remove",
-      "search" to "Filled.Search",
-      "settings" to "Filled.Settings",
-      "share" to "Filled.Share",
-      "star" to "Filled.Star",
-      "stopCircle" to "Filled.StopCircle",
-      "upload" to "Filled.Upload",
-      "videoLibrary" to "Filled.VideoLibrary",
-      "visibility" to "Filled.Visibility",
-      "warning" to "Filled.Warning",
-    )
+  val ICON_MEMBERS: Map<String, String> = GeneratedMaterialIconMembers
 
   /**
    * Properties whose values do not name a member of anything, and **why**, per entry.

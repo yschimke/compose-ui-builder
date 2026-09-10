@@ -340,7 +340,7 @@ card appear rather than a filled one that changes a frame later; the variant is 
 component's starter content rather than instead of it, so the card still arrives holding something.
 
 Declared rather than inferred, because every heuristic for "the variant property" is wrong somewhere
-in this catalog: `m3/icon.iconKey` is an enum of forty-seven icons and no more a variant than
+in this catalog: `m3/icon.iconKey` is an enum of the generated Material icon inventory and no more a variant than
 `layout/row.horizontalArrangement` is, while `variant` and `style` are the same idea under two names.
 A stale declaration degrades rather than fails — an unknown property name, or one with no allowed
 values, means the component offers no variants, exactly as it did before the field existed.
@@ -520,6 +520,12 @@ bounded numbers, booleans, enums, and colors, including optional properties that
 authored on the node. Icon nodes additionally use a searchable Google Material Icons picker. Icon
 keys share one allowlist across capability validation, the native renderer, structured SVG
 recording, and generated Compose export.
+
+The generated catalog exposes 11,385 style-qualified vectors while retaining 46 legacy saved-design
+aliases outside search. Results are bounded to 80 rendered rows and vectors resolve only when a row
+is painted, so a query searches the complete catalog without eagerly constructing it.
+
+![Material icon search showing Chat results in five styles](../evidence/ui-builder-material-icons/picker-chat.png)
 
 | Before | Catalog | After |
 | --- | --- | --- |

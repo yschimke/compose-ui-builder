@@ -237,7 +237,7 @@ class UiBuilderEditorStateTest {
         .toSet()
 
     assertEquals(GoogleMaterialIcons.map { it.key }.toSet(), allowed)
-    assertTrue(GoogleMaterialIcons.size >= 40)
+    assertEquals(11_431, GoogleMaterialIcons.size)
     val field =
       reducer
         .propertyFields(reducer.initial(document, selectedNodeId = "search-leading-icon"))

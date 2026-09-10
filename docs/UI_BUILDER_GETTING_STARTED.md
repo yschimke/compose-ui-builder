@@ -941,10 +941,31 @@ the projection rules.
 
 ### The export's one classpath requirement
 
-A screen holding an `m3/icon` names `Icons.Filled.AccountCircle` and its kin, and the catalog's 46
-icon keys are mostly in **`androidx.compose.material:material-icons-extended`** rather than in
-`-core`. A generated file cannot add a dependency to the project it lands in, so a project pasting
-such an export needs that artifact; everything else the export names is Compose UI and Material 3.
+A screen holding an `m3/icon` names `Icons.Filled.AccountCircle` and its kin. The picker exposes all
+11,385 vectors shipped by Compose's Material Icons core + extended artifacts: `filled/…`,
+`outlined/…`, `rounded/…`, `twoTone/…`, `sharp/…`, and `autoMirrored/<style>/…` where supplied.
+The original 46 bare keys remain accepted compatibility aliases (including
+`genres -> Icons.Filled.Category`) but are hidden from search so they do not duplicate rows.
+
+Most vectors are in **`androidx.compose.material:material-icons-extended`** rather than in `-core`.
+A generated file cannot add a dependency to the project it lands in, so a project pasting such an
+export needs that artifact; everything else the export names is Compose UI and Material 3. Exported
+source contains only the icon members the design uses, rather than a resolver for the whole catalog.
+
+The inventory is generated from the resolved 1.7.3 core and extended desktop jars. The same build
+step generates the Wasm/native vector bindings and Compose-free export mapping, then verifies the
+checked-in capability allowlist. Search evaluates the full index but composes at most 80 matching
+rows. Vector lookup is generated separately from the metadata, so opening the picker creates
+neither thousands of menu items nor all 11,385 `ImageVector` objects; only the current and visible
+matches are materialised.
+
+Measured on the production `wasmJsBrowserProductionWebpack` output for this change, the UI-builder
+Wasm application grows from 8,737,944 bytes to 26,519,707 bytes (+204%); gzip grows from 2,372,654
+to 5,275,042 bytes (+122%). Skiko remains a separate unchanged 8,652,729-byte asset. The generated
+binding source is 2,579,301 bytes and the Compose-free export index is 585,985 bytes; neither is
+checked in. The capability JSON grows from 75,688 to 338,449 bytes. These are the explicit costs of
+making every advertised vector render locally in Wasm. Generated screen source does not inherit
+that cost: its `builderIcon` resolver contains only keys used by that design.
 
 The capability is per catalog. `remote-m3` has no record and is not meant to — Remote Compose is
 kept out of the Compose exporter by design — so a host serving both advertises Compose export on

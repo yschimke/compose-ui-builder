@@ -7938,14 +7938,25 @@ private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> 
 }
 
 @Composable
-private fun GoogleIconPropertyControl(
+internal fun GoogleIconPropertyControl(
   field: EditorPropertyField,
   onTextInputFocusChanged: (Boolean) -> Unit,
   commit: (String) -> Unit,
+  initiallyExpanded: Boolean = false,
+  initialQuery: String = "",
 ) {
-  var expanded by remember(field.nodeId, field.name) { mutableStateOf(false) }
-  var query by remember(field.nodeId, field.name) { mutableStateOf("") }
+  var expanded by remember(field.nodeId, field.name) { mutableStateOf(initiallyExpanded) }
+  var query by remember(field.nodeId, field.name) { mutableStateOf(initialQuery) }
   val current = googleMaterialIcon(field.value)
+  val matchingIcons =
+    remember(query) {
+      SelectableGoogleMaterialIcons.filter {
+          query.isBlank() ||
+            it.label.contains(query, ignoreCase = true) ||
+            it.key.contains(query, ignoreCase = true)
+        }
+        .take(80)
+    }
   Text(
     "Google Material Icons catalog",
     Modifier.padding(top = 7.dp),
@@ -7986,21 +7997,23 @@ private fun GoogleIconPropertyControl(
       textStyle =
         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
     )
-    GoogleMaterialIcons.filter {
-        query.isBlank() ||
-          it.label.contains(query, ignoreCase = true) ||
-          it.key.contains(query, ignoreCase = true)
-      }
-      .forEach { icon ->
-        DropdownMenuItem(
-          text = { Text(icon.label) },
-          leadingIcon = { Icon(icon.imageVector, null, Modifier.size(20.dp)) },
-          onClick = {
-            expanded = false
-            commit(icon.key)
-          },
-        )
-      }
+    Text(
+      if (query.isBlank()) "Search ${SelectableGoogleMaterialIcons.size} icons — showing 80"
+      else "${matchingIcons.size}${if (matchingIcons.size == 80) "+" else ""} matches",
+      Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+    matchingIcons.forEach { icon ->
+      DropdownMenuItem(
+        text = { Text(icon.label) },
+        leadingIcon = { Icon(icon.imageVector, null, Modifier.size(20.dp)) },
+        onClick = {
+          expanded = false
+          commit(icon.key)
+        },
+      )
+    }
   }
 }
 
