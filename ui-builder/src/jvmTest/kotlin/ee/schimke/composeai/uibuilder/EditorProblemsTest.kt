@@ -73,6 +73,9 @@ class EditorProblemsTest {
     assertEquals("root-surface", reported.nodeId)
     assertEquals("m3/surface", reported.componentId)
     assertTrue("environment.theme" in reported.message, reported.message)
+    // The export runs, so the panel must not sort this into the section headed "what the Compose
+    // export gate refuses" or colour it as an error. Its own call site has always said as much.
+    assertTrue(!reported.blocking, "the root-surface notice is not a refusal")
   }
 
   @Test

@@ -2542,6 +2542,11 @@ class UiBuilderEditorReducer(
               message = notice.message,
               nodeId = notice.nodeId,
               componentId = "m3/surface",
+              // The comment above already says the export runs. Before the panel split its rows
+              // that was a quiet inaccuracy under a heading claiming everything listed is refused;
+              // once the split exists, leaving it on the default would sort a notice into the
+              // blocking section and colour it as an error — the same untruth, now stated twice.
+              blocking = false,
             )
           }
         ))
