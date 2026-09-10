@@ -1436,7 +1436,7 @@ private fun RenderNode(
             // nothing rather than taking the composition down, which is the rule every other
             // reference in this renderer follows.
             ancestors = here,
-            arguments = node.componentArguments(),
+            arguments = node.componentArguments(arguments),
           )
         }
       }
@@ -1458,20 +1458,37 @@ private const val DESIGN_COMPONENT_INSTANCE = "design/component-instance"
  */
 private fun UiBuilderNode.forEachRows(): List<JsonObject> {
   val data = obj("data")
-  if (data.optionalString("type") != "list") return emptyList()
+  if (data.wrapperType() != "list") return emptyList()
   val values = data["values"] as? JsonArray ?: return emptyList()
   return values.mapNotNull { row ->
     val value = row as? JsonObject ?: return@mapNotNull null
-    if (value.optionalString("type") != "object") return@mapNotNull null
+    if (value.wrapperType() != "object") return@mapNotNull null
     value["fields"] as? JsonObject
   }
 }
 
 private fun UiBuilderNode.componentKey(): String =
-  component?.optionalString("componentKey").orEmpty()
+  (component?.get("componentKey") as? JsonPrimitive)?.contentOrNull.orEmpty()
 
-private fun UiBuilderNode.componentArguments(): JsonObject =
-  component?.get("arguments")?.objectOrEmpty() ?: JsonObject(emptyMap())
+/**
+ * What a placement passes, with its own bound arguments resolved from the dictionary around it.
+ *
+ * A placement inside a loop template passes the row — `{"type":"binding","value":"shade"}` — and
+ * the body reads the *placement's* dictionary, so without this substitution the body received the
+ * wrapper and drew its fallback while the generated Kotlin varied correctly per row. One
+ * substitution, the same one a property takes, at the one place a scope is handed on.
+ */
+private fun UiBuilderNode.componentArguments(scope: JsonObject): JsonObject {
+  val declared = component?.get("arguments")?.objectOrEmpty() ?: JsonObject(emptyMap())
+  if (scope.isEmpty() || declared.isEmpty()) return declared
+  return JsonObject(
+    declared.mapValues { (_, value) ->
+      val binding = value as? JsonObject ?: return@mapValues value
+      val key = binding.bindingKey() ?: return@mapValues value
+      scope[key] ?: value
+    }
+  )
+}
 
 /** Where the placed component's body starts, or null when the design defines no such component. */
 private fun UiBuilderDocument.componentRoot(node: UiBuilderNode): String? {
@@ -1488,13 +1505,29 @@ private fun UiBuilderDocument.componentRoot(node: UiBuilderNode): String? {
  * placement did not pass is left as it stands: the accessors then read their own fallback, which
  * draws the component's default rather than refusing to draw the design.
  */
+/**
+ * The key this value wrapper reads, or null when it holds a value of its own.
+ *
+ * Read with safe casts rather than `optionalString`, which throws on a non-primitive. Placement
+ * arguments and loop rows are open-keyed dictionaries the capability validator never type-checks,
+ * so a wrapper shaped `{"type": "binding", "value": {}}` reaches the canvas intact — and the canvas
+ * has to draw the rest of the design rather than go down with it. The exporter refuses the same
+ * document by name; here the property simply keeps whatever it already held.
+ */
+private fun JsonObject.bindingKey(): String? {
+  if (wrapperType() != "binding") return null
+  return (this["value"] as? JsonPrimitive)?.contentOrNull
+}
+
+/** The `type` a value wrapper declares, or null when it is absent or is not a scalar. */
+private fun JsonObject.wrapperType(): String? = (this["type"] as? JsonPrimitive)?.contentOrNull
+
 private fun UiBuilderNode.withArguments(arguments: JsonObject): UiBuilderNode {
   if (arguments.isEmpty() || properties.isEmpty()) return this
   var substituted = false
   val resolved = properties.mapValues { (_, value) ->
     val binding = value as? JsonObject ?: return@mapValues value
-    if (binding.optionalString("type") != "binding") return@mapValues value
-    val key = binding.optionalString("value") ?: return@mapValues value
+    val key = binding.bindingKey() ?: return@mapValues value
     val argument = arguments[key] ?: return@mapValues value
     substituted = true
     argument
@@ -3099,18 +3132,21 @@ private fun UiBuilderNode.resolvedInteger(
   fallback: Int = 0,
 ): Int {
   val value = obj(name)
-  if (value.optionalString("type") != "state") {
-    return value["value"]?.jsonPrimitive?.intOrNull ?: fallback
+  if (value.wrapperType() != "state") {
+    return (value["value"] as? JsonPrimitive)?.intOrNull ?: fallback
   }
-  val held = state[value.optionalString("variable")] ?: return fallback
+  val held = state[(value["variable"] as? JsonPrimitive)?.contentOrNull] ?: return fallback
   return held.toIntOrNull() ?: held.toDoubleOrNull()?.toInt() ?: fallback
 }
 
 private fun UiBuilderNode.resolvedBool(name: String, state: Map<String, String?>): Boolean {
   val value = obj(name)
-  return if (value.optionalString("type") == "stateEquals") {
-    uiBuilderStateEquals(state[value.optionalString("variable")], value["value"])
-  } else value["value"]?.jsonPrimitive?.booleanOrNull ?: false
+  return if (value.wrapperType() == "stateEquals") {
+    uiBuilderStateEquals(
+      state[(value["variable"] as? JsonPrimitive)?.contentOrNull],
+      value["value"],
+    )
+  } else (value["value"] as? JsonPrimitive)?.booleanOrNull ?: false
 }
 
 /**
@@ -3151,21 +3187,31 @@ private fun UiBuilderNode.textContentTopPaddingDp(): Float =
     }
     .toFloat()
 
-private fun UiBuilderNode.string(name: String): String =
-  obj(name)["value"]?.jsonPrimitive?.contentOrNull.orEmpty()
+/**
+ * The scalar a property's value wrapper holds, or null when it holds an object, an array or a null.
+ *
+ * Read with a safe cast rather than `jsonPrimitive`. A property can hold a binding whose key never
+ * resolved, or a wrapper an editor built wrong, and `#484`'s rule applies to the shape of a value
+ * as much as to its content: one node this canvas cannot resolve draws its own default, it does not
+ * fail the frame. The export gate refuses the same document by name, in a panel this canvas has to
+ * stay alive to show.
+ */
+private fun UiBuilderNode.valueScalar(name: String): JsonPrimitive? =
+  obj(name)["value"] as? JsonPrimitive
+
+private fun UiBuilderNode.string(name: String): String = valueScalar(name)?.contentOrNull.orEmpty()
 
 private fun UiBuilderNode.float(name: String, fallback: Float = 0f): Float =
-  obj(name)["value"]?.jsonPrimitive?.floatOrNull ?: fallback
+  valueScalar(name)?.floatOrNull ?: fallback
 
 /** A dimension the document actually carries, or null — which is not the same as zero. */
-private fun UiBuilderNode.dimension(name: String): Dp? =
-  obj(name)["value"]?.jsonPrimitive?.floatOrNull?.dp
+private fun UiBuilderNode.dimension(name: String): Dp? = valueScalar(name)?.floatOrNull?.dp
 
 private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
-  obj(name)["value"]?.jsonPrimitive?.intOrNull ?: fallback
+  valueScalar(name)?.intOrNull ?: fallback
 
 private fun UiBuilderNode.bool(name: String, fallback: Boolean = false): Boolean =
-  obj(name)["value"]?.jsonPrimitive?.booleanOrNull ?: fallback
+  valueScalar(name)?.booleanOrNull ?: fallback
 
 @Composable
 private fun UiBuilderNode.textStyle(): androidx.compose.ui.text.TextStyle {
