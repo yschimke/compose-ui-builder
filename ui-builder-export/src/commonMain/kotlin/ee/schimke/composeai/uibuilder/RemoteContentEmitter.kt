@@ -406,13 +406,11 @@ internal class RemoteContentEmitter(
     // has not said where anything goes. `children` is the single-slot spelling every design uses
     // today, accepted only when there is exactly one slot to mean.
     val single = slotParameters.singleOrNull()
-    val filled =
-      slotParameters.mapNotNull { parameter ->
-        val ids =
-          node.slots[parameter.name]
-            ?: if (parameter == single) node.slots["children"] else null
-        ids?.takeIf { it.isNotEmpty() }?.let { parameter to it }
-      }
+    val filled = slotParameters.mapNotNull { parameter ->
+      val ids =
+        node.slots[parameter.name] ?: if (parameter == single) node.slots["children"] else null
+      ids?.takeIf { it.isNotEmpty() }?.let { parameter to it }
+    }
     val strayChildren =
       node.slots["children"].orEmpty().isNotEmpty() && (single == null || filled.isEmpty())
     if (strayChildren) {
@@ -470,9 +468,11 @@ internal class RemoteContentEmitter(
     // the call; every other slot is a named argument whose value is a lambda. Both are ordinary
     // Kotlin, and the split matters only for how it reads.
     val trailingName =
-      record.parameters.lastOrNull()?.takeIf { it.composableSlot }?.name?.takeIf { name ->
-        blocks.any { it.first == name }
-      }
+      record.parameters
+        .lastOrNull()
+        ?.takeIf { it.composableSlot }
+        ?.name
+        ?.takeIf { name -> blocks.any { it.first == name } }
     val named = blocks.filterNot { it.first == trailingName }
     val lines = mutableListOf<String>()
     val headArguments = arguments.toMutableList()
