@@ -71,6 +71,7 @@ object ScreenExportGate {
         listOf("no component record is configured for this catalog, so nothing can be exported")
       )
     }
+    val resolvable = record.callableAliases()
     return when (val projected = ScreenDocumentProjection.project(document, tagNodes = tagNodes)) {
       // Both classes, not just the one that failed first. The projection and the generator refuse
       // for unrelated reasons — one cannot express a value, the other cannot prove a call site —
@@ -83,7 +84,12 @@ object ScreenExportGate {
       is ScreenDocumentProjection.Outcome.Projected ->
         when (
           val generated =
-            ScreenGenerator.generate(projected.document, record, PACKAGE_NAME, EXPRESSION_PACKAGES)
+            ScreenGenerator.generate(
+              projected.document,
+              resolvable,
+              PACKAGE_NAME,
+              EXPRESSION_PACKAGES,
+            )
         ) {
           is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
           is ScreenGenerator.Result.Emitted -> Outcome.Emitted(generated.source)
@@ -143,3 +149,28 @@ object ScreenExportGate {
       is Outcome.Emitted -> emptyList()
     }
 }
+
+/**
+ * [this] with every component also named by its callable — the canonical id without the module it
+ * was discovered from.
+ *
+ * `ScreenDocumentProjection`'s variant table substitutes a callable for a node when the design
+ * picks a variant (`m3/card` with `style = elevated` becomes `ElevatedCard`), and the generator has
+ * to resolve what it substituted. A canonical id cannot be that name: it is `<module>/<callable>`,
+ * and the same catalog discovered from a differently-named module produces a different one — which
+ * is exactly what happened to m3-catalog, whose shipped record says `m3-catalog/…` and whose own
+ * repository says `catalog/…`.
+ *
+ * Added, never replacing: a component keeps every id it had. Two modules contributing the same
+ * callable would collide on one alias, and they would be the same Kotlin function, so the generator
+ * resolving either is the same answer.
+ */
+fun ComponentRecordFile.callableAliases(): ComponentRecordFile =
+  copy(
+    components =
+      components.map { component ->
+        val callable = component.canonicalId.substringAfter('/', "")
+        if (callable.isEmpty() || callable in component.componentIds) component
+        else component.copy(componentIds = component.componentIds + callable)
+      }
+  )
