@@ -88,8 +88,16 @@ fun UiBuilderRemoteComposePalettePreview() {
     // row is greyed and never show the affordance working.
     initialSelectedNodeId = "discover-grid",
     initialComponentsOpen = true,
+    // The production sheet has hundreds of sources below the authoring catalog. Narrow to the
+    // shared capture size so the evidence actually shows those rows instead of only the catalog
+    // above them; search still matches their stable ids even though those ids are no longer drawn.
+    initialCatalogQuery = "compact",
     remoteComposeSources = REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES,
     resolveRemoteComposeDocument = { error("a preview never adds") },
+    // A preview may not read the network, so these stand in for the serving catalog's PNG route.
+    // The product callback loads the real rendered sticker; this fixture makes the loaded state
+    // deterministic enough for the editor-chrome diff to keep covering its layout.
+    resolveRemoteComposeThumbnail = ::remoteComposePaletteThumbnail,
   )
 }
 
@@ -148,16 +156,37 @@ fun UiBuilderUnexportablePalettePreview() {
  * Two families and three states, so the palette's group headings are visible rather than implied.
  */
 private val REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES =
-  listOf(
-    RemoteComposeSource("appcard__ideal__default__compact", "App card", "appcard"),
-    RemoteComposeSource("appcard__ideal__icon__compact", "App card with icon", "appcard"),
-    RemoteComposeSource("button-filled__ideal__default__compact", "Filled button", "button-filled"),
-    RemoteComposeSource(
-      "button-filled__ideal__disabled__compact",
-      "Filled button, disabled",
-      "button-filled",
-    ),
+  parseRemoteComposeSources(
+    """
+    {"previews": [
+      {"id":"appcard__ideal__default__compact","label":"appcard__ideal__default__compact","remoteCompose":true},
+      {"id":"appcard__ideal__icon__compact","label":"appcard__ideal__icon__compact","remoteCompose":true},
+      {"id":"button-filled__ideal__default__compact","label":"button-filled__ideal__default__compact","remoteCompose":true},
+      {"id":"button-filled__ideal__disabled__compact","label":"button-filled__ideal__disabled__compact","remoteCompose":true}
+    ]}
+    """
+      .trimIndent()
   )
+
+/** Deterministic stand-ins for the four catalog PNGs used by the chrome preview above. */
+private fun remoteComposePaletteThumbnail(source: RemoteComposeSource): ImageBitmap {
+  val bitmap = ImageBitmap(160, 120)
+  val canvas = Canvas(bitmap)
+  canvas.drawRect(
+    Rect(0f, 0f, 160f, 120f),
+    Paint().apply { color = Color(0xffe6e1e9) },
+  )
+  val component = Paint().apply { color = Color(0xff6750a4) }
+  if (source.group == "appcard") {
+    canvas.drawRect(Rect(18f, 20f, 142f, 100f), component)
+    val detail = Paint().apply { color = Color(0xffeaddff) }
+    canvas.drawRect(Rect(34f, 42f, 110f, 50f), detail)
+    canvas.drawRect(Rect(34f, 62f, 126f, 70f), detail)
+  } else {
+    canvas.drawRect(Rect(24f, 42f, 136f, 82f), component)
+  }
+  return bitmap
+}
 
 /**
  * A node deep enough in the tree to exercise the layers panel's indentation and its naming, rather

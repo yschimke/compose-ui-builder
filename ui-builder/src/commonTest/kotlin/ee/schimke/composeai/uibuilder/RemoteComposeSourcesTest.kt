@@ -74,7 +74,39 @@ class RemoteComposeSourcesTest {
     val sources =
       parseRemoteComposeSources("""{"previews": [{"id": "solo", "remoteCompose": true}]}""")
 
-    assertEquals(listOf(RemoteComposeSource("solo", "solo", "documents")), sources)
+    assertEquals(listOf(RemoteComposeSource("solo", "Solo", "documents")), sources)
+  }
+
+  @Test
+  fun `machine labels become concise state names without losing the searchable id`() {
+    val sources =
+      parseRemoteComposeSources(
+        """
+        {"previews": [
+          {
+            "id": "button-child__ideal__icon-disabled__compact",
+            "label": "button-child__ideal__icon-disabled__compact",
+            "remoteCompose": true
+          },
+          {
+            "id": "button-child__ideal__default__compact",
+            "label": "",
+            "remoteCompose": true
+          }
+        ]}
+        """
+          .trimIndent()
+      )
+
+    assertEquals(listOf("button-child", "button-child"), sources.map(RemoteComposeSource::group))
+    assertEquals(
+      listOf("Default · Compact", "Icon disabled · Compact"),
+      sources.map(RemoteComposeSource::label),
+    )
+    assertEquals(
+      listOf("button-child__ideal__icon-disabled__compact"),
+      filterRemoteComposeSources(sources, "icon-disabled").map(RemoteComposeSource::id),
+    )
   }
 
   @Test

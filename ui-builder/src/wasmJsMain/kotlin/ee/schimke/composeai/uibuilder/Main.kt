@@ -1297,6 +1297,11 @@ private fun LiveSessionApp(
       resolveRemoteComposeDocument = { source ->
         fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${source.id}.rc"))
       },
+      resolveRemoteComposeThumbnail = { source ->
+        val encoded =
+          fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${source.id}.png"))
+        Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
+      },
       // The same fetch, for a URL the *design* names rather than one the palette built. Which URLs
       // are reachable is [sameOriginRequestUrl]'s rule and not a second policy written here: it
       // resolves against the page and throws on anything that leaves this origin, so a design

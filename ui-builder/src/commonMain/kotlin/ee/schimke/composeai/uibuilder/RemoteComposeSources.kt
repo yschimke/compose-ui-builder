@@ -55,13 +55,18 @@ fun parseRemoteComposeSources(previewsJson: String): List<RemoteComposeSource> =
     .previews
     .filter { it.remoteCompose && it.id.isNotBlank() }
     .map {
+      val family =
+        it.id.substringBefore(SOURCE_GROUP_SEPARATOR, missingDelimiterValue = UNGROUPED_SOURCES)
       RemoteComposeSource(
         id = it.id,
-        label = it.label.ifBlank { it.id },
-        group =
-          it.id
-            .substringBefore(SOURCE_GROUP_SEPARATOR, missingDelimiterValue = UNGROUPED_SOURCES)
-            .ifBlank { UNGROUPED_SOURCES },
+        // Some Remote Compose catalogs have no authored preview label and repeat the full sticker
+        // id here. That id is useful for search and diagnostics, but it is not a name: in a narrow
+        // palette every row then reads `button-child__ideal__…`. Keep a real catalog label, and
+        // turn only that technical fallback into the state words after the family separator.
+        label = sourceLabel(it.id, it.label),
+        // Keep the stable family key for ordering and search. The panel humanises it at the final
+        // presentation edge, rather than changing the identity every consumer already groups by.
+        group = family.ifBlank { UNGROUPED_SOURCES },
       )
     }
     .sortedWith(compareBy(RemoteComposeSource::group, RemoteComposeSource::label))
@@ -88,6 +93,35 @@ fun filterRemoteComposeSources(
 private const val SOURCE_GROUP_SEPARATOR = "__"
 
 private const val UNGROUPED_SOURCES = "documents"
+
+/** A catalog label when it has one; otherwise the useful, non-plumbing part of its sticker id. */
+internal fun sourceLabel(id: String, catalogLabel: String): String {
+  val label = catalogLabel.trim()
+  val technical = label.isEmpty() || label == id || SOURCE_GROUP_SEPARATOR in label
+  if (!technical) return label
+  val states =
+    id
+      .split(SOURCE_GROUP_SEPARATOR)
+      .drop(1)
+      // `ideal` is a capture lane, not a property somebody choosing a component understands.
+      .filterNot { it.equals("ideal", ignoreCase = true) }
+      .map(::humanizeSourceSlug)
+      .filter(String::isNotBlank)
+  return states.joinToString(" · ").ifBlank {
+    humanizeSourceSlug(id.substringBefore(SOURCE_GROUP_SEPARATOR))
+  }
+}
+
+/** Turns the catalog's stable kebab-case machine word into a sentence-case palette label. */
+internal fun humanizeSourceSlug(value: String): String =
+  value
+    .trim()
+    .replace('-', ' ')
+    .replace('_', ' ')
+    .split(Regex("\\s+"))
+    .filter(String::isNotBlank)
+    .joinToString(" ")
+    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
 private val PREVIEWS_JSON = Json { ignoreUnknownKeys = true }
 

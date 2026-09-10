@@ -90,11 +90,31 @@ Both are `@Preview`s in `:ui-builder` — `UiBuilderLayoutInspectorPreview` and 
 `UiBuilderRemoteComposePalettePreview`, at the same size and the same selection — so the next change
 to either state of the panel is diffed without anyone remembering to render it.
 
+### The source picker is visual, and its ids are not its names
+
+The serving catalog does not always publish a human label for every Remote Compose state. In that
+case `/api/previews` repeats the stable sticker id, such as
+`button-child__ideal__icon-disabled__compact`. The picker keeps that exact id for filtering,
+fetching, and insertion, but no longer draws it twice. It presents the family as **Button child**
+and the state as **Icon disabled · Compact**; `ideal` is a capture lane and is deliberately omitted.
+A real authored catalog label still wins unchanged.
+
+Each visible source row also lazily requests the catalog's existing `render/<id>.png` and fits it
+into the same thumbnail tile as an ordinary authoring component. Lazy loading matters here: the
+deployed sheet contains hundreds of sources, and opening the picker must not download all of them.
+An offline host or failed image keeps a neutral component glyph; Add still fetches and validates the
+`.rc` document independently, so a missing thumbnail never changes what can be inserted.
+
+| Before: ids used as labels, with no picture | After: state names and rendered thumbnails |
+| --- | --- |
+| ![Remote Compose rows showing repeated technical ids](evidence/ui-builder-remote-compose/picker-before.png) | ![Remote Compose rows showing concise state names and thumbnails](evidence/ui-builder-remote-compose/picker-after.png) |
+
 This is the transport-neutral resolver the decision above anticipated, in its smallest honest form:
 bytes are loaded and verified outside the renderer and the same decoded document is supplied. What
 it is not yet is the *suspendable, size-limited resolver with content hashes and caching* of
 follow-up 1 — the bytes are copied into the design, so a design does not track the catalog when the
-catalog republishes, and 476 rows are listed but only the added ones are fetched.
+catalog republishes. The lightweight PNGs are fetched only for rows the lazy list composes; the
+larger `.rc` bytes are still fetched only for the source an author adds.
 
 ## Native options for the visual editor
 

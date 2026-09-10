@@ -178,6 +178,7 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
@@ -592,6 +593,14 @@ fun UiBuilderEditor(
    * cannot add anything, so the panel requires both.
    */
   resolveRemoteComposeDocument: (suspend (RemoteComposeSource) -> String)? = null,
+  /**
+   * Fetches the serving catalog's rendered PNG for one Remote Compose source.
+   *
+   * Loaded lazily by the visible palette rows: a catalog may publish hundreds of documents, so
+   * opening the panel must not download its whole sticker sheet. Null keeps the neutral component
+   * glyph, which is still an honest visual affordance in offline previews and tests.
+   */
+  resolveRemoteComposeThumbnail: (suspend (RemoteComposeSource) -> ImageBitmap?)? = null,
   /**
    * Fetches the Base64-encoded document at an embedded node's `documentUrl`, or throws.
    *
@@ -1062,6 +1071,7 @@ fun UiBuilderEditor(
           if (resolveRemoteComposeDocument == null) emptyList() else remoteComposeSources,
         pendingRemoteComposeSource = pendingRemoteSource,
         remoteComposeFailure = remoteSourceFailure,
+        resolveRemoteComposeThumbnail = resolveRemoteComposeThumbnail,
         onAddRemoteComposeSource = { source ->
           focusEditor()
           if (pendingRemoteSource == null) pendingRemoteSource = source
@@ -3691,6 +3701,7 @@ private fun EditorNavigator(
   remoteComposeSources: List<RemoteComposeSource>,
   pendingRemoteComposeSource: RemoteComposeSource?,
   remoteComposeFailure: String?,
+  resolveRemoteComposeThumbnail: (suspend (RemoteComposeSource) -> ImageBitmap?)?,
   onAddRemoteComposeSource: (RemoteComposeSource) -> Unit,
   moveRefusal: (String, ParentSlot) -> EditorMoveRefusal?,
   onEditorInteraction: () -> Unit,
@@ -3727,6 +3738,7 @@ private fun EditorNavigator(
             remoteComposeSources = remoteComposeSources,
             pendingRemoteComposeSource = pendingRemoteComposeSource,
             remoteComposeFailure = remoteComposeFailure,
+            resolveRemoteComposeThumbnail = resolveRemoteComposeThumbnail,
             onAddRemoteComposeSource = onAddRemoteComposeSource,
             onTextInputFocusChanged = onTextInputFocusChanged,
             dispatch = dispatch,
@@ -3788,6 +3800,7 @@ private fun InsertPanel(
   remoteComposeSources: List<RemoteComposeSource>,
   pendingRemoteComposeSource: RemoteComposeSource?,
   remoteComposeFailure: String?,
+  resolveRemoteComposeThumbnail: (suspend (RemoteComposeSource) -> ImageBitmap?)?,
   onAddRemoteComposeSource: (RemoteComposeSource) -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -3896,6 +3909,7 @@ private fun InsertPanel(
           }
           RemoteComposeSourceRow(
             source = source,
+            resolveThumbnail = resolveRemoteComposeThumbnail,
             // Enabled off the same question the insert will ask, so a row that cannot land is
             // visibly unavailable rather than pressable and then refused.
             canAdd =
@@ -4823,7 +4837,7 @@ private fun SearchField(
 @Composable
 private fun GroupHeading(group: String) {
   Text(
-    group.uppercase(),
+    humanizeSourceSlug(group).uppercase(),
     Modifier.fillMaxWidth()
       .background(Color(0xff202126))
       .padding(horizontal = 14.dp, vertical = 5.dp),
@@ -4843,23 +4857,53 @@ private fun GroupHeading(group: String) {
 @Composable
 private fun RemoteComposeSourceRow(
   source: RemoteComposeSource,
+  resolveThumbnail: (suspend (RemoteComposeSource) -> ImageBitmap?)?,
   canAdd: Boolean,
   onAdd: () -> Unit,
 ) {
+  var thumbnail by remember(source.id) { mutableStateOf<ImageBitmap?>(null) }
+  LaunchedEffect(source.id, resolveThumbnail) {
+    thumbnail =
+      try {
+        resolveThumbnail?.invoke(source)
+      } catch (cancelled: CancellationException) {
+        throw cancelled
+      } catch (_: Throwable) {
+        null
+      }
+  }
   Row(
-    Modifier.fillMaxWidth().height(42.dp).padding(start = 26.dp, end = 12.dp),
+    Modifier.fillMaxWidth().height(44.dp).padding(start = 14.dp, end = 12.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Column(Modifier.weight(1f)) {
-      Text(source.label, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-      Text(
-        source.id,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
+    Surface(
+      Modifier.size(COMPONENT_THUMBNAIL_SIZE),
+      shape = RoundedCornerShape(4.dp),
+      color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    ) {
+      if (thumbnail != null) {
+        Image(
+          bitmap = thumbnail!!,
+          contentDescription = null,
+          modifier = Modifier.fillMaxSize().padding(2.dp).clearAndSetSemantics {},
+          contentScale = ContentScale.Fit,
+        )
+      } else {
+        Icon(
+          Icons.Filled.Widgets,
+          contentDescription = null,
+          modifier = Modifier.padding(8.dp),
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
     }
+    Text(
+      source.label,
+      Modifier.padding(start = 6.dp).weight(1f),
+      style = MaterialTheme.typography.bodyMedium,
+      maxLines = 2,
+      overflow = TextOverflow.Ellipsis,
+    )
     TextButton(onClick = onAdd, enabled = canAdd) {
       Text("Add", Modifier.semantics { contentDescription = "Add ${source.label}" })
     }
