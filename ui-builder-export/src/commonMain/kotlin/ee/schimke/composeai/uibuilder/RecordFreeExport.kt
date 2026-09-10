@@ -197,12 +197,18 @@ object RecordFreeExport {
    *
    * Null when [document] is not a widget at all, matching [generate]'s "this is not mine" rather
    * than refusing a caller that never asked about widgets.
+   *
+   * @param components the catalog's own component record, by component id — the same map [generate]
+   *   takes as `packComponents` for a widget, and it has to be the same one: a design whose picture
+   *   refuses while its file exports, or the reverse, is a disagreement between two surfaces
+   *   showing the same design.
    */
   fun nativePreview(
     document: DesignDocumentV1,
     packageName: String,
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
     shape: WearWidgetHostShape = WearWidgetHostShape.Default,
+    components: Map<String, ComponentRecord> = emptyMap(),
   ): NativePreview? {
     if (!isWearWidget(document)) return null
     return runCatching {
@@ -213,6 +219,7 @@ object RecordFreeExport {
             packageName,
             assets,
             shape,
+            components,
           )
       ) {
         is WearWidgetNativePreviewExporter.Result.Emitted ->

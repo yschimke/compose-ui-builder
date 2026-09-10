@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.discovery.ComponentRecord
+
 /**
  * The source the **native preview lane** compiles for a Wear widget design.
  *
@@ -61,12 +63,17 @@ internal object WearWidgetNativePreviewExporter {
    * @param shape which host container to build the params for. The design does not carry this — the
    *   frame is the host's — so it arrives from whoever asked for the render, and the editor's
    *   canvas is drawing the same shape beside this pane.
+   * @param components the catalog's own component record, by component id, for the fallback in
+   *   `RemoteContentEmitter`. The same map the export lane passes, because a design that exports
+   *   and does not render — or renders and does not export — is the one disagreement between the
+   *   two surfaces worth refusing outright.
    */
   fun export(
     document: UiBuilderDocument,
     packageName: String,
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
     shape: WearWidgetHostShape = WearWidgetHostShape.Default,
+    components: Map<String, ComponentRecord> = emptyMap(),
   ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
@@ -84,17 +91,30 @@ internal object WearWidgetNativePreviewExporter {
     // an emitter only learns by emitting. Its refusals are dropped; the real pass below reports.
     val depth =
       if (
-        RemoteContentEmitter(document, mutableListOf(), assets, inlineContentImages = true).let {
-          probe ->
-          probe.background(root)
-          contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
-          probe.usesTheme
-        }
+        RemoteContentEmitter(
+            document,
+            mutableListOf(),
+            assets,
+            inlineContentImages = true,
+            components = components,
+          )
+          .let { probe ->
+            probe.background(root)
+            contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
+            probe.usesTheme
+          }
       )
         2
       else 1
 
-    val emitter = RemoteContentEmitter(document, refusals, assets, inlineContentImages = true)
+    val emitter =
+      RemoteContentEmitter(
+        document,
+        refusals,
+        assets,
+        inlineContentImages = true,
+        components = components,
+      )
     val background = emitter.background(root)
     val body =
       when (contentIds.size) {
