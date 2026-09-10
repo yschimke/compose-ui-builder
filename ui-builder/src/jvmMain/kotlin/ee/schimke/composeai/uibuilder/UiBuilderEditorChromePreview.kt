@@ -160,9 +160,13 @@ private val REMOTE_COMPOSE_PALETTE_PREVIEW_SOURCES =
     """
     {"previews": [
       {"id":"appcard__ideal__default__compact","label":"appcard__ideal__default__compact","remoteCompose":true},
+      {"id":"appcard__ideal__default__large","label":"appcard__ideal__default__large","remoteCompose":true},
       {"id":"appcard__ideal__icon__compact","label":"appcard__ideal__icon__compact","remoteCompose":true},
+      {"id":"appcard__ideal__icon__large","label":"appcard__ideal__icon__large","remoteCompose":true},
       {"id":"button-filled__ideal__default__compact","label":"button-filled__ideal__default__compact","remoteCompose":true},
-      {"id":"button-filled__ideal__disabled__compact","label":"button-filled__ideal__disabled__compact","remoteCompose":true}
+      {"id":"button-filled__ideal__default__large","label":"button-filled__ideal__default__large","remoteCompose":true},
+      {"id":"button-filled__ideal__disabled__compact","label":"button-filled__ideal__disabled__compact","remoteCompose":true},
+      {"id":"button-filled__ideal__disabled__large","label":"button-filled__ideal__disabled__large","remoteCompose":true}
     ]}
     """
       .trimIndent()

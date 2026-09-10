@@ -63,10 +63,12 @@ UI builder now reads that lane:
    `hasRemoteComposeDoc`. `modes` could not answer it — a Remote Compose sticker and a Jetpack
    Compose preview are both `snapshot` — and probing `.rc` per preview is 476 requests to learn
    something the host already knows.
-2. **Add** fetches `render/<id>.rc`, Base64-encodes it, and the reducer decodes it before building
-   the operation. The renderer decodes it too, because playing it is what it does; refusing here is
-   what stops a catalog lane's HTML error page from becoming a saved design revision that every
-   collaborator sees as an error box.
+2. **Add or drop** fetches `render/<id>.rc`, Base64-encodes it, and the reducer decodes it before
+   building the operation. A drag carries the published capture and highlights the exact compatible
+   slot; the editor captures that slot on release and revalidates it after the fetch rather than
+   silently retargeting to a later selection. The renderer decodes the bytes too, because playing
+   them is what it does; refusing here is what stops a catalog lane's HTML error page from becoming
+   a saved design revision that every collaborator sees as an error box.
 3. The insert lands as one `InsertNode` carrying the bytes, not an insert followed by a property
    write. The intermediate state — a `remote-compose/document` with no document — renders as its
    own diagnostic, and collaborators would watch it appear.
@@ -104,6 +106,15 @@ into the same thumbnail tile as an ordinary authoring component. Lazy loading ma
 deployed sheet contains hundreds of sources, and opening the picker must not download all of them.
 An offline host or failed image keeps a neutral component glyph; Add still fetches and validates the
 `.rc` document independently, so a missing thumbnail never changes what can be inserted.
+
+The catalog can publish the same semantic sticker once per capture frame (`compact`, `large`, and
+the other window-size classes). Those are evidence variants, not authoring choices: the outer
+design supplies the frame into which the embedded document is laid out. The picker therefore
+collapses ids that differ only in their final capture-frame segment, keeps the compact id as the
+deterministic fetch source, and removes the frame suffix from the displayed state. Other state
+segments remain distinct and searchable.
+
+![Remote Compose picker with capture-size duplicates collapsed](../evidence/ui-builder-remote-compose/picker-deduplicated.png)
 
 | Before: ids used as labels, with no picture | After: state names and rendered thumbnails |
 | --- | --- |
@@ -149,9 +160,12 @@ it:
   sense — the real component, not a document — and correspondingly cannot author anything the
   frontend was not compiled with, which is why it substitutes only for `compose-m3` and falls back
   to snapshots elsewhere. Remote Compose needs the opposite property: content that arrives as data.
-- The JVM Compose render port (`ServeUiBuilderNativePreview`, the editor's **Native** button)
-  renders a saved revision with real Compose on the host. It is a second opinion on the canvas, not
-  a second canvas.
+- The JVM Compose render port (`ServeUiBuilderNativePreview`, the editor's **2 panes** choice)
+  renders a saved revision with real Compose on the host. It is the static target preview beside
+  the Wasm editor, not a replacement for it. **3 panes** adds a clean interactive Wasm rendition;
+  for `remote-m3` that is the common CMP player on the same wire document.
+
+![Editor, static target preview, and interactive preview](../evidence/ui-builder-remote-compose/workspace-three-panes.png)
 
 ## Two ways in, and one way back out
 

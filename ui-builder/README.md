@@ -45,7 +45,8 @@ The hosted `/ui-builder/` application opens a catalog-aware New design chooser w
 named, then a native Compose editor backed by the persistent live service. New design remains
 available in the desktop toolbar and compact More menu. Its searchable catalog, layers tree,
 canvas selection overlay and property inspector all mutate the document through
-`CollaborationReducer`; catalog drops resolve against the visibly named selected slot. The editor
+`CollaborationReducer`; catalog Adds resolve against the visibly named selected slot, while drags
+resolve against the compatible slot under the pointer. The editor
 also exposes an accessible Add action for the same compatible target and preserves selection,
 search, inspector mode, and operation numbering when live authoritative snapshots arrive. The editor
 measures the design at its pinned 1280×800dp viewport and applies a sibling visual transform to fit
@@ -57,6 +58,19 @@ is the exception and opens pinned at 1:1, because that lane exists to compare th
 against the clean harness's. Explicit `?mode=…` URLs retain the frozen local fixtures;
 `?mode=jetcaster-builder` remains the clean harness surface and does not compose editor controls or
 transforms.
+
+A palette drag carries a live rendering of the component under the pointer and highlights the exact
+compatible slot it will fill. Remote Compose rows use their published capture as the drag preview;
+their drop captures that slot before fetching the document, then revalidates it when the bytes
+arrive. Pointer-resolved slots are validated directly by the reducer; they no longer have to agree
+with the layer selected before the drag began. Clicking a layer focuses the editor, and Delete or
+Backspace removes the selected subtree through the same guarded delete operation as the context
+menu.
+
+On desktop, the renderer control is an additive one-, two-, or three-pane workspace. The Wasm
+visual editor is always first. The second pane is the static target render compiled by the host.
+The third is a clean interactive Wasm rendition; Remote M3 uses its actual CMP/Wasm player there,
+while catalogs that declare Wasm stand-ins say so in the chooser.
 
 A right-click on a layer — in the tree or on the design, which is hit-tested against the boxes the
 renderer already reports — selects it and offers the verbs that act on it: properties, duplicate,

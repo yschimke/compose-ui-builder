@@ -121,4 +121,25 @@ class RemoteComposeSourcesTest {
     assertEquals(2, filterRemoteComposeSources(sources, "appcard").size)
     assertTrue(filterRemoteComposeSources(sources, "nothing here").isEmpty())
   }
+
+  @Test
+  fun `capture frame variants collapse to one component choice`() {
+    val sources =
+      parseRemoteComposeSources(
+        """
+        {"previews": [
+          {"id": "button__ideal__filled__large", "label": "button__ideal__filled__large", "remoteCompose": true},
+          {"id": "button__ideal__filled__compact", "label": "button__ideal__filled__compact", "remoteCompose": true},
+          {"id": "button__ideal__disabled__compact", "label": "button__ideal__disabled__compact", "remoteCompose": true}
+        ]}
+        """
+          .trimIndent()
+      )
+
+    assertEquals(
+      listOf("button__ideal__disabled__compact", "button__ideal__filled__compact"),
+      sources.map(RemoteComposeSource::id),
+    )
+    assertEquals(listOf("Disabled · Compact", "Filled"), sources.map(RemoteComposeSource::label))
+  }
 }

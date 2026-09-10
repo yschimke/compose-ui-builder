@@ -165,6 +165,38 @@ class ReferencePiecePromotionTest {
     assertFalse(target == ParentSlot("no-such-node", "children"))
   }
 
+  @Test
+  fun `a catalog drag outside every measured target does not fall through to selection`() {
+    val target =
+      reducer.catalogDropTarget(
+        state = initial,
+        componentId = "m3/text",
+        slots = listOf(slot("main-content", "children", 0f, 0f, 40f, 40f)),
+        nodeBounds = emptyMap(),
+        pointX = 500f,
+        pointY = 500f,
+      )
+
+    assertNull(target)
+  }
+
+  @Test
+  fun `an unmaterialized empty slot uses its parent as the catalog drop region`() {
+    // chip-news has a label but no leadingIcon entry. The catalog still declares leadingIcon and
+    // the collaboration reducer will materialize it when the first icon lands there.
+    val target =
+      reducer.catalogDropTarget(
+        state = initial,
+        componentId = "m3/icon",
+        slots = emptyList(),
+        nodeBounds = mapOf("chip-news" to UiBuilderPixelBounds(20f, 20f, 100f, 40f)),
+        pointX = 50f,
+        pointY = 30f,
+      )
+
+    assertEquals(ParentSlot("chip-news", "leadingIcon"), target)
+  }
+
   private fun slot(
     parentNodeId: String,
     slotName: String,

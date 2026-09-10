@@ -87,23 +87,25 @@ class EditorRemoteComposeInsertTest {
   }
 
   @Test
-  fun `a target the selection no longer resolves to is refused`() {
+  fun `a pointer target remains valid when selection moves during the fetch`() {
     val initial = reducer.initial(document, selectedNodeId = "discover-grid")
     val target = assertNotNull(reducer.dropTarget(initial, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID))
-    // The fetch is a round trip, so the selection can move under it. The target is re-derived from
-    // the selection as it stands, and a stale one is refused rather than inserted somewhere the
-    // author is no longer looking.
+    // The fetch is a round trip, so the selection can move under it. A pointer-resolved target is
+    // still the place the author dropped onto and stays valid independently of that selection.
     val moved = reducer.initial(document, selectedNodeId = document.roots.first())
     assertTrue(reducer.dropTarget(moved, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID) != target)
 
-    val refused =
+    val inserted =
       reducer.reduce(
         moved,
         UiBuilderEditorEvent.InsertRemoteComposeDocument(source, encoded, target),
       )
 
-    val outcome = assertIs<CommandOutcome.Rejected>(refused.lastOutcome)
-    assertEquals(RejectionCode.INVALID_LOCATION, outcome.code)
+    assertIs<CommandOutcome.Accepted>(inserted.lastOutcome)
+    assertEquals(
+      inserted.selectedNodeId,
+      inserted.document.nodes.getValue(target.nodeId).slots.getValue(target.slot).last(),
+    )
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()

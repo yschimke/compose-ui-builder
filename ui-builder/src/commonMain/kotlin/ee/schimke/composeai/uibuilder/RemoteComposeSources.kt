@@ -69,6 +69,16 @@ fun parseRemoteComposeSources(previewsJson: String): List<RemoteComposeSource> =
         group = family.ifBlank { UNGROUPED_SOURCES },
       )
     }
+    .distinctBy(RemoteComposeSource::id)
+    // The catalog publishes the same semantic sticker once per capture frame. A design does not:
+    // the outer UI-builder environment supplies the frame the embedded document is laid out in.
+    // Keep one fetchable id for transport, but present one component choice to the author.
+    .groupBy(::sourceWithoutCaptureFrame)
+    .values
+    .map { captures ->
+      val source = captures.minWith(compareBy(::captureFrameRank, RemoteComposeSource::id))
+      if (captures.size == 1) source else source.copy(label = source.label.withoutCaptureFrame())
+    }
     .sortedWith(compareBy(RemoteComposeSource::group, RemoteComposeSource::label))
 
 /** The palette's search, over the same three strings the component list matches on. */
@@ -122,6 +132,38 @@ internal fun humanizeSourceSlug(value: String): String =
     .filter(String::isNotBlank)
     .joinToString(" ")
     .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+/** Identity of the authored state, excluding the preview frame it happened to be captured in. */
+private fun sourceWithoutCaptureFrame(source: RemoteComposeSource): String {
+  val parts = source.id.split(SOURCE_GROUP_SEPARATOR)
+  val last = parts.lastOrNull()?.lowercase()
+  return if (parts.size > 1 && last in CAPTURE_FRAME_NAMES)
+    parts.dropLast(1).joinToString(SOURCE_GROUP_SEPARATOR)
+  else source.id
+}
+
+/** Prefer the compact capture when several equivalent transport documents are available. */
+private fun captureFrameRank(source: RemoteComposeSource): Int =
+  when (source.id.substringAfterLast(SOURCE_GROUP_SEPARATOR).lowercase()) {
+    "compact",
+    "small" -> 0
+    "medium",
+    "standard" -> 1
+    "expanded",
+    "large" -> 2
+    else -> 3
+  }
+
+private fun String.withoutCaptureFrame(): String {
+  val separator = " · "
+  val parts = split(separator)
+  return if (parts.lastOrNull()?.lowercase() in CAPTURE_FRAME_NAMES)
+    parts.dropLast(1).joinToString(separator)
+  else this
+}
+
+private val CAPTURE_FRAME_NAMES =
+  setOf("compact", "small", "medium", "standard", "expanded", "large")
 
 private val PREVIEWS_JSON = Json { ignoreUnknownKeys = true }
 
