@@ -58,7 +58,7 @@ composeai-tools = "2.4.1"
 # `preview-data-api`, `renderer-desktop`, `daemon-desktop` and the `data-*` runtimes below no
 # longer move with `composeai-tools`. (`composeai-data`, the tools repository's separately-versioned
 # data line, went with the move.) A point pin, for the same reason as the two above.
-composeai-preview-daemon = "3.0.0"
+composeai-preview-daemon = "3.0.1"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
