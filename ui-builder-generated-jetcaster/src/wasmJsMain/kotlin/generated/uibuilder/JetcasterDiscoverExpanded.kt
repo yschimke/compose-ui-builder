@@ -1,4 +1,4 @@
-// Generator content SHA-256: b7d74a01c48e8f51274deded353c185d2ca19f01ea5aff64bd2bda91080f1c96
+// Generator content SHA-256: 619403d30c4a7986a3b84902f9cf0a1c1f05b4e461928079f1d5c4dea67f2d36
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -12,8 +12,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.outlined.*
+import androidx.compose.material.icons.automirrored.rounded.*
+import androidx.compose.material.icons.automirrored.sharp.*
+import androidx.compose.material.icons.automirrored.twotone.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.sharp.*
+import androidx.compose.material.icons.twotone.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -1436,51 +1443,15 @@ private fun BuilderAssetImage(
 
 private fun builderIcon(key: String): ImageVector =
   when (key) {
-    "accessTime" -> Icons.Filled.AccessTime
     "accountCircle" -> Icons.Filled.AccountCircle
-    "add" -> Icons.Filled.Add
     "addCircle" -> Icons.Filled.AddCircle
-    "arrowBack" -> Icons.AutoMirrored.Filled.ArrowBack
-    "arrowForward" -> Icons.AutoMirrored.Filled.ArrowForward
-    "bookmark" -> Icons.Filled.Bookmark
-    "bookmarkBorder" -> Icons.Outlined.BookmarkBorder
-    "calendarMonth" -> Icons.Filled.CalendarMonth
-    "cameraAlt" -> Icons.Filled.CameraAlt
     "check" -> Icons.Filled.Check
     "checkCircle" -> Icons.Filled.CheckCircle
-    "chevronRight" -> Icons.Filled.ChevronRight
-    "close" -> Icons.Filled.Close
-    "coffee" -> Icons.Filled.Coffee
-    "delete" -> Icons.Filled.Delete
-    "download" -> Icons.Filled.Download
-    "edit" -> Icons.Filled.Edit
-    "email" -> Icons.Filled.Email
-    "expandMore" -> Icons.Filled.ExpandMore
-    "favorite" -> Icons.Filled.Favorite
     "genres" -> Icons.Filled.Category
-    "home" -> Icons.Filled.Home
-    "image" -> Icons.Filled.Image
-    "info" -> Icons.Filled.Info
-    "locationOn" -> Icons.Filled.LocationOn
-    "lock" -> Icons.Filled.Lock
-    "menu" -> Icons.Filled.Menu
     "moreVert" -> Icons.Filled.MoreVert
-    "notifications" -> Icons.Filled.Notifications
-    "pauseCircle" -> Icons.Filled.PauseCircle
-    "person" -> Icons.Filled.Person
-    "phone" -> Icons.Filled.Phone
     "playCircle" -> Icons.Filled.PlayCircle
     "playlistAdd" -> Icons.AutoMirrored.Filled.PlaylistAdd
-    "refresh" -> Icons.Filled.Refresh
-    "remove" -> Icons.Filled.Remove
     "search" -> Icons.Filled.Search
-    "settings" -> Icons.Filled.Settings
-    "share" -> Icons.Filled.Share
-    "star" -> Icons.Filled.Star
-    "stopCircle" -> Icons.Filled.StopCircle
-    "upload" -> Icons.Filled.Upload
     "videoLibrary" -> Icons.Filled.VideoLibrary
-    "visibility" -> Icons.Filled.Visibility
-    "warning" -> Icons.Filled.Warning
     else -> error("Unsupported Google Material icon: $key")
   }
