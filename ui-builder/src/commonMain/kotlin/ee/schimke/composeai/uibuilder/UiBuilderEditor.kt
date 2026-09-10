@@ -1176,7 +1176,13 @@ fun UiBuilderEditor(
   // every node and every property against the catalog, traverses the graph and looks for cycles.
   // Called inline it would run all of that on every recomposition of the inspector — which is
   // every keystroke in a property field and every frame of a drag.
-  val problems = remember(reducer, state.document) { reducer.problems(state.document) }
+  val documentProblems = remember(reducer, state.document) { reducer.problems(state.document) }
+  // Appended rather than folded into `problems`, which is a pure function of the document and stays
+  // one: drift is a fact about another host's library, fetched by whoever is hosting this editor
+  // and handed over as state. Keyed on the findings alone, so the cache above survives a fetch.
+  val driftProblems =
+    remember(state.componentDrift) { componentDriftProblems(state.componentDrift) }
+  val problems = documentProblems + driftProblems
   // Keyed on the operation counter rather than on the document: an undo puts the document back to
   // one the history has already seen, and the entry it moved the marker to is the whole point.
   val operationHistory =

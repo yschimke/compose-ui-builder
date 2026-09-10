@@ -423,6 +423,20 @@ data class UiBuilderEditorState(
    * design that already holds one keeps validating and rendering it.
    */
   val enabledPacks: Set<String> = emptySet(),
+  /**
+   * What a read of the project's component library last said about the components this design
+   * imported, or empty when nobody has asked.
+   *
+   * Held on the state rather than computed with the rest of the Issues panel because it is not a
+   * fact about the document: answering it means reading another host, and [problems] is a pure
+   * function of the document precisely so the panel can cache it against the document alone. So the
+   * host fetches, dispatches [UiBuilderEditorEvent.SetComponentDrift], and the panel appends
+   * [componentDriftProblems] of this to what the document itself says.
+   *
+   * Empty is "not asked", not "nothing drifted" — the panel shows neither, which is the same row
+   * count either way and the reason the distinction costs nothing here.
+   */
+  val componentDrift: List<ComponentDriftFinding> = emptyList(),
   val layerQuery: String = "",
   /**
    * Whether taps on the canvas drive the screen instead of selecting layers.
@@ -693,6 +707,14 @@ sealed interface UiBuilderEditorEvent {
 
   /** The packs the host remembered as on, applied when the design opens. */
   data class SetEnabledPacks(val packIds: Set<String>) : UiBuilderEditorEvent
+
+  /**
+   * What a read of the project's component library found, for the Issues panel to say.
+   *
+   * An event rather than a parameter of `problems` because the fetch is the host's — it needs a
+   * design id, a base URL and a token, none of which the reducer has or should acquire.
+   */
+  data class SetComponentDrift(val findings: List<ComponentDriftFinding>) : UiBuilderEditorEvent
 
   data class SelectNode(val nodeId: String) : UiBuilderEditorEvent
 
@@ -1285,6 +1307,11 @@ class UiBuilderEditorReducer(
       collapsedCatalogGroups = state.collapsedCatalogGroups,
       expandedCatalogComponents = state.expandedCatalogComponents,
       enabledPacks = state.enabledPacks,
+      // Carried, minus the rows this document has already answered. Every edit rebuilds the state,
+      // so dropping them all would lose the panel's drift rows on the next keystroke; keeping them
+      // all would keep saying a design has drifted from a symbol the arriving edit just
+      // re-imported.
+      componentDrift = state.componentDrift.stillDescribing(document),
       layerQuery = state.layerQuery,
       previewMode = state.previewMode,
       codePaneVisible = state.codePaneVisible,
@@ -1345,6 +1372,7 @@ class UiBuilderEditorReducer(
           enabledPacks =
             event.packIds.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null }
         )
+      is UiBuilderEditorEvent.SetComponentDrift -> state.copy(componentDrift = event.findings)
       is UiBuilderEditorEvent.ToggleCatalogComponent ->
         state.copy(
           expandedCatalogComponents = state.expandedCatalogComponents.toggled(event.componentId)
