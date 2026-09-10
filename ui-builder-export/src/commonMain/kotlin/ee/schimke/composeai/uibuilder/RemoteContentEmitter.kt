@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.TargetParameter
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -173,10 +174,24 @@ internal class RemoteContentEmitter(
   private var usesDp = false
   private var usesTextAlign = false
   private var usesRemoteBoolean = false
+  private var usesRemoteInt = false
   private var usesLambdaAction = false
 
   /** Callables the record-driven fallback wrote, so their imports are the ones it used. */
   private val usedComponentImports = mutableSetOf<String>()
+
+  /**
+   * The document state variables an emitted action writes to, as their declarations.
+   *
+   * A `valueChange` writes into a REMOTE mutable, so a design's `stateVariables` have to exist in
+   * the generated body before an action can name one. Collected while emitting and read back by the
+   * caller through [stateLocals], because which variables a widget needs is not known until its
+   * actions have been written — the same order [background] already works in.
+   */
+  private val stateWrites = linkedMapOf<String, String>()
+
+  /** `val <name> = rememberMutableRemote…(<initial>)` for each variable an action wrote to. */
+  fun stateLocals(): List<String> = stateWrites.values.toList()
 
   /** The `WearWidgetBrush` chain a container's background declares. */
   data class Background(
@@ -313,7 +328,11 @@ internal class RemoteContentEmitter(
 
   /** The node and its subtree, as indented source lines. */
   fun emit(nodeId: String, depth: Int): List<String> {
-    val node = document.nodes[nodeId] ?: return emptyList()
+    val raw = document.nodes[nodeId] ?: return emptyList()
+    val node = raw.withArguments(argumentScopes.lastOrNull()) ?: return emptyList()
+    node.component?.let { placement ->
+      return placement(node, placement, depth)
+    }
     val pad = INDENT.repeat(depth)
     return when (node.componentId) {
       "m3/text" -> (pad + text(node, pad)).split("\n")
@@ -357,6 +376,82 @@ internal class RemoteContentEmitter(
     }
   }
 
+  /**
+   * The arguments each enclosing placement supplied, innermost last.
+   *
+   * A design component's body reads `{"type":"binding","value":"<key>"}` and the placement supplies
+   * the key, so a body node means something different at each placement of it. Resolved where the
+   * node is FETCHED rather than where each property is read: `emit` is the one place that turns an
+   * id into a node, so substituting there is what makes every downstream reader — the text case,
+   * the record fallback, the modifier walk — see the resolved value without any of them knowing
+   * placements exist.
+   */
+  private val argumentScopes = ArrayDeque<JsonObject>()
+
+  /**
+   * A placed design component: its body, inlined, with the placement's arguments substituted.
+   *
+   * Inlined rather than emitted as a function, which is what the Compose lane does. A design
+   * component's body is ordinary catalog nodes, and this emitter can already write every one of
+   * them — whereas a `RemoteCustomComponent` hole would be actively wrong here: the host registers
+   * renderers by name, and nothing is registered under a design-local component key, so the widget
+   * would reserve the bounds and draw nothing.
+   *
+   * A pack component is a different thing wearing a similar shape — `<packId>/<name>`, whose
+   * picture comes from the native lane compiled against the served bundle — and it is not this: it
+   * has no body in this document to inline, so it falls through to the ordinary refusal.
+   */
+  private fun placement(node: UiBuilderNode, placement: JsonObject, depth: Int): List<String> {
+    val key = placement.plainString("componentKey")
+    val definition = key?.let { document.components[it] as? JsonObject }
+    val root = definition?.plainString("root")
+    if (key == null || root == null || root !in document.nodes) {
+      refusals +=
+        "`${node.id}` places `${key ?: "an unnamed component"}`, which this design does not define"
+      return emptyList()
+    }
+    // A component that places itself, directly or through another, would inline for ever. The
+    // depth is small on purpose: a design component nested three deep is a design nobody wrote by
+    // accident, and an unbounded walk turns a malformed document into a hang.
+    if (argumentScopes.size >= MAX_PLACEMENT_DEPTH) {
+      refusals +=
+        "`${node.id}` places `$key` more than $MAX_PLACEMENT_DEPTH deep, which is a component " +
+          "placing itself"
+      return emptyList()
+    }
+    argumentScopes.addLast(placement["arguments"] as? JsonObject ?: JsonObject(emptyMap()))
+    val body = emit(root, depth)
+    argumentScopes.removeLast()
+    return body
+  }
+
+  /**
+   * [this] with every `binding` property replaced by what the placement passed for it, or null when
+   * the placement passed nothing — which is a refusal rather than an empty value, because a body
+   * that reads a key nobody supplied is a component being placed wrongly.
+   */
+  private fun UiBuilderNode.withArguments(arguments: JsonObject?): UiBuilderNode? {
+    if (arguments == null || properties.isEmpty()) return this
+    var missing: String? = null
+    val resolved = properties.mapValues { (name, value) ->
+      val binding = (value as? JsonObject)?.takeIf { it.plainString("type") == "binding" }
+      if (binding == null) value
+      else {
+        val key = binding.plainString("value")
+        val supplied = key?.let { arguments[it] }
+        if (supplied == null) {
+          missing = "`$name` reads `${key ?: "an unnamed argument"}`"
+          value
+        } else supplied
+      }
+    }
+    missing?.let {
+      refusals += "the placed component's $it, which its placement does not supply"
+      return null
+    }
+    return if (resolved == properties) this else copy(properties = JsonObject(resolved))
+  }
+
   private fun refuseUnknown(node: UiBuilderNode): List<String> {
     refusals += "`${node.componentId}` has no Remote Compose counterpart this generator can write"
     return emptyList()
@@ -392,6 +487,28 @@ internal class RemoteContentEmitter(
    */
   private fun recordCall(node: UiBuilderNode, depth: Int): List<String>? {
     val record = components[node.componentId] ?: return null
+    // The guards `ComponentSnippets.callSite` applies before it looks at a single parameter, and
+    // for its reasons. A recovered signature is not a call site: `remote-m3/theme-specimen` has
+    // one and is not public, so writing the call from its parameters produced an import and an
+    // invocation of something a generated file cannot reach. Each of these is a property of the
+    // CALLABLE, which no design value can supply, so each refuses whatever the design says.
+    val inaccessible =
+      when {
+        !record.callableFromAnotherFile ->
+          "is not public or internal, so a generated file cannot call it"
+        record.overloadsCollided ->
+          "has overloads that collided under one id, so no single call site identifies one"
+        record.hasTypeParameters ->
+          "declares type parameters a call omitting defaulted arguments cannot infer"
+        record.hasContextReceivers -> "declares a context a generated widget cannot supply"
+        record.symbol.receiver != null ->
+          "is declared on ${record.symbol.receiver}, so a call needs that scope around it"
+        else -> null
+      }
+    if (inaccessible != null) {
+      refusals += "`${node.componentId}` $inaccessible"
+      return emptyList()
+    }
     if (!record.signatureKnown) {
       refusals +=
         "`${node.componentId}` has no recovered signature, so no call to it can be written"
@@ -445,7 +562,11 @@ internal class RemoteContentEmitter(
           parameter.name == MODIFIER_PARAMETER -> node.modifierExpression(pad)
           authored != null -> remoteValue(parameter, authored)
           parameter.hasDefault -> null
-          parameter.typeFqn == ACTION_FQN -> lambdaActionExpression()
+          parameter.typeFqn == ACTION_FQN -> actionExpression(node, parameter)
+          // Nullable and no default: optional to the design, mandatory to Kotlin. Omitting it
+          // does not compile and refusing it would reject a design that legitimately left it
+          // out, so the absence is written down as what it is.
+          parameter.nullable -> "null"
           else -> null
         }
       if (expression == null) {
@@ -486,16 +607,172 @@ internal class RemoteContentEmitter(
       headArguments.forEach { lines += "$pad$INDENT$it," }
       named.forEach { (name, ids) ->
         lines += "$pad$INDENT$name = {"
-        lines += ids.flatMap { emit(it, depth + 2) }
+        lines +=
+          inSlotScope(slotParameters.first { it.name == name }) {
+            ids.flatMap { emit(it, depth + 2) }
+          }
         lines += "$pad$INDENT},"
       }
       lines += if (trailingName == null) "$pad)" else "$pad)$OPENING_BRACE"
     }
     if (trailingName != null) {
-      lines += blocks.first { it.first == trailingName }.second.flatMap { emit(it, depth + 1) }
+      val slot = slotParameters.first { it.name == trailingName }
+      lines +=
+        inSlotScope(slot) {
+          blocks.first { it.first == trailingName }.second.flatMap { emit(it, depth + 1) }
+        }
       lines += "$pad}"
     }
     return lines
+  }
+
+  /**
+   * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing.
+   *
+   * Every action a document can carry is a state WRITE — `set`, `select` and `setText` assign,
+   * `toggle` negates — each naming a variable declared in `stateVariables`. Nothing in the model
+   * calls out to the host, so all of them are one `valueChange`, and the spellings are compiled in
+   * wear-m3-catalog's `RemoteActionVocabularyProbe` rather than guessed here.
+   *
+   * The event key is the parameter without its `on`: `onClick` reads `click`, which is what the
+   * Compose lane's `actionLambda("click", …)` reads for the same component.
+   *
+   * Four refusals, each because the alternative is a design that means something else:
+   * - **`selectOrClear`** assigns null, and `valueChange`'s second parameter is a non-null
+   *   `RemoteState<T>`. A design that clears a selection and one that sets it to a sentinel are
+   *   different designs, so this refuses rather than picking one.
+   * - **more than one action.** A handler runs its list in order and as a unit; a Remote `Action`
+   *   is a single write, and emitting the head would export a handler that does less than the
+   *   preview shows — which the Compose lane fixed for itself and is worth not repeating.
+   * - **a variable the document does not declare**, which would compile into a write to nothing.
+   * - **a `toggle` on anything but a boolean**, which is what `!` means and nothing else.
+   */
+  private fun actionExpression(node: UiBuilderNode, parameter: TargetParameter): String? {
+    val event = parameter.name.removePrefix("on").replaceFirstChar { it.lowercaseChar() }
+    val actions = (node.eventBindings[event] as? JsonArray).orEmpty()
+    if (actions.isEmpty()) return lambdaActionExpression()
+    if (actions.size > 1) {
+      refusals +=
+        "`${node.id}` runs ${actions.size} actions on `$event` and a Remote action is one write"
+      return null
+    }
+    val action = actions.single() as? JsonObject
+    val kind = action?.plainString("type")
+    val variable = action?.plainString("variable")
+    if (action == null || kind == null || variable == null) {
+      refusals += "the `$event` binding on `${node.id}` is not an action naming a variable"
+      return null
+    }
+    if (kind == "selectOrClear") {
+      refusals +=
+        "`${node.id}` clears `$variable` on `$event`, and a Remote value cannot be null — " +
+          "clearing a selection and setting it to a sentinel are different designs"
+      return null
+    }
+    val declared = document.stateVariables[variable] as? JsonObject
+    val valueType = declared?.plainString("valueType")
+    if (declared == null || valueType == null) {
+      refusals += "`${node.id}` writes `$variable` on `$event`, which the design does not declare"
+      return null
+    }
+    val target = variable.remoteIdentifier()
+    val written =
+      when (kind) {
+        "set",
+        "select",
+        "setText" -> remoteLiteral(valueType, action["value"])
+        "toggle" ->
+          if (valueType == "bool") "!$target"
+          else {
+            refusals +=
+              "`${node.id}` toggles `$variable` on `$event` and it is declared `$valueType`, " +
+                "which has no negation"
+            return null
+          }
+        else -> null
+      }
+    if (written == null) {
+      refusals +=
+        "`${node.id}` writes `$variable` on `$event` with `$kind`, which this generator " +
+          "cannot express as a Remote value"
+      return null
+    }
+    val factory = stateFactory(valueType)
+    if (factory == null) {
+      refusals += "`$variable` is declared `$valueType`, which has no Remote mutable"
+      return null
+    }
+    stateWrites.getOrPut(variable) {
+      "val $target = $factory(${remoteInitial(valueType, declared["initialValue"])})"
+    }
+    return "valueChange($target, $written)"
+  }
+
+  private fun stateFactory(valueType: String): String? =
+    when (valueType) {
+      "bool" -> "rememberMutableRemoteBoolean"
+      "int" -> "rememberMutableRemoteInt"
+      "float" -> "rememberMutableRemoteFloat"
+      "string" -> "rememberMutableRemoteString"
+      else -> null
+    }
+
+  /** The Kotlin literal a mutable's factory takes, which is a plain one and not a Remote value. */
+  private fun remoteInitial(valueType: String, initial: JsonElement?): String {
+    val primitive = initial as? JsonPrimitive
+    return when (valueType) {
+      "bool" -> (primitive?.booleanOrNull ?: false).toString()
+      "int" -> (primitive?.intOrNull ?: 0).toString()
+      "float" -> "${primitive?.floatOrNull ?: 0f}f"
+      else -> "\"${primitive?.contentOrNull.orEmpty().escaped()}\""
+    }
+  }
+
+  /** A design's action value as a Remote value of the variable's declared type. */
+  private fun remoteLiteral(valueType: String, value: JsonElement?): String? {
+    val primitive = value as? JsonPrimitive ?: return null
+    return when (valueType) {
+      "bool" ->
+        primitive.booleanOrNull?.let {
+          usesRemoteBoolean = true
+          "$it.rb"
+        }
+      "int" ->
+        primitive.intOrNull?.let {
+          usesRemoteInt = true
+          "$it.ri"
+        }
+      "float" ->
+        primitive.floatOrNull?.let {
+          usesRemoteFloat = true
+          "${it}f.rf"
+        }
+      "string" ->
+        primitive.contentOrNull?.let {
+          usesRemoteString = true
+          "\"${it.escaped()}\".rs"
+        }
+      else -> null
+    }
+  }
+
+  /**
+   * Emit a slot's children inside the scope its lambda gives them.
+   *
+   * `RemoteButton.content` is a `RemoteRowScope` lambda, so a child in it may carry `weight` — and
+   * `weightCall` reads [scope], which the hand-written row and column path sets and this one did
+   * not. A design whose button holds a weighted child was refused as "not in a row or column" while
+   * standing in exactly one. The receiver's simple name without its `Scope` suffix is the
+   * vocabulary the rest of this file already uses.
+   */
+  private fun <T> inSlotScope(slot: TargetParameter, body: () -> T): T {
+    val receiver = slot.composableSlotReceiver?.substringAfterLast('.')?.removeSuffix("Scope")
+    if (receiver == null) return body()
+    val enclosing = scope
+    scope = receiver
+    val result = body()
+    scope = enclosing
+    return result
   }
 
   private fun lambdaActionExpression(): String {
@@ -1182,6 +1459,14 @@ internal class RemoteContentEmitter(
     if (usesLambdaAction) {
       imports += "androidx.compose.remote.creation.compose.action.lambdaAction"
     }
+    if (stateWrites.isNotEmpty()) {
+      imports += "androidx.compose.remote.creation.compose.action.valueChange"
+      stateWrites.values.forEach { declaration ->
+        val factory = declaration.substringAfter("= ").substringBefore('(')
+        imports += "androidx.compose.remote.creation.compose.state.$factory"
+      }
+    }
+    if (usesRemoteInt) imports += "androidx.compose.remote.creation.compose.state.ri"
     imports += usedComponentImports
     if (usesAlignment) imports += "androidx.compose.remote.creation.compose.layout.RemoteAlignment"
     if (usesArrangement) {
@@ -1701,12 +1986,33 @@ private fun kotlinx.serialization.json.JsonElement.numberValue(): Float? =
 /** The parameter names and types the record-driven fallback in [RemoteContentEmitter] knows. */
 private const val MODIFIER_PARAMETER = "modifier"
 
+/** How deeply a design component may place another before this calls it a cycle. */
+private const val MAX_PLACEMENT_DEPTH = 4
+
 private const val ACTION_FQN = "androidx.compose.remote.creation.compose.action.Action"
 private const val REMOTE_STRING_FQN = "androidx.compose.remote.creation.compose.state.RemoteString"
 private const val REMOTE_BOOLEAN_FQN =
   "androidx.compose.remote.creation.compose.state.RemoteBoolean"
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
+
+/** A plain string field of an action or a state declaration — not the `{type, value}` wrapper. */
+private fun JsonObject.plainString(key: String): String? =
+  (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+
+/** A state variable's name as a Kotlin identifier the generated body can declare. */
+private fun String.remoteIdentifier(): String = buildString {
+  this@remoteIdentifier.forEachIndexed { index, character ->
+    append(
+      when {
+        character.isLetter() || character == '_' -> character
+        character.isDigit() && index > 0 -> character
+        else -> '_'
+      }
+    )
+  }
+}
+  .ifEmpty { "state" }
 
 internal fun kotlinx.serialization.json.JsonElement.boolOrNull(): Boolean? =
   (this as? JsonObject)?.get("value")?.jsonPrimitive?.booleanOrNull

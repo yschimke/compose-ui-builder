@@ -7,6 +7,7 @@ import ee.schimke.composeai.discovery.TargetParameter
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -98,7 +99,26 @@ class RemoteContentRecordFallbackTest {
     put("value", JsonPrimitive(text))
   }
 
-  private fun document(nodes: Map<String, UiBuilderNode>, root: String) =
+  private fun stateVariable(valueType: String, initial: JsonPrimitive) = buildJsonObject {
+    put("type", JsonPrimitive("value"))
+    put("valueType", JsonPrimitive(valueType))
+    put("nullable", JsonPrimitive(false))
+    put("initialValue", initial)
+    put("persistence", JsonPrimitive("preview"))
+  }
+
+  private fun action(type: String, variable: String, value: JsonPrimitive? = null) =
+    buildJsonObject {
+      put("type", JsonPrimitive(type))
+      put("variable", JsonPrimitive(variable))
+      if (value != null) put("value", value)
+    }
+
+  private fun document(
+    nodes: Map<String, UiBuilderNode>,
+    root: String,
+    state: JsonObject = JsonObject(emptyMap()),
+  ) =
     UiBuilderDocument(
       schema = "compose-ui-builder-document/v1-candidate",
       id = "record-fallback",
@@ -106,12 +126,16 @@ class RemoteContentRecordFallbackTest {
       revision = 1,
       catalogPin = JsonObject(emptyMap()),
       environment = JsonObject(emptyMap()),
-      stateVariables = JsonObject(emptyMap()),
+      stateVariables = state,
       roots = listOf(root),
       nodes = nodes,
     )
 
-  private fun widget(child: Map<String, UiBuilderNode>, childId: String) =
+  private fun widget(
+    child: Map<String, UiBuilderNode>,
+    childId: String,
+    state: JsonObject = JsonObject(emptyMap()),
+  ) =
     document(
       mapOf(
         "host" to
@@ -122,6 +146,7 @@ class RemoteContentRecordFallbackTest {
           )
       ) + child,
       root = "host",
+      state = state,
     )
 
   @Test
@@ -191,6 +216,330 @@ class RemoteContentRecordFallbackTest {
     assertTrue("RemoteButton(onClick = lambdaAction {}) {" in source, source)
     assertTrue("RemoteText(text = \"Go\".rs)" in source, source)
     assertTrue("import androidx.compose.remote.creation.compose.action.lambdaAction" in source)
+  }
+
+  /**
+   * An authored event binding is a `valueChange`, and the variable it writes is declared for it.
+   *
+   * Every action a document carries is a state write, so `hostAction` maps to nothing that exists
+   * and all of them are this. The spellings are compiled in wear-m3-catalog's
+   * `RemoteActionVocabularyProbe`; what is asserted here is that a design reaches them.
+   */
+  @Test
+  fun `an authored action writes the design's state`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            widget(
+              mapOf(
+                "button" to
+                  UiBuilderNode(
+                    id = "button",
+                    componentId = "remote-m3/remote-button",
+                    slots = mapOf("children" to listOf("label")),
+                    eventBindings =
+                      buildJsonObject {
+                        put("click", JsonArray(listOf(action("toggle", "expanded"))))
+                      },
+                  ),
+                "label" to
+                  UiBuilderNode(
+                    id = "label",
+                    componentId = "remote-m3/remote-text",
+                    properties = buildJsonObject { put("text", value("More")) },
+                  ),
+              ),
+              childId = "button",
+              state =
+                buildJsonObject { put("expanded", stateVariable("bool", JsonPrimitive(false))) },
+            ),
+            components =
+              mapOf(
+                "remote-m3/remote-button" to remoteButton,
+                "remote-m3/remote-text" to remoteText,
+              ),
+          )
+        )
+        .source
+
+    assertTrue("val expanded = rememberMutableRemoteBoolean(false)" in source, source)
+    assertTrue("RemoteButton(onClick = valueChange(expanded, !expanded)) {" in source, source)
+    assertTrue("import androidx.compose.remote.creation.compose.action.valueChange" in source)
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.state.rememberMutableRemoteBoolean" in
+        source,
+      source,
+    )
+    // The absent-binding default is gone from this widget: nothing here binds nothing.
+    assertTrue("lambdaAction" !in source, source)
+  }
+
+  /** An assignment carries the design's value as a Remote value of the declared type. */
+  @Test
+  fun `a set action assigns the value the design carries`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            widget(
+              mapOf(
+                "button" to
+                  UiBuilderNode(
+                    id = "button",
+                    componentId = "remote-m3/remote-button",
+                    slots = mapOf("children" to listOf("label")),
+                    eventBindings =
+                      buildJsonObject {
+                        put(
+                          "click",
+                          JsonArray(listOf(action("set", "page", JsonPrimitive(2)))),
+                        )
+                      },
+                  ),
+                "label" to
+                  UiBuilderNode(
+                    id = "label",
+                    componentId = "remote-m3/remote-text",
+                    properties = buildJsonObject { put("text", value("Next")) },
+                  ),
+              ),
+              childId = "button",
+              state = buildJsonObject { put("page", stateVariable("int", JsonPrimitive(0))) },
+            ),
+            components =
+              mapOf(
+                "remote-m3/remote-button" to remoteButton,
+                "remote-m3/remote-text" to remoteText,
+              ),
+          )
+        )
+        .source
+
+    assertTrue("val page = rememberMutableRemoteInt(0)" in source, source)
+    assertTrue("RemoteButton(onClick = valueChange(page, 2.ri)) {" in source, source)
+  }
+
+  /**
+   * `selectOrClear` assigns null, and a Remote value cannot be one. Refused by name rather than
+   * given a sentinel, because clearing a selection and setting it to zero are different designs.
+   */
+  @Test
+  fun `clearing a selection is refused by name`() {
+    val result =
+      WearWidgetCodeExporter.export(
+        widget(
+          mapOf(
+            "button" to
+              UiBuilderNode(
+                id = "button",
+                componentId = "remote-m3/remote-button",
+                slots = mapOf("children" to listOf("label")),
+                eventBindings =
+                  buildJsonObject {
+                    put(
+                      "click",
+                      JsonArray(listOf(action("selectOrClear", "chosen", JsonPrimitive("a")))),
+                    )
+                  },
+              ),
+            "label" to
+              UiBuilderNode(
+                id = "label",
+                componentId = "remote-m3/remote-text",
+                properties = buildJsonObject { put("text", value("Pick")) },
+              ),
+          ),
+          childId = "button",
+          state = buildJsonObject { put("chosen", stateVariable("string", JsonPrimitive(""))) },
+        ),
+        components =
+          mapOf(
+            "remote-m3/remote-button" to remoteButton,
+            "remote-m3/remote-text" to remoteText,
+          ),
+      )
+    val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
+    assertTrue(
+      refused.reasons.any { "clears `chosen`" in it && "cannot be null" in it },
+      refused.reasons.toString(),
+    )
+  }
+
+  /** A write to a variable the design never declared would compile into a write to nothing. */
+  @Test
+  fun `an action naming an undeclared variable is refused`() {
+    val result =
+      WearWidgetCodeExporter.export(
+        widget(
+          mapOf(
+            "button" to
+              UiBuilderNode(
+                id = "button",
+                componentId = "remote-m3/remote-button",
+                slots = mapOf("children" to listOf("label")),
+                eventBindings =
+                  buildJsonObject { put("click", JsonArray(listOf(action("toggle", "nowhere")))) },
+              ),
+            "label" to
+              UiBuilderNode(
+                id = "label",
+                componentId = "remote-m3/remote-text",
+                properties = buildJsonObject { put("text", value("Go")) },
+              ),
+          ),
+          childId = "button",
+        ),
+        components =
+          mapOf(
+            "remote-m3/remote-button" to remoteButton,
+            "remote-m3/remote-text" to remoteText,
+          ),
+      )
+    val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
+    assertTrue(
+      refused.reasons.any { "the design does not declare" in it },
+      refused.reasons.toString(),
+    )
+  }
+
+  private fun binding(key: String) = buildJsonObject {
+    put("type", JsonPrimitive("binding"))
+    put("value", JsonPrimitive(key))
+  }
+
+  /**
+   * A placed design component is its body, inlined, with the placement's arguments substituted.
+   *
+   * Inlined rather than emitted as a function, which is what the Compose lane does: a design
+   * component's body is ordinary catalog nodes and this emitter can write every one of them. A
+   * `RemoteCustomComponent` hole would be actively wrong — the host registers renderers by name and
+   * nothing is registered under a design-local key, so the widget would reserve bounds and draw
+   * nothing.
+   */
+  @Test
+  fun `a placed design component is inlined with its arguments`() {
+    val document =
+      widget(
+          mapOf(
+            "place" to
+              UiBuilderNode(
+                id = "place",
+                componentId = "design/component-instance",
+                component =
+                  buildJsonObject {
+                    put("componentKey", JsonPrimitive("headline"))
+                    put("arguments", buildJsonObject { put("caption", value("Next train")) })
+                  },
+              ),
+            "headline-root" to
+              UiBuilderNode(
+                id = "headline-root",
+                componentId = "remote-m3/remote-text",
+                properties = buildJsonObject { put("text", binding("caption")) },
+              ),
+          ),
+          childId = "place",
+        )
+        .copy(
+          components =
+            buildJsonObject {
+              put(
+                "headline",
+                buildJsonObject {
+                  put("name", JsonPrimitive("Headline"))
+                  put("root", JsonPrimitive("headline-root"))
+                },
+              )
+            }
+        )
+
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            document,
+            components = mapOf("remote-m3/remote-text" to remoteText),
+          )
+        )
+        .source
+
+    assertTrue("RemoteText(text = \"Next train\".rs)" in source, source)
+    // Inlined, so nothing names the component: no function, no hole, no key.
+    assertTrue("headline" !in source, source)
+  }
+
+  /** A body reading a key the placement does not supply is a component placed wrongly. */
+  @Test
+  fun `a binding the placement does not supply is refused`() {
+    val document =
+      widget(
+          mapOf(
+            "place" to
+              UiBuilderNode(
+                id = "place",
+                componentId = "design/component-instance",
+                component =
+                  buildJsonObject {
+                    put("componentKey", JsonPrimitive("headline"))
+                    put("arguments", JsonObject(emptyMap()))
+                  },
+              ),
+            "headline-root" to
+              UiBuilderNode(
+                id = "headline-root",
+                componentId = "remote-m3/remote-text",
+                properties = buildJsonObject { put("text", binding("caption")) },
+              ),
+          ),
+          childId = "place",
+        )
+        .copy(
+          components =
+            buildJsonObject {
+              put(
+                "headline",
+                buildJsonObject {
+                  put("name", JsonPrimitive("Headline"))
+                  put("root", JsonPrimitive("headline-root"))
+                },
+              )
+            }
+        )
+
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(
+          document,
+          components = mapOf("remote-m3/remote-text" to remoteText),
+        )
+      )
+    assertTrue(
+      refused.reasons.any { "reads `caption`" in it && "does not supply" in it },
+      refused.reasons.toString(),
+    )
+  }
+
+  /** A placement naming a component the design does not define refuses by name. */
+  @Test
+  fun `a placement of an undefined component is refused`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(
+          widget(
+            mapOf(
+              "place" to
+                UiBuilderNode(
+                  id = "place",
+                  componentId = "design/component-instance",
+                  component = buildJsonObject { put("componentKey", JsonPrimitive("missing")) },
+                )
+            ),
+            childId = "place",
+          )
+        )
+      )
+    assertTrue(
+      refused.reasons.any { "places `missing`" in it },
+      refused.reasons.toString(),
+    )
   }
 
   /**
