@@ -50,7 +50,7 @@ maven-publish = "0.37.0"
 # .screenSizes` here. 2.1.0 is the first release carrying `ScreenGenerator.Preview.devices`
 # (compose-ai-tools#5248), which is what turns a design's export-device set into one
 # `@Preview(device = …)` per id rather than a multipreview that discards which devices it named.
-composeai-tools = "2.5.0"
+composeai-tools = "2.7.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -102,6 +102,14 @@ composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-esca
 # it lived here only because it was written inside the `serve` package and came along when the server
 # was extracted. Same version ref as the rest of compose-ai-tools, because it now ships on that line.
 composeai-render-host = { module = "ee.schimke.composeai:render-host", version.ref = "composeai-tools" }
+# The Remote Compose JSON codec: authoring JSON -> `.rc` bytes, and `.rc` bytes -> the
+# operation-level document JSON the viewer's `GET /render/<id>.rc.json` lane serves. Layer 1 by
+# `REPOSITORY_LAYERS.md`'s test (behaviour, opens no socket), consumed here as a published
+# coordinate like `render-matrix` — this server never inflates a document any other way, so there is
+# exactly one `remote-core` on the classpath and no split-family skew for `RemoteComposePairing` to
+# report. Runs on a plain JVM: `remote-core` and `remote-creation-core` are `java-library`
+# publications, so nothing Android reaches this server through them.
+composeai-remotecompose-json = { module = "ee.schimke.composeai:remotecompose-json", version.ref = "composeai-tools" }
 # The wire contract this server speaks to a `compose-preview build-host --stdio` process, so it can
 # ask for local Gradle work without linking the Gradle Tooling API. Shape and framing only — that is
 # what lets `checkServeModuleBoundary` keep holding while the server gains the capability

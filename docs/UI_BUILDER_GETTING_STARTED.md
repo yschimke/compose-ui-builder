@@ -870,6 +870,16 @@ use, so what you author is what the watch draws. A row is greyed while a fetch i
 while no compatible slot is selected; a document that arrives and does not decode is refused with
 the fetched id named, and nothing is written.
 
+The same document is readable as text at **`render/<id>.rc.json`** — the operation stream the
+`.rc` bytes carry, projected into JSON. It is for a person, a `diff` in a review, or `jq` in a
+script, where the `.rc` lane is bytes for a player, and it answers the question a picture cannot:
+whether a sticker's padding changed or its render just antialiased differently. It is not the
+dialect you *write* — that is AndroidX's authoring JSON, and the two are not inverses; see
+[compose-ai-tools' `REMOTE_COMPOSE_JSON.md`](https://github.com/yschimke/compose-ai-tools/blob/main/docs/design/REMOTE_COMPOSE_JSON.md).
+A document this server can serve but cannot inflate — a bundle baked on a newer Remote Compose
+alpha than the server links — answers `422` naming the document, rather than failing the request
+as a server error.
+
 There is no drag handle on these rows, unlike the components above: the bytes are a network round
 trip away, so a drag would have to promise an insert on release that it cannot make. The insert
 resolves its slot when the bytes arrive rather than when the row is pressed, so moving the
