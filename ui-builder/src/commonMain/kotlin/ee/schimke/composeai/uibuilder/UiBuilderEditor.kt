@@ -425,6 +425,15 @@ fun UiBuilderEditor(
   initialPreviewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   /**
+   * What a read of the project's component library said about the components this design imported.
+   *
+   * Supplied by the host rather than fetched here, for the same reason the device presets are: it
+   * is a request against a design id with the host's own credential, and the reducer has neither.
+   * Empty (the default) is "nobody asked", which shows nothing — a host with no component library
+   * behind it gets the editor it had before this existed.
+   */
+  componentDrift: List<ComponentDriftFinding> = emptyList(),
+  /**
    * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
    * the JVM-only render catalog they come from. Empty (the default) simply hides the menu and
    * leaves the raw fields, so a host that has no catalog to hand still gets a working inspector.
@@ -866,6 +875,20 @@ fun UiBuilderEditor(
   fun focusEditor() {
     textInputFocused = false
     editorFocusRequester.requestFocus()
+  }
+  // The host's answer, into the state the Issues panel reads. An effect rather than a value folded
+  // in at composition because the fetch lands after mount, and the reducer's copy has to survive
+  // the document rebuilds that happen between then and the next fetch.
+  //
+  // Re-dispatched whenever the document's component declarations change, and that is not belt and
+  // braces. `stillDescribing` drops a finding the moment its component stops matching, which is
+  // right — but an edit that drops one is very often reversible, and undo restores the exact
+  // source the finding described. Without this the row would stay gone until a reload, because the
+  // host has no reason to fetch again. Re-handing the host's own unfiltered list lets the reducer
+  // decide afresh; anything still invalid is filtered out again, so this cannot resurrect a row
+  // that has stopped being true.
+  LaunchedEffect(componentDrift, state.document.components) {
+    dispatch(UiBuilderEditorEvent.SetComponentDrift(componentDrift))
   }
   // Following the address bar after the first paint, for the navigation the browser answers without
   // reloading: a fragment-only move between two thread links, or Back over one.
@@ -6966,6 +6989,11 @@ private fun ProblemsInspector(
   problems: List<EditorProblem>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
+  // Two lists, because the panel makes a claim about every row it shows. "What the export gate
+  // refuses" is true of a missing required property and false of a component whose library has
+  // moved — that design still exports, and always will, because it holds the body it drew. Mixing
+  // them told somebody their export would fail when it would not.
+  val (blocking, advisories) = problems.partition { it.blocking }
   if (problems.isEmpty()) {
     Text(
       "Nothing is blocking a Compose export of this design.",
@@ -6975,8 +7003,11 @@ private fun ProblemsInspector(
     return
   }
   Text(
-    "These are what the Compose export gate refuses, checked against the whole document rather " +
-      "than the last edit.",
+    if (blocking.isEmpty())
+      "Nothing is blocking a Compose export of this design. These are worth knowing about."
+    else
+      "These are what the Compose export gate refuses, checked against the whole document rather " +
+        "than the last edit.",
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.labelSmall,
   )
@@ -6985,31 +7016,56 @@ private fun ProblemsInspector(
   // and the drag, not the click underneath it.
   SelectionContainer {
     LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-      itemsIndexed(problems) { _, problem ->
-        Column(
-          Modifier.fillMaxWidth().padding(bottom = 12.dp).let { base ->
-            problem.nodeId?.let { id ->
-              base.clickable { dispatch(UiBuilderEditorEvent.SelectNode(id)) }
-            } ?: base
-          }
-        ) {
+      itemsIndexed(blocking) { _, problem -> ProblemRow(problem, blocking = true, dispatch) }
+      if (advisories.isNotEmpty() && blocking.isNotEmpty()) {
+        item {
           Text(
-            problem.code,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.labelMedium,
+            "Not blocking an export",
+            Modifier.padding(top = 4.dp, bottom = 10.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall,
           )
-          Text(problem.message, style = MaterialTheme.typography.bodySmall)
-          val where =
-            listOfNotNull(problem.nodeId, problem.componentId).joinToString(" · ").ifEmpty { null }
-          if (where != null) {
-            Text(
-              where,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              style = MaterialTheme.typography.labelSmall,
-            )
-          }
         }
       }
+      itemsIndexed(advisories) { _, problem -> ProblemRow(problem, blocking = false, dispatch) }
+    }
+  }
+}
+
+/**
+ * One row, coloured by whether it stops an export.
+ *
+ * The error colour is the panel's loudest signal and it should mean one thing. An advisory in it
+ * reads as a build failure at a glance, which is the misreading the split above exists to prevent.
+ */
+@Composable
+private fun ProblemRow(
+  problem: EditorProblem,
+  blocking: Boolean,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  Column(
+    Modifier.fillMaxWidth().padding(bottom = 12.dp).let { base ->
+      problem.nodeId?.let { id -> base.clickable { dispatch(UiBuilderEditorEvent.SelectNode(id)) } }
+        ?: base
+    }
+  ) {
+    Text(
+      problem.code,
+      color =
+        if (blocking) MaterialTheme.colorScheme.error
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelMedium,
+    )
+    Text(problem.message, style = MaterialTheme.typography.bodySmall)
+    val where =
+      listOfNotNull(problem.nodeId, problem.componentId).joinToString(" · ").ifEmpty { null }
+    if (where != null) {
+      Text(
+        where,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
     }
   }
 }

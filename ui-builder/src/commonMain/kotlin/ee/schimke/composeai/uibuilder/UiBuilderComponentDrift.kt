@@ -69,14 +69,23 @@ fun componentDriftProblems(findings: List<ComponentDriftFinding>): List<EditorPr
           // Separated from withdrawn on purpose: a branch that is unreachable today is not a
           // removal, and telling somebody their component was deleted when it was not is worse
           // than telling them it could not be read.
+          // Deliberately says nothing about what the project currently holds. The server returns
+          // this state for a host that has no coordinate for the system at all — a portable design
+          // opened somewhere its original project is not configured — and there it has read
+          // nothing, so it has no basis to claim the symbol is published, malformed, or anything
+          // else. Naming a malformed symbol would send its reader looking for one.
           ComponentDriftState.UNUSABLE ->
-            "${finding.system} publishes `${finding.componentId}` but it cannot be read right now, " +
-              "so whether this design has drifted from it is unknown"
+            "`${finding.componentId}` cannot be checked against ${finding.system} right now, so " +
+              "whether this design has drifted from it is unknown"
         }
       EditorProblem(
         code = "COMPONENT_${finding.state.name}",
         message = message,
         componentId = finding.paletteId,
+        // None of these stops an export. A design draws and exports the body it holds whatever the
+        // library has since done, which is the whole bargain — so listing them beside the things
+        // that actually refuse would tell somebody their export will fail when it will not.
+        blocking = false,
       )
     }
 
@@ -90,18 +99,44 @@ fun componentDriftProblems(findings: List<ComponentDriftFinding>): List<EditorPr
  * matches is worse than no row.
  *
  * So a finding survives exactly while the thing it was computed about is unchanged: the component
- * is still declared and still records the digest the finding was taken against. A re-import writes
- * a new digest and drops the row; a removal drops it too. Both are then re-answered by the host's
- * next fetch, which is the only thing that can say what the library holds *now*.
+ * is still declared and still records the same source — project, symbol id and digest alike. A
+ * re-import writes a different one and drops the row; a removal drops it too. Both are then
+ * re-answered by the host's next fetch, the only thing that can say what the library holds *now*.
  */
 fun List<ComponentDriftFinding>.stillDescribing(
   document: UiBuilderDocument
 ): List<ComponentDriftFinding> = filter { finding ->
-  document.components.importedDigestOf(finding.componentKey) == finding.importedDigest
+  document.components.importedSourceOf(finding.componentKey) ==
+    ImportedSource(finding.system, finding.componentId, finding.importedDigest)
 }
 
-private fun JsonObject.importedDigestOf(componentKey: String): String? = runCatching {
-  get(componentKey)?.jsonObject?.get("source")?.jsonObject?.get("digest")
+/** The whole of a component's recorded `source`, since any part of it moving invalidates a row. */
+private data class ImportedSource(
+  val system: String,
+  val componentId: String,
+  val digest: String,
+)
+
+/**
+ * The digest alone does not identify what a finding was about.
+ *
+ * The same key can be re-imported from a different project, or from a different symbol in the same
+ * project, whose published content happens to be identical — two projects sharing one component is
+ * the ordinary case rather than a contrived one. The digest still matches, and a row kept on that
+ * basis goes on naming a project the document no longer references.
+ */
+private fun JsonObject.importedSourceOf(componentKey: String): ImportedSource? {
+  val source =
+    runCatching { get(componentKey)?.jsonObject?.get("source")?.jsonObject }.getOrNull()
+      ?: return null
+  return ImportedSource(
+    system = source.text("system") ?: return null,
+    componentId = source.text("componentId") ?: return null,
+    digest = source.text("digest") ?: return null,
+  )
+}
+
+private fun JsonObject.text(key: String): String? = runCatching {
+  this[key]?.jsonPrimitive?.content
 }
   .getOrNull()
-  ?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }

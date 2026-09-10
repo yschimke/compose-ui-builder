@@ -76,7 +76,11 @@ class ComponentDriftProblemsTest {
     assertEquals("COMPONENT_WITHDRAWN", withdrawn.code)
     assertEquals("COMPONENT_UNUSABLE", unusable.code)
     assertTrue(withdrawn.message.contains("no longer publishes"), withdrawn.message)
-    assertTrue(unusable.message.contains("cannot be read right now"), unusable.message)
+    assertTrue(unusable.message.contains("cannot be checked against"), unusable.message)
+    // Says nothing about what the project currently holds. The server returns this state for a
+    // host with no coordinate for the system at all, where it has read nothing — claiming the
+    // symbol is published would send a reader looking for a malformed component that may not exist.
+    assertTrue(!unusable.message.contains("publishes"), unusable.message)
     assertTrue(unusable.message.contains("unknown"), unusable.message)
   }
 
@@ -147,7 +151,11 @@ class ComponentDriftProblemsTest {
       components = components,
     )
 
-  private fun declared(digest: String?): JsonObject =
+  private fun declared(
+    digest: String?,
+    system: String = "m3-catalog",
+    componentId: String = "contribution-cell",
+  ): JsonObject =
     Json.parseToJsonElement(
         """
         {
@@ -156,8 +164,8 @@ class ComponentDriftProblemsTest {
             "root": "n1"
             ${if (digest == null) "" else """,
             "source": {
-              "system": "m3-catalog",
-              "componentId": "contribution-cell",
+              "system": "$system",
+              "componentId": "$componentId",
               "digest": "$digest"
             }"""}
           }
@@ -186,6 +194,41 @@ class ComponentDriftProblemsTest {
       emptyList(),
       listOf(finding("contribution-cell", ComponentDriftState.DRIFTED))
         .stillDescribing(documentDeclaring(declared("sha256:reimported"))),
+    )
+  }
+
+  @Test
+  fun `drift rows are never presented as export blockers`() {
+    // The panel's copy is a claim about every row it shows — "what the Compose export gate
+    // refuses". A design exports the body it holds however far the library has moved, so a drift
+    // row listed among refusals tells somebody their export will fail when it will not.
+    val problems =
+      componentDriftProblems(
+        listOf(
+          finding("streak-badge", ComponentDriftState.DRIFTED),
+          finding("activity-row", ComponentDriftState.WITHDRAWN),
+          finding("badge-shelf", ComponentDriftState.UNUSABLE),
+        )
+      )
+    assertTrue(problems.none { it.blocking }, problems.toString())
+  }
+
+  @Test
+  fun `a key re-imported from elsewhere drops its row even when the content is identical`() {
+    // Two projects publishing the same component is ordinary, not contrived, so the digest alone
+    // does not identify what a finding was about: re-pointing a key at another project leaves the
+    // digest matching, and a row kept on that basis goes on naming a project this design no
+    // longer references.
+    val drifted = listOf(finding("contribution-cell", ComponentDriftState.DRIFTED))
+    assertEquals(
+      emptyList(),
+      drifted.stillDescribing(documentDeclaring(declared("sha256:imported", system = "wear-m3"))),
+    )
+    assertEquals(
+      emptyList(),
+      drifted.stillDescribing(
+        documentDeclaring(declared("sha256:imported", componentId = "contribution-tile"))
+      ),
     )
   }
 
