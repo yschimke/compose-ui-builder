@@ -1,12 +1,16 @@
 [
   {
     "field": "componentMenu.groupOrder",
-    "why": "Deliberate, and here the frozen side is not even a Remote Compose taxonomy: `remoteM3Catalog` never declares a componentMenu of its own, so it inherits the packaged Material 3 one wholesale — Scaffolds, Layout, Navigation, Text inputs — shelf names for a catalog of widget containers, shaders and typefaces. The policy states :remote-catalog's own @CatalogComponent(group = ...) vocabulary, led by Widget Container and Scaffold templates because a Remote design starts from a container and everything else goes inside one.",
+    "why": "Deliberate, and here the frozen side is not even a Remote Compose taxonomy: `remoteM3Catalog` never declares a componentMenu of its own, so it inherits the packaged Material 3 one wholesale — Scaffolds, Layout, Navigation, Text inputs — shelf names for a catalog of widget containers, shaders and typefaces. The policy states :remote-catalog's own @CatalogComponent(group = ...) vocabulary, led by Widget Container and Scaffold templates because a Remote design starts from a container and everything else goes inside one. RE-REVIEWED after yschimke/wear-m3-catalog#410: `Selection buttons`, `Edge-hugging buttons`, `Sliders` and `Steppers` are declared only in `src/snapshot/kotlin`, so the released-lane order never named them and under the snapshot lane the editor appended all four after every ordered group and sorted them alphabetically. Added in place — the three button families together after `Buttons`, then the two value pickers — so the stated order is the one a person sees.",
     "policy": [
       "Widget Container",
       "Scaffold templates",
       "Containment",
       "Buttons",
+      "Selection buttons",
+      "Edge-hugging buttons",
+      "Sliders",
+      "Steppers",
       "Text",
       "Iconography",
       "Communication",
@@ -83,5 +87,241 @@
       ]
     },
     "frozen": null
+  },
+  {
+    "field": "code",
+    "why": "Stated as null, deliberately. remote-catalog's own policy says why: a Remote widget is written in the creation DSL rather than in Compose, which is a `code.language` and a set of structural templates, and both arrive with the template engine rather than ahead of it. Until then the export prints call sites from the record. The frozen catalog states no code block either, so this records that the absence was read rather than overlooked.",
+    "policy": null,
+    "frozen": null
+  },
+  {
+    "field": "templates",
+    "why": "Empty for the same reason `code` is null — there is no template engine yet, so there are no structural templates to name. Recorded so a future non-empty value re-surfaces here for review.",
+    "policy": [],
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-app-card",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Containment"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-button-group",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-card",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Containment"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-checkbox-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-circular-progress-indicator",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-compact-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-curved-progress-indicator",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Communication"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-edge-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Edge-hugging buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-horizontal-page-indicator",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Communication"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-icon",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here. RE-REVIEWED: it was accepted on `Buttons` and is now on `Containment`, which is the same one-id-per-symbol trade landing somewhere else. The walk now follows a singleton lambda held by another singleton lambda (yschimke/compose-ai-tools#5354), so previews that stopped at a frame now reach `RemoteIcon`, and the sorted-first catalog id that names its shelf changed with them. Neither shelf is where a person would look — this catalog declares an `Iconography` shelf and nothing is on it — and `@BuilderComponent(group = …)` on the declaring sticker is the sanctioned fix, tracked rather than done here because it is a catalog decision and not a transcription.",
+    "policy": {
+      "group": "Containment"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-icon-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-linear-progress-indicator",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Communication"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-outlined-card",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Containment"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-radio-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-slider",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Sliders"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-split-checkbox-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-split-radio-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-split-switch-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-stepper",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Steppers"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-sticker",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Containment"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-switch-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-text",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Containment"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-text-button",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Communication"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-title-card",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Containment"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-vertical-page-indicator",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Communication"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/theme-specimen",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "policy": {
+      "group": "Theme"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.remote-m3/lottie",
+    "why": "NOT deliberate — a stated cutover blocker, recorded so this gate can run strict while the loss stays asserted. The frozen shelf carries `remote-m3/lottie` on Content and the published catalog cannot offer it: it is an asset player rather than a Remote Compose component call, so no record entry exists, and `remote-m3/` is not one of the donor namespaces (`layout/`, `shape/`, `asset/`, `remote-compose/`) that ProductionUiBuilderRuntime unions back in. It is one of five the swap loses and the only one of those five that RemoteContentEmitter can actually write. Tracked component by component in PublishedRemoteM3CatalogEquivalenceTest.knownAbsent.",
+    "policy": null,
+    "frozen": {
+      "group": "Content"
+    }
   }
 ]

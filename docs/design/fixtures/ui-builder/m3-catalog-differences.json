@@ -1,15 +1,946 @@
 [
   {
+    "field": "code",
+    "why": "The frozen catalog states no `code` block and m3-catalog states none either — the generator writes the key as null rather than omitting it. Reviewed as the absence it looks like: this catalog's screens are written by the record-driven generator from the component record, which is the default and needs no strategy stated. A catalog that later declares one is a change to how its screens are emitted and should reach this list as a value, not as a null.",
+    "policy": null,
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/app-bar-with-search",
+    "why": "m3-catalog publishes `m3/app-bar-with-search` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Top app bar`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Top app bar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/assist-chip",
+    "why": "m3-catalog publishes `m3/assist-chip` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Chips`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/badge",
+    "why": "m3-catalog publishes `m3/badge` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Badges`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Badges"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/bottom-app-bar",
+    "why": "m3-catalog publishes `m3/bottom-app-bar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Bottom app bar`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Bottom app bar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/button",
+    "why": "Same place, finer name: the catalog files `m3/button` on `Buttons`, which is a shelf inside its own `Actions` section, and `Actions` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen entry also carries `variantProperty: style`, which the catalog does not: the frozen shelf collapses the variants into one component with a property, and m3-catalog publishes them as separate components — one record per symbol, which is what makes its id 1:1 with a callable.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": {
+      "group": "Actions",
+      "variantProperty": "style"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/card",
+    "why": "Same place, finer name: the catalog files `m3/card` on `Cards`, which is a shelf inside its own `Containment` section, and `Containment` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen entry also carries `variantProperty: variant`, which the catalog does not: the frozen shelf collapses the variants into one component with a property, and m3-catalog publishes them as separate components — one record per symbol, which is what makes its id 1:1 with a callable.",
+    "policy": {
+      "group": "Cards"
+    },
+    "frozen": {
+      "group": "Containment",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/center-aligned-top-app-bar",
+    "why": "Same place, finer name: the catalog files `m3/center-aligned-top-app-bar` on `Top app bar`, which is a shelf inside its own `Navigation` section, and `Navigation` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Top app bar"
+    },
+    "frozen": {
+      "group": "Navigation"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/centered-track",
+    "why": "m3-catalog publishes `m3/centered-track` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Sliders`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Sliders"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/checkbox",
+    "why": "Same place, finer name: the catalog files `m3/checkbox` on `Checkbox`, which is a shelf inside its own `Selection` section, and `Selection` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Checkbox"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/circular-progress-indicator",
+    "why": "m3-catalog publishes `m3/circular-progress-indicator` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Progress indicators`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Progress indicators"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/circular-wavy-progress-indicator",
+    "why": "m3-catalog publishes `m3/circular-wavy-progress-indicator` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Progress indicators`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Progress indicators"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/contained-loading-indicator",
+    "why": "m3-catalog publishes `m3/contained-loading-indicator` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Loading indicator`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Loading indicator"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/current-scheme",
+    "why": "m3-catalog publishes `m3/current-scheme` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Color`, inside this catalog's `Styles` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Color"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/date-picker",
+    "why": "Same place, finer name: the catalog files `m3/date-picker` on `Date pickers`, which is a shelf inside its own `Selection` section, and `Selection` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen entry also carries `variantProperty: mode`, which the catalog does not: the frozen shelf collapses the variants into one component with a property, and m3-catalog publishes them as separate components — one record per symbol, which is what makes its id 1:1 with a callable.",
+    "policy": {
+      "group": "Date pickers"
+    },
+    "frozen": {
+      "group": "Selection",
+      "variantProperty": "mode"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/date-picker-dialog",
+    "why": "m3-catalog publishes `m3/date-picker-dialog` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Date pickers`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Date pickers"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/date-range-picker",
+    "why": "m3-catalog publishes `m3/date-range-picker` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Date pickers`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Date pickers"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/dialog",
+    "why": "Same place, finer name: the catalog files `m3/dialog` on `Dialogs`, which is a shelf inside its own `Containment` section, and `Containment` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Dialogs"
+    },
+    "frozen": {
+      "group": "Containment"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/docked-search-bar",
+    "why": "m3-catalog publishes `m3/docked-search-bar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Search`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Search"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-assist-chip",
+    "why": "m3-catalog publishes `m3/elevated-assist-chip` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Chips`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-button",
+    "why": "m3-catalog publishes `m3/elevated-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-card",
+    "why": "m3-catalog publishes `m3/elevated-card` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Cards`, inside this catalog's `Containment` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Cards"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-filter-chip",
+    "why": "m3-catalog publishes `m3/elevated-filter-chip` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Chips`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-leading-button",
+    "why": "m3-catalog publishes `m3/elevated-leading-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-suggestion-chip",
+    "why": "m3-catalog publishes `m3/elevated-suggestion-chip` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Chips`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-toggle-button",
+    "why": "m3-catalog publishes `m3/elevated-toggle-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Toggle buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Toggle buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/elevated-trailing-button",
+    "why": "m3-catalog publishes `m3/elevated-trailing-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/extended-floating-action-button",
+    "why": "m3-catalog publishes `m3/extended-floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/filled-icon-button",
+    "why": "m3-catalog publishes `m3/filled-icon-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Icon buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Icon buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/filled-tonal-button",
+    "why": "m3-catalog publishes `m3/filled-tonal-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/filled-tonal-icon-button",
+    "why": "m3-catalog publishes `m3/filled-tonal-icon-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Icon buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Icon buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/filter-chip",
+    "why": "Same place, finer name: the catalog files `m3/filter-chip` on `Chips`, which is a shelf inside its own `Selection` section, and `Selection` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/floating-action-button",
+    "why": "m3-catalog publishes `m3/floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/horizontal-centered-hero-carousel",
+    "why": "m3-catalog publishes `m3/horizontal-centered-hero-carousel` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Carousel`, inside this catalog's `Containment` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Carousel"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/horizontal-divider",
+    "why": "Same place, finer name: the catalog files `m3/horizontal-divider` on `Divider`, which is a shelf inside its own `Containment` section, and `Containment` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Divider"
+    },
+    "frozen": {
+      "group": "Containment"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/horizontal-floating-toolbar",
+    "why": "Same place, finer name: the catalog files `m3/horizontal-floating-toolbar` on `Toolbars`, which is a shelf inside its own `Actions` section, and `Actions` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Toolbars"
+    },
+    "frozen": {
+      "group": "Actions"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/horizontal-multi-browse-carousel",
+    "why": "m3-catalog publishes `m3/horizontal-multi-browse-carousel` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Carousel`, inside this catalog's `Containment` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Carousel"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/horizontal-uncontained-carousel",
+    "why": "m3-catalog publishes `m3/horizontal-uncontained-carousel` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Carousel`, inside this catalog's `Containment` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Carousel"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/icon",
+    "why": "The catalog files `m3/icon` on `Bottom app bar` (its `Navigation` section) and the frozen catalog on `Content`, and those are not the same place. Reviewed and left as the catalog states it — where a component belongs on m3-catalog's own shelves is m3-catalog's call, and PublishedGeneratedM3CatalogEquivalenceTest pins the four nobody has chosen.",
+    "policy": {
+      "group": "Bottom app bar"
+    },
+    "frozen": {
+      "group": "Content"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/icon-button",
+    "why": "Same place, finer name: the catalog files `m3/icon-button` on `Icon buttons`, which is a shelf inside its own `Actions` section, and `Actions` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen entry also carries `variantProperty: variant`, which the catalog does not: the frozen shelf collapses the variants into one component with a property, and m3-catalog publishes them as separate components — one record per symbol, which is what makes its id 1:1 with a callable.",
+    "policy": {
+      "group": "Icon buttons"
+    },
+    "frozen": {
+      "group": "Actions",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/input-chip",
+    "why": "m3-catalog publishes `m3/input-chip` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Chips`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/large-extended-floating-action-button",
+    "why": "m3-catalog publishes `m3/large-extended-floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/large-floating-action-button",
+    "why": "m3-catalog publishes `m3/large-floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/large-top-app-bar",
+    "why": "m3-catalog publishes `m3/large-top-app-bar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Top app bar`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Top app bar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/leading-button",
+    "why": "m3-catalog publishes `m3/leading-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/linear-wavy-progress-indicator",
+    "why": "m3-catalog publishes `m3/linear-wavy-progress-indicator` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Progress indicators`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Progress indicators"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/list-item",
+    "why": "Same place, finer name: the catalog files `m3/list-item` on `Lists`, which is a shelf inside its own `Containment` section, and `Containment` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Lists"
+    },
+    "frozen": {
+      "group": "Containment"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/loading-indicator",
+    "why": "m3-catalog publishes `m3/loading-indicator` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Loading indicator`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Loading indicator"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/material-expressive-theme",
+    "why": "m3-catalog publishes `m3/material-expressive-theme` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Badges`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Badges"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/medium-extended-floating-action-button",
+    "why": "m3-catalog publishes `m3/medium-extended-floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/medium-floating-action-button",
+    "why": "m3-catalog publishes `m3/medium-floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/medium-top-app-bar",
+    "why": "m3-catalog publishes `m3/medium-top-app-bar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Top app bar`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Top app bar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/multi-choice-segmented-button-row",
+    "why": "m3-catalog publishes `m3/multi-choice-segmented-button-row` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Segmented buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Segmented buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/navigation-rail",
+    "why": "m3-catalog publishes `m3/navigation-rail` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Navigation rail`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Navigation rail"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/navigation-rail-item",
+    "why": "m3-catalog publishes `m3/navigation-rail-item` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Navigation rail`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Navigation rail"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/outlined-button",
+    "why": "m3-catalog publishes `m3/outlined-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/outlined-card",
+    "why": "m3-catalog publishes `m3/outlined-card` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Cards`, inside this catalog's `Containment` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Cards"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/outlined-icon-button",
+    "why": "m3-catalog publishes `m3/outlined-icon-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Icon buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Icon buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/outlined-leading-button",
+    "why": "m3-catalog publishes `m3/outlined-leading-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/outlined-text-field",
+    "why": "m3-catalog publishes `m3/outlined-text-field` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Text fields`, inside this catalog's `Text inputs` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Text fields"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/outlined-toggle-button",
+    "why": "m3-catalog publishes `m3/outlined-toggle-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Toggle buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Toggle buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/outlined-trailing-button",
+    "why": "m3-catalog publishes `m3/outlined-trailing-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/primary-scrollable-tab-row",
+    "why": "m3-catalog publishes `m3/primary-scrollable-tab-row` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Tabs`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Tabs"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/primary-tab-row",
+    "why": "Same place, finer name: the catalog files `m3/primary-tab-row` on `Tabs`, which is a shelf inside its own `Navigation` section, and `Navigation` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Tabs"
+    },
+    "frozen": {
+      "group": "Navigation"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/progress-indicator",
+    "why": "Same place, finer name: the catalog files `m3/progress-indicator` on `Progress indicators`, which is a shelf inside its own `Communication` section, and `Communication` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen entry also carries `variantProperty: variant`, which the catalog does not: the frozen shelf collapses the variants into one component with a property, and m3-catalog publishes them as separate components — one record per symbol, which is what makes its id 1:1 with a callable.",
+    "policy": {
+      "group": "Progress indicators"
+    },
+    "frozen": {
+      "group": "Communication",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/provide-text-style",
+    "why": "m3-catalog publishes `m3/provide-text-style` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Typography`, inside this catalog's `Styles` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Typography"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/radio-button",
+    "why": "Same place, finer name: the catalog files `m3/radio-button` on `Radio button`, which is a shelf inside its own `Selection` section, and `Selection` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Radio button"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/range-slider",
+    "why": "m3-catalog publishes `m3/range-slider` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Sliders`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Sliders"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/search-bar",
+    "why": "Same place, finer name: the catalog files `m3/search-bar` on `Search`, which is a shelf inside its own `Navigation` section, and `Navigation` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Search"
+    },
+    "frozen": {
+      "group": "Navigation"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/search-input-field",
+    "why": "Same place, finer name: the catalog files `m3/search-input-field` on `Search`, which is a shelf inside its own `Navigation` section, and `Navigation` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Search"
+    },
+    "frozen": {
+      "group": "Navigation"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/secondary-scrollable-tab-row",
+    "why": "m3-catalog publishes `m3/secondary-scrollable-tab-row` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Tabs`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Tabs"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/secondary-tab-row",
+    "why": "m3-catalog publishes `m3/secondary-tab-row` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Tabs`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Tabs"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/segmented-button",
+    "why": "m3-catalog publishes `m3/segmented-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Segmented buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Segmented buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/short-navigation-bar",
+    "why": "m3-catalog publishes `m3/short-navigation-bar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Navigation bar`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Navigation bar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/short-navigation-bar-item",
+    "why": "m3-catalog publishes `m3/short-navigation-bar-item` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Navigation bar`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Navigation bar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/single-choice-segmented-button-row",
+    "why": "m3-catalog publishes `m3/single-choice-segmented-button-row` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Segmented buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Segmented buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/slider",
+    "why": "Same place, finer name: the catalog files `m3/slider` on `Sliders`, which is a shelf inside its own `Selection` section, and `Selection` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Sliders"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/small-extended-floating-action-button",
+    "why": "m3-catalog publishes `m3/small-extended-floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/small-floating-action-button",
+    "why": "m3-catalog publishes `m3/small-floating-action-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `FAB`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "FAB"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/snackbar",
+    "why": "m3-catalog publishes `m3/snackbar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Snackbar`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Snackbar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/snackbar-host",
+    "why": "The catalog states no shelf for `m3/snackbar-host` because it publishes no such component. For this one that is deliberate rather than a gap: there is no SnackbarHost preview, m3-catalog's Snackbar.kt calling the host a dispatcher and composing snackbars directly. Asserted absent with that reason in PublishedGeneratedM3CatalogEquivalenceTest.knownAbsent.",
+    "policy": null,
+    "frozen": {
+      "group": "Communication"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/split-button-layout",
+    "why": "m3-catalog publishes `m3/split-button-layout` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/sticker",
+    "why": "m3-catalog publishes `m3/sticker` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Badges`, inside this catalog's `Communication` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Badges"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/suggestion-chip",
+    "why": "m3-catalog publishes `m3/suggestion-chip` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Chips`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/surface",
+    "why": "The catalog files `m3/surface` on `Chips` (its `Selection` section) and the frozen catalog on `Layout`, and those are not the same place. Reviewed and left as the catalog states it — where a component belongs on m3-catalog's own shelves is m3-catalog's call, and PublishedGeneratedM3CatalogEquivalenceTest pins the four nobody has chosen.",
+    "policy": {
+      "group": "Chips"
+    },
+    "frozen": {
+      "group": "Layout"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/switch",
+    "why": "Same place, finer name: the catalog files `m3/switch` on `Switch`, which is a shelf inside its own `Selection` section, and `Selection` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Switch"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/tab",
+    "why": "Same place, finer name: the catalog files `m3/tab` on `Tabs`, which is a shelf inside its own `Navigation` section, and `Navigation` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf.",
+    "policy": {
+      "group": "Tabs"
+    },
+    "frozen": {
+      "group": "Navigation"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/text",
+    "why": "The catalog files `m3/text` on `Typography` (its `Styles` section) and the frozen catalog on `Content`, and those are not the same place. Reviewed and left as the catalog states it — where a component belongs on m3-catalog's own shelves is m3-catalog's call, and PublishedGeneratedM3CatalogEquivalenceTest pins the four nobody has chosen.",
+    "policy": {
+      "group": "Typography"
+    },
+    "frozen": {
+      "group": "Content"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/text-button",
+    "why": "m3-catalog publishes `m3/text-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/text-field",
+    "why": "Same place, finer name: the catalog files `m3/text-field` on `Text fields`, which is a shelf inside its own `Text inputs` section, and `Text inputs` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen entry also carries `variantProperty: variant`, which the catalog does not: the frozen shelf collapses the variants into one component with a property, and m3-catalog publishes them as separate components — one record per symbol, which is what makes its id 1:1 with a callable.",
+    "policy": {
+      "group": "Text fields"
+    },
+    "frozen": {
+      "group": "Text inputs",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/thumb",
+    "why": "m3-catalog publishes `m3/thumb` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Sliders`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Sliders"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/time-input",
+    "why": "m3-catalog publishes `m3/time-input` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Time pickers`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Time pickers"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/time-picker",
+    "why": "Same place, finer name: the catalog files `m3/time-picker` on `Time pickers`, which is a shelf inside its own `Selection` section, and `Selection` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen entry also carries `variantProperty: mode`, which the catalog does not: the frozen shelf collapses the variants into one component with a property, and m3-catalog publishes them as separate components — one record per symbol, which is what makes its id 1:1 with a callable.",
+    "policy": {
+      "group": "Time pickers"
+    },
+    "frozen": {
+      "group": "Selection",
+      "variantProperty": "mode"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/toggle-button",
+    "why": "m3-catalog publishes `m3/toggle-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Toggle buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Toggle buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/tonal-leading-button",
+    "why": "m3-catalog publishes `m3/tonal-leading-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/tonal-toggle-button",
+    "why": "m3-catalog publishes `m3/tonal-toggle-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Toggle buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Toggle buttons"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/tonal-trailing-button",
+    "why": "m3-catalog publishes `m3/tonal-trailing-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/top-app-bar",
+    "why": "m3-catalog publishes `m3/top-app-bar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Top app bar`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Top app bar"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/track",
+    "why": "m3-catalog publishes `m3/track` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Sliders`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Sliders"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/trailing-button",
+    "why": "m3-catalog publishes `m3/trailing-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Split button`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Split button"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/tri-state-checkbox",
+    "why": "m3-catalog publishes `m3/tri-state-checkbox` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Checkbox`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Checkbox"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/vertical-divider",
+    "why": "m3-catalog publishes `m3/vertical-divider` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Divider`, inside this catalog's `Containment` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Divider"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/vertical-floating-toolbar",
+    "why": "m3-catalog publishes `m3/vertical-floating-toolbar` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Toolbars`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Toolbars"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/vertical-slider",
+    "why": "m3-catalog publishes `m3/vertical-slider` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Sliders`, inside this catalog's `Selection` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Sliders"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/wide-navigation-rail",
+    "why": "m3-catalog publishes `m3/wide-navigation-rail` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Navigation rail`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Navigation rail"
+    },
+    "frozen": null
+  },
+  {
+    "field": "componentMenu.components.m3/wide-navigation-rail-item",
+    "why": "m3-catalog publishes `m3/wide-navigation-rail-item` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Navigation rail`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "policy": {
+      "group": "Navigation rail"
+    },
+    "frozen": null
+  },
+  {
     "field": "componentMenu.groupOrder",
-    "why": "Deliberate, and narrower than it looks: the policy's seven shelves are the frozen eleven minus Scaffolds, Layout, Content and Embedded, in the same relative order. Those four hold `layout/*`, `asset/image`, `shape/*` and `remote-compose/*` — components of the BUILDER, not of yschimke/m3-catalog, which renders no Column and ships no Remote Compose embed. A catalog cannot state a shelf order for components it does not publish, and the builder supplies its own builtins' shelves as it always has. Every group the catalog does publish keeps its place.",
+    "why": "Shelf names, where the frozen catalog holds section words. m3-catalog files a component under its `@file:CatalogGroup(name = …)` shelf — `Buttons`, `Cards`, `Time pickers` — and the frozen Jetcaster transcription groups by the eleven broader words those shelves sit inside. An earlier version of this list held the seven section words instead, which named none of the twenty-nine shelves the catalog actually uses: an unnamed group sorts alphabetically after every named one, so the stated order governed nothing and the panel a person saw was A-to-Z. The four frozen words with no entry here — Scaffolds, Layout, Content, Embedded — hold `layout/*`, `asset/image`, `shape/*` and `remote-compose/*`, components of the BUILDER, which supplies their shelves as it always has. Five shelves listed have no component today and stay listed so the day one composes it lands where it belongs; PublishedGeneratedM3CatalogEquivalenceTest pins which five.\n\nThe eighty-five components below that the frozen catalog carries no entry for are the same difference one level down, and UI_BUILDER_CATALOG_CONTRACT.md phase 3 settles their shape in advance: the frozen m3-catalog capability document is a hand transcription of the packaged Jetcaster catalog, unrelated to yschimke/m3-catalog, and \"the two describe different component sets on purpose (fifty-nine rendered components against twenty-five transcribed ones), so here the reviewed difference list is the point and a byte-equal result would be the surprising outcome\". Measured, it is eighty-five against twenty-five, and PublishedGeneratedM3CatalogEquivalenceTest pins the set.",
     "policy": [
-      "Navigation",
-      "Actions",
-      "Selection",
-      "Text inputs",
-      "Containment",
-      "Communication",
-      "Styles"
+      "Bottom app bar",
+      "Navigation bar",
+      "Navigation rail",
+      "Search",
+      "Tabs",
+      "Top app bar",
+      "Buttons",
+      "FAB",
+      "Icon buttons",
+      "Segmented buttons",
+      "Split button",
+      "Toggle buttons",
+      "Toolbars",
+      "Checkbox",
+      "Chips",
+      "Date pickers",
+      "Menus",
+      "Radio button",
+      "Sliders",
+      "Switch",
+      "Time pickers",
+      "Text fields",
+      "Bottom sheets",
+      "Cards",
+      "Carousel",
+      "Dialogs",
+      "Divider",
+      "Lists",
+      "Side sheets",
+      "Badges",
+      "Loading indicator",
+      "Progress indicators",
+      "Snackbar",
+      "Tooltips",
+      "Color",
+      "Shapes",
+      "Typography"
     ],
     "frozen": [
       "Scaffolds",
@@ -26,12 +957,6 @@
     ]
   },
   {
-    "field": "platformLabel",
-    "why": "The frozen catalog carries no label. 'Mobile' is the title-cased platform word and the one the chooser shows today, so this states the existing behaviour rather than changing it.",
-    "policy": "Mobile",
-    "frozen": null
-  },
-  {
     "field": "frame.adapter",
     "why": "The frozen catalog names no adapter; the server selects the rectangular phone frame for the packaged Material 3 catalog in code. `frame/rect` with `seedDevice: id:pixel_6` is that same selection stated as data, reviewed against the renderer's default branch.",
     "policy": "frame/rect",
@@ -41,6 +966,12 @@
     "field": "frame.seedDevice",
     "why": "Already reviewed in prose by the `frame.adapter` entry beside it — which says `frame/rect` with `seedDevice: id:pixel_6` — and now pinned as a value, because a fact argued in somebody else's `why` is not a fact anything checks. m3-catalog's breakpoints carry no `device`, so the documented default (the first breakpoint's) cannot supply one and the catalog states it outright. `id:pixel_6` is what this build already opens a new mobile screen on: `UiBuilderTemplates` seeds that frame deliberately, and names it over a newer id because four catalog entries share its geometry, so the frame stays matched as the device catalog grows.",
     "policy": "id:pixel_6",
+    "frozen": null
+  },
+  {
+    "field": "platformLabel",
+    "why": "The frozen catalog carries no label. 'Mobile' is the title-cased platform word and the one the chooser shows today, so this states the existing behaviour rather than changing it.",
+    "policy": "Mobile",
     "frozen": null
   },
   {
@@ -57,6 +988,12 @@
         "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric — the same lane that produces this catalog's stickers."
       }
     },
+    "frozen": null
+  },
+  {
+    "field": "templates",
+    "why": "No catalog declares a template yet — UI_BUILDER_CATALOG_CONTRACT.md phase 3a says the seed documents have to be frozen in this repository before one can, and none is. An empty list is therefore the correct statement and not a gap; the entry exists so that the first template m3-catalog publishes shows up here as a difference somebody reads.",
+    "policy": [],
     "frozen": null
   }
 ]

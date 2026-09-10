@@ -1,0 +1,4496 @@
+{
+  "$comment": "GENERATED, verbatim. Captured from `:catalog:composePreviewDiscover` in yschimke/m3-catalog with the plugin from yschimke/compose-ai-tools#5354 — the same way remote-m3-published-v1.json was captured, and the opposite of m3-catalog-published-v1.json beside it, which is hand-built and says so. Do not edit it to keep a test green: an edit here is a claim about what the catalog publishes, and the only way to make that claim true is to change the catalog and re-capture. Paired with m3-catalog-generated-record-v1.json from the same run.",
+  "schema": "compose-ui-builder-catalog/v1",
+  "catalog": {
+    "id": "m3-catalog",
+    "title": "Material 3 Design Kit",
+    "platform": "mobile",
+    "platformLabel": "Mobile",
+    "module": "catalog",
+    "variant": "debug"
+  },
+  "record": {
+    "file": "components.json",
+    "schemaVersion": 2,
+    "components": 110
+  },
+  "statusSemantics": {
+    "platform": "mobile",
+    "platformLabel": "Mobile",
+    "componentIdPrefix": "m3/",
+    "previewSurfaces": {
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "The builder's canvas is Compose Multiplatform for Wasm and links its own Material 3, not this catalog's Android artifacts. For the components it has an adapter for the picture is close; where it has none it draws a placeholder. Layout, spacing and typography are near enough to design with and are not what ships."
+      },
+      "native": {
+        "fidelity": "authoritative",
+        "backend": "android",
+        "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric — the same lane that produces this catalog's stickers."
+      }
+    },
+    "componentMenu": {
+      "groupOrder": [
+        "Bottom app bar",
+        "Navigation bar",
+        "Navigation rail",
+        "Search",
+        "Tabs",
+        "Top app bar",
+        "Buttons",
+        "FAB",
+        "Icon buttons",
+        "Segmented buttons",
+        "Split button",
+        "Toggle buttons",
+        "Toolbars",
+        "Checkbox",
+        "Chips",
+        "Date pickers",
+        "Menus",
+        "Radio button",
+        "Sliders",
+        "Switch",
+        "Time pickers",
+        "Text fields",
+        "Bottom sheets",
+        "Cards",
+        "Carousel",
+        "Dialogs",
+        "Divider",
+        "Lists",
+        "Side sheets",
+        "Badges",
+        "Loading indicator",
+        "Progress indicators",
+        "Snackbar",
+        "Tooltips",
+        "Color",
+        "Shapes",
+        "Typography"
+      ],
+      "components": {
+        "m3/dialog": {
+          "group": "Dialogs"
+        },
+        "m3/bottom-app-bar": {
+          "group": "Bottom app bar"
+        },
+        "m3/center-aligned-top-app-bar": {
+          "group": "Top app bar"
+        },
+        "m3/large-top-app-bar": {
+          "group": "Top app bar"
+        },
+        "m3/medium-top-app-bar": {
+          "group": "Top app bar"
+        },
+        "m3/top-app-bar": {
+          "group": "Top app bar"
+        },
+        "m3/badge": {
+          "group": "Badges"
+        },
+        "m3/button": {
+          "group": "Buttons"
+        },
+        "m3/elevated-button": {
+          "group": "Buttons"
+        },
+        "m3/filled-tonal-button": {
+          "group": "Buttons"
+        },
+        "m3/outlined-button": {
+          "group": "Buttons"
+        },
+        "m3/text-button": {
+          "group": "Buttons"
+        },
+        "m3/card": {
+          "group": "Cards"
+        },
+        "m3/elevated-card": {
+          "group": "Cards"
+        },
+        "m3/outlined-card": {
+          "group": "Cards"
+        },
+        "m3/checkbox": {
+          "group": "Checkbox"
+        },
+        "m3/tri-state-checkbox": {
+          "group": "Checkbox"
+        },
+        "m3/assist-chip": {
+          "group": "Chips"
+        },
+        "m3/elevated-assist-chip": {
+          "group": "Chips"
+        },
+        "m3/elevated-filter-chip": {
+          "group": "Chips"
+        },
+        "m3/elevated-suggestion-chip": {
+          "group": "Chips"
+        },
+        "m3/filter-chip": {
+          "group": "Chips"
+        },
+        "m3/input-chip": {
+          "group": "Chips"
+        },
+        "m3/suggestion-chip": {
+          "group": "Chips"
+        },
+        "m3/date-picker-dialog": {
+          "group": "Date pickers"
+        },
+        "m3/date-picker": {
+          "group": "Date pickers"
+        },
+        "m3/date-range-picker": {
+          "group": "Date pickers"
+        },
+        "m3/horizontal-divider": {
+          "group": "Divider"
+        },
+        "m3/vertical-divider": {
+          "group": "Divider"
+        },
+        "m3/extended-floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/large-extended-floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/large-floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/medium-extended-floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/medium-floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/small-extended-floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/small-floating-action-button": {
+          "group": "FAB"
+        },
+        "m3/horizontal-floating-toolbar": {
+          "group": "Toolbars"
+        },
+        "m3/vertical-floating-toolbar": {
+          "group": "Toolbars"
+        },
+        "m3/filled-icon-button": {
+          "group": "Icon buttons"
+        },
+        "m3/filled-tonal-icon-button": {
+          "group": "Icon buttons"
+        },
+        "m3/icon-button": {
+          "group": "Icon buttons"
+        },
+        "m3/outlined-icon-button": {
+          "group": "Icon buttons"
+        },
+        "m3/icon": {
+          "group": "Bottom app bar"
+        },
+        "m3/list-item": {
+          "group": "Lists"
+        },
+        "m3/contained-loading-indicator": {
+          "group": "Loading indicator"
+        },
+        "m3/loading-indicator": {
+          "group": "Loading indicator"
+        },
+        "m3/material-expressive-theme": {
+          "group": "Badges"
+        },
+        "m3/navigation-rail": {
+          "group": "Navigation rail"
+        },
+        "m3/navigation-rail-item": {
+          "group": "Navigation rail"
+        },
+        "m3/outlined-text-field": {
+          "group": "Text fields"
+        },
+        "m3/circular-progress-indicator": {
+          "group": "Progress indicators"
+        },
+        "m3/progress-indicator": {
+          "group": "Progress indicators"
+        },
+        "m3/radio-button": {
+          "group": "Radio button"
+        },
+        "m3/search-input-field": {
+          "group": "Search"
+        },
+        "m3/app-bar-with-search": {
+          "group": "Top app bar"
+        },
+        "m3/docked-search-bar": {
+          "group": "Search"
+        },
+        "m3/search-bar": {
+          "group": "Search"
+        },
+        "m3/multi-choice-segmented-button-row": {
+          "group": "Segmented buttons"
+        },
+        "m3/segmented-button": {
+          "group": "Segmented buttons"
+        },
+        "m3/single-choice-segmented-button-row": {
+          "group": "Segmented buttons"
+        },
+        "m3/short-navigation-bar": {
+          "group": "Navigation bar"
+        },
+        "m3/short-navigation-bar-item": {
+          "group": "Navigation bar"
+        },
+        "m3/centered-track": {
+          "group": "Sliders"
+        },
+        "m3/thumb": {
+          "group": "Sliders"
+        },
+        "m3/track": {
+          "group": "Sliders"
+        },
+        "m3/range-slider": {
+          "group": "Sliders"
+        },
+        "m3/slider": {
+          "group": "Sliders"
+        },
+        "m3/vertical-slider": {
+          "group": "Sliders"
+        },
+        "m3/snackbar": {
+          "group": "Snackbar"
+        },
+        "m3/elevated-leading-button": {
+          "group": "Split button"
+        },
+        "m3/elevated-trailing-button": {
+          "group": "Split button"
+        },
+        "m3/leading-button": {
+          "group": "Split button"
+        },
+        "m3/outlined-leading-button": {
+          "group": "Split button"
+        },
+        "m3/outlined-trailing-button": {
+          "group": "Split button"
+        },
+        "m3/tonal-leading-button": {
+          "group": "Split button"
+        },
+        "m3/tonal-trailing-button": {
+          "group": "Split button"
+        },
+        "m3/trailing-button": {
+          "group": "Split button"
+        },
+        "m3/split-button-layout": {
+          "group": "Split button"
+        },
+        "m3/surface": {
+          "group": "Chips"
+        },
+        "m3/switch": {
+          "group": "Switch"
+        },
+        "m3/tab": {
+          "group": "Tabs"
+        },
+        "m3/primary-scrollable-tab-row": {
+          "group": "Tabs"
+        },
+        "m3/primary-tab-row": {
+          "group": "Tabs"
+        },
+        "m3/secondary-scrollable-tab-row": {
+          "group": "Tabs"
+        },
+        "m3/secondary-tab-row": {
+          "group": "Tabs"
+        },
+        "m3/text-field": {
+          "group": "Text fields"
+        },
+        "m3/provide-text-style": {
+          "group": "Typography"
+        },
+        "m3/text": {
+          "group": "Typography"
+        },
+        "m3/time-input": {
+          "group": "Time pickers"
+        },
+        "m3/time-picker": {
+          "group": "Time pickers"
+        },
+        "m3/elevated-toggle-button": {
+          "group": "Toggle buttons"
+        },
+        "m3/outlined-toggle-button": {
+          "group": "Toggle buttons"
+        },
+        "m3/toggle-button": {
+          "group": "Toggle buttons"
+        },
+        "m3/tonal-toggle-button": {
+          "group": "Toggle buttons"
+        },
+        "m3/circular-wavy-progress-indicator": {
+          "group": "Progress indicators"
+        },
+        "m3/linear-wavy-progress-indicator": {
+          "group": "Progress indicators"
+        },
+        "m3/wide-navigation-rail": {
+          "group": "Navigation rail"
+        },
+        "m3/wide-navigation-rail-item": {
+          "group": "Navigation rail"
+        },
+        "m3/horizontal-centered-hero-carousel": {
+          "group": "Carousel"
+        },
+        "m3/horizontal-multi-browse-carousel": {
+          "group": "Carousel"
+        },
+        "m3/horizontal-uncontained-carousel": {
+          "group": "Carousel"
+        },
+        "m3/current-scheme": {
+          "group": "Color"
+        },
+        "m3/sticker": {
+          "group": "Badges"
+        }
+      }
+    },
+    "frame": {
+      "$comment": "A rectangle, and no geometry block: a phone screen's frame is its device size, which the builder already reads from the device preset, so there is nothing measured for this catalog to publish. The Wear catalog needs one because a round screen's content insets are computed by the library rather than implied by the size.",
+      "adapter": "frame/rect",
+      "seedDevice": "id:pixel_6"
+    },
+    "code": null,
+    "templates": [],
+    "colorTokens": {
+      "$comment": "The theme roles a colour property or a background modifier may name — the roles a canvas drawing this catalog can resolve. Anything else is a #RRGGBB or #AARRGGBB literal. This is Material 3's own vocabulary, which is why this catalog is the one entitled to state it.",
+      "roles": [
+        "background",
+        "surface",
+        "surfaceContainer",
+        "surfaceContainerLow",
+        "surfaceContainerHigh",
+        "surfaceContainerHighest",
+        "primary",
+        "onPrimary",
+        "tertiary",
+        "onTertiary",
+        "onSurface",
+        "onSurfaceVariant",
+        "outlineVariant",
+        "transparent"
+      ]
+    },
+    "assetRegistry": null,
+    "builtins": {},
+    "components": {
+      "m3/dialog": {
+        "record": "catalog/androidx.compose.material3.AlertDialog_skikoKt.AlertDialog",
+        "catalogId": "Dialog/Basic",
+        "displayName": "Dialog",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "DialogContent",
+          "OverlayContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "containerColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "tonalElevationDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "shapeDp",
+            "jsonType": "number",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "icon",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "IconContent"
+            ]
+          },
+          {
+            "name": "title",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          },
+          {
+            "name": "text",
+            "cardinality": {
+              "min": 0
+            },
+            "ordered": true,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          },
+          {
+            "name": "dismissButton",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container"
+            ],
+            "acceptedTraits": [
+              "Action"
+            ]
+          },
+          {
+            "name": "confirmButton",
+            "cardinality": {
+              "min": 1,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container"
+            ],
+            "acceptedTraits": [
+              "Action"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "background",
+          "border",
+          "shadow",
+          "wrapContentSize",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/bottom-app-bar": {
+        "record": "catalog/androidx.compose.material3.AppBarKt.BottomAppBar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/center-aligned-top-app-bar": {
+        "record": "catalog/androidx.compose.material3.AppBarKt.CenterAlignedTopAppBar",
+        "catalogId": null,
+        "displayName": "Top app bar",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "TopBar",
+          "ScreenContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "containerColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "scrolledContainerColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "scrollBehavior",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "pinned",
+              "enterAlways",
+              "exitUntilCollapsed"
+            ],
+            "notes": "Reaches the generated Kotlin as the matching TopAppBarDefaults behavior. The canvas draws the bar pinned whatever this says: a scroll behavior is driven by a nested-scroll connection the document has no scaffold to carry."
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "title",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/large-top-app-bar": {
+        "record": "catalog/androidx.compose.material3.AppBarKt.LargeTopAppBar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/medium-top-app-bar": {
+        "record": "catalog/androidx.compose.material3.AppBarKt.MediumTopAppBar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/top-app-bar": {
+        "record": "catalog/androidx.compose.material3.AppBarKt.TopAppBar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/badge": {
+        "record": "catalog/androidx.compose.material3.BadgeKt.Badge",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/button": {
+        "record": "catalog/androidx.compose.material3.ButtonKt.Button",
+        "catalogId": null,
+        "displayName": "Button",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "Action",
+          "ToolbarItem"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "style",
+            "jsonType": "string",
+            "required": true,
+            "allowedValues": [
+              "filled",
+              "filledTonal",
+              "text",
+              "fab"
+            ]
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "selected",
+            "jsonType": [
+              "boolean",
+              "string",
+              "object"
+            ],
+            "required": false,
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types."
+          },
+          {
+            "name": "containerColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "onClickAction",
+            "jsonType": [
+              "object",
+              "null"
+            ],
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "content",
+            "cardinality": {
+              "min": 1
+            },
+            "ordered": true,
+            "acceptedRoles": [
+              "Leaf",
+              "Container"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/elevated-button": {
+        "record": "catalog/androidx.compose.material3.ButtonKt.ElevatedButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/filled-tonal-button": {
+        "record": "catalog/androidx.compose.material3.ButtonKt.FilledTonalButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/outlined-button": {
+        "record": "catalog/androidx.compose.material3.ButtonKt.OutlinedButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/text-button": {
+        "record": "catalog/androidx.compose.material3.ButtonKt.TextButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/card": {
+        "record": "catalog/androidx.compose.material3.CardKt.Card",
+        "catalogId": null,
+        "displayName": "Card",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "GridItem",
+          "CarouselItem",
+          "ListItem",
+          "OverlayContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "variant",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "filled",
+              "elevated",
+              "outlined"
+            ]
+          },
+          {
+            "name": "containerColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "shape",
+            "jsonType": "string",
+            "required": false
+          },
+          {
+            "name": "stableKey",
+            "jsonType": "string",
+            "required": false
+          },
+          {
+            "name": "elevationDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "onClickAction",
+            "jsonType": [
+              "object",
+              "null"
+            ],
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "content",
+            "cardinality": {
+              "min": 1
+            },
+            "ordered": true,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "clip",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "background",
+          "border",
+          "shadow",
+          "wrapContentSize",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/elevated-card": {
+        "record": "catalog/androidx.compose.material3.CardKt.ElevatedCard",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/outlined-card": {
+        "record": "catalog/androidx.compose.material3.CardKt.OutlinedCard",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/checkbox": {
+        "record": "catalog/androidx.compose.material3.CheckboxKt.Checkbox",
+        "catalogId": null,
+        "displayName": "Checkbox",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "SelectionControl",
+          "Action"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "checked",
+            "jsonType": [
+              "boolean",
+              "string",
+              "object"
+            ],
+            "required": false,
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shape a filter chip's `selected` takes."
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "padding",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/tri-state-checkbox": {
+        "record": "catalog/androidx.compose.material3.CheckboxKt.TriStateCheckbox",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/assist-chip": {
+        "record": "catalog/androidx.compose.material3.ChipKt.AssistChip",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/elevated-assist-chip": {
+        "record": "catalog/androidx.compose.material3.ChipKt.ElevatedAssistChip",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/elevated-filter-chip": {
+        "record": "catalog/androidx.compose.material3.ChipKt.ElevatedFilterChip",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/elevated-suggestion-chip": {
+        "record": "catalog/androidx.compose.material3.ChipKt.ElevatedSuggestionChip",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/filter-chip": {
+        "record": "catalog/androidx.compose.material3.ChipKt.FilterChip",
+        "catalogId": null,
+        "displayName": "Filter chip",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "SelectionControl",
+          "ListItem"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "selected",
+            "jsonType": [
+              "boolean",
+              "string",
+              "object"
+            ],
+            "required": true,
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types."
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "shape",
+            "jsonType": "string",
+            "required": false
+          },
+          {
+            "name": "onClickAction",
+            "jsonType": [
+              "object",
+              "null"
+            ],
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "label",
+            "cardinality": {
+              "min": 1,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          },
+          {
+            "name": "leadingIcon",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/input-chip": {
+        "record": "catalog/androidx.compose.material3.ChipKt.InputChip",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/suggestion-chip": {
+        "record": "catalog/androidx.compose.material3.ChipKt.SuggestionChip",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/date-picker-dialog": {
+        "record": "catalog/androidx.compose.material3.DatePickerDialog_skikoKt.DatePickerDialog",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/date-picker": {
+        "record": "catalog/androidx.compose.material3.DatePickerKt.DatePicker",
+        "catalogId": null,
+        "displayName": "Date picker",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "PickerContent",
+          "DateContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "mode",
+            "jsonType": "string",
+            "required": true,
+            "allowedValues": [
+              "picker",
+              "input"
+            ],
+            "notes": "Material's own DisplayMode: the calendar, or the typed date field."
+          },
+          {
+            "name": "selectedDate",
+            "jsonType": "string",
+            "required": true,
+            "notes": "ISO-8601 `YYYY-MM-DD`. Pinned rather than read from the clock so a render is the same picture on every day."
+          },
+          {
+            "name": "showModeToggle",
+            "jsonType": "boolean",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/date-range-picker": {
+        "record": "catalog/androidx.compose.material3.DateRangePickerKt.DateRangePicker",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/horizontal-divider": {
+        "record": "catalog/androidx.compose.material3.DividerKt.HorizontalDivider",
+        "catalogId": null,
+        "displayName": "Horizontal divider",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "DividerContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "thicknessDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/vertical-divider": {
+        "record": "catalog/androidx.compose.material3.DividerKt.VerticalDivider",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/extended-floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.ExtendedFloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.FloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/large-extended-floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.LargeExtendedFloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/large-floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.LargeFloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/medium-extended-floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.MediumExtendedFloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/medium-floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.MediumFloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/small-extended-floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.SmallExtendedFloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/small-floating-action-button": {
+        "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.SmallFloatingActionButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/horizontal-floating-toolbar": {
+        "record": "catalog/androidx.compose.material3.FloatingToolbarKt.HorizontalFloatingToolbar",
+        "catalogId": null,
+        "displayName": "Horizontal floating toolbar",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "ToolbarContent",
+          "OverlayContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "expanded",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "containerColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "contentPadding",
+            "jsonType": "object",
+            "required": false
+          },
+          {
+            "name": "alignment",
+            "jsonType": "string",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "content",
+            "cardinality": {
+              "min": 1
+            },
+            "ordered": true,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "ToolbarItem"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/vertical-floating-toolbar": {
+        "record": "catalog/androidx.compose.material3.FloatingToolbarKt.VerticalFloatingToolbar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/filled-icon-button": {
+        "record": "catalog/androidx.compose.material3.IconButtonKt.FilledIconButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/filled-tonal-icon-button": {
+        "record": "catalog/androidx.compose.material3.IconButtonKt.FilledTonalIconButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/icon-button": {
+        "record": "catalog/androidx.compose.material3.IconButtonKt.IconButton",
+        "catalogId": null,
+        "displayName": "Icon button",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "Action",
+          "OverlayControl",
+          "ToolbarItem"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "variant",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "standard",
+              "filled",
+              "tonal",
+              "outlined"
+            ]
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "selected",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "alignment",
+            "jsonType": "string",
+            "required": false
+          },
+          {
+            "name": "contentDescription",
+            "jsonType": [
+              "string",
+              "null"
+            ],
+            "required": false
+          },
+          {
+            "name": "sizeDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "onClickAction",
+            "jsonType": [
+              "object",
+              "null"
+            ],
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "content",
+            "cardinality": {
+              "min": 1,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "IconContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/outlined-icon-button": {
+        "record": "catalog/androidx.compose.material3.IconButtonKt.OutlinedIconButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/icon": {
+        "record": "catalog/androidx.compose.material3.IconKt.Icon",
+        "catalogId": null,
+        "displayName": "Icon",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "IconContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "iconKey",
+            "jsonType": "string",
+            "required": true,
+            "allowedValues": [
+              "accessTime",
+              "accountCircle",
+              "add",
+              "addCircle",
+              "arrowBack",
+              "arrowForward",
+              "bookmark",
+              "bookmarkBorder",
+              "calendarMonth",
+              "cameraAlt",
+              "check",
+              "checkCircle",
+              "chevronRight",
+              "close",
+              "coffee",
+              "delete",
+              "download",
+              "edit",
+              "email",
+              "expandMore",
+              "favorite",
+              "genres",
+              "home",
+              "image",
+              "info",
+              "locationOn",
+              "lock",
+              "menu",
+              "moreVert",
+              "notifications",
+              "pauseCircle",
+              "person",
+              "phone",
+              "playCircle",
+              "playlistAdd",
+              "refresh",
+              "remove",
+              "search",
+              "settings",
+              "share",
+              "star",
+              "stopCircle",
+              "upload",
+              "videoLibrary",
+              "visibility",
+              "warning"
+            ]
+          },
+          {
+            "name": "contentDescription",
+            "jsonType": [
+              "string",
+              "null"
+            ],
+            "required": false
+          },
+          {
+            "name": "sizeDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/list-item": {
+        "record": "catalog/androidx.compose.material3.ListItemKt.ListItem",
+        "catalogId": null,
+        "displayName": "List item",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "ListItem",
+          "GridItem"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "startAccentColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A 3dp bar down the leading edge, drawn behind the item. Empty draws none. A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "headline",
+            "cardinality": {
+              "min": 1,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          },
+          {
+            "name": "supporting",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          },
+          {
+            "name": "trailing",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/contained-loading-indicator": {
+        "record": "catalog/androidx.compose.material3.LoadingIndicatorKt.ContainedLoadingIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/loading-indicator": {
+        "record": "catalog/androidx.compose.material3.LoadingIndicatorKt.LoadingIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/material-expressive-theme": {
+        "record": "catalog/androidx.compose.material3.MaterialThemeKt.MaterialExpressiveTheme",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/navigation-rail": {
+        "record": "catalog/androidx.compose.material3.NavigationRailKt.NavigationRail",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/navigation-rail-item": {
+        "record": "catalog/androidx.compose.material3.NavigationRailKt.NavigationRailItem",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/outlined-text-field": {
+        "record": "catalog/androidx.compose.material3.OutlinedTextFieldKt.OutlinedTextField",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/circular-progress-indicator": {
+        "record": "catalog/androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/progress-indicator": {
+        "record": "catalog/androidx.compose.material3.ProgressIndicatorKt.LinearProgressIndicator",
+        "catalogId": "Progress/Linear",
+        "displayName": "Progress indicator",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "Feedback",
+          "Decoration"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "variant",
+            "jsonType": "string",
+            "required": true,
+            "allowedValues": [
+              "linear",
+              "circular"
+            ],
+            "notes": "Two Material composables that take the same arguments and differ in shape, spelled as one component the way `m3/text-field` spells its two."
+          },
+          {
+            "name": "progress",
+            "jsonType": [
+              "number",
+              "object"
+            ],
+            "required": false,
+            "notes": "0..1, a literal or a `state` read. Absent means the indeterminate indicator — Material's own distinction between a progress you know and one you do not."
+          },
+          {
+            "name": "indeterminate",
+            "jsonType": "boolean",
+            "required": false,
+            "notes": "Draws the running animation rather than a value. Pinned to its first frame on the canvas, because a render that animates is a render that cannot be diffed."
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/radio-button": {
+        "record": "catalog/androidx.compose.material3.RadioButtonKt.RadioButton",
+        "catalogId": null,
+        "displayName": "Radio button",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "SelectionControl",
+          "Action"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "selected",
+            "jsonType": [
+              "boolean",
+              "string",
+              "object"
+            ],
+            "required": false,
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is what makes a group of them pick one option between them."
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "padding",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/search-input-field": {
+        "record": "catalog/androidx.compose.material3.SearchBarDefaults.InputField",
+        "catalogId": "Search/Bar",
+        "displayName": "Search input field",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "SearchInput",
+          "TextInput"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "value",
+            "jsonType": "object",
+            "required": true
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "readOnly",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "onQueryChangeAction",
+            "jsonType": [
+              "object",
+              "null"
+            ],
+            "required": false
+          },
+          {
+            "name": "onSearchAction",
+            "jsonType": [
+              "object",
+              "null"
+            ],
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "placeholder",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          },
+          {
+            "name": "leadingIcon",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "IconContent",
+              "Action"
+            ]
+          },
+          {
+            "name": "trailingIcon",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "IconContent",
+              "Action"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/app-bar-with-search": {
+        "record": "catalog/androidx.compose.material3.SearchBarKt.AppBarWithSearch",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/docked-search-bar": {
+        "record": "catalog/androidx.compose.material3.SearchBarKt.DockedSearchBar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/search-bar": {
+        "record": "catalog/androidx.compose.material3.SearchBarKt.SearchBar",
+        "catalogId": null,
+        "displayName": "Search bar",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "TopBar",
+          "SearchContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "expanded",
+            "jsonType": "boolean",
+            "required": true
+          },
+          {
+            "name": "shapeDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "tonalElevationDp",
+            "jsonType": "number",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "inputField",
+            "cardinality": {
+              "min": 1,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container"
+            ],
+            "acceptedTraits": [
+              "SearchInput"
+            ]
+          },
+          {
+            "name": "expandedContent",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/multi-choice-segmented-button-row": {
+        "record": "catalog/androidx.compose.material3.SegmentedButtonKt.MultiChoiceSegmentedButtonRow",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/segmented-button": {
+        "record": "catalog/androidx.compose.material3.SegmentedButtonKt.SegmentedButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/single-choice-segmented-button-row": {
+        "record": "catalog/androidx.compose.material3.SegmentedButtonKt.SingleChoiceSegmentedButtonRow",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/short-navigation-bar": {
+        "record": "catalog/androidx.compose.material3.ShortNavigationBarKt.ShortNavigationBar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/short-navigation-bar-item": {
+        "record": "catalog/androidx.compose.material3.ShortNavigationBarKt.ShortNavigationBarItem",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/centered-track": {
+        "record": "catalog/androidx.compose.material3.SliderDefaults.CenteredTrack",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/thumb": {
+        "record": "catalog/androidx.compose.material3.SliderDefaults.Thumb",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/track": {
+        "record": "catalog/androidx.compose.material3.SliderDefaults.Track",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/range-slider": {
+        "record": "catalog/androidx.compose.material3.SliderKt.RangeSlider",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/slider": {
+        "record": "catalog/androidx.compose.material3.SliderKt.Slider",
+        "catalogId": null,
+        "displayName": "Slider",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "SelectionControl",
+          "FormField"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "value",
+            "jsonType": [
+              "number",
+              "object"
+            ],
+            "required": true,
+            "notes": "A literal, or a `state` read of a declared decimal variable — which is what makes dragging the canvas change the design's state rather than the slider's own memory."
+          },
+          {
+            "name": "valueFrom",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "valueTo",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "steps",
+            "jsonType": "integer",
+            "required": false,
+            "notes": "Discrete stops between the ends, as Material counts them: 0 is a continuous slider."
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/vertical-slider": {
+        "record": "catalog/androidx.compose.material3.SliderKt.VerticalSlider",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/snackbar": {
+        "record": "catalog/androidx.compose.material3.SnackbarKt.Snackbar",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/elevated-leading-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.ElevatedLeadingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/elevated-trailing-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.ElevatedTrailingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/leading-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.LeadingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/outlined-leading-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.OutlinedLeadingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/outlined-trailing-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.OutlinedTrailingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/tonal-leading-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.TonalLeadingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/tonal-trailing-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.TonalTrailingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/trailing-button": {
+        "record": "catalog/androidx.compose.material3.SplitButtonDefaults.TrailingButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/split-button-layout": {
+        "record": "catalog/androidx.compose.material3.SplitButtonKt.SplitButtonLayout",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/surface": {
+        "record": "catalog/androidx.compose.material3.SurfaceKt.Surface",
+        "catalogId": null,
+        "displayName": "Surface",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "ScreenContent",
+          "PaneContent",
+          "GridItem",
+          "ListItem",
+          "RemoteAuthorable"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "containerColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit. Painted across the area the surface is measured to, and no further. A root surface with no size modifier wraps its content, so its containerColor is the frame's ground only when the root fills the frame (fillMaxSize); the ground outside it comes from environment.theme. The export reports ROOT_SURFACE_DOES_NOT_FILL_FRAME when a coloured root does not."
+          },
+          {
+            "name": "contentColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "shapeDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "tonalElevationDp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "themePrimaryColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "themeBackgroundColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "themeSurfaceColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "themeContentColor",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "themeTypeScale",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "themeCornerRadiusDp",
+            "jsonType": "number",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "content",
+            "cardinality": {
+              "min": 0
+            },
+            "ordered": true,
+            "acceptedRoles": [
+              "Scaffold",
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxSize",
+          "fillMaxWidth",
+          "padding",
+          "clip",
+          "matchParentSize",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "fillMaxHeight",
+          "background",
+          "border",
+          "shadow",
+          "wrapContentSize",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/switch": {
+        "record": "catalog/androidx.compose.material3.SwitchKt.Switch",
+        "catalogId": null,
+        "displayName": "Switch",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "SelectionControl",
+          "Action"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "checked",
+            "jsonType": [
+              "boolean",
+              "string",
+              "object"
+            ],
+            "required": false,
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types."
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "padding",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/tab": {
+        "record": "catalog/androidx.compose.material3.TabKt.Tab",
+        "catalogId": null,
+        "displayName": "Tab",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "TabItem",
+          "SelectionControl"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "selected",
+            "jsonType": [
+              "boolean",
+              "string",
+              "object"
+            ],
+            "required": true,
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shapes `m3/filter-chip` accepts, and for the same reason: a tab whose selection cannot be read from state is a tab that cannot be selected."
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "text",
+            "cardinality": {
+              "min": 1,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/primary-scrollable-tab-row": {
+        "record": "catalog/androidx.compose.material3.TabRowKt.PrimaryScrollableTabRow",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/primary-tab-row": {
+        "record": "catalog/androidx.compose.material3.TabRowKt.PrimaryTabRow",
+        "catalogId": null,
+        "displayName": "Tab row",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "TabBar",
+          "OrderedContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "selectedIndex",
+            "jsonType": [
+              "integer",
+              "object"
+            ],
+            "required": true,
+            "notes": "An index, or a `state` read of a declared `int` variable — which is an object, and why `object` is one of the accepted types. It is the variable the tabs write."
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "tabs",
+            "cardinality": {
+              "min": 1
+            },
+            "ordered": true,
+            "acceptedRoles": [
+              "Container"
+            ],
+            "acceptedTraits": [
+              "TabItem"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/secondary-scrollable-tab-row": {
+        "record": "catalog/androidx.compose.material3.TabRowKt.SecondaryScrollableTabRow",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/secondary-tab-row": {
+        "record": "catalog/androidx.compose.material3.TabRowKt.SecondaryTabRow",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/text-field": {
+        "record": "catalog/androidx.compose.material3.TextFieldKt.TextField",
+        "catalogId": null,
+        "displayName": "Text field",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "TextInput",
+          "FormField"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "variant",
+            "jsonType": "string",
+            "required": true,
+            "allowedValues": [
+              "filled",
+              "outlined"
+            ],
+            "notes": "Two composables, one component: `TextField` and `OutlinedTextField` differ in nothing a design authors, which is how `m3/card` already spells its three."
+          },
+          {
+            "name": "value",
+            "jsonType": [
+              "string",
+              "object"
+            ],
+            "required": false,
+            "notes": "A literal, or a `state` read of a declared variable — the same shape a search input's `value` takes, and what makes typing in the canvas change the design's state rather than a field's own memory."
+          },
+          {
+            "name": "enabled",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "readOnly",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "singleLine",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "isError",
+            "jsonType": "boolean",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [
+          {
+            "name": "label",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          },
+          {
+            "name": "placeholder",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          },
+          {
+            "name": "supportingText",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "TextContent"
+            ]
+          },
+          {
+            "name": "leadingIcon",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "IconContent",
+              "Action"
+            ]
+          },
+          {
+            "name": "trailingIcon",
+            "cardinality": {
+              "min": 0,
+              "max": 1
+            },
+            "ordered": false,
+            "acceptedRoles": [
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "IconContent",
+              "Action"
+            ]
+          }
+        ],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/provide-text-style": {
+        "record": "catalog/androidx.compose.material3.TextKt.ProvideTextStyle",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/text": {
+        "record": "catalog/androidx.compose.material3.TextKt.Text",
+        "catalogId": null,
+        "displayName": "Text",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "TextContent",
+          "RemoteAuthorable"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "text",
+            "jsonType": "string",
+            "required": true
+          },
+          {
+            "name": "style",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "displayLarge",
+              "displayMedium",
+              "displaySmall",
+              "headlineLarge",
+              "headlineMedium",
+              "headlineSmall",
+              "titleLarge",
+              "titleMedium",
+              "titleSmall",
+              "bodyLarge",
+              "bodyMedium",
+              "bodySmall",
+              "labelLarge",
+              "labelMedium",
+              "labelSmall"
+            ]
+          },
+          {
+            "name": "fontWeight",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "normal",
+              "medium",
+              "semiBold",
+              "bold"
+            ]
+          },
+          {
+            "name": "fontStyle",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "normal",
+              "italic"
+            ]
+          },
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+          },
+          {
+            "name": "fontSizeSp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "lineHeightSp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "letterSpacingSp",
+            "jsonType": "number",
+            "required": false
+          },
+          {
+            "name": "minLines",
+            "jsonType": "integer",
+            "required": false
+          },
+          {
+            "name": "maxLines",
+            "jsonType": "integer",
+            "required": false
+          },
+          {
+            "name": "softWrap",
+            "jsonType": "boolean",
+            "required": false
+          },
+          {
+            "name": "overflow",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "clip",
+              "ellipsis",
+              "visible"
+            ]
+          },
+          {
+            "name": "textAlign",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "start",
+              "center",
+              "end",
+              "justify"
+            ]
+          },
+          {
+            "name": "textDecoration",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "none",
+              "underline",
+              "lineThrough"
+            ]
+          },
+          {
+            "name": "alignment",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "topStart",
+              "topCenter",
+              "topEnd",
+              "centerStart",
+              "center",
+              "centerEnd",
+              "bottomStart",
+              "bottomCenter",
+              "bottomEnd"
+            ]
+          },
+          {
+            "name": "weight",
+            "jsonType": "number",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/time-input": {
+        "record": "catalog/androidx.compose.material3.TimePickerKt.TimeInput",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/time-picker": {
+        "record": "catalog/androidx.compose.material3.TimePickerKt.TimePicker",
+        "catalogId": null,
+        "displayName": "Time picker",
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [
+          "PickerContent",
+          "TimeContent"
+        ],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "mode",
+            "jsonType": "string",
+            "required": true,
+            "allowedValues": [
+              "dial",
+              "input"
+            ],
+            "notes": "The clock face, or the two typed fields Material calls TimeInput — two composables over one state, spelled as one component the way `m3/progress-indicator` spells linear and circular."
+          },
+          {
+            "name": "hour",
+            "jsonType": "integer",
+            "required": true,
+            "notes": "0..23 whatever `is24Hour` says: the state holds a 24-hour clock and renders it in the chosen one."
+          },
+          {
+            "name": "minute",
+            "jsonType": "integer",
+            "required": true
+          },
+          {
+            "name": "is24Hour",
+            "jsonType": "boolean",
+            "required": false
+          }
+        ],
+        "slotCapabilities": [],
+        "modifierCapabilities": [
+          "size",
+          "fillMaxWidth",
+          "padding",
+          "alpha",
+          "offset",
+          "rotate",
+          "scale",
+          "zIndex",
+          "testTag",
+          "width",
+          "height",
+          "widthIn",
+          "heightIn",
+          "aspectRatio",
+          "align",
+          "alignHorizontal",
+          "alignVertical",
+          "weight"
+        ]
+      },
+      "m3/elevated-toggle-button": {
+        "record": "catalog/androidx.compose.material3.ToggleButtonKt.ElevatedToggleButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/outlined-toggle-button": {
+        "record": "catalog/androidx.compose.material3.ToggleButtonKt.OutlinedToggleButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/toggle-button": {
+        "record": "catalog/androidx.compose.material3.ToggleButtonKt.ToggleButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/tonal-toggle-button": {
+        "record": "catalog/androidx.compose.material3.ToggleButtonKt.TonalToggleButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/circular-wavy-progress-indicator": {
+        "record": "catalog/androidx.compose.material3.WavyProgressIndicatorKt.CircularWavyProgressIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/linear-wavy-progress-indicator": {
+        "record": "catalog/androidx.compose.material3.WavyProgressIndicatorKt.LinearWavyProgressIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/wide-navigation-rail": {
+        "record": "catalog/androidx.compose.material3.WideNavigationRailKt.WideNavigationRail",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/wide-navigation-rail-item": {
+        "record": "catalog/androidx.compose.material3.WideNavigationRailKt.WideNavigationRailItem",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/list-detail-pane-scaffold": {
+        "record": "catalog/androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldKt.ListDetailPaneScaffold",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/animated-pane": {
+        "record": "catalog/androidx.compose.material3.adaptive.layout.PaneKt.AnimatedPane",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/supporting-pane-scaffold": {
+        "record": "catalog/androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldKt.SupportingPaneScaffold",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/navigation-suite-item": {
+        "record": "catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteItem",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/navigation-suite-scaffold": {
+        "record": "catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteScaffold",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/horizontal-centered-hero-carousel": {
+        "record": "catalog/androidx.compose.material3.carousel.CarouselKt.HorizontalCenteredHeroCarousel",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/horizontal-multi-browse-carousel": {
+        "record": "catalog/androidx.compose.material3.carousel.CarouselKt.HorizontalMultiBrowseCarousel",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/horizontal-uncontained-carousel": {
+        "record": "catalog/androidx.compose.material3.carousel.CarouselKt.HorizontalUncontainedCarousel",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/current-scheme": {
+        "record": "catalog/ee.schimke.m3catalog.CatalogSchemeChoice$Companion.currentScheme",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/sticker": {
+        "record": "catalog/ee.schimke.m3catalog.CatalogThemeKt.Sticker",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "m3/adaptive-sticker": {
+        "record": "catalog/ee.schimke.m3catalog.adaptive.AdaptiveLayoutsKt.AdaptiveSticker",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      }
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/dialog",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/bottom-app-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/center-aligned-top-app-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/large-top-app-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/medium-top-app-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/top-app-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/badge",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/filled-tonal-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/outlined-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/text-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/card",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-card",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/outlined-card",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/checkbox",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/tri-state-checkbox",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/assist-chip",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-assist-chip",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-filter-chip",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-suggestion-chip",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/filter-chip",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/input-chip",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/suggestion-chip",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/date-picker-dialog",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/date-picker",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/date-range-picker",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/horizontal-divider",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/vertical-divider",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/extended-floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/large-extended-floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/large-floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/medium-extended-floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/medium-floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/small-extended-floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/small-floating-action-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/horizontal-floating-toolbar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/vertical-floating-toolbar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/filled-icon-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/filled-tonal-icon-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/icon-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/outlined-icon-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/icon",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/list-item",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/contained-loading-indicator",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/loading-indicator",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/material-expressive-theme",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/navigation-rail",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/navigation-rail-item",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/outlined-text-field",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/circular-progress-indicator",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/progress-indicator",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/radio-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/search-input-field",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/app-bar-with-search",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/docked-search-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/search-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/multi-choice-segmented-button-row",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/segmented-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/single-choice-segmented-button-row",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/short-navigation-bar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/short-navigation-bar-item",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/centered-track",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/thumb",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/track",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/range-slider",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/slider",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/vertical-slider",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/snackbar",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-leading-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-trailing-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/leading-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/outlined-leading-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/outlined-trailing-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/tonal-leading-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/tonal-trailing-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/trailing-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/split-button-layout",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/surface",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/switch",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/tab",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/primary-scrollable-tab-row",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/primary-tab-row",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/secondary-scrollable-tab-row",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/secondary-tab-row",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/text-field",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/provide-text-style",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/text",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/time-input",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/time-picker",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/elevated-toggle-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/outlined-toggle-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/toggle-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/tonal-toggle-button",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/circular-wavy-progress-indicator",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/linear-wavy-progress-indicator",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/wide-navigation-rail",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/wide-navigation-rail-item",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/list-detail-pane-scaffold",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/animated-pane",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/supporting-pane-scaffold",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/navigation-suite-item",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/navigation-suite-scaffold",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/horizontal-centered-hero-carousel",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/horizontal-multi-browse-carousel",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/horizontal-uncontained-carousel",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/current-scheme",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/sticker",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "m3/adaptive-sticker",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    }
+  ]
+}

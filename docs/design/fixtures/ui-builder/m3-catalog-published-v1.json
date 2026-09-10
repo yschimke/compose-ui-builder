@@ -1,5 +1,5 @@
 {
-  "$comment": "Generated from m3-catalog's authored ui-builder.policy.json and its component record \u2014 the shape the delivery branch publishes and PublishedUiBuilderCatalog reads. Regenerate whenever the frozen capability document moves.",
+  "$comment": "SYNTHETIC COMPOSER INPUT, hand-built — read PublishedM3CatalogEquivalenceTest before trusting it. Its components block was written here, keyed on the ids the frozen capability document uses, so the composer can be exercised ahead of the catalog that will feed it. It is NOT what m3-catalog will publish and must not be regenerated to stay equal to the frozen shelf: UI_BUILDER_CATALOG_CONTRACT.md says the two intentionally hold different component sets, and a real run offers about sixty the frozen one does not. Nor is it evidence that anything produces this shape — a real generated pair collided 49 of 108 components on an id this file does not collide on. The builtin and cardinality refusal tests deliberately no longer read this file; they live in PublishedUiBuilderCatalogHostileInputTest against their own record, because both spliced strings into this one and the splice lands differently once a generator writes the keys.",
   "schema": "compose-ui-builder-catalog/v1",
   "catalog": {
     "id": "m3-catalog",
@@ -21,7 +21,7 @@
       "native": {
         "fidelity": "authoritative",
         "backend": "android",
-        "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric \u2014 the same lane that produces this catalog's stickers."
+        "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric — the same lane that produces this catalog's stickers."
       }
     },
     "frame": {
@@ -30,7 +30,7 @@
       "seedDevice": "id:pixel_6"
     },
     "colorTokens": {
-      "$comment": "The theme roles a colour property or a background modifier may name \u2014 the roles a canvas drawing this catalog can resolve. Anything else is a #RRGGBB or #AARRGGBB literal. This is Material 3's own vocabulary, which is why this catalog is the one entitled to state it.",
+      "$comment": "The theme roles a colour property or a background modifier may name — the roles a canvas drawing this catalog can resolve. Anything else is a #RRGGBB or #AARRGGBB literal. This is Material 3's own vocabulary, which is why this catalog is the one entitled to state it.",
       "roles": [
         "background",
         "surface",
@@ -81,7 +81,7 @@
               "object"
             ],
             "required": false,
-            "notes": "A flag, or a `stateEquals` read of a declared state variable \u2014 which is an object, and why `object` is one of the accepted types."
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types."
           },
           {
             "name": "containerColor",
@@ -311,7 +311,7 @@
               "object"
             ],
             "required": false,
-            "notes": "A flag, or a `stateEquals` read of a declared state variable \u2014 the same shape a filter chip's `selected` takes."
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shape a filter chip's `selected` takes."
           },
           {
             "name": "enabled",
@@ -467,7 +467,7 @@
               "object"
             ],
             "required": true,
-            "notes": "A flag, or a `stateEquals` read of a declared state variable \u2014 which is an object, and why `object` is one of the accepted types."
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types."
           },
           {
             "name": "enabled",
@@ -935,7 +935,7 @@
               "object"
             ],
             "required": true,
-            "notes": "An index, or a `state` read of a declared `int` variable \u2014 which is an object, and why `object` is one of the accepted types. It is the variable the tabs write."
+            "notes": "An index, or a `state` read of a declared `int` variable — which is an object, and why `object` is one of the accepted types. It is the variable the tabs write."
           }
         ],
         "slotCapabilities": [
@@ -998,7 +998,7 @@
               "object"
             ],
             "required": false,
-            "notes": "0..1, a literal or a `state` read. Absent means the indeterminate indicator \u2014 Material's own distinction between a progress you know and one you do not."
+            "notes": "0..1, a literal or a `state` read. Absent means the indeterminate indicator — Material's own distinction between a progress you know and one you do not."
           },
           {
             "name": "indeterminate",
@@ -1034,7 +1034,7 @@
               "object"
             ],
             "required": false,
-            "notes": "A flag, or a `stateEquals` read of a declared state variable \u2014 which is what makes a group of them pick one option between them."
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is what makes a group of them pick one option between them."
           },
           {
             "name": "enabled",
@@ -1251,7 +1251,7 @@
               "object"
             ],
             "required": true,
-            "notes": "A literal, or a `state` read of a declared decimal variable \u2014 which is what makes dragging the canvas change the design's state rather than the slider's own memory."
+            "notes": "A literal, or a `state` read of a declared decimal variable — which is what makes dragging the canvas change the design's state rather than the slider's own memory."
           },
           {
             "name": "valueFrom",
@@ -1416,7 +1416,7 @@
               "object"
             ],
             "required": false,
-            "notes": "A flag, or a `stateEquals` read of a declared state variable \u2014 which is an object, and why `object` is one of the accepted types."
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types."
           },
           {
             "name": "enabled",
@@ -1450,7 +1450,7 @@
               "object"
             ],
             "required": true,
-            "notes": "A flag, or a `stateEquals` read of a declared state variable \u2014 the same shapes `m3/filter-chip` accepts, and for the same reason: a tab whose selection cannot be read from state is a tab that cannot be selected."
+            "notes": "A flag, or a `stateEquals` read of a declared state variable — the same shapes `m3/filter-chip` accepts, and for the same reason: a tab whose selection cannot be read from state is a tab that cannot be selected."
           }
         ],
         "slotCapabilities": [
@@ -1679,7 +1679,7 @@
               "object"
             ],
             "required": false,
-            "notes": "A literal, or a `state` read of a declared variable \u2014 the same shape a search input's `value` takes, and what makes typing in the canvas change the design's state rather than a field's own memory."
+            "notes": "A literal, or a `state` read of a declared variable — the same shape a search input's `value` takes, and what makes typing in the canvas change the design's state rather than a field's own memory."
           },
           {
             "name": "enabled",
@@ -1790,331 +1790,331 @@
       },
       "catalog/androidx.compose.material3.AppBarKt.BottomAppBar": {
         "record": "catalog/androidx.compose.material3.AppBarKt.BottomAppBar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.AppBarKt.LargeTopAppBar": {
         "record": "catalog/androidx.compose.material3.AppBarKt.LargeTopAppBar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.AppBarKt.MediumTopAppBar": {
         "record": "catalog/androidx.compose.material3.AppBarKt.MediumTopAppBar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.AppBarKt.TopAppBar": {
         "record": "catalog/androidx.compose.material3.AppBarKt.TopAppBar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.BadgeKt.Badge": {
         "record": "catalog/androidx.compose.material3.BadgeKt.Badge",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ButtonKt.ElevatedButton": {
         "record": "catalog/androidx.compose.material3.ButtonKt.ElevatedButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ButtonKt.FilledTonalButton": {
         "record": "catalog/androidx.compose.material3.ButtonKt.FilledTonalButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ButtonKt.OutlinedButton": {
         "record": "catalog/androidx.compose.material3.ButtonKt.OutlinedButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ButtonKt.TextButton": {
         "record": "catalog/androidx.compose.material3.ButtonKt.TextButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.CardKt.ElevatedCard": {
         "record": "catalog/androidx.compose.material3.CardKt.ElevatedCard",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.CardKt.OutlinedCard": {
         "record": "catalog/androidx.compose.material3.CardKt.OutlinedCard",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.CheckboxKt.TriStateCheckbox": {
         "record": "catalog/androidx.compose.material3.CheckboxKt.TriStateCheckbox",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ChipKt.AssistChip": {
         "record": "catalog/androidx.compose.material3.ChipKt.AssistChip",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ChipKt.ElevatedAssistChip": {
         "record": "catalog/androidx.compose.material3.ChipKt.ElevatedAssistChip",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ChipKt.ElevatedFilterChip": {
         "record": "catalog/androidx.compose.material3.ChipKt.ElevatedFilterChip",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ChipKt.ElevatedSuggestionChip": {
         "record": "catalog/androidx.compose.material3.ChipKt.ElevatedSuggestionChip",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ChipKt.InputChip": {
         "record": "catalog/androidx.compose.material3.ChipKt.InputChip",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ChipKt.SuggestionChip": {
         "record": "catalog/androidx.compose.material3.ChipKt.SuggestionChip",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.DateRangePickerKt.DateRangePicker": {
         "record": "catalog/androidx.compose.material3.DateRangePickerKt.DateRangePicker",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.DividerKt.VerticalDivider": {
         "record": "catalog/androidx.compose.material3.DividerKt.VerticalDivider",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.ExtendedFloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.ExtendedFloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.FloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.FloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.LargeExtendedFloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.LargeExtendedFloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.LargeFloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.LargeFloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.MediumExtendedFloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.MediumExtendedFloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.MediumFloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.MediumFloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.SmallExtendedFloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.SmallExtendedFloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingActionButtonKt.SmallFloatingActionButton": {
         "record": "catalog/androidx.compose.material3.FloatingActionButtonKt.SmallFloatingActionButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.FloatingToolbarKt.VerticalFloatingToolbar": {
         "record": "catalog/androidx.compose.material3.FloatingToolbarKt.VerticalFloatingToolbar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.IconButtonKt.FilledIconButton": {
         "record": "catalog/androidx.compose.material3.IconButtonKt.FilledIconButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.IconButtonKt.FilledTonalIconButton": {
         "record": "catalog/androidx.compose.material3.IconButtonKt.FilledTonalIconButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.IconButtonKt.OutlinedIconButton": {
         "record": "catalog/androidx.compose.material3.IconButtonKt.OutlinedIconButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.LoadingIndicatorKt.ContainedLoadingIndicator": {
         "record": "catalog/androidx.compose.material3.LoadingIndicatorKt.ContainedLoadingIndicator",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.LoadingIndicatorKt.LoadingIndicator": {
         "record": "catalog/androidx.compose.material3.LoadingIndicatorKt.LoadingIndicator",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.NavigationRailKt.NavigationRail": {
         "record": "catalog/androidx.compose.material3.NavigationRailKt.NavigationRail",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.NavigationRailKt.NavigationRailItem": {
         "record": "catalog/androidx.compose.material3.NavigationRailKt.NavigationRailItem",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.OutlinedTextFieldKt.OutlinedTextField": {
         "record": "catalog/androidx.compose.material3.OutlinedTextFieldKt.OutlinedTextField",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator": {
         "record": "catalog/androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SearchBarKt.AppBarWithSearch": {
         "record": "catalog/androidx.compose.material3.SearchBarKt.AppBarWithSearch",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SearchBarKt.DockedSearchBar": {
         "record": "catalog/androidx.compose.material3.SearchBarKt.DockedSearchBar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SegmentedButtonKt.MultiChoiceSegmentedButtonRow": {
         "record": "catalog/androidx.compose.material3.SegmentedButtonKt.MultiChoiceSegmentedButtonRow",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SegmentedButtonKt.SegmentedButton": {
         "record": "catalog/androidx.compose.material3.SegmentedButtonKt.SegmentedButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SegmentedButtonKt.SingleChoiceSegmentedButtonRow": {
         "record": "catalog/androidx.compose.material3.SegmentedButtonKt.SingleChoiceSegmentedButtonRow",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ShortNavigationBarKt.ShortNavigationBar": {
         "record": "catalog/androidx.compose.material3.ShortNavigationBarKt.ShortNavigationBar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ShortNavigationBarKt.ShortNavigationBarItem": {
         "record": "catalog/androidx.compose.material3.ShortNavigationBarKt.ShortNavigationBarItem",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SliderDefaults.CenteredTrack": {
         "record": "catalog/androidx.compose.material3.SliderDefaults.CenteredTrack",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SliderDefaults.Thumb": {
         "record": "catalog/androidx.compose.material3.SliderDefaults.Thumb",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SliderDefaults.Track": {
         "record": "catalog/androidx.compose.material3.SliderDefaults.Track",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SliderKt.RangeSlider": {
         "record": "catalog/androidx.compose.material3.SliderKt.RangeSlider",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SliderKt.VerticalSlider": {
         "record": "catalog/androidx.compose.material3.SliderKt.VerticalSlider",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SnackbarKt.Snackbar": {
         "record": "catalog/androidx.compose.material3.SnackbarKt.Snackbar",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.ElevatedLeadingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.ElevatedLeadingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.ElevatedTrailingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.ElevatedTrailingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.LeadingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.LeadingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.OutlinedLeadingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.OutlinedLeadingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.OutlinedTrailingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.OutlinedTrailingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.TonalLeadingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.TonalLeadingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.TonalTrailingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.TonalTrailingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonDefaults.TrailingButton": {
         "record": "catalog/androidx.compose.material3.SplitButtonDefaults.TrailingButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.SplitButtonKt.SplitButtonLayout": {
         "record": "catalog/androidx.compose.material3.SplitButtonKt.SplitButtonLayout",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.TabRowKt.PrimaryScrollableTabRow": {
         "record": "catalog/androidx.compose.material3.TabRowKt.PrimaryScrollableTabRow",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.TabRowKt.SecondaryScrollableTabRow": {
         "record": "catalog/androidx.compose.material3.TabRowKt.SecondaryScrollableTabRow",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.TabRowKt.SecondaryTabRow": {
         "record": "catalog/androidx.compose.material3.TabRowKt.SecondaryTabRow",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.TextKt.ProvideTextStyle": {
         "record": "catalog/androidx.compose.material3.TextKt.ProvideTextStyle",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ToggleButtonKt.ElevatedToggleButton": {
         "record": "catalog/androidx.compose.material3.ToggleButtonKt.ElevatedToggleButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ToggleButtonKt.OutlinedToggleButton": {
         "record": "catalog/androidx.compose.material3.ToggleButtonKt.OutlinedToggleButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ToggleButtonKt.ToggleButton": {
         "record": "catalog/androidx.compose.material3.ToggleButtonKt.ToggleButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.ToggleButtonKt.TonalToggleButton": {
         "record": "catalog/androidx.compose.material3.ToggleButtonKt.TonalToggleButton",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.WavyProgressIndicatorKt.CircularWavyProgressIndicator": {
         "record": "catalog/androidx.compose.material3.WavyProgressIndicatorKt.CircularWavyProgressIndicator",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.WavyProgressIndicatorKt.LinearWavyProgressIndicator": {
         "record": "catalog/androidx.compose.material3.WavyProgressIndicatorKt.LinearWavyProgressIndicator",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.WideNavigationRailKt.WideNavigationRail": {
         "record": "catalog/androidx.compose.material3.WideNavigationRailKt.WideNavigationRail",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.WideNavigationRailKt.WideNavigationRailItem": {
         "record": "catalog/androidx.compose.material3.WideNavigationRailKt.WideNavigationRailItem",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldKt.ListDetailPaneScaffold": {
         "record": "catalog/androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldKt.ListDetailPaneScaffold",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.adaptive.layout.PaneKt.AnimatedPane": {
         "record": "catalog/androidx.compose.material3.adaptive.layout.PaneKt.AnimatedPane",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldKt.SupportingPaneScaffold": {
         "record": "catalog/androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldKt.SupportingPaneScaffold",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteItem": {
         "record": "catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteItem",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteScaffold": {
         "record": "catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteScaffold",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.carousel.CarouselKt.HorizontalCenteredHeroCarousel": {
         "record": "catalog/androidx.compose.material3.carousel.CarouselKt.HorizontalCenteredHeroCarousel",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/androidx.compose.material3.carousel.CarouselKt.HorizontalUncontainedCarousel": {
         "record": "catalog/androidx.compose.material3.carousel.CarouselKt.HorizontalUncontainedCarousel",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/ee.schimke.m3catalog.CatalogSchemeChoice$Companion.currentScheme": {
         "record": "catalog/ee.schimke.m3catalog.CatalogSchemeChoice$Companion.currentScheme",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/ee.schimke.m3catalog.CatalogThemeKt.Sticker": {
         "record": "catalog/ee.schimke.m3catalog.CatalogThemeKt.Sticker",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       },
       "catalog/ee.schimke.m3catalog.adaptive.AdaptiveLayoutsKt.AdaptiveSticker": {
         "record": "catalog/ee.schimke.m3catalog.adaptive.AdaptiveLayoutsKt.AdaptiveSticker",
-        "excluded": "not on this catalog's shelf \u2014 the catalog publishes 22 components and this symbol is not one of them"
+        "excluded": "not on this catalog's shelf — the catalog publishes 22 components and this symbol is not one of them"
       }
     },
     "componentMenu": {
