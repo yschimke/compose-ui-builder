@@ -50,7 +50,7 @@ maven-publish = "0.37.0"
 # .screenSizes` here. 2.1.0 is the first release carrying `ScreenGenerator.Preview.devices`
 # (compose-ai-tools#5248), which is what turns a design's export-device set into one
 # `@Preview(device = …)` per id rather than a multipreview that discards which devices it named.
-composeai-tools = "2.4.1"
+composeai-tools = "2.5.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
