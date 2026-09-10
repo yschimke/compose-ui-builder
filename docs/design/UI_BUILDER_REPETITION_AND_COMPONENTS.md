@@ -273,7 +273,14 @@ ui-builder/components/<file>.json    one component symbol per file
 
 A local directory (uncached, because it is the half that changes under you) and a served catalog's
 `design-artifacts/<system>` branch (cached against that catalog's last load). Symbols reach the
-palette as `project/<id>`. What separates this from a component pack is the thing that makes it
+palette as `project/<id>`.
+
+**Built so far**, in `ServeUiBuilderComponentLibrary`: both sources, the index and symbol reads,
+both honesty rules below, and two admin routes — a listing and one symbol with its digest and body.
+A published symbol file is an ordinary `DesignDocumentV1` declaring exactly one component plus the
+nodes its body is made of, so there is no second wire type, no second validator, and no contracts
+release in the path. **Not built**: the editor side — a `project/<id>` on the palette, the import
+that records id and digest into a design, and the drift report when a later read disagrees. What separates this from a component pack is the thing that makes it
 worth having at all: these are catalog nodes all the way down, so the Wasm canvas draws them
 properly rather than as a named placeholder — a pack cannot, and says so.
 
@@ -300,7 +307,10 @@ only has to carry a symbol during the phase where it is still moving — the fai
    The canvas is done; the wire surfaces in the table above move with the first construct that
    draws a second copy.
 3. **Component symbols and instances**, in-document — built, canvas and export.
-4. **`ui-builder/components/`**, reusing the designs reader; graduation needs nothing new.
+4. **`ui-builder/components/`** — the library and its two rules are built on the server
+   (`ServeUiBuilderComponentLibrary`, listed and fetched under
+   `/admin/ui-builder/component-library`); the editor does not yet import from it. Graduation still
+   needs nothing new.
 5. **Data-driven loops** — built on the canvas and in the editor's export lane. Two emitters are
    still refused by name: `items(rows, key = { … })` for a loop inside a lazy container, and the
    record-driven lane the code pane and the server use.
