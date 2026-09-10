@@ -25,34 +25,26 @@ tasks.named("check") {
   )
 }
 
-tasks.register("ktfmtCheckAll") {
-  group = "verification"
-  dependsOn(
-    ":ui-builder-runtime:ktfmtCheck",
-    ":ui-builder-renderer:ktfmtCheck",
-    ":server:ktfmtCheck",
-    ":slot-preview-runtime:ktfmtCheck",
-    ":ui-builder:ktfmtCheck",
-    ":ui-builder-generated-jetcaster:ktfmtCheck",
-    ":ui-builder-reference-jetcaster:ktfmtCheck",
-    ":usage-source-psi:ktfmtCheck",
-    ":wasm-ui:ktfmtCheck",
-  )
-}
+// The formatting aggregates — DERIVED, never listed, for the reason the Maven set below is.
+//
+// They were hand-kept lists and had drifted by four modules: `mcp`, `native-catalog-m3`,
+// `ui-builder-artwork` and `ui-builder-export`. `AGENTS.md` tells every contributor and every
+// agent to run `ktfmtCheckAll` before committing, CI's `check` reaches those four anyway, so the
+// gate that was supposed to save a round trip was the thing costing one — twice in one session on
+// the same file. A list of modules that has to be edited when a module is added is not a gate,
+// it is a reminder.
+//
+// Keyed on the ktfmt plugin rather than on the module list: a module formats if and only if it
+// applies the plugin, which is the same fact from the only place that states it.
+val ktfmtCheckAll = tasks.register("ktfmtCheckAll") { group = "verification" }
 
-tasks.register("ktfmtFormat") {
-  group = "formatting"
-  dependsOn(
-    ":ui-builder-runtime:ktfmtFormat",
-    ":ui-builder-renderer:ktfmtFormat",
-    ":server:ktfmtFormat",
-    ":slot-preview-runtime:ktfmtFormat",
-    ":ui-builder:ktfmtFormat",
-    ":ui-builder-generated-jetcaster:ktfmtFormat",
-    ":ui-builder-reference-jetcaster:ktfmtFormat",
-    ":usage-source-psi:ktfmtFormat",
-    ":wasm-ui:ktfmtFormat",
-  )
+val ktfmtFormatAll = tasks.register("ktfmtFormat") { group = "formatting" }
+
+subprojects {
+  plugins.withId("com.ncorti.ktfmt.gradle") {
+    ktfmtCheckAll.configure { dependsOn(tasks.named("ktfmtCheck")) }
+    ktfmtFormatAll.configure { dependsOn(tasks.named("ktfmtFormat")) }
+  }
 }
 
 // ---------------------------------------------------------------------------
