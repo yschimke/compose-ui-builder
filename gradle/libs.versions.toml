@@ -133,6 +133,9 @@ composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-se
 composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix", version.ref = "composeai-tools" }
 composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-preview-daemon" }
 composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-preview-daemon" }
+# Slot marker/host API shared by JVM and Wasm catalogs. The daemon repository owns and publishes
+# both variants; this server consumes the release instead of compiling a second copy.
+composeai-slot-preview-runtime = { module = "ee.schimke.composeai:slot-preview-runtime", version.ref = "composeai-preview-daemon" }
 
 composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol", version.ref = "composeai-contracts" }
 composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol", version.ref = "composeai-contracts" }

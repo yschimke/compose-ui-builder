@@ -16,7 +16,6 @@ tasks.named("check") {
     ":ui-builder-renderer:check",
     ":ui-builder-web:check",
     ":server:check",
-    ":slot-preview-runtime:check",
     ":ui-builder:check",
     ":ui-builder-generated-jetcaster:check",
     ":ui-builder-reference-jetcaster:check",
