@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.discovery.ComponentRecord
+import ee.schimke.composeai.discovery.TargetParameter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -148,6 +150,15 @@ internal class RemoteContentEmitter(
    * files because it has somewhere to put them.
    */
   private val bundled: WidgetAssetContents? = null,
+  /**
+   * The catalog's own component record, by component id — the inventory behind the fallback in
+   * [emit].
+   *
+   * Empty by default and empty for every caller that has none, which is what keeps this a fallback:
+   * a component with a hand-written case here never reaches the record, and a caller that passes
+   * nothing gets exactly the behaviour it had.
+   */
+  private val components: Map<String, ComponentRecord> = emptyMap(),
 ) {
   /** True once a colour or type token has been written, which only reads inside a theme. */
   var usesTheme: Boolean = false
@@ -161,6 +172,11 @@ internal class RemoteContentEmitter(
   private var usesAlignment = false
   private var usesDp = false
   private var usesTextAlign = false
+  private var usesRemoteBoolean = false
+  private var usesLambdaAction = false
+
+  /** Callables the record-driven fallback wrote, so their imports are the ones it used. */
+  private val usedComponentImports = mutableSetOf<String>()
 
   /** The `WearWidgetBrush` chain a container's background declares. */
   data class Background(
@@ -337,13 +353,194 @@ internal class RemoteContentEmitter(
             "the embedded document `${node.id}` is bytes rather than source, and a captured " +
               "document cannot be nested inside one being written from source here"
         }
-      else -> {
-        refusals +=
-          "`${node.componentId}` has no Remote Compose counterpart this generator can write"
-        emptyList()
-      }
+      else -> recordCall(node, depth) ?: refuseUnknown(node)
     }
   }
+
+  private fun refuseUnknown(node: UiBuilderNode): List<String> {
+    refusals += "`${node.componentId}` has no Remote Compose counterpart this generator can write"
+    return emptyList()
+  }
+
+  /**
+   * A call written from the component RECORD, for a component this emitter has no case for.
+   *
+   * The hand-written cases above are here because a `remote-material3` component takes Remote
+   * Compose values rather than Kotlin ones — `RemoteText(text: RemoteString)` — and a design
+   * carries `"text": "Next train"`. That is a mapping from a design's value to a Remote value, one
+   * TYPE at a time, and the record already says which type each parameter wants. Six types block
+   * every component this generator cannot write; twenty-five components do not.
+   *
+   * So this writes the call the record describes, filling each parameter from the design and
+   * refusing by name when it cannot. It runs only after every hand-written case has declined,
+   * because those encode more than a signature can: `layout/box` chooses `RemoteBox`'s alignment
+   * from the CHILD's, and `m3/text` maps a style token onto the theme.
+   *
+   * Three rules, each a refusal rather than a guess:
+   * - **one content slot.** A component with two `@Composable` slots and no default on either
+   *   cannot be filled from a design that says only "these are my children"; a component whose
+   *   content slot is not last cannot take a trailing lambda.
+   * - **every required parameter, or none of it.** A missing `RemoteFloat` is not a component drawn
+   *   slightly wrong, it is source that does not compile.
+   * - **`onClick` with nothing authored is `lambdaAction {}`.** Nine of this catalog's components
+   *   require an `Action` and no design carries one, which read as an open question until it was
+   *   compiled: a design that says nothing about behaviour means an action that does nothing.
+   *
+   * What it does not do is prove the result compiles. The spellings are compile-verified in
+   * wear-m3-catalog (`RemoteValueVocabularyProbe`), and the generated file beside it is the gate
+   * that will catch this one: `UI_BUILDER_CATALOG_CONTRACT.md` phase 2, item 11.
+   */
+  private fun recordCall(node: UiBuilderNode, depth: Int): List<String>? {
+    val record = components[node.componentId] ?: return null
+    if (!record.signatureKnown) {
+      refusals +=
+        "`${node.componentId}` has no recovered signature, so no call to it can be written"
+      return emptyList()
+    }
+    val pad = INDENT.repeat(depth)
+    val slotParameters = record.parameters.filter { it.composableSlot }
+
+    // Which design children go into which slot. A slot is filled by the children the design put
+    // under ITS OWN NAME, so a component with several says which is which — `appName`, `title`
+    // and `content` on a card are three different places and a design that named none of them
+    // has not said where anything goes. `children` is the single-slot spelling every design uses
+    // today, accepted only when there is exactly one slot to mean.
+    val single = slotParameters.singleOrNull()
+    val filled =
+      slotParameters.mapNotNull { parameter ->
+        val ids =
+          node.slots[parameter.name]
+            ?: if (parameter == single) node.slots["children"] else null
+        ids?.takeIf { it.isNotEmpty() }?.let { parameter to it }
+      }
+    val strayChildren =
+      node.slots["children"].orEmpty().isNotEmpty() && (single == null || filled.isEmpty())
+    if (strayChildren) {
+      refusals +=
+        if (slotParameters.isEmpty()) {
+          "`${node.componentId}` has children in the design and no content slot to put them in"
+        } else {
+          "`${node.componentId}` takes ${slotParameters.size} content slots " +
+            "(${slotParameters.joinToString { it.name }}) and the design names none of them, so " +
+            "which slot each child belongs in is not recoverable"
+        }
+      return emptyList()
+    }
+
+    val arguments = mutableListOf<String>()
+    val blocks = mutableListOf<Pair<String, List<String>>>()
+    for (parameter in record.parameters) {
+      if (parameter.composableSlot) {
+        val children = filled.firstOrNull { it.first == parameter }?.second
+        when {
+          children != null -> blocks += parameter.name to children
+          // A required slot with no children is an empty lambda, not an omitted argument: the
+          // parameter has no default, so leaving it off does not compile, and empty is what the
+          // design says — a container nobody has filled yet.
+          !parameter.hasDefault -> blocks += parameter.name to emptyList()
+        }
+        continue
+      }
+      val authored = node.properties[parameter.name]
+      val expression =
+        when {
+          parameter.name == MODIFIER_PARAMETER -> node.modifierExpression(pad)
+          authored != null -> remoteValue(parameter, authored)
+          parameter.hasDefault -> null
+          parameter.typeFqn == ACTION_FQN -> lambdaActionExpression()
+          else -> null
+        }
+      if (expression == null) {
+        if (!parameter.hasDefault && parameter.name != MODIFIER_PARAMETER) {
+          refusals +=
+            "`${node.componentId}` requires `${parameter.name}: ${parameter.type}` and the " +
+              "design carries no value this generator can write as one"
+          return emptyList()
+        }
+        continue
+      }
+      arguments += "${parameter.name} = $expression"
+    }
+
+    usedComponentImports += record.symbol.callable
+    val symbol = record.symbol.name
+    if (blocks.isEmpty()) return (pad + call(symbol, arguments, pad)).split("\n")
+
+    // The LAST parameter's slot is written as a trailing lambda when it is the last parameter of
+    // the call; every other slot is a named argument whose value is a lambda. Both are ordinary
+    // Kotlin, and the split matters only for how it reads.
+    val trailingName =
+      record.parameters.lastOrNull()?.takeIf { it.composableSlot }?.name?.takeIf { name ->
+        blocks.any { it.first == name }
+      }
+    val named = blocks.filterNot { it.first == trailingName }
+    val lines = mutableListOf<String>()
+    val headArguments = arguments.toMutableList()
+    if (named.isEmpty() && headArguments.size <= 1) {
+      lines +=
+        pad +
+          (if (headArguments.isEmpty()) "$symbol {"
+          else "${call(symbol, headArguments, pad, trailing = OPENING_BRACE.length)}$OPENING_BRACE")
+    } else {
+      lines += "$pad$symbol("
+      headArguments.forEach { lines += "$pad$INDENT$it," }
+      named.forEach { (name, ids) ->
+        lines += "$pad$INDENT$name = {"
+        lines += ids.flatMap { emit(it, depth + 2) }
+        lines += "$pad$INDENT},"
+      }
+      lines += if (trailingName == null) "$pad)" else "$pad)$OPENING_BRACE"
+    }
+    if (trailingName != null) {
+      lines += blocks.first { it.first == trailingName }.second.flatMap { emit(it, depth + 1) }
+      lines += "$pad}"
+    }
+    return lines
+  }
+
+  private fun lambdaActionExpression(): String {
+    usesLambdaAction = true
+    return "lambdaAction {}"
+  }
+
+  /**
+   * A design's value as an expression of the parameter's declared type, or null when there is none.
+   *
+   * Matched on the QUALIFIED type for the reason `ComponentSnippets` gives one level up: `type`
+   * prints a simple name, so `com.example.RemoteString` and the real one read identically, and a
+   * generator that answers off the spelling writes source that does not compile.
+   */
+  private fun remoteValue(parameter: TargetParameter, value: JsonElement): String? =
+    when (parameter.typeFqn) {
+      REMOTE_STRING_FQN ->
+        value.stringOrNull()?.let {
+          usesRemoteString = true
+          "\"${it.escaped()}\".rs"
+        }
+      REMOTE_BOOLEAN_FQN ->
+        value.boolOrNull()?.let {
+          usesRemoteBoolean = true
+          "$it.rb"
+        }
+      REMOTE_FLOAT_FQN ->
+        value.numberOrNull()?.let {
+          usesRemoteFloat = true
+          "${it}f.rf"
+        }
+      REMOTE_COLOR_FQN ->
+        value
+          .stringOrNull()
+          ?.takeIf { it.startsWith("#") }
+          ?.let {
+            usesColorLiteral = true
+            "${it.argbLiteral()}.rc"
+          }
+      "kotlin.String" -> value.stringOrNull()?.let { "\"${it.escaped()}\"" }
+      "kotlin.Boolean" -> value.boolOrNull()?.toString()
+      "kotlin.Int" -> value.intOrNull()?.toString()
+      "kotlin.Float" -> value.numberOrNull()?.let { "${it}f" }
+      else -> null
+    }
 
   private fun container(
     node: UiBuilderNode,
@@ -981,6 +1178,11 @@ internal class RemoteContentEmitter(
     if (usesRow) imports += "androidx.compose.remote.creation.compose.layout.RemoteRow"
     if (usesLottie) imports += "com.google.android.horologist.remotecompose.lottie.LottieAnimation"
     if (usesRemoteFloat) imports += "androidx.compose.remote.creation.compose.state.rf"
+    if (usesRemoteBoolean) imports += "androidx.compose.remote.creation.compose.state.rb"
+    if (usesLambdaAction) {
+      imports += "androidx.compose.remote.creation.compose.action.lambdaAction"
+    }
+    imports += usedComponentImports
     if (usesAlignment) imports += "androidx.compose.remote.creation.compose.layout.RemoteAlignment"
     if (usesArrangement) {
       imports += "androidx.compose.remote.creation.compose.layout.RemoteArrangement"
@@ -1495,6 +1697,19 @@ private fun kotlinx.serialization.json.JsonElement.stringValue(): String? =
 
 private fun kotlinx.serialization.json.JsonElement.numberValue(): Float? =
   (this as? JsonPrimitive)?.floatOrNull
+
+/** The parameter names and types the record-driven fallback in [RemoteContentEmitter] knows. */
+private const val MODIFIER_PARAMETER = "modifier"
+
+private const val ACTION_FQN = "androidx.compose.remote.creation.compose.action.Action"
+private const val REMOTE_STRING_FQN = "androidx.compose.remote.creation.compose.state.RemoteString"
+private const val REMOTE_BOOLEAN_FQN =
+  "androidx.compose.remote.creation.compose.state.RemoteBoolean"
+private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
+private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
+
+internal fun kotlinx.serialization.json.JsonElement.boolOrNull(): Boolean? =
+  (this as? JsonObject)?.get("value")?.jsonPrimitive?.booleanOrNull
 
 internal fun kotlinx.serialization.json.JsonElement.stringOrNull(): String? =
   (this as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull

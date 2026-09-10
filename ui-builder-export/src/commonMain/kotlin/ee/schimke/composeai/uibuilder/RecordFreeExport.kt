@@ -84,7 +84,12 @@ object RecordFreeExport {
       // through [nativePreview] rather than here. Accepting the flag and dropping it would read as
       // support.
       document.isWearWidget() ->
-        WearWidgetCodeExporter.export(document, packageName, assets).generated()
+        // A widget takes no PACK components — a pack's Jetpack Compose composable cannot be
+        // played as Remote Compose — and it does take its own catalog's record, which is a
+        // different thing wearing the same parameter. `RemoteContentEmitter` falls back to it for
+        // a component it has no hand-written case for, which is most of what a Remote catalog
+        // publishes.
+        WearWidgetCodeExporter.export(document, packageName, assets, packComponents).generated()
       document.isWearScreen() ->
         WearScreenCodeExporter.export(document, packageName, tagNodes, packComponents).generated()
       else -> null

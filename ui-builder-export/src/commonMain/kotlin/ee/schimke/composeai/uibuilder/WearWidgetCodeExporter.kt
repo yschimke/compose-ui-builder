@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.discovery.ComponentRecord
+
 /**
  * Generates the Kotlin a Wear widget design becomes: a `GlanceWearWidget`, its Remote Compose
  * content, and a `@Preview` per host container shape that draws it through the real host tooling —
@@ -56,8 +58,9 @@ object WearWidgetCodeExporter {
     document: UiBuilderDocument,
     packageName: String? = null,
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    components: Map<String, ComponentRecord> = emptyMap(),
   ): Result =
-    when (val outcome = generate(document, packageName, assets, bundled = null)) {
+    when (val outcome = generate(document, packageName, assets, bundled = null, components)) {
       is Outcome.Refused -> Result.Refused(outcome.reasons)
       is Outcome.Generated -> Result.Emitted(outcome.source)
     }
@@ -115,6 +118,7 @@ object WearWidgetCodeExporter {
     packageName: String?,
     assets: WidgetAssetBytes,
     bundled: WidgetAssetContents?,
+    components: Map<String, ComponentRecord> = emptyMap(),
   ): Outcome {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
@@ -155,16 +159,24 @@ object WearWidgetCodeExporter {
     // refusals are dropped, the real emitter below being the one that reports them.
     val depth =
       if (
-        RemoteContentEmitter(document, mutableListOf(), assets, bundled = bundled).let { probe ->
-          probe.background(root)
-          contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
-          probe.usesTheme
-        }
+        RemoteContentEmitter(
+            document,
+            mutableListOf(),
+            assets,
+            bundled = bundled,
+            components = components,
+          )
+          .let { probe ->
+            probe.background(root)
+            contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
+            probe.usesTheme
+          }
       )
         2
       else 1
 
-    val emitter = RemoteContentEmitter(document, refusals, assets, bundled = bundled)
+    val emitter =
+      RemoteContentEmitter(document, refusals, assets, bundled = bundled, components = components)
     val background = emitter.background(root)
     val body =
       when (contentIds.size) {

@@ -1,0 +1,242 @@
+package ee.schimke.composeai.uibuilder
+
+import ee.schimke.composeai.discovery.ComponentOrigin
+import ee.schimke.composeai.discovery.ComponentRecord
+import ee.schimke.composeai.discovery.ComponentSymbol
+import ee.schimke.composeai.discovery.TargetParameter
+import kotlin.test.Test
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+/**
+ * A `remote-m3` component the emitter has no case for, written from the component RECORD.
+ *
+ * `RemoteContentEmitter.emit` is a `when` over component ids with a hand-written function each, and
+ * "twenty-five components means twenty-five functions" was the wrong unit for what that costs. A
+ * `remote-material3` component takes Remote Compose values rather than Kotlin ones —
+ * `RemoteText(text: RemoteString)` against a design's `"text": "Next train"` — so the missing piece
+ * is a mapping from a design's value to a Remote value, one TYPE at a time, and the record already
+ * says which type each parameter wants.
+ *
+ * The spellings are not invented here. `RemoteValueVocabularyProbe` in wear-m3-catalog compiles
+ * `"…".rs`, `true.rb`, `0.5f.rf`, `Color(…).rc` and `lambdaAction {}` against remote-material3 and
+ * the creation DSL, which is the only place that can: this repository has no Remote Compose
+ * dependency anywhere, by design.
+ */
+class RemoteContentRecordFallbackTest {
+
+  private fun parameter(
+    name: String,
+    typeFqn: String,
+    type: String = typeFqn.substringAfterLast('.'),
+    hasDefault: Boolean = false,
+    composableSlot: Boolean = false,
+  ) =
+    TargetParameter(
+      name = name,
+      type = type,
+      typeFqn = typeFqn,
+      hasDefault = hasDefault,
+      composableSlot = composableSlot,
+    )
+
+  private fun record(name: String, vararg parameters: TargetParameter) =
+    ComponentRecord(
+      canonicalId = "remote-catalog/androidx.wear.compose.remote.material3.${name}Kt.$name",
+      componentIds = emptyList(),
+      symbol =
+        ComponentSymbol(
+          jvmOwner = "androidx.wear.compose.remote.material3.${name}Kt",
+          callable = "androidx.wear.compose.remote.material3.$name",
+          name = name,
+          origin = ComponentOrigin.LIBRARY,
+        ),
+      parameters = parameters.toList(),
+      slots = emptyList(),
+      signatureKnown = true,
+    )
+
+  private val remoteText =
+    record(
+      "RemoteText",
+      parameter("text", "androidx.compose.remote.creation.compose.state.RemoteString"),
+      parameter(
+        "modifier",
+        "androidx.compose.remote.creation.compose.modifier.RemoteModifier",
+        hasDefault = true,
+      ),
+      parameter(
+        "color",
+        "androidx.compose.remote.creation.compose.state.RemoteColor",
+        hasDefault = true,
+      ),
+    )
+
+  private val remoteButton =
+    record(
+      "RemoteButton",
+      parameter("onClick", "androidx.compose.remote.creation.compose.action.Action"),
+      parameter(
+        "enabled",
+        "androidx.compose.remote.creation.compose.state.RemoteBoolean",
+        hasDefault = true,
+      ),
+      parameter(
+        "content",
+        "kotlin.Function1",
+        type = "RemoteRowScope.() -> Unit",
+        composableSlot = true,
+      ),
+    )
+
+  private fun value(text: String) = buildJsonObject {
+    put("type", JsonPrimitive("string"))
+    put("value", JsonPrimitive(text))
+  }
+
+  private fun document(nodes: Map<String, UiBuilderNode>, root: String) =
+    UiBuilderDocument(
+      schema = "compose-ui-builder-document/v1-candidate",
+      id = "record-fallback",
+      title = "Record fallback",
+      revision = 1,
+      catalogPin = JsonObject(emptyMap()),
+      environment = JsonObject(emptyMap()),
+      stateVariables = JsonObject(emptyMap()),
+      roots = listOf(root),
+      nodes = nodes,
+    )
+
+  private fun widget(child: Map<String, UiBuilderNode>, childId: String) =
+    document(
+      mapOf(
+        "host" to
+          UiBuilderNode(
+            id = "host",
+            componentId = "remote-m3/widget-container-small",
+            slots = mapOf("content" to listOf(childId)),
+          )
+      ) + child,
+      root = "host",
+    )
+
+  @Test
+  fun `a component with no case is written from its record`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            widget(
+              mapOf(
+                "label" to
+                  UiBuilderNode(
+                    id = "label",
+                    componentId = "remote-m3/remote-text",
+                    properties = buildJsonObject { put("text", value("Next train")) },
+                  )
+              ),
+              childId = "label",
+            ),
+            components = mapOf("remote-m3/remote-text" to remoteText),
+          )
+        )
+        .source
+
+    assertTrue("RemoteText(text = \"Next train\".rs)" in source, source)
+    assertTrue("import androidx.wear.compose.remote.material3.RemoteText" in source, source)
+    assertTrue("import androidx.compose.remote.creation.compose.state.rs" in source, source)
+  }
+
+  /**
+   * `onClick` with nothing authored is `lambdaAction {}`.
+   *
+   * Nine of remote-catalog's components require an `Action` and no design carries one, which read
+   * as an open product question until it was compiled. A design that says nothing about behaviour
+   * means an action that does nothing, and that is a legal `Action`.
+   */
+  @Test
+  fun `a required action with nothing authored is a lambda that does nothing`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            widget(
+              mapOf(
+                "button" to
+                  UiBuilderNode(
+                    id = "button",
+                    componentId = "remote-m3/remote-button",
+                    slots = mapOf("children" to listOf("label")),
+                  ),
+                "label" to
+                  UiBuilderNode(
+                    id = "label",
+                    componentId = "remote-m3/remote-text",
+                    properties = buildJsonObject { put("text", value("Go")) },
+                  ),
+              ),
+              childId = "button",
+            ),
+            components =
+              mapOf(
+                "remote-m3/remote-button" to remoteButton,
+                "remote-m3/remote-text" to remoteText,
+              ),
+          )
+        )
+        .source
+
+    assertTrue("RemoteButton(onClick = lambdaAction {}) {" in source, source)
+    assertTrue("RemoteText(text = \"Go\".rs)" in source, source)
+    assertTrue("import androidx.compose.remote.creation.compose.action.lambdaAction" in source)
+  }
+
+  /**
+   * Without a record the refusal is the one it always was, so nothing that has no record changes.
+   */
+  @Test
+  fun `a component with no case and no record is refused by name`() {
+    val result =
+      WearWidgetCodeExporter.export(
+        widget(
+          mapOf("label" to UiBuilderNode(id = "label", componentId = "remote-m3/remote-text")),
+          childId = "label",
+        )
+      )
+    val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
+    assertTrue(
+      refused.reasons.any {
+        "remote-m3/remote-text" in it && "no Remote Compose counterpart" in it
+      },
+      refused.reasons.toString(),
+    )
+  }
+
+  /**
+   * A required parameter the design cannot fill refuses by NAME rather than emitting a call that
+   * does not compile. A missing `RemoteFloat` is not a component drawn slightly wrong.
+   */
+  @Test
+  fun `a required parameter the design cannot fill refuses by name`() {
+    val slider =
+      record(
+        "RemoteSlider",
+        parameter("value", "androidx.compose.remote.creation.compose.state.RemoteFloat"),
+      )
+    val result =
+      WearWidgetCodeExporter.export(
+        widget(
+          mapOf("slider" to UiBuilderNode(id = "slider", componentId = "remote-m3/remote-slider")),
+          childId = "slider",
+        ),
+        components = mapOf("remote-m3/remote-slider" to slider),
+      )
+    val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
+    assertTrue(
+      refused.reasons.any { "value: RemoteFloat" in it },
+      refused.reasons.toString(),
+    )
+  }
+}
