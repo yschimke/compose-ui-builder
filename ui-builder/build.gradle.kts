@@ -347,8 +347,24 @@ tasks.named("wasmJsBrowserProductionWebpack") {
 // it carries the production preview and nothing else. `UiBuilderEditorChromePreview` exists to be
 // diffed, not shipped: leaving it in the bundle took it from 478 KB to 1.6 MB, because the editor
 // chrome drags in the whole authoring UI that the document renderer never touches.
-tasks.named<ee.schimke.composeai.plugin.BundlePreviewTask>("composePreviewBundle") {
-  previewIds.set(
-    listOf("ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview")
-  )
+// Inside `afterEvaluate`, because compose-ai-tools 2.8.0 (its #5380) defers the Desktop lane's task
+// registration to `afterEvaluate` on any module applying the Kotlin Multiplatform plugin without
+// `com.android.kotlin.multiplatform.library` — this one — so that a KMP-Android module applying
+// `org.jetbrains.compose` first can still claim the Robolectric lane. `composePreviewBundle` no
+// longer exists while this script body runs, and naming it here failed configuration outright.
+//
+// The plugin registers its `afterEvaluate` during the `plugins { }` block, so it runs before this
+// one and the task is there by the time we name it. `withType(...).configureEach` looks like the
+// order-independent answer and is a trap: the plugin's registration action does
+// `previewIds.set(previewIdsProperty.orElse(emptyList()))`, and under deferred registration that
+// action runs *after* a `configureEach` added earlier — silently resetting the selection to empty.
+// The bundle still built, at 70 previews and 4.9 MB instead of 1 and 2.5 MB.
+afterEvaluate {
+  tasks.named<ee.schimke.composeai.plugin.BundlePreviewTask>("composePreviewBundle") {
+    previewIds.set(
+      listOf(
+        "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
+      )
+    )
+  }
 }
