@@ -51,7 +51,7 @@ maven-publish = "0.37.0"
 # .screenSizes` here. 2.1.0 is the first release carrying `ScreenGenerator.Preview.devices`
 # (compose-ai-tools#5248), which is what turns a design's export-device set into one
 # `@Preview(device = …)` per id rather than a multipreview that discards which devices it named.
-composeai-tools = "2.9.0"
+composeai-tools = "2.10.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -59,7 +59,7 @@ composeai-tools = "2.9.0"
 # `preview-data-api`, `renderer-desktop`, `daemon-desktop` and the `data-*` runtimes below no
 # longer move with `composeai-tools`. (`composeai-data`, the tools repository's separately-versioned
 # data line, went with the move.) A point pin, for the same reason as the two above.
-composeai-preview-daemon = "3.4.0"
+composeai-preview-daemon = "3.4.2"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
