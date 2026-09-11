@@ -245,11 +245,29 @@ carries `autoMirror = <that value>`.
 **The legacy keys are lower-camel, and the new names are snake_case.** `MaterialIconCatalogTasks`
 builds its key from the Kotlin member — `ArrowBack` becomes `arrowBack`, so the stored key is
 `autoMirrored/filled/arrowBack` and never `arrow_back`. A migration that treats the suffix as an
-already-valid symbol name resolves nothing. The mapping is therefore an explicit generated table
-from every real stored spelling — all 11,385 style-qualified keys plus the 46 unqualified
-compatibility aliases — to its symbol name, built from the same inventory that produced the keys,
-not derived by re-casing a string at runtime. `autoMirrored/filled/arrowBack` maps to `arrow_back`
-at `fill 1` **with** `iconAutoMirror = true`.
+already-valid symbol name resolves nothing, so every stored key has to be re-spelled.
+`autoMirrored/filled/arrowBack` maps to `arrow_back` at `fill 1` **with** `iconAutoMirror = true`.
+
+**It is a rule plus twenty-seven exceptions, not a generated table of 11,431 rows.** This document
+asked for the table first; the measurement says a table is mostly arithmetic written out. There are
+2,133 distinct member names behind the 11,431 keys, and re-casing the member resolves **2,106** of
+them against the pinned name list — the whole of the difference being the digit boundary, where
+neither convention wins (`co2` stays `co2`, `filter1` is `filter_1`), so two spellings are tried and
+no name has both. The remaining 27 are hand-written and named: 11 upstream renames (`crop169` →
+`crop_16_9`, the `outbond` typo upstream later fixed, `playCircleFilled` and `playCircleOutline`
+both folding into `play_circle` now that fill is an axis) and 16 icons Material Symbols dropped
+outright (`facebook`, `fitbit`, `pix`, `whatsapp`, the `panorama*Select` variants). A generated
+table would be a large asset regenerated on every pin bump; these 27 lines change only when upstream
+renames something.
+
+The rule is never trusted on its own: a candidate spelling is accepted only when the **pinned face
+carries it**, so a bad guess is an explicit "no equivalent" somebody sees rather than a silently
+wrong picture, and a name upstream drops turns into that same visible answer. All 2,133 are held
+against the real name list in `MaterialSymbolsLegacyKeysTest`, with the expected answer for each
+committed, so a rule that stops covering one fails loudly. The style decomposition is checked there
+too, because getting it backwards would redraw every icon in every existing design: `Filled`,
+`Rounded` and `Sharp` are one drawing at three corner treatments, all of them *filled*, so they are
+the three faces at `FILL 1`, and only `Outlined` is `FILL 0`.
 
 `iconKey` stops being an 11,431-value enum and the catalog says "a name in the Material Symbols
 set", validated against the shipped name list rather than spelled out. The `SUMMARY_ALLOWED_VALUES`
