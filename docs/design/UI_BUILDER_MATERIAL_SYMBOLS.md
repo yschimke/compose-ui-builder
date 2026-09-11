@@ -250,8 +250,8 @@ already-valid symbol name resolves nothing, so every stored key has to be re-spe
 
 **It is a rule plus twenty-seven exceptions, not a generated table of 11,431 rows.** This document
 asked for the table first; the measurement says a table is mostly arithmetic written out. There are
-2,133 distinct member names behind the 11,431 keys, and re-casing the member resolves **2,106** of
-them against the pinned name list — the whole of the difference being the digit boundary, where
+2,132 distinct member names behind the 11,385 style-qualified keys, and re-casing the member
+resolves **2,105** of them against the pinned name list — the whole of the difference being the digit boundary, where
 neither convention wins (`co2` stays `co2`, `filter1` is `filter_1`), so two spellings are tried and
 no name has both. The remaining 27 are hand-written and named: 11 upstream renames (`crop169` →
 `crop_16_9`, the `outbond` typo upstream later fixed, `playCircleFilled` and `playCircleOutline`
@@ -264,7 +264,21 @@ The rule is never trusted on its own: a candidate spelling is accepted only when
 carries it**, so a bad guess is an explicit "no equivalent" somebody sees rather than a silently
 wrong picture, and a name upstream drops turns into that same visible answer. All 2,133 are held
 against the real name list in `MaterialSymbolsLegacyKeysTest`, with the expected answer for each
-committed, so a rule that stops covering one fails loudly. The style decomposition is checked there
+committed, so a rule that stops covering one fails loudly.
+
+**The 46 unqualified keys are not "the filled member of the same name".** Five of them stood for
+something else, and reading them the tempting way is silent rather than loud: `genres` was always
+`Icons.Filled.Category`, and `genres` is *also* a real Material Symbols icon, so the assumption
+swaps the picture rather than failing. `arrowBack`, `arrowForward` and `playlistAdd` were
+auto-mirrored members that would stop flipping in RTL, and `bookmarkBorder` was the outlined one.
+Each is written as the qualified key it stands for and migrated through the ordinary path, and all
+46 are pinned against the inventory column that issued them.
+
+One rename outranks its style rather than following it. `playCircleFilled` and `playCircleOutline`
+were two icons, each drawn in all five styles; Material Symbols has one `play_circle` and says the
+difference with `FILL`. Taking fill from the style there would collapse the pair — a stored
+`filled/playCircleOutline` would come back filled — so the name's baked fill wins and only the face
+follows the style. The style decomposition is checked there
 too, because getting it backwards would redraw every icon in every existing design: `Filled`,
 `Rounded` and `Sharp` are one drawing at three corner treatments, all of them *filled*, so they are
 the three faces at `FILL 1`, and only `Outlined` is `FILL 0`.
