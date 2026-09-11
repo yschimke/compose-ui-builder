@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
+import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.validateCapabilities
@@ -1155,9 +1156,22 @@ private fun LiveSessionApp(
         Json.encodeToString(collaborators.map(UiBuilderCollaborator::selectedNodeIds)),
       )
     }
+    // The record this host generates this catalog's exports from, for the code pane and the
+    // problems panel. Without it they judge every catalog by the record embedded in this build —
+    // `m3-catalog`'s authored one — and a published catalog's components are not in it, so the
+    // pane reported "no component" for what the export writes. See `UiBuilderEditorReducer`.
+    //
+    // Fetched separately rather than carried on the capability document, and after the design is
+    // on screen rather than before: it is the largest thing this page reads and nothing draws with
+    // it. A host that serves none, and a fetch that fails, leave the editor exactly where it was.
+    var catalogRecord by remember(loadedCatalog) { mutableStateOf<ComponentRecordFile?>(null) }
+    LaunchedEffect(loadedCatalog) {
+      catalogRecord = fetchCatalogRecord(loadedCatalog.benchmark.catalogSystemId)
+    }
     UiBuilderEditor(
       document = loadedDocument,
       catalog = loadedCatalog,
+      catalogRecord = catalogRecord,
       actorId = config.actorId,
       clientId = config.clientId,
       operationIdPrefix = config.operationIdPrefix,
@@ -2073,6 +2087,32 @@ private data class DevicePresetWire(
   val heightDp: Int,
   val density: Double,
 )
+
+/**
+ * The component record this host generates [catalogSystemId]'s exports from, or null.
+ *
+ * Null on every failure, deliberately and quietly: a host with no record for this catalog answers
+ * 404, an older host has no such route at all, and an offline page reaches neither. All three mean
+ * the same thing to the editor — judge the design by the record embedded in this build, exactly as
+ * it did before the route existed — and none of them is worth a banner over a design that draws and
+ * exports regardless.
+ *
+ * Unknown keys are ignored for the reason `EmbeddedComponentRecordAccess` gives: a record from a
+ * newer producer should still parse, and which schema versions may be generated from is the
+ * *host's* judgement, made before this is served. A record it would not generate from is not served
+ * at all.
+ */
+private suspend fun fetchCatalogRecord(catalogSystemId: String): ComponentRecordFile? =
+  runCatching {
+    catalogRecordJson.decodeFromString<ComponentRecordFile>(
+      fetchText(
+        "/api/ui-builder/v1/catalogs/${encodeUriComponent(catalogSystemId)}/component-record"
+      )
+    )
+  }
+  .getOrNull()
+
+private val catalogRecordJson = Json { ignoreUnknownKeys = true }
 
 private suspend fun loadLiveCatalogs(http: UiBuilderProtocolHttpClient): List<CatalogCapabilityV1> =
   when (val result = http.execute(ListCatalogsRequestV1)) {

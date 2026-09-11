@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
@@ -1238,14 +1239,39 @@ class UiBuilderEditorReducer(
   private val actorId: String = EDITOR_ACTOR_ID,
   private val clientId: String = EDITOR_CLIENT_ID,
   private val operationIdPrefix: String = clientId,
+  /**
+   * This catalog's OWN component record, as the host that serves the catalog reads it, or null when
+   * the host has none to give.
+   *
+   * The record embedded in this module is `m3-catalog`'s authored one, baked in at build time, and
+   * it is the only record the editor had. Against a **published** catalog that is the wrong record
+   * rather than an incomplete one: the shelf serves components this build has never heard of, so
+   * the code pane and the problems panel reported "no component `m3/…` in this catalog" for every
+   * one of them while the server's export wrote their call sites perfectly well. Fetched from the
+   * host and handed in here, the two lanes read one record and can no longer disagree about what a
+   * component is.
+   *
+   * Null is today's behaviour, unchanged: a host that serves no record, a catalog whose record this
+   * build will not generate from, and a page that could not reach either fall back to the embedded
+   * record.
+   */
+  private val catalogRecord: ComponentRecordFile? = null,
 ) {
   private val capabilityValidator = CapabilityValidator(catalog)
 
   /**
-   * The record the code pane and the problems panel generate from: the embedded one, plus this
-   * catalog's pack components projected back into record shape. See [packComponentRecords].
+   * The record the code pane and the problems panel generate from: this catalog's own where the
+   * host served one and the embedded one otherwise, plus this catalog's pack components projected
+   * back into record shape. See [packComponentRecords].
+   *
+   * The catalog's own record REPLACES the embedded one rather than joining it, because parity is
+   * the point: the server generates from that record and nothing else, and a union would let the
+   * browser resolve an id the export refuses — a disagreement in the more expensive direction,
+   * since it is discovered at export rather than while authoring.
    */
-  private val exportRecord by lazy { catalog.exportRecord(embeddedComponentRecord()) }
+  private val exportRecord by lazy {
+    catalog.exportRecord(catalogRecord ?: embeddedComponentRecord())
+  }
 
   /**
    * The pack components a record-free (Wear screen) design may hold, for the same two callers as
@@ -1266,10 +1292,18 @@ class UiBuilderEditorReducer(
    * and `remote-m3` screens generate through their own emitters (`RecordFreeExport`) and are judged
    * by neither this record nor its absence, so greying every row of a Wear palette against
    * `m3-catalog`'s record would be the palette lying in the other direction.
+   *
+   * That question does not arise for [catalogRecord]: the host served it AS this catalog's record,
+   * so it is this catalog's whatever module discovery ran against — and the module names differ in
+   * practice, m3-catalog's shipped record saying `m3-catalog/…` where its own repository says
+   * `catalog/…`. Comparing them would have taken every marker off a published palette, which is the
+   * case this record exists to serve.
    */
   private val composeExportCoverage: Set<String>? by lazy {
     val record = exportRecord ?: return@lazy null
-    if (record.module != catalog.benchmark.catalogSystemId) return@lazy null
+    if (catalogRecord == null && record.module != catalog.benchmark.catalogSystemId) {
+      return@lazy null
+    }
     record.components.filter { it.code?.call != null }.flatMapTo(mutableSetOf()) { it.componentIds }
   }
 

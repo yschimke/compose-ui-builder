@@ -175,6 +175,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
@@ -302,6 +303,14 @@ data class UiBuilderNativeNodeBounds(
 fun UiBuilderEditor(
   document: UiBuilderDocument,
   catalog: CapabilityCatalog,
+  /**
+   * The component record the host serving [catalog] generates its exports from, where it has one.
+   *
+   * See `UiBuilderEditorReducer`'s own parameter. Null — the default, and every caller but the live
+   * browser session — leaves the code pane reading the record embedded at build time, which is what
+   * it always read.
+   */
+  catalogRecord: ComponentRecordFile? = null,
   onStateChanged: (UiBuilderEditorState) -> Unit = {},
   onCanvasMetrics: (Int, Int, Float) -> Unit = { _, _, _ -> },
   onCanvasBoundsChanged: (Rect) -> Unit = {},
@@ -646,8 +655,8 @@ fun UiBuilderEditor(
   resolveDesignAsset: (suspend (String) -> ByteArray)? = null,
 ) {
   val reducer =
-    remember(catalog, actorId, clientId, operationIdPrefix) {
-      UiBuilderEditorReducer(catalog, actorId, clientId, operationIdPrefix)
+    remember(catalog, catalogRecord, actorId, clientId, operationIdPrefix) {
+      UiBuilderEditorReducer(catalog, actorId, clientId, operationIdPrefix, catalogRecord)
     }
   var state by
     remember(document.id) {
