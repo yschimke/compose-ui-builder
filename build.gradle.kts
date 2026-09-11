@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
+
 plugins {
   base
   alias(libs.plugins.kotlin.jvm) apply false
@@ -92,6 +94,46 @@ tasks.named("check") {
     ":usage-source-psi:check",
     ":wasm-ui:check",
   )
+}
+
+// ---------------------------------------------------------------------------
+// One Kotlin/Wasm executable links at a time.
+// ---------------------------------------------------------------------------
+//
+// `kotlin.daemon.jvmargs=-Xmx6g` above is sized for ONE ir2wasm pass. There is one Kotlin daemon
+// for the whole build, `org.gradle.parallel=true`, and twenty-six of these link tasks across seven
+// modules — so `check` runs several of them inside that single 6 GB heap and it dies with "Not
+// enough memory to run compilation".
+//
+// That is what took `main` red from #710 (the complete Material icon inventory) through #711's
+// 4g -> 6g bump, which raised the ceiling without changing how many passes share it. The failure
+// moved between `:ui-builder:compileTestDevelopmentExecutableKotlinWasmJs` and
+// `:ui-builder-renderer:compileDevelopmentExecutableKotlinWasmJs` run to run — whichever pair
+// happened to overlap, which is the signature of contention rather than of one task being too big.
+//
+// The evidence that a single pass does fit: the `visual-harness` job compiles four of these
+// executables at the same 6 GB and passes, because it runs `--no-daemon --no-parallel
+// --max-workers=1`. And `:ui-builder:compileTestDevelopmentExecutableKotlinWasmJs` — the one CI
+// dies on — links in 5m13s at 6 GB on a 15 GB machine when nothing else shares the daemon.
+//
+// So the constraint is stated where it is true, rather than by serialising a whole CI job or by
+// raising a number that has to be raised again the next time the icon set grows. A shared build
+// service with `maxParallelUsages = 1` is Gradle's way to say "these tasks must not run
+// concurrently with each other"; everything else in the build stays parallel.
+//
+// Matched by TASK TYPE, not by name. A name pattern is the same hand-kept list `ktfmtCheckAll`
+// was, one rename away from silently matching nothing and letting the OOM back in with no test to
+// notice — and there is no cheap test for "CI has enough memory". `KotlinJsIrLink` is the type
+// Kotlin gives every executable link; if it is renamed the build stops compiling here instead.
+abstract class WasmLinkLane : BuildService<BuildServiceParameters.None>
+
+val wasmLinkLane =
+  gradle.sharedServices.registerIfAbsent("wasmLinkLane", WasmLinkLane::class) {
+    maxParallelUsages.set(1)
+  }
+
+subprojects {
+  tasks.withType<KotlinJsIrLink>().configureEach { usesService(wasmLinkLane) }
 }
 
 // The formatting aggregates — DERIVED, never listed, for the reason the Maven set below is.
