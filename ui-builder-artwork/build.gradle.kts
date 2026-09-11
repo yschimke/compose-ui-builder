@@ -15,7 +15,16 @@ kotlin {
   jvmToolchain(libs.versions.java.ui.builder.get().toInt())
 
   jvm()
-  @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class) wasmJs { browser() }
+  // `binaries.executable()` is required by Compose 1.12.0, not optional here: its
+  // `checkComposeUiTestConfigurationForWasmJs` check fails the build when the wasmJs test
+  // classpath resolves Skiko and no executable binary is declared, because the Skiko runtime
+  // would have nothing to load from (CMP-4906). This module declares no wasmJs tests today, but
+  // the check looks at the configuration rather than at whether tests exist.
+  @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+  wasmJs {
+    browser()
+    binaries.executable()
+  }
 
   sourceSets {
     commonMain.dependencies {
