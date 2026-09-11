@@ -5,14 +5,15 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.platform.FrameRecomposer
 import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import ee.schimke.composeai.uibuilder.artwork.readProjectOwnedJetcasterArtwork
 import java.security.MessageDigest
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -137,13 +138,23 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
         convertTextToPaths = false,
         prettyXML = true,
       )
+    // Compose 1.12.0 took the frame clock out of the scene: the recomposer owns it, and what was
+    // one `scene.render(canvas, nanos)` is now the three steps that call made — advance the frame,
+    // settle the layout, draw. The frame time is still the document's own
+    // ([UiBuilderDocument.fixedFrameNanos]), which is what keeps a re-export byte-identical.
+    //
+    // `Unconfined` rather than the `EmptyCoroutineContext` the scene used to take: the recomposer
+    // requires a `ContinuationInterceptor` and refuses without one. Unconfined is the honest
+    // choice for this recorder — every frame is driven by hand from this thread and nothing here
+    // ever waits, so recomposition runs inline before the measure below rather than on a worker
+    // this export would then have to wait for and shut down.
+    val recomposer = FrameRecomposer(Dispatchers.Unconfined)
     val scene =
       CanvasLayersComposeScene(
+        recomposer,
         density = Density(density, fontScale),
         layoutDirection = layoutDirection,
         size = IntSize(widthPx, heightPx),
-        coroutineContext = EmptyCoroutineContext,
-        invalidate = {},
       )
     return try {
       try {
@@ -159,12 +170,18 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
             )
           }
         }
-        scene.render(skiaCanvas.asComposeCanvas(), document.fixedFrameNanos())
+        recomposer.performFrame(document.fixedFrameNanos())
+        scene.measureAndLayout()
+        scene.draw(skiaCanvas.asComposeCanvas())
       } finally {
         try {
           scene.close()
         } finally {
-          skiaCanvas.close()
+          try {
+            recomposer.close()
+          } finally {
+            skiaCanvas.close()
+          }
         }
       }
       val bytes = ByteArray(output.bytesWritten())
@@ -186,13 +203,14 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
       if (document.environmentText("layoutDirection") == "rtl") LayoutDirection.Rtl
       else LayoutDirection.Ltr
     val surface = Surface.makeRasterN32Premul(widthPx, heightPx)
+    // The same three steps, and the same dispatcher, as the SVG pass above.
+    val recomposer = FrameRecomposer(Dispatchers.Unconfined)
     val scene =
       CanvasLayersComposeScene(
+        recomposer,
         density = Density(density, fontScale),
         layoutDirection = layoutDirection,
         size = IntSize(widthPx, heightPx),
-        coroutineContext = EmptyCoroutineContext,
-        invalidate = {},
       )
     var snapshot: UiBuilderInspectionSnapshot? = null
     return try {
@@ -203,7 +221,9 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
           onInspectionSnapshot = { snapshot = it },
         )
       }
-      scene.render(surface.canvas.asComposeCanvas(), document.fixedFrameNanos())
+      recomposer.performFrame(document.fixedFrameNanos())
+      scene.measureAndLayout()
+      scene.draw(surface.canvas.asComposeCanvas())
       val measured =
         checkNotNull(snapshot) { "layout provenance pass produced no inspection snapshot" }
       require(
@@ -218,8 +238,15 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
           measured.nodes.mapNotNull { node -> node.bounds?.let { node.nodeId to it } }.toMap(),
       )
     } finally {
-      scene.close()
-      surface.close()
+      try {
+        scene.close()
+      } finally {
+        try {
+          recomposer.close()
+        } finally {
+          surface.close()
+        }
+      }
     }
   }
 }
