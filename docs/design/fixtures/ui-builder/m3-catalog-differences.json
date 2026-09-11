@@ -324,9 +324,9 @@
   },
   {
     "field": "componentMenu.components.m3/icon",
-    "why": "The catalog files `m3/icon` on `Bottom app bar` (its `Navigation` section) and the frozen catalog on `Content`, and those are not the same place. Reviewed and left as the catalog states it — where a component belongs on m3-catalog's own shelves is m3-catalog's call, and PublishedGeneratedM3CatalogEquivalenceTest pins the four nobody has chosen.",
+    "why": "The catalog files `m3/icon` on its own `Icons` shelf and the frozen catalog on `Content`, and those are not the same place. Reviewed and left as the catalog states it. It used to sit on `Bottom app bar` — not a choice, but wherever the sorted-first catalog id of the stickers drawing `Icon` happened to land — and m3-catalog#327 added `Icons` to `groupOrder` and put it there, which is the sanctioned way for a catalog to place a component its stickers span. Where a component belongs on m3-catalog's own shelves is m3-catalog's call.",
     "policy": {
-      "group": "Bottom app bar"
+      "group": "Icons"
     },
     "frozen": {
       "group": "Content"
@@ -712,9 +712,9 @@
   },
   {
     "field": "componentMenu.components.m3/surface",
-    "why": "The catalog files `m3/surface` on `Chips` (its `Selection` section) and the frozen catalog on `Layout`, and those are not the same place. Reviewed and left as the catalog states it — where a component belongs on m3-catalog's own shelves is m3-catalog's call, and PublishedGeneratedM3CatalogEquivalenceTest pins the four nobody has chosen.",
+    "why": "The catalog files `m3/surface` on its own `Surfaces` shelf and the frozen catalog on `Layout`, and those are not the same place. Reviewed and left as the catalog states it. It used to sit on `Chips`, inherited from `Chip/Assist` rather than chosen; m3-catalog#327 added `Surfaces` to `groupOrder` and put it there. Where a component belongs on m3-catalog's own shelves is m3-catalog's call.",
     "policy": {
-      "group": "Chips"
+      "group": "Surfaces"
     },
     "frozen": {
       "group": "Layout"
@@ -902,7 +902,7 @@
   },
   {
     "field": "componentMenu.groupOrder",
-    "why": "Shelf names, where the frozen catalog holds section words. m3-catalog files a component under its `@file:CatalogGroup(name = …)` shelf — `Buttons`, `Cards`, `Time pickers` — and the frozen Jetcaster transcription groups by the eleven broader words those shelves sit inside. An earlier version of this list held the seven section words instead, which named none of the twenty-nine shelves the catalog actually uses: an unnamed group sorts alphabetically after every named one, so the stated order governed nothing and the panel a person saw was A-to-Z. The four frozen words with no entry here — Scaffolds, Layout, Content, Embedded — hold `layout/*`, `asset/image`, `shape/*` and `remote-compose/*`, components of the BUILDER, which supplies their shelves as it always has. Five shelves listed have no component today and stay listed so the day one composes it lands where it belongs; PublishedGeneratedM3CatalogEquivalenceTest pins which five.\n\nThe eighty-five components below that the frozen catalog carries no entry for are the same difference one level down, and UI_BUILDER_CATALOG_CONTRACT.md phase 3 settles their shape in advance: the frozen m3-catalog capability document is a hand transcription of the packaged Jetcaster catalog, unrelated to yschimke/m3-catalog, and \"the two describe different component sets on purpose (fifty-nine rendered components against twenty-five transcribed ones), so here the reviewed difference list is the point and a byte-equal result would be the surprising outcome\". Measured, it is eighty-five against twenty-five, and PublishedGeneratedM3CatalogEquivalenceTest pins the set.",
+    "why": "Shelf names, where the frozen catalog holds section words. m3-catalog files a component under its `@file:CatalogGroup(name = …)` shelf — `Buttons`, `Cards`, `Time pickers` — and the frozen Jetcaster transcription groups by the eleven broader words those shelves sit inside. An earlier version of this list held the seven section words instead, which named none of the twenty-nine shelves the catalog actually uses: an unnamed group sorts alphabetically after every named one, so the stated order governed nothing and the panel a person saw was A-to-Z. The four frozen words with no entry here — Scaffolds, Layout, Content, Embedded — hold `layout/*`, `asset/image`, `shape/*` and `remote-compose/*`, components of the BUILDER, which supplies their shelves as it always has. Five shelves listed have no component today and stay listed so the day one composes it lands where it belongs; PublishedGeneratedM3CatalogEquivalenceTest pins which five.\n\nThe eighty-five components below that the frozen catalog carries no entry for are the same difference one level down, and UI_BUILDER_CATALOG_CONTRACT.md phase 3 settles their shape in advance: the frozen m3-catalog capability document is a hand transcription of the packaged Jetcaster catalog, unrelated to yschimke/m3-catalog, and \"the two describe different component sets on purpose (fifty-nine rendered components against twenty-five transcribed ones), so here the reviewed difference list is the point and a byte-equal result would be the surprising outcome\". Measured, it is eighty-five against twenty-five, and PublishedGeneratedM3CatalogEquivalenceTest pins the set. RE-REVIEWED after m3-catalog#327, which adds two shelf names: `Icons` after `Icon buttons` and `Surfaces` before `Cards`, so `m3/icon` and `m3/surface` have somewhere to be that a person would look. That is an editorial addition to the kit's taxonomy rather than a derivation, which is why it is re-stated here rather than absorbed silently.",
     "policy": [
       "Bottom app bar",
       "Navigation bar",
@@ -913,6 +913,7 @@
       "Buttons",
       "FAB",
       "Icon buttons",
+      "Icons",
       "Segmented buttons",
       "Split button",
       "Toggle buttons",
@@ -927,6 +928,7 @@
       "Time pickers",
       "Text fields",
       "Bottom sheets",
+      "Surfaces",
       "Cards",
       "Carousel",
       "Dialogs",

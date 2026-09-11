@@ -561,11 +561,12 @@ object ScreenDocumentProjection {
      * The arguments built from **more than one** property, and the properties they consumed.
      *
      * Every other property is one value on one parameter, which the loop in [arguments] handles a
-     * row at a time. Three shapes are not: an arrangement and a spacing name **one** `Arrangement`
-     * between them, two colour roles fill **one** `TopAppBarColors` bundle, and a colour dot is a
-     * `Box` whose entire meaning is a modifier chain built from both its properties. Read one at a
-     * time, the second of each pair would silently overwrite the first in the argument map — a row
-     * with `spaceBetween` and an 8dp gap exporting as whichever the document happened to list last.
+     * row at a time. Four shapes are not: an arrangement and a spacing name **one** `Arrangement`
+     * between them, two colour roles fill **one** `TopAppBarColors` bundle, a time picker's hour
+     * and minute are **one** `TimePickerState`, and a colour dot is a `Box` whose entire meaning is
+     * a modifier chain built from both its properties. Read one at a time, the second of each pair
+     * would silently overwrite the first in the argument map — a row with `spaceBetween` and an 8dp
+     * gap exporting as whichever the document happened to list last.
      */
     private fun composite(
       node: DesignNodeV1,
@@ -605,8 +606,64 @@ object ScreenDocumentProjection {
           }
         }
       }
+      STATE_BUNDLES[node.componentId]?.let { bundle ->
+        val present = bundle.arguments.filterKeys { it in node.properties }
+        if (present.isNotEmpty()) {
+          spent += present.keys
+          val named =
+            present
+              .mapNotNull { (property, argument) ->
+                stateArgument(argument, node, property)?.let { argument.parameter to it }
+              }
+              .toMap()
+          // The same all-or-nothing rule the colour bundles keep, for the same reason: a state
+          // built from two of a component's three settings is a component configured differently
+          // from the one on the canvas, and it compiles.
+          if (named.size == present.size) {
+            // The canvas's defaults for what the design left unset, in the table's own order, so
+            // the call reads the way the factory declares it.
+            val complete =
+              bundle.arguments
+                .mapNotNull { (property, argument) ->
+                  val supplied = named[argument.parameter]
+                  val fallback = if (property in node.properties) null else argument.whenAbsent
+                  (supplied ?: fallback)?.let { argument.parameter to it }
+                }
+                .toMap()
+            arguments[bundle.parameter] =
+              ScreenValue.Construct(
+                callableFqn = bundle.factoryFqn,
+                named = complete,
+                typeFqn = bundle.typeFqn,
+                requiredOptIns = bundle.optIns,
+              )
+          }
+        }
+      }
       if (node.componentId == COLOUR_DOT) spent += colourDot(node, fromProperties)
       return spent
+    }
+
+    /**
+     * One state-factory argument, clamped to the range the canvas clamps to.
+     *
+     * `coerceIn` rather than a refusal, deliberately, and only where the canvas coerces: the
+     * builder already drew this design with the clamped value, so the export that matches the
+     * picture is the clamped one. Refusing instead would reject a document the service accepted and
+     * the canvas rendered — the disagreement between surfaces this projection exists to remove. A
+     * value the catalog validator lets through as "an integer" and Material rejects as an hour is
+     * the case this closes: 25 becomes 23 here exactly as it does on the canvas.
+     */
+    private fun stateArgument(
+      argument: StateArgument,
+      node: DesignNodeV1,
+      property: String,
+    ): ScreenValue? {
+      val raw = value(node.properties.getValue(property), node, property) ?: return null
+      val range = argument.range ?: return raw
+      if (raw !is ScreenValue.Whole) return raw
+      return if (raw.value in range.first.toLong()..range.last.toLong()) raw
+      else ScreenValue.Whole(raw.value.coerceIn(range.first.toLong(), range.last.toLong()))
     }
 
     /**
@@ -2379,6 +2436,75 @@ object ScreenDocumentProjection {
     )
 
   /**
+   * Properties that configure a component's **remembered state** rather than its call, per
+   * component.
+   *
+   * `TimePicker` takes no `hour`: it takes a `TimePickerState`, and the hour is what that state was
+   * remembered with. Discovery already writes `state = rememberTimePickerState()` as the
+   * placeholder for the required parameter — the record's `noArgFactory` — so the shape is already
+   * the right one and the only thing missing was the arguments. This fills them in, which turns the
+   * placeholder into the design: the same factory call, carrying what the canvas draws.
+   *
+   * A [ColorBundle] by another name — several properties into one constructed argument — and kept
+   * apart from it because the values are the properties' own rather than colours, and because the
+   * parameter names differ from the property names (`hour` is `initialHour`).
+   *
+   * `m3/date-picker` is the same shape and is deliberately absent: its `selectedDate` is a date
+   * string and `rememberDatePickerState` wants `initialSelectedDateMillis`, a conversion this
+   * projection has no vocabulary for.
+   *
+   * @property arguments the catalog property, in the factory's own parameter order, mapped to the
+   *   factory parameter it fills.
+   */
+  private class StateBundle(
+    val parameter: String,
+    val factoryFqn: String,
+    val typeFqn: String,
+    val arguments: Map<String, StateArgument>,
+    val optIns: List<String>,
+  )
+
+  /**
+   * One factory parameter, and the two things the CANVAS does to the property before passing it.
+   *
+   * Both exist because the canvas is what the author saw. `BuilderTimePicker` reads
+   * `node.integer("hour", …).coerceIn(0, 23)` and `node.bool("is24Hour", true)`, so an export that
+   * forwarded the raw property would draw a different picture from the one on screen — or fail in
+   * composition, for an hour a validator accepted as "an integer" and Material rejects as an hour.
+   *
+   * @property range the bounds the canvas clamps to, or null where the value is not a number.
+   * @property whenAbsent the value the canvas uses for an OPTIONAL property nobody set. Without it
+   *   the argument is simply omitted and Material's own default applies — for `is24Hour` that is
+   *   the device locale, so the same design draws a 24-hour dial in the builder and a 12-hour one
+   *   on a US phone. A default the canvas states is part of the design, not an absence.
+   */
+  private class StateArgument(
+    val parameter: String,
+    val range: IntRange? = null,
+    val whenAbsent: ScreenValue? = null,
+  )
+
+  private val STATE_BUNDLES: Map<String, StateBundle> =
+    mapOf(
+      "m3/time-picker" to
+        StateBundle(
+          parameter = "state",
+          factoryFqn = "androidx.compose.material3.rememberTimePickerState",
+          typeFqn = "androidx.compose.material3.TimePickerState",
+          arguments =
+            mapOf(
+              "hour" to StateArgument("initialHour", range = 0..23),
+              "minute" to StateArgument("initialMinute", range = 0..59),
+              "is24Hour" to StateArgument("is24Hour", whenAbsent = ScreenValue.Bool(true)),
+            ),
+          // None: discovery records `TimePicker(state = rememberTimePickerState())` with an empty
+          // `requiredOptIns`, so both halves of that call are stable API and claiming an opt-in
+          // here would write an `@OptIn` the file does not need.
+          optIns = emptyList(),
+        )
+    )
+
+  /**
    * The components whose `alignment` property is "how a parent Box aligns this" node — the
    * catalog's words on `layout/column`, and `m3/text` declares the same nine values. A modifier in
    * a property's clothing, routed through `alignLink` like the authored one.
@@ -2481,6 +2607,11 @@ object ScreenDocumentProjection {
       "m3/icon-button" to "variant",
       "m3/text-field" to "variant",
       "m3/progress-indicator" to "variant",
+      // The catalog's own note names the precedent: `TimePicker` and `TimeInput` are "two
+      // composables over one state, spelled as one component the way `m3/progress-indicator`
+      // spells linear and circular". Identical parameter lists, so the only decision is which
+      // one to call.
+      "m3/time-picker" to "mode",
     )
 
   /**
@@ -2539,6 +2670,11 @@ object ScreenDocumentProjection {
           "filled" to ComponentVariant(TEXT_FIELD_ID, "textField"),
           "outlined" to ComponentVariant(OUTLINED_TEXT_FIELD_ID, "outlinedTextField"),
         ),
+      "m3/time-picker" to
+        mapOf(
+          "dial" to ComponentVariant(TIME_PICKER_ID, "timePicker"),
+          "input" to ComponentVariant(TIME_INPUT_ID, "timePicker"),
+        ),
       // The two indicators. Each name is TWO Compose overloads — a determinate one taking
       // `progress: () -> Float` and an indeterminate one whose parameters all default — and the
       // argument list picks between them, so both live under one record and one entry here. Which
@@ -2574,9 +2710,16 @@ object ScreenDocumentProjection {
     "androidx.compose.material3.IconButtonKt.FilledTonalIconButton"
   private const val OUTLINED_ICON_BUTTON_ID =
     "androidx.compose.material3.IconButtonKt.OutlinedIconButton"
+  private const val TIME_PICKER_ID = "androidx.compose.material3.TimePickerKt.TimePicker"
+  private const val TIME_INPUT_ID = "androidx.compose.material3.TimePickerKt.TimeInput"
   private const val TEXT_FIELD_ID = "androidx.compose.material3.TextFieldKt.TextField"
+  // `OutlinedTextFieldKt`, not `TextFieldKt`: Material declares the outlined field in its own
+  // file. The alias `callableAliases()` adds is the record's canonical id minus the module, so an
+  // id naming the wrong file resolves to nothing and the variant refuses — which is what this one
+  // did, on every authored outlined field, until the parity test below started authoring every
+  // variant rather than the first.
   private const val OUTLINED_TEXT_FIELD_ID =
-    "androidx.compose.material3.TextFieldKt.OutlinedTextField"
+    "androidx.compose.material3.OutlinedTextFieldKt.OutlinedTextField"
   private const val LINEAR_INDICATOR_ID =
     "androidx.compose.material3.ProgressIndicatorKt.LinearProgressIndicator"
   private const val CIRCULAR_INDICATOR_ID =

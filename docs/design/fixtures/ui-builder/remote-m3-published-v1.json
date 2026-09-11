@@ -1,5 +1,5 @@
 {
-  "$comment": "GENERATED, unlike its m3 sibling — captured verbatim from `./gradlew :remote-catalog:composePreviewDiscover` in yschimke/wear-m3-catalog, with the plugin built from yschimke/compose-ai-tools#5354. That is the pair the cutover will actually use, so this fixture answers the question the hand-built m3 one cannot: can the catalog produce a usable published file. Regenerate the same way whenever remote-catalog gains or loses a component.",
+  "$comment": "GENERATED, unlike its m3 sibling — captured verbatim from `./gradlew :remote-catalog:composePreviewDiscover` in yschimke/wear-m3-catalog at wear-m3-catalog#425, with the published plugin that repository pins (compose-ai-tools 2.7.0). That is the pair the cutover will actually use, so this fixture answers the question the hand-built m3 one cannot: can the catalog produce a usable published file. Regenerate the same way whenever remote-catalog gains or loses a component.",
   "schema": "compose-ui-builder-catalog/v1",
   "catalog": {
     "id": "remote-m3",
@@ -73,7 +73,7 @@
           "group": "Selection buttons"
         },
         "remote-m3/remote-circular-progress-indicator": {
-          "group": "Buttons"
+          "group": "Communication"
         },
         "remote-m3/remote-curved-progress-indicator": {
           "group": "Communication"
@@ -85,16 +85,16 @@
           "group": "Buttons"
         },
         "remote-m3/remote-icon": {
-          "group": "Containment"
+          "group": "Iconography"
         },
         "remote-m3/remote-linear-progress-indicator": {
           "group": "Communication"
         },
         "remote-m3/remote-horizontal-page-indicator": {
-          "group": "Communication"
+          "group": "Position indicators"
         },
         "remote-m3/remote-vertical-page-indicator": {
-          "group": "Communication"
+          "group": "Position indicators"
         },
         "remote-m3/remote-radio-button": {
           "group": "Selection buttons"
@@ -118,10 +118,10 @@
           "group": "Selection buttons"
         },
         "remote-m3/remote-text-button": {
-          "group": "Communication"
+          "group": "Buttons"
         },
         "remote-m3/remote-text": {
-          "group": "Containment"
+          "group": "Text"
         },
         "remote-m3/remote-title-card": {
           "group": "Containment"
@@ -733,7 +733,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Remote Compose component: every sticker is drawn inside one and nobody places one in a design.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null

@@ -142,9 +142,9 @@
   },
   {
     "field": "componentMenu.components.remote-m3/remote-circular-progress-indicator",
-    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
     "policy": {
-      "group": "Buttons"
+      "group": "Communication"
     },
     "frozen": null
   },
@@ -174,17 +174,17 @@
   },
   {
     "field": "componentMenu.components.remote-m3/remote-horizontal-page-indicator",
-    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
     "policy": {
-      "group": "Communication"
+      "group": "Position indicators"
     },
     "frozen": null
   },
   {
     "field": "componentMenu.components.remote-m3/remote-icon",
-    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here. RE-REVIEWED: it was accepted on `Buttons` and is now on `Containment`, which is the same one-id-per-symbol trade landing somewhere else. The walk now follows a singleton lambda held by another singleton lambda (yschimke/compose-ai-tools#5354), so previews that stopped at a frame now reach `RemoteIcon`, and the sorted-first catalog id that names its shelf changed with them. Neither shelf is where a person would look — this catalog declares an `Iconography` shelf and nothing is on it — and `@BuilderComponent(group = …)` on the declaring sticker is the sanctioned fix, tracked rather than done here because it is a catalog decision and not a transcription.",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
     "policy": {
-      "group": "Containment"
+      "group": "Iconography"
     },
     "frozen": null
   },
@@ -278,17 +278,17 @@
   },
   {
     "field": "componentMenu.components.remote-m3/remote-text",
-    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
     "policy": {
-      "group": "Containment"
+      "group": "Text"
     },
     "frozen": null
   },
   {
     "field": "componentMenu.components.remote-m3/remote-text-button",
-    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
     "policy": {
-      "group": "Communication"
+      "group": "Buttons"
     },
     "frozen": null
   },
@@ -302,9 +302,9 @@
   },
   {
     "field": "componentMenu.components.remote-m3/remote-vertical-page-indicator",
-    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with. remote-catalog offers twenty-five Remote Compose components the synthesised shelf never carried, plus its own two wrappers, and each is shelved by the `@CatalogComponent(group = …)` of the sticker its id was attributed to. Reviewed against the catalog's own sections. Note that a component drawn by stickers in SEVERAL sections gets one shelf — `RemoteText` is drawn by 29 stickers and lands on Containment — which is what one id per symbol costs, and is asserted in PublishedRemoteM3CatalogEquivalenceTest rather than papered over here.",
+    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
     "policy": {
-      "group": "Communication"
+      "group": "Position indicators"
     },
     "frozen": null
   },

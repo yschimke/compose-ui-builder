@@ -316,12 +316,12 @@
       "signatureKnown": true
     },
     {
-      "canonicalId": "m3-catalog/androidx.compose.material3.HorizontalDividerKt.HorizontalDivider",
+      "canonicalId": "m3-catalog/androidx.compose.material3.DividerKt.HorizontalDivider",
       "componentIds": [
         "m3/horizontal-divider"
       ],
       "symbol": {
-        "jvmOwner": "androidx.compose.material3.HorizontalDividerKt",
+        "jvmOwner": "androidx.compose.material3.DividerKt",
         "callable": "androidx.compose.material3.HorizontalDivider",
         "name": "HorizontalDivider",
         "origin": "LIBRARY"
@@ -1292,12 +1292,12 @@
       "signatureKnown": true
     },
     {
-      "canonicalId": "m3-catalog/androidx.compose.material3.FilterChipKt.FilterChip",
+      "canonicalId": "m3-catalog/androidx.compose.material3.ChipKt.FilterChip",
       "componentIds": [
         "m3/filter-chip"
       ],
       "symbol": {
-        "jvmOwner": "androidx.compose.material3.FilterChipKt",
+        "jvmOwner": "androidx.compose.material3.ChipKt",
         "callable": "androidx.compose.material3.FilterChip",
         "name": "FilterChip",
         "origin": "LIBRARY"
@@ -1479,10 +1479,10 @@
       "signatureKnown": true
     },
     {
-      "canonicalId": "m3-catalog/androidx.compose.material3.TextFieldKt.OutlinedTextField",
+      "canonicalId": "m3-catalog/androidx.compose.material3.OutlinedTextFieldKt.OutlinedTextField",
       "componentIds": [],
       "symbol": {
-        "jvmOwner": "androidx.compose.material3.TextFieldKt",
+        "jvmOwner": "androidx.compose.material3.OutlinedTextFieldKt",
         "callable": "androidx.compose.material3.OutlinedTextField",
         "name": "OutlinedTextField",
         "origin": "LIBRARY"
