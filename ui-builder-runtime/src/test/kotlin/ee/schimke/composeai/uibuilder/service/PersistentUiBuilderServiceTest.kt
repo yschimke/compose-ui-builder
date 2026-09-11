@@ -570,6 +570,192 @@ class PersistentUiBuilderServiceTest {
     assertEquals(RejectionCodeV1.INVALID_COMMAND, absent.code)
   }
 
+  /**
+   * The write side of "referenced, not copied": a design already open gains a component.
+   *
+   * An import is one batch — the body's nodes, then the declaration naming their root — because a
+   * `DesignCommandV1` is atomic, and a design that briefly held a body no name pointed at would be
+   * a design an export could be asked about mid-import.
+   */
+  @Test
+  fun `a component is declared over its body, redeclared, removed and undone`() {
+    val storage = MemoryStorage()
+    var service = service(storage = storage)
+    create(service)
+    val cell = DesignComponentV1(name = "ContributionCell", root = "cell")
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "declare",
+            0,
+            InsertNodeMutationV1(textNode("root"), NodeLocationV1()),
+            // The body is an ordinary subtree placed like any other — a design has one root, and
+            // a component's body is not an exception to that.
+            InsertNodeMutationV1(textNode("cell"), NodeLocationV1(ParentSlotV1("root", "content"))),
+            DeclareComponentMutationV1("contribution-cell", cell),
+          )
+        ),
+      )
+    )
+    assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
+
+    // A redeclaration is a write over the same key — what an import of a newer version of the
+    // symbol does — and the record carries both sides, so one type compensates it.
+    val renamed = cell.copy(name = "ContributionTile")
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("redeclare", 1, DeclareComponentMutationV1("contribution-cell", renamed))
+        ),
+      )
+    )
+    assertEquals(renamed, currentDocument(service).components.getValue("contribution-cell"))
+
+    service = service(storage = storage)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-redeclare", "browser", 2, "redeclare")
+        ),
+      )
+    )
+    assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("remove", 3, RemoveComponentMutationV1("contribution-cell"))
+        ),
+      )
+    )
+    assertEquals(emptyMap(), currentDocument(service).components)
+
+    // The body outlives the name, deliberately: undeclaring leaves a subtree nothing draws, which
+    // is what a body looks like between being written and being named.
+    assertTrue("cell" in currentDocument(service).nodes)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-remove", "browser", 4, "remove")
+        ),
+      )
+    )
+    assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
+  }
+
+  @Test
+  fun `a removal that would strand a placement is refused rather than applied`() {
+    val service = service()
+    create(service)
+    val cell = DesignComponentV1(name = "ContributionCell", root = "cell")
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "declare",
+            0,
+            InsertNodeMutationV1(textNode("root"), NodeLocationV1()),
+            InsertNodeMutationV1(textNode("cell"), NodeLocationV1(ParentSlotV1("root", "content"))),
+            DeclareComponentMutationV1("contribution-cell", cell),
+            InsertNodeMutationV1(
+              DesignNodeV1(
+                id = "placed",
+                componentId = DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                component = DesignComponentInstanceV1("contribution-cell"),
+              ),
+              NodeLocationV1(ParentSlotV1("root", "content")),
+            ),
+          )
+        ),
+      )
+    )
+
+    // The obligation this mutation's contract names: a placement whose component is gone draws
+    // nothing while reporting success, which is the worse of the two ways to be wrong.
+    val refused =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("remove", 1, RemoveComponentMutationV1("contribution-cell"))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
+    assertEquals("placed", refused.nodeId)
+    assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
+
+    // A key nothing declared is a client bug, not a no-op: there is no before to compensate to.
+    val absent =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("remove-absent", 1, RemoveComponentMutationV1("nothing"))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, absent.code)
+  }
+
+  @Test
+  fun `a declaration naming a body this design does not hold is refused`() {
+    val service = service()
+    create(service)
+
+    // Not a pedantic check: the name is the only thing that makes the body drawable, and a
+    // declaration pointing at nothing renders blank while reporting success — the same failure the
+    // removal rule refuses, arriving through the other door.
+    val refused =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "declare",
+              0,
+              DeclareComponentMutationV1(
+                "contribution-cell",
+                DesignComponentV1(name = "ContributionCell", root = "never-inserted"),
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, refused.code)
+    assertEquals("never-inserted", refused.field)
+    assertEquals(emptyMap(), currentDocument(service).components)
+
+    val blank =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("blank", 0, DeclareComponentMutationV1("", DesignComponentV1("X", "cell")))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, blank.code)
+  }
+
   @Test
   fun `an event binding is written, unbound by an empty list and undone`() {
     val storage = MemoryStorage()
@@ -3405,6 +3591,11 @@ class PersistentUiBuilderServiceTest {
           }
           return@forEach
         }
+        // A placement is a document construct rather than a catalog component — no catalog
+        // declares `design/component-instance` — so this stub exempts it exactly as the real
+        // catalog validation does. Without the exemption a design could declare a component and
+        // never place one.
+        if (node.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) return@forEach
         if (node.componentId != "m3.Text") {
           return UiBuilderCatalogIssue("UNKNOWN_COMPONENT", "unknown component", node.id)
         }

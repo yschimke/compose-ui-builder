@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.ColorTokenValueV1
 import ee.schimke.composeai.uibuilder.protocol.ColorValueV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.DESIGN_COMPONENT_INSTANCE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DiagnosticSeverityV1
@@ -313,6 +314,26 @@ public class CurrentM3UiBuilderCatalogExecutor(
     for ((nodeId, nodeElement) in encodedNodes.entries.sortedBy { it.key }) {
       val node = nodeElement.jsonObject
       val componentId = node.requiredString("componentId")
+      // A placement is a document construct, not a catalog component: no catalog declares
+      // `design/component-instance`, so looking it up here refused every design that placed one of
+      // its own components — which made `declareComponent` unusable, since nothing could then
+      // instantiate what it declared. The editor's `CapabilityValidator` has always drawn this
+      // distinction; this is the same rule on the writing side.
+      //
+      // What it is checked for instead is the one thing that can be wrong about it here: the key
+      // has to name a component this document declares. Its properties are the body's arguments
+      // rather than a catalog component's properties, so the property and slot rules below do not
+      // apply to it and are not run against it.
+      if (componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) {
+        val key = node["component"]?.jsonObject?.get("componentKey")?.jsonPrimitive?.contentOrNull
+        if (key.isNullOrBlank()) {
+          return issue("INVALID_PLACEMENT", "placement names no component", nodeId)
+        }
+        if (key !in document.components) {
+          return issue("UNKNOWN_COMPONENT", "this design declares no component $key", nodeId)
+        }
+        continue
+      }
       val component =
         catalogComponents[componentId]
           ?: return issue(
@@ -418,13 +439,35 @@ public class CurrentM3UiBuilderCatalogExecutor(
                 nodeId,
                 name,
               )
+          val childComponentId = child.requiredString("componentId")
+          // A placement in a slot is judged by the body it places, which is what decides whether
+          // the slot accepts it. Resolved through the declaration rather than the catalog, for the
+          // reason above: the placement itself is not a catalog component.
           val childCapability =
-            catalogComponents[child.requiredString("componentId")]
-              ?: return issue(
-                "UNKNOWN_COMPONENT",
-                "child $childId has an unknown component",
-                childId,
-              )
+            if (childComponentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) {
+              val key =
+                child["component"]?.jsonObject?.get("componentKey")?.jsonPrimitive?.contentOrNull
+              val root = key?.let { document.components[it]?.root }
+              // Absent or dangling is already refused where the node itself is checked, so
+              // reaching here with nothing to resolve means the body root is missing — a document
+              // that would draw a placement of nothing.
+              val rootComponentId = root?.let {
+                encodedNodes[it]?.jsonObject?.requiredString("componentId")
+              }
+              rootComponentId?.let { catalogComponents[it] }
+                ?: return issue(
+                  "UNKNOWN_COMPONENT",
+                  "child $childId places a component whose body cannot be resolved",
+                  childId,
+                )
+            } else {
+              catalogComponents[childComponentId]
+                ?: return issue(
+                  "UNKNOWN_COMPONENT",
+                  "child $childId has an unknown component",
+                  childId,
+                )
+            }
           if (slot != null && !slotAccepts(slot, childCapability)) {
             return issue(
               "INCOMPATIBLE_SLOT_CHILD",

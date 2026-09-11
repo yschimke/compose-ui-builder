@@ -2275,6 +2275,76 @@ public class PersistentUiBuilderService(
             staleStateWrites(original, command, mutation.name),
           )
         }
+        is DeclareComponentMutationV1 -> {
+          if (mutation.componentKey.isBlank()) {
+            fail(
+              RejectionCodeV1.INVALID_COMMAND,
+              "component key is blank",
+              operationIndex = index,
+            )
+          }
+          // The body has to exist before the name can point at it. A declaration naming a root
+          // this document does not hold is a component that draws nothing, and an instance of it
+          // reports success while rendering blank — the same failure the state-variable rules
+          // exist to prevent, one level up.
+          //
+          // An import is a batch: the body's `insertNode`s precede the declaration, so by the time
+          // this runs the root is in `working.document` even though it was not in the base.
+          if (mutation.declaration.root !in working.document.nodes) {
+            fail(
+              RejectionCodeV1.INVALID_DOCUMENT,
+              "component ${mutation.componentKey} names a body root " +
+                "`${mutation.declaration.root}` this design does not hold",
+              operationIndex = index,
+              field = mutation.declaration.root,
+            )
+          }
+          val before = working.document.components[mutation.componentKey]
+          val document =
+            working.document.copy(
+              components =
+                working.document.components + (mutation.componentKey to mutation.declaration)
+            )
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            ComponentChangeV1(mutation.componentKey, before, mutation.declaration),
+            staleComponentWrites(original, command, mutation.componentKey),
+          )
+        }
+        is RemoveComponentMutationV1 -> {
+          val before =
+            working.document.components[mutation.componentKey]
+              ?: fail(
+                RejectionCodeV1.INVALID_COMMAND,
+                "this design declares no component ${mutation.componentKey}",
+                operationIndex = index,
+                field = mutation.componentKey,
+              )
+          // The obligation this mutation's contract states: a placement may still name the key,
+          // and a placement whose component is gone draws nothing while reporting success.
+          //
+          // The body is deliberately not checked — undeclaring alone leaves a subtree nothing
+          // draws, which is what a body looks like between being written and being named, and is a
+          // legitimate intermediate state rather than a broken document.
+          working.document.nodes.values
+            .firstOrNull { it.component?.componentKey == mutation.componentKey }
+            ?.let { placement ->
+              fail(
+                RejectionCodeV1.INVALID_DOCUMENT,
+                "node ${placement.id} still places component ${mutation.componentKey}",
+                operationIndex = index,
+                nodeId = placement.id,
+                field = mutation.componentKey,
+              )
+            }
+          val document =
+            working.document.copy(components = working.document.components - mutation.componentKey)
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            ComponentChangeV1(mutation.componentKey, before, null),
+            staleComponentWrites(original, command, mutation.componentKey),
+          )
+        }
         is SetEventBindingMutationV1 -> {
           val node =
             working.document.nodes[mutation.nodeId]
@@ -2577,6 +2647,48 @@ public class PersistentUiBuilderService(
               tombstones = tombstones - change.nodeId
             }
             working = WorkingDesign(document, tombstones, positions)
+          }
+          is ComponentChangeV1 -> {
+            val expected = if (undo) change.after else change.before
+            if (working.document.components[change.componentKey] != expected) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "component declaration changed after the target operation",
+                field = change.componentKey,
+              )
+            }
+            val target = if (undo) change.before else change.after
+            // Taking a declaration back out is only safe if nothing has since come to place it:
+            // undoing a `declareComponent` that somebody has since instantiated would leave a
+            // placement drawing nothing and reporting success, which is the state the removal rule
+            // refuses to commit in the first place. The mirror of the state-variable check above.
+            if (target == null) {
+              working.document.nodes.values
+                .firstOrNull { it.component?.componentKey == change.componentKey }
+                ?.let { placement ->
+                  fail(
+                    RejectionCodeV1.UNSAFE_COMPENSATION,
+                    "node ${placement.id} places component ${change.componentKey}",
+                    nodeId = placement.id,
+                    field = change.componentKey,
+                  )
+                }
+            }
+            val declarations =
+              if (target == null) working.document.components - change.componentKey
+              else working.document.components + (change.componentKey to target)
+            // Putting one back has the same obligation a declaration does: it must still name a
+            // body this document holds, or the compensation writes the broken state the forward
+            // path refuses.
+            if (target != null && target.root !in working.document.nodes) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "component ${change.componentKey} names a body root `${target.root}` " +
+                  "this design no longer holds",
+                field = target.root,
+              )
+            }
+            working = working.copy(document = working.document.copy(components = declarations))
           }
           is EnvironmentChangeRecordV1 -> {
             val expected = if (undo) change.after else change.before
@@ -3194,6 +3306,22 @@ internal data class EventBindingChangeV1(
   val event: String,
   val before: List<DesignActionV1>?,
   val after: List<DesignActionV1>?,
+) : ChangeRecordV1
+
+/**
+ * One component declaration, before and after.
+ *
+ * `before == null` is a declaration this operation introduced and `after == null` one it removed,
+ * so the same record compensates a `declareComponent` and a `removeComponent` — exactly as
+ * [StateVariableChangeV1] does for the pair beside it, and for the same reason: a second type or a
+ * flag saying which it was would be a fact the two nulls already carry.
+ */
+@Serializable
+@SerialName("component")
+internal data class ComponentChangeV1(
+  val componentKey: String,
+  val before: DesignComponentV1?,
+  val after: DesignComponentV1?,
 ) : ChangeRecordV1
 
 @Serializable
@@ -3827,6 +3955,26 @@ private fun staleStateWrites(
     )
   else emptyList()
 
+/** The component analogue of [staleStateWrites] — the same question, keyed on the component. */
+private fun staleComponentWrites(
+  original: PersistedDesignV1,
+  command: DesignCommandV1,
+  componentKey: String,
+): List<CommandConflictV1> =
+  if (
+    command.baseRevision < original.document.revision &&
+      original.touchedSince(command.baseRevision, touchKey("c", componentKey))
+  )
+    listOf(
+      CommandConflictV1(
+        ConflictCodeV1.STALE_PROPERTY_WRITE,
+        null,
+        componentKey,
+        original.document.revision,
+      )
+    )
+  else emptyList()
+
 private const val POSITION_STEP = 1_024
 private const val POSITION_MIDPOINT = 512
 private const val POSITION_MAX = 65_536
@@ -4220,6 +4368,9 @@ private fun ChangeRecordV1.touchKeys(): List<String> =
     // Node granular, because the chain is one value — see [ModifierChangeV1].
     is ModifierChangeV1 -> listOf(touchKey("m", nodeId))
     is StateVariableChangeV1 -> listOf(touchKey("v", name))
+    // Key granular, like a state variable: two actors declaring different components do not
+    // conflict, and two declaring the same one are writing the same thing.
+    is ComponentChangeV1 -> listOf(touchKey("c", componentKey))
     is EventBindingChangeV1 -> listOf(touchKey("b", nodeId, event))
     is EnvironmentChangeRecordV1 -> fields.map { touchKey("e", it.name) }
     // `nodeId` rather than `affectedNodeIds`: the move check asks about the node that moved, and

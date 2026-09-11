@@ -402,20 +402,13 @@ abstract class UpdateMaterialIconCatalogFixtures : DefaultTask() {
   @get:PathSensitive(PathSensitivity.NONE)
   abstract val generatedM3: RegularFileProperty
 
-  @get:InputFile
-  @get:PathSensitive(PathSensitivity.NONE)
-  abstract val generatedWear: RegularFileProperty
-
   // Deliberately not task outputs: the generator reads the checked-in files as templates, so
   // declaring them here would manufacture a generate -> update -> generate dependency cycle.
   @get:Internal abstract val checkedInM3: RegularFileProperty
 
-  @get:Internal abstract val checkedInWear: RegularFileProperty
-
   @TaskAction
   fun update() {
     generatedM3.get().asFile.copyTo(checkedInM3.get().asFile, overwrite = true)
-    generatedWear.get().asFile.copyTo(checkedInWear.get().asFile, overwrite = true)
   }
 }
 

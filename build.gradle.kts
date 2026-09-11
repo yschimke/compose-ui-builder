@@ -45,9 +45,6 @@ val generateMaterialIconExportSource =
 
 val m3MaterialIconCatalogFixture =
   layout.projectDirectory.file("docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json")
-val wearMaterialIconCatalogFixture =
-  layout.projectDirectory.file("docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json")
-
 val generateMaterialIconCatalogFixture =
   tasks.register<GenerateMaterialIconCatalogFixture>("generateMaterialIconCatalogFixture") {
     inventory.set(generateMaterialIconInventory.flatMap { it.output })
@@ -57,21 +54,21 @@ val generateMaterialIconCatalogFixture =
     )
   }
 
-val generateWearMaterialIconCatalogFixture =
-  tasks.register<GenerateMaterialIconCatalogFixture>("generateWearMaterialIconCatalogFixture") {
-    inventory.set(generateMaterialIconInventory.flatMap { it.output })
-    catalog.set(wearMaterialIconCatalogFixture)
-    output.set(layout.buildDirectory.file("generated/materialIcons/wear-m3-capabilities-v1.json"))
-  }
-
+// `wear-m3-capabilities-v1.json` is deliberately absent here. It is a **golden**, owned by
+// `SynthesisedCatalogGoldenTest`: `wearM3Catalog` is synthesised in Kotlin from the packaged
+// Material 3 catalog, so the golden already carries the full icon list and regenerating it is what
+// records an icon-catalog change. Patching the same file here as well gave it two writers that
+// produce the same icons in different bytes — the allowlist spliced onto one line here, expanded
+// one entry per line by the golden's `Json { prettyPrint = true }` — and `VerifyMatchingFile`
+// compares bytes, so no content of the file could satisfy both. Every push since the icon catalog
+// grew was red on whichever of the two ran last (#710).
+//
+// `m3-catalog-capabilities-v1.json` has no golden and stays here, which is what this task is for.
 tasks.register<UpdateMaterialIconCatalogFixtures>("updateMaterialIconCatalogFixture") {
   group = "code generation"
-  description =
-    "Updates the m3 and wear-m3 icon allowlists from the shipped Material Icons artifact."
+  description = "Updates the m3 icon allowlist from the shipped Material Icons artifact."
   generatedM3.set(generateMaterialIconCatalogFixture.flatMap { it.output })
-  generatedWear.set(generateWearMaterialIconCatalogFixture.flatMap { it.output })
   checkedInM3.set(m3MaterialIconCatalogFixture)
-  checkedInWear.set(wearMaterialIconCatalogFixture)
 }
 
 val checkMaterialIconCatalogFixture =
@@ -80,15 +77,7 @@ val checkMaterialIconCatalogFixture =
     expected.set(generateMaterialIconCatalogFixture.flatMap { it.output })
   }
 
-val checkWearMaterialIconCatalogFixture =
-  tasks.register<VerifyMatchingFile>("checkWearMaterialIconCatalogFixture") {
-    checkedIn.set(wearMaterialIconCatalogFixture)
-    expected.set(generateWearMaterialIconCatalogFixture.flatMap { it.output })
-  }
-
-tasks.named("check") {
-  dependsOn(checkMaterialIconCatalogFixture, checkWearMaterialIconCatalogFixture)
-}
+tasks.named("check") { dependsOn(checkMaterialIconCatalogFixture) }
 
 tasks.named("check") {
   group = "verification"

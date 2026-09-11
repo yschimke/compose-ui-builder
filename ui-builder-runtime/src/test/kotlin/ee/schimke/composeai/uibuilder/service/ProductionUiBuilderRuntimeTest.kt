@@ -49,6 +49,47 @@ class ProductionUiBuilderRuntimeTest {
     assertEquals("UNKNOWN_COMPONENT", catalogs.validate(invalid, catalog)?.code)
   }
 
+  /**
+   * A design may place its own components against the real packaged catalog.
+   *
+   * `design/component-instance` is a document construct — no catalog declares it — so looking it up
+   * as a catalog component refused every design that placed one, which made `declareComponent`
+   * unusable: nothing could instantiate what it declared. The editor's `CapabilityValidator` has
+   * always drawn this distinction; this is the writing side holding the same line.
+   */
+  @Test
+  fun `a placement of the design's own component validates against the body, not the catalog`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalog = catalogs.listCatalogs().single()
+    val placed =
+      document().let { base ->
+        base.copy(
+          nodes =
+            base.nodes +
+              ("surface" to
+                base.nodes
+                  .getValue("surface")
+                  .copy(slots = mapOf("content" to listOf("text", "placed")))) +
+              ("placed" to
+                DesignNodeV1(
+                  id = "placed",
+                  componentId = DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                  component = DesignComponentInstanceV1("greeting"),
+                )),
+          components = mapOf("greeting" to DesignComponentV1(name = "Greeting", root = "text")),
+        )
+      }
+
+    assertNull(catalogs.validate(placed, catalog))
+
+    // The one thing that can be wrong about a placement here: naming a component the design does
+    // not declare. A placement of nothing draws nothing while reporting success.
+    val dangling = placed.copy(components = emptyMap())
+    val issue = catalogs.validate(dangling, catalog)
+    assertEquals("UNKNOWN_COMPONENT", issue?.code)
+    assertEquals("placed", issue?.nodeId)
+  }
+
   @Test
   fun `a write is refused for the value kind its name states, and only on the write`() {
     val catalogs = CurrentM3UiBuilderCatalogExecutor()
