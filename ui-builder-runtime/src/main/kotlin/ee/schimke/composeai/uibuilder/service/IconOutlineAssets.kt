@@ -108,15 +108,6 @@ public object IconOutlineAssets {
   public fun isOutlineKey(assetKey: String): Boolean = assetKey.startsWith(IconOutlineKeyV1.PREFIX)
 
   /**
-   * [assets] with the outlines for [wanted] present and every other outline dropped.
-   *
-   * Uploads are untouched — they are somebody's bytes and this has no business pruning them — but
-   * an outline nothing references is a picture of an icon the design no longer draws, and leaving
-   * it would grow the document one edit at a time. [resolve] answers null for an icon the host
-   * cannot resolve right now, in which case the existing entry is kept rather than dropped: a cold
-   * cache must not erase the pictures a design already had.
-   */
-  /**
    * The icons [nodes] draw, read from whatever each node carries.
    *
    * A node names its icon with `iconName` and positions it with the four axes; anything absent is
@@ -153,18 +144,42 @@ public object IconOutlineAssets {
       else -> null
     }
 
-  public fun refreshed(
+  /**
+   * [assets] with an outline present for every icon in [wanted], and nothing removed.
+   *
+   * **Adding only, deliberately.** An outline nothing references looks like dead weight, and the
+   * first version of this dropped it. That is wrong: undo restores a node without restoring the
+   * assets pruned when it changed, so recreating the outline would need the resolver — and the
+   * documented cold-cache case is exactly when there is none. Undo would then return a document
+   * that is not the one it undid, with blank icons where there were pictures. So a design keeps the
+   * outline of every icon it has drawn, bounded by the distinct icons somebody chose at about 550
+   * bytes each, and pruning becomes an explicit operation if it ever earns one.
+   *
+   * [resolve] answering null leaves that icon without an entry yet. It never removes one.
+   *
+   * [maximumAssets] is the design's own asset ceiling, and it binds here because keeping every
+   * outline is otherwise unbounded: change one node's icon enough times and the additions alone
+   * could pass a limit only the upload route enforces, which would then refuse somebody's next
+   * image because of pictures nobody asked for. At the ceiling this simply stops adding — an icon
+   * without a recorded outline, the same state a host with no resolver leaves — rather than
+   * evicting one, because eviction is what undo cannot survive.
+   */
+  public fun withOutlines(
     assets: Map<String, AssetBindingV1>,
     wanted: Set<IconOutlineKeyV1>,
+    maximumAssets: Int,
     resolve: (IconOutlineKeyV1) -> String?,
   ): Map<String, AssetBindingV1> {
-    val keys = wanted.associateBy { it.assetKey() }
-    val kept = assets.filterKeys { !isOutlineKey(it) || it in keys }.toMutableMap()
-    keys.forEach { (assetKey, icon) ->
-      if (assetKey in kept) return@forEach
-      val pathData = resolve(icon) ?: return@forEach
-      kept[assetKey] = binding(pathData)
-    }
-    return kept
+    val room = maximumAssets - assets.size
+    if (room <= 0) return assets
+    val missing = wanted.filterNot { it.assetKey() in assets }
+    if (missing.isEmpty()) return assets
+    val added =
+      missing
+        .asSequence()
+        .mapNotNull { icon -> resolve(icon)?.let { icon.assetKey() to binding(it) } }
+        .take(room)
+        .toList()
+    return if (added.isEmpty()) assets else assets + added
   }
 }
