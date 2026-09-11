@@ -126,6 +126,8 @@ abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
       setOf(
         "module ee.schimke.composeai:ui-builder-protocol",
         "module ee.schimke.composeai:ui-builder-protocol-jvm",
+        "module ee.schimke.composeai:screen-document",
+        "module ee.schimke.composeai:screen-document-jvm",
         "module ee.schimke.composeai:screen-model",
         "module ee.schimke.composeai:screen-model-jvm",
       )
