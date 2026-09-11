@@ -145,12 +145,19 @@ private fun validateGraph(document: UiBuilderDocument): List<ExportValidationIss
       }
   }
   document.roots.forEach { root -> references.getOrPut(root) { mutableListOf() } += "<root>" }
-  // A component body is referenced by the component that owns it, not by a slot. Counted here so
-  // it is neither unreachable — it is drawn wherever the component is placed — nor a duplicate the
-  // moment a second design places the same component.
-  document.componentRoots().forEach { (key, root) ->
-    references.getOrPut(root) { mutableListOf() } += "<component:$key>"
-  }
+  // Component roots are deliberately NOT counted here, though they are walked below.
+  //
+  // This map answers one question — is a node placed in the tree more than once — and a component
+  // root is not a placement: the body is drawn wherever the component is placed, and its
+  // declaration naming it is a claim of ownership rather than a second parent. Counting it made
+  // every document that declares a component a duplicate of itself, because a body has to be
+  // somewhere: a published library symbol names its own root in `roots` *and* in `components`, and
+  // a design authoring a component holds the body in a slot, so both collected two references for
+  // one node and neither could export.
+  //
+  // Reachability, the other reason the old comment gave for counting it, is not this map's job:
+  // the walk below visits `componentRoots()` as entry points and `UNREACHABLE_NODE` reads what it
+  // visited. So a body reached only through its declaration is still reachable.
   references.entries
     .sortedBy { it.key }
     .forEach { (nodeId, parents) ->

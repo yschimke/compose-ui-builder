@@ -368,6 +368,84 @@ class ComponentPlacementTest {
       checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
     )
 
+  /**
+   * A body has to live somewhere, and both places it can live were counted as a second parent.
+   *
+   * `validateGraph` collected a reference for every `components[*].root` alongside the slot and
+   * root references, then refused any node referenced twice. A design authoring a component holds
+   * the body in a slot; a published library symbol names its own root in `roots` *and* in
+   * `components`. Both collected two references for one node, so neither could export — a component
+   * was unexportable in either shape it can take.
+   */
+  @Test
+  fun `a component root is not a second parent of its own body`() {
+    val slotted =
+      document().let { base ->
+        base.copy(
+          nodes =
+            base.nodes +
+              ("root" to
+                base.nodes
+                  .getValue("root")
+                  .copy(
+                    slots =
+                      mapOf(
+                        "children" to
+                          (base.nodes.getValue("root").slots["children"].orEmpty() + "cell-body")
+                      )
+                  ))
+        )
+      }
+    assertEquals(
+      emptyList(),
+      validateDocumentForExport(slotted, catalog()).filter {
+        it.code == "DUPLICATE_NODE_REFERENCE"
+      },
+    )
+
+    // The published-symbol shape: the body is the document's root and the component's root at once.
+    val symbol =
+      document()
+        .copy(
+          roots = listOf("cell-body"),
+          nodes = mapOf("cell-body" to document().nodes.getValue("cell-body")),
+        )
+    assertEquals(
+      emptyList(),
+      validateDocumentForExport(symbol, catalog()).filter { it.code == "DUPLICATE_NODE_REFERENCE" },
+    )
+
+    // The rule it exists for still bites: one node in two slots is genuinely placed twice.
+    val twice =
+      document().let { base ->
+        base.copy(
+          nodes =
+            base.nodes +
+              ("root" to
+                base.nodes
+                  .getValue("root")
+                  .copy(
+                    slots =
+                      mapOf(
+                        "children" to
+                          (base.nodes.getValue("root").slots["children"].orEmpty() + "cell-0")
+                      )
+                  ))
+        )
+      }
+    assertTrue(
+      validateDocumentForExport(twice, catalog()).any { it.code == "DUPLICATE_NODE_REFERENCE" },
+      "a node in two slots is still a duplicate",
+    )
+
+    // And a body reached only through its declaration is still reachable: the walk takes component
+    // roots as entry points, so dropping them from the reference map costs nothing there.
+    assertEquals(
+      emptyList(),
+      validateDocumentForExport(document(), catalog()).filter { it.code == "UNREACHABLE_NODE" },
+    )
+  }
+
   private fun exportSource(document: UiBuilderDocument): String {
     val result = CapabilityComposeCodeExporter.export(document, catalog())
     assertTrue(result.successful, result.diagnostics.joinToString { "${it.code}:${it.message}" })
