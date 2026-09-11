@@ -291,6 +291,16 @@ public class PersistentUiBuilderService(
    * refuse and leaves every other lane exactly as it was.
    */
   private val assets: UiBuilderAssetStore? = null,
+  /**
+   * Resolves the outline of an icon a design names, so the design can carry its own picture.
+   *
+   * Null on a host with no icon source, which leaves the registry empty and every lane exactly as
+   * it was. Hosts that have one fill it here rather than in the editor, because the editor is not
+   * the only thing that writes: `ui_builder_apply` writes an icon over MCP, a `CreateDesign` can
+   * carry one from the start, and such a design can be exported or natively previewed before
+   * anybody opens it.
+   */
+  private val iconOutlines: IconOutlineResolver? = null,
 ) :
   UiBuilderServicePort, UiBuilderServiceDiagnosticsSource, UiBuilderAdminPort, UiBuilderAssetPort {
   /**
@@ -981,7 +991,10 @@ public class PersistentUiBuilderService(
 
     val design =
       PersistedDesignV1(
-        document = document,
+        // Outlines are filled here too, not only on the write path: a design can be created with
+        // its icons already in it — an MCP `CreateDesign`, a template, a pack — and then exported
+        // or natively previewed before anybody opens it in an editor.
+        document = withIconOutlines(document),
         lastSequence = 0,
         // Owned by the human when the caller is acting for one. An agent's grant is a
         // short-lived delegation of *their* authority, so a design it creates has to outlive the
@@ -1207,6 +1220,31 @@ public class PersistentUiBuilderService(
     return LockedExecution(UiBuilderServiceResponse.DesignAccess(request.designId, access))
   }
 
+  /**
+   * The design with the outlines of every icon it names present, and stale ones dropped.
+   *
+   * Run on the reduced design rather than inside the reducer so that it applies to every write once
+   * — an apply, a batch, an undo, a redo — instead of to whichever mutations somebody remembered.
+   * It cannot fail a write: a host with no resolver, or one whose icon cache is cold, leaves the
+   * entries it already had and adds none, so an offline write is a design with fewer pictures
+   * rather than a rejected command.
+   */
+  private fun withIconOutlines(design: PersistedDesignV1): PersistedDesignV1 {
+    val document = withIconOutlines(design.document)
+    return if (document === design.document) design else design.copy(document = document)
+  }
+
+  private fun withIconOutlines(document: DesignDocumentV1): DesignDocumentV1 {
+    val resolver = iconOutlines ?: return document
+    val wanted = IconOutlineAssets.drawnBy(document.nodes.values)
+    if (wanted.isEmpty() && document.assets.none(::isOutline)) return document
+    val assets = IconOutlineAssets.refreshed(document.assets, wanted, resolver::pathData)
+    return if (assets == document.assets) document else document.copy(assets = assets)
+  }
+
+  private fun isOutline(entry: Map.Entry<String, *>): Boolean =
+    IconOutlineAssets.isOutlineKey(entry.key)
+
   private fun apply(
     actor: AuthenticatedUiBuilderActor,
     submission: UiBuilderSubmission,
@@ -1285,21 +1323,22 @@ public class PersistentUiBuilderService(
         )
       }
     }
+    val reduced = reduction.design.let(::withIconOutlines)
     val outcomes =
-      (reduction.design.operationOutcomes +
+      (reduced.operationOutcomes +
           (submission.operationId to OperationOutcomeRecordV1(fingerprint, reduction.outcome)))
         .entries
         .toList()
         .takeLast(limits.retainedOperationOutcomes)
         .associate { it.toPair() }
     val recorded =
-      reduction.design.copy(
+      reduced.copy(
         operationOutcomes = outcomes,
         // Two bounds, and the byte one is the load-bearing half: keeping `acceptedOperations` a
         // subset of the retained outcomes preserves the invariant those two have always had, and
         // the budget is what stops one design's undo records from being most of the store.
         acceptedOperations =
-          reduction.design.acceptedOperations
+          reduced.acceptedOperations
             .filterKeys { it in outcomes.keys }
             .retainNewestWithinBytes(
               limits.retainedUndoBytes,
@@ -4121,6 +4160,12 @@ private fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     // (yschimke/compose-preview-server#528). No `else`: the next format added should fail this
     // compile rather than silently read as unsupported.
     ExportFormatV1.BUNDLE -> exportCapabilities.bundle
+    // Added by compose-preview-contracts 2.17.0, and read the same way: the capability decides,
+    // and no catalog here sets either, so both are refused at this gate until something can write
+    // one. Wired rather than folded into an `else`, so the next format added still fails this
+    // compile instead of silently reading as unsupported — which is what this `when` is for.
+    ExportFormatV1.JSON -> exportCapabilities.remoteJson
+    ExportFormatV1.RC -> exportCapabilities.remoteDocument
   }
 
 private data class EnvironmentValidationIssue(

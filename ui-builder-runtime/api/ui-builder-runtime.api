@@ -69,6 +69,48 @@ public final class ee/schimke/composeai/uibuilder/service/FileUiBuilderStateStor
 public final class ee/schimke/composeai/uibuilder/service/FileUiBuilderStateStorage$Companion {
 }
 
+public final class ee/schimke/composeai/uibuilder/service/IconOutlineAssets {
+	public static final field INSTANCE Lee/schimke/composeai/uibuilder/service/IconOutlineAssets;
+	public final fun binding (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/protocol/AssetBindingV1;
+	public final fun drawnBy (Ljava/lang/Iterable;)Ljava/util/Set;
+	public final fun isOutlineKey (Ljava/lang/String;)Z
+	public final fun pathData (Lee/schimke/composeai/uibuilder/protocol/AssetBindingV1;)Ljava/lang/String;
+	public final fun refreshed (Ljava/util/Map;Ljava/util/Set;Lkotlin/jvm/functions/Function1;)Ljava/util/Map;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/IconOutlineKeyV1 {
+	public static final field Companion Lee/schimke/composeai/uibuilder/service/IconOutlineKeyV1$Companion;
+	public static final field MEDIA_TYPE Ljava/lang/String;
+	public static final field PREFIX Ljava/lang/String;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;FFFF)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;FFFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun assetKey ()Ljava/lang/String;
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun component5 ()F
+	public final fun component6 ()F
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;FFFF)Lee/schimke/composeai/uibuilder/service/IconOutlineKeyV1;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/IconOutlineKeyV1;Ljava/lang/String;Ljava/lang/String;FFFFILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/IconOutlineKeyV1;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFill ()F
+	public final fun getGrade ()F
+	public final fun getName ()Ljava/lang/String;
+	public final fun getOpticalSize ()F
+	public final fun getStyle ()Ljava/lang/String;
+	public final fun getWeight ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/IconOutlineKeyV1$Companion {
+}
+
+public abstract interface class ee/schimke/composeai/uibuilder/service/IconOutlineResolver {
+	public abstract fun pathData (Lee/schimke/composeai/uibuilder/service/IconOutlineKeyV1;)Ljava/lang/String;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/PackagedUiBuilderRenderBundle {
 	public static final field DOCUMENT_OVERRIDE_KEY Ljava/lang/String;
 	public static final field INSTANCE Lee/schimke/composeai/uibuilder/service/PackagedUiBuilderRenderBundle;
@@ -81,8 +123,8 @@ public final class ee/schimke/composeai/uibuilder/service/PackagedUiBuilderRende
 
 public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService : ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort, ee/schimke/composeai/uibuilder/service/UiBuilderAssetPort, ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnosticsSource, ee/schimke/composeai/uibuilder/service/UiBuilderServicePort {
 	public static final field Companion Lee/schimke/composeai/uibuilder/service/PersistentUiBuilderService$Companion;
-	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderDesignStateStore;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;)V
-	public synthetic fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderDesignStateStore;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderDesignStateStore;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;Lee/schimke/composeai/uibuilder/service/IconOutlineResolver;)V
+	public synthetic fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderDesignStateStore;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;Lee/schimke/composeai/uibuilder/service/IconOutlineResolver;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;)V
 	public synthetic fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun adminDeleteDesign (Ljava/lang/String;)Z

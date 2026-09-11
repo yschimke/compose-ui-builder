@@ -2327,6 +2327,19 @@ public class ProductionUiBuilderExportExecutor(
         throw UnsupportedOperationException(
           "bundle export is not implemented; ExportCapabilitiesV1.bundle is false for this executor"
         )
+      // The same arrangement for the two formats contracts 2.17.0 added: [capabilities] leaves
+      // `remoteJson` and `remoteDocument` at their false defaults, so the service refuses these
+      // before an executor is reached, and implementing either starts from a compile error here.
+      ExportFormatV1.JSON ->
+        throw UnsupportedOperationException(
+          "remote JSON export is not implemented; ExportCapabilitiesV1.remoteJson is false for " +
+            "this executor"
+        )
+      ExportFormatV1.RC ->
+        throw UnsupportedOperationException(
+          "remote document export is not implemented; ExportCapabilitiesV1.remoteDocument is " +
+            "false for this executor"
+        )
     }
 
   override fun close(): Unit = renderer.close()
