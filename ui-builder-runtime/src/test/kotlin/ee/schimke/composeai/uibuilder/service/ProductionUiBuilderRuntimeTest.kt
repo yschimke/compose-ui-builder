@@ -90,6 +90,116 @@ class ProductionUiBuilderRuntimeTest {
     assertEquals("placed", issue?.nodeId)
   }
 
+  /**
+   * A placement carries no capability of its own, so it is held to the body's.
+   *
+   * Skipping the check let a direct `ApplyOperation` persist a modifier
+   * `CapabilityComposeCodeExporter.modifierExpression` throws on — a design the server accepted and
+   * the export then refused.
+   */
+  @Test
+  fun `a placement's modifiers are judged by the body it draws`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalog = catalogs.listCatalogs().single()
+    val placed = document().withPlacement()
+
+    assertNull(catalogs.validate(placed, catalog))
+
+    val modified =
+      placed.copy(
+        nodes =
+          placed.nodes +
+            ("placed" to
+              placed.nodes
+                .getValue("placed")
+                .copy(
+                  // `matchParentSize` is a real modifier and is not among the eighteen `m3/text`
+                  // declares, so this is the exact shape the export would refuse.
+                  modifiers = listOf(MatchParentSizeModifierV1)
+                ))
+      )
+    val issue = catalogs.validate(modified, catalog)
+    assertEquals("UNKNOWN_MODIFIER", issue?.code)
+    assertEquals("placed", issue?.nodeId)
+  }
+
+  /**
+   * Children hung on a placement are drawn by nobody.
+   *
+   * The renderer's component-instance path and the exporter's `emitPlacement` both draw the
+   * declared body and never traverse the placement's own slots, so accepting these commits nodes
+   * that vanish from preview and generated output while the operation reports success.
+   */
+  @Test
+  fun `a placement may not hold children of its own`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalog = catalogs.listCatalogs().single()
+    val placed = document().withPlacement()
+
+    val withChild =
+      placed.copy(
+        nodes =
+          placed.nodes +
+            ("orphan" to
+              DesignNodeV1(
+                id = "orphan",
+                componentId = "m3/text",
+                properties = mapOf("text" to StringValueV1("drawn by nobody")),
+              )) +
+            ("placed" to
+              placed.nodes.getValue("placed").copy(slots = mapOf("content" to listOf("orphan")))),
+        components = placed.components,
+      )
+
+    val issue = catalogs.validate(withChild, catalog)
+    assertEquals("INVALID_PLACEMENT", issue?.code)
+    assertEquals("placed", issue?.nodeId)
+    assertEquals("content", issue?.field)
+  }
+
+  /**
+   * A body root that is itself a placement is an ordinary composition.
+   *
+   * Resolving only one hop asked the catalog for `design/component-instance`, got null, and
+   * rejected every nested component placed in a slot — a shape the renderer and exporter both
+   * support, cycle diagnostics included.
+   */
+  @Test
+  fun `a component whose body places another component still resolves in a slot`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalog = catalogs.listCatalogs().single()
+    val nested =
+      document().withPlacement().let { base ->
+        base.copy(
+          nodes =
+            base.nodes +
+              ("surface" to
+                base.nodes
+                  .getValue("surface")
+                  .copy(slots = mapOf("content" to listOf("text", "outer")))) +
+              ("outer" to
+                DesignNodeV1(
+                  id = "outer",
+                  componentId = DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                  component = DesignComponentInstanceV1("wrapper"),
+                )),
+          components =
+            base.components + ("wrapper" to DesignComponentV1(name = "Wrapper", root = "placed")),
+        )
+      }
+
+    assertNull(catalogs.validate(nested, catalog))
+
+    // A declaration whose body root places itself is a cycle; the walk has to stop rather than
+    // recurse until the stack gives out. The export gate reports it as `GRAPH_CYCLE`; from here it
+    // is simply a body that cannot be resolved.
+    val cyclic =
+      nested.copy(
+        components = nested.components + ("wrapper" to DesignComponentV1("Wrapper", "outer"))
+      )
+    assertEquals("UNKNOWN_COMPONENT", catalogs.validate(cyclic, catalog)?.code)
+  }
+
   @Test
   fun `a write is refused for the value kind its name states, and only on the write`() {
     val catalogs = CurrentM3UiBuilderCatalogExecutor()
@@ -474,6 +584,22 @@ class ProductionUiBuilderRuntimeTest {
     )
 
   private fun document(): DesignDocumentV1 = Companion.document()
+
+  /** The fixture with a `greeting` component over the `text` node, and one placement of it. */
+  private fun DesignDocumentV1.withPlacement(): DesignDocumentV1 =
+    copy(
+      nodes =
+        nodes +
+          ("surface" to
+            nodes.getValue("surface").copy(slots = mapOf("content" to listOf("text", "placed")))) +
+          ("placed" to
+            DesignNodeV1(
+              id = "placed",
+              componentId = DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+              component = DesignComponentInstanceV1("greeting"),
+            )),
+      components = mapOf("greeting" to DesignComponentV1(name = "Greeting", root = "text")),
+    )
 
   internal companion object {
     /** The two-node m3 design every test here starts from; shared with the pack tests. */

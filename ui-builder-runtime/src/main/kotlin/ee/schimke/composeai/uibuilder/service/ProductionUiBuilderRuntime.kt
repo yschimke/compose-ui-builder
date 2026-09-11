@@ -332,6 +332,37 @@ public class CurrentM3UiBuilderCatalogExecutor(
         if (key !in document.components) {
           return issue("UNKNOWN_COMPONENT", "this design declares no component $key", nodeId)
         }
+        // Children hung on a placement are drawn by nobody. Both the renderer's
+        // component-instance path and `CapabilityComposeCodeExporter.emitPlacement` draw the
+        // declared body and never look at the placement's own slots, so accepting these would
+        // commit nodes that vanish from the preview and from the generated Kotlin while the
+        // operation reported success — and the topology checker, which counts them as placed,
+        // would agree they are fine.
+        val placementSlots = node.objectOrEmpty("slots")
+        val occupied = placementSlots.entries.firstOrNull { it.value.jsonArray.isNotEmpty() }
+        if (occupied != null) {
+          return issue(
+            "INVALID_PLACEMENT",
+            "a placement draws its component's body, so slot ${occupied.key} cannot hold children",
+            nodeId,
+            occupied.key,
+          )
+        }
+        // Modifiers are the one catalog rule that does reach a placement: they are applied to
+        // whatever the body's root draws, and `CapabilityComposeCodeExporter.modifierExpression`
+        // throws on a type it cannot write. Skipping the check here let a direct `ApplyOperation`
+        // persist a design that then failed at export — the editor's `CapabilityValidator` has
+        // always resolved `placedCapability` and checked them.
+        val placed =
+          placedCapability(node, document, encodedNodes, catalogComponents)
+            ?: return issue(
+              "UNKNOWN_COMPONENT",
+              "the body of component $key cannot be resolved",
+              nodeId,
+            )
+        node.modifierIssue(nodeId, placed, "component $key's body")?.let {
+          return it
+        }
         continue
       }
       val component =
@@ -383,17 +414,8 @@ public class CurrentM3UiBuilderCatalogExecutor(
           }
         }
 
-      val allowedModifiers = component.modifierCapabilities.toSet()
-      node.arrayOrEmpty("modifiers").forEachIndexed { index, modifier ->
-        val type = (modifier as? JsonObject)?.optionalString("type")
-        if (type == null || type !in allowedModifiers) {
-          return issue(
-            "UNKNOWN_MODIFIER",
-            "modifier ${type ?: "at index $index"} is not declared by $componentId",
-            nodeId,
-            "modifiers[$index]",
-          )
-        }
+      node.modifierIssue(nodeId, component, componentId)?.let {
+        return it
       }
 
       val declaredSlots = component.slots.associateBy { it.name }
@@ -445,16 +467,10 @@ public class CurrentM3UiBuilderCatalogExecutor(
           // reason above: the placement itself is not a catalog component.
           val childCapability =
             if (childComponentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) {
-              val key =
-                child["component"]?.jsonObject?.get("componentKey")?.jsonPrimitive?.contentOrNull
-              val root = key?.let { document.components[it]?.root }
-              // Absent or dangling is already refused where the node itself is checked, so
-              // reaching here with nothing to resolve means the body root is missing — a document
-              // that would draw a placement of nothing.
-              val rootComponentId = root?.let {
-                encodedNodes[it]?.jsonObject?.requiredString("componentId")
-              }
-              rootComponentId?.let { catalogComponents[it] }
+              // Follows nested placements: a component whose body root places another component
+              // is an ordinary composition the renderer and the exporter both traverse, and
+              // stopping at the first hop rejected every one of them.
+              placedCapability(child, document, encodedNodes, catalogComponents)
                 ?: return issue(
                   "UNKNOWN_COMPONENT",
                   "child $childId places a component whose body cannot be resolved",
@@ -2548,6 +2564,65 @@ private fun JsonObject.requiredString(name: String): String =
 
 private fun JsonObject.optionalString(name: String): String? =
   this[name]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull
+
+/**
+ * The catalog capability of what a placement actually draws, or null when it cannot be resolved.
+ *
+ * A `design/component-instance` is a document construct with no capability of its own; what decides
+ * which modifiers it may carry, and which slots will accept it, is the component it places. So this
+ * walks from the placement to its declaration, to that declaration's body root — and, when the root
+ * is itself a placement, keeps walking. Nested design components are an ordinary composition that
+ * the renderer and the exporter both traverse.
+ *
+ * [seen] guards the walk. A declaration whose body root places the declaration itself is a cycle
+ * the export gate reports as `GRAPH_CYCLE`; reaching it from here must return "cannot resolve"
+ * rather than recurse until the stack gives out.
+ */
+private fun placedCapability(
+  placement: JsonObject,
+  document: DesignDocumentV1,
+  encodedNodes: JsonObject,
+  catalogComponents: Map<String, ComponentCapabilityV1>,
+  seen: MutableSet<String> = mutableSetOf(),
+): ComponentCapabilityV1? {
+  val key =
+    placement["component"]?.jsonObject?.get("componentKey")?.jsonPrimitive?.contentOrNull
+      ?: return null
+  if (!seen.add(key)) return null
+  val root = document.components[key]?.root ?: return null
+  val rootNode = encodedNodes[root]?.jsonObject ?: return null
+  val rootComponentId = rootNode.requiredString("componentId")
+  return if (rootComponentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID)
+    placedCapability(rootNode, document, encodedNodes, catalogComponents, seen)
+  else catalogComponents[rootComponentId]
+}
+
+/**
+ * The modifier rule, asked of one node against the capability that decides it.
+ *
+ * Shared so a placement is held to its body's modifiers by the same code that holds an ordinary
+ * node to its component's — two spellings of this rule would eventually disagree, and the
+ * disagreement would be discovered at export.
+ */
+private fun JsonObject.modifierIssue(
+  nodeId: String,
+  capability: ComponentCapabilityV1,
+  declaredBy: String,
+): UiBuilderCatalogIssue? {
+  val allowed = capability.modifierCapabilities.toSet()
+  arrayOrEmpty("modifiers").forEachIndexed { index, modifier ->
+    val type = (modifier as? JsonObject)?.optionalString("type")
+    if (type == null || type !in allowed) {
+      return UiBuilderCatalogIssue(
+        "UNKNOWN_MODIFIER",
+        "modifier ${type ?: "at index $index"} is not declared by $declaredBy",
+        nodeId,
+        "modifiers[$index]",
+      )
+    }
+  }
+  return null
+}
 
 private fun JsonObject.objectOrEmpty(name: String): JsonObject =
   this[name] as? JsonObject ?: JsonObject(emptyMap())
