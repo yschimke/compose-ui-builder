@@ -1597,6 +1597,7 @@ fun UiBuilderEditor(
   // preview frame all draw a pack component, and all of them should draw its placeholder.
   CompositionLocalProvider(
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
+    LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
     // Here for the same reason as the line above it: the canvas, the extent beside it and every

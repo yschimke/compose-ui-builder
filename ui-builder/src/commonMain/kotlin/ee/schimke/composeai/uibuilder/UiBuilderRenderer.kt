@@ -204,6 +204,30 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
 /**
+ * Every component id the catalog offers, so the `else` branch can tell two different things apart.
+ *
+ * Falling off the `when` means one of two things, and until now both drew the same error container
+ * reading "Unsupported component". They are not the same:
+ * - **the catalog does not offer this id** — a design pinned to another catalog, a stale import, a
+ *   typo. Something IS wrong, and the error container is right.
+ * - **the catalog offers it and this canvas has no case for it.** Nothing is wrong. The component
+ *   is on the palette, it exports, and m3-catalog renders every one of them — the browser just
+ *   cannot draw it. That is [NativeOnlyPlaceholder]'s situation exactly, and it is what the
+ *   published shelf already *says*: `PublishedUiBuilderCatalog.wasm()` writes the note "drawn on
+ *   the canvas as a named placeholder" for every component with no adapter, and then the canvas
+ *   drew an error instead. This is the renderer keeping that promise (m3-catalog#324).
+ *
+ * Membership, deliberately, rather than the capability's own `adapterStatus`. That field would be
+ * the direct statement of "this canvas can draw it" and it is not trustworthy: the frozen
+ * `m3-catalog` capabilities report `planned` for `layout/box`, `m3/button`, `m3/card`,
+ * `m3/icon-button`, `m3/search-bar`, `m3/search-input-field`, `m3/snackbar-host` and
+ * `m3/horizontal-floating-toolbar`, all eight of which the `when` above draws. Reaching the `else`
+ * is the renderer's own first-hand answer to the same question and cannot drift from it.
+ */
+internal val LocalUiBuilderCatalogComponentIds =
+  staticCompositionLocalOf<Set<String>> { emptySet() }
+
+/**
  * Which host container a Wear widget design is drawn inside.
  *
  * A composition local rather than a document property, because the shape is not the design's: the
@@ -425,6 +449,12 @@ fun UiBuilderSurface(
    */
   nativeOnlyComponentIds: Set<String> = LocalUiBuilderNativeOnly.current,
   /**
+   * Every component id the catalog offers, so one this canvas has no case for draws as a named
+   * placeholder rather than as an error. See [LocalUiBuilderCatalogComponentIds]. Inherited from an
+   * enclosing provider, like the set above it.
+   */
+  catalogComponentIds: Set<String> = LocalUiBuilderCatalogComponentIds.current,
+  /**
    * Draw the design at its whole extent rather than at its frame — see [LocalUiBuilderUnrolled] for
    * what that swaps and what it costs.
    */
@@ -551,6 +581,7 @@ fun UiBuilderSurface(
     LocalUiBuilderTypeScale provides typeScale,
     LocalUiBuilderCornerRadius provides cornerRadius,
     LocalUiBuilderNativeOnly provides nativeOnlyComponentIds,
+    LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
     LocalUiBuilderUnrolled provides unrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
   ) {
@@ -1441,6 +1472,20 @@ private fun RenderNode(
         }
       }
     }
+    // On the palette, exportable, rendered by its own catalog — and this canvas has no case for
+    // it. The shelf already promises exactly this picture; see [LocalUiBuilderCatalogComponentIds]
+    // for why membership answers the question and `adapterStatus` does not.
+    //
+    // Below every specific case, so it can only ever catch an id that would otherwise have drawn
+    // an error: nothing this renderer knows how to draw can be demoted to a placeholder by it.
+    in LocalUiBuilderCatalogComponentIds.current ->
+      NativeOnlyPlaceholder(node, measured) {
+        // The children, for the reason the Wear and pack placeholders keep theirs: an icon inside
+        // an icon button is the thing an author is looking for, and dropping it would hide whole
+        // subtrees from the canvas.
+        node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+      }
+    // Not the catalog's at all. Now the only thing this says, and it is true when it says it.
     else -> UnsupportedComponentDiagnostic(node.componentId, measured)
   }
 }
