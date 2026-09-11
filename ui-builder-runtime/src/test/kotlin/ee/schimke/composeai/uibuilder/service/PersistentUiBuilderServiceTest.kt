@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.io.Closeable
 import java.nio.file.Files
@@ -41,6 +42,67 @@ class PersistentUiBuilderServiceTest {
   private val owner = AuthenticatedUiBuilderActor("owner")
   private val viewer = AuthenticatedUiBuilderActor("viewer")
   private val outsider = AuthenticatedUiBuilderActor("outsider")
+
+  @Test
+  fun `disabled supplied document requests never reach an exporter`() {
+    if (UiBuilderBuildFeatures.remoteCompose) return
+    val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
+    val service = service(exportRequests = requests)
+    for (format in listOf(ExportFormatV1.PNG, ExportFormatV1.JSON, ExportFormatV1.RC)) {
+      val result =
+        assertIs<UiBuilderServiceResponse.Error>(
+          execute(service, owner, UiBuilderServiceRequest.ExportDocument(document(), format))
+        )
+      assertEquals(ServiceErrorCodeV1.BAD_REQUEST, result.error.code)
+      assertContains(result.error.message, "disabled in this build")
+    }
+    assertTrue(requests.isEmpty())
+  }
+
+  @Test
+  fun `detached component bodies persist once while several instances reference them`() {
+    val storage = MemoryStorage()
+    val placed =
+      document()
+        .copy(
+          roots = listOf("root"),
+          nodes =
+            mapOf(
+              "root" to
+                textNode("root").copy(slots = mapOf("content" to listOf("first", "second"))),
+              "first" to
+                DesignNodeV1(
+                  "first",
+                  DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                  component = DesignComponentInstanceV1("cell"),
+                ),
+              "second" to
+                DesignNodeV1(
+                  "second",
+                  DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                  component = DesignComponentInstanceV1("cell"),
+                ),
+              "body" to textNode("body"),
+            ),
+          components = mapOf("cell" to DesignComponentV1("Cell", "body")),
+        )
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service(storage), owner, UiBuilderServiceRequest.CreateDesign(placed))
+    )
+    val restored = currentDocument(service(storage))
+    assertEquals(placed, restored.copy(createdAtEpochMillis = null, updatedAtEpochMillis = null))
+    val cyclic =
+      placed.copy(
+        nodes = placed.nodes + ("body" to placed.nodes.getValue("first").copy(id = "body"))
+      )
+    assertIs<UiBuilderServiceResponse.Error>(
+      execute(service(), owner, UiBuilderServiceRequest.CreateDesign(cyclic))
+    )
+    val orphan = placed.copy(components = emptyMap())
+    assertIs<UiBuilderServiceResponse.Error>(
+      execute(service(), owner, UiBuilderServiceRequest.CreateDesign(orphan))
+    )
+  }
 
   @Test
   fun `a design says what an actor may do to it, and says nothing to a stranger`() {

@@ -1,16 +1,19 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.discovery.ComponentRecord
+
 /**
  * Generates the `@RemoteComposable` function a [REMOTE_COMPOSE_INLINE_COMPONENT_ID] subtree is.
  *
  * ## Why this is neither of the other two generators
  *
  * [WearWidgetCodeExporter] writes a whole *widget* — a `GlanceWearWidget`, a `WearWidgetDocument`
- * and the Glance host preview around it — because a `remote-m3` design is a widget and nothing
- * else. [CapabilityComposeCodeExporter] writes a Jetpack Compose screen. An inline node is a third
- * thing: a piece of Remote Compose *inside* somebody else's screen, whose delivery — captured into
- * a document at build time, fetched from a server, played by whichever host the application already
- * has — is the application's choice rather than the design's.
+ * and the Glance host preview around it — when the design has a Wear widget scaffold.
+ * [CapabilityComposeCodeExporter] writes a Jetpack Compose screen. An inline node is a third thing:
+ * a piece of Remote Compose *inside* somebody else's screen. Ordinary Remote catalog roots use the
+ * same emitter. Their delivery — captured into a document at build time, fetched from a server,
+ * played by whichever host the application already has — is the application's choice rather than
+ * the design's.
  *
  * So this writes the one part the design does decide, which is the body, in the same vocabulary
  * [RemoteContentEmitter] writes a widget body in. What it deliberately does not write is the call
@@ -71,43 +74,95 @@ public object InlineRemoteContentExporter {
     }
 
     val contentIds = node.slots["content"].orEmpty()
-    val refusals = mutableListOf<String>()
-    // The same throwaway probe `WearWidgetCodeExporter` runs, and for the same reason: the theme
-    // wrapper moves every line of the body one level right, and whether it is wanted is something
-    // an emitter only learns by emitting. Its refusals are dropped; the real pass below reports.
-    val depth =
-      if (
-        RemoteContentEmitter(document, mutableListOf()).let { probe ->
-          contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
-          probe.usesTheme
-        }
-      )
-        2
-      else 1
+    if (contentIds.size > 1)
+      return Result.Refused(listOf("remote content has one body; `$nodeId` has ${contentIds.size}"))
+    return source(
+      document,
+      contentIds,
+      functionName(document, nodeId),
+      "Remote content `${nodeId.escapeComment()}` of design",
+      packageName,
+      emptyMap(),
+      WidgetAssetBytes { null },
+      emptyBox = true,
+    )
+  }
 
-    val emitter = RemoteContentEmitter(document, refusals)
-    val body =
-      when (contentIds.size) {
-        0 -> listOf("${INDENT.repeat(depth)}RemoteBox(modifier = RemoteModifier.fillMaxSize())")
-        1 -> emitter.emit(contentIds.single(), depth = depth)
-        // Unreachable through the catalog, whose `content` slot caps at one, and refused rather
-        // than asserted because a stored design can carry a shape a later catalog would not accept.
-        else -> {
-          refusals += "remote content has one body; `$nodeId` has ${contentIds.size}"
-          emptyList()
-        }
+  /**
+   * Emits authored roots directly, without adding a widget or synthetic inline node to the tree.
+   */
+  internal fun exportRoots(
+    document: UiBuilderDocument,
+    packageName: String?,
+    components: Map<String, ComponentRecord>,
+    assets: WidgetAssetBytes,
+  ): Result {
+    val reasons = mutableListOf<String>()
+    if (document.roots.isEmpty()) reasons += "document.roots: a Remote source export needs a root"
+    val complete = mutableSetOf<String>()
+    fun visit(id: String, ancestors: Set<String>) {
+      if (id in ancestors) {
+        reasons += "nodes.$id: cyclic child reference"
+        return
       }
+      if (id in complete) return
+      val node = document.nodes[id]
+      if (node == null) {
+        reasons += "nodes.$id: missing node"
+        return
+      }
+      if (ancestors.size >= 128) {
+        reasons += "nodes.$id: layout nesting exceeds 128 levels"
+        return
+      }
+      node.slots.values.flatten().forEach { visit(it, ancestors + id) }
+      complete += id
+    }
+    document.roots.forEach { visit(it, emptySet()) }
+    if (reasons.isNotEmpty()) return Result.Refused(reasons.distinct())
+    return source(
+      document,
+      document.roots,
+      functionName(document, ""),
+      "Remote content of design",
+      packageName,
+      components,
+      assets,
+      emptyBox = false,
+    )
+  }
+
+  private fun source(
+    document: UiBuilderDocument,
+    contentIds: List<String>,
+    name: String,
+    description: String,
+    packageName: String?,
+    components: Map<String, ComponentRecord>,
+    assets: WidgetAssetBytes,
+    emptyBox: Boolean,
+  ): Result {
+    val refusals = mutableListOf<String>()
+    // Theme use is known after emitting. Probe every root, then emit once at the correct depth.
+    val probe =
+      RemoteContentEmitter(document, mutableListOf(), assets = assets, components = components)
+    contentIds.forEach { probe.emit(it, depth = 1) }
+    val depth = if (probe.usesTheme) 2 else 1
+    val emitter = RemoteContentEmitter(document, refusals, assets = assets, components = components)
+    val body =
+      if (contentIds.isEmpty() && emptyBox) {
+        listOf("${INDENT.repeat(depth)}RemoteBox(modifier = RemoteModifier.fillMaxSize())")
+      } else contentIds.flatMap { emitter.emit(it, depth = depth) }
+    emitter.validateFunctionNames(name)
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
-    val name = functionName(document, nodeId)
     return Result.Emitted(
       functionName = name,
       source =
         buildString {
           appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
           appendLine(
-            "// Remote content `${nodeId.escapeComment()}` of design " +
-              "${document.id.escapeComment()} revision ${document.revision}."
+            "// $description " + "${document.id.escapeComment()} revision ${document.revision}."
           )
           appendLine("@file:Suppress(\"RestrictedApi\")")
           appendLine()
@@ -125,6 +180,7 @@ public object InlineRemoteContentExporter {
           appendLine(
             "fun $name(${emitter.imageParameters.joinToString { "${it.identifier}: RemoteImageBitmap" }}) {"
           )
+          emitter.stateLocals().forEach { appendLine("$INDENT$it") }
           if (emitter.usesTheme) {
             appendLine("${INDENT}RemoteMaterialTheme {")
             body.forEach(::appendLine)
@@ -133,6 +189,10 @@ public object InlineRemoteContentExporter {
             body.forEach(::appendLine)
           }
           appendLine("}")
+          emitter.declarations.forEach {
+            appendLine()
+            appendLine(it)
+          }
         },
     )
   }

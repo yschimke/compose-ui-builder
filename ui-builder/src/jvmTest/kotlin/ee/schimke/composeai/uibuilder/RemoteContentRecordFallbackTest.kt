@@ -318,6 +318,58 @@ class RemoteContentRecordFallbackTest {
     assertTrue("RemoteButton(onClick = valueChange(page, 2.ri)) {" in source, source)
   }
 
+  @Test
+  fun `an ordered event exports every action through combinedAction`() {
+    val result =
+      WearWidgetCodeExporter.export(
+        widget(
+          mapOf(
+            "button" to
+              UiBuilderNode(
+                "button",
+                "remote-m3/remote-button",
+                slots = mapOf("children" to listOf("label")),
+                eventBindings =
+                  buildJsonObject {
+                    put(
+                      "click",
+                      JsonArray(
+                        listOf(
+                          action("set", "page", JsonPrimitive(2)),
+                          action("toggle", "expanded"),
+                        )
+                      ),
+                    )
+                  },
+              ),
+            "label" to
+              UiBuilderNode(
+                "label",
+                "remote-m3/remote-text",
+                properties = buildJsonObject { put("text", value("Next")) },
+              ),
+          ),
+          childId = "button",
+          state =
+            buildJsonObject {
+              put("page", stateVariable("int", JsonPrimitive(0)))
+              put("expanded", stateVariable("bool", JsonPrimitive(false)))
+            },
+        ),
+        components =
+          mapOf("remote-m3/remote-button" to remoteButton, "remote-m3/remote-text" to remoteText),
+      )
+    val source = assertIs<WearWidgetCodeExporter.Result.Emitted>(result).source
+    assertTrue(
+      "combinedAction(valueChange(page, 2.ri), valueChange(expanded, !expanded))" in source,
+      source,
+    )
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.action.combinedAction" in source,
+      source,
+    )
+  }
+
   /**
    * `selectOrClear` assigns null, and a Remote value cannot be one. Refused by name rather than
    * given a sentinel, because clearing a selection and setting it to zero are different designs.
@@ -406,17 +458,9 @@ class RemoteContentRecordFallbackTest {
     put("value", JsonPrimitive(key))
   }
 
-  /**
-   * A placed design component is its body, inlined, with the placement's arguments substituted.
-   *
-   * Inlined rather than emitted as a function, which is what the Compose lane does: a design
-   * component's body is ordinary catalog nodes and this emitter can write every one of them. A
-   * `RemoteCustomComponent` hole would be actively wrong — the host registers renderers by name and
-   * nothing is registered under a design-local key, so the widget would reserve bounds and draw
-   * nothing.
-   */
+  /** Reusable Remote composables take explicit typed arguments at each placement. */
   @Test
-  fun `a placed design component is inlined with its arguments`() {
+  fun `a placed design component is exported as a function with arguments`() {
     val document =
       widget(
           mapOf(
@@ -461,9 +505,9 @@ class RemoteContentRecordFallbackTest {
         )
         .source
 
-    assertTrue("RemoteText(text = \"Next train\".rs)" in source, source)
-    // Inlined, so nothing names the component: no function, no hole, no key.
-    assertTrue("headline" !in source, source)
+    assertTrue("argument0 = \"Next train\".rs" in source, source)
+    assertTrue("private fun Headline(" in source, source)
+    assertTrue("RemoteText(text = argument0)" in source, source)
   }
 
   /** A body reading a key the placement does not supply is a component placed wrongly. */
@@ -512,7 +556,7 @@ class RemoteContentRecordFallbackTest {
         )
       )
     assertTrue(
-      refused.reasons.any { "reads `caption`" in it && "does not supply" in it },
+      refused.reasons.any { "missing component argument `caption`" in it },
       refused.reasons.toString(),
     )
   }

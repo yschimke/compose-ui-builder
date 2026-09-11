@@ -276,7 +276,16 @@ class GeneratedDocumentTest {
    */
   private fun assertExportAgreesWithTheRecord(document: UiBuilderDocument, case: String) {
     val used = document.nodes.values.map { it.componentId }.toSet()
-    val expected = used - recordedComponentIds
+    // Semantic loops lower to a Column and a typed repetition; they do not call a catalog symbol.
+    // The released floor must still refuse until the additive shared vocabulary is available.
+    val repetitions = runCatching {
+      Json.decodeFromString<ee.schimke.composeai.discovery.ScreenNode>(
+        """{"componentId":"","repetition":{"fields":{},"rows":[]}}"""
+      )
+    }
+      .isSuccess
+    val expected =
+      used - recordedComponentIds - if (repetitions) setOf("layout/for-each") else emptySet()
     val generated = reducer.generatedCode(document)
     if (expected.isEmpty()) {
       assertEquals(

@@ -295,6 +295,13 @@
                     "name": "propagateMinConstraints",
                     "notes": null,
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "showByState",
+                    "notes": "Select one child by state. Object fields: selector is a typed scalar or state read; cases is an object mapping child IDs to typed scalar values; optional fallback is a string child ID. Every child must be a case or the fallback. Compose export uses when. Remote export uses StateLayout for non-null number or flag selectors; String equality is unavailable on that target.",
+                    "required": false
                 }
             ],
             "role": "Container",
@@ -559,6 +566,81 @@
                 "HorizontalContent",
                 "LayoutPrimitive",
                 "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "notes": null,
+                "platformSupported": true
+            }
+        },
+        {
+            "code": {
+                "imports": [],
+                "symbol": ""
+            },
+            "componentId": "layout/for-each",
+            "displayName": "For each",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "data",
+                    "notes": "The rows: a `list` value whose entries are `object` values — one dictionary per row, read by the template through `{\"type\":\"binding\",\"value\":\"<key>\"}`, the same reader a component body uses for its arguments.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "template",
+                    "ordered": false
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "Repeated rows draw the template more than once, and the structured recorder correlates a text element by authored node id — so only the last row's measurements survive and the typography annotation cannot be matched. Unverified until the recorder reads instance paths, which makes an SVG export of a design holding a loop refuse by name rather than emit an unannotated one.",
+                "status": "unverified"
+            },
+            "traits": [
+                "OrderedContent",
+                "RepeatedContent"
             ],
             "wasm": {
                 "adapterStatus": "supported",

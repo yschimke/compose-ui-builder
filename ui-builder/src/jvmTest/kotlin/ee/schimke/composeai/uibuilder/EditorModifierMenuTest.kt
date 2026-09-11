@@ -6,6 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -235,6 +236,48 @@ class EditorModifierMenuTest {
       padded.document.nodes.getValue("main-background").modifiers.size,
       edited.document.nodes.getValue("main-background").modifiers.size,
     )
+  }
+
+  @Test
+  fun `repeated modifiers are edited at their exact chain position`() {
+    val padded =
+      reducer.reduce(
+        reducer.initial(document, selectedNodeId = "main-background"),
+        UiBuilderEditorEvent.ToggleModifier("main-background", "padding"),
+      )
+    val node = padded.document.nodes.getValue("main-background")
+    val padding = node.modifiers.last()
+    val repeated =
+      padded.document.copy(
+        nodes =
+          padded.document.nodes +
+            (node.id to node.copy(modifiers = JsonArray(node.modifiers + padding)))
+      )
+    val initial = reducer.initial(repeated, selectedNodeId = node.id)
+    val index = repeated.nodes.getValue(node.id).modifiers.lastIndex
+    val edited =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.SetModifierValue(node.id, "padding", "topDp", "24", index),
+      )
+    val before = repeated.nodes.getValue(node.id).modifiers
+    val after = edited.document.nodes.getValue(node.id).modifiers
+    assertEquals(before.dropLast(1), after.dropLast(1))
+    assertEquals("24", after.last().jsonObject.getValue("topDp").jsonPrimitive.content)
+    assertEquals(
+      listOf(index - 1, index),
+      reducer.modifierFields(edited).filter { it.type == "padding" }.map { it.index }.distinct(),
+    )
+    for (event in
+      listOf(
+        UiBuilderEditorEvent.SetModifierValue(node.id, "padding", "topDp", "30", index + 1),
+        UiBuilderEditorEvent.SetModifierValue(node.id, "padding", "madeUp", "30", index),
+        UiBuilderEditorEvent.SetModifierValue(node.id, "padding", "topDp", "NaN", index),
+      )) {
+      val refused = reducer.reduce(edited, event)
+      assertTrue(refused.lastOutcome is CommandOutcome.Rejected)
+      assertEquals(edited.document, refused.document)
+    }
   }
 
   @Test

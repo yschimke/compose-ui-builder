@@ -31,7 +31,8 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 object ScreenExportGate {
 
   /** The packages a generated screen may name. Narrow on purpose; widening is a reviewed act. */
-  val EXPRESSION_PACKAGES: Set<String> = setOf("androidx.compose")
+  // Bound layout spacing uses kotlin.math.max to preserve the canvas's nonnegative gap rule.
+  val EXPRESSION_PACKAGES: Set<String> = setOf("androidx.compose", "kotlin.math")
 
   /** The package a generated screen is emitted into. */
   const val PACKAGE_NAME: String = "generated.uibuilder"
@@ -124,6 +125,7 @@ object ScreenExportGate {
     // Document order, deduplicated: one line per component, not one per node. A design with 29
     // icons in it has one icon problem.
     return document.nodes.values
+      .filter { it.component == null && it.componentId != "layout/for-each" }
       .map { it.componentId }
       .distinct()
       .mapNotNull { id ->

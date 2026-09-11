@@ -54,7 +54,7 @@ class BindableLineCountPropertyTest {
     val fields = reducer.propertyFields(state)
     assertTrue(fields.any { it.name == "minLines" }, "m3/text declares minLines")
     assertEquals(
-      emptyList(),
+      listOf("text", "softWrap"),
       fields.filter { reducer.canBindToState(state, textNodeId, it.name) }.map { it.name },
     )
   }

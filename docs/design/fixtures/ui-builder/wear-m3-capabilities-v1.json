@@ -13022,6 +13022,13 @@
                     "name": "propagateMinConstraints",
                     "notes": null,
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "showByState",
+                    "notes": "Select one child by state. Object fields: selector is a typed scalar or state read; cases is an object mapping child IDs to typed scalar values; optional fallback is a string child ID. Every child must be a case or the fallback. Compose export uses when. Remote export uses StateLayout for non-null number or flag selectors; String equality is unavailable on that target.",
+                    "required": false
                 }
             ],
             "role": "Container",

@@ -46,6 +46,74 @@ class EditorCodePaneTest {
     )
 
   @Test
+  fun `a Remote catalog shows source for a plain layout root`() {
+    org.junit.Assume.assumeTrue(
+      "Enable with -PuiBuilderRemoteCompose=true",
+      UiBuilderBuildFeatures.remoteCompose,
+    )
+    val remoteCatalog =
+      catalog.copy(
+        statusSemantics =
+          JsonObject(catalog.statusSemantics + ("platform" to JsonPrimitive("remote-compose")))
+      )
+    val document = Json {
+      ignoreUnknownKeys = true
+    }
+      .decodeFromString<UiBuilderDocument>(
+        java.io
+          .File(
+            System.getProperty("uiBuilderProjectDir"),
+            "../docs/design/evidence/ui-builder-live-document-preview/sample.document.json",
+          )
+          .readText()
+      )
+    val code =
+      assertIs<EditorGeneratedCode.Source>(
+        UiBuilderEditorReducer(remoteCatalog).generatedCode(document)
+      )
+    assertTrue("RemoteStateLayout" in code.kotlin, code.kotlin)
+    assertTrue(".clickable(valueChange(page, 20.ri))" in code.kotlin, code.kotlin)
+    assertFalse("WearWidget" in code.kotlin, code.kotlin)
+  }
+
+  @Test
+  fun `the existing code pane uses production bound callback factories`() {
+    org.junit.Assume.assumeTrue(
+      "Enable with -PuiBuilderRemoteCompose=true",
+      UiBuilderBuildFeatures.remoteCompose,
+    )
+    val remoteCatalog =
+      catalog.copy(
+        statusSemantics =
+          JsonObject(catalog.statusSemantics + ("platform" to JsonPrimitive("remote-compose")))
+      )
+    val document = Json {
+      ignoreUnknownKeys = true
+    }
+      .decodeFromString<UiBuilderDocument>(
+        java.io
+          .File(
+            System.getProperty("uiBuilderProjectDir"),
+            "../experiments/remote-state-selection/bound-actions.document.json",
+          )
+          .readText()
+      )
+    val code =
+      assertIs<EditorGeneratedCode.Source>(
+          UiBuilderEditorReducer(remoteCatalog).generatedCode(document)
+        )
+        .kotlin
+    val expected =
+      assertIs<RecordFreeExport.Generated.Emitted>(
+          RecordFreeExport.generate(document, UiBuilderCatalogPlatform.REMOTE_COMPOSE)
+        )
+        .source
+    assertEquals(expected, code)
+    assertTrue("valueChange(page, actionValue0.ri)" in code)
+    assertTrue("clickable(capture0(argument1))" in code)
+  }
+
+  @Test
   fun `a new design shows the Kotlin its export would write`() {
     val code = assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(blank()))
 
@@ -102,14 +170,14 @@ class EditorCodePaneTest {
 
   @Test
   fun `a design the export refuses shows the reasons where the source would be`() {
-    // The flagship fixture does not export — enum values with no Kotlin member, a state read
-    // needing a `remember` preamble, an adaptive grid specification. A pane that went blank here
+    // The flagship fixture does not export — enum values with no Kotlin member, a text callback
+    // needing its event value, an adaptive grid specification. A pane that went blank here
     // would hide the actionable half of the answer behind a different tab.
     val code = assertIs<EditorGeneratedCode.Refused>(reducer.generatedCode(jetcaster))
 
     assertTrue(code.reasons.isNotEmpty())
     assertTrue(
-      code.reasons.any { it.contains("state variable `searchQuery`") },
+      code.reasons.any { it.contains("eventBindings.valueChange") && it.contains("callback") },
       code.reasons.toString(),
     )
     // The same answer the problems panel gives, because it is the same call.

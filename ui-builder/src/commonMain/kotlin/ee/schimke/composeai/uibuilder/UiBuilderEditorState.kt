@@ -101,6 +101,8 @@ data class EditorModifierField(
   val value: String,
   /** The values this field may take, or empty when it is a number. */
   val choices: List<String> = emptyList(),
+  /** Position in the ordered chain; repeated modifier types remain independently editable. */
+  val index: Int = 0,
 )
 
 enum class EditorComponentKind(val label: String) {
@@ -887,6 +889,24 @@ sealed interface UiBuilderEditorEvent {
     val type: String,
     val field: String,
     val draft: String,
+    val modifierIndex: Int? = null,
+  ) : UiBuilderEditorEvent
+
+  data class SetStateVariable(val name: String, val declaration: JsonObject) : UiBuilderEditorEvent
+
+  data class RemoveStateVariable(val name: String) : UiBuilderEditorEvent
+
+  data class SetStateSelection(val nodeId: String, val selection: StateSelection?) :
+    UiBuilderEditorEvent
+
+  data class SetEventBinding(val nodeId: String, val event: String, val actions: JsonArray) :
+    UiBuilderEditorEvent
+
+  data class AppendAction(
+    val nodeId: String,
+    val event: String,
+    val action: EditorStateAction,
+    val index: Int? = null,
   ) : UiBuilderEditorEvent
 
   data class UpdateEnvironment(val settings: ScreenEnvironmentSettings) : UiBuilderEditorEvent
@@ -914,10 +934,8 @@ sealed interface UiBuilderEditorEvent {
   /**
    * Insert a component already wired to write state when it is clicked.
    *
-   * Insertion is the only moment a client can put an event binding on a node: the wire's mutation
-   * set reaches properties and never `eventBindings`, while `InsertNode` carries a whole node. The
-   * same shape of limit as declaring state at creation, and the same fix — `setEventBinding` on the
-   * wire — after which a handler can be added to a node that already exists.
+   * Insert the node and its initial handler atomically. Existing handlers can also be edited with
+   * [SetEventBinding].
    */
   data class InsertComponentWithAction(
     val componentId: String,
@@ -1465,10 +1483,46 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.BindPropertyToState ->
         bindPropertyToState(state, event.nodeId, event.property, event.variable, event.equalsValue)
       is UiBuilderEditorEvent.UnbindProperty -> unbindProperty(state, event.nodeId, event.property)
+      is UiBuilderEditorEvent.SetStateVariable ->
+        state.apply(
+          state.operationSequence + 1,
+          listOf(DesignOperation.SetStateVariable(event.name, event.declaration)),
+          selectionAfter = state.selectedNodeId,
+        )
+      is UiBuilderEditorEvent.RemoveStateVariable ->
+        state.apply(
+          state.operationSequence + 1,
+          listOf(DesignOperation.RemoveStateVariable(event.name)),
+          selectionAfter = state.selectedNodeId,
+        )
+      is UiBuilderEditorEvent.SetStateSelection ->
+        state.apply(
+          state.operationSequence + 1,
+          listOf(
+            event.selection?.let {
+              DesignOperation.SetProperty(event.nodeId, SHOW_BY_STATE, it.encode())
+            } ?: DesignOperation.RemoveNodeProperty(event.nodeId, SHOW_BY_STATE)
+          ),
+          selectionAfter = event.nodeId,
+        )
+      is UiBuilderEditorEvent.SetEventBinding ->
+        state.apply(
+          state.operationSequence + 1,
+          listOf(DesignOperation.SetEventBinding(event.nodeId, event.event, event.actions)),
+          selectionAfter = event.nodeId,
+        )
+      is UiBuilderEditorEvent.AppendAction -> appendAction(state, event)
       is UiBuilderEditorEvent.UpdateEnvironment -> updateEnvironment(state, event.settings)
       is UiBuilderEditorEvent.ToggleModifier -> toggleModifier(state, event.nodeId, event.type)
       is UiBuilderEditorEvent.SetModifierValue ->
-        setModifierValue(state, event.nodeId, event.type, event.field, event.draft)
+        setModifierValue(
+          state,
+          event.nodeId,
+          event.type,
+          event.field,
+          event.draft,
+          event.modifierIndex,
+        )
       is UiBuilderEditorEvent.ShowInspector -> state.copy(inspectorMode = event.mode)
       is UiBuilderEditorEvent.ApplyTheme -> applyTheme(state, event.settings)
       UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
@@ -1675,6 +1729,10 @@ class UiBuilderEditorReducer(
         is DesignOperation.RemoveNodeProperty ->
           "Cleared ${operation.property} on ${label(operation.nodeId)}"
         is DesignOperation.SetEnvironment -> "Set ${operation.field} on the screen"
+        is DesignOperation.SetStateVariable -> "Set state ${operation.name}"
+        is DesignOperation.RemoveStateVariable -> "Removed state ${operation.name}"
+        is DesignOperation.SetEventBinding ->
+          "Changed ${operation.event} actions on ${label(operation.nodeId)}"
         is DesignOperation.SetModifiers -> "Changed the layout of ${label(operation.nodeId)}"
       }
     }
@@ -1784,29 +1842,30 @@ class UiBuilderEditorReducer(
    *
    * Answered by building the value the bind would write and putting it through the same validator
    * the bind itself uses, rather than by reasoning about types a second time. The catalog refuses a
-   * state read on plenty of properties — `m3/text.text` is `string` and takes a literal, not a
-   * reference — and a menu that offers a binding the reducer will refuse is a menu that lies. The
-   * wrap menu is built the same way and for the same reason.
+   * state read whose declared value type does not fit the property — and a menu that offers a
+   * binding the reducer will refuse is a menu that lies. The wrap menu is built the same way and
+   * for the same reason.
    */
   fun canBindToState(
     state: UiBuilderEditorState,
     nodeId: String,
     propertyName: String,
   ): Boolean {
-    val variable = state.document.stateVariables.keys.firstOrNull() ?: return false
     if (state.document.nodes[nodeId] == null) return false
-    val candidate =
-      if (bindingNeedsComparison(state, nodeId, propertyName))
-        JsonObject(
-          mapOf(
-            "type" to JsonPrimitive("stateEquals"),
-            "variable" to JsonPrimitive(variable),
-            "value" to JsonPrimitive("probe"),
+    return state.document.stateVariables.keys.any { variable ->
+      val candidate =
+        if (bindingNeedsComparison(state, nodeId, propertyName))
+          JsonObject(
+            mapOf(
+              "type" to JsonPrimitive("stateEquals"),
+              "variable" to JsonPrimitive(variable),
+              "value" to JsonPrimitive("probe"),
+            )
           )
-        )
-      else
-        JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive(variable)))
-    return validator.validate(state.document, nodeId, propertyName, candidate) == null
+        else
+          JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive(variable)))
+      validator.validate(state.document, nodeId, propertyName, candidate) == null
+    }
   }
 
   fun bindingNeedsComparison(
@@ -2293,25 +2352,39 @@ class UiBuilderEditorReducer(
             }
             .distinct()
         val encodedValues =
-          nodes.map { (it.properties[property.name] as? JsonObject)?.get("value") }.distinct()
+          nodes
+            .map {
+              if (control == EditorPropertyControl.Unsupported) it.properties[property.name]
+              else (it.properties[property.name] as? JsonObject)?.get("value")
+            }
+            .distinct()
         val mixed = encodedValues.size > 1
+        val loopRows = node.componentId == "layout/for-each" && property.name == "data"
+        val summary =
+          when {
+            loopRows && encoded?.get("type") == JsonPrimitive("list") ->
+              (encoded["values"] as? JsonArray)?.size?.let {
+                "$it ${if (it == 1) "row" else "rows"}"
+              }
+            else -> null
+          }
         EditorPropertyField(
             nodeCount = nodes.size,
             mixed = mixed,
             boundVariable = boundVariables.singleOrNull(),
             nodeId = node.id,
             name = property.name,
-            label = property.name.humanLabel(),
+            label = if (loopRows) "Rows" else property.name.humanLabel(),
             required = property.required,
             written = nodes.any { property.name in it.properties },
             control = control,
-            value = if (mixed) "" else value?.primitiveOrNull()?.content ?: "",
+            value = if (mixed) "" else summary ?: value?.primitiveOrNull()?.content ?: "",
             choices =
               property.allowedValues.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } +
                 property.editor?.suggestedValues.orEmpty(),
             numberBounds = numberBounds,
             error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
-            notes = property.notes,
+            notes = if (loopRows) "Each row fills the same layout template." else property.notes,
           )
           .let(::listOf)
       }
@@ -2394,7 +2467,7 @@ class UiBuilderEditorReducer(
   fun modifierFields(state: UiBuilderEditorState): List<EditorModifierField> {
     val nodeId = state.selection.singleOrNull() ?: return emptyList()
     val node = state.document.nodes[nodeId] ?: return emptyList()
-    return node.modifiers.flatMapIndexed { _, element ->
+    return node.modifiers.flatMapIndexed { index, element ->
       val modifier = element as? JsonObject ?: return@flatMapIndexed emptyList()
       val type = modifier.optionalStringValue("type") ?: return@flatMapIndexed emptyList()
       MODIFIER_FIELDS[type].orEmpty().map { field ->
@@ -2404,6 +2477,7 @@ class UiBuilderEditorReducer(
           label = field.label,
           value = modifier[field.name]?.primitiveOrNull()?.content.orEmpty(),
           choices = field.choices,
+          index = index,
         )
       }
     }
@@ -2424,15 +2498,37 @@ class UiBuilderEditorReducer(
     type: String,
     field: String,
     draft: String,
+    modifierIndex: Int?,
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val node = state.document.nodes[nodeId] ?: return state
-    val choices =
-      MODIFIER_FIELDS[type].orEmpty().firstOrNull { it.name == field }?.choices.orEmpty()
+    val definition =
+      MODIFIER_FIELDS[type].orEmpty().firstOrNull { it.name == field }
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "Unknown modifier field $type.$field",
+          nodeId,
+          "modifiers",
+        )
+    if (
+      modifierIndex != null &&
+        (node.modifiers.getOrNull(modifierIndex) as? JsonObject)?.optionalStringValue("type") !=
+          type
+    ) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "The modifier chain changed; select the modifier again",
+        nodeId,
+        "modifiers",
+      )
+    }
+    val choices = definition.choices
     val value =
       if (choices.isEmpty()) {
         val number =
-          draft.trim().toDoubleOrNull()
+          draft.trim().toDoubleOrNull()?.takeIf { it.isFinite() }
             ?: return state.rejected(
               sequence,
               RejectionCode.INVALID_PROPERTY,
@@ -2461,9 +2557,14 @@ class UiBuilderEditorReducer(
     var written = false
     val chain =
       JsonArray(
-        node.modifiers.map { element ->
-          val modifier = element as? JsonObject ?: return@map element
-          if (written || modifier.optionalStringValue("type") != type) return@map element
+        node.modifiers.mapIndexed { index, element ->
+          val modifier = element as? JsonObject ?: return@mapIndexed element
+          if (
+            written ||
+              modifier.optionalStringValue("type") != type ||
+              (modifierIndex != null && index != modifierIndex)
+          )
+            return@mapIndexed element
           written = true
           JsonObject(modifier + (field to value))
         }
@@ -2654,7 +2755,8 @@ class UiBuilderEditorReducer(
     //
     // No package: this pane is read and pasted into a file that already has one. The export passes
     // `ScreenExportGate.PACKAGE_NAME` for the same designs, because an artifact *is* the file.
-    RecordFreeExport.generate(document, packComponents = packComponents)?.let { recordFree ->
+    RecordFreeExport.generate(document, catalog.platform, packComponents = packComponents)?.let {
+      recordFree ->
       return@runCatching when (recordFree) {
         is RecordFreeExport.Generated.Emitted -> EditorGeneratedCode.Source(recordFree.source)
         is RecordFreeExport.Generated.Refused -> EditorGeneratedCode.Refused(recordFree.reasons)
@@ -2696,7 +2798,10 @@ class UiBuilderEditorReducer(
   // editor down over the one document whose problems a designer most needs listed. The capability
   // diagnostics above already name that document's real fault.
   runCatching {
-    when (val recordFree = RecordFreeExport.generate(document, packComponents = packComponents)) {
+    when (
+      val recordFree =
+        RecordFreeExport.generate(document, catalog.platform, packComponents = packComponents)
+    ) {
       is RecordFreeExport.Generated.Refused -> recordFree.reasons
       // It generates. The gate below would still refuse it — that is the whole reason these
       // designs have their own emitter — so asking it anything here is asking the wrong question.
@@ -2916,6 +3021,35 @@ class UiBuilderEditorReducer(
    * against the catalog itself — and re-deriving it from the selection would refuse a slot that is
    * demonstrably legal, because the selection is wherever the operator last clicked.
    */
+  private fun appendAction(
+    state: UiBuilderEditorState,
+    event: UiBuilderEditorEvent.AppendAction,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val declaration =
+      state.document.stateVariables[event.action.variable] as? JsonObject
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "Unknown state ${event.action.variable}",
+        )
+    event.action.valueRefusal(declaration)?.let {
+      return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, it)
+    }
+    val node = state.document.nodes[event.nodeId] ?: return state
+    val actions = (node.eventBindings[event.event] as? JsonArray).orEmpty().toMutableList()
+    if (event.index == null) actions += event.action.encoded(declaration)
+    else if (event.index in actions.indices)
+      actions[event.index] = event.action.encoded(declaration)
+    else
+      return state.rejected(sequence, RejectionCode.INVALID_COMMAND, "That action no longer exists")
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.SetEventBinding(event.nodeId, event.event, JsonArray(actions))),
+      selectionAfter = event.nodeId,
+    )
+  }
+
   private fun insertAt(
     state: UiBuilderEditorState,
     component: ComponentCapability,
@@ -5069,6 +5203,8 @@ private fun Map<String, UiBuilderNode>.appendDuplicateSubtree(
   taken: MutableSet<String>,
 ) {
   val source = getValue(sourceNodeId)
+  val selection = source.stateSelection()
+  val childCopies = mutableMapOf<String, String>()
   operations +=
     DesignOperation.InsertNode(
       node =
@@ -5077,7 +5213,11 @@ private fun Map<String, UiBuilderNode>.appendDuplicateSubtree(
           // A copy is a new instance, so it gets a new identity. Cloning `stableKey` put two
           // children in one lazy slot under the same `key(…)`, which Compose refuses at runtime,
           // and cloning `scrollStateKey` made two scroll containers share a position.
-          properties = source.properties.withFreshInstanceIdentity(copyNodeId),
+          properties =
+            JsonObject(
+              source.properties.withFreshInstanceIdentity(copyNodeId) -
+                (if (selection != null) setOf(SHOW_BY_STATE) else emptySet())
+            ),
           slots = source.slots.mapValues { emptyList() },
         ),
       parent = parent,
@@ -5091,6 +5231,7 @@ private fun Map<String, UiBuilderNode>.appendDuplicateSubtree(
       // root it hangs from is fresh — either way the collaboration reducer rejects the whole paste
       // as a duplicate.
       val childCopyId = freshCopyId("$copyNodeId-${childId.replace('/', '-')}", taken)
+      childCopies[childId] = childCopyId
       appendDuplicateSubtree(
         sourceNodeId = childId,
         copyNodeId = childCopyId,
@@ -5101,6 +5242,19 @@ private fun Map<String, UiBuilderNode>.appendDuplicateSubtree(
       )
       previousCopyId = childCopyId
     }
+  }
+  selection?.let {
+    operations +=
+      DesignOperation.SetProperty(
+        copyNodeId,
+        SHOW_BY_STATE,
+        it
+          .copy(
+            cases = it.cases.mapKeys { (id, _) -> childCopies.getValue(id) },
+            fallback = it.fallback?.let(childCopies::getValue),
+          )
+          .encode(),
+      )
   }
 }
 
@@ -5561,6 +5715,9 @@ private fun AcceptedCommand.subjectNodeId(): String? =
       is DesignOperation.SetProperty -> operation.nodeId
       is DesignOperation.RemoveNodeProperty -> operation.nodeId
       is DesignOperation.SetModifiers -> operation.nodeId
+      is DesignOperation.SetStateVariable -> null
+      is DesignOperation.RemoveStateVariable -> null
+      is DesignOperation.SetEventBinding -> operation.nodeId
       is DesignOperation.SetEnvironment -> null
     }
   }
@@ -5576,7 +5733,12 @@ private fun AcceptedCommand.subjectNodeId(): String? =
 private fun AcceptedCommand.describeChanges(): List<EditorOperationChange> =
   propertyChanges.map {
     EditorOperationChange(
-      label = it.address.property,
+      label =
+        when (it.address.target) {
+          PropertyTarget.StateVariable -> "State ${it.address.property}"
+          PropertyTarget.EventBinding -> "${it.address.property} actions"
+          PropertyTarget.Property -> it.address.property
+        },
       before = it.before?.displayValue(),
       after = it.afterValue?.displayValue(),
     )

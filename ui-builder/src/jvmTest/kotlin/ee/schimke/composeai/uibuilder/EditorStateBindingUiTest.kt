@@ -45,11 +45,10 @@ class EditorStateBindingUiTest {
     // reasoning about catalog types a second time and getting a different answer.
     assertTrue(reducer.canBindToState(state("chip-crime"), "chip-crime", "selected"))
 
-    // `m3/text.text` is `string` and takes a literal, not a reference. Offering a binding here
-    // would be a menu that lies.
-    assertFalse(reducer.canBindToState(state("search-placeholder"), "search-placeholder", "text"))
-    // And a plain boolean has no room for the comparison object either.
-    assertFalse(reducer.canBindToState(state("chip-crime"), "chip-crime", "enabled"))
+    // A String state read produces text, and a comparison produces a Boolean. The wire wrapper
+    // being an object does not prevent either from satisfying a scalar property.
+    assertTrue(reducer.canBindToState(state("search-placeholder"), "search-placeholder", "text"))
+    assertTrue(reducer.canBindToState(state("chip-crime"), "chip-crime", "enabled"))
   }
 
   @Test

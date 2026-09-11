@@ -13,6 +13,27 @@ import kotlinx.coroutines.runBlocking
 class EditorExportMenuTest {
 
   @Test
+  fun `remote source and document downloads need no image renderer`() {
+    val formats = exportFormatsFor(svg = false, png = false, json = true, rc = true)
+    val entries = exportMenuEntries(formats).flatten()
+    assertEquals(
+      if (UiBuilderBuildFeatures.remoteCompose)
+        listOf(EditorExportFormat.Json, EditorExportFormat.Rc)
+      else emptyList(),
+      formats,
+    )
+    assertEquals(UiBuilderBuildFeatures.remoteCompose, entries.any { it.label == "Copy JSON" })
+    assertTrue(
+      entries.none { it is EditorExportMenuEntry.CopyPicture && it.format == EditorExportFormat.Rc }
+    )
+    assertEquals(UiBuilderBuildFeatures.remoteCompose, entries.any { it.label == "Download JSON" })
+    assertEquals(
+      UiBuilderBuildFeatures.remoteCompose,
+      entries.any { it.label == "Download Remote document (.rc)" },
+    )
+  }
+
+  @Test
   fun `the menu lists every verb for every format the catalog can render, verb by verb`() {
     val groups = exportMenuEntries(exportFormatsFor(svg = true, png = true))
 

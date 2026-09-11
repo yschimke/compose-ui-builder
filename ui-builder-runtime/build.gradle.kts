@@ -53,6 +53,8 @@ dependencies {
   // makes the generated POM usable by a host implementing or decorating the port.
   api(libs.composeai.ui.builder.protocol)
   implementation(libs.kotlinx.serialization.json)
+  // Shared binding semantics: the browser and persistent service must accept the same state reads.
+  implementation(project(":ui-builder-export"))
 
   // The packaged render bundle `PackagedUiBuilderRenderBundle.copyTo` materializes, as a sibling
   // artifact rather than bytes in this jar.
@@ -124,9 +126,11 @@ abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
       setOf(
         "module ee.schimke.composeai:ui-builder-protocol",
         "module ee.schimke.composeai:ui-builder-protocol-jvm",
+        "module ee.schimke.composeai:screen-model",
+        "module ee.schimke.composeai:screen-model-jvm",
       )
     /**
-     * The one project on this classpath, and the reason it does not weaken the gate.
+     * The packaged render data and shared document semantics on this classpath.
      *
      * Everything this check exists to keep out — transports, renderers, daemons, MCP, Compose UI —
      * is *code*, reachable because it sits on the classpath. `:ui-builder-render-bundle` has no
@@ -135,13 +139,14 @@ abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
      * classloader here can see — which is exactly the property this module already relied on when
      * the same bytes were its own resource.
      *
-     * Named as a single constant rather than folded into [allowedComposeAi] because it is a
-     * *project*, and a project is the thing this check is otherwise absolute about.
+     * `:ui-builder-export` holds the common, Compose-free document and property rules that the
+     * browser uses too. It depends on the transport-free screen model, not a renderer. Naming those
+     * exact coordinates keeps the same exclusions on the resolved transitive graph.
      */
-    val allowedProject = "project :ui-builder-render-bundle"
+    val allowedProjects = setOf("project :ui-builder-render-bundle", "project :ui-builder-export")
     val offenders =
       resolvedComponents.get().filter { component ->
-        (component.startsWith("project ") && component != allowedProject) ||
+        (component.startsWith("project ") && component !in allowedProjects) ||
           (component.startsWith("module ee.schimke.composeai:") &&
             component !in allowedComposeAi) ||
           component.startsWith("module io.ktor:") ||

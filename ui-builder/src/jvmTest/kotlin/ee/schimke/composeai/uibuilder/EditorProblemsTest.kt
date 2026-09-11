@@ -33,8 +33,8 @@ class EditorProblemsTest {
     // This asserted `emptyList()` while the panel read only `CapabilityComposeCodeExporter`, which
     // has an emitter for every catalog id. The panel now also runs the projection and generator the
     // **server's export** runs, and against those the flagship Jetcaster design does not export:
-    // enum values with no Kotlin member, `matchParentSize` outside a `BoxScope`, a state read and
-    // an event binding the projection has no channel for, an adaptive grid specification.
+    // enum values with no Kotlin member, state comparisons, a text callback consuming an event
+    // value, and an adaptive grid specification.
     //
     // Those refusals were always true — the export has always produced them — and the panel was
     // silent about every one. Asserting the old emptiness now would be asserting that the panel
@@ -46,7 +46,9 @@ class EditorProblemsTest {
       "the fixture is structurally sound, so every problem should come from the export gate: $reported",
     )
     assertTrue(
-      reported.any { it.message.contains("state variable `searchQuery`") },
+      reported.any {
+        it.message.contains("eventBindings.valueChange") && it.message.contains("callback")
+      },
       reported.toString(),
     )
   }

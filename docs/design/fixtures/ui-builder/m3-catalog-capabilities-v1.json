@@ -116,7 +116,8 @@
       ],
       "properties": [
         { "name": "contentAlignment", "jsonType": "string", "required": false },
-        { "name": "propagateMinConstraints", "jsonType": "boolean", "required": false }
+        { "name": "propagateMinConstraints", "jsonType": "boolean", "required": false },
+        { "name": "showByState", "jsonType": "object", "required": false, "notes": "Select one child by state. Object fields: selector is a typed scalar or state read; cases is an object mapping child IDs to typed scalar values; optional fallback is a string child ID. Every child must be a case or the fallback. Compose export uses when. Remote export uses StateLayout for non-null number or flag selectors; String equality is unavailable on that target." }
       ],
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "clip", "matchParentSize", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "verticalScroll", "horizontalScroll", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "planned" },

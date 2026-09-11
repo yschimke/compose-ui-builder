@@ -41,6 +41,8 @@ enum class EditorExportFormat(
 ) {
   Svg("SVG", "svg"),
   Png("PNG", "png"),
+  Json("JSON", "json"),
+  Rc("Remote document (.rc)", "rc"),
 }
 
 /** What the host does with a design's picture; see [EditorExportFormat]. */
@@ -52,6 +54,10 @@ interface UiBuilderExportHost {
    * an Export button that always refuses is worse than none.
    */
   val formats: List<EditorExportFormat>
+
+  /** A local document has no shareable server export URL. */
+  val supportsLinks: Boolean
+    get() = true
 
   /** Copies the rendered design to the clipboard; returns a sentence for the toolbar. */
   suspend fun copyPicture(format: EditorExportFormat): String
@@ -79,6 +85,8 @@ sealed interface EditorExportMenuEntry {
         when (format) {
           EditorExportFormat.Svg -> "Paste into Figma as editable layers"
           EditorExportFormat.Png -> "Paste anywhere as a picture"
+          EditorExportFormat.Json -> "Editable Remote Compose source"
+          EditorExportFormat.Rc -> "Use Download to save the binary document"
         }
   }
 
@@ -108,12 +116,15 @@ sealed interface EditorExportMenuEntry {
  * them read every row to find the verb. Within a group the catalog's order stands, and the catalog
  * lists SVG first where it has it, because the Figma route is the one this menu exists for.
  */
-fun exportMenuEntries(formats: List<EditorExportFormat>): List<List<EditorExportMenuEntry>> =
+fun exportMenuEntries(
+  formats: List<EditorExportFormat>,
+  supportsLinks: Boolean = true,
+): List<List<EditorExportMenuEntry>> =
   if (formats.isEmpty()) emptyList()
   else
     listOf(
-      formats.map(EditorExportMenuEntry::CopyPicture),
-      formats.map(EditorExportMenuEntry::CopyLink),
+      formats.filter { it != EditorExportFormat.Rc }.map(EditorExportMenuEntry::CopyPicture),
+      if (supportsLinks) formats.map(EditorExportMenuEntry::CopyLink) else emptyList(),
       formats.map(EditorExportMenuEntry::Download),
     )
 
@@ -132,7 +143,14 @@ suspend fun UiBuilderExportHost.perform(entry: EditorExportMenuEntry): String =
  * compose-preview-contracts and `commonMain` has no reason to depend on it for two flags. SVG leads
  * for the reason [exportMenuEntries] gives.
  */
-fun exportFormatsFor(svg: Boolean, png: Boolean): List<EditorExportFormat> = buildList {
+fun exportFormatsFor(
+  svg: Boolean,
+  png: Boolean,
+  json: Boolean = false,
+  rc: Boolean = false,
+): List<EditorExportFormat> = buildList {
   if (svg) add(EditorExportFormat.Svg)
   if (png) add(EditorExportFormat.Png)
+  if (UiBuilderBuildFeatures.remoteCompose && json) add(EditorExportFormat.Json)
+  if (UiBuilderBuildFeatures.remoteCompose && rc) add(EditorExportFormat.Rc)
 }

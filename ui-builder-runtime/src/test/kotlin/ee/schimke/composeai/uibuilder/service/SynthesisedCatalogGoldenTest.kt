@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -86,15 +87,38 @@ class SynthesisedCatalogGoldenTest {
     val expected = pretty.encodeToString(JsonObject.serializer(), catalog(systemId))
     val file = goldenFor(systemId)
     if (System.getProperty(WRITE_PROPERTY) == "write") {
+      check(UiBuilderBuildFeatures.remoteCompose) {
+        "Regenerate the complete catalog vocabulary with -PuiBuilderRemoteCompose=true"
+      }
       file.parentFile.mkdirs()
       file.writeText(expected + "\n")
       return
     }
     assertEquals(
       expected.trim(),
-      file.takeIf { it.isFile }?.readText()?.trim(),
+      file.takeIf { it.isFile }?.let(::expectedForBuild)?.trim(),
       "${file.path} is stale or missing. Re-run with -PuiBuilderGoldens=write and read the diff: " +
         "it is the description a catalog repository has to be able to reproduce.",
+    )
+  }
+
+  // The golden retains the complete vocabulary. The disabled build omits only the experimental
+  // selection property; every other field and its ordering must still match the committed catalog.
+  private fun expectedForBuild(file: File): String {
+    if (UiBuilderBuildFeatures.remoteCompose) return file.readText()
+    val catalog = pretty.parseToJsonElement(file.readText()) as JsonObject
+    val components =
+      (catalog.getValue("components") as JsonArray).map { element ->
+        val component = element as JsonObject
+        val properties =
+          (component.getValue("properties") as JsonArray).filterNot {
+            ((it as JsonObject)["name"] as? JsonPrimitive)?.content == "showByState"
+          }
+        JsonObject(component + ("properties" to JsonArray(properties)))
+      }
+    return pretty.encodeToString(
+      JsonObject.serializer(),
+      JsonObject(catalog + ("components" to JsonArray(components))),
     )
   }
 

@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
+import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
@@ -20,10 +21,12 @@ import ee.schimke.composeai.uibuilder.protocol.NullValueV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
+import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetEventBindingMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetHeightDpEnvironmentChangeV1
@@ -31,8 +34,10 @@ import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChan
 import ee.schimke.composeai.uibuilder.protocol.SetLocaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetModifiersMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
+import ee.schimke.composeai.uibuilder.protocol.SetStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetThemeEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetWidthDpEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import ee.schimke.composeai.uibuilder.protocol.ThemeV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
@@ -238,6 +243,18 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
     // Its own mutation since compose-preview-contracts 2.10.0 (#480); the server reads it as the
     // same removal a null `setProperty` is, which is what this sent before the wire could say it.
     is DesignOperation.RemoveNodeProperty -> RemoveNodePropertyMutationV1(nodeId, property)
+    is DesignOperation.SetStateVariable ->
+      SetStateVariableMutationV1(
+        name,
+        bridgeJson.decodeFromString(StateVariableV1.serializer(), declaration.toString()),
+      )
+    is DesignOperation.RemoveStateVariable -> RemoveStateVariableMutationV1(name)
+    is DesignOperation.SetEventBinding ->
+      SetEventBindingMutationV1(
+        nodeId,
+        event,
+        actions.map { bridgeJson.decodeFromString(DesignActionV1.serializer(), it.toString()) },
+      )
     is DesignOperation.SetModifiers ->
       SetModifiersMutationV1(
         nodeId,

@@ -2,6 +2,8 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.RemoteDocumentExportSupport
+import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.io.Closeable
 import java.io.IOException
@@ -614,6 +616,7 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.RenameDesign -> designId
       is UiBuilderServiceRequest.DeleteDesign -> designId
       UiBuilderServiceRequest.ListCatalogs,
+      is UiBuilderServiceRequest.ExportDocument,
       is UiBuilderServiceRequest.CreateDesign,
       is UiBuilderServiceRequest.ListDesigns -> null
     }
@@ -624,7 +627,11 @@ public class PersistentUiBuilderService(
         return UiBuilderServiceResponse.Error(UiBuilderServiceError(it.code, it.reason))
       }
     }
-    if (call.request is UiBuilderServiceRequest.ExportDesign) return export(call)
+    if (
+      call.request is UiBuilderServiceRequest.ExportDesign ||
+        call.request is UiBuilderServiceRequest.ExportDocument
+    )
+      return export(call)
     val execution = lock.withLock { executeLocked(call) }
     drain(execution.mailboxes)
     return execution.response
@@ -899,7 +906,8 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.GetSnapshot -> open(call.actor, request.designId, request.revision)
       is UiBuilderServiceRequest.GetDelta -> delta(call.actor, request)
       is UiBuilderServiceRequest.UpdatePresence -> presence(call.actor, request)
-      is UiBuilderServiceRequest.ExportDesign ->
+      is UiBuilderServiceRequest.ExportDesign,
+      is UiBuilderServiceRequest.ExportDocument ->
         error("export is executed outside the service lock")
       is UiBuilderServiceRequest.RenameDesign -> rename(call.actor, request)
       is UiBuilderServiceRequest.DeleteDesign -> delete(call.actor, request.designId)
@@ -1557,7 +1565,9 @@ public class PersistentUiBuilderService(
     val currentExports = activeExports.incrementAndGet()
     updatePeak(peakExports, currentExports.toLong())
     try {
-      return exportAdmitted(call)
+      return if (call.request is UiBuilderServiceRequest.ExportDocument)
+        exportDocumentAdmitted(call)
+      else exportAdmitted(call)
     } finally {
       activeExports.decrementAndGet()
       exportPermits.release()
@@ -1619,6 +1629,31 @@ public class PersistentUiBuilderService(
         )
       pinnedSequence = state.sequence
     }
+    val outcome = executeExport(pinned)
+    if (outcome !is UiBuilderServiceResponse.Export) return outcome
+    lock.withLock {
+      val design =
+        persisted.designs[request.designId]
+          ?: return UiBuilderServiceResponse.Error(notFound(request.designId))
+      val audit =
+        AuditRecordV1(
+          kind = AuditKindV1.EXPORT,
+          actorId = call.actor.actorId,
+          designId = request.designId,
+          revision = pinned.revision,
+          sequence = pinnedSequence,
+          operationId = null,
+          exportFormat = request.format,
+          atEpochMillis = clock.millis(),
+        )
+      val updated =
+        design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
+      commitDesign(request.designId, updated)
+    }
+    return outcome
+  }
+
+  private fun executeExport(pinned: RevisionPinnedUiBuilderExport): UiBuilderServiceResponse {
     val artifact =
       try {
         exportTaskRunner.execute(limits.exportTimeoutMillis) { exporter.export(pinned) }
@@ -1662,26 +1697,60 @@ public class PersistentUiBuilderService(
         )
       )
     }
-    lock.withLock {
-      val design =
-        persisted.designs[request.designId]
-          ?: return UiBuilderServiceResponse.Error(notFound(request.designId))
-      val audit =
-        AuditRecordV1(
-          kind = AuditKindV1.EXPORT,
-          actorId = call.actor.actorId,
-          designId = request.designId,
-          revision = pinned.revision,
-          sequence = pinnedSequence,
-          operationId = null,
-          exportFormat = request.format,
-          atEpochMillis = clock.millis(),
-        )
-      val updated =
-        design.copy(audit = (design.audit + audit).takeLast(limits.retainedAuditRecords))
-      commitDesign(request.designId, updated)
-    }
     return UiBuilderServiceResponse.Export(artifact)
+  }
+
+  private fun exportDocumentAdmitted(call: UiBuilderServiceCall): UiBuilderServiceResponse {
+    val request = call.request as UiBuilderServiceRequest.ExportDocument
+    val document = request.document
+    fun invalid(message: String) =
+      UiBuilderServiceResponse.Error(UiBuilderServiceError(ServiceErrorCodeV1.BAD_REQUEST, message))
+    if (!UiBuilderBuildFeatures.remoteCompose)
+      return invalid("Remote Compose authoring is disabled in this build")
+    if (
+      request.format != ExportFormatV1.PNG && request.format !in RemoteDocumentExportSupport.formats
+    ) {
+      return invalid("supplied documents support only PNG, Remote JSON and RC export")
+    }
+    if (document.id.isBlank() || document.revision < 0)
+      return invalid("invalid document id or revision")
+    if (document.nodes.size > limits.maximumNodesPerDesign)
+      return invalid("design node limit exceeded")
+    documentQuotaIssue(document, countRejection = true)?.let {
+      return invalid(it)
+    }
+    validateEnvironment(document.environment)?.let {
+      return invalid(it.message)
+    }
+    validateTopology(document)?.let {
+      return invalid(it.message)
+    }
+    val catalog =
+      catalogs.resolve(document.catalogPin)
+        ?: return UiBuilderServiceResponse.Error(
+          UiBuilderServiceError(
+            ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
+            "catalog pin is unavailable",
+          )
+        )
+    if (!catalog.supports(request.format))
+      return invalid("catalog does not support ${request.format} export")
+    catalogs.validate(document, catalog)?.let {
+      return UiBuilderServiceResponse.Error(it.toServiceError())
+    }
+    // The exporter receives only supplied content. No store lookup, asset resolution, audit write,
+    // collaboration notification or revision allocation happens for this operation.
+    return executeExport(
+      RevisionPinnedUiBuilderExport(
+        actor = call.actor,
+        designId = document.id,
+        revision = document.revision,
+        documentHash = documentHash(document),
+        document = document,
+        catalog = catalog,
+        format = request.format,
+      )
+    )
   }
 
   private fun reduce(
@@ -4142,6 +4211,9 @@ private fun validateTopology(document: DesignDocumentV1): RejectedOutcomeV1? {
       placements[child] = (placements[child] ?: 0) + 1
     }
   }
+  // A definition owns a detached body once; calls do not add structural placements.
+  // Existing declarations may also name a subtree already placed in the screen.
+  document.components.values.forEach { placements.putIfAbsent(it.root, 1) }
   val unknown = placements.keys - document.nodes.keys
   if (unknown.isNotEmpty()) {
     return rejected(
@@ -4164,14 +4236,21 @@ private fun validateTopology(document: DesignDocumentV1): RejectedOutcomeV1? {
   val visiting = mutableSetOf<String>()
   val visited = mutableSetOf<String>()
   fun visit(id: String): Boolean {
-    if (!visiting.add(id)) return false
     if (id in visited) return true
-    document.nodes.getValue(id).slots.values.flatten().forEach { if (!visit(it)) return false }
+    if (!visiting.add(id) || visiting.size > 128) return false
+    val node = document.nodes.getValue(id)
+    node.slots.values.flatten().forEach { if (!visit(it)) return false }
+    node.component?.componentKey?.let { key ->
+      document.components[key]?.root?.let { if (!visit(it)) return false }
+    }
     visiting.remove(id)
     visited += id
     return true
   }
-  if (document.roots.any { !visit(it) } || visited != document.nodes.keys) {
+  if (
+    (document.roots + document.components.values.map { it.root }).any { !visit(it) } ||
+      visited != document.nodes.keys
+  ) {
     return rejected(
       "",
       document.revision,
@@ -4213,15 +4292,14 @@ private fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     ExportFormatV1.PNG -> exportCapabilities.png
     // Defaults to false in the contract, and no catalog here sets it, so a BUNDLE export is
     // refused as BAD_REQUEST at the gate above until the server can actually write one
-    // (yschimke/compose-preview-server#528). No `else`: the next format added should fail this
-    // compile rather than silently read as unsupported.
+    // (yschimke/compose-preview-server#528). Remote formats are optional in the staged contracts.
     ExportFormatV1.BUNDLE -> exportCapabilities.bundle
     // Added by compose-preview-contracts 2.17.0, and read the same way: the capability decides,
     // and no catalog here sets either, so both are refused at this gate until something can write
     // one. Wired rather than folded into an `else`, so the next format added still fails this
     // compile instead of silently reading as unsupported — which is what this `when` is for.
-    ExportFormatV1.JSON -> exportCapabilities.remoteJson
-    ExportFormatV1.RC -> exportCapabilities.remoteDocument
+    ExportFormatV1.JSON -> UiBuilderBuildFeatures.remoteCompose && exportCapabilities.remoteJson
+    ExportFormatV1.RC -> UiBuilderBuildFeatures.remoteCompose && exportCapabilities.remoteDocument
   }
 
 private data class EnvironmentValidationIssue(

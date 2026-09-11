@@ -2,6 +2,12 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.RemoteDocumentExportSupport
+import ee.schimke.composeai.uibuilder.SHOW_BY_STATE
+import ee.schimke.composeai.uibuilder.STATE_SELECTION_CONTAINER
+import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.inspectUiBuilderArgumentBindings
+import ee.schimke.composeai.uibuilder.propertyMatches
 import ee.schimke.composeai.uibuilder.protocol.AssetBindingV1
 import ee.schimke.composeai.uibuilder.protocol.AssetKeyValueV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogAssetSourceV1
@@ -28,6 +34,10 @@ import ee.schimke.composeai.uibuilder.protocol.SvgCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UploadedAssetSourceV1
 import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
+import ee.schimke.composeai.uibuilder.stateBindingMatchesCatalog
+import ee.schimke.composeai.uibuilder.stateSelectionIssue
+import ee.schimke.composeai.uibuilder.toUiBuilderDocument
+import ee.schimke.composeai.uibuilder.toUiBuilderNode
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -260,8 +270,41 @@ public class CurrentM3UiBuilderCatalogExecutor(
           }
         catalog
           .copy(
+            components =
+              catalog.components.map { component ->
+                if (!UiBuilderBuildFeatures.remoteCompose)
+                  component.copy(
+                    properties = component.properties.filterNot { it.name == SHOW_BY_STATE }
+                  )
+                else if (
+                  component.componentId != STATE_SELECTION_CONTAINER ||
+                    component.properties.any { it.name == SHOW_BY_STATE }
+                )
+                  component
+                else
+                  component.copy(
+                    properties =
+                      component.properties +
+                        baseCatalog.components
+                          .first { it.componentId == STATE_SELECTION_CONTAINER }
+                          .properties
+                          .first { it.name == SHOW_BY_STATE }
+                  )
+              },
             exportCapabilities =
-              catalog.exportCapabilities.copy(composeCode = composeExportFor(systemId))
+              RemoteDocumentExportSupport.capabilities(
+                catalog.exportCapabilities.copy(composeCode = composeExportFor(systemId)),
+                json =
+                  catalog.platform == "remote-compose" &&
+                    RemoteDocumentExportSupport.jsonFormat?.let {
+                      RemoteDocumentExportSupport.supports(exportCapabilities, it)
+                    } == true,
+                document =
+                  catalog.platform == "remote-compose" &&
+                    RemoteDocumentExportSupport.documentFormat?.let {
+                      RemoteDocumentExportSupport.supports(exportCapabilities, it)
+                    } == true,
+              ),
           )
           .withPacks(packs.filter { it.platform == catalog.platform })
       }
@@ -311,6 +354,10 @@ public class CurrentM3UiBuilderCatalogExecutor(
     val catalogComponents = components.getValue(systemId)
     val encodedDocument = json.encodeToJsonElement(document).jsonObject
     val encodedNodes = encodedDocument.getValue("nodes").jsonObject
+    val argumentBindings = inspectUiBuilderArgumentBindings(document.toUiBuilderDocument())
+    argumentBindings.issues.firstOrNull()?.let {
+      return issue("INVALID_ARGUMENT_BINDING", it.message, it.nodeId, it.field)
+    }
     for ((nodeId, nodeElement) in encodedNodes.entries.sortedBy { it.key }) {
       val node = nodeElement.jsonObject
       val componentId = node.requiredString("componentId")
@@ -372,6 +419,13 @@ public class CurrentM3UiBuilderCatalogExecutor(
             "component $componentId is not in $systemId",
             nodeId,
           )
+      stateSelectionIssue(
+          document.nodes.getValue(nodeId).toUiBuilderNode(),
+          encodedDocument.objectOrEmpty("stateVariables"),
+        )
+        ?.let {
+          return issue("INVALID_PROPERTY_VALUE", it, nodeId, SHOW_BY_STATE)
+        }
       val properties = node.objectOrEmpty("properties")
       val declaredProperties = component.properties.associateBy { it.name }
       for ((name, value) in properties) {
@@ -384,7 +438,34 @@ public class CurrentM3UiBuilderCatalogExecutor(
               name,
             )
         val unwrapped = value.unwrapTypedValue()
-        if (!capability.jsonType.accepts(unwrapped)) {
+        val argumentMatches =
+          argumentBindings.propertyMatches(nodeId, name, value) { supplied ->
+            val stateMatches =
+              stateBindingMatchesCatalog(
+                supplied,
+                capability.jsonType,
+                capability.allowedValues,
+                encodedDocument.objectOrEmpty("stateVariables"),
+                name,
+              )
+            stateMatches
+              ?: (capability.jsonType.accepts(supplied.unwrapTypedValue()) &&
+                (capability.allowedValues.isEmpty() ||
+                  supplied.unwrapTypedValue() in capability.allowedValues))
+          }
+        val bindingMatches =
+          argumentMatches
+            ?: stateBindingMatchesCatalog(
+              value,
+              capability.jsonType,
+              capability.allowedValues,
+              encodedDocument.objectOrEmpty("stateVariables"),
+              name,
+            )
+        if (
+          bindingMatches == false ||
+            (bindingMatches == null && !capability.jsonType.accepts(unwrapped))
+        ) {
           return issue(
             "INVALID_PROPERTY_TYPE",
             "property $name does not match its catalog JSON type",
@@ -392,7 +473,11 @@ public class CurrentM3UiBuilderCatalogExecutor(
             name,
           )
         }
-        if (capability.allowedValues.isNotEmpty() && unwrapped !in capability.allowedValues) {
+        if (
+          bindingMatches == null &&
+            capability.allowedValues.isNotEmpty() &&
+            unwrapped !in capability.allowedValues
+        ) {
           return issue(
             "INVALID_PROPERTY_VALUE",
             "property $name is outside its catalog allowed values",
@@ -1200,6 +1285,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "layout/box",
       "layout/column",
       "layout/row",
+      "layout/for-each",
       "m3/surface",
       "m3/text",
       "remote-compose/document",

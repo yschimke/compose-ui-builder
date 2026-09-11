@@ -316,7 +316,15 @@ fun documentDiff(
     before = before,
     after = after,
     nodes = nodes,
-    environment = environment,
+    environment =
+      environment +
+        (before.stateVariables.keys + after.stateVariables.keys).sorted().mapNotNull { name ->
+          val oldValue = before.stateVariables[name]
+          val newValue = after.stateVariables[name]
+          if (oldValue == newValue) null
+          else
+            EditorOperationChange("State $name", oldValue?.displayValue(), newValue?.displayValue())
+        },
   )
 }
 

@@ -183,7 +183,10 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -429,6 +432,8 @@ fun UiBuilderEditor(
    * Ignored for every design whose root is not a widget container.
    */
   onRequestNativeRender: (suspend (WearWidgetHostShape) -> UiBuilderNativeRender)? = null,
+  /** Compiles the saved design to a document for the existing player's interactive Preview mode. */
+  onRequestDocumentPreview: (suspend (UiBuilderDocument) -> UiBuilderDocumentPreview)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
   initialPreviewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
@@ -1167,90 +1172,114 @@ fun UiBuilderEditor(
     remember(state.document, devicePresets, state.variantAxes) {
       state.document.variantPanes(devicePresets, state.variantAxes)
     }
+  val livePreview: @Composable (Modifier) -> Unit = { modifier ->
+    if (UiBuilderBuildFeatures.remoteCompose && onRequestDocumentPreview != null) {
+      RemoteDocumentPreviewPane(
+        document = state.document,
+        authoritativeGeneration = authoritativeGeneration,
+        request = onRequestDocumentPreview,
+        modifier = modifier,
+      )
+    } else {
+      LiveWasmPreviewPane(document = state.document, modifier = modifier)
+    }
+  }
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
-    PinnedDesignCanvas(
-      document = state.document,
-      variants = variantPanes,
-      selectedNodeId = state.selectedNodeId,
-      onNodeSelected = {
-        focusEditor()
-        dispatch(UiBuilderEditorEvent.SelectNode(it))
-      },
-      onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
-      onCanvasBounds = {
-        canvasBounds = it
-        onCanvasBoundsChanged(it)
-      },
-      dropHovered = canvasDropHovered,
-      dropTarget = draggedTarget,
-      dragPreview =
-        if (draggedRemoteThumbnail == null)
-          draggedComponentId?.let { reducer.previewDocument(it, draggedComponentVariant) }
-        else null,
-      dragPreviewBitmap = draggedRemoteThumbnail,
-      dragPosition = catalogDragPosition,
-      showSelectionOverlay = showSelectionOverlay && !state.previewMode,
-      reference = state.reference,
-      onMarkDrawn = { kind, points ->
-        dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
-      },
-      onPieceMoved = { pieceId, dx, dy ->
-        dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
-      },
-      collaborators = collaborators,
-      commentThreads = comments.pinned(state.reference.marks),
-      selectedThreadId = selectedThreadId,
-      onCommentThreadSelected = { threadId ->
-        selectThread(threadId)
-        dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments))
-      },
-      onInspectionSnapshot = { snapshot ->
-        canvasInspection = snapshot
-        onInspectionSnapshot?.invoke(snapshot)
-      },
-      onInspectionInvalidated = onInspectionInvalidated,
-      selectionMenu = selectionMenu,
-      hoverEditor =
-        if (state.previewMode || state.selection.size != 1) null
-        else {
-          {
-            SelectionHoverEditor(
-              label = selectionLabel,
-              // The same rule the panel opens on: what the node carries, which is what the export
-              // would write. A hovering card is the last place to list what a component *could*
-              // have.
-              fields =
-                reducer.propertyFields(state).filter { field ->
-                  field.written ||
-                    field.required ||
-                    field.boundVariable != null ||
-                    field.error != null
-                },
-              modifierFields = reducer.modifierFields(state),
-              focusTarget = hoverFocusTarget,
-              onFocusHandled = { hoverFocusTarget = null },
-              onCommitProperty = { name, value ->
-                state.selectedNodeId?.let {
-                  dispatch(UiBuilderEditorEvent.CommitProperty(it, name, value))
-                }
-              },
-              onCommitModifier = { type, field, value ->
-                state.selectedNodeId?.let {
-                  dispatch(UiBuilderEditorEvent.SetModifierValue(it, type, field, value))
-                }
-              },
-              onTextInputFocusChanged = { textInputFocused = it },
-            )
-          }
+    if (state.previewMode && onRequestDocumentPreview != null) {
+      livePreview(modifier)
+    } else {
+      PinnedDesignCanvas(
+        document = state.document,
+        variants = variantPanes,
+        selectedNodeId = state.selectedNodeId,
+        onNodeSelected = {
+          focusEditor()
+          dispatch(UiBuilderEditorEvent.SelectNode(it))
         },
-      zoom = canvasZoom,
-      onZoomChanged = {
-        focusEditor()
-        canvasZoom = it
-      },
-      contentAlignment = alignment,
-      modifier = modifier,
-    )
+        onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
+        onCanvasBounds = {
+          canvasBounds = it
+          onCanvasBoundsChanged(it)
+        },
+        dropHovered = canvasDropHovered,
+        dropTarget = draggedTarget,
+        dragPreview =
+          if (draggedRemoteThumbnail == null)
+            draggedComponentId?.let { reducer.previewDocument(it, draggedComponentVariant) }
+          else null,
+        dragPreviewBitmap = draggedRemoteThumbnail,
+        dragPosition = catalogDragPosition,
+        showSelectionOverlay = showSelectionOverlay && !state.previewMode,
+        reference = state.reference,
+        onMarkDrawn = { kind, points ->
+          dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
+        },
+        onPieceMoved = { pieceId, dx, dy ->
+          dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
+        },
+        collaborators = collaborators,
+        commentThreads = comments.pinned(state.reference.marks),
+        selectedThreadId = selectedThreadId,
+        onCommentThreadSelected = { threadId ->
+          selectThread(threadId)
+          dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments))
+        },
+        onInspectionSnapshot = { snapshot ->
+          canvasInspection = snapshot
+          onInspectionSnapshot?.invoke(snapshot)
+        },
+        onInspectionInvalidated = onInspectionInvalidated,
+        selectionMenu = selectionMenu,
+        hoverEditor =
+          if (state.previewMode || state.selection.size != 1) null
+          else {
+            {
+              SelectionHoverEditor(
+                label = selectionLabel,
+                // The same rule the panel opens on: what the node carries, which is what the export
+                // would write. A hovering card is the last place to list what a component *could*
+                // have.
+                fields =
+                  reducer.propertyFields(state).filter { field ->
+                    field.written ||
+                      field.required ||
+                      field.boundVariable != null ||
+                      field.error != null
+                  },
+                modifierFields = reducer.modifierFields(state),
+                focusTarget = hoverFocusTarget,
+                onFocusHandled = { hoverFocusTarget = null },
+                onCommitProperty = { name, value ->
+                  state.selectedNodeId?.let {
+                    dispatch(UiBuilderEditorEvent.CommitProperty(it, name, value))
+                  }
+                },
+                onCommitModifier = { field, value ->
+                  state.selectedNodeId?.let {
+                    dispatch(
+                      UiBuilderEditorEvent.SetModifierValue(
+                        it,
+                        field.type,
+                        field.field,
+                        value,
+                        field.index,
+                      )
+                    )
+                  }
+                },
+                onTextInputFocusChanged = { textInputFocused = it },
+              )
+            }
+          },
+        zoom = canvasZoom,
+        onZoomChanged = {
+          focusEditor()
+          canvasZoom = it
+        },
+        contentAlignment = alignment,
+        modifier = modifier,
+      )
+    }
   }
   // Cached against the document, because it is not cheap and depends on nothing else: it walks
   // every node and every property against the catalog, traverses the graph and looks for cycles.
@@ -1494,6 +1523,7 @@ fun UiBuilderEditor(
   // tell which generator wrote it.
   val generatedCodeCaption =
     if (state.document.isWearWidget()) "Wear widget · Remote Compose"
+    else if (catalog.platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) "Remote Compose source"
     else "Compose export · ${ScreenExportGate.PACKAGE_NAME}"
   val propertyFields = reducer.propertyFields(state)
   // Which of those a binding must reach as a comparison rather than a bare read. Computed beside
@@ -1525,6 +1555,8 @@ fun UiBuilderEditor(
       state = state,
       onClose = { inspectorOpen = false },
       fields = propertyFields,
+      modifierFields = reducer.modifierFields(state),
+      modifierToggles = reducer.modifierToggles(state),
       stateVariables = reducer.stateVariableNames(state),
       comparisonBindingProperties = comparisonBindingProperties,
       bindableProperties = bindableProperties,
@@ -1762,9 +1794,8 @@ fun UiBuilderEditor(
                     )
                   } else {
                     Row(Modifier.fillMaxWidth().weight(1f)) {
-                      // The visual editor never leaves the workspace. Additional positions are
-                      // previews of the same document, not alternative renderers that replace the
-                      // authoring coordinate space.
+                      // Design mode owns the authoring coordinates; Preview plays the document in
+                      // this same position. Additional panes compare the same saved design.
                       canvas(
                         Modifier.weight(1f)
                           .fillMaxHeight()
@@ -1785,10 +1816,7 @@ fun UiBuilderEditor(
                         )
                       }
                       if (state.previewSurface == EditorPreviewSurface.Both) {
-                        LiveWasmPreviewPane(
-                          document = state.document,
-                          modifier = Modifier.weight(1f).fillMaxHeight(),
-                        )
+                        livePreview(Modifier.weight(1f).fillMaxHeight())
                       }
                     }
                   }
@@ -2081,9 +2109,7 @@ private fun NewDesignDialog(
           isError = designId.isNotEmpty() && !designIdValid,
           singleLine = true,
         )
-        // State is declared here because `CreateDesign` carries a whole document and no released
-        // mutation reaches `stateVariables` afterwards. Until one does, this is the only moment a
-        // design can be given the variables the inspector then binds properties to.
+        // Optional starting state. The Screen inspector can add and edit declarations later.
         if (!stateExpanded && declared.isEmpty()) {
           TextButton(
             onClick = { stateExpanded = true },
@@ -2578,7 +2604,10 @@ private fun EditorToolbar(
  */
 @Composable
 private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
-  val groups = remember(host.formats) { exportMenuEntries(host.formats) }
+  val groups =
+    remember(host.formats, host.supportsLinks) {
+      exportMenuEntries(host.formats, host.supportsLinks)
+    }
   if (groups.isEmpty()) return
   var open by remember { mutableStateOf(false) }
   var status by remember { mutableStateOf<String?>(null) }
@@ -4539,7 +4568,7 @@ internal fun PinnedDesignCanvas(
               // Where a right-click landed on the design, in the frame's own pixels, and null
               // while no menu is open.
               var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
-              Box(
+              CanvasExtentLayout(
                 Modifier.fillMaxSize().onSecondaryClick(document.id) { position ->
                   if (!showSelectionOverlay) return@onSecondaryClick
                   // The inspection reports each box in root pixels, which is the space this press
@@ -6094,7 +6123,7 @@ private fun SelectionHoverEditor(
   focusTarget: String?,
   onFocusHandled: () -> Unit,
   onCommitProperty: (String, String) -> Unit,
-  onCommitModifier: (String, String, String) -> Unit,
+  onCommitModifier: (EditorModifierField, String) -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
 ) {
   Surface(
@@ -6138,7 +6167,7 @@ private fun SelectionHoverEditor(
             onFocusHandled = onFocusHandled,
             onTextInputFocusChanged = onTextInputFocusChanged,
           ) {
-            onCommitModifier(field.type, field.field, it)
+            onCommitModifier(field, it)
           }
         }
         if (fields.isEmpty() && modifierFields.isEmpty()) {
@@ -6314,6 +6343,8 @@ private fun PropertyInspector(
   state: UiBuilderEditorState,
   onClose: (() -> Unit)?,
   fields: List<EditorPropertyField>,
+  modifierFields: List<EditorModifierField>,
+  modifierToggles: List<EditorModifierToggle>,
   stateVariables: List<String>,
   comparisonBindingProperties: Set<String>,
   bindableProperties: Set<String>,
@@ -6378,6 +6409,8 @@ private fun PropertyInspector(
         state = state,
         node = node,
         fields = fields,
+        modifierFields = modifierFields,
+        modifierToggles = modifierToggles,
         stateVariables = stateVariables,
         comparisonBindingProperties = comparisonBindingProperties,
         bindableProperties = bindableProperties,
@@ -6415,6 +6448,8 @@ private fun InspectorBody(
   state: UiBuilderEditorState,
   node: UiBuilderNode?,
   fields: List<EditorPropertyField>,
+  modifierFields: List<EditorModifierField>,
+  modifierToggles: List<EditorModifierToggle>,
   stateVariables: List<String>,
   comparisonBindingProperties: Set<String>,
   bindableProperties: Set<String>,
@@ -6492,6 +6527,10 @@ private fun InspectorBody(
       // section joined them below. A tab that silently clips its last control is worse than one
       // that scrolls.
       Column(Modifier.verticalScroll(rememberScrollState())) {
+        if (UiBuilderBuildFeatures.remoteCompose) {
+          StateVariablesInspector(state.document, onTextInputFocusChanged, dispatch)
+          HorizontalDivider(Modifier.padding(vertical = 10.dp))
+        }
         ScreenEnvironmentInspector(
           document = state.document,
           devicePresets = devicePresets,
@@ -6552,13 +6591,16 @@ private fun InspectorBody(
     // What the export would write, plus what it would refuse without: the panel opens on the node
     // as the code has it. A bound property counts as written, and so does one being complained
     // about, because hiding the field an error names is how an error becomes unfixable.
-    val shownFields = fields.filter {
-      it.written ||
-        it.required ||
-        it.boundVariable != null ||
-        it.error != null ||
-        it.name in revealed
-    }
+    val shownFields =
+      fields
+        .filter { it.name != SHOW_BY_STATE }
+        .filter {
+          it.written ||
+            it.required ||
+            it.boundVariable != null ||
+            it.error != null ||
+            it.name in revealed
+        }
     val shownNames = shownFields.map { it.name }.toSet()
     fun matches(field: EditorPropertyField): Boolean =
       propertyQuery.isBlank() ||
@@ -6567,7 +6609,8 @@ private fun InspectorBody(
     val visibleFields = shownFields.filter(::matches)
     // Everything the component allows and this node has not been given. Offered, never listed: a
     // search reaches it in one word, and until then it is thirty controls nobody asked for.
-    val addableFields = fields.filterNot { it.name in shownNames }.filter(::matches)
+    val addableFields =
+      fields.filterNot { it.name in shownNames || it.name == SHOW_BY_STATE }.filter(::matches)
     // Open the drawer whenever a search is running, so typing a property's name finds it whether
     // or not the node already has one.
     val addOpen = addingProperty || propertyQuery.isNotBlank()
@@ -6601,7 +6644,18 @@ private fun InspectorBody(
         PropertyControl(
           field = field,
           stateVariables = if (field.name in bindableProperties) stateVariables else emptyList(),
-          needsComparison = field.name in comparisonBindingProperties,
+          needsComparison = { variable ->
+            val declaration = state.document.stateVariables[variable] as? JsonObject
+            val valueType = (declaration?.get("valueType") as? JsonPrimitive)?.content
+            val booleanState =
+              valueType == "bool" ||
+                (valueType == null &&
+                  (declaration?.get("initialValue") as? JsonPrimitive)?.booleanOrNull != null)
+            val nullableState =
+              (declaration?.get("nullable") as? JsonPrimitive)?.booleanOrNull == true ||
+                declaration?.get("initialValue") is JsonNull
+            field.name in comparisonBindingProperties && (!booleanState || nullableState)
+          },
           onTextInputFocusChanged = onTextInputFocusChanged,
           onBind = { variable, equalsValue ->
             dispatch(
@@ -6668,25 +6722,117 @@ private fun InspectorBody(
           }
         }
       }
-      if (node.modifiers.isNotEmpty()) {
-        item {
-          HorizontalDivider(Modifier.padding(vertical = 12.dp))
-          Text("Modifiers", style = MaterialTheme.typography.labelLarge)
-          Text(
-            "Shown from the document. Modifier parameter editing waits for an authoritative modifier operation.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
-          )
+      if (
+        UiBuilderBuildFeatures.remoteCompose &&
+          node.componentId == STATE_SELECTION_CONTAINER &&
+          fields.any { it.name == SHOW_BY_STATE }
+      ) {
+        item { StateSelectionInspector(state.document, node, onTextInputFocusChanged, dispatch) }
+      }
+      if (
+        UiBuilderBuildFeatures.remoteCompose &&
+          (node.componentId in COMPOSE_EMITTED_CLICK_COMPONENTS || node.eventBindings.isNotEmpty())
+      ) {
+        item { EventActionsInspector(state.document, node, onTextInputFocusChanged, dispatch) }
+      }
+      if (UiBuilderBuildFeatures.remoteCompose) {
+        if (node.modifiers.isNotEmpty() || modifierToggles.isNotEmpty()) {
+          item {
+            HorizontalDivider(Modifier.padding(vertical = 12.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+              Text("Layout", Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+              var addModifier by remember(node.id) { mutableStateOf(false) }
+              val available = modifierToggles.filterNot { it.applied }
+              Box {
+                TextButton(onClick = { addModifier = true }, enabled = available.isNotEmpty()) {
+                  Text("Add modifier")
+                }
+                DropdownMenu(expanded = addModifier, onDismissRequest = { addModifier = false }) {
+                  available.forEach { item ->
+                    DropdownMenuItem(
+                      text = { Text(item.label) },
+                      onClick = {
+                        addModifier = false
+                        dispatch(UiBuilderEditorEvent.ToggleModifier(node.id, item.type))
+                      },
+                    )
+                  }
+                }
+              }
+            }
+          }
+          itemsIndexed(node.modifiers) { index, modifier ->
+            val type = (modifier as? JsonObject)?.get("type")?.jsonPrimitive?.content.orEmpty()
+            val editable = modifierFields.filter { it.index == index }
+            val label =
+              modifierToggles
+                .firstOrNull { it.type == type }
+                ?.label
+                ?.removePrefix("Add ")
+                ?.replaceFirstChar { it.uppercase() }
+                ?: type.replace(Regex("([a-z])([A-Z])"), "$1 $2").replaceFirstChar {
+                  it.uppercase()
+                }
+            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+              Text(label, style = MaterialTheme.typography.labelMedium)
+              editable.forEach { field ->
+                key(node.id, index, field.field) {
+                  HoverEditorRow(
+                    label = field.label,
+                    value = field.value,
+                    control =
+                      if (field.choices.isEmpty()) EditorPropertyControl.Number
+                      else EditorPropertyControl.Enum,
+                    choices = field.choices,
+                    focused = false,
+                    onFocusHandled = {},
+                    onTextInputFocusChanged = onTextInputFocusChanged,
+                  ) { value ->
+                    dispatch(
+                      UiBuilderEditorEvent.SetModifierValue(
+                        node.id,
+                        field.type,
+                        field.field,
+                        value,
+                        index,
+                      )
+                    )
+                  }
+                }
+              }
+              if (editable.isEmpty() && type !in modifierToggles.map { it.type }) {
+                Text(
+                  modifier.toString(),
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  maxLines = 3,
+                  overflow = TextOverflow.Ellipsis,
+                )
+              }
+            }
+          }
         }
-        itemsIndexed(node.modifiers) { _, modifier ->
-          Text(
-            modifier.toString(),
-            Modifier.padding(top = 6.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-          )
+      } else {
+        if (node.modifiers.isNotEmpty()) {
+          item {
+            HorizontalDivider(Modifier.padding(vertical = 12.dp))
+            Text("Modifiers", style = MaterialTheme.typography.labelLarge)
+            Text(
+              "Shown from the document. Modifier parameter editing waits for an authoritative modifier operation.",
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelSmall,
+            )
+          }
+          itemsIndexed(node.modifiers) { _, modifier ->
+            Text(
+              modifier.toString(),
+              Modifier.padding(top = 6.dp),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
+              maxLines = 3,
+              overflow = TextOverflow.Ellipsis,
+            )
+          }
         }
       }
     }
@@ -6716,7 +6862,7 @@ private fun AddPropertyRow(field: EditorPropertyField, onAdd: () -> Unit) {
 private fun PropertyControl(
   field: EditorPropertyField,
   stateVariables: List<String>,
-  needsComparison: Boolean,
+  needsComparison: (String) -> Boolean,
   onTextInputFocusChanged: (Boolean) -> Unit,
   onBind: (String, String?) -> Unit,
   onUnbind: () -> Unit,
@@ -6838,7 +6984,7 @@ private fun StateBindingRow(variable: String, onUnbind: () -> Unit) {
 private fun StateBindMenu(
   field: EditorPropertyField,
   stateVariables: List<String>,
-  needsComparison: Boolean,
+  needsComparison: (String) -> Boolean,
   onTextInputFocusChanged: (Boolean) -> Unit,
   onBind: (String, String?) -> Unit,
 ) {
@@ -6858,7 +7004,7 @@ private fun StateBindMenu(
           text = { Text(variable) },
           onClick = {
             open = false
-            if (needsComparison) pending = variable else onBind(variable, null)
+            if (needsComparison(variable)) pending = variable else onBind(variable, null)
           },
         )
       }

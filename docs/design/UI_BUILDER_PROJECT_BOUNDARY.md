@@ -68,6 +68,11 @@ server-side", would have put the boundary in the middle of the builder's own sta
    `:ui-builder` itself is deliberately not a seam. The editor is reached as a distribution, never
    as a classpath.
 
+   Within the builder, `:ui-builder-runtime` also uses `:ui-builder-export` for shared scalar state
+   binding validation. That module and its screen-model dependency contain no Compose UI or
+   transport code. The runtime's resolved-classpath allowlist names them explicitly, so browser
+   and service validation can agree without linking the editor or server into the runtime.
+
 3. **Every module belongs to exactly one project.** A new module that joins neither list fails the
    check. This is the guard that matters most in practice — the usual way a boundary rots is not a
    forbidden edge but a module nobody classified, which the check then silently stops covering.

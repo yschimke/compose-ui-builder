@@ -118,6 +118,16 @@ public sealed interface UiBuilderServiceRequest {
   ) : UiBuilderServiceRequest
 
   /**
+   * Compile supplied Remote document content without creating or reading a stored design.
+   *
+   * The host admits this with export capability. Only self-contained Remote JSON/RC exports are
+   * accepted; catalog pins, topology and quotas are checked just as for saved designs. The existing
+   * DesignDocumentV1 and ExportArtifactV1 shapes travel through the host's document-export route.
+   */
+  public data class ExportDocument(val document: DesignDocumentV1, val format: ExportFormatV1) :
+    UiBuilderServiceRequest
+
+  /**
    * Change a design's title, and nothing else about it.
    *
    * Outside the operation log on purpose. The title is document metadata rather than design

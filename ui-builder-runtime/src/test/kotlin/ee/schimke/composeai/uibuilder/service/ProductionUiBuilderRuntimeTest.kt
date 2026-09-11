@@ -25,6 +25,56 @@ class ProductionUiBuilderRuntimeTest {
   @TempDir lateinit var stateDirectory: Path
 
   @Test
+  fun `catalog validation checks every supplied component argument against its property`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor()
+    val catalog = catalogs.listCatalogs().single()
+    val placed =
+      document()
+        .copy(
+          roots = listOf("place"),
+          nodes =
+            mapOf(
+              "place" to
+                DesignNodeV1(
+                  "place",
+                  DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                  component =
+                    DesignComponentInstanceV1("pair", mapOf("gap" to DecimalValueV1(8.0))),
+                ),
+              "body" to
+                DesignNodeV1(
+                  "body",
+                  "layout/row",
+                  properties = mapOf("horizontalSpacingDp" to BindingValueV1("gap")),
+                ),
+            ),
+          components = mapOf("pair" to DesignComponentV1("Pair", "body")),
+        )
+    assertNull(catalogs.validate(placed, catalog))
+    val wrong =
+      placed.copy(
+        nodes =
+          placed.nodes +
+            ("place" to
+              placed.nodes
+                .getValue("place")
+                .copy(
+                  component =
+                    DesignComponentInstanceV1("pair", mapOf("gap" to StringValueV1("wide")))
+                ))
+      )
+    assertEquals("INVALID_PROPERTY_TYPE", catalogs.validate(wrong, catalog)?.code)
+    val missing =
+      placed.copy(
+        nodes =
+          placed.nodes +
+            ("place" to
+              placed.nodes.getValue("place").copy(component = DesignComponentInstanceV1("pair")))
+      )
+    assertEquals("INVALID_ARGUMENT_BINDING", catalogs.validate(missing, catalog)?.code)
+  }
+
+  @Test
   fun `packaged current m3 catalog resolves only its exact pin and validates strictly`() {
     val catalogs = CurrentM3UiBuilderCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
@@ -340,6 +390,7 @@ class ProductionUiBuilderRuntimeTest {
         "layout/box",
         "layout/column",
         "layout/row",
+        "layout/for-each",
         "m3/surface",
         "m3/text",
         "remote-compose/document",

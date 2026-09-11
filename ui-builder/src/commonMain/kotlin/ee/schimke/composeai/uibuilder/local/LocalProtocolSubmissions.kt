@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.RedoCommand
 import ee.schimke.composeai.uibuilder.UndoCommand
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
+import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
@@ -17,9 +18,11 @@ import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
+import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetEventBindingMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetFontScaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetHeightDpEnvironmentChangeV1
@@ -27,8 +30,10 @@ import ee.schimke.composeai.uibuilder.protocol.SetLayoutDirectionEnvironmentChan
 import ee.schimke.composeai.uibuilder.protocol.SetLocaleEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetModifiersMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
+import ee.schimke.composeai.uibuilder.protocol.SetStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetThemeEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetWidthDpEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
@@ -37,6 +42,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.jsonObject
 
 /**
  * `EditorSubmission.toProtocolSubmission` read backwards, for the session that lives in the page.
@@ -47,10 +53,10 @@ import kotlinx.serialization.json.buildJsonArray
  * price of that reuse is this file: something has to turn the wire spelling back into the reducer's
  * own commands, because the reducer is what actually applies them.
  *
- * Deliberately partial. The wire carries mutations the editor has no way to emit — state variables,
- * event bindings, a catalog upgrade — and the honest answer for those is a refusal naming the
- * mutation, not a silent no-op that would commit a revision doing nothing. When the editor learns
- * to author one, it gains a case here in the same change.
+ * Deliberately partial. The wire carries mutations the editor has no way to emit — a catalog
+ * upgrade — and the honest answer for those is a refusal naming the mutation, not a silent no-op
+ * that would commit a revision doing nothing. When the editor learns to author one, it gains a case
+ * here in the same change.
  */
 internal sealed interface LocalSubmissionMapping {
   data class Mapped(val record: LocalSubmissionRecordV1) : LocalSubmissionMapping
@@ -162,6 +168,31 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
       )
     is RemoveNodePropertyMutationV1 ->
       MutationMapping.Mapped(listOf(DesignOperation.RemoveNodeProperty(nodeId, property)))
+    is SetStateVariableMutationV1 ->
+      MutationMapping.Mapped(
+        listOf(
+          DesignOperation.SetStateVariable(
+            name,
+            localBridgeJson
+              .encodeToJsonElement(StateVariableV1.serializer(), declaration)
+              .jsonObject,
+          )
+        )
+      )
+    is RemoveStateVariableMutationV1 ->
+      MutationMapping.Mapped(listOf(DesignOperation.RemoveStateVariable(name)))
+    is SetEventBindingMutationV1 ->
+      MutationMapping.Mapped(
+        listOf(
+          DesignOperation.SetEventBinding(
+            nodeId,
+            event,
+            JsonArray(
+              actions.map { localBridgeJson.encodeToJsonElement(DesignActionV1.serializer(), it) }
+            ),
+          )
+        )
+      )
     is SetModifiersMutationV1 ->
       MutationMapping.Mapped(
         listOf(

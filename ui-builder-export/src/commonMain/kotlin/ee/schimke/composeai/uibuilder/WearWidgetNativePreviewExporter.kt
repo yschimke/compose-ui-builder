@@ -125,6 +125,7 @@ internal object WearWidgetNativePreviewExporter {
           emptyList()
         }
       }
+    emitter.validateFunctionNames("${document.widgetIdentifier()}Content")
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.widgetIdentifier()
@@ -158,6 +159,7 @@ internal object WearWidgetNativePreviewExporter {
           // are inlined above rather than asked for, because this function's only caller is a
           // generated `@Preview`.
           appendLine("fun ${name}Content() {")
+          emitter.stateLocals().forEach { appendLine("$INDENT$it") }
           if (emitter.usesTheme) {
             appendLine("${INDENT}RemoteMaterialTheme {")
             body.forEach(::appendLine)

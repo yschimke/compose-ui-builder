@@ -303,3 +303,29 @@ subprojects {
     tasks.named("check") { dependsOn(pomCheck) }
   }
 }
+
+// One compile-time choice for the editor/server and the independently published MCP adapter.
+// No environment, URL or request parameter can turn a released build's feature set on.
+val remoteComposeAuthoring = providers.gradleProperty("uiBuilderRemoteCompose").orElse("false").map {
+  require(it == "true" || it == "false") { "uiBuilderRemoteCompose must be true or false" }
+  it.toBooleanStrict()
+}
+listOf(
+  Triple("generateUiBuilderBuildFeatures", "ee.schimke.composeai.uibuilder", "UiBuilderBuildFeatures"),
+  Triple("generateMcpBuildFeatures", "ee.schimke.composeai.mcp", "McpBuildFeatures"),
+).forEach { (taskName, packageName, objectName) ->
+  tasks.register(taskName) {
+    val enabled = remoteComposeAuthoring
+    val output = layout.buildDirectory.dir("generated/$taskName")
+    inputs.property("uiBuilderRemoteCompose", enabled)
+    outputs.dir(output)
+    doLast {
+      val directory = output.get().asFile.apply { mkdirs() }
+      directory.resolve("$objectName.kt").writeText(
+        "package $packageName\n\n" +
+          "/** Build-time feature selection. Enable with -PuiBuilderRemoteCompose=true. */\n" +
+          "object $objectName {\n  const val remoteCompose: Boolean = ${enabled.get()}\n}\n"
+      )
+    }
+  }
+}

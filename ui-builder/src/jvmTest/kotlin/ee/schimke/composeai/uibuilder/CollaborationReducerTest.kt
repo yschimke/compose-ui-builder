@@ -24,6 +24,50 @@ import kotlinx.serialization.json.put
 
 class CollaborationReducerTest {
   @Test
+  fun `a command can edit a document with a detached component body`() {
+    val base = document()
+    val placed =
+      base.copy(
+        nodes =
+          base.nodes +
+            mapOf(
+              "container" to
+                base.nodes
+                  .getValue("container")
+                  .copy(slots = mapOf("items" to listOf("a", "b", "place"))),
+              "place" to
+                UiBuilderNode(
+                  "place",
+                  "design/component-instance",
+                  component = Json.parseToJsonElement("""{"componentKey":"cell"}""") as JsonObject,
+                ),
+              "body" to base.nodes.getValue("child").copy(id = "body"),
+            ),
+        components =
+          Json.parseToJsonElement("""{"cell":{"name":"Cell","root":"body"}}""") as JsonObject,
+      )
+    val command =
+      command(
+        "edit-with-component",
+        4,
+        DesignOperation.SetProperty("a", "text", typed("string", JsonPrimitive("updated"))),
+      )
+    val application =
+      CollaborationReducer.apply(CollaborationState(placed), command, catalogPropertyValidator())
+    assertIs<CommandOutcome.Accepted>(application.outcome)
+    assertEquals(5, application.state.document.revision)
+    assertEquals(placed.components, application.state.document.components)
+    assertEquals(placed.nodes.getValue("body"), application.state.document.nodes.getValue("body"))
+    val cyclic =
+      placed.copy(
+        nodes = placed.nodes + ("body" to placed.nodes.getValue("place").copy(id = "body"))
+      )
+    val refused =
+      CollaborationReducer.apply(CollaborationState(cyclic), command, catalogPropertyValidator())
+    assertEquals(RejectionCode.CYCLE, assertIs<CommandOutcome.Rejected>(refused.outcome).code)
+  }
+
+  @Test
   fun `typed command schema round trips with stable operation discriminators`() {
     val command =
       command(

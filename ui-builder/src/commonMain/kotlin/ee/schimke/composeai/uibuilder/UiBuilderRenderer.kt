@@ -173,7 +173,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 enum class UiBuilderLayer {
@@ -507,6 +506,17 @@ fun UiBuilderSurface(
         }
       }
     }
+  var appliedDeclarations by remember(document.id) { mutableStateOf(document.stateVariables) }
+  LocalCanvasExtentInputs.current?.let { updateInputs ->
+    val inputs = CanvasExtentInputs(document, state.toMap())
+    SideEffect { updateInputs(inputs) }
+  }
+  SideEffect {
+    if (appliedDeclarations != document.stateVariables) {
+      reconcilePreviewState(state, appliedDeclarations, document.stateVariables)
+      appliedDeclarations = document.stateVariables
+    }
+  }
   val theme = document.environment["theme"]?.jsonPrimitive?.contentOrNull
   val dark = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
   val platformDensity = LocalDensity.current
@@ -715,7 +725,7 @@ private fun RenderNode(
   // Bindings are resolved once, here, rather than at each accessor: below this line a bound
   // property is an ordinary value, so every reader — colour, text, dimension, the modifier chain —
   // sees what the placement passed without knowing a placement happened.
-  val node = authored.withArguments(arguments)
+  val node = authored.withArguments(arguments).withPreviewState(state)
   val enabled = node.bool("enabled", true)
   val activate = { node.dispatch("click", state, onState) }
   if (node.eventBindings["click"] != null) {
@@ -924,7 +934,11 @@ private fun RenderNode(
     }
     "layout/box" ->
       Box(measured) {
-        slot("children").forEach { id ->
+        val children =
+          if (UiBuilderBuildFeatures.remoteCompose && SHOW_BY_STATE in node.properties)
+            listOfNotNull(node.stateSelection()?.selectedNode(state, document.stateVariables))
+          else slot("children")
+        children.forEach { id ->
           val item = document.nodes.getValue(id)
           val parentSizing =
             if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
@@ -1579,6 +1593,33 @@ private fun UiBuilderNode.withArguments(arguments: JsonObject): UiBuilderNode {
   }
   return if (substituted) copy(properties = JsonObject(resolved)) else this
 }
+
+/** Resolve reads for every property accessor while retaining the variable for two-way controls. */
+private fun UiBuilderNode.withPreviewState(state: Map<String, String?>): UiBuilderNode =
+  copy(
+    properties =
+      JsonObject(
+        properties.mapValues { (_, encoded) ->
+          val binding = encoded as? JsonObject ?: return@mapValues encoded
+          val variable =
+            (binding["variable"] as? JsonPrimitive)?.content ?: return@mapValues encoded
+          when (binding.wrapperType()) {
+            "state" ->
+              JsonObject(binding + ("value" to (state[variable]?.let(::JsonPrimitive) ?: JsonNull)))
+            "stateEquals" ->
+              JsonObject(
+                binding +
+                  mapOf(
+                    "type" to JsonPrimitive("bool"),
+                    "value" to
+                      JsonPrimitive(uiBuilderStateEquals(state[variable], binding["value"])),
+                  )
+              )
+            else -> encoded
+          }
+        }
+      )
+  )
 
 /**
  * The brush this gradient layer paints, on the axis its `direction` names.
@@ -3126,10 +3167,33 @@ private fun UiBuilderNode.dispatch(
   onState: (String, String?) -> Unit,
 ) {
   val actions = eventBindings[event] as? JsonArray ?: return
-  actions.forEach { element ->
-    uiBuilderStateWrite(element.jsonObject, state)?.let { (variable, next) ->
-      onState(variable, next)
-    }
+  uiBuilderStateWrites(actions, state).forEach { (variable, next) -> onState(variable, next) }
+}
+
+/** Later actions observe earlier writes even when a host applies callbacks after dispatch. */
+internal fun uiBuilderStateWrites(
+  actions: JsonArray,
+  state: Map<String, String?>,
+): List<Pair<String, String?>> {
+  val working = state.toMutableMap()
+  return actions.mapNotNull { element ->
+    (element as? JsonObject)
+      ?.let { uiBuilderStateWrite(it, working) }
+      ?.also { (name, value) -> working[name] = value }
+  }
+}
+
+/** Authoring a declaration resets that variable's preview value; unrelated interactions survive. */
+internal fun reconcilePreviewState(
+  state: MutableMap<String, String?>,
+  before: JsonObject,
+  after: JsonObject,
+) {
+  (before.keys - after.keys).forEach { state.remove(it) }
+  after.forEach { (name, declaration) ->
+    if (declaration != before[name])
+      state[name] =
+        ((declaration as? JsonObject)?.get("initialValue") as? JsonPrimitive)?.contentOrNull
   }
 }
 
@@ -3143,9 +3207,21 @@ internal fun uiBuilderStateWrite(
   action: JsonObject,
   state: Map<String, String?>,
 ): Pair<String, String?>? {
-  val variable = action.optionalString("variable") ?: return null
-  val value = action["value"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull
-  return when (action.optionalString("type")) {
+  val variable =
+    (action["variable"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull ?: return null
+  val kind = (action["type"] as? JsonPrimitive)?.contentOrNull
+  // An imported experimental document may contain a binding the current preview cannot resolve.
+  // Preserve the current state for that action; neither crash nor turn an unresolved value into
+  // null.
+  val operand = action["value"]
+  if (
+    kind in setOf("set", "select", "setText", "selectOrClear") &&
+      operand != null &&
+      operand !is JsonPrimitive
+  )
+    return null
+  val value = (operand as? JsonPrimitive)?.contentOrNull
+  return when (kind) {
     "select",
     "setText",
     // `set` is the protocol's own name for an assignment and behaves exactly as `select` does:

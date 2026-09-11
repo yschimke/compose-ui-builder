@@ -1,0 +1,62 @@
+// Generated from a Compose UI builder design. Do not edit by hand.
+// Remote content of design remote-live-preview revision 0.
+@file:Suppress("RestrictedApi")
+
+package generated.uibuilder
+
+import androidx.compose.remote.creation.compose.action.valueChange
+import androidx.compose.remote.creation.compose.layout.RemoteBox
+import androidx.compose.remote.creation.compose.layout.RemoteComposable
+import androidx.compose.remote.creation.compose.layout.RemoteStateLayout
+import androidx.compose.remote.creation.compose.modifier.RemoteModifier
+import androidx.compose.remote.creation.compose.modifier.background
+import androidx.compose.remote.creation.compose.modifier.clickable
+import androidx.compose.remote.creation.compose.modifier.fillMaxSize
+import androidx.compose.remote.creation.compose.modifier.padding
+import androidx.compose.remote.creation.compose.state.rc
+import androidx.compose.remote.creation.compose.state.rdp
+import androidx.compose.remote.creation.compose.state.rememberMutableRemoteInt
+import androidx.compose.remote.creation.compose.state.ri
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+
+@RemoteComposable
+@Composable
+fun StatefulPreviewRemoteContent() {
+    val page = rememberMutableRemoteInt(10)
+    RemoteBox(modifier = RemoteModifier.fillMaxSize().padding(24.rdp, 24.rdp, 24.rdp, 24.rdp)) {
+        val selectionIndex0 =
+            (page and 65535.ri).isEqualTo(20.ri)
+                .and((page shr 16.ri).isEqualTo(0.ri))
+                .select(1.ri, 2.ri).createReference()
+        val selectionIndex1 =
+            (page and 65535.ri).isEqualTo(10.ri)
+                .and((page shr 16.ri).isEqualTo(0.ri))
+                .select(0.ri, selectionIndex0).createReference()
+        RemoteStateLayout(selectionIndex1, 0, 1, 2) { selectionIndex2 ->
+            when (selectionIndex2) {
+                0 -> RemoteBox {
+                    RemoteBox(
+                        modifier = RemoteModifier.fillMaxSize()
+                            .background(Color(0xFF6750A4).rc)
+                            .clickable(valueChange(page, 20.ri)),
+                    )
+                }
+                1 -> RemoteBox {
+                    RemoteBox(
+                        modifier = RemoteModifier.fillMaxSize()
+                            .background(Color(0xFF008577).rc)
+                            .clickable(valueChange(page, 30.ri)),
+                    )
+                }
+                2 -> RemoteBox {
+                    RemoteBox(
+                        modifier = RemoteModifier.fillMaxSize()
+                            .background(Color(0xFF3949AB).rc)
+                            .clickable(valueChange(page, 10.ri)),
+                    )
+                }
+            }
+        }
+    }
+}

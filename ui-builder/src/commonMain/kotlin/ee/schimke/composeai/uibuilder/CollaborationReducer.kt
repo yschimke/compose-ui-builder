@@ -75,6 +75,19 @@ sealed interface DesignOperation {
   data class RemoveNodeProperty(val nodeId: String, val property: String) : DesignOperation
 
   @Serializable
+  @SerialName("setStateVariable")
+  data class SetStateVariable(val name: String, val declaration: JsonObject) : DesignOperation
+
+  @Serializable
+  @SerialName("removeStateVariable")
+  data class RemoveStateVariable(val name: String) : DesignOperation
+
+  @Serializable
+  @SerialName("setEventBinding")
+  data class SetEventBinding(val nodeId: String, val event: String, val actions: JsonArray) :
+    DesignOperation
+
+  @Serializable
   @SerialName("setEnvironment")
   data class SetEnvironment(val field: String, val value: JsonElement) : DesignOperation
 
@@ -125,7 +138,45 @@ data class NodeTombstone(
   val positions: Map<String, StableNodePosition> = emptyMap(),
 )
 
-data class PropertyAddress(val nodeId: String, val property: String)
+/** Separate namespaces prevent an event named `text` from conflicting with a text property. */
+enum class PropertyTarget {
+  Property,
+  StateVariable,
+  EventBinding,
+}
+
+data class PropertyAddress(
+  val nodeId: String,
+  val property: String,
+  val target: PropertyTarget = PropertyTarget.Property,
+)
+
+internal fun UiBuilderDocument.valueAt(address: PropertyAddress): JsonElement? =
+  when (address.target) {
+    PropertyTarget.Property -> nodes[address.nodeId]?.properties?.get(address.property)
+    PropertyTarget.EventBinding -> nodes[address.nodeId]?.eventBindings?.get(address.property)
+    PropertyTarget.StateVariable -> stateVariables[address.property]
+  }
+
+internal fun UiBuilderDocument.withValueAt(
+  address: PropertyAddress,
+  value: JsonElement?,
+): UiBuilderDocument {
+  fun JsonObject.updated() =
+    JsonObject(if (value == null) this - address.property else this + (address.property to value))
+  if (address.target == PropertyTarget.StateVariable)
+    return copy(stateVariables = stateVariables.updated())
+  val node =
+    nodes[address.nodeId]
+      ?: fail(RejectionCode.UNKNOWN_NODE, "unknown node ${address.nodeId}", address.nodeId)
+  val changed =
+    when (address.target) {
+      PropertyTarget.Property -> node.copy(properties = node.properties.updated())
+      PropertyTarget.EventBinding -> node.copy(eventBindings = node.eventBindings.updated())
+      PropertyTarget.StateVariable -> error("handled above")
+    }
+  return copy(nodes = nodes + (node.id to changed))
+}
 
 data class StablePositionKey(val path: List<Int>, val tieBreaker: String) :
   Comparable<StablePositionKey> {
@@ -620,6 +671,15 @@ object CollaborationReducer {
     } catch (failure: ReducerFailure) {
       return state.rejected(failure.code, failure.message.orEmpty(), nodeId = failure.nodeId)
     }
+    if (trace.propertyChanges.any { it.address.target != PropertyTarget.Property })
+      trace.state.document.behaviorIssue()?.let { issue ->
+        return state.rejected(
+          RejectionCode.INVALID_DOCUMENT,
+          issue.message,
+          nodeId = issue.nodeId,
+          field = issue.field,
+        )
+      }
     documentValidator?.validate(trace.state.document)?.let { issue ->
       return state.rejected(
         RejectionCode.INVALID_DOCUMENT,
@@ -796,8 +856,7 @@ object CollaborationReducer {
     // collaborator's write — leaves a different revision and is still refused.
     if (scalarOnly) {
       target.propertyChanges.asReversed().distinctBy(PropertyChange::address).forEach { change ->
-        val current =
-          state.document.nodes[change.address.nodeId]?.properties?.get(change.address.property)
+        val current = state.document.valueAt(change.address)
         val currentVersion = state.propertyVersions[change.address]
         if (current != change.afterValue || currentVersion != target.committedRevision) {
           return state.rejected(
@@ -867,14 +926,7 @@ object CollaborationReducer {
     if (scalarOnly) {
       var document = prepared.document
       target.propertyChanges.asReversed().forEach { change ->
-        val node = document.nodes.getValue(change.address.nodeId)
-        val properties =
-          if (change.before == null) node.properties - change.address.property
-          else node.properties + (change.address.property to change.before)
-        document =
-          document.copy(
-            nodes = document.nodes + (node.id to node.copy(properties = JsonObject(properties)))
-          )
+        document = document.withValueAt(change.address, change.before)
       }
       changed = changed.copy(document = document)
     } else if (modifierOnly) {
@@ -921,6 +973,15 @@ object CollaborationReducer {
         )
       }
     }
+    if (target.propertyChanges.any { it.address.target != PropertyTarget.Property })
+      changed.document.behaviorIssue()?.let { issue ->
+        return state.rejected(
+          RejectionCode.INVALID_DOCUMENT,
+          issue.message,
+          nodeId = issue.nodeId,
+          field = issue.field,
+        )
+      }
     documentValidator?.validate(changed.document)?.let { issue ->
       return state.rejected(
         RejectionCode.INVALID_DOCUMENT,
@@ -1093,8 +1154,7 @@ object CollaborationReducer {
     // the stamp that made sequential undo impossible.
     if (scalarOnly) {
       undo.target.propertyChanges.distinctBy(PropertyChange::address).forEach { change ->
-        val current =
-          state.document.nodes[change.address.nodeId]?.properties?.get(change.address.property)
+        val current = state.document.valueAt(change.address)
         val currentVersion = state.propertyVersions[change.address]
         if (current != change.before || currentVersion != change.beforeVersion) {
           return state.rejected(
@@ -1174,15 +1234,7 @@ object CollaborationReducer {
     if (scalarOnly) {
       var document = prepared.document
       undo.target.propertyChanges.forEach { change ->
-        val node = document.nodes.getValue(change.address.nodeId)
-        val after = change.afterValue
-        val properties =
-          if (after == null) node.properties - change.address.property
-          else node.properties + (change.address.property to after)
-        document =
-          document.copy(
-            nodes = document.nodes + (node.id to node.copy(properties = JsonObject(properties)))
-          )
+        document = document.withValueAt(change.address, change.afterValue)
       }
       changed = changed.copy(document = document)
     } else if (modifierOnly) {
@@ -1225,6 +1277,15 @@ object CollaborationReducer {
         )
       }
     }
+    if (undo.target.propertyChanges.any { it.address.target != PropertyTarget.Property })
+      changed.document.behaviorIssue()?.let { issue ->
+        return state.rejected(
+          RejectionCode.INVALID_DOCUMENT,
+          issue.message,
+          nodeId = issue.nodeId,
+          field = issue.field,
+        )
+      }
     documentValidator?.validate(changed.document)?.let { issue ->
       return state.rejected(
         RejectionCode.INVALID_DOCUMENT,
@@ -1510,6 +1571,34 @@ private fun CollaborationState.applyOperation(
       trace.compensationChanges += CompensationChange.Property(change)
       changed
     }
+    is DesignOperation.SetStateVariable ->
+      writeBehavior(
+        PropertyAddress("", operation.name, PropertyTarget.StateVariable),
+        operation.declaration,
+        baseRevision,
+        trace,
+      )
+    is DesignOperation.RemoveStateVariable -> {
+      if (operation.name !in document.stateVariables)
+        fail(
+          RejectionCode.INVALID_COMMAND,
+          "unknown state variable ${operation.name}",
+          field = operation.name,
+        )
+      writeBehavior(
+        PropertyAddress("", operation.name, PropertyTarget.StateVariable),
+        null,
+        baseRevision,
+        trace,
+      )
+    }
+    is DesignOperation.SetEventBinding ->
+      writeBehavior(
+        PropertyAddress(operation.nodeId, operation.event, PropertyTarget.EventBinding),
+        operation.actions.takeIf { it.isNotEmpty() },
+        baseRevision,
+        trace,
+      )
     is DesignOperation.SetModifiers -> {
       modifierVersions[operation.nodeId]
         ?.takeIf { it > baseRevision }
@@ -1560,6 +1649,34 @@ private fun CollaborationState.applyOperation(
       changed
     }
   }
+
+private fun CollaborationState.writeBehavior(
+  address: PropertyAddress,
+  value: JsonElement?,
+  baseRevision: Int,
+  trace: ReductionTrace,
+): CollaborationState {
+  if (address.property.isBlank())
+    fail(RejectionCode.INVALID_COMMAND, "name must not be blank", field = address.property)
+  val before = document.valueAt(address)
+  val changed = copy(document = document.withValueAt(address, value))
+  propertyVersions[address]
+    ?.takeIf { it > baseRevision }
+    ?.let { revision ->
+      trace.conflicts +=
+        ConflictNotice(
+          ConflictCode.STALE_PROPERTY_WRITE,
+          address.nodeId,
+          address.property,
+          revision,
+        )
+    }
+  val change = PropertyChange(address, before, value ?: JsonNull, propertyVersions[address])
+  trace.propertyTouches += address
+  trace.propertyChanges += change
+  trace.compensationChanges += CompensationChange.Property(change)
+  return changed
+}
 
 private fun CollaborationState.insertNode(
   operation: DesignOperation.InsertNode,
@@ -1774,7 +1891,11 @@ private fun CollaborationState.setProperty(
 
 /** A write to one property address — a set or an unset — which undo rewinds as a scalar lane. */
 private fun DesignOperation.isPropertyWrite(): Boolean =
-  this is DesignOperation.SetProperty || this is DesignOperation.RemoveNodeProperty
+  this is DesignOperation.SetProperty ||
+    this is DesignOperation.RemoveNodeProperty ||
+    this is DesignOperation.SetStateVariable ||
+    this is DesignOperation.RemoveStateVariable ||
+    this is DesignOperation.SetEventBinding
 
 private fun CollaborationState.removeProperty(
   operation: DesignOperation.RemoveNodeProperty,
@@ -1862,26 +1983,17 @@ private fun CollaborationState.compensateProperty(
   change: PropertyChange,
   undo: Boolean,
 ): CollaborationState {
-  val node = liveNode(change.address.nodeId)
   val expected = if (undo) change.afterValue else change.before
-  val current = node.properties[change.address.property]
-  if (current != expected) {
+  if (document.valueAt(change.address) != expected) {
     fail(
       RejectionCode.UNSAFE_COMPENSATION,
-      "property ${change.address.property} no longer has its compensable value",
+      "${change.address.property} no longer has its compensable value",
       change.address.nodeId,
       change.address.property,
     )
   }
-  val target = if (undo) change.before else change.afterValue
-  val properties =
-    if (target == null) node.properties - change.address.property
-    else node.properties + (change.address.property to target)
   return copy(
-    document =
-      document.copy(
-        nodes = document.nodes + (node.id to node.copy(properties = JsonObject(properties)))
-      )
+    document = document.withValueAt(change.address, if (undo) change.before else change.afterValue)
   )
 }
 
@@ -1963,6 +2075,18 @@ private val literalPropertyTypes =
 
 private fun propertyWrapperIssue(type: String, encodedValue: JsonObject): String? =
   when (type) {
+    "object" -> {
+      val fields = encodedValue["fields"] as? JsonObject
+      if (encodedValue.keys != setOf("type", "fields") || fields == null)
+        "object wrapper must contain exactly type and a fields object"
+      else
+        fields.entries.firstNotNullOfOrNull { (name, value) ->
+          val nested = value as? JsonObject
+          val nestedType = nested?.nonEmptyString("type")
+          if (nested == null || nestedType == null) "object field $name must be a typed value"
+          else propertyWrapperIssue(nestedType, nested)?.let { "object field $name $it" }
+        }
+    }
     in literalPropertyTypes ->
       if (encodedValue.keys == setOf("type", "value")) null
       else "literal wrapper must contain exactly type and value"
@@ -2206,6 +2330,15 @@ internal fun UiBuilderDocument.requireValidPlacement() {
   }
   roots.forEach(::record)
   nodes.values.forEach { node -> node.slots.values.flatten().forEach(::record) }
+  val componentRoots = components.mapValues { (key, definition) ->
+    ((definition as? JsonObject)?.get("root") as? JsonPrimitive)?.takeIf { it.isString }?.content
+      ?: fail(RejectionCode.INVALID_DOCUMENT, "component $key names no body root")
+  }
+  componentRoots.values.forEach { root ->
+    // A declaration owns its detached body once. Existing declarations over a screen subtree
+    // remain valid, and placing that component does not create a second structural parent.
+    if (root !in locations) record(root)
+  }
   nodes.keys.sorted().forEach { nodeId ->
     val count = locations[nodeId] ?: 0
     if (count != 1) {
@@ -2221,11 +2354,23 @@ internal fun UiBuilderDocument.requireValidPlacement() {
   fun visit(nodeId: String) {
     if (nodeId in visiting) fail(RejectionCode.CYCLE, "cycle at $nodeId", nodeId)
     if (!visited.add(nodeId)) return
+    if (visiting.size >= 128)
+      fail(RejectionCode.INVALID_DOCUMENT, "nesting exceeds 128 levels", nodeId)
     visiting += nodeId
-    nodes.getValue(nodeId).slots.values.flatten().forEach(::visit)
+    val node = nodes.getValue(nodeId)
+    node.slots.values.flatten().forEach(::visit)
+    node.component?.let { placement ->
+      val key = (placement["componentKey"] as? JsonPrimitive)?.contentOrNull
+      val root =
+        componentRoots[key]
+          ?: fail(RejectionCode.INVALID_DOCUMENT, "unknown component $key", nodeId)
+      visit(root)
+    }
     visiting -= nodeId
   }
   roots.forEach(::visit)
+  componentRoots.values.forEach(::visit)
+  if (visited.size != nodes.size) fail(RejectionCode.CYCLE, "unreachable cycle in design")
 }
 
 private fun UiBuilderDocument.descendants(rootId: String): Set<String> {

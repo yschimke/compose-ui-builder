@@ -89,6 +89,19 @@ val uiBuilderJava = JavaLanguageVersion.of(libs.versions.java.ui.builder.get().t
 
 val uiBuilderLauncher = javaToolchains.launcherFor { languageVersion.set(uiBuilderJava) }
 
+// Compile the exact shared-export golden. Keep the source in build output so formatting does not
+// rewrite the generator's spelling; the server test checks every byte against ScreenExportGate.
+val stageBehaviorCompileFixture =
+  tasks.register<Sync>("stageBehaviorCompileFixture") {
+    from(rootProject.file("docs/design/fixtures/ui-builder/state-actions.kt.txt")) {
+      rename { "StateActions.kt" }
+    }
+    from(rootProject.file("docs/design/fixtures/ui-builder/clickable-state-layout.kt.txt")) {
+      rename { "ClickableStateLayout.kt" }
+    }
+    into(layout.buildDirectory.dir("generated/behavior-fixture"))
+  }
+
 kotlin {
   // `java-ui-builder`, above the rest of this build. This module's JVM classes are published to
   // nobody: they leave the build only inside `:ui-builder-render-bundle`'s polyglot PNG, which
@@ -161,6 +174,7 @@ kotlin {
       .resources
       .srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
     getByName("jvmTest") {
+      kotlin.srcDir(stageBehaviorCompileFixture)
       resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
     }
   }

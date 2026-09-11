@@ -190,6 +190,10 @@ object WearWidgetCodeExporter {
           emptyList()
         }
       }
+    emitter.validateFunctionNames(
+      "${document.widgetIdentifier()}Content",
+      document.widgetIdentifier(),
+    )
     if (refusals.isNotEmpty()) return Outcome.Refused(refusals.distinct())
 
     val name = document.widgetIdentifier()

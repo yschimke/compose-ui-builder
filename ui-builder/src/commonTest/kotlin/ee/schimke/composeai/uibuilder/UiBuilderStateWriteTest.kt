@@ -84,6 +84,26 @@ class UiBuilderStateWriteTest {
   }
 
   @Test
+  fun `unresolved experimental action values neither crash nor clear state`() {
+    for (kind in listOf("set", "select", "setText", "selectOrClear")) {
+      for (value in listOf("""{"type":"binding","value":"rowId"}""", "[]")) {
+        assertNull(
+          uiBuilderStateWrite(
+            action("""{"type":"$kind","variable":"page","value":$value}"""),
+            mapOf("page" to "10"),
+          )
+        )
+      }
+    }
+    assertNull(
+      uiBuilderStateWrite(action("""{"type":{},"variable":"page","value":20}"""), emptyMap())
+    )
+    assertNull(
+      uiBuilderStateWrite(action("""{"type":"set","variable":{},"value":20}"""), emptyMap())
+    )
+  }
+
+  @Test
   fun `a numeric operand compares by value, the way the exported screen compares it`() {
     // The renderer keeps state in its string form, so `1` and `1.0` used to be two different
     // values here while the generated Kotlin — comparing two `Double`s — called them the same.

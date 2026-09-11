@@ -1250,10 +1250,8 @@ class UiBuilderEditorStateTest {
   }
 
   @Test
-  fun `a property whose catalog type has no room for a state read refuses the binding`() {
-    // `m3/text.text` is declared `string`, and a state read is not a string. The catalog decides
-    // where a binding is legal; this reducer only asks it.
-    val variable = reducer.stateVariableNames(reducer.initial(document, "chip-crime")).first()
+  fun `a text property can bind a string state through scalar catalog metadata`() {
+    val variable = "searchQuery"
     val text = reducer.treeRows(document).first { it.componentId == "m3/text" }
     val attempted =
       reducer.reduce(
@@ -1261,10 +1259,16 @@ class UiBuilderEditorStateTest {
         UiBuilderEditorEvent.BindPropertyToState(text.nodeId, "text", variable),
       )
 
-    assertIs<CommandOutcome.Rejected>(attempted.lastOutcome)
+    assertIs<CommandOutcome.Accepted>(attempted.lastOutcome)
     assertEquals(
-      document.nodes.getValue(text.nodeId).properties["text"],
-      attempted.document.nodes.getValue(text.nodeId).properties["text"],
+      variable,
+      attempted.document.nodes
+        .getValue(text.nodeId)
+        .properties["text"]
+        ?.jsonObject
+        ?.get("variable")
+        ?.jsonPrimitive
+        ?.content,
     )
   }
 

@@ -729,6 +729,19 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceReques
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$ExportDocument : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
+	public fun <init> (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/ExportFormatV1;)V
+	public final fun component1 ()Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;
+	public final fun component2 ()Lee/schimke/composeai/uibuilder/protocol/ExportFormatV1;
+	public final fun copy (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/ExportFormatV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$ExportDocument;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$ExportDocument;Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/ExportFormatV1;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$ExportDocument;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDocument ()Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;
+	public final fun getFormat ()Lee/schimke/composeai/uibuilder/protocol/ExportFormatV1;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$GetDelta : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
 	public fun <init> (Ljava/lang/String;JI)V
 	public final fun component1 ()Ljava/lang/String;

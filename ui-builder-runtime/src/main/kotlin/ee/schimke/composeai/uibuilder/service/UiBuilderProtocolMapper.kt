@@ -137,6 +137,7 @@ public object UiBuilderProtocolMapper {
       // themselves) and answers outside the envelope. Reaching here is a programming error, not a
       // bad request.
       is UiBuilderServiceRequest.RenameDesign,
+      is UiBuilderServiceRequest.ExportDocument,
       is UiBuilderServiceRequest.GetDesignActions,
       is UiBuilderServiceRequest.DeleteDesign ->
         throw IllegalArgumentException(

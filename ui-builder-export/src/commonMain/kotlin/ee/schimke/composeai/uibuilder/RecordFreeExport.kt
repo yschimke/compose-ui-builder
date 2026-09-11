@@ -23,6 +23,70 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
  */
 object RecordFreeExport {
 
+  /** Catalog-directed source export; ordinary Remote roots need no Wear widget scaffold. */
+  fun generate(
+    document: UiBuilderDocument,
+    platform: UiBuilderCatalogPlatform,
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Generated? {
+    generate(document, packageName, packComponents = packComponents, assets = assets)?.let {
+      return it
+    }
+    if (
+      !UiBuilderBuildFeatures.remoteCompose || platform != UiBuilderCatalogPlatform.REMOTE_COMPOSE
+    )
+      return null
+    return when (
+      val result =
+        InlineRemoteContentExporter.exportRoots(document, packageName, packComponents, assets)
+    ) {
+      is InlineRemoteContentExporter.Result.Emitted ->
+        Generated.Emitted(result.source, result.functionName)
+      is InlineRemoteContentExporter.Result.Refused -> Generated.Refused(result.reasons)
+    }
+  }
+
+  fun generate(
+    document: DesignDocumentV1,
+    platform: UiBuilderCatalogPlatform,
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Generated? {
+    if (!applies(document, platform)) return null
+    if (!document.isRecordFree()) {
+      val unsupported = buildList {
+        if (document.tokenBindings.isNotEmpty())
+          add("tokenBindings: resolve catalog tokens before Remote Kotlin export")
+        document.nodes.forEach { (id, node) ->
+          if (node.predicate != null)
+            add("nodes.$id.predicate: Remote Kotlin predicate lowering is not available")
+          if (node.accessibility != null)
+            add("nodes.$id.accessibility: Remote Kotlin semantics lowering is not available")
+          if (node.assetBindings.isNotEmpty())
+            add("nodes.$id.assetBindings: Remote Kotlin asset binding lowering is not available")
+          if (node.tokenBindings.isNotEmpty())
+            add("nodes.$id.tokenBindings: resolve catalog tokens before Remote Kotlin export")
+        }
+      }
+      if (unsupported.isNotEmpty()) return Generated.Refused(unsupported)
+    }
+    return runCatching {
+      generate(document.toUiBuilderDocument(), platform, packageName, packComponents, assets)
+    }
+      .getOrElse {
+        Generated.Refused(
+          listOf("document: Remote source export could not read the design: ${it.message}")
+        )
+      }
+  }
+
+  fun applies(document: DesignDocumentV1, platform: UiBuilderCatalogPlatform): Boolean =
+    (UiBuilderBuildFeatures.remoteCompose && platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) ||
+      document.isRecordFree()
+
   /**
    * The catalog system ids whose designs export without a component record.
    *

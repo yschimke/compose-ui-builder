@@ -195,6 +195,12 @@ object CapabilityComposeCodeExporter {
       if (remoteScopes.isRemote(node.id)) return@forEach
       val capability = catalog.componentsById[node.componentId]
       when {
+        SHOW_BY_STATE in node.properties ->
+          diagnostics +=
+            node.error(
+              "STATE_SELECTION_GENERATOR_REQUIRED",
+              "Show by state requires the shared state-selection generator",
+            )
         // A placement is a document construct rather than a catalog component: it is not on any
         // catalog's palette, it has no properties or slots of its own, and where it may sit is the
         // question of what its component's body root is — the capability the body already has.

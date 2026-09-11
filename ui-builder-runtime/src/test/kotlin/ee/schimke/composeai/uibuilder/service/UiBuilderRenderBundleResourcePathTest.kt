@@ -1,8 +1,15 @@
 package ee.schimke.composeai.uibuilder.service
 
+import java.nio.file.Files
+import java.util.zip.ZipFile
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The seam between this module and `:ui-builder-render-bundle`, which is a string.
@@ -19,6 +26,34 @@ import kotlin.test.assertTrue
  * this one can only fail for this reason.
  */
 class UiBuilderRenderBundleResourcePathTest {
+
+  @Test
+  fun `the packaged bundle contains only the production renderer preview`() {
+    val file = Files.createTempFile("ui-builder-renderer", ".png").toFile()
+    try {
+      PackagedUiBuilderRenderBundle::class
+        .java
+        .getResourceAsStream(PackagedUiBuilderRenderBundle.RESOURCE)!!
+        .use { file.writeBytes(it.readBytes()) }
+      ZipFile(file).use { zip ->
+        val record =
+          zip.getInputStream(zip.getEntry("previews.json")).bufferedReader().use {
+            Json.parseToJsonElement(it.readText()).jsonObject
+          }
+        assertEquals(
+          listOf(
+            "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
+          ),
+          record.getValue("previews").jsonArray.map {
+            it.jsonObject.getValue("id").jsonPrimitive.content
+          },
+          "The preview plugin must not overwrite the production filter with all editor previews.",
+        )
+      }
+    } finally {
+      file.delete()
+    }
+  }
 
   @Test
   fun `the declared resource path resolves on the classpath`() {
