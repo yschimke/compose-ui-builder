@@ -21,7 +21,7 @@
 # from a daemon nobody knew existed (yschimke/compose-preview-server#344).
 java-server = "17"
 java-ui-builder = "21"
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 ktfmt = "0.27.0"
 ktfmt-cli = "0.64"
 compose-multiplatform = "1.11.1"
