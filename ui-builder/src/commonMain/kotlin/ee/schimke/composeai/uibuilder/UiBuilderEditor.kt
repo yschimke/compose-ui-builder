@@ -1580,28 +1580,6 @@ fun UiBuilderEditor(
     )
   }
 
-  // Composed but never shown: it photographs a component and hands back the pixels. Mounted here
-  // rather than inside the panel so that a capture survives the inspector switching tabs.
-  val pendingCapture = captureRequest
-  ReferenceComponentCapture(
-    request = pendingCapture,
-    catalog = catalog,
-    document = state.document,
-    onCaptured = { captured ->
-      captureRequest = null
-      captureFailure =
-        if (captured == null) "That component could not be captured from this catalog." else null
-      if (captured != null && pendingCapture != null) {
-        dispatch(
-          UiBuilderEditorEvent.PlaceReferencePiece(
-            captured,
-            componentId = pendingCapture.componentId,
-          )
-        )
-      }
-    },
-  )
-
   // Provided once here rather than at each surface: the canvas, every palette thumbnail and the
   // preview frame all draw a pack component, and all of them should draw its placeholder.
   CompositionLocalProvider(
@@ -1613,6 +1591,31 @@ fun UiBuilderEditor(
     // variant pane draw the same widget, and all of them should draw the frame being viewed.
     LocalWearWidgetHostShape provides state.wearWidgetHostShape,
   ) {
+    // Composed but never shown: it photographs a component and hands back the pixels. Mounted
+    // here rather than inside the panel so that a capture survives the inspector switching tabs,
+    // and inside the provider rather than beside it so the specimen is drawn with the same
+    // catalog ids the canvas is: outside it, a component this canvas has no case for was
+    // photographed as the error container while the canvas beside it drew the placeholder.
+    val pendingCapture = captureRequest
+    ReferenceComponentCapture(
+      request = pendingCapture,
+      catalog = catalog,
+      document = state.document,
+      onCaptured = { captured ->
+        captureRequest = null
+        captureFailure =
+          if (captured == null) "That component could not be captured from this catalog." else null
+        if (captured != null && pendingCapture != null) {
+          dispatch(
+            UiBuilderEditorEvent.PlaceReferencePiece(
+              captured,
+              componentId = pendingCapture.componentId,
+            )
+          )
+        }
+      },
+    )
+
     MaterialTheme(colorScheme = EditorColors) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxWidth < 840.dp
