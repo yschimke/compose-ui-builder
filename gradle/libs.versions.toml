@@ -67,7 +67,7 @@ composeai-preview-daemon = "3.2.0"
 # component placements and loop rows this repository's canvas and exporter already draw from its
 # own document model.
 composeai-contracts = "2.16.0"
-rc-players = "1.60.1"
+rc-players = "1.60.2"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
