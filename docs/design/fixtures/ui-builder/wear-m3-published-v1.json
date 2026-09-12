@@ -1,5 +1,5 @@
 {
-  "$comment": "GENERATED — captured verbatim from the `design-artifacts/wear-m3-catalog` delivery branch of yschimke/wear-m3-catalog at 13a624728, which `composePreviewDiscover` wrote from wear-m3-catalog b1bd5d19 (the merge of wear-m3-catalog#466, the composePreviewPlugin 2.11.1 pin). That pin is why this fixture can exist at all: every Design Artifacts run since 7be2de73 had SKIPPED `composePreviewBundle` on this KMP-Android module, so the branch served a document generated before the catalog adopted its own @file:CatalogGroup vocabulary — ten shelves whose names its components had already stopped using. Regenerate the same way — take the delivery branch's `ui-builder.json` and re-add this key — whenever wear-m3-catalog gains or loses a component, or its policy changes what a component declares.\n\nNOT yet gated in CI, unlike its remote-m3 and m3 siblings — but no longer for want of review. All 23 differences this document scores against the frozen catalog are carried by `wear-m3-differences.json`, each pinning both sides: **11** reshelved with the record symbol unchanged, **7** reshelved while dropping a frozen `variantProperty` (`button`, `card`, `date-picker`, `edge-button`, `icon-button`, `text-button`, `time-picker`), and **5** the frozen catalog lists that this menu does not offer. The gate reports 0 differences, 0 unstated facts and 0 unusable exemptions against it.\n\nWhat still blocks `--strict` is the third of its seven conditions, \"a fact the catalog states that the frozen one cannot check\": 60 unreviewed fields remain — 58 components the frozen catalog has no opinion about, plus `code` and `templates`. Those are ADDITIONS rather than losses, so accepting them is lower-risk than the 23 were; they are nonetheless unread, and two of the ones that were read turned out to be catalog-side collisions rather than intent (`circular-progress-indicator` shelved on Buttons, `edge-button` bound to AlertDialog's overload), fixed upstream in wear-m3-catalog#474 rather than recorded here. That is the argument against bulk-accepting the rest.\n\nRE-CAPTURED 2026-09-12 from the delivery branch at 7f8b5134f, after wear-m3-catalog#474 and the Design Artifacts run that published it. That run is what moved the two collisions this fixture previously recorded: `circular-progress-indicator` Buttons → `Progress indicators`, and `wear-m3/edge-button` rebound from `AlertDialogDefaults.EdgeButton` on `Dialogs` to the standalone `EdgeButtonKt.EdgeButton` on `Edge-hugging buttons`. `edge-button`'s entry was RE-PINNED, not removed: the substitution it recorded no longer exists, but a real difference survives — the policy still states no `variantProperty` where the frozen catalog states `size` — so it is now the seventh variant loss above rather than a class of its own, and its `why` keeps the substitution as history. That is why the counts here read 11/7/5 and not 11/6/1/5.",
+  "$comment": "GENERATED — captured verbatim from the `design-artifacts/wear-m3-catalog` delivery branch of yschimke/wear-m3-catalog at 94905f4d7, which `composePreviewDiscover` wrote from wear-m3-catalog 385536a6 (the merge of wear-m3-catalog#488). Regenerate the same way — take the delivery branch's `ui-builder.json` and re-add this key — whenever wear-m3-catalog gains or loses a component, or its policy changes what a component declares.\n\n78 record components and an implied 69-entry menu. The two differ by the nine preview frames the catalog EXCLUDES: `sticker`, `screen-sticker`, `transparent-screen-sticker`, `full-screen-sticker`, `edge-button-sticker`, `animated-sticker` and `edge-button-screen` from `CatalogThemeKt`, plus `wear-screen` and `media-row-sticker`. None is a Wear Material 3 component: every sticker is the frame a component is drawn INSIDE, the Design Kit publishes no node for any of them, and nobody places one in a design. All nine stay in the record carrying their `excluded` reason — what the schema means by \"kept off the shelf, with the stated reason\" — and none is offered for insertion. The same exclusion, and the same reasoning, as `m3/sticker` in the sibling m3-catalog and `remote-m3/remote-sticker` next door.\n\nWHY THIS CAPTURE AND NOT THE LAST ONE. The previous fixture predated the exclusions entirely — it recorded all 78 components as offered, because it was taken before wear-m3-catalog#479 excluded the frames and before #483 corrected what two of those `excluded` strings said. A gate run against it would have compared the live catalog to a document that no longer existed, which is the failure the remote-m3 fixture's own note warns about. Re-capture after a republish rather than trusting a green run against a stale fixture.\n\nGetting this capture took two attempts, for a reason worth recording: the republish that produced it came from #488's MERGE PUSH, not from the lane dispatch aimed at it. #488 touched `design-artifacts.yml`, a shared render input, so the run it triggered re-rendered all three lanes and the dispatch was a duplicate. Check whether a push has already scheduled a lane before dispatching one.",
   "schema": "compose-ui-builder-catalog/v1",
   "catalog": {
     "id": "wear-m3",
@@ -260,27 +260,6 @@
         },
         "wear-m3/one-handed-gesture-scroll-indicator": {
           "group": "One-handed gestures"
-        },
-        "wear-m3/edge-button-sticker": {
-          "group": "Edge-hugging buttons"
-        },
-        "wear-m3/full-screen-sticker": {
-          "group": "Sign-in"
-        },
-        "wear-m3/screen-sticker": {
-          "group": "Fast scrolling"
-        },
-        "wear-m3/sticker": {
-          "group": "Text"
-        },
-        "wear-m3/transparent-screen-sticker": {
-          "group": "Progress indicators"
-        },
-        "wear-m3/wear-screen": {
-          "group": "Lists and screens"
-        },
-        "wear-m3/media-row-sticker": {
-          "group": "Media controls"
         }
       }
     },
@@ -1560,7 +1539,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The frame for a motion recording — an `AppScaffold` with the clock stubbed out. Already absent from the component menu, so this entry changes nothing there; it is here to put the published reason on the record, which keeps every excluded component and carries the `excluded` string beside it.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1577,7 +1556,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The scrollable screen the edge-button reveal is recorded through. Its own KDoc says it is not a component frame: the kit publishes no screen cell for it. Already absent from the component menu, so this entry changes nothing there; it is here to put the published reason on the record, which keeps every excluded component and carries the `excluded` string beside it.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1594,7 +1573,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The frame pinned to the 192dp base screen width, so an edge button draws at the width whose arc it is clipped to. Published on `Edge-hugging buttons`.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1611,7 +1590,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The screen frame with the theme background filled. Published on `Sign-in`.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1628,7 +1607,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The same frame inside an `AppScaffold` with a stubbed `TimeText`, so a sticker draws as a screen. Published on `Fast scrolling`.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1645,7 +1624,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The bare frame — `CatalogMaterialTheme { Box { content() } }`. Published on `Text`.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1662,7 +1641,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The screen frame without a background fill. Published on `Progress indicators`.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1679,7 +1658,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The list sections' screen frame — `MaterialTheme` plus an `AppScaffold` with a stubbed `TimeText`. It sits in a file that carries a `@file:CatalogGroup`, which is the only reason it published on a plausible-looking shelf (`Lists and screens`) rather than a scattered one.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
@@ -1696,7 +1675,7 @@
         "starter": {},
         "variantProperty": null,
         "variants": {},
-        "excluded": null,
+        "excluded": "the catalog's own preview frame, not a Wear Material 3 component: every sticker is drawn inside one, the Design Kit publishes no node for it, and nobody places one in a design. Same exclusion, and the same reason, as `m3/sticker` in the sibling m3-catalog. The Media Controls row frame — a `Sticker` narrowed to the kit's 192dp base screen width and a fixed row height. Same as `wear-screen`: its file's `@file:CatalogGroup` is why it published on `Media controls` rather than a scattered shelf.",
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
