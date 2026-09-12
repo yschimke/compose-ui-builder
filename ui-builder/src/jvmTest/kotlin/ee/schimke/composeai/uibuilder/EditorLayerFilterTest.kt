@@ -190,17 +190,34 @@ class EditorLayerFilterTest {
   }
 
   @Test
-  fun `an authoritative update does not drop out of preview mode`() {
-    // Same reconciliation, same reason: preview mode is view state, and saving while previewing
-    // threw you back into the editor without explaining why.
-    val previewing =
+  fun `an authoritative update does not close the panes somebody opened`() {
+    // Same reconciliation, same reason: which panes are open is view state, and saving while
+    // watching the preview threw you back into the editor without explaining why.
+    val watching =
       reducer.reduce(
-        reducer.initial(document, selectedNodeId = "root-surface"),
-        UiBuilderEditorEvent.TogglePreview,
+        reducer.reduce(
+          reducer.initial(document, selectedNodeId = "root-surface"),
+          UiBuilderEditorEvent.TogglePane(EditorPane.Preview),
+        ),
+        UiBuilderEditorEvent.TogglePane(EditorPane.Editor),
       )
-    assertTrue(previewing.previewMode)
+    assertEquals(setOf(EditorPane.Preview), watching.panes)
+    assertTrue(!watching.editing)
 
-    assertTrue(reducer.reconciled(previewing, previewing.document.copy(revision = 99)).previewMode)
+    assertEquals(
+      setOf(EditorPane.Preview),
+      reducer.reconciled(watching, watching.document.copy(revision = 99)).panes,
+    )
+  }
+
+  @Test
+  fun `the last open pane cannot be switched off`() {
+    // A workspace with no panes is a blank window, and nothing left on screen would get you out.
+    val opened = reducer.initial(document, selectedNodeId = "root-surface")
+    assertEquals(setOf(EditorPane.Editor), opened.panes)
+
+    val refused = reducer.reduce(opened, UiBuilderEditorEvent.TogglePane(EditorPane.Editor))
+    assertEquals(setOf(EditorPane.Editor), refused.panes)
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()

@@ -160,10 +160,12 @@ it:
   sense — the real component, not a document — and correspondingly cannot author anything the
   frontend was not compiled with, which is why it substitutes only for `compose-m3` and falls back
   to snapshots elsewhere. Remote Compose needs the opposite property: content that arrives as data.
-- The JVM Compose render port (`ServeUiBuilderNativePreview`, the editor's **2 panes** choice)
-  renders a saved revision with real Compose on the host. It is the static target preview beside
-  the Wasm editor, not a replacement for it. **3 panes** adds a clean interactive Wasm rendition;
-  for `remote-m3` that is the common CMP player on the same wire document.
+- The JVM Compose render port (`ServeUiBuilderNativePreview`, the editor's **Native** pane) renders
+  a saved revision with real Compose on the host. It is the target-platform surface beside the Wasm
+  panes, not a replacement for them. The workspace's three panes are switched on and off
+  independently — `Editor` and `Preview` are both this browser's Wasm, and only `Native` leaves it —
+  so a host with no compile lane plays the exported document in the native pane instead; for
+  `remote-m3` that is the common CMP player on the same wire document.
 
 ![Editor, static target preview, and interactive preview](../evidence/ui-builder-remote-compose/workspace-three-panes.png)
 

@@ -441,14 +441,6 @@ data class UiBuilderEditorState(
    */
   val componentDrift: List<ComponentDriftFinding> = emptyList(),
   val layerQuery: String = "",
-  /**
-   * Whether taps on the canvas drive the screen instead of selecting layers.
-   *
-   * The renderer has always been interactive — a click binding writes state and the composition
-   * reacts — but in the editor a full-size selection overlay sits on top of it and swallows every
-   * tap. So a screen wired to react could not be made to react by the person who wired it.
-   */
-  val previewMode: Boolean = false,
   val operationSequence: Int = 0,
   val lastOutcome: CommandOutcome? = null,
   val selectionBeforeOperations: Map<String, String?> = emptyMap(),
@@ -490,10 +482,12 @@ data class UiBuilderEditorState(
    */
   val revisionCompare: Int? = null,
   /**
-   * Which renderer draws the design. [EditorPreviewSurface.Wasm] unless a host offers another — the
-   * editor's own canvas is the one that always exists.
+   * Which design panes the workspace draws, each switched on or off on its own.
+   *
+   * [EditorPane.Editor] alone unless a host or a catalog asks for more: the authoring canvas is the
+   * one pane that always exists and the one this tool is for. Never empty — see [EditorPane].
    */
-  val previewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
+  val panes: Set<EditorPane> = setOf(EditorPane.Editor),
   /**
    * Which host container a Wear widget design is framed in, on the canvas and in the native render.
    *
@@ -543,6 +537,18 @@ data class UiBuilderEditorState(
     copy(reference = reference)
 
   /**
+   * Whether the authoring canvas is on screen at all.
+   *
+   * The selection overlay, the hover editor and every editing chord are gated on this rather than
+   * on a mode flag of their own: with the editor pane switched off there is nothing on screen to
+   * show what a Delete or an arrow just did, so those chords would edit invisibly and surprise
+   * later. It is the same rule the old Design/Preview switch enforced, asked of the pane that
+   * actually draws the overlay.
+   */
+  val editing: Boolean
+    get() = EditorPane.Editor in panes
+
+  /**
    * The anchor: the most recently selected node.
    *
    * Every single-selection question in the editor — which node the inspector edits, where an insert
@@ -575,21 +581,41 @@ sealed interface EditorGeneratedCode {
 }
 
 /**
- * How many design panes the workspace draws.
+ * One of the workspace's design panes, each switched on or off on its own.
  *
- * The authoring canvas is always the first pane and always Compose/Wasm. [Native] adds the static
- * target render; [Both] also adds a clean interactive Wasm rendition. The enum names remain stable
- * because hosts and visual fixtures already select them, while the UI presents the pane meaning.
+ * These used to be a ladder — one, two or three panes, chosen as a single value in a fixed order —
+ * and a ladder cannot say "the preview on its own". It also put the *compiled* surface on the
+ * second rung, so asking for a second look at a design cost a host round trip whether or not the
+ * target platform was the question anyone had. These are three independent answers to "what am I
+ * looking at", drawn left to right in declaration order.
+ *
+ * Only [Native] leaves this browser. [Editor] and [Preview] are the same Wasm renderer with and
+ * without the authoring overlay on top, which is why switching [Preview] on is free and instant.
+ *
+ * At least one is always on. A workspace with no panes is a blank window, so the reducer refuses to
+ * switch off the last one standing and [WorkspacePanesMenu] draws that row disabled rather than
+ * letting somebody find out by pressing it.
  */
-enum class EditorPreviewSurface {
-  /** The editor's own Compose/Wasm canvas only. */
-  Wasm,
+enum class EditorPane(
+  /** What the toolbar calls it, joined with the other open panes — so: short. */
+  val label: String,
+  /** What the menu row calls it, where there is room for the whole name. */
+  val title: String,
+) {
+  /** The authoring canvas: this browser's Compose, editable, and where a node is selected. */
+  Editor("Editor", "Visual editor"),
 
-  /** Editor plus a static target-platform render compiled by the host. */
-  Native,
+  /**
+   * The same renderer with the editor taken off it, across the design's devices and configurations.
+   *
+   * Not a second opinion about fidelity — it is the same pixels the canvas draws — but about
+   * *interaction*: no selection overlay swallowing taps, so a screen wired to react can be made to
+   * react by the person who wired it, and every device and axis the design claims side by side.
+   */
+  Preview("Preview", "Preview"),
 
-  /** Editor, static target preview, and a clean interactive rendition. */
-  Both,
+  /** The design as the target platform draws it, compiled and played by the host. */
+  Native("Native", "Native"),
 }
 
 enum class EditorInspectorMode {
@@ -733,13 +759,15 @@ sealed interface UiBuilderEditorEvent {
   data class SearchLayers(val query: String) : UiBuilderEditorEvent
 
   /**
-   * Hands the canvas to the screen and back.
+   * Switches one design pane on, or off.
    *
-   * The only editor event that stays live while previewing. Everything else is suppressed, because
-   * the chords that select and delete would otherwise still be editing a document nobody can see
-   * themselves editing.
+   * The only family of editor events that stays live with the authoring canvas switched off.
+   * Everything else is suppressed, because the chords that select and delete would otherwise still
+   * be editing a document nobody can see themselves editing — and a pane toggle is the way back.
+   *
+   * Switching off the last open pane is refused rather than obeyed: see [EditorPane].
    */
-  data object TogglePreview : UiBuilderEditorEvent
+  data class TogglePane(val pane: EditorPane) : UiBuilderEditorEvent
 
   /** Shows or hides the generated-Kotlin pane under the canvas. */
   data object ToggleCodePane : UiBuilderEditorEvent
@@ -763,8 +791,8 @@ sealed interface UiBuilderEditorEvent {
    */
   data class CompareRevision(val revision: Int) : UiBuilderEditorEvent
 
-  /** Chooses which renderer draws the design. */
-  data class ShowPreviewSurface(val surface: EditorPreviewSurface) : UiBuilderEditorEvent
+  /** Sets the whole open-pane set at once. An empty set is ignored — see [EditorPane]. */
+  data class ShowPanes(val panes: Set<EditorPane>) : UiBuilderEditorEvent
 
   /**
    * Chooses which host container a Wear widget design is framed in.
@@ -1373,14 +1401,13 @@ class UiBuilderEditorReducer(
       // re-imported.
       componentDrift = state.componentDrift.stillDescribing(document),
       layerQuery = state.layerQuery,
-      previewMode = state.previewMode,
       codePaneVisible = state.codePaneVisible,
       // The strip survives an authoritative document; what it was *showing* does not. The rebuilt
       // collaboration state carries none of the mutations that built the arriving document, so the
       // revision somebody was looking at is one this editor can no longer picture — the strip
       // honestly restarts at the new document rather than holding a peek it cannot redraw.
       historyBarVisible = state.historyBarVisible,
-      previewSurface = state.previewSurface,
+      panes = state.panes,
       wearWidgetHostShape = state.wearWidgetHostShape,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
@@ -1443,7 +1470,14 @@ class UiBuilderEditorReducer(
           expandedCatalogComponents = state.expandedCatalogComponents.toggled(event.componentId)
         )
       is UiBuilderEditorEvent.SearchLayers -> state.copy(layerQuery = event.query)
-      is UiBuilderEditorEvent.TogglePreview -> state.copy(previewMode = !state.previewMode)
+      is UiBuilderEditorEvent.TogglePane ->
+        state.copy(
+          panes =
+            if (event.pane !in state.panes) state.panes + event.pane
+            // The last pane standing stays: the alternative is an empty workspace, which is not a
+            // view of the design and not a state anything on screen could get you out of.
+            else if (state.panes.size > 1) state.panes - event.pane else state.panes
+        )
       is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
       is UiBuilderEditorEvent.ToggleHistoryBar ->
         // Shutting the strip ends whatever it was showing. A peek that outlived the control it was
@@ -1458,7 +1492,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.CompareRevision ->
         if (state.revisionPeek == null || state.revisionPeek == event.revision) state
         else state.copy(revisionCompare = event.revision)
-      is UiBuilderEditorEvent.ShowPreviewSurface -> state.copy(previewSurface = event.surface)
+      is UiBuilderEditorEvent.ShowPanes ->
+        if (event.panes.isEmpty()) state else state.copy(panes = event.panes)
       is UiBuilderEditorEvent.ShowWearWidgetHostShape ->
         state.copy(wearWidgetHostShape = event.shape)
       is UiBuilderEditorEvent.SelectAllMatches -> selectAllMatches(state)

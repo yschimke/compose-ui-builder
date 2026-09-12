@@ -85,13 +85,18 @@ class EditorShortcutTableTest {
   }
 
   @Test
-  fun `previewing leaves only the chord that ends it`() {
+  fun `a closed canvas leaves only the chords that open a pane`() {
     // With the selection overlay gone there is nothing on screen to show what a Delete or an arrow
     // just did, so those chords would edit invisibly and surprise later.
-    val previewing = EditorChord(Key.Enter, command = true, shift = false)
     assertEquals(
-      UiBuilderEditorEvent.TogglePreview,
-      editorShortcutFor(previewing, previewing = true)?.event,
+      UiBuilderEditorEvent.TogglePane(EditorPane.Editor),
+      editorShortcutFor(EditorChord(Key.Enter, command = true, shift = true), editing = false)
+        ?.event,
+    )
+    assertEquals(
+      UiBuilderEditorEvent.TogglePane(EditorPane.Preview),
+      editorShortcutFor(EditorChord(Key.Enter, command = true, shift = false), editing = false)
+        ?.event,
     )
     listOf(Key.Delete, Key.Z, Key.C, Key.V, Key.D, Key.DirectionDown, Key.P).forEach { key ->
       assertNull(
@@ -101,15 +106,27 @@ class EditorShortcutTableTest {
             command = key != Key.Delete && key != Key.DirectionDown,
             shift = false,
           ),
-          previewing = true,
+          editing = false,
         ),
-        "$key should be inert while previewing",
+        "$key should be inert with the authoring canvas closed",
       )
     }
     // And every one of them is live again the moment the canvas comes back.
     assertNotNull(editorShortcutFor(EditorChord(Key.Delete, command = false, shift = false)))
-    // Ctrl/⌘+P is the browser's print dialog and is deliberately not ours, previewing or not.
+    // Ctrl/⌘+P is the browser's print dialog and is deliberately not ours, pane or no pane.
     assertNull(editorShortcutFor(EditorChord(Key.P, command = true, shift = false)))
+  }
+
+  @Test
+  fun `the shifted Enter reaches the editor pane rather than the preview one`() {
+    assertEquals(
+      UiBuilderEditorEvent.TogglePane(EditorPane.Editor),
+      resolve(EditorChord(Key.Enter, command = true, shift = true))?.event,
+    )
+    assertEquals(
+      UiBuilderEditorEvent.TogglePane(EditorPane.Preview),
+      resolve(EditorChord(Key.Enter, command = true, shift = false))?.event,
+    )
   }
 
   @Test

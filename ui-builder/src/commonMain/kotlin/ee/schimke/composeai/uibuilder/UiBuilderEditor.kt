@@ -94,9 +94,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -364,7 +361,6 @@ fun UiBuilderEditor(
    * seed that cannot be applied is not a reason to refuse to open the design.
    */
   initialEdits: List<UiBuilderEditorEvent> = emptyList(),
-  initialPreviewMode: Boolean = false,
   initialCodePaneVisible: Boolean = false,
   /**
    * Whether the strip of revision thumbnails is open when the design opens.
@@ -436,7 +432,14 @@ fun UiBuilderEditor(
   onRequestDocumentPreview: (suspend (UiBuilderDocument) -> UiBuilderDocumentPreview)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
-  initialPreviewSurface: EditorPreviewSurface = EditorPreviewSurface.Wasm,
+  /**
+   * Which design panes the workspace opens with.
+   *
+   * The authoring canvas alone, which is what somebody who opened a design editor asked for. A host
+   * that wants another pane in the picture — a preview that exists to diff one — names it here; a
+   * catalog whose canvas is only a stand-in has the native pane added for it below.
+   */
+  initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   /**
    * What a read of the project's component library said about the components this design imported.
@@ -679,26 +682,25 @@ fun UiBuilderEditor(
             inspectorMode = initialInspectorMode,
             addBeside = initialAddBeside,
             variantAxes = initialVariantAxes,
-            previewMode = initialPreviewMode,
             codePaneVisible = initialCodePaneVisible,
             historyBarVisible = initialHistoryBarVisible,
             enabledPacks =
               initialEnabledPacks.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
-            // A catalog whose canvas is only a stand-in opens on the host's renderer instead, where
-            // the host has one. Not a preference — on `wear-m3` the canvas draws Material 3
+            // A catalog whose canvas is only a stand-in opens with the host's renderer beside it,
+            // where the host has one. Not a preference — on `wear-m3` the canvas draws Material 3
             // lookalikes because a Wasm build cannot link `androidx.wear.compose:compose-material3`
-            // at all, so a Wasm-first editor opens every Wear design on a picture of the wrong
-            // library. An explicit [initialPreviewSurface] from the host still wins: it is a host
-            // saying which surface it wants captured.
-            previewSurface =
+            // at all, so a Wasm-only workspace opens every Wear design on a picture of the wrong
+            // library. An explicit [initialPanes] from the host still wins: a host naming its panes
+            // is a host saying which surfaces it wants captured.
+            panes =
               if (
-                initialPreviewSurface == EditorPreviewSurface.Wasm &&
+                initialPanes == setOf(EditorPane.Editor) &&
                   !catalog.previewSurfaces.wasm.fidelity.isAuthoritative &&
                   onRequestNativeRender != null
               ) {
-                EditorPreviewSurface.Native
+                setOf(EditorPane.Editor, EditorPane.Native)
               } else {
-                initialPreviewSurface
+                initialPanes
               },
           )
       )
@@ -1172,114 +1174,108 @@ fun UiBuilderEditor(
     remember(state.document, devicePresets, state.variantAxes) {
       state.document.variantPanes(devicePresets, state.variantAxes)
     }
-  val livePreview: @Composable (Modifier) -> Unit = { modifier ->
-    if (UiBuilderBuildFeatures.remoteCompose && onRequestDocumentPreview != null) {
-      RemoteDocumentPreviewPane(
-        document = state.document,
-        authoritativeGeneration = authoritativeGeneration,
-        request = onRequestDocumentPreview,
-        modifier = modifier,
-      )
-    } else {
-      LiveWasmPreviewPane(document = state.document, modifier = modifier)
-    }
+  // The read-only pane: the same renderer, with the editor taken off it. Free of the host, which is
+  // the point — see [EditorPane.Preview].
+  val previewPane: @Composable (Modifier) -> Unit = { modifier ->
+    DesignPreviewPane(
+      document = state.document,
+      variants = variantPanes,
+      canvasClaim = catalog.previewSurfaces.wasm,
+      modifier = modifier,
+    )
   }
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
-    if (state.previewMode && onRequestDocumentPreview != null) {
-      livePreview(modifier)
-    } else {
-      PinnedDesignCanvas(
-        document = state.document,
-        variants = variantPanes,
-        selectedNodeId = state.selectedNodeId,
-        onNodeSelected = {
-          focusEditor()
-          dispatch(UiBuilderEditorEvent.SelectNode(it))
-        },
-        onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
-        onCanvasBounds = {
-          canvasBounds = it
-          onCanvasBoundsChanged(it)
-        },
-        dropHovered = canvasDropHovered,
-        dropTarget = draggedTarget,
-        dragPreview =
-          if (draggedRemoteThumbnail == null)
-            draggedComponentId?.let { reducer.previewDocument(it, draggedComponentVariant) }
-          else null,
-        dragPreviewBitmap = draggedRemoteThumbnail,
-        dragPosition = catalogDragPosition,
-        showSelectionOverlay = showSelectionOverlay && !state.previewMode,
-        reference = state.reference,
-        onMarkDrawn = { kind, points ->
-          dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
-        },
-        onPieceMoved = { pieceId, dx, dy ->
-          dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
-        },
-        collaborators = collaborators,
-        commentThreads = comments.pinned(state.reference.marks),
-        selectedThreadId = selectedThreadId,
-        onCommentThreadSelected = { threadId ->
-          selectThread(threadId)
-          dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments))
-        },
-        onInspectionSnapshot = { snapshot ->
-          canvasInspection = snapshot
-          onInspectionSnapshot?.invoke(snapshot)
-        },
-        onInspectionInvalidated = onInspectionInvalidated,
-        selectionMenu = selectionMenu,
-        hoverEditor =
-          if (state.previewMode || state.selection.size != 1) null
-          else {
-            {
-              SelectionHoverEditor(
-                label = selectionLabel,
-                // The same rule the panel opens on: what the node carries, which is what the export
-                // would write. A hovering card is the last place to list what a component *could*
-                // have.
-                fields =
-                  reducer.propertyFields(state).filter { field ->
-                    field.written ||
-                      field.required ||
-                      field.boundVariable != null ||
-                      field.error != null
-                  },
-                modifierFields = reducer.modifierFields(state),
-                focusTarget = hoverFocusTarget,
-                onFocusHandled = { hoverFocusTarget = null },
-                onCommitProperty = { name, value ->
-                  state.selectedNodeId?.let {
-                    dispatch(UiBuilderEditorEvent.CommitProperty(it, name, value))
-                  }
+    PinnedDesignCanvas(
+      document = state.document,
+      variants = variantPanes,
+      selectedNodeId = state.selectedNodeId,
+      onNodeSelected = {
+        focusEditor()
+        dispatch(UiBuilderEditorEvent.SelectNode(it))
+      },
+      onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
+      onCanvasBounds = {
+        canvasBounds = it
+        onCanvasBoundsChanged(it)
+      },
+      dropHovered = canvasDropHovered,
+      dropTarget = draggedTarget,
+      dragPreview =
+        if (draggedRemoteThumbnail == null)
+          draggedComponentId?.let { reducer.previewDocument(it, draggedComponentVariant) }
+        else null,
+      dragPreviewBitmap = draggedRemoteThumbnail,
+      dragPosition = catalogDragPosition,
+      showSelectionOverlay = showSelectionOverlay,
+      reference = state.reference,
+      onMarkDrawn = { kind, points ->
+        dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
+      },
+      onPieceMoved = { pieceId, dx, dy ->
+        dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
+      },
+      collaborators = collaborators,
+      commentThreads = comments.pinned(state.reference.marks),
+      selectedThreadId = selectedThreadId,
+      onCommentThreadSelected = { threadId ->
+        selectThread(threadId)
+        dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments))
+      },
+      onInspectionSnapshot = { snapshot ->
+        canvasInspection = snapshot
+        onInspectionSnapshot?.invoke(snapshot)
+      },
+      onInspectionInvalidated = onInspectionInvalidated,
+      selectionMenu = selectionMenu,
+      hoverEditor =
+        if (state.selection.size != 1) null
+        else {
+          {
+            SelectionHoverEditor(
+              label = selectionLabel,
+              // The same rule the panel opens on: what the node carries, which is what the export
+              // would write. A hovering card is the last place to list what a component *could*
+              // have.
+              fields =
+                reducer.propertyFields(state).filter { field ->
+                  field.written ||
+                    field.required ||
+                    field.boundVariable != null ||
+                    field.error != null
                 },
-                onCommitModifier = { field, value ->
-                  state.selectedNodeId?.let {
-                    dispatch(
-                      UiBuilderEditorEvent.SetModifierValue(
-                        it,
-                        field.type,
-                        field.field,
-                        value,
-                        field.index,
-                      )
+              modifierFields = reducer.modifierFields(state),
+              focusTarget = hoverFocusTarget,
+              onFocusHandled = { hoverFocusTarget = null },
+              onCommitProperty = { name, value ->
+                state.selectedNodeId?.let {
+                  dispatch(UiBuilderEditorEvent.CommitProperty(it, name, value))
+                }
+              },
+              onCommitModifier = { field, value ->
+                state.selectedNodeId?.let {
+                  dispatch(
+                    UiBuilderEditorEvent.SetModifierValue(
+                      it,
+                      field.type,
+                      field.field,
+                      value,
+                      field.index,
                     )
-                  }
-                },
-                onTextInputFocusChanged = { textInputFocused = it },
-              )
-            }
-          },
-        zoom = canvasZoom,
-        onZoomChanged = {
-          focusEditor()
-          canvasZoom = it
+                  )
+                }
+              },
+              onTextInputFocusChanged = { textInputFocused = it },
+            )
+          }
         },
-        contentAlignment = alignment,
-        modifier = modifier,
-      )
-    }
+      zoom = canvasZoom,
+      onZoomChanged = {
+        focusEditor()
+        canvasZoom = it
+      },
+      contentAlignment = alignment,
+      modifier = modifier,
+    )
   }
   // Cached against the document, because it is not cheap and depends on nothing else: it walks
   // every node and every property against the catalog, traverses the graph and looks for cycles.
@@ -1345,10 +1341,23 @@ fun UiBuilderEditor(
   // projection plus a full generator run, which nobody should pay for on every recomposition — or
   // at all, with the pane closed.
   var nativeRender by remember(document.id) { mutableStateOf(initialNativeRender) }
-  // Whether the chosen surface needs the host to draw anything. Derived rather than stored: the
-  // surface is the setting, and a second flag that could disagree with it is a bug waiting.
-  val nativeRequested =
-    onRequestNativeRender != null && state.previewSurface != EditorPreviewSurface.Wasm
+  // The native pane is the host's compiled render wherever the host has a compile lane, because
+  // that lane is the only surface here that is actually the target platform: Robolectric-backed
+  // Android, or the desktop daemon. The Remote Compose player is this browser playing a document
+  // the host exported — nearer the Wasm panes than a native render — so it stands in only where
+  // there is no compile lane at all, which is the one case where it is the most faithful thing
+  // available.
+  val playedNativeRequest = onRequestDocumentPreview?.takeIf {
+    onRequestNativeRender == null && UiBuilderBuildFeatures.remoteCompose
+  }
+  // Whether the native pane can draw anything at all. A host with neither lane still gets the row
+  // in the menu, disabled and carrying the reason — a control that vanishes teaches nobody that the
+  // pane exists.
+  val nativeAvailable = onRequestNativeRender != null || playedNativeRequest != null
+  // Whether the open panes need the host to compile anything. Derived rather than stored: the pane
+  // set is the setting, and a second flag that could disagree with it is a bug waiting. Only the
+  // native pane ever asks — which is the whole reason [EditorPane.Preview] is a separate choice.
+  val nativeRequested = onRequestNativeRender != null && EditorPane.Native in state.panes
   var nativePending by remember(document.id) { mutableStateOf(false) }
   // Keyed on the revision as well as the request, so asking again after an edit re-renders rather
   // than showing the frame the design used to have — a stale native render beside a live canvas is
@@ -1367,6 +1376,30 @@ fun UiBuilderEditor(
         UiBuilderNativeRender(failure = failure.message ?: "the native render request failed")
       }
     nativePending = false
+  }
+  // The third pane: the design as the target platform draws it, compiled on the host — or played
+  // from the host's own export where there is no compile lane. Either way it is the host's answer
+  // rather than this browser's, which is why it is a separate pane from [EditorPane.Preview].
+  val nativePane: @Composable (Modifier) -> Unit = { paneModifier ->
+    if (playedNativeRequest != null) {
+      RemoteDocumentPreviewPane(
+        document = state.document,
+        authoritativeGeneration = authoritativeGeneration,
+        request = playedNativeRequest,
+        modifier = paneModifier,
+      )
+    } else {
+      NativeRenderPane(
+        render = nativeRender,
+        pending = nativePending,
+        selectedNodeId = state.selectedNodeId,
+        onNodeSelected = {
+          focusEditor()
+          dispatch(UiBuilderEditorEvent.SelectNode(it))
+        },
+        modifier = paneModifier,
+      )
+    }
   }
   LaunchedEffect(pendingRemoteSource) {
     val source = pendingRemoteSource ?: return@LaunchedEffect
@@ -1660,7 +1693,7 @@ fun UiBuilderEditor(
               editorShortcut(
                 event,
                 enabled = !textInputFocused,
-                previewing = state.previewMode,
+                editing = state.editing,
                 dispatch = ::dispatch,
               )
             }
@@ -1705,11 +1738,9 @@ fun UiBuilderEditor(
               onSyncToServer = onSyncToServer,
               exportHost = exportHost,
               onComponentPacks = onComponentPacks,
-              // Absent where the host cannot draw: a project with no compile lane has exactly one
-              // renderer, and offering a choice between it and nothing is not a choice.
-              previewSurface = if (onRequestNativeRender == null) null else state.previewSurface,
+              panes = state.panes,
               previewSurfaces = catalog.previewSurfaces,
-              nativeAvailable = onRequestNativeRender != null,
+              nativeAvailable = nativeAvailable,
               dispatch = ::dispatch,
             )
           }
@@ -1794,29 +1825,23 @@ fun UiBuilderEditor(
                     )
                   } else {
                     Row(Modifier.fillMaxWidth().weight(1f)) {
-                      // Design mode owns the authoring coordinates; Preview plays the document in
-                      // this same position. Additional panes compare the same saved design.
-                      canvas(
-                        Modifier.weight(1f)
-                          .fillMaxHeight()
-                          .background(Color(0xff0d0e11))
-                          .padding(24.dp),
-                        Alignment.Center,
-                      )
-                      if (nativeRequested) {
-                        NativeRenderPane(
-                          render = nativeRender,
-                          pending = nativePending,
-                          selectedNodeId = state.selectedNodeId,
-                          onNodeSelected = {
-                            focusEditor()
-                            dispatch(UiBuilderEditorEvent.SelectNode(it))
-                          },
-                          modifier = Modifier.weight(1f).fillMaxHeight(),
+                      // Whichever panes are on, in the enum's own order and sharing the width
+                      // equally. Each is a whole answer to "what am I looking at" rather than a
+                      // rung of a ladder, so none of them is conditional on another being drawn.
+                      if (EditorPane.Editor in state.panes) {
+                        canvas(
+                          Modifier.weight(1f)
+                            .fillMaxHeight()
+                            .background(Color(0xff0d0e11))
+                            .padding(24.dp),
+                          Alignment.Center,
                         )
                       }
-                      if (state.previewSurface == EditorPreviewSurface.Both) {
-                        livePreview(Modifier.weight(1f).fillMaxHeight())
+                      if (EditorPane.Preview in state.panes) {
+                        previewPane(Modifier.weight(1f).fillMaxHeight())
+                      }
+                      if (EditorPane.Native in state.panes && nativeAvailable) {
+                        nativePane(Modifier.weight(1f).fillMaxHeight())
                       }
                     }
                   }
@@ -2442,11 +2467,8 @@ private fun EditorToolbar(
   exportHost: UiBuilderExportHost?,
   /** Opens the component-pack settings, or null where the catalog offers no pack. */
   onComponentPacks: (() -> Unit)? = null,
-  /**
-   * The surface in use, or null where the host cannot compile — a project with one renderer is not
-   * offered a choice between it and nothing.
-   */
-  previewSurface: EditorPreviewSurface? = null,
+  /** Which design panes are open — see [EditorPane]. */
+  panes: Set<EditorPane> = setOf(EditorPane.Editor),
   /** What this design's catalog says each renderer's picture of it is worth. */
   previewSurfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
   /** Whether the host can compile and draw this design at all. */
@@ -2472,16 +2494,6 @@ private fun EditorToolbar(
       ToolbarIconAction("Redo", "Ctrl/⌘+Shift+Z", Icons.AutoMirrored.Filled.Redo, canRedo) {
         dispatch(UiBuilderEditorEvent.Redo)
       }
-      // Centred rather than left-packed, and the only control in the row wearing a label: it is
-      // the mode switch, and a mode switch that reads like a button is the thing people press by
-      // accident and cannot find on purpose.
-      Spacer(Modifier.weight(1f))
-      CanvasModeSwitch(
-        previewing = state.previewMode,
-        canvasClaim = previewSurfaces.wasm,
-        nativeAvailable = nativeAvailable,
-        dispatch = dispatch,
-      )
       Spacer(Modifier.weight(1f))
       // Only once there is something to hide — a picture, a placed piece or a mark. An
       // always-present control for a feature most designs never use is exactly the crowding the
@@ -2507,11 +2519,9 @@ private fun EditorToolbar(
       // Beside Code, because they are the two answers to "how do I get this out": the Kotlin the
       // design is, and the picture it draws. Absent where the host cannot render one.
       if (exportHost != null) ExportMenu(exportHost)
-      if (previewSurface != null) {
-        RenderSurfaceMenu(previewSurface, previewSurfaces, dispatch)
-      }
-      // Beside the renderer menu, because they are the two "what am I looking at" choices: which
-      // renderer draws the design, and which host frame it is drawn inside.
+      WorkspacePanesMenu(panes, previewSurfaces, nativeAvailable, dispatch)
+      // Beside the panes menu, because they are the two "what am I looking at" choices: which panes
+      // are open, and which host frame the design is drawn inside.
       state.document.wearWidgetScaffoldSize()?.let { size ->
         WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
       }
@@ -2742,67 +2752,6 @@ private fun DocumentIdentity(state: UiBuilderEditorState, modifier: Modifier = M
 }
 
 /**
- * Design or Preview, as two positions of one control rather than a button that renames itself.
- *
- * A button reading "Previewing · exit" is a coin toss — it names the state on the way in and the
- * action on the way out — and it is the wrong shape for the question anyway. This is a mode, so it
- * gets the control every tool uses for a mode.
- */
-@Composable
-private fun CanvasModeSwitch(
-  previewing: Boolean,
-  /**
-   * What the browser's own canvas is worth on this catalog.
-   *
-   * Preview mode is a claim — "this is your screen, without the editor on top of it" — and on a
-   * catalog whose canvas draws stand-ins the claim is false. Where the host can compile the design
-   * the mode still exists and answers with the host's renderer instead; where it cannot, the
-   * position is refused, carrying the catalog's own sentence about why rather than a grey button.
-   */
-  canvasClaim: UiBuilderPreviewSurfaces.SurfaceClaim = UiBuilderPreviewSurfaces.DEFAULT.wasm,
-  nativeAvailable: Boolean = false,
-  dispatch: (UiBuilderEditorEvent) -> Unit,
-) {
-  val canvasIsAuthoritative = canvasClaim.fidelity.isAuthoritative
-  val previewEnabled = canvasIsAuthoritative || nativeAvailable
-  val previewDescription =
-    when {
-      previewEnabled -> "Preview (Ctrl/⌘+Enter)"
-      canvasClaim.reason.isNotEmpty() -> "Preview unavailable: ${canvasClaim.reason}"
-      else -> "Preview unavailable: this catalog has no faithful renderer on this host"
-    }
-  SingleChoiceSegmentedButtonRow {
-    SegmentedButton(
-      selected = !previewing,
-      onClick = { if (previewing) dispatch(UiBuilderEditorEvent.TogglePreview) },
-      shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-      icon = {},
-      label = { Text("Design", style = MaterialTheme.typography.labelLarge) },
-      modifier =
-        Modifier.semantics { contentDescription = "Design mode (Ctrl/⌘+Enter)" }.width(112.dp),
-    )
-    SegmentedButton(
-      selected = previewing,
-      enabled = previewEnabled,
-      onClick = {
-        if (previewing) return@SegmentedButton
-        // Switch the renderer *before* the mode, so the first frame Preview shows is already the
-        // faithful one. Entering Preview and then noticing the canvas is a lookalike is the
-        // sequence this whole declaration exists to prevent.
-        if (!canvasIsAuthoritative) {
-          dispatch(UiBuilderEditorEvent.ShowPreviewSurface(EditorPreviewSurface.Native))
-        }
-        dispatch(UiBuilderEditorEvent.TogglePreview)
-      },
-      shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-      icon = {},
-      label = { Text("Preview", style = MaterialTheme.typography.labelLarge) },
-      modifier = Modifier.semantics { contentDescription = previewDescription }.width(112.dp),
-    )
-  }
-}
-
-/**
  * Which host container a Wear widget is framed in, as a menu of the shapes the platform ships.
  *
  * Offered only on a widget design, and that is not a cosmetic gate: on anything else the choice
@@ -2815,7 +2764,7 @@ private fun CanvasModeSwitch(
  * container is a real question — its content box and padding both differ from the squircle's, so a
  * layout that just fits in one can clip in the other.
  *
- * A menu rather than a segmented pair, matching [RenderSurfaceMenu] beside it: each position wants
+ * A menu rather than a segmented pair, matching [WorkspacePanesMenu] beside it: each position wants
  * a sentence, and there is room for a third shape here if the round container's per-diameter
  * footprint is ever worth drawing.
  */
@@ -2880,55 +2829,70 @@ internal fun UiBuilderDocument.wearWidgetScaffoldSize(): WearWidgetScaffoldSize?
 }
 
 /**
- * Which renderer draws the canvas, as a menu of three named choices.
+ * Which design panes are open, as three switches rather than a rung on a ladder.
  *
- * It used to be one button that cycled Wasm → Native → Both. A cycling control hides two thirds of
- * itself: you cannot see what the other positions are, you cannot reach one without passing through
- * the other, and each position needs a sentence that a button face has no room for.
+ * It used to be one value — "1 pane", "2 panes", "3 panes" — which is a control that can only count
+ * and cannot say what it is counting. You could not ask for the preview without the editor, you
+ * could not ask for the native render without the preview, and the second rung was the one that
+ * cost a compile. Each pane is now its own row and its own answer.
+ *
+ * The last open pane's row is disabled: switching it off would leave a blank workspace, and a
+ * control whose only outcome is nothing is worse than no control. A host with no compile lane keeps
+ * the native row too, disabled and carrying the catalog's own sentence about why — a row that
+ * vanishes teaches nobody that the pane exists.
  */
 @Composable
-private fun RenderSurfaceMenu(
-  surface: EditorPreviewSurface,
+private fun WorkspacePanesMenu(
+  panes: Set<EditorPane>,
   /**
-   * The catalog's own claims, so an option that cannot tell the truth says so where it is chosen.
+   * The catalog's own claims, so a pane that cannot tell the truth says so where it is chosen.
    *
-   * The Wasm entry is never *removed* on such a catalog: the browser canvas is what a node is
-   * selected and dragged on, and an editor with no canvas is not an editor. What it loses is the
-   * word "immediate" standing alone as its whole description.
+   * The Wasm panes are never *removed* on such a catalog: the browser canvas is what a node is
+   * selected and dragged on, and an editor with no canvas is not an editor. What they lose is the
+   * word "immediate" standing alone as their whole description.
    */
   surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
+  /** Whether the host can draw the native pane at all. */
+  nativeAvailable: Boolean = false,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var open by remember { mutableStateOf(false) }
+  val label = panesLabel(panes)
   Box {
     TextButton(
       onClick = { open = true },
-      modifier = Modifier.semantics { contentDescription = "Workspace panes (${surface.label()})" },
+      modifier = Modifier.semantics { contentDescription = "Workspace panes ($label)" },
     ) {
       Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
-      Text(surface.label(), Modifier.padding(start = 6.dp))
+      Text(label, Modifier.padding(start = 6.dp))
       Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-      EditorPreviewSurface.entries.forEach { option ->
+      EditorPane.entries.forEach { pane ->
+        val shown = pane in panes
+        val available = pane != EditorPane.Native || nativeAvailable
+        // Off it may not go while it is the only thing on screen; on it may not go where the host
+        // cannot draw it.
+        val enabled = available && !(shown && panes.size == 1)
         DropdownMenuItem(
           text = {
             Column {
-              Text(option.label())
+              Text(pane.title)
               Text(
-                option.supportingText(surfaces),
+                if (available) pane.supportingText(surfaces) else pane.unavailableText(surfaces),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelSmall,
               )
             }
           },
+          enabled = enabled,
           leadingIcon = {
-            if (option == surface) Icon(Icons.Filled.Check, contentDescription = null)
+            if (shown) Icon(Icons.Filled.Check, contentDescription = null)
             else Spacer(Modifier.size(24.dp))
           },
           onClick = {
             open = false
-            dispatch(UiBuilderEditorEvent.ShowPreviewSurface(option))
+            dispatch(UiBuilderEditorEvent.TogglePane(pane))
           },
         )
       }
@@ -3340,35 +3304,55 @@ private fun StatusText(text: String, color: Color = MaterialTheme.colorScheme.on
   Text(text, color = color, style = MaterialTheme.typography.labelSmall, maxLines = 1)
 }
 
-private fun EditorPreviewSurface.label(): String =
-  when (this) {
-    EditorPreviewSurface.Wasm -> "1 pane"
-    EditorPreviewSurface.Native -> "2 panes"
-    EditorPreviewSurface.Both -> "3 panes"
-  }
+/**
+ * What the toolbar button says: the open panes, in the enum's own order.
+ *
+ * Named rather than counted. "2 panes" answers a question nobody asked — the question is *which*
+ * two, and on a workspace where the second one might be a compile that is not a detail.
+ */
+internal fun panesLabel(panes: Set<EditorPane>): String =
+  EditorPane.entries.filter { it in panes }.joinToString(" + ") { it.label }.ifEmpty { "No panes" }
 
 /**
- * One line under each renderer's name, which is where a catalog's own caveat belongs.
+ * One line under each pane's name, which is where a catalog's own caveat belongs.
  *
  * "Drawn in this browser" is a complete description on `m3-catalog`, where the canvas draws the
  * same Material 3 the export names. On `wear-m3` it is the least interesting true thing about it,
  * and the interesting one — those are stand-ins for a library no browser can link — is exactly what
- * somebody choosing a renderer needs to read.
+ * somebody choosing a pane needs to read.
  */
-internal fun EditorPreviewSurface.supportingText(
+internal fun EditorPane.supportingText(
   surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT
 ): String {
   val wasmDescription =
     if (surfaces.wasm.fidelity.isAuthoritative) "Wasm" else "Wasm stand-in, for authoring"
   return when (this) {
-    EditorPreviewSurface.Wasm -> "Visual editor · $wasmDescription"
-    EditorPreviewSurface.Native ->
+    EditorPane.Editor -> "Edit the design · $wasmDescription"
+    // The two claims that matter about this pane: it does not edit, and it does not compile. The
+    // second is why it is worth switching on at all rather than waiting for the native one.
+    EditorPane.Preview -> "Devices and configurations, not editable · $wasmDescription"
+    EditorPane.Native ->
       if (surfaces.native.backend == UiBuilderPreviewSurfaces.BACKEND_ANDROID)
-        "Editor · $wasmDescription + static Android preview"
-      else "Editor · $wasmDescription + static target preview"
-    EditorPreviewSurface.Both -> "Editor · $wasmDescription + static target + interactive preview"
+        "Compiled on the host · Android"
+      else "Compiled on the host · the target platform"
   }
 }
+
+/**
+ * Why a pane cannot be switched on, said where it is refused.
+ *
+ * Only [EditorPane.Native] ever needs one — the other two are this browser drawing what it already
+ * has — and it is the catalog's own sentence wherever the catalog wrote one, so the refusal is an
+ * explanation rather than a greyed row.
+ */
+internal fun EditorPane.unavailableText(
+  surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT
+): String =
+  when {
+    this != EditorPane.Native -> supportingText(surfaces)
+    surfaces.native.reason.isNotEmpty() -> "Unavailable: ${surfaces.native.reason}"
+    else -> "Unavailable: this host has no compile lane for the design"
+  }
 
 /**
  * One icon control, with the label and its chord in the tooltip and in the semantics.
@@ -3581,7 +3565,7 @@ private enum class LayerSelectionGesture {
 private fun editorShortcut(
   event: KeyEvent,
   enabled: Boolean,
-  previewing: Boolean,
+  editing: Boolean,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ): Boolean {
   if (!enabled || event.type != KeyEventType.KeyDown) return false
@@ -3591,7 +3575,7 @@ private fun editorShortcut(
       command = event.isCtrlPressed || event.isMetaPressed,
       shift = event.isShiftPressed,
     )
-  val match = editorShortcutFor(chord, previewing) ?: return false
+  val match = editorShortcutFor(chord, editing) ?: return false
   dispatch(match.event)
   return true
 }
@@ -3599,16 +3583,16 @@ private fun editorShortcut(
 /**
  * The shortcut a chord resolves to, or null when none does.
  *
- * Pure, so the table's precedence and the preview suppression can be tested without synthesising a
+ * Pure, so the table's precedence and the suppression below can be tested without synthesising a
  * key event — which on this target is more machinery than the rule being tested.
  *
- * While the canvas belongs to the screen, only the chord that hands it back is live. With the
- * selection overlay gone there is nothing on screen to show what a Delete or an arrow just did, so
- * those chords would edit invisibly and surprise later.
+ * With the authoring canvas switched off, only the chords that open a pane are live. There is then
+ * no selection overlay on screen to show what a Delete or an arrow just did, so those chords would
+ * edit invisibly and surprise later — and a pane toggle is the way back to seeing them.
  */
-internal fun editorShortcutFor(chord: EditorChord, previewing: Boolean = false): EditorShortcut? =
+internal fun editorShortcutFor(chord: EditorChord, editing: Boolean = true): EditorShortcut? =
   EDITOR_SHORTCUTS.firstOrNull { it.matches(chord) }
-    ?.takeIf { !previewing || it.event == UiBuilderEditorEvent.TogglePreview }
+    ?.takeIf { editing || it.event is UiBuilderEditorEvent.TogglePane }
 
 /** The part of a key press a shortcut is allowed to look at. */
 internal data class EditorChord(val key: Key, val command: Boolean, val shift: Boolean)
@@ -3671,6 +3655,16 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       keys = setOf(Key.Z),
       command = true,
     ),
+    // The shifted spelling first, so the plain one below does not eat it — the same rule redo and
+    // undo follow two entries up.
+    EditorShortcut(
+      chord = "Ctrl/\u2318+Shift+Enter",
+      description = "Show or hide the visual editor",
+      event = UiBuilderEditorEvent.TogglePane(EditorPane.Editor),
+      keys = setOf(Key.Enter, Key.NumPadEnter),
+      command = true,
+      shift = true,
+    ),
     // Enter rather than P. The builder ships in a browser, and Ctrl/\u2318+P is the print dialog:
     // a chord whose worst case is a print preview over the design is not a chord worth having,
     // and whether Compose consumes it before the browser sees it is not something to find out in
@@ -3678,10 +3672,11 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     // else.
     EditorShortcut(
       chord = "Ctrl/\u2318+Enter",
-      description = "Hand the canvas to the screen, and back",
-      event = UiBuilderEditorEvent.TogglePreview,
+      description = "Show or hide the preview beside the design",
+      event = UiBuilderEditorEvent.TogglePane(EditorPane.Preview),
       keys = setOf(Key.Enter, Key.NumPadEnter),
       command = true,
+      shift = false,
     ),
     EditorShortcut(
       chord = "Ctrl/\u2318+D",
@@ -7540,16 +7535,39 @@ private fun NativeRenderPane(
 }
 
 /**
- * A clean, interactive rendition beside the editing canvas.
+ * The design with the editor taken off it: the same renderer, every device, no compile.
  *
- * It shares the document but not the editor overlay or renderer session, so controls can be used
- * without changing selection and without their remembered state leaking into the authoring pane.
- * Remote M3 plays through the real CMP/Wasm Remote Compose player here; catalogs whose own
- * capability declaration calls Wasm a stand-in continue to say so in the pane chooser.
+ * ## Why this pane is not the native one
+ *
+ * It draws exactly what the canvas beside it draws — the same Wasm Compose, the same document, the
+ * same pixels — and that is deliberate. The question it answers is not "how does this look on
+ * Android"; it is "how does this *behave*, and how does it survive the other frames". A full-size
+ * selection overlay sits on the authoring canvas and swallows every tap, so a screen wired to react
+ * could not be made to react by the person who wired it. Here there is no overlay: the controls are
+ * live, the design's own scrolling is live, and nothing being clicked changes the selection.
+ *
+ * It is also free. Nothing here asks the host for anything, which is why it can be switched on
+ * mid-thought and switched off again — and why the pane that *does* cost a compile is a separate
+ * choice somebody makes on purpose ([EditorPane]).
+ *
+ * ## Every frame the design claims, side by side
+ *
+ * The design at its own size first, then one frame per device in `exportDevices` and one per
+ * switched-on axis — the same [UiBuilderVariantPane] list the canvas draws beside itself, so the
+ * two panes cannot disagree about which devices the design ships on. Laid out in a scrolling row
+ * rather than scaled to fit: a device frame shrunk to a thumbnail answers nothing about text that
+ * only just fits.
  */
 @Composable
-private fun LiveWasmPreviewPane(
+private fun DesignPreviewPane(
   document: UiBuilderDocument,
+  /**
+   * The device and axis frames to draw after the design's own — see
+   * [UiBuilderDocument.variantPanes].
+   */
+  variants: List<UiBuilderVariantPane>,
+  /** What this catalog says its browser renderer is worth, said where somebody is reading it. */
+  canvasClaim: UiBuilderPreviewSurfaces.SurfaceClaim = UiBuilderPreviewSurfaces.DEFAULT.wasm,
   modifier: Modifier = Modifier,
 ) {
   val widthDp =
@@ -7557,32 +7575,75 @@ private fun LiveWasmPreviewPane(
   val heightDp =
     document.environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 800f
   val hostDensity = LocalDensity.current
-  val densityRatio = document.renderDensity(hostDensity).density / hostDensity.density
+  // The design's own frame, as a pane like the others, so the row below has one shape in it. Its
+  // session id is distinct from the canvas's for the reason [UiBuilderVariantPane] gives: two
+  // panes of one design are separated by the session, never by the document id.
+  val panes =
+    listOf(
+      UiBuilderVariantPane(
+        id = "preview-design",
+        label = designFrameLabel(widthDp, heightDp),
+        widthDp = widthDp,
+        heightDp = heightDp,
+        document = document,
+      )
+    ) + variants
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
       Text(
-        "Live preview · interactive Wasm target",
+        if (canvasClaim.fidelity.isAuthoritative) "Preview · not editable"
+        else "Preview · not editable · ${canvasClaim.reason.ifEmpty { "stand-in components" }}",
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelSmall,
       )
-      BoxWithConstraints(
-        Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp),
-        contentAlignment = Alignment.Center,
-      ) {
+      BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
+        // One scale for the whole row, so two devices in it are drawn at the same ratio and are
+        // actually comparable — picking a scale per frame would make a watch and a tablet look the
+        // same size, which is the one thing this row exists to contradict.
+        //
+        // Chosen so the tallest frame fits the pane's height and the widest fits its width: the
+        // row then always shows at least one frame whole, and the rest are reached by scrolling
+        // rather than by squeezing every phone in the row down to a thumbnail.
+        //
+        // Capped at 1:1 against the design's own pixels — the ceiling is the *smallest* density
+        // ratio in the row, because one scale serves all of them. [ConstrainedFramePane] lays the
+        // frame out in the design's pixels and clips there, so a scale past that ratio magnifies
+        // the composition into a clip it cannot grow: the design is drawn bigger and the right of
+        // it disappears. That is not a hypothetical — on a 2.625× render host with a 1× design it
+        // is every frame in this row.
+        val tallest = panes.maxOf { it.heightDp }
+        val widest = panes.maxOf { it.widthDp }
+        val oneToOne = panes.minOf {
+          it.document.renderDensity(hostDensity).density / hostDensity.density
+        }
         val scale =
-          minOf(maxWidth.value / widthDp, maxHeight.value / heightDp).coerceIn(MIN_CANVAS_ZOOM, 1f)
-        ConstrainedFramePane(
-          document = document,
-          widthDp = widthDp,
-          heightDp = heightDp,
-          scale = scale,
-          densityRatio = densityRatio,
-          renderSessionId = "live-preview",
-        )
+          minOf(maxHeight.value / (tallest + VARIANT_LABEL_ROOM_DP), maxWidth.value / widest)
+            .coerceIn(MIN_CANVAS_ZOOM, maxOf(oneToOne, MIN_CANVAS_ZOOM))
+        // Centred, so a row that fits sits in the middle of the pane rather than in its top-left
+        // corner. Scrolling still works when it does not fit: `Arrangement.Center` only decides
+        // where the slack goes, and a row wider than the pane has none.
+        Row(
+          Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
+          horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          panes.forEach { pane ->
+            key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
+          }
+        }
       }
     }
   }
 }
+
+/**
+ * What the design's own frame is called in the preview row.
+ *
+ * Its geometry, because that is what the row is comparing: a frame labelled "Design" beside three
+ * labelled `Pixel 7` is the one pane whose name says nothing about what is being compared.
+ */
+private fun designFrameLabel(widthDp: Float, heightDp: Float): String =
+  "Design · ${widthDp.toInt()}×${heightDp.toInt()}dp"
 
 /**
  * The frame itself, with the overlay that makes it a surface rather than a picture.

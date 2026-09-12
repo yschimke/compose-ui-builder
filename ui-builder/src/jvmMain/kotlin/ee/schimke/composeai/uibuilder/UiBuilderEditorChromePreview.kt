@@ -323,11 +323,11 @@ fun UiBuilderStateBindingPreview() {
 }
 
 /**
- * The canvas handed to the screen.
+ * The workspace with the authoring canvas switched off: the preview pane on its own.
  *
  * The selection overlay is gone, so a tap reaches the component under it and the renderer's state
- * writes actually run. The toolbar says which side it is on. Nothing else moves — the panels stay
- * live on purpose, because they are explicit actions, unlike a keystroke aimed at the canvas.
+ * writes actually run. The panes button says what is on screen. Nothing else moves — the panels
+ * stay live on purpose, because they are explicit actions, unlike a keystroke aimed at the canvas.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -338,7 +338,25 @@ fun UiBuilderPreviewModePreview() {
     // The same node `UiBuilderLayoutInspectorPreview` selects, and a big one, so the selection
     // overlay's absence is the visible half of a change that is otherwise all behaviour.
     initialSelectedNodeId = "discover-grid",
-    initialPreviewMode = true,
+    initialPanes = setOf(EditorPane.Preview),
+  )
+}
+
+/**
+ * The pane this change is for: the design as drawn, beside the design being edited.
+ *
+ * Costs the host nothing — no compile, no round trip — which is the claim worth having a render of.
+ * The row inside it carries the design's own frame plus every device and axis the canvas draws
+ * beside itself, at one shared scale.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderEditorAndPreviewPanesPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialPanes = setOf(EditorPane.Editor, EditorPane.Preview),
   )
 }
 
@@ -563,17 +581,17 @@ fun UiBuilderNativeRenderPreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialNativeRender = nativeRenderPreviewRefusal,
-    initialPreviewSurface = EditorPreviewSurface.Native,
+    initialPanes = setOf(EditorPane.Editor, EditorPane.Native),
     onRequestNativeRender = { _ -> nativeRenderPreviewRefusal },
   )
 }
 
 /**
- * The comparison case: both renderers at once.
+ * The comparison case: all three panes at once.
  *
- * Rendered as its own preview rather than folded into the one above, because they are the two
- * shapes this control produces and a diff of either alone would not show the other moving. This is
- * the state a Wasm project reaches for occasionally; [UiBuilderNativeRenderPreview] is the state a
+ * Rendered as its own preview rather than folded into the one above, because they are the shapes
+ * this control produces and a diff of either alone would not show the other moving. This is the
+ * state a Wasm project reaches for occasionally; [UiBuilderNativeRenderPreview] is the state a
  * project with no browser renderer lives in.
  */
 @Preview(widthDp = 1600, heightDp = 900)
@@ -584,7 +602,7 @@ fun UiBuilderRenderComparisonPreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialNativeRender = nativeRenderPreviewRefusal,
-    initialPreviewSurface = EditorPreviewSurface.Both,
+    initialPanes = setOf(EditorPane.Editor, EditorPane.Preview, EditorPane.Native),
     onRequestNativeRender = { _ -> nativeRenderPreviewRefusal },
   )
 }
@@ -612,7 +630,7 @@ fun UiBuilderNativeOverlayPreview() {
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialNativeRender = nativeOverlayPreviewRender,
-    initialPreviewSurface = EditorPreviewSurface.Native,
+    initialPanes = setOf(EditorPane.Editor, EditorPane.Native),
     onRequestNativeRender = { _ -> nativeOverlayPreviewRender },
   )
 }

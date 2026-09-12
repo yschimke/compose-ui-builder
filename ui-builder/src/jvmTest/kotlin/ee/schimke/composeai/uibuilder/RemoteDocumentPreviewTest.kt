@@ -76,7 +76,7 @@ class RemoteDocumentPreviewTest {
         UiBuilderEditor(
           document(stem),
           catalog,
-          initialPreviewMode = true,
+          initialPanes = setOf(EditorPane.Native),
           onRequestDocumentPreview = {
             requested = it
             ready(it.revision, stem).copy(saved = saved)
@@ -148,7 +148,7 @@ class RemoteDocumentPreviewTest {
         UiBuilderEditor(
           document(),
           catalog,
-          initialPreviewSurface = EditorPreviewSurface.Both,
+          initialPanes = setOf(EditorPane.Editor, EditorPane.Native),
           onInspectionSnapshot = { inspection = it },
           onRequestDocumentPreview = {
             UiBuilderDocumentPreview.Failed("Compiled preview requested")
