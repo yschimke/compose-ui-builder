@@ -94,6 +94,8 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
@@ -2375,15 +2377,20 @@ private fun AdaptiveSupportingPaneScaffold(
       if (node.string("layoutMode") == "singlePane")
         frameDirective.copy(maxHorizontalPartitions = 1)
       else frameDirective
-    // The library's own computation, so "two panes or one" is its answer rather than ours. Then the
-    // design's own flags are written over it: a pane the design does not have is hidden whatever
-    // the
-    // frame would allow.
+    // The library's own computation, so "two panes or one" is its answer rather than ours.
+    //
+    // The destination decides which pane wins a sole partition, and it is the supporting pane
+    // exactly when the design declares no main pane. Masking afterwards is not enough there: the
+    // one partition goes to the primary by default, so hiding the primary for a supporting-only
+    // design would leave a value with everything hidden and draw a blank frame.
     val computed =
       calculateThreePaneScaffoldValue(
         maxHorizontalPartitions = directive.maxHorizontalPartitions,
         adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
-        currentDestination = null,
+        currentDestination =
+          if (!mainVisible && supportingVisible)
+            ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting)
+          else null,
       )
     val value =
       ThreePaneScaffoldValue(

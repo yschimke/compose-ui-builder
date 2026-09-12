@@ -1,4 +1,4 @@
-// Generator content SHA-256: 6bfe3c83d71d1704b2cdbf75eabab63ceab2ab317306aaa6b280bea8d176cb89
+// Generator content SHA-256: 511e54e210f3eb634b89ed79e4d48a10533cc8074ffffe48aedd36df4baf35cd
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -23,10 +23,13 @@ import androidx.compose.material.icons.sharp.*
 import androidx.compose.material.icons.twotone.*
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
@@ -48,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowSizeClass
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 
 // Generated from design fixture-jetcaster-discover-expanded revision 108.
@@ -1248,27 +1252,36 @@ private fun BuilderSupportingPaneScaffold(
   mainPane: @Composable () -> Unit,
   supportingPane: @Composable () -> Unit,
 ) {
-  val windowDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
-  val directive =
-    if (singlePane) windowDirective.copy(maxHorizontalPartitions = 1) else windowDirective
-  val computed =
-    calculateThreePaneScaffoldValue(
-      maxHorizontalPartitions = directive.maxHorizontalPartitions,
-      adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
-      currentDestination = null,
+  val posture = currentWindowAdaptiveInfo().windowPosture
+  BoxWithConstraints(modifier) {
+    val frameDirective =
+      calculatePaneScaffoldDirective(
+        WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)
+      )
+    val directive =
+      if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective
+    val computed =
+      calculateThreePaneScaffoldValue(
+        maxHorizontalPartitions = directive.maxHorizontalPartitions,
+        adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
+        currentDestination =
+          if (!mainPaneVisible && supportingPaneVisible)
+            ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting)
+          else null,
+      )
+    SupportingPaneScaffold(
+      directive = directive,
+      value =
+        ThreePaneScaffoldValue(
+          primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden,
+          secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden,
+          tertiary = PaneAdaptedValue.Hidden,
+        ),
+      mainPane = { mainPane() },
+      supportingPane = { supportingPane() },
+      modifier = Modifier.fillMaxSize(),
     )
-  SupportingPaneScaffold(
-    directive = directive,
-    value =
-      ThreePaneScaffoldValue(
-        primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden,
-        secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden,
-        tertiary = PaneAdaptedValue.Hidden,
-      ),
-    mainPane = { mainPane() },
-    supportingPane = { supportingPane() },
-    modifier = modifier,
-  )
+  }
 }
 
 @Composable

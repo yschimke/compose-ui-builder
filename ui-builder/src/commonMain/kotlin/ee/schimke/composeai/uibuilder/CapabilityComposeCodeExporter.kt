@@ -375,13 +375,42 @@ private class ComposeEmitter(
    */
   private var emittingRow: Pair<String, LoopSignature>? = null
 
+  /**
+   * The body first, then the header in front of it.
+   *
+   * The import list has to be a fact about what was emitted rather than a prediction about what
+   * will be. A document can *define* a reusable component whose body holds a
+   * `layout/supporting-pane-scaffold` and never place it: `validateGraph()` treats component roots
+   * as reachable, while [emitComponentFunctions] emits only the keys a placement names, so a
+   * document-wide "does any node use it?" says yes and the emitted screen contains no call. An
+   * import of Material 3 Adaptive with nothing using it does not compile in a project that never
+   * added the dependency, so predicting wrongly is a broken export rather than a stray line.
+   *
+   * Emitting first removes the prediction: [emittedSupportingPaneScaffold] is set by
+   * [emitSupportingPane] itself, so the only thing that can turn the imports on is the call being
+   * written. The diagnostics the header quotes are complete before this class is constructed, so
+   * nothing in the header depends on the body beyond that flag.
+   */
   fun emit(): String {
     val functionName = document.exportFunctionName()
+    appendLine("@Composable")
+    appendLine("fun $functionName() {")
+    emitState(1)
+    document.roots.forEach { rootId -> emitNode(rootId, 1) }
+    appendLine("}")
+    appendLine()
+    emitComponentFunctions()
+    emitRowClasses()
+    emitCompatibilityHelpers()
+    val body = out.toString()
+
+    out.clear()
     appendLine("@file:OptIn(ExperimentalMaterial3Api::class)")
     appendLine()
     appendLine("package generated.uibuilder")
     appendLine()
     (GENERATED_IMPORTS +
+        adaptiveImports() +
         additionalTextImports() +
         listOfNotNull(assetAdapter?.renderer?.importName))
       .distinct()
@@ -401,16 +430,7 @@ private class ComposeEmitter(
           "// TODO[${diagnostic.code.escapeComment()}] node=${diagnostic.nodeId?.escapeComment() ?: "document"}: ${diagnostic.message.escapeComment()}"
         )
       }
-    appendLine("@Composable")
-    appendLine("fun $functionName() {")
-    emitState(1)
-    document.roots.forEach { rootId -> emitNode(rootId, 1) }
-    appendLine("}")
-    appendLine()
-    emitComponentFunctions()
-    emitRowClasses()
-    emitCompatibilityHelpers()
-    return out.toString().trimEnd() + "\n"
+    return (out.toString() + body).trimEnd() + "\n"
   }
 
   /**
@@ -876,6 +896,7 @@ private class ComposeEmitter(
    * canvas's own fit still reads them, and a design that carries them exports the same layout.
    */
   private fun emitSupportingPane(node: UiBuilderNode, level: Int) {
+    emittedSupportingPaneScaffold = true
     line(level, "BuilderSupportingPaneScaffold(")
     line(level + 1, "modifier = ${node.modifierExpression()},")
     line(level + 1, "singlePane = ${node.string("layoutMode") == "singlePane"},")
@@ -1080,6 +1101,36 @@ private class ComposeEmitter(
       "Text(text = ${node.boundStringExpression("text")}, style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.boundColorExpression("color")}, fontWeight = ${node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
     )
   }
+
+  /**
+   * Material 3 Adaptive's imports, and only for a design that has the component.
+   *
+   * Unconditional entries in [GENERATED_IMPORTS] are all from the Compose and Material 3 artifacts
+   * an ordinary consumer of this export already has. Adaptive is a separate artifact on a separate
+   * version line, so an unused import of it is not free: it stops the generated file compiling in a
+   * project that never asked for the dependency. `emitAdaptiveHelper` is gated on the same
+   * predicate, so the helper and its imports cannot come apart.
+   */
+  private fun adaptiveImports(): List<String> =
+    if (!emittedSupportingPaneScaffold) emptyList()
+    else
+      listOf(
+        "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi",
+        "androidx.compose.material3.adaptive.WindowAdaptiveInfo",
+        "androidx.compose.material3.adaptive.currentWindowAdaptiveInfo",
+        "androidx.compose.material3.adaptive.layout.PaneAdaptedValue",
+        "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold",
+        "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults",
+        "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole",
+        "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem",
+        "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue",
+        "androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective",
+        "androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue",
+        "androidx.window.core.layout.WindowSizeClass",
+      )
+
+  /** Set by [emitSupportingPane], so nothing but an emitted call can turn the adaptive code on. */
+  private var emittedSupportingPaneScaffold = false
 
   private fun additionalTextImports(): List<String> {
     val propertyNames = document.nodes.values.flatMap { it.properties.keys }.toSet()
@@ -1417,6 +1468,41 @@ private class ComposeEmitter(
     line(level, ")")
   }
 
+  /**
+   * The real `SupportingPaneScaffold`, wrapped only enough to take this design's two booleans.
+   *
+   * Emitted **only** for a design that has the component — see [adaptiveImports] for why an unused
+   * adaptive import is not free.
+   *
+   * The directive comes from the scaffold's own `BoxWithConstraints`, not from
+   * `currentWindowAdaptiveInfo()`, which is the same rule `AdaptiveSupportingPaneScaffold` follows
+   * in the renderer and is load-bearing for the reason this export exists: a scaffold under a
+   * `width`, a `widthIn` or any narrower parent inside a wide window would otherwise be told about
+   * the window, request two partitions, and disagree with the preview pane that measured its real
+   * bounds. Only the posture is still the window's, because a hinge is hardware.
+   */
+  private fun emitAdaptiveHelper() {
+    if (!emittedSupportingPaneScaffold) return
+    appendLine(
+      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) {"
+    )
+    appendLine("  val posture = currentWindowAdaptiveInfo().windowPosture")
+    appendLine("  BoxWithConstraints(modifier) {")
+    appendLine(
+      "    val frameDirective = calculatePaneScaffoldDirective(WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)); val directive = if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective"
+    )
+    // A supporting-only design must name the supporting pane as the destination, or the sole
+    // partition goes to the primary and masking it afterwards leaves a blank frame.
+    appendLine(
+      "    val computed = calculateThreePaneScaffoldValue(maxHorizontalPartitions = directive.maxHorizontalPartitions, adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(), currentDestination = if (!mainPaneVisible && supportingPaneVisible) ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting) else null)"
+    )
+    appendLine(
+      "    SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { mainPane() }, supportingPane = { supportingPane() }, modifier = Modifier.fillMaxSize())"
+    )
+    appendLine("  }")
+    appendLine("}")
+  }
+
   private fun emitCompatibilityHelpers() {
     appendLine(
       "// Compatibility helpers are explicit export diagnostics, not claims of API parity."
@@ -1424,22 +1510,7 @@ private class ComposeEmitter(
     appendLine(
       "@Composable private fun builderCardColors(containerColor: Color) = CardDefaults.cardColors(containerColor = containerColor)"
     )
-    // A thin wrapper around the real scaffold rather than a reimplementation of it: it exists only
-    // to turn this design's two booleans into the scaffold's directive and value, so the generated
-    // screen reads as one call and the adaptive decision stays the library's.
-    appendLine(
-      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) {"
-    )
-    appendLine(
-      "  val windowDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()); val directive = if (singlePane) windowDirective.copy(maxHorizontalPartitions = 1) else windowDirective"
-    )
-    appendLine(
-      "  val computed = calculateThreePaneScaffoldValue(maxHorizontalPartitions = directive.maxHorizontalPartitions, adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(), currentDestination = null)"
-    )
-    appendLine(
-      "  SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { mainPane() }, supportingPane = { supportingPane() }, modifier = modifier)"
-    )
-    appendLine("}")
+    emitAdaptiveHelper()
     appendLine(
       "@Composable private fun BuilderHorizontalCarousel(kind: String, itemWidth: Dp, spacing: Dp, contentPaddingStart: Dp, content: @Composable RowScope.(Dp) -> Unit) { check(kind == \"uncontained\") { \"Unsupported carousel kind: ${'$'}kind\" }; Row(Modifier.padding(start = contentPaddingStart), horizontalArrangement = Arrangement.spacedBy(spacing)) { content(itemWidth) } }"
     )
@@ -3361,17 +3432,6 @@ private val GENERATED_IMPORTS =
       "androidx.compose.foundation.shape.RoundedCornerShape",
       "androidx.compose.foundation.text.BasicTextField",
       "androidx.compose.material.icons.Icons",
-      // The real adaptive scaffold the supporting-pane component emits. Unconditional, like every
-      // other entry here: the list is deduplicated and sorted, and a design without the component
-      // carries an unused import rather than the emitter growing a second code path.
-      "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi",
-      "androidx.compose.material3.adaptive.currentWindowAdaptiveInfo",
-      "androidx.compose.material3.adaptive.layout.PaneAdaptedValue",
-      "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold",
-      "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults",
-      "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue",
-      "androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective",
-      "androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue",
       "androidx.compose.material.icons.automirrored.filled.*",
       "androidx.compose.material.icons.automirrored.outlined.*",
       "androidx.compose.material.icons.automirrored.rounded.*",

@@ -26,7 +26,11 @@ import kotlinx.serialization.json.JsonPrimitive
 class AdaptiveSupportingPaneTest {
 
   /** A scaffold with one identifiable word in each pane, and nothing else. */
-  private fun document(layoutMode: String = "expandedTwoPane") =
+  private fun document(
+    layoutMode: String = "expandedTwoPane",
+    mainPaneVisible: Boolean = true,
+    supportingPaneVisible: Boolean = true,
+  ) =
     UiBuilderDocument(
       schema = "ui-builder/v1",
       id = "panes",
@@ -58,7 +62,9 @@ class AdaptiveSupportingPaneTest {
                           "type" to JsonPrimitive("enum"),
                           "value" to JsonPrimitive(layoutMode),
                         )
-                      )
+                      ),
+                    "mainPaneVisible" to bool(mainPaneVisible),
+                    "supportingPaneVisible" to bool(supportingPaneVisible),
                   )
                 ),
               slots = mapOf("mainPane" to listOf("main"), "supportingPane" to listOf("support")),
@@ -67,6 +73,9 @@ class AdaptiveSupportingPaneTest {
           "support" to text("support", "SupportPaneWord"),
         ),
     )
+
+  private fun bool(value: Boolean) =
+    JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(value)))
 
   private fun text(id: String, value: String) =
     UiBuilderNode(
@@ -146,5 +155,28 @@ class AdaptiveSupportingPaneTest {
       // is a worse outcome than showing an author a pane their phone will not.
       onNodeWithText("MainPaneWord").assertIsDisplayed()
       onNodeWithText("SupportPaneWord").assertIsDisplayed()
+    }
+
+  @Test
+  fun `a supporting pane that is the only pane is the pane that is shown`() =
+    runDesktopComposeUiTest(width = 411, height = 914) {
+      setContent { MaterialTheme { UiBuilderSurface(document(mainPaneVisible = false)) } }
+      // One partition goes to the primary pane, so masking the primary afterwards would leave a
+      // value with everything hidden and a blank frame. A design whose only pane is the supporting
+      // one is valid, and it is the pane the frame owes.
+      onNodeWithText("SupportPaneWord").assertIsDisplayed()
+      onNodeWithText("MainPaneWord").assertIsNotDisplayed()
+    }
+
+  @Test
+  fun `a supporting-only design on a singlePane frame is not blank either`() =
+    runDesktopComposeUiTest(width = 1280, height = 800) {
+      setContent {
+        MaterialTheme {
+          UiBuilderSurface(document(layoutMode = "singlePane", mainPaneVisible = false))
+        }
+      }
+      onNodeWithText("SupportPaneWord").assertIsDisplayed()
+      onNodeWithText("MainPaneWord").assertIsNotDisplayed()
     }
 }

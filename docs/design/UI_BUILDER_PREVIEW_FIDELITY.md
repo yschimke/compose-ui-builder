@@ -85,6 +85,11 @@ components** belong. It exists because rung 1 cannot answer two questions:
   class from its own constraints, which inside `ConstrainedFramePane` are the device's width and
   height at the device's density. The posture stays the real one: a hinge is hardware, not a frame.
 
+  The **generated Kotlin does the same**, and there it is not about frames: a scaffold under a
+  `width`, a `widthIn` or any narrower parent inside a wide window would be told about the window,
+  ask for two partitions, and disagree with the preview pane that measured its real bounds. Whether
+  a rung-2/rung-3 disagreement means anything depends on the two rungs asking the same question.
+
 There is no selection overlay, so taps reach the controls: a screen wired to react can be made to
 react. It is still not editable — a design has one document, and offering a coordinate space per
 frame for one shared outcome is what makes multi-variant editors confusing.
