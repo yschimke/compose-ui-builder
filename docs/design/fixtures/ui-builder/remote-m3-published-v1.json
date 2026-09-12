@@ -1,5 +1,5 @@
 {
-  "$comment": "GENERATED, unlike its m3 sibling — captured verbatim from the `design-artifacts/remote-m3` delivery branch of yschimke/wear-m3-catalog at 4d76e19fb, which `composePreviewDiscover` wrote from wear-m3-catalog 8278885e (the merge of wear-m3-catalog#446). That is the pair the cutover will actually use, so this fixture answers the question the hand-built m3 one cannot: can the catalog produce a usable published file. Regenerate the same way — take the delivery branch's `ui-builder.json` and re-add this key — whenever remote-catalog gains or loses a component, or its policy changes what a component declares.",
+  "$comment": "GENERATED, unlike its m3 sibling — captured verbatim from the `design-artifacts/remote-m3` delivery branch of yschimke/wear-m3-catalog at 9047edfce, which `composePreviewDiscover` wrote from wear-m3-catalog 540893ab (the merge of wear-m3-catalog#485). That is the pair the cutover actually uses, so this fixture answers the question the hand-built m3 one cannot: can the catalog produce a usable published file. Regenerate the same way — take the delivery branch's `ui-builder.json` and re-add this key — whenever remote-catalog gains or loses a component, or its policy changes what a component declares.\n\n28 record components and a 26-entry menu. The two differ by the two components the catalog EXCLUDES: `remote-m3/remote-sticker`, its own preview frame, and `remote-m3/capturing-wear-widget-preview`, a `private` capture wrapper that hands the widget's encoded document to `IrSidecarChannel` so a render lands a `.rc` sidecar. Both stay in the record carrying their `excluded` reason — that is what the schema means by \"kept off the shelf, with the stated reason\" — and neither is offered for insertion.\n\nThe capture wrapper is why this capture exists rather than the previous one. It was published on the `Widget Container` shelf until wear-m3-catalog#485 excluded it, and against the earlier 27-component fixture the equivalence gate scored 0/0/0/0 while the LIVE document had one unreviewed field — a gate green against a document that no longer existed. Re-capture after a republish rather than trusting a green run against a stale fixture.",
   "schema": "compose-ui-builder-catalog/v1",
   "catalog": {
     "id": "remote-m3",
@@ -12,7 +12,7 @@
   "record": {
     "file": "components.json",
     "schemaVersion": 2,
-    "components": 27
+    "components": 28
   },
   "statusSemantics": {
     "platform": "remote-compose",
@@ -753,6 +753,23 @@
         "propertyCapabilities": null,
         "slotCapabilities": null,
         "modifierCapabilities": null
+      },
+      "remote-m3/capturing-wear-widget-preview": {
+        "record": "remote-catalog/ee.schimke.wearm3catalog.remote.WidgetContainerPreviewsKt.CapturingWearWidgetPreview",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": "a `private` capture wrapper, not a Remote Compose component: it exists only to hand the widget's encoded document to `IrSidecarChannel` so the render lands a `.rc` sidecar beside the PNG, and it is local at all only until AndroidX's `useSafeFallbackRendererVersion` reaches compose-ai-tools' published wrapper. Same exclusion, and the same reason, as `remote-m3/remote-sticker` above: nobody places a capture frame in a design. It published on the `Widget Container` shelf, beside the two widget-container builtins it wraps.",
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
       }
     }
   },
@@ -890,6 +907,11 @@
     {
       "code": "component.canvas.unclaimed",
       "subject": "remote-m3/theme-specimen",
+      "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
+    },
+    {
+      "code": "component.canvas.unclaimed",
+      "subject": "remote-m3/capturing-wear-widget-preview",
       "message": "no canvas adapter claimed, so it draws as a placeholder. That is the honest default and needs no fixing; it is reported so a shelf drawn entirely in placeholders is visible rather than mysterious."
     }
   ]
