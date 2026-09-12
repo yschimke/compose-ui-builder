@@ -10,12 +10,10 @@ package ee.schimke.composeai.uibuilderreference.jetcaster
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,6 +54,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -169,23 +175,41 @@ fun main() {
   ComposeViewport(viewportContainerId = "composeApp") { JetcasterReferenceApp() }
 }
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 private fun JetcasterReferenceApp() {
   MaterialTheme(colorScheme = ReferenceColors) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-      BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (maxWidth >= 1280.dp) {
-          Row(Modifier.fillMaxSize()) {
-            MainDiscoverPane(Modifier.width(744.dp).fillMaxHeight())
-            Spacer(
-              Modifier.width(24.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background)
-            )
-            PodcastDetailPane(Modifier.weight(1f).fillMaxHeight())
-          }
-        } else {
-          MainDiscoverPane(Modifier.fillMaxSize())
-        }
-      }
+      // The real `SupportingPaneScaffold`, not a `BoxWithConstraints` imitating one.
+      //
+      // This app is the independent oracle the builder is measured against, so it has to reach for
+      // the component an app author would reach for. While it hand-rolled the split -- a `Row`
+      // with a 744.dp main pane above a 1280.dp breakpoint -- it disagreed with the builder by
+      // ~7.7% at expanded width from #788 onward, which is 7x the convergence bound. Nothing said
+      // so, because the `toMatchSnapshot` assertions on the same tests failed first and the
+      // convergence gate never ran.
+      val directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
+      // The library's own computation, so "two panes or one" is its answer rather than this app's,
+      // exactly as `AdaptiveSupportingPaneScaffold` does it on the builder's side. Both panes are
+      // always declared here, so there is no supporting-only case to name a destination for.
+      val computed =
+        calculateThreePaneScaffoldValue(
+          maxHorizontalPartitions = directive.maxHorizontalPartitions,
+          adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
+          currentDestination = null,
+        )
+      SupportingPaneScaffold(
+        directive = directive,
+        value =
+          ThreePaneScaffoldValue(
+            primary = computed.primary,
+            secondary = computed.secondary,
+            tertiary = PaneAdaptedValue.Hidden,
+          ),
+        mainPane = { MainDiscoverPane(Modifier.fillMaxSize()) },
+        supportingPane = { PodcastDetailPane(Modifier.fillMaxSize()) },
+        modifier = Modifier.fillMaxSize(),
+      )
     }
   }
   LaunchedEffect(Unit) { publishReady() }
