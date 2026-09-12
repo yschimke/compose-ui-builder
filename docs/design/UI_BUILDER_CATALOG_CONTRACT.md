@@ -687,16 +687,41 @@ binary has never heard of. Items 15, 16, 17 and 19 remain: the platform word, th
 the canvas mapping and the `compose-preview-server ui` lane still read Kotlin, so a published catalog
 is served but a **Wear-shaped** one is not yet drawn from its own declarations.
 
-**The lever item 18 promised is now a flag, and it defaults to `none`.** Item 18 says the cutover is
-"per catalog and reversible"; as shipped, the only reversal an operator had was
+**The lever item 18 promised is now a flag, and it defaults to `remote-m3`.** Item 18 says the
+cutover is "per catalog and reversible"; as shipped, the only reversal an operator had was
 `SERVE_UI_BUILDER_CATALOGS`, which withdraws a catalog from the builder entirely rather than
 returning it to its synthesised definition. `--ui-builder-published-catalogs` is the finer lever:
 `all`, `none`, or a subset of the served catalogs, refusing an id this host does not serve so a typo
 is a startup error rather than a silent no-op. `SERVE_UI_BUILDER_PUBLISHED_CATALOGS` reaches it from
 the deployment image.
 
-**It defaults to `none` because neither catalog this image serves is ready, and one of them would
-have broken.** Measuring the two against their frozen goldens, rather than assuming:
+**It defaults to `remote-m3`, now served from its own published file.** It defaulted to `none`
+while no catalog was ready and one of them would have broken. `remote-m3` measures clean: 0
+differences, 0 unstated facts, 0 unusable exemptions and 0 unreviewed fields under `--strict`,
+against the document the delivery branch carries.
+
+**Two costs come with it, both deliberate and both ticketed**, because a clean gate is not the
+same as a free swap:
+
+- **`remote-m3/lottie` is no longer offered** ([#795]). The published catalog cannot carry it — an
+  asset player has no component call for the record to find, and `remote-m3/` is not a donor
+  namespace — so a new author cannot place a Lottie animation, and a document holding one fails
+  validation as `UNKNOWN_COMPONENT`. The differences list called this "NOT deliberate — a stated
+  cutover blocker" until the loss was accepted to get the published path serving traffic.
+- **Persisted designs may strand** ([#796]). Changing a catalog's source changes its reference,
+  and `resolve` accepts only the exact current one, so a design pinned to the synthesised catalog
+  becomes `CATALOG_UNAVAILABLE` on the restart that flips the lever, with no upgrade path.
+  Unverified in blast radius: whether this deployment holds such designs is not knowable from the
+  repository.
+
+There is a lesson in how the first was nearly missed. The gate reported zero **because** the
+blocker was recorded as an accepted difference, so a zero is only as strong as the differences
+list under it. Read the list, not just the count.
+
+[#795]: https://github.com/yschimke/compose-preview-server/issues/795
+[#796]: https://github.com/yschimke/compose-preview-server/issues/796
+
+The other two are not in. Measuring all three against their frozen goldens, rather than assuming:
 
 | Builder catalog | Served from | Publishes `ui-builder.json`? | Gate |
 | --- | --- | --- | --- |
