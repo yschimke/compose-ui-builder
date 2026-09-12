@@ -6,7 +6,6 @@ plugins {
   alias(libs.plugins.kotlin.jvm)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.ktfmt)
-  alias(libs.plugins.maven.publish)
 }
 
 group = "ee.schimke.composeai"
@@ -184,36 +183,3 @@ tasks.register<CheckUiBuilderRuntimeBoundary>("checkUiBuilderRuntimeBoundary") {
 }
 
 tasks.named("check") { dependsOn("checkUiBuilderRuntimeBoundary") }
-
-mavenPublishing {
-  publishToMavenCentral(automaticRelease = true)
-  if (!project.version.toString().endsWith("SNAPSHOT")) signAllPublications()
-  coordinates(group.toString(), publishedArtifactId, project.version.toString())
-  pom {
-    name.set("Compose Preview — UI Builder Runtime")
-    description.set(
-      "Persistent collaborative UI-builder service, catalog validation, and revision-pinned export orchestration."
-    )
-    url.set("https://github.com/yschimke/compose-preview-server")
-    inceptionYear.set("2026")
-    licenses {
-      license {
-        name.set("The Apache License, Version 2.0")
-        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-        distribution.set("repo")
-      }
-    }
-    developers {
-      developer {
-        id.set("yschimke")
-        name.set("Yuri Schimke")
-        url.set("https://github.com/yschimke")
-      }
-    }
-    scm {
-      url.set("https://github.com/yschimke/compose-preview-server")
-      connection.set("scm:git:https://github.com/yschimke/compose-preview-server.git")
-      developerConnection.set("scm:git:ssh://git@github.com/yschimke/compose-preview-server.git")
-    }
-  }
-}

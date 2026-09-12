@@ -5,7 +5,6 @@ import java.util.zip.ZipFile
 
 plugins {
   `java-library`
-  alias(libs.plugins.maven.publish)
 }
 
 group = "ee.schimke.composeai"
@@ -59,49 +58,10 @@ configurations.named("runtimeElements") {
   outgoing.artifact(webArchive)
 }
 
-mavenPublishing {
-  publishToMavenCentral(automaticRelease = true)
-  if (!project.version.toString().endsWith("SNAPSHOT")) signAllPublications()
-  coordinates(group.toString(), publishedArtifactId, project.version.toString())
-  pom {
-    name.set("Compose Preview — UI Builder Web")
-    description.set("Immutable Compose/Wasm frontend archive for the Compose Preview UI builder.")
-    url.set("https://github.com/yschimke/compose-preview-server")
-    inceptionYear.set("2026")
-    licenses {
-      license {
-        name.set("The Apache License, Version 2.0")
-        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-        distribution.set("repo")
-      }
-    }
-    developers {
-      developer {
-        id.set("yschimke")
-        name.set("Yuri Schimke")
-        url.set("https://github.com/yschimke")
-      }
-    }
-    scm {
-      url.set("https://github.com/yschimke/compose-preview-server")
-      connection.set("scm:git:https://github.com/yschimke/compose-preview-server.git")
-      developerConnection.set("scm:git:ssh://git@github.com/yschimke/compose-preview-server.git")
-    }
-  }
-}
-
-abstract class VerifyUiBuilderWebPublication : DefaultTask() {
+abstract class VerifyUiBuilderWebArchive : DefaultTask() {
   @get:InputFile
   @get:PathSensitive(PathSensitivity.NONE)
   abstract val archiveFile: RegularFileProperty
-
-  @get:InputFile
-  @get:PathSensitive(PathSensitivity.NONE)
-  abstract val moduleMetadataFile: RegularFileProperty
-
-  @get:InputFile
-  @get:PathSensitive(PathSensitivity.NONE)
-  abstract val pomFile: RegularFileProperty
 
   @TaskAction
   fun verify() {
@@ -128,39 +88,15 @@ abstract class VerifyUiBuilderWebPublication : DefaultTask() {
         }
       check(unsafe.isEmpty()) { "UI-builder web archive contains unsafe paths: $unsafe" }
     }
-
-    val metadata = moduleMetadataFile.get().asFile.readText()
-    val archiveName = archive.name
-    check(metadata.contains("\"org.gradle.category\": \"distribution\""))
-    check(metadata.contains("\"org.gradle.libraryelements\": \"ui-builder-web\""))
-    check(metadata.contains("\"org.gradle.usage\": \"ui-builder-web\""))
-    check(metadata.contains("\"org.gradle.usage\": \"ui-builder-web-api\""))
-    check(metadata.split("\"url\": \"$archiveName\"").size - 1 == 2) {
-      "both published Gradle variants must resolve to $archiveName"
-    }
-    check(!metadata.contains("\"url\": \"${archiveName.removeSuffix(".zip")}.jar\"")) {
-      "published Gradle metadata still exposes an empty primary JAR"
-    }
-
-    val pom = pomFile.get().asFile.readText()
-    check(pom.contains("<packaging>zip</packaging>")) {
-      "published Maven POM does not declare the frontend ZIP as its primary artifact"
-    }
   }
 }
 
-val verifyUiBuilderWebPublication =
-  tasks.register<VerifyUiBuilderWebPublication>("verifyUiBuilderWebPublication") {
-    description = "Verify the frontend archive and its published Maven/Gradle artifact shape."
+val verifyUiBuilderWebArchive =
+  tasks.register<VerifyUiBuilderWebArchive>("verifyUiBuilderWebArchive") {
+    description = "Verify the frontend archive carries a complete, safely-named bundle."
     group = "verification"
-    dependsOn(
-      webArchive,
-      tasks.named("generateMetadataFileForMavenPublication"),
-      tasks.named("generatePomFileForMavenPublication"),
-    )
+    dependsOn(webArchive)
     archiveFile.set(webArchive.flatMap { it.archiveFile })
-    moduleMetadataFile.set(layout.buildDirectory.file("publications/maven/module.json"))
-    pomFile.set(layout.buildDirectory.file("publications/maven/pom-default.xml"))
   }
 
-tasks.named("check") { dependsOn(verifyUiBuilderWebPublication) }
+tasks.named("check") { dependsOn(verifyUiBuilderWebArchive) }

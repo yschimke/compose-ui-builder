@@ -31,7 +31,6 @@ compose-multiplatform = "1.12.0"
 compose-material3-adaptive = "1.2.0"
 material-icons-extended = "1.7.3"
 graphics-shapes = "1.1.0"
-maven-publish = "0.37.0"
 # One ref for every compose-ai-tools coordinate, and for the Gradle plugin id it also drives.
 # 1.80.0 is the first release carrying `render-matrix`, which `:mcp` needs, and the daemon-core /
 # render-session-api surface the moved MCP sources compile against. The pin moved with the module
@@ -187,5 +186,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 compose-preview = { id = "ee.schimke.composeai.preview", version.ref = "composeai-tools" }

@@ -25,7 +25,6 @@ plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.multiplatform)
   alias(libs.plugins.kotlin.serialization)
-  alias(libs.plugins.maven.publish)
 }
 
 group = "ee.schimke.composeai"
@@ -72,40 +71,5 @@ kotlin {
       implementation(libs.kotlinx.serialization.json)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
-  }
-}
-
-mavenPublishing {
-  publishToMavenCentral(automaticRelease = true)
-  if (!project.version.toString().endsWith("SNAPSHOT")) signAllPublications()
-  coordinates(group.toString(), publishedArtifactId, project.version.toString())
-  pom {
-    name.set("Compose Preview — UI Builder Export")
-    description.set(
-      "Projection from a saved UI-builder design onto the screen model the Compose generator " +
-        "consumes, shared by the server and the browser editor so the two agree about what a " +
-        "design exports."
-    )
-    url.set("https://github.com/yschimke/compose-preview-server")
-    inceptionYear.set("2026")
-    licenses {
-      license {
-        name.set("The Apache License, Version 2.0")
-        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-        distribution.set("repo")
-      }
-    }
-    developers {
-      developer {
-        id.set("yschimke")
-        name.set("Yuri Schimke")
-        url.set("https://github.com/yschimke")
-      }
-    }
-    scm {
-      url.set("https://github.com/yschimke/compose-preview-server")
-      connection.set("scm:git:https://github.com/yschimke/compose-preview-server.git")
-      developerConnection.set("scm:git:ssh://git@github.com/yschimke/compose-preview-server.git")
-    }
   }
 }

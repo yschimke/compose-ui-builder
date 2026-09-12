@@ -34,8 +34,8 @@ restart. A browser is opened on the builder; `--no-open` prints the URL instead.
 The builder bundle it serves is already inside the server distribution, so downloading
 `compose-preview-server-<version>.tar.gz` from a release is the whole install. Releases also carry
 `compose-preview-ui-builder-web-<version>.zip` on its own, for serving the bundle yourself or
-pointing an existing server at it with `--ui-builder-dir`; the same archive is on Maven Central as
-`compose-preview-ui-builder-web`. To build it from this repository instead:
+pointing an existing server at it with `--ui-builder-dir`. To build it from this repository
+instead:
 
 ```bash
 ./gradlew :ui-builder:wasmFrontendDist   # writes ui-builder/build/wasmDist

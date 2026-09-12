@@ -844,14 +844,17 @@ consumption for the runtime and web archive; adding the renderer ZIP and a full 
 operation replay remains part of the extraction gate. Moving the frontend out remains a
 release/deployment decision, not a source API discovery exercise.
 
-`scripts/check-ui-builder-external-consumer.sh` makes that artifact seam executable. It publishes
-the runtime and frontend to a fresh temporary Maven repository, copies a minimal Gradle consumer
-and wrapper outside this checkout, compiles and runs against the runtime coordinate, and resolves
-the frontend only through its exact distribution attributes. The consumer rejects project
-components, artifacts under the producer checkout, source-path leakage in the repository, malformed
-metadata, and an incomplete frontend ZIP. This proves the two published artifacts can be consumed
-without `mavenLocal()`, a composite build, or project substitution; the broader extraction criteria
-still require the released-server operation-replay and version-skew tests above.
+`scripts/check-ui-builder-external-consumer.sh` used to make that artifact seam executable: it
+published the runtime and frontend to a fresh temporary Maven repository, compiled a minimal Gradle
+consumer outside this checkout against the runtime coordinate, and resolved the frontend through its
+distribution attributes alone.
+
+It went with the publication. This repository publishes nothing to Maven Central — its artifacts are
+the `.tar.gz`/`.zip` assets on each GitHub release — so there is no coordinate for an external
+consumer to resolve and nothing for that gate to prove. The seam it guarded is still real and still
+guarded, by the checks that do not depend on a POM: `checkServeModuleBoundary` and
+`checkRenderHostIsServerFree` below, which are resolved-classpath gates. The broader extraction
+criteria still require the released-server operation-replay and version-skew tests above.
 
 Do not add a reverse `:render-host -> :server` edge, a web server to `:render-host`, `mavenLocal()`, a
 composite include, or implementation code to the contracts repository. `checkServeModuleBoundary`
