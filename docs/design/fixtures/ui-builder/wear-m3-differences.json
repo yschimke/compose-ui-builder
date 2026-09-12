@@ -103,5 +103,234 @@
       ]
     },
     "frozen": null
+  },
+  {
+    "field": "componentMenu.components.wear-m3/button-group",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.ButtonGroupKt.ButtonGroup`.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": {
+      "group": "Actions"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/checkbox-button",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.CheckboxButtonKt.CheckboxButton`.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/icon",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.IconKt.Icon`. Note `Iconography` is the one name in `groupOrder` that no `@file:CatalogGroup` in `catalog/src` declares — this component comes from the library rather than from a catalog section file, which is why it carries a shelf no file names. Checked, not a typo.",
+    "policy": {
+      "group": "Iconography"
+    },
+    "frozen": {
+      "group": "Content"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/list-header",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.ListHeaderKt.ListHeader`.",
+    "policy": {
+      "group": "Lists and screens"
+    },
+    "frozen": {
+      "group": "Lists"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/list-sub-header",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.ListHeaderKt.ListSubHeader`.",
+    "policy": {
+      "group": "Text"
+    },
+    "frozen": {
+      "group": "Lists"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/radio-button",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.RadioButtonKt.RadioButton`.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/screen-scaffold",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.ScreenScaffoldKt.ScreenScaffold`.",
+    "policy": {
+      "group": "Fast scrolling"
+    },
+    "frozen": {
+      "group": "Screens"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/slider",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.SliderKt.Slider`.",
+    "policy": {
+      "group": "Sliders and steppers"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/stepper",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.StepperKt.Stepper`.",
+    "policy": {
+      "group": "Sliders and steppers"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/switch-button",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.SwitchButtonKt.SwitchButton`.",
+    "policy": {
+      "group": "Selection buttons"
+    },
+    "frozen": {
+      "group": "Selection"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/text",
+    "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.TextKt.Text`.",
+    "policy": {
+      "group": "Text"
+    },
+    "frozen": {
+      "group": "Content"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/button",
+    "why": "Reshelved as above, AND the policy states no `variantProperty` where the frozen catalog states `variant`. That is a real loss, not a rename: the insert panel loses this component's variant control until the catalog declares `@BuilderComponent(variantProperty = …)`, which neither catalog does today — an authoring gap rather than a removal. Accepted deliberately (2026-09-12) and recorded rather than waived, so it is asserted here instead of disappearing into a green gate. The record symbol is unchanged, so the component itself is the same one: `androidx.wear.compose.material3.ButtonKt.Button`.",
+    "policy": {
+      "group": "Buttons"
+    },
+    "frozen": {
+      "group": "Actions",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/card",
+    "why": "Reshelved as above, AND the policy states no `variantProperty` where the frozen catalog states `variant`. That is a real loss, not a rename: the insert panel loses this component's variant control until the catalog declares `@BuilderComponent(variantProperty = …)`, which neither catalog does today — an authoring gap rather than a removal. Accepted deliberately (2026-09-12) and recorded rather than waived, so it is asserted here instead of disappearing into a green gate. The record symbol is unchanged, so the component itself is the same one: `androidx.wear.compose.material3.CardKt.Card`.",
+    "policy": {
+      "group": "Cards"
+    },
+    "frozen": {
+      "group": "Containment",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/date-picker",
+    "why": "Reshelved as above, AND the policy states no `variantProperty` where the frozen catalog states `type`. That is a real loss, not a rename: the insert panel loses this component's variant control until the catalog declares `@BuilderComponent(variantProperty = …)`, which neither catalog does today — an authoring gap rather than a removal. Accepted deliberately (2026-09-12) and recorded rather than waived, so it is asserted here instead of disappearing into a green gate. The record symbol is unchanged, so the component itself is the same one: `androidx.wear.compose.material3.DatePickerKt.DatePicker`.",
+    "policy": {
+      "group": "Pickers"
+    },
+    "frozen": {
+      "group": "Selection",
+      "variantProperty": "type"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/icon-button",
+    "why": "Reshelved as above, AND the policy states no `variantProperty` where the frozen catalog states `variant`. That is a real loss, not a rename: the insert panel loses this component's variant control until the catalog declares `@BuilderComponent(variantProperty = …)`, which neither catalog does today — an authoring gap rather than a removal. Accepted deliberately (2026-09-12) and recorded rather than waived, so it is asserted here instead of disappearing into a green gate. The record symbol is unchanged, so the component itself is the same one: `androidx.wear.compose.material3.IconButtonKt.IconButton`.",
+    "policy": {
+      "group": "Icon buttons"
+    },
+    "frozen": {
+      "group": "Actions",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/text-button",
+    "why": "Reshelved as above, AND the policy states no `variantProperty` where the frozen catalog states `variant`. That is a real loss, not a rename: the insert panel loses this component's variant control until the catalog declares `@BuilderComponent(variantProperty = …)`, which neither catalog does today — an authoring gap rather than a removal. Accepted deliberately (2026-09-12) and recorded rather than waived, so it is asserted here instead of disappearing into a green gate. The record symbol is unchanged, so the component itself is the same one: `androidx.wear.compose.material3.TextButtonKt.TextButton`. Its shelf is `Icon buttons` rather than `Buttons` because the catalog declares it in `sections/IconButtons.kt`; that is the catalog's filing, not a slip here.",
+    "policy": {
+      "group": "Icon buttons"
+    },
+    "frozen": {
+      "group": "Actions",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/time-picker",
+    "why": "Reshelved as above, AND the policy states no `variantProperty` where the frozen catalog states `type`. That is a real loss, not a rename: the insert panel loses this component's variant control until the catalog declares `@BuilderComponent(variantProperty = …)`, which neither catalog does today — an authoring gap rather than a removal. Accepted deliberately (2026-09-12) and recorded rather than waived, so it is asserted here instead of disappearing into a green gate. The record symbol is unchanged, so the component itself is the same one: `androidx.wear.compose.material3.TimePickerKt.TimePicker`.",
+    "policy": {
+      "group": "Pickers"
+    },
+    "frozen": {
+      "group": "Selection",
+      "variantProperty": "type"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/edge-button",
+    "why": "NOT a reshelving, and it would be wrong to record it as one. The id now names a DIFFERENT component: the policy's `wear-m3/edge-button` resolves to `androidx.wear.compose.material3.AlertDialogDefaults.EdgeButton` — the button belonging to AlertDialog, which is why `Dialogs` is the correct shelf for it — while the frozen `wear-m3/edge-button` is the standalone Wear M3 `EdgeButton`, filed under `Actions` with a `size` variant. So this entry accepts two things at once, a SUBSTITUTION and a LOSS: the id is rebound to the dialog's edge button, and the standalone `EdgeButton` becomes unreachable — it appears in the published menu under no id at all. The catalog's own `EdgeButtonSticker` and `EdgeButtonScreen` are published as `wear-m3/edge-button-sticker` (on `Edge-hugging buttons`) and `wear-m3/edge-button-screen`, but both are catalog wrappers rather than the library component the frozen shelf offered. Same class as `remote-m3/lottie`: a stated loss, recorded so the gate can run strict while the loss stays asserted. Reviewed 2026-09-12. Found only by resolving the id to its `record` symbol — the shelf move alone looked like the other six.",
+    "policy": {
+      "group": "Dialogs"
+    },
+    "frozen": {
+      "group": "Actions",
+      "variantProperty": "size"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/alert-dialog",
+    "why": "Listed by the frozen catalog and NOT offered by the published menu — absent from `statusSemantics.components` entirely, so there is no record symbol to compare. Accepted as a recorded loss (2026-09-12) rather than waived. The menu does offer `wear-m3/alert-dialog-content` on the `Dialogs` shelf, so the surface is reachable through the catalog's own sticker; what is lost is the library composable as a directly insertable component.",
+    "policy": null,
+    "frozen": {
+      "group": "Containment"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/confirmation-dialog",
+    "why": "Listed by the frozen catalog and NOT offered by the published menu — absent from `statusSemantics.components` entirely, so there is no record symbol to compare. Accepted as a recorded loss (2026-09-12) rather than waived. As with alert-dialog, `wear-m3/confirmation-dialog-content` is offered on `Dialogs` (alongside the success and failure variants as separate entries), so the `variant` axis the frozen entry carried is expressed as distinct components rather than as a variant control.",
+    "policy": null,
+    "frozen": {
+      "group": "Containment",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/open-on-phone-dialog",
+    "why": "Listed by the frozen catalog and NOT offered by the published menu — absent from `statusSemantics.components` entirely, so there is no record symbol to compare. Accepted as a recorded loss (2026-09-12) rather than waived. `wear-m3/open-on-phone-dialog-content` is offered on `Dialogs`, same substitution as the two above.",
+    "policy": null,
+    "frozen": {
+      "group": "Containment"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/progress-indicator",
+    "why": "Listed by the frozen catalog and NOT offered by the published menu — absent from `statusSemantics.components` entirely, so there is no record symbol to compare. Accepted as a recorded loss (2026-09-12) rather than waived. THE ONE CLEAN LOSS of the five: no `progress-indicator` counterpart is offered under any id. The menu carries `arc-`, `linear-`, `segmented-circular-` and `circular-progress-indicator` as separate components, which covers the drawing but not the frozen entry's `variant` axis over them. Worth revisiting if the catalog ever declares a unified indicator.",
+    "policy": null,
+    "frozen": {
+      "group": "Communication",
+      "variantProperty": "variant"
+    }
+  },
+  {
+    "field": "componentMenu.components.wear-m3/transforming-lazy-column",
+    "why": "Listed by the frozen catalog and NOT offered by the published menu — absent from `statusSemantics.components` entirely, so there is no record symbol to compare. Accepted as a recorded loss (2026-09-12) rather than waived. Not absent in practice: it is served as a declared BUILTIN (see `ui-builder.policy.json`'s `builtins`), so the builder offers it without a record entry. That is why it cannot appear in `componentMenu.components`, and why this is the least lossy of the five.",
+    "policy": null,
+    "frozen": {
+      "group": "Lists"
+    }
   }
 ]

@@ -544,20 +544,41 @@ Each phase is releasable on its own and leaves every catalog working.
    id from the cover sheet (`:remote-catalog` and m3-catalog both do; wear-m3-catalog declares
    `catalogId` because its builder id and its delivery system differ), and worth passing always.
    Semantics never identify a catalog: a second `wear` catalog can agree on every compared field, so
-   without an id the gate cannot tell "ready" from "you fetched the wrong file". The three
-   invocations, of which **only the `wear-m3` one passes today** (measured 2026-09-12 against each
-   catalog repository's current `main`; `remote-m3` reports 0 differences and **29** unusable
-   exemptions, `m3-catalog` 0 and **107**, because those two differences lists have outlived the
-   differences they were written for — their policies moved to agree with the frozen catalog and
-   nobody retired the exemptions):
+   without an id the gate cannot tell "ready" from "you fetched the wrong file".
+
+   **Read what an invocation compares before reading its exit code**, because the authored
+   policy and the published document are not interchangeable here. Run against a catalog's authored
+   `ui-builder.policy.json`, all three report 0 differences and a pile of unusable exemptions —
+   `remote-m3` 29, `m3-catalog` 107, `wear-m3` 23 as of 2026-09-12. That is **structural, not
+   staleness**: a differences list is written against the PUBLISHED document, where a component
+   menu is derived from the record, and its per-component entries cannot apply to an authored
+   policy that declares only a handful of components. The counts line up exactly — 27, 105 and 23
+   per-component entries respectively, plus two catalog-level ones each for the first two.
+
+   An earlier revision of this paragraph said these lists "have outlived the differences they were
+   written for" and that the policies had moved to agree with the frozen catalog. That was wrong,
+   and wrong in the direction that invites someone to delete 136 reviewed exemptions. What the CI
+   job runs, and what these lists are for, is the published-document form below:
 
    ```
+   # What `ui-builder-contract` runs, and what the differences lists are written against:
+   # the catalog's PUBLISHED document, captured here as a `*-published-v1.json` fixture.
+   .github/scripts/ui-builder-equivalence.sh --strict \
+     --policy docs/design/fixtures/ui-builder/remote-m3-published-v1.json \
+     --golden docs/design/fixtures/ui-builder/remote-m3-capabilities-v1.json \
+     --differences docs/design/fixtures/ui-builder/remote-m3-differences.json \
+     --catalog-id remote-m3 --component-id-prefix "remote-m3/"
+   # m3-catalog-generated-published-v1.json  → m3-catalog, --component-id-prefix "m3/"
+   # wear-m3-published-v1.json               → wear-m3,    --component-id-prefix "wear-m3/"
+   #   (not in CI yet — see the wear-m3 note in `wear-m3-published-v1.json`'s `$comment`)
+
+   # And against a catalog's AUTHORED policy, which is a weaker check — it compares only the
+   # facts that policy states, so the per-component entries above show up as unusable exemptions.
+   # Useful before a catalog publishes anything; never a readiness signal on its own.
    .github/scripts/ui-builder-equivalence.sh --strict \
      --policy <wear-m3-catalog>/ui-builder.policy.json \
      --golden docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json \
      --differences docs/design/fixtures/ui-builder/wear-m3-differences.json --catalog-id wear-m3
-   # …/remote-catalog/ui-builder.policy.json  → remote-m3
-   # <m3-catalog>/ui-builder.policy.json      → m3-catalog
    ```
 
 Everything else that was phase 0 — the platform word, the emitter routing, the canvas mapping, the
