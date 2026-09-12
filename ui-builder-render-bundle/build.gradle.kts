@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 import java.util.zip.ZipFile
 
@@ -132,6 +133,23 @@ tasks.processResources {
  * left it out, or a rename of the file it writes, would otherwise publish an empty artifact and
  * fail at a consumer's runtime with "packaged UI-builder renderer bundle is missing".
  */
+/**
+ * Coordinates the RENDERER needs that no packed preview reaches.
+ *
+ * `androidx.window.core.layout.WindowSizeClass` is imported by `UiBuilderRenderer.kt` and called
+ * from `AdaptiveSupportingPaneScaffold`, which the node renderer enters for a
+ * `layout/supporting-pane-scaffold` node -- so it is needed by the *document*, never by the one
+ * preview the bundle packs. #788 introduced that call and #812 is the 500 it produced: an
+ * `exportDesign` of any design with a supporting pane failed with the bare class name, and the
+ * only gate that would have caught it was a visual harness step that had been unreachable for
+ * eleven runs behind an unrelated red.
+ *
+ * A coordinate belongs here when `:ui-builder` imports from it and the reachability walk cannot
+ * see the call from a packed preview. Adding one is cheap; the failure it prevents costs a
+ * release.
+ */
+val RENDER_ONLY_COORDINATES = listOf("org.jetbrains.androidx.window:window-core")
+
 val verifyRenderBundlePackaged =
   tasks.register("verifyRenderBundlePackaged") {
     description = "Fail the build if the published jar does not carry the render bundle."
@@ -157,6 +175,52 @@ val verifyRenderBundlePackaged =
             Properties().apply { load(stream) }.getProperty("javaMin")
           }
         checkNotNull(javaMin?.toIntOrNull()) { "$manifestEntry has no numeric javaMin" }
+
+        // The bundle's own classpath, checked for the render-only coordinates below.
+        //
+        // `composePreviewBundle` minimizes: a dependency with no class reachable from the packed
+        // preview is dropped, and `bundle.json` lists only what survived. That is correct for a
+        // library the previews never touch and silent for one the RENDERER reaches only when a
+        // rendered document asks for it -- nothing fails until a design uses the component, and
+        // then it is a 500 from `exportDesign` naming a bare class, a long way from this build.
+        val bundleFile = File.createTempFile("ui-builder-renderer", ".bundle")
+        try {
+          jar.getInputStream(packaged).use { source ->
+            bundleFile.outputStream().use { sink -> source.copyTo(sink) }
+          }
+          // The bundle is a polyglot PNG whose tail is an ordinary zip, which is how the daemon
+          // opens it too.
+          val carried =
+            ZipFile(bundleFile).use { bundle ->
+              val descriptor =
+                checkNotNull(bundle.getEntry("bundle.json")) { "$entry carries no bundle.json" }
+              val parsed =
+                bundle.getInputStream(descriptor).use { stream ->
+                  groovy.json.JsonSlurper().parseText(stream.readBytes().toString(Charsets.UTF_8))
+                }
+              @Suppress("UNCHECKED_CAST")
+              val classpath =
+                ((parsed as Map<String, Any?>)["classpath"] as? List<Map<String, Any?>>).orEmpty()
+              // `kind`, not `type`. `BundlePreviewTask` serializes these with
+              // `classDiscriminator = "kind"`, and a Maven entry carries its OWN `type` field
+              // holding the packaging -- so filtering on `type` matches "jar", never "maven",
+              // and the set comes back empty.
+              classpath
+                .filter { it["kind"] == "maven" }
+                .map { "${it["group"]}:${it["artifact"]}" }
+                .toSet()
+            }
+          check(carried.isNotEmpty()) { "$entry lists no Maven coordinates; the check is vacuous" }
+          val missing = RENDER_ONLY_COORDINATES.filterNot { required -> required in carried }
+          check(missing.isEmpty()) {
+            "the render bundle does not carry ${missing.joinToString()}. " +
+              "`:ui-builder` imports classes from it, but no packed preview reaches them, so " +
+              "`composePreviewBundle` pruned the coordinate and the daemon renders without it. " +
+              "Carried: ${carried.sorted().joinToString()}"
+          }
+        } finally {
+          bundleFile.delete()
+        }
       }
     }
   }
