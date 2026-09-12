@@ -170,6 +170,14 @@ this reason: the editing pane draws the design's whole extent, and `ConstrainedF
 draws the same document clipped to its frame, read-only, with its own `renderSessionId`. A variant
 pane is that same seam, parameterised by an environment *override* instead of a height clamp.
 
+**The variants are not on the authoring canvas.** They were, for one release, and it was the wrong
+place: the one surface you edit on grew a row of surfaces you cannot, and the fit shrank the frame
+you were working in to make room for them. They live in the workspace's **preview pane**
+(`EditorPane.Preview`) — you build the UI once on a canvas that holds one frame, and watch it adapt
+beside you. `PinnedDesignCanvas` takes no variant list at all, so nothing can put a strip back on it.
+The canvas keeps its extent companion, which is the same design overflowing its own frame rather
+than a device or a theme.
+
 ### Where the device list comes from: `exportDevices`, already stored
 
 `DesignEnvironmentV1.exportDevices` is a stored, shared, wire-carried list of device ids the design
@@ -178,13 +186,22 @@ claims to work on. Before this, exactly one consumer read it —
 generated screen — and the editor never drew it. A design could therefore claim three devices and show
 its author one, and the two decisions were made in different places with neither showing the other.
 
-The variant strip is that list, drawn. **The set you look at is the set the export writes**, which is
+The preview pane is that list, drawn. **The set you look at is the set the export writes**, which is
 the whole reason to seed it from stored state rather than from a viewer-local list of devices.
+
+**A device is a set of properties, never a picture of a handset.** `UiBuilderDevicePreset` carries an
+id, a label, a group, a width, a height and a density, and a pane is the design composed at those —
+nothing draws a bezel, a notch or a rounded corner. A mock that is not photoreal is worse than none:
+it invites a judgement about a screen from a drawing of a phone that is not the phone. So each pane
+is labelled with what it applied (`Pixel 6 · 411×914dp · 2.625×`) rather than only with the name,
+because which of width, height and density moved is the only question the pane can answer.
 
 ### One editing pane, and the rest are mirrors
 
-Exactly one pane accepts edits: the extent, at the design's own frame. Every variant pane is
-read-only — no selection overlay, no hit-testing, no drop target, no comment pins.
+Exactly one pane accepts edits: the extent, at the design's own frame, on the authoring canvas. Every
+variant pane is read-only — no selection overlay, no hit-testing, no drop target, no comment pins —
+and they are in a different pane of the workspace entirely, which is the clearest possible statement
+of that rule.
 
 This is the load-bearing rule of the feature, not a limitation of the first version. "Which variant
 did my edit land in?" is the question that makes multi-variant editors confusing, and a design has one
@@ -192,10 +209,34 @@ document: an edit made on the tablet pane is an edit to the same tree the phone 
 every pane editable would not give the author more power, it would give them a coordinate space per
 pane and one shared outcome.
 
+### Where this is going: the real adaptive components
+
+The point of building at a tablet frame and watching the design come down to a phone is that the
+**actual** Compose components adapt — that `SupportingPaneScaffold` collapses to one pane because the
+window says so, the way it will in the app. Today they do not, and the previews are correct only in
+the weak sense that a frame change reaches the layout:
+
+- The Wasm renderer draws `layout/supporting-pane-scaffold` with `DeterministicSupportingPaneScaffold`
+  — a `BoxWithConstraints` in this repository that expands past
+  `mainPaneWidth + supportingPaneWidth + spacing`.
+- The Kotlin export emits `BuilderSupportingPaneScaffold`, a second hand-rolled helper with a
+  *different* threshold again: a hard `1280.dp`. The preview and the generated app can therefore
+  disagree about when the design expands.
+- The native lane refuses the component outright, because `layoutMode` is an authored property and
+  the real scaffold derives its panes from a `PaneScaffoldDirective` and the window rather than
+  taking a mode (`ScreenDocumentProjection.VARIANT_PROPERTIES`).
+
+`androidx.compose.material3.adaptive` is on no module's dependency floor here, which is why the
+stand-ins exist rather than being an oversight. The direction is to link it in the renderer and emit
+the real component from the exporter, at which point `layoutMode` stops being something an author
+sets and the refusal goes away with it — the frame decides, which is what the whole variant model
+already assumes. Until then, read the tablet pane as "a wider frame reaches the layout", not as what
+that library would draw.
+
 ### Theme, font scale and direction are unstored view toggles
 
 Devices come from the document because the document already carries them and the export already
-writes them. Dark, RTL and a large font scale do **not**: they are toggles on the strip, held in
+writes them. Dark, RTL and a large font scale do **not**: they are toggles held in
 `UiBuilderEditorState`, not stored, not shared, not undone.
 
 They could have been stored sets — an `exportThemes`, an `exportFontScales` — and that is a field in
