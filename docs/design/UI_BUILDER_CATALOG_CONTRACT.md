@@ -545,7 +545,11 @@ Each phase is releasable on its own and leaves every catalog working.
    `catalogId` because its builder id and its delivery system differ), and worth passing always.
    Semantics never identify a catalog: a second `wear` catalog can agree on every compared field, so
    without an id the gate cannot tell "ready" from "you fetched the wrong file". The three
-   invocations that pass today:
+   invocations, of which **only the `wear-m3` one passes today** (measured 2026-09-12 against each
+   catalog repository's current `main`; `remote-m3` reports 0 differences and **29** unusable
+   exemptions, `m3-catalog` 0 and **107**, because those two differences lists have outlived the
+   differences they were written for — their policies moved to agree with the frozen catalog and
+   nobody retired the exemptions):
 
    ```
    .github/scripts/ui-builder-equivalence.sh --strict \
@@ -675,16 +679,25 @@ have broken.** Measuring the two against their frozen goldens, rather than assum
 
 | Builder catalog | Served from | Publishes `ui-builder.json`? | Gate |
 | --- | --- | --- | --- |
-| `remote-m3` | `yschimke/wear-m3-catalog` `design-artifacts/remote-m3` | no — the cover sheet declares no `uiBuilderFile` | nothing to compare; the loader never engages |
-| `m3-catalog` | `yschimke/m3-catalog` `design-artifacts/m3-catalog` | yes, 48 KB, and the cover sheet declares it | **25 differences, exit 1** |
+| `remote-m3` | `yschimke/wear-m3-catalog` `design-artifacts/remote-m3` | yes, 42 KB, and the cover sheet declares it | 0 differences against the committed snapshot, `--strict` green in CI |
+| `m3-catalog` | `yschimke/m3-catalog` `design-artifacts/m3-catalog` | yes, 188 KB, and the cover sheet declares it | 0 differences against the live document; **2** unusable exemptions |
 
-`m3-catalog` is the dangerous one and it was on. Its published file declares **zero** components and
-**zero** builtins under `statusSemantics`: composing it against the 104-component record derives all
-104 ids from the `m3/` prefix in place of a curated shelf of 41, its 29 menu entries leave the rest
-ungrouped, and a catalog with no builtins has no screen root to put any component into. That is not
-a degraded catalog, it is an unusable one, and nothing in the loader would have said so — the file
-is well-formed, so `PublishedUiBuilderCatalog` composes it happily. Turning the published path off
-by default and naming a catalog to turn it on is the shape phase 4 should have shipped with.
+**Both rows were rewritten on 2026-09-12; the table had outlived its measurements.** It recorded
+`remote-m3` as declaring no `uiBuilderFile` and `m3-catalog` as publishing a 48 KB file scoring 25
+differences. Neither holds: every one of the five delivery branches now stamps
+`"uiBuilderFile": "ui-builder.json"` on its cover sheet, and the two figures below are what the gate
+actually reports.
+
+`m3-catalog` was the dangerous one and it was on. When this paragraph was written its published file
+declared **zero** components and **zero** builtins under `statusSemantics`, so composing it against
+the then-104-component record derived every id from the `m3/` prefix in place of a curated shelf of
+41 and left the rest ungrouped. **The components half has since been fixed** — the published file
+now declares 110 components with a 102-entry menu over 39 shelves, and scores 0 differences. The
+builtins half has not: it still declares **zero**, so a catalog composed from it has no screen root
+to put any component into. That is why the lever stays `none` rather than why it was set — the
+original reason is gone and this one replaces it. Nothing in the loader would say so either way: the
+file is well-formed, so `PublishedUiBuilderCatalog` composes it happily. Turning the published path
+off by default and naming a catalog to turn it on is the shape phase 4 should have shipped with.
 
 **`wear-m3` is out of the image's default allowlist, for a different and simpler reason.** It is a
 Wear/Android catalog — Robolectric previews, an Android SDK for its native lane — that nobody is
