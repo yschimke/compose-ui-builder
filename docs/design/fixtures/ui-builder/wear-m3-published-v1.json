@@ -1,5 +1,5 @@
 {
-  "$comment": "GENERATED — captured verbatim from the `design-artifacts/wear-m3-catalog` delivery branch of yschimke/wear-m3-catalog at 13a624728, which `composePreviewDiscover` wrote from wear-m3-catalog b1bd5d19 (the merge of wear-m3-catalog#466, the composePreviewPlugin 2.11.1 pin). That pin is why this fixture can exist at all: every Design Artifacts run since 7be2de73 had SKIPPED `composePreviewBundle` on this KMP-Android module, so the branch served a document generated before the catalog adopted its own @file:CatalogGroup vocabulary — ten shelves whose names its components had already stopped using. Regenerate the same way — take the delivery branch's `ui-builder.json` and re-add this key — whenever wear-m3-catalog gains or loses a component, or its policy changes what a component declares.\n\nNOT yet gated in CI, unlike its remote-m3 and m3 siblings — but no longer for want of review. All 23 differences this document scores against the frozen catalog are now carried by `wear-m3-differences.json`, each pinning both sides: 11 reshelved with the record symbol unchanged, 6 reshelved while dropping a frozen `variantProperty`, 1 (`edge-button`) that is a substitution rather than a move, and 5 the frozen catalog lists that this menu does not offer. The gate reports 0 differences, 0 unstated facts and 0 unusable exemptions against it.\n\nWhat still blocks `--strict` is the third of its seven conditions, \"a fact the catalog states that the frozen one cannot check\": 60 unreviewed fields remain — 58 components the frozen catalog has no opinion about, plus `code` and `templates`. Those are ADDITIONS rather than losses, so accepting them is lower-risk than the 23 were; they are nonetheless unread, and two of the ones that were read turned out to be catalog-side collisions rather than intent (`circular-progress-indicator` shelved on Buttons, `edge-button` bound to AlertDialog's overload), fixed upstream in wear-m3-catalog#474 rather than recorded here. That is the argument against bulk-accepting the rest.\n\nEXPECT THIS FIXTURE TO NEED RE-CAPTURING. wear-m3-catalog#474 corrects those two bindings at source, so the next Design Artifacts republish moves `circular-progress-indicator` to `Progress indicators` and rebinds `wear-m3/edge-button` to `EdgeButtonKt.EdgeButton` on `Edge-hugging buttons`. When that lands, re-capture this file and revise the `edge-button` entry in the differences list, which will correctly read as an unusable exemption until it is.",
+  "$comment": "GENERATED — captured verbatim from the `design-artifacts/wear-m3-catalog` delivery branch of yschimke/wear-m3-catalog at 13a624728, which `composePreviewDiscover` wrote from wear-m3-catalog b1bd5d19 (the merge of wear-m3-catalog#466, the composePreviewPlugin 2.11.1 pin). That pin is why this fixture can exist at all: every Design Artifacts run since 7be2de73 had SKIPPED `composePreviewBundle` on this KMP-Android module, so the branch served a document generated before the catalog adopted its own @file:CatalogGroup vocabulary — ten shelves whose names its components had already stopped using. Regenerate the same way — take the delivery branch's `ui-builder.json` and re-add this key — whenever wear-m3-catalog gains or loses a component, or its policy changes what a component declares.\n\nNOT yet gated in CI, unlike its remote-m3 and m3 siblings — but no longer for want of review. All 23 differences this document scores against the frozen catalog are carried by `wear-m3-differences.json`, each pinning both sides: **11** reshelved with the record symbol unchanged, **7** reshelved while dropping a frozen `variantProperty` (`button`, `card`, `date-picker`, `edge-button`, `icon-button`, `text-button`, `time-picker`), and **5** the frozen catalog lists that this menu does not offer. The gate reports 0 differences, 0 unstated facts and 0 unusable exemptions against it.\n\nWhat still blocks `--strict` is the third of its seven conditions, \"a fact the catalog states that the frozen one cannot check\": 60 unreviewed fields remain — 58 components the frozen catalog has no opinion about, plus `code` and `templates`. Those are ADDITIONS rather than losses, so accepting them is lower-risk than the 23 were; they are nonetheless unread, and two of the ones that were read turned out to be catalog-side collisions rather than intent (`circular-progress-indicator` shelved on Buttons, `edge-button` bound to AlertDialog's overload), fixed upstream in wear-m3-catalog#474 rather than recorded here. That is the argument against bulk-accepting the rest.\n\nRE-CAPTURED 2026-09-12 from the delivery branch at 7f8b5134f, after wear-m3-catalog#474 and the Design Artifacts run that published it. That run is what moved the two collisions this fixture previously recorded: `circular-progress-indicator` Buttons → `Progress indicators`, and `wear-m3/edge-button` rebound from `AlertDialogDefaults.EdgeButton` on `Dialogs` to the standalone `EdgeButtonKt.EdgeButton` on `Edge-hugging buttons`. `edge-button`'s entry was RE-PINNED, not removed: the substitution it recorded no longer exists, but a real difference survives — the policy still states no `variantProperty` where the frozen catalog states `size` — so it is now the seventh variant loss above rather than a class of its own, and its `why` keeps the substitution as history. That is why the counts here read 11/7/5 and not 11/6/1/5.",
   "schema": "compose-ui-builder-catalog/v1",
   "catalog": {
     "id": "wear-m3",
@@ -61,7 +61,7 @@
           "group": "Dialogs"
         },
         "wear-m3/edge-button": {
-          "group": "Dialogs"
+          "group": "Edge-hugging buttons"
         },
         "wear-m3/alert-dialog-content": {
           "group": "Dialogs"
@@ -112,7 +112,7 @@
           "group": "Selection buttons"
         },
         "wear-m3/circular-progress-indicator": {
-          "group": "Buttons"
+          "group": "Progress indicators"
         },
         "wear-m3/confirmation-dialog-content": {
           "group": "Dialogs"
@@ -410,7 +410,7 @@
         "modifierCapabilities": null
       },
       "wear-m3/edge-button": {
-        "record": "catalog/androidx.wear.compose.material3.AlertDialogDefaults.EdgeButton",
+        "record": "catalog/androidx.wear.compose.material3.EdgeButtonKt.EdgeButton",
         "catalogId": null,
         "displayName": null,
         "canvas": null,
