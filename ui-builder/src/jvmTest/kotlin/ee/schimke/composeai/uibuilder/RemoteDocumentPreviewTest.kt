@@ -52,6 +52,15 @@ class RemoteDocumentPreviewTest {
   }
 
   private fun assertPlayback(stem: String, saved: Boolean = true) {
+    // The interactive document pane is opt-in build surface: `UiBuilderEditor` mounts it only when
+    // `UiBuilderBuildFeatures.remoteCompose` is set, so in a shipping build there is no
+    // "Live preview · …" label to find and all three cases fail on a missing node rather than on
+    // anything they mean to assert. The `.rc` fixtures here are pre-recorded, so nothing else in
+    // this file needed the feature — which is why it never got the guard the export tests carry.
+    org.junit.Assume.assumeTrue(
+      "Enable with -PuiBuilderRemoteCompose=true",
+      UiBuilderBuildFeatures.remoteCompose,
+    )
     val report =
       decodeRemoteComposeDocument(ready(stem = stem).documentBase64)
         .getOrThrow()

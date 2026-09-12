@@ -284,8 +284,17 @@ class GeneratedDocumentTest {
       )
     }
       .isSuccess
+    // A second gate, one level below the generator vocabulary: a build without
+    // `UiBuilderBuildFeatures.remoteCompose` refuses ANY document carrying a repetition
+    // ("stateful authoring and reusable source export are disabled in this build"), however well
+    // the shared generator can express one. So in a shipping build `layout/for-each` is expected
+    // to refuse and must NOT be exempted the way the vocabulary gate exempts it — otherwise this
+    // helper demands source from a document the product has already declined to generate.
+    val withheldByBuild = !UiBuilderBuildFeatures.remoteCompose && used.contains("layout/for-each")
     val expected =
-      used - recordedComponentIds - if (repetitions) setOf("layout/for-each") else emptySet()
+      used -
+        recordedComponentIds -
+        if (repetitions && !withheldByBuild) setOf("layout/for-each") else emptySet()
     val generated = reducer.generatedCode(document)
     if (expected.isEmpty()) {
       assertEquals(

@@ -238,9 +238,10 @@ production composables in the interaction harness. They are not a separate edito
 website screenshot. `ServeUiBuilderMcpIntegrationTest` discovers the property through the catalog,
 authors it through MCP and proves that removing its selector declaration is rejected.
 `StateSelectionExportTest` validates the same shape and checks typed cases, fallback and padding
-through the actual shared export gate. Run that test with `VERIFY_LOCAL_STATE_SELECTION=true`
-and a manifest overriding only the generator pair to require generated code; without the override
-it verifies the released floor's explicit refusal.
+through the actual shared export gate. That test needed `VERIFY_LOCAL_STATE_SELECTION=true` and a
+manifest overriding the generator pair while the released floor still refused state selection; the
+release carrying it has landed, so the test now asserts the emitted source unconditionally and the
+environment variable is gone.
 
 Verification for this chunk: 931 builder tests, 35 shared-export tests, 188 runtime tests and
 15 targeted server/MCP tests pass with released dependencies. The same 15 server/MCP tests pass
