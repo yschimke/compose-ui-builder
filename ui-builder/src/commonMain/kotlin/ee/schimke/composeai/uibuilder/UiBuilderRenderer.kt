@@ -88,6 +88,15 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.WindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberDatePickerState
@@ -152,6 +161,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.window.core.layout.WindowSizeClass
 import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
 import ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry
 import ee.schimke.composeai.rcplayer.compose.RcCustomContent
@@ -829,7 +839,7 @@ private fun RenderNode(
         slot("items").forEach { child(it, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) }
       }
     "layout/supporting-pane-scaffold" ->
-      DeterministicSupportingPaneScaffold(
+      AdaptiveSupportingPaneScaffold(
         node,
         measured,
         { next -> slot("mainPane").forEach { child(it, next) } },
@@ -2264,12 +2274,159 @@ private fun RemoteComposeDiagnostic(
 }
 
 /**
- * Material adaptive is not on this module's dependency floor. This explicit compatibility layout
- * implements only deterministic expanded two-pane sizing and single-pane fallback; it does not
- * claim posture, motion, navigation, or predictive-back behaviour.
+ * The real `SupportingPaneScaffold`, not an imitation of one.
+ *
+ * ## Why this is the whole point of the pane it draws in
+ *
+ * This component used to be a `BoxWithConstraints` here that expanded past a width it computed
+ * itself, and the Kotlin export emitted a *second* hand-rolled helper with a different threshold
+ * again — so a design could expand at one width on the canvas and another in the app, and the
+ * preview pane could not answer the question it exists for. Both are gone: the canvas, the preview
+ * pane and the generated source now go through `androidx.compose.material3.adaptive`, so "does it
+ * adapt" is answered by the library that will answer it in production.
+ *
+ * ## How `layoutMode` reaches a component that has no such parameter
+ *
+ * It does not, and it never could — the scaffold takes a `PaneScaffoldDirective` and derives its
+ * panes from the window, which is why the record-driven export gate refuses the property and still
+ * does: mapping a mode onto a directive is a computation, and a record can only write a value as an
+ * argument to a member. A hand-written emitter can compute, so here and in
+ * [CapabilityComposeCodeExporter] the property maps onto the directive:
+ *
+ * - `adaptive`, `twoPane` and `expandedTwoPane` leave the directive as the window computed it, so
+ *   the library decides and a tablet design collapses to one pane on a phone. The two-pane
+ *   spellings behaved that way under the old stand-in too — it required the frame to be wide enough
+ *   — so nothing observable changes for a design that uses them.
+ * - `singlePane` pins `maxHorizontalPartitions` to 1: one pane at every width, on purpose.
+ *
+ * `adaptive` is the one spelling whose behaviour changes, and it changes to what its name says. The
+ * stand-in's expansion test required the mode to be one of the two-pane spellings, so a design
+ * asking for `adaptive` was the one design that never adapted.
+ *
+ * ## The frame is the window, not the browser
+ *
+ * `currentWindowAdaptiveInfo()` reports the window the *workspace* is in, and in the preview pane
+ * that is one browser holding a row of device frames. Asked directly it gives every frame the same
+ * answer, so a phone frame and a tablet frame beside it would expand or collapse together — which
+ * is the one thing the multi-frame rung exists to disprove.
+ *
+ * So the size class is computed from this scaffold's **own** constraints
+ * ([`WindowSizeClass.compute`]), which inside [ConstrainedFramePane] are the device's width and
+ * height in the device's own density. Each frame is its own window, which is what it is standing in
+ * for. The posture is still the real one — a hinge is a property of hardware, not of a frame, and
+ * on the native lane the window really is the window.
+ *
+ * ## The visibility flags are the scaffold's value, not its directive
+ *
+ * `mainPaneVisible` / `supportingPaneVisible` say which panes this design has at all, which is a
+ * different question from how many the window can show. They go to the [ThreePaneScaffoldValue];
+ * the directive decides the rest, and `calculateThreePaneScaffoldValue` hides the supporting pane
+ * when the partitions do not reach it.
+ *
+ * ## The unrolled editor gets the stand-in; every constrained frame gets this
+ *
+ * The switch is [LocalUiBuilderUnrolled] — the same one that already turns `layout/lazy-column`
+ * into a `Column`, `layout/lazy-grid` into a non-lazy grid and drops a `verticalScroll`. One signal
+ * decides all of it, so "unrolled" and "constrained" cannot each answer for a different component:
+ * the visual editor gets [UnfoldedSupportingPaneScaffold] and the preview pane gets this.
+ *
+ * There is a second reason it has to be this way round, and it is not a preference. The real
+ * scaffold cannot be measured against an unbounded height — `ThreePaneContentMeasurePolicy` lays
+ * out at the height it is given, and `Constraints.Infinity` is not a size: `Size(1280 x 2147483647)
+ * is out of range`. The editor's canvas measures exactly that way on purpose, because unrolling a
+ * `LazyColumn` so its ninth row can be edited is what [CanvasExtentLayout] is for, and `unrolled =
+ * true` is set at the same call site.
+ *
+ * Reading the incoming constraints here instead would answer differently in that layout's probe
+ * pass than in its placement pass, and the extent reported would then belong to a layout nobody
+ * drew. A composition local set once by the pane is stable across both.
+ *
+ * So this is the fidelity ladder meeting a real component, and it resolves the way the ladder says:
+ * the editing surface is the one allowed to lie, and it draws every pane the design declares at
+ * every canvas width — the full expanded experience, always. Every constrained frame — the preview
+ * pane, each device and axis, the native lane — gets the real one, and that is where a design
+ * collapses to a phone. A 1-vs-2 disagreement about pane count is therefore expected and is the
+ * documented meaning of that row
+ * ([`UI_BUILDER_PREVIEW_FIDELITY.md`](../../../../../../docs/design/UI_BUILDER_PREVIEW_FIDELITY.md)).
+ */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@Composable
+private fun AdaptiveSupportingPaneScaffold(
+  node: UiBuilderNode,
+  modifier: Modifier,
+  mainPane: @Composable (Modifier) -> Unit,
+  supportingPane: @Composable (Modifier) -> Unit,
+) {
+  if (LocalUiBuilderUnrolled.current) {
+    UnfoldedSupportingPaneScaffold(node, modifier, mainPane, supportingPane)
+    return
+  }
+  val mainVisible = node.bool("mainPaneVisible", true)
+  val supportingVisible = node.bool("supportingPaneVisible", true)
+  val posture = currentWindowAdaptiveInfo().windowPosture
+  BoxWithConstraints(modifier) {
+    val frameInfo =
+      WindowAdaptiveInfo(
+        WindowSizeClass.compute(maxWidth.value, maxHeight.value),
+        posture,
+      )
+    val frameDirective = calculatePaneScaffoldDirective(frameInfo)
+    val directive =
+      if (node.string("layoutMode") == "singlePane")
+        frameDirective.copy(maxHorizontalPartitions = 1)
+      else frameDirective
+    // The library's own computation, so "two panes or one" is its answer rather than ours. Then the
+    // design's own flags are written over it: a pane the design does not have is hidden whatever
+    // the
+    // frame would allow.
+    val computed =
+      calculateThreePaneScaffoldValue(
+        maxHorizontalPartitions = directive.maxHorizontalPartitions,
+        adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
+        currentDestination = null,
+      )
+    val value =
+      ThreePaneScaffoldValue(
+        primary = if (mainVisible) computed.primary else PaneAdaptedValue.Hidden,
+        secondary = if (supportingVisible) computed.secondary else PaneAdaptedValue.Hidden,
+        tertiary = PaneAdaptedValue.Hidden,
+      )
+    SupportingPaneScaffold(
+      directive = directive,
+      value = value,
+      mainPane = { mainPane(Modifier.fillMaxSize()) },
+      supportingPane = { supportingPane(Modifier.fillMaxSize()) },
+      modifier = Modifier.fillMaxSize(),
+    )
+  }
+}
+
+/**
+ * The unrolled canvas's stand-in for the adaptive scaffold, and only its stand-in.
+ *
+ * Reached through [LocalUiBuilderUnrolled], which is the visual editor and nothing else — the
+ * preview pane, the device and axis frames, the native lane and every export are constrained and
+ * get the real component. See [AdaptiveSupportingPaneScaffold] for why the split runs on that one
+ * signal rather than on two.
+ *
+ * **It always draws the expanded experience.** Every pane the design declares is on screen at every
+ * canvas width, and `layoutMode` is not consulted at all — that property is now the real scaffold's
+ * directive, and the question it answers ("how many panes fits here?") is a device question the
+ * preview pane exists to answer. Collapsing here would answer it with the canvas's own width, which
+ * is a window nobody ships, and the cost of being wrong is not a mis-drawn picture: a hidden pane
+ * is a subtree that cannot be selected, dropped into or edited.
+ *
+ * That is the same licence as the unrolled column above it. The canvas shows you the thing you are
+ * editing, including the parts a device would not show; the preview pane beside it is what says
+ * which parts those are.
+ *
+ * The widths are proportional rather than absolute for that reason too — a tablet's 744 + 512 dp
+ * pair at its authored size would overflow a narrow canvas and push the supporting pane off the
+ * edge, so they become weights and the pair fills whatever frame it is given in the ratio the
+ * design asked for.
  */
 @Composable
-private fun DeterministicSupportingPaneScaffold(
+private fun UnfoldedSupportingPaneScaffold(
   node: UiBuilderNode,
   modifier: Modifier,
   mainPane: @Composable (Modifier) -> Unit,
@@ -2280,21 +2437,11 @@ private fun DeterministicSupportingPaneScaffold(
   val mainWidth = node.float("mainPanePreferredWidthDp", 744f).coerceAtLeast(1f)
   val supportWidth = node.float("supportingPanePreferredWidthDp", 512f).coerceAtLeast(1f)
   val spacing = node.float("paneSpacingDp").coerceAtLeast(0f)
-  BoxWithConstraints(modifier) {
-    val expanded =
-      node.string("layoutMode") in setOf("expandedTwoPane", "twoPane") &&
-        mainVisible &&
-        supportingVisible &&
-        maxWidth >= (mainWidth + supportWidth + spacing).dp
-    if (expanded) {
-      Row(Modifier.fillMaxSize()) {
-        mainPane(Modifier.width(mainWidth.dp).fillMaxSize())
-        Spacer(Modifier.width(spacing.dp))
-        supportingPane(Modifier.weight(1f).fillMaxSize())
-      }
-    } else if (mainVisible) mainPane(Modifier.fillMaxSize())
-    else if (supportingVisible) supportingPane(Modifier.fillMaxSize())
-    else Box(Modifier.fillMaxSize())
+  Row(modifier) {
+    if (mainVisible) mainPane(Modifier.weight(mainWidth).fillMaxSize())
+    if (mainVisible && supportingVisible) Spacer(Modifier.width(spacing.dp))
+    if (supportingVisible) supportingPane(Modifier.weight(supportWidth).fillMaxSize())
+    if (!mainVisible && !supportingVisible) Box(Modifier.fillMaxSize())
   }
 }
 

@@ -22,6 +22,10 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.material3)
       @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
       @Suppress("DEPRECATION") implementation(compose.ui)
+      // The generated screen calls the real `SupportingPaneScaffold` rather than a hand-rolled
+      // two-pane helper, so this fixture links what a consuming app would link.
+      implementation(libs.compose.material3.adaptive)
+      implementation(libs.compose.material3.adaptive.layout)
       implementation(project(":ui-builder-artwork"))
     }
   }

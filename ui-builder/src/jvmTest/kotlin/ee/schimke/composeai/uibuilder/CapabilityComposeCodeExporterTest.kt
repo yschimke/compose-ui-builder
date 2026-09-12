@@ -72,7 +72,14 @@ class CapabilityComposeCodeExporterTest {
     assertEquals(document.id, first.provenance.designId)
     assertEquals(document.revision, first.provenance.designRevision)
     assertEquals("candidate", first.provenance.capabilityDigest)
-    assertTrue(first.diagnostics.any { it.code == "ADAPTIVE_COMPATIBILITY_HELPER" })
+    // The scaffold is no longer a compatibility helper, so there is no longer a diagnostic saying
+    // so: `BuilderSupportingPaneScaffold` is a wrapper that hands the design's two booleans to the
+    // real `SupportingPaneScaffold`, and the adaptive decision is the library's.
+    assertFalse(first.diagnostics.any { it.code == "ADAPTIVE_COMPATIBILITY_HELPER" })
+    assertTrue(source.contains("SupportingPaneScaffold(directive = directive"))
+    assertTrue(
+      source.contains("import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold")
+    )
     assertFalse(first.diagnostics.any { it.code == "ASSET_BINDING_REQUIRED" })
     assertEquals(artworkAdapter.id, first.provenance.assetAdapterId)
     assertTrue(first.provenance.declaredFallbacks.isEmpty())

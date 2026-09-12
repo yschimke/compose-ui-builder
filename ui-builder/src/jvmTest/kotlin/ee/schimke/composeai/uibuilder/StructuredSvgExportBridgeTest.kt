@@ -67,13 +67,26 @@ class StructuredSvgExportBridgeTest {
       textElements.map { it.attributes.getValue("data-compose-node-id") }.toSet()
     // Skia may split a wrapped text node into a different number of line fragments across its
     // Linux and macOS backends. Authored node identity is the stable structural contract.
-    assertEquals(26, emittedTextNodeIds.size)
+    assertEquals(23, emittedTextNodeIds.size)
+    // The supporting pane is `androidx.compose.material3.adaptive`'s own, and the real scaffold
+    // spends height on the margins and partition spacing the stand-in did not have. The design's
+    // last episode row is what that costs: it used to clip mid-row, leaving a headline with no
+    // metadata under it, and now it falls wholly below the fold. Both are honest answers from a
+    // bounded composition — see `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md`. What is being pinned
+    // is that the boundary is a *row*: a design must not lose a title while keeping its summary.
+    val belowTheFold =
+      setOf(
+        "detail-episode-139-title",
+        "detail-episode-139-podcast",
+        "detail-episode-139-summary",
+        "detail-episode-139-meta",
+      )
     assertEquals(
       document.nodes.values.filter { it.componentId == "m3/text" }.map { it.id }.toSet() -
-        "detail-episode-139-meta",
+        belowTheFold,
       emittedTextNodeIds,
     )
-    assertFalse("detail-episode-139-meta" in emittedTextNodeIds)
+    assertTrue(belowTheFold.none { it in emittedTextNodeIds })
     assertEquals(textElements.size, textElements.map { it.attributes.getValue("id") }.toSet().size)
     val authoredIconNodeIds =
       setOf(

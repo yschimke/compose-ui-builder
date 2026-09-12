@@ -209,34 +209,35 @@ document: an edit made on the tablet pane is an edit to the same tree the phone 
 every pane editable would not give the author more power, it would give them a coordinate space per
 pane and one shared outcome.
 
-### Where this is going: the real adaptive components
+### The real adaptive components
 
 The rung this sits on, and what each of the three is allowed to lie about, is
 [`UI_BUILDER_PREVIEW_FIDELITY.md`](UI_BUILDER_PREVIEW_FIDELITY.md) — the short version being that the
-preview pane is the one that owes you *real components*, and does not pay that debt yet.
-
+preview pane is the one that owes you *real components*.
 
 The point of building at a tablet frame and watching the design come down to a phone is that the
 **actual** Compose components adapt — that `SupportingPaneScaffold` collapses to one pane because the
-window says so, the way it will in the app. Today they do not, and the previews are correct only in
-the weak sense that a frame change reaches the layout:
+window says so, the way it will in the app. For `layout/supporting-pane-scaffold` that is now what
+happens: every variant pane, and the Kotlin the capability exporter generates, call
+`androidx.compose.material3.adaptive`'s own scaffold, so a tablet design collapsing to a phone here is
+the library's answer rather than this repository's approximation of it. The record-driven projection
+still refuses the component — its panes are not plain composable slots and a record cannot compute a
+directive — so the native lane on that route is unchanged.
 
-- The Wasm renderer draws `layout/supporting-pane-scaffold` with `DeterministicSupportingPaneScaffold`
-  — a `BoxWithConstraints` in this repository that expands past
-  `mainPaneWidth + supportingPaneWidth + spacing`.
-- The Kotlin export emits `BuilderSupportingPaneScaffold`, a second hand-rolled helper with a
-  *different* threshold again: a hard `1280.dp`. The preview and the generated app can therefore
-  disagree about when the design expands.
-- The native lane refuses the component outright, because `layoutMode` is an authored property and
-  the real scaffold derives its panes from a `PaneScaffoldDirective` and the window rather than
-  taking a mode (`ScreenDocumentProjection.VARIANT_PROPERTIES`).
+Two consequences worth knowing while reading a row of frames:
 
-`androidx.compose.material3.adaptive` is on no module's dependency floor here, which is why the
-stand-ins exist rather than being an oversight. The direction is to link it in the renderer and emit
-the real component from the exporter, at which point `layoutMode` stops being something an author
-sets and the refusal goes away with it — the frame decides, which is what the whole variant model
-already assumes. Until then, read the tablet pane as "a wider frame reaches the layout", not as what
-that library would draw.
+- **The frame is the window.** The size class handed to the scaffold is computed from the frame's own
+  constraints, not from `currentWindowAdaptiveInfo()`. Asked about the browser, every pane in the row
+  would answer identically and the row would show nothing.
+- **`layoutMode` is a directive now, not a width comparison.** `adaptive`, `twoPane` and
+  `expandedTwoPane` all leave the decision to the library; only `singlePane` overrides it, pinning
+  `maxHorizontalPartitions` to 1. The old stand-in expanded only for the two-pane spellings, so
+  `adaptive` was the one value that never adapted — that is fixed, and it is the one behaviour change.
+
+The **canvas** still draws a stand-in, on purpose, and it is not the old one: it draws every declared
+pane at every width, because a collapsed pane on the editing surface is a subtree nobody can select or
+drop into. The remaining stand-ins — the uncontained carousel, the floating toolbar, the `wear-m3`
+lookalikes — are listed in the fidelity doc.
 
 ### Theme, font scale and direction are unstored view toggles
 

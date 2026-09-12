@@ -31,6 +31,15 @@ The same licence covers everything else the canvas puts on top of the design: th
 drop targets, the hover editor, comment pins, collaborator cursors. None of it is in the design, and
 all of it is in the way of using the design.
 
+It covers one thing *inside* the design too, for the same reason. An adaptive scaffold on the canvas
+draws **every pane it declares, at every canvas width** — the full expanded, tablet experience —
+rather than collapsing the way the real component would
+([`UnfoldedSupportingPaneScaffold`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt)).
+A collapsed pane is not merely a smaller picture: it is a subtree that cannot be selected, dropped
+into or edited, and the width that would have collapsed it is the canvas's, which is a window nobody
+ships. This is the unrolled column again — show the author the thing they are authoring — and the
+pane beside it is what says which parts a device actually gets.
+
 Components on this rung may be **adapters or placeholders**. What matters on rung 1 is that a node is
 **there**, is **selectable** and **takes a drop** — not that it is the component the export names.
 
@@ -69,6 +78,12 @@ components** belong. It exists because rung 1 cannot answer two questions:
   are device *properties* (a width, a height, a density written over the design's environment),
   never a picture of a handset; see
   [`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](UI_BUILDER_CANVAS_FRAMES_VARIANTS.md).
+
+  For that to mean anything, **each frame has to be its own window**. An adaptive component asked
+  `currentWindowAdaptiveInfo()` would be told about the browser holding the whole row, and every
+  frame would expand or collapse together — disproving nothing. So the scaffold computes its size
+  class from its own constraints, which inside `ConstrainedFramePane` are the device's width and
+  height at the device's density. The posture stays the real one: a hinge is hardware, not a frame.
 
 There is no selection overlay, so taps reach the controls: a screen wired to react can be made to
 react. It is still not editable — a design has one document, and offering a coordinate space per
@@ -149,25 +164,38 @@ single holds: `PinnedDesignCanvas` takes no variant list at all, the preview pan
 and axis, and the native pane draws one frame. The native rung goes through the generator, the
 compile lane and the platform daemon, and streams a live session.
 
-**Does not hold yet: rung 2's components are rung 1's.** Both panes go through the same
-[`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt),
-so the preview inherits every stand-in the editor uses. The known ones:
+**Holds for the adaptive scaffold, as of the change that added this paragraph.**
+`layout/supporting-pane-scaffold` is `androidx.compose.material3.adaptive`'s own
+`SupportingPaneScaffold` in the preview pane and in the Kotlin the capability exporter generates,
+where there used to be two hand-rolled helpers with two different thresholds. `layoutMode` stopped
+being a width comparison and became a `PaneScaffoldDirective`: every spelling but `singlePane` lets
+the library decide, and `singlePane` pins `maxHorizontalPartitions` to 1.
 
-- `layout/supporting-pane-scaffold` → `DeterministicSupportingPaneScaffold`, a `BoxWithConstraints`
-  with its own threshold rather than `androidx.compose.material3.adaptive`'s `SupportingPaneScaffold`.
-  The Kotlin export emits a *second* hand-rolled helper with a different threshold again, so rung 2
-  and rung 3 can disagree about when a design expands — which by the table above reads as an export
-  bug and is really a missing dependency.
+The **record-driven** projection still refuses the property, and that refusal is now narrower rather
+than stale. Mapping a mode onto a directive is a computation at the call site; that projection emits
+a property by writing its value as an argument to a recorded member, and there is no member for it to
+be an argument of — so a hand-written emitter can do it and a record cannot
+([`ScreenDocumentProjection.VARIANT_PROPERTIES`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/ScreenDocumentProjection.kt)).
+The component has no record there in any case, because its panes are not plain composable slots.
+
+The canvas keeps its stand-in, and that is the ladder working rather than a leftover: the real
+scaffold cannot be measured against an unbounded height (`Size(1280 x 2147483647) is out of range`),
+which is exactly how the authoring canvas measures so a list can be edited past its fold. A 1-vs-2
+disagreement about pane count is therefore expected, and it is the first row of the table above.
+
+**Does not hold yet: the rest of rung 2's components are rung 1's.** Both panes go through the same
+[`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt),
+so the preview inherits every remaining stand-in the editor uses:
+
 - `layout/horizontal-carousel` → `CompatibleHorizontalCarousel`; Material's uncontained carousel is
   not on the dependency floor.
 - `CompatibleFloatingToolbar`, and the `wear-m3` Material 3 lookalikes — the last of which is the
   bounded case above and stays a stand-in by construction.
 
-Closing this is the direction, not a defect list to clear before the ladder is true: link the real
-libraries into the renderer where they are KMP-capable, emit the real components from the exporter,
-and let properties the real component derives from the window (`layoutMode`) stop being authored.
-Until then, rung 2 tells the truth about **layout and fit** and inherits rung 1's components, and the
-preview pane's caption is the place that has to keep saying so.
+Closing these is the direction, not a defect list to clear before the ladder is true, and the
+scaffold is the worked example of what closing one looks like: link the real library where it is
+KMP-capable, emit the real component from the exporter, and let the properties the component derives
+for itself stop being authored.
 
 ## See also
 

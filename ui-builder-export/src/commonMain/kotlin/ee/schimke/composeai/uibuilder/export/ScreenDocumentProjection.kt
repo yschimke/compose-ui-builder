@@ -3497,6 +3497,14 @@ object ScreenDocumentProjection {
    * reason is authored per entry rather than shared. A refusal an operator cannot act on is worth
    * about as much as no refusal, and one that describes a different component is worth less.
    *
+   * `layoutMode` stays refused **here** even though the renderer and
+   * `CapabilityComposeCodeExporter` now call the real `SupportingPaneScaffold` and map the property
+   * onto a `PaneScaffoldDirective`. That mapping is a computation at the call site, and this
+   * projection emits a property by writing its value as an argument to a recorded member: there is
+   * no member for it to be an argument of. A hand-written emitter can compute; a record cannot —
+   * and `layout/supporting-pane-scaffold` has no record here for the separate reason that its panes
+   * are not plain composable slots.
+   *
    * [COMPONENT_VARIANTS] is where "picks a component" became expressible, and an id that goes
    * through it leaves this table — `m3/card`, `m3/button`, `m3/text-field` and
    * `m3/progress-indicator` all have.

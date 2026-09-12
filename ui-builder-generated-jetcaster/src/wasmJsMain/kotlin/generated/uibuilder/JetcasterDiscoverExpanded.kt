@@ -1,4 +1,4 @@
-// Generator content SHA-256: 619403d30c4a7986a3b84902f9cf0a1c1f05b4e461928079f1d5c4dea67f2d36
+// Generator content SHA-256: 6bfe3c83d71d1704b2cdbf75eabab63ceab2ab317306aaa6b280bea8d176cb89
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -22,6 +22,14 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material.icons.sharp.*
 import androidx.compose.material.icons.twotone.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,8 +52,6 @@ import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 
 // Generated from design fixture-jetcaster-discover-expanded revision 108.
 // Catalog m3-catalog@candidate; capability candidate.
-// TODO[ADAPTIVE_COMPATIBILITY_HELPER] node=pane-scaffold: two-pane helper does not prove adaptive
-// posture or motion parity
 // TODO[UNEMITTED_EVENT] node=podcast-card-android: event 'click' is not emitted
 // TODO[CAROUSEL_COMPATIBILITY_HELPER] node=podcast-carousel: row helper preserves order and sizing
 // but not Material carousel masking
@@ -67,10 +73,7 @@ fun JetcasterDiscoverExpandedSupportingPane() {
     // typed-properties:{"layoutMode":{"type":"enum","value":"expandedTwoPane"},"mainPanePreferredWidthDp":{"type":"float","value":744},"mainPaneVisible":{"type":"bool","value":true},"paneSpacingDp":{"type":"float","value":24},"supportingPanePreferredWidthDp":{"type":"float","value":512},"supportingPaneVisible":{"type":"bool","value":true}}
     BuilderSupportingPaneScaffold(
       modifier = Modifier.fillMaxSize(),
-      mainPaneWidth = 744.dp,
-      supportingPaneWidth = 512.dp,
-      paneSpacing = 24.dp,
-      layoutMode = "expandedTwoPane",
+      singlePane = false,
       mainPaneVisible = true,
       supportingPaneVisible = true,
       mainPane = {
@@ -1235,33 +1238,37 @@ fun JetcasterDiscoverExpandedSupportingPane() {
 private fun builderCardColors(containerColor: Color) =
   CardDefaults.cardColors(containerColor = containerColor)
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 private fun BuilderSupportingPaneScaffold(
   modifier: Modifier,
-  mainPaneWidth: Dp,
-  supportingPaneWidth: Dp,
-  paneSpacing: Dp,
-  layoutMode: String,
+  singlePane: Boolean,
   mainPaneVisible: Boolean,
   supportingPaneVisible: Boolean,
   mainPane: @Composable () -> Unit,
   supportingPane: @Composable () -> Unit,
 ) {
-  BoxWithConstraints(modifier) {
-    val expanded = layoutMode == "expandedTwoPane" && maxWidth >= 1280.dp
-    if (expanded) {
-      Row(Modifier.fillMaxSize()) {
-        if (mainPaneVisible) Box(Modifier.width(mainPaneWidth).fillMaxHeight()) { mainPane() }
-        if (mainPaneVisible && supportingPaneVisible) Spacer(Modifier.width(paneSpacing))
-        if (supportingPaneVisible)
-          Box(Modifier.width(supportingPaneWidth).fillMaxHeight()) { supportingPane() }
-      }
-    } else if (mainPaneVisible) {
-      mainPane()
-    } else if (supportingPaneVisible) {
-      supportingPane()
-    }
-  }
+  val windowDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
+  val directive =
+    if (singlePane) windowDirective.copy(maxHorizontalPartitions = 1) else windowDirective
+  val computed =
+    calculateThreePaneScaffoldValue(
+      maxHorizontalPartitions = directive.maxHorizontalPartitions,
+      adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
+      currentDestination = null,
+    )
+  SupportingPaneScaffold(
+    directive = directive,
+    value =
+      ThreePaneScaffoldValue(
+        primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden,
+        secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden,
+        tertiary = PaneAdaptedValue.Hidden,
+      ),
+    mainPane = { mainPane() },
+    supportingPane = { supportingPane() },
+    modifier = modifier,
+  )
 }
 
 @Composable

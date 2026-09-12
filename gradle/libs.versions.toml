@@ -25,6 +25,10 @@ kotlin = "2.4.20"
 ktfmt = "0.27.0"
 ktfmt-cli = "0.64"
 compose-multiplatform = "1.12.0"
+# Material 3 adaptive, for the real `SupportingPaneScaffold` on the editor's canvas and preview
+# panes. Its own version line rather than the Compose Multiplatform one, which is why it is a
+# separate ref: the adaptive artifacts ship independently of the CMP bundle.
+compose-material3-adaptive = "1.2.0"
 material-icons-extended = "1.7.3"
 graphics-shapes = "1.1.0"
 maven-publish = "0.37.0"
@@ -169,6 +173,8 @@ snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-hi
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
+compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }
+compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
 material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "material-icons-extended" }
 material-icons-extended-desktop = { module = "org.jetbrains.compose.material:material-icons-extended-desktop", version.ref = "material-icons-extended" }
 material-icons-core-desktop = { module = "org.jetbrains.compose.material:material-icons-core-desktop", version.ref = "material-icons-extended" }

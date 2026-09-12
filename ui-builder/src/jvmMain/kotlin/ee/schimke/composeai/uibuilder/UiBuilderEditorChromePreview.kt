@@ -435,12 +435,9 @@ private val PREVIEW_PHONE =
   UiBuilderDevicePreset("id:pixel_7", "Pixel 7", "Phones", 411, 914, 2.625)
 private val PREVIEW_TABLET =
   UiBuilderDevicePreset("id:pixel_tablet", "Pixel Tablet", "Tablets", 1280, 800, 2.0)
-private val PREVIEW_DEVICE_PRESETS =
-  listOf(
-    PREVIEW_PHONE,
-    UiBuilderDevicePreset("id:pixel_fold", "Pixel Fold", "Foldables", 841, 701, 2.625),
-    PREVIEW_TABLET,
-  )
+private val PREVIEW_FOLD =
+  UiBuilderDevicePreset("id:pixel_fold", "Pixel Fold", "Foldables", 841, 701, 2.625)
+private val PREVIEW_DEVICE_PRESETS = listOf(PREVIEW_PHONE, PREVIEW_FOLD, PREVIEW_TABLET)
 
 private fun UiBuilderDocument.onDevice(preset: UiBuilderDevicePreset): UiBuilderDocument =
   copy(
@@ -988,6 +985,38 @@ fun UiBuilderVariantStripPreview() {
     initialSelectedNodeId = "discover-grid",
     initialPanes = setOf(EditorPane.Editor, EditorPane.Preview),
     initialVariantAxes = setOf(EditorVariantAxis.Dark),
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/**
+ * The real `SupportingPaneScaffold`, deciding.
+ *
+ * The Jetcaster fixture's root is `layout/supporting-pane-scaffold` with `layoutMode` set to
+ * `expandedTwoPane`. The design is authored at the **Pixel Fold** and claims the Pixel 7, so the
+ * preview pane draws the same document at both — and the pane count is the library's answer rather
+ * than this repository's: the size class is computed from each frame's own constraints, so the fold
+ * keeps its supporting pane and the phone beside it does not.
+ *
+ * The fold is the frame chosen on purpose. A tablet would prove less than it looks: the old
+ * stand-in's threshold was `744 + 512 + 24` dp, which lands at exactly 1280, so a Pixel Tablet
+ * expanded under both rules and the pictures would differ only in partition widths. At 841 dp they
+ * disagree outright — the library calls that an expanded window and the stand-in's sum did not
+ * reach it — so a design authored for a foldable showed its author one pane and shipped two.
+ *
+ * The editor pane is **off**, deliberately: two frames need the width here. The canvas is the one
+ * surface that does *not* collapse, and at the zoom a third pane would force that is a claim about
+ * structure rather than about pixels, so it is pinned in `AdaptiveSupportingPaneTest` instead of
+ * rendered.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderAdaptivePaneVariantsPreview() {
+  UiBuilderEditor(
+    document =
+      editorChromePreviewDocument.onDevice(PREVIEW_FOLD).claiming(PREVIEW_PHONE).inLightTheme(),
+    catalog = editorChromePreviewCatalog,
+    initialPanes = setOf(EditorPane.Preview),
     devicePresets = PREVIEW_DEVICE_PRESETS,
   )
 }

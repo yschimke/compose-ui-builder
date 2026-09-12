@@ -383,22 +383,23 @@ rather than unfinished: there is one document behind all of them, so an edit mad
 would be an edit to the tree the phone pane draws.
 
 A wider pane is worth having when the design actually responds to width. A supporting-pane scaffold
-does, and it takes three things at once — the tablet pane draws the supporting pane the phone does
-not only when all of them hold:
+does, and since it is `androidx.compose.material3.adaptive`'s own `SupportingPaneScaffold`, what
+decides is what would decide in the app:
 
-- `layoutMode` is `expandedTwoPane` or `twoPane`. The editor inserts **`adaptive`** by default and
-  that value does *not* expand, whatever its name suggests;
-- both `mainPaneVisible` and `supportingPaneVisible` are on;
-- the **scaffold node itself** is at least
-  `mainPanePreferredWidthDp + supportingPanePreferredWidthDp + paneSpacingDp` wide. On the defaults
-  that is 744 + 512 + spacing, so a scaffold narrower than about **1256 dp** stays single-pane
-  however the mode is set — and raising either preferred width raises the threshold with it.
+- both `mainPaneVisible` and `supportingPaneVisible` are on — these say which panes the design *has*,
+  which is a different question from how many fit;
+- `layoutMode` is anything but `singlePane`. `adaptive`, `twoPane` and `expandedTwoPane` all hand the
+  decision to the library; `singlePane` pins it to one pane at every width. The editor inserts
+  `adaptive` by default, and unlike the old stand-in that value now does what its name says;
+- the **frame** is wide enough for the library's expanded breakpoint. That is a window size class,
+  not a sum of the authored pane widths, and it is computed from the scaffold's own constraints —
+  so a `width` or `widthIn` on the scaffold, or any narrower ancestor, holds it single-pane on the
+  widest tablet in the list. Check the node's own constraints before reaching for a bigger preset.
 
-Read the third one exactly as written: `DeterministicSupportingPaneScaffold` measures inside
-`BoxWithConstraints(modifier)`, so the width that decides is the one the scaffold is *given*, not
-the device preset. A wide preset is necessary and not sufficient — a `width` or `widthIn` on the
-scaffold, or any narrower ancestor, holds it single-pane on the widest tablet in the list. Check the
-node's own constraints before reaching for a bigger preset.
+`mainPanePreferredWidthDp`, `supportingPanePreferredWidthDp` and `paneSpacingDp` no longer form a
+threshold. They are the proportions the **editor canvas** lays the panes out in, where every declared
+pane is always drawn so none of them becomes uneditable; the variant panes beside it are where the
+design actually collapses.
 
 In the wide editor layout, **`Native`** replaces the builder's canvas with the host's pane, and the
 compare chips say why they are inert rather than accepting a choice that would draw nothing.

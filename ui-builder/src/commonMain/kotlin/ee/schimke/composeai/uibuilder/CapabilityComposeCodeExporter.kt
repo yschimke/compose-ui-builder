@@ -284,12 +284,10 @@ object CapabilityComposeCodeExporter {
       }
       diagnostics += node.fieldCoverageDiagnostics()
       when (node.componentId) {
-        "layout/supporting-pane-scaffold" ->
-          diagnostics +=
-            node.warning(
-              "ADAPTIVE_COMPATIBILITY_HELPER",
-              "two-pane helper does not prove adaptive posture or motion parity",
-            )
+        // `layout/supporting-pane-scaffold` used to warn here that a "two-pane helper does not
+        // prove adaptive posture or motion parity". It no longer emits a helper that could fail to:
+        // the generated screen calls the real `SupportingPaneScaffold` through the directive the
+        // window computes, which is the thing the warning was asking for.
         "layout/horizontal-carousel" ->
           diagnostics +=
             node.warning(
@@ -864,16 +862,23 @@ private class ComposeEmitter(
       .joinToString("|")
   }
 
+  /**
+   * The real `SupportingPaneScaffold`, through the same directive the canvas uses.
+   *
+   * `layoutMode` is not a parameter of the real component and never could be — it derives its panes
+   * from a [PaneScaffoldDirective] and the window — so it is written as the directive instead,
+   * which is what the canvas's `AdaptiveSupportingPaneScaffold` does with the identical rule. That
+   * is the point of emitting the real symbol: the preview and the app can no longer disagree about
+   * the width a design expands at, because neither of them owns a threshold any more.
+   *
+   * `mainPanePreferredWidthDp`, `supportingPanePreferredWidthDp` and `paneSpacingDp` are not
+   * written: the scaffold partitions the window itself. They stay authored properties because the
+   * canvas's own fit still reads them, and a design that carries them exports the same layout.
+   */
   private fun emitSupportingPane(node: UiBuilderNode, level: Int) {
     line(level, "BuilderSupportingPaneScaffold(")
     line(level + 1, "modifier = ${node.modifierExpression()},")
-    line(level + 1, "mainPaneWidth = ${node.number("mainPanePreferredWidthDp", 744f).dpLiteral()},")
-    line(
-      level + 1,
-      "supportingPaneWidth = ${node.number("supportingPanePreferredWidthDp", 512f).dpLiteral()},",
-    )
-    line(level + 1, "paneSpacing = ${node.number("paneSpacingDp", 24f).dpLiteral()},")
-    line(level + 1, "layoutMode = \"${node.string("layoutMode").escape()}\",")
+    line(level + 1, "singlePane = ${node.string("layoutMode") == "singlePane"},")
     line(level + 1, "mainPaneVisible = ${node.boolValue("mainPaneVisible", true)},")
     line(level + 1, "supportingPaneVisible = ${node.boolValue("supportingPaneVisible", true)},")
     line(level + 1, "mainPane = {")
@@ -1419,11 +1424,20 @@ private class ComposeEmitter(
     appendLine(
       "@Composable private fun builderCardColors(containerColor: Color) = CardDefaults.cardColors(containerColor = containerColor)"
     )
+    // A thin wrapper around the real scaffold rather than a reimplementation of it: it exists only
+    // to turn this design's two booleans into the scaffold's directive and value, so the generated
+    // screen reads as one call and the adaptive decision stays the library's.
     appendLine(
-      "@Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, mainPaneWidth: Dp, supportingPaneWidth: Dp, paneSpacing: Dp, layoutMode: String, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) { BoxWithConstraints(modifier) { val expanded = layoutMode == \"expandedTwoPane\" && maxWidth >= 1280.dp; if (expanded) {"
+      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) {"
     )
     appendLine(
-      "  Row(Modifier.fillMaxSize()) { if (mainPaneVisible) Box(Modifier.width(mainPaneWidth).fillMaxHeight()) { mainPane() }; if (mainPaneVisible && supportingPaneVisible) Spacer(Modifier.width(paneSpacing)); if (supportingPaneVisible) Box(Modifier.width(supportingPaneWidth).fillMaxHeight()) { supportingPane() } } } else if (mainPaneVisible) { mainPane() } else if (supportingPaneVisible) { supportingPane() } }"
+      "  val windowDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()); val directive = if (singlePane) windowDirective.copy(maxHorizontalPartitions = 1) else windowDirective"
+    )
+    appendLine(
+      "  val computed = calculateThreePaneScaffoldValue(maxHorizontalPartitions = directive.maxHorizontalPartitions, adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(), currentDestination = null)"
+    )
+    appendLine(
+      "  SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { mainPane() }, supportingPane = { supportingPane() }, modifier = modifier)"
     )
     appendLine("}")
     appendLine(
@@ -3347,6 +3361,17 @@ private val GENERATED_IMPORTS =
       "androidx.compose.foundation.shape.RoundedCornerShape",
       "androidx.compose.foundation.text.BasicTextField",
       "androidx.compose.material.icons.Icons",
+      // The real adaptive scaffold the supporting-pane component emits. Unconditional, like every
+      // other entry here: the list is deduplicated and sorted, and a design without the component
+      // carries an unused import rather than the emitter growing a second code path.
+      "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi",
+      "androidx.compose.material3.adaptive.currentWindowAdaptiveInfo",
+      "androidx.compose.material3.adaptive.layout.PaneAdaptedValue",
+      "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold",
+      "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults",
+      "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue",
+      "androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective",
+      "androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue",
       "androidx.compose.material.icons.automirrored.filled.*",
       "androidx.compose.material.icons.automirrored.outlined.*",
       "androidx.compose.material.icons.automirrored.rounded.*",
