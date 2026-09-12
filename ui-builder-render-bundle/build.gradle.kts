@@ -133,23 +133,6 @@ tasks.processResources {
  * left it out, or a rename of the file it writes, would otherwise publish an empty artifact and
  * fail at a consumer's runtime with "packaged UI-builder renderer bundle is missing".
  */
-/**
- * Coordinates the RENDERER needs that no packed preview reaches.
- *
- * `androidx.window.core.layout.WindowSizeClass` is imported by `UiBuilderRenderer.kt` and called
- * from `AdaptiveSupportingPaneScaffold`, which the node renderer enters for a
- * `layout/supporting-pane-scaffold` node -- so it is needed by the *document*, never by the one
- * preview the bundle packs. #788 introduced that call and #812 is the 500 it produced: an
- * `exportDesign` of any design with a supporting pane failed with the bare class name, and the
- * only gate that would have caught it was a visual harness step that had been unreachable for
- * eleven runs behind an unrelated red.
- *
- * A coordinate belongs here when `:ui-builder` imports from it and the reachability walk cannot
- * see the call from a packed preview. Adding one is cheap; the failure it prevents costs a
- * release.
- */
-val RENDER_ONLY_COORDINATES = listOf("org.jetbrains.androidx.window:window-core")
-
 val verifyRenderBundlePackaged =
   tasks.register("verifyRenderBundlePackaged") {
     description = "Fail the build if the published jar does not carry the render bundle."
@@ -163,6 +146,23 @@ val verifyRenderBundlePackaged =
     // have run it, which is a worse outcome than the missing diagnostic it was added to replace.
     val manifestEntry = "$bundleResourceDirectory/$bundleManifestResourceName"
     val artifactId = publishedArtifactId
+    // A local, so the `doLast` lambda captures a List<String>. Reading a script-level `val` from
+    // inside it captures the whole script object, which the configuration cache refuses -- the
+    // same trap the `processResources` block above takes locals to avoid, which I walked into
+    // anyway.
+    //
+    // Coordinates the RENDERER needs that no packed preview reaches.
+    // `androidx.window.core.layout.WindowSizeClass` is imported by `UiBuilderRenderer.kt` and
+    // called from `AdaptiveSupportingPaneScaffold`, which the node renderer enters for a
+    // `layout/supporting-pane-scaffold` node -- needed by the *document*, never by the one preview
+    // the bundle packs (#788 introduced the call, #812 is the 500 it produced).
+    //
+    // Matched against the KMP variant suffixes too: a multiplatform module publishes a root
+    // coordinate that redirects (`available-at`) to a per-platform artifact, so the resolved JVM
+    // dependency is recorded as `window-core-desktop`, never `window-core`. An exact match here
+    // failed on a bundle that carried the class perfectly well.
+    val required = listOf("org.jetbrains.androidx.window:window-core")
+    val variantSuffixes = listOf("", "-desktop", "-jvm")
     inputs.file(jarFile)
     doLast {
       ZipFile(jarFile.get().asFile).use { jar ->
@@ -211,11 +211,16 @@ val verifyRenderBundlePackaged =
                 .toSet()
             }
           check(carried.isNotEmpty()) { "$entry lists no Maven coordinates; the check is vacuous" }
-          val missing = RENDER_ONLY_COORDINATES.filterNot { required -> required in carried }
+          val missing =
+            required.filterNot { coordinate ->
+              variantSuffixes.any { suffix -> "$coordinate$suffix" in carried }
+            }
           check(missing.isEmpty()) {
             "the render bundle does not carry ${missing.joinToString()}. " +
-              "`:ui-builder` imports classes from it, but no packed preview reaches them, so " +
-              "`composePreviewBundle` pruned the coordinate and the daemon renders without it. " +
+              "`:ui-builder` imports classes from it, so the daemon renders without them and an " +
+              "export of any document that reaches them fails with a bare class name. Likely " +
+              "`composePreviewBundle` pruned it as unreachable -- but check the carried list " +
+              "first for a variant spelling this assertion does not know about. " +
               "Carried: ${carried.sorted().joinToString()}"
           }
         } finally {
