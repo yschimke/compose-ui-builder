@@ -72,7 +72,7 @@ fun UiBuilderDocument.variantPanes(
       val preset = presets.firstOrNull { it.id == id } ?: return@mapNotNull null
       UiBuilderVariantPane(
         id = "variant-device-${preset.id}",
-        label = preset.label,
+        label = deviceVariantLabel(preset),
         widthDp = preset.widthDp.toFloat(),
         heightDp = preset.heightDp.toFloat(),
         document =
@@ -101,6 +101,26 @@ fun UiBuilderDocument.variantPanes(
       }
   return devicePanes + axisPanes
 }
+
+/**
+ * What a device pane is called: the device, and the three properties being applied.
+ *
+ * A device here is **not** a picture of a handset. Nothing draws a bezel, a notch or a rounded
+ * corner — [UiBuilderVariantPane] is the design composed at a size and a density, and that is the
+ * whole of what a preset carries ([UiBuilderDevicePreset] has an id, a label, a width, a height and
+ * a density and nothing else). So the label says the properties rather than only the name: "Pixel
+ * 6" alone leaves somebody comparing two panes to guess which of width, height and density moved,
+ * which is the only question the pane can answer.
+ *
+ * The density is trimmed of a trailing `.0` because `2×` is the number a designer says and `2.0×`
+ * reads like a measurement; a fractional one keeps its digits, since 2.625 and 2.75 are different
+ * devices and rounding them together would make two panes claim the same frame.
+ */
+internal fun deviceVariantLabel(preset: UiBuilderDevicePreset): String =
+  "${preset.label} · ${preset.widthDp}×${preset.heightDp}dp · ${trimmedDensity(preset.density)}×"
+
+/** `2.0` as `2`, `2.625` unchanged — see [deviceVariantLabel]. */
+internal fun trimmedDensity(density: Double): String = density.toString().removeSuffix(".0")
 
 /** What one axis writes over the design's own environment. */
 private fun EditorVariantAxis.overrides(): Map<String, JsonPrimitive> =

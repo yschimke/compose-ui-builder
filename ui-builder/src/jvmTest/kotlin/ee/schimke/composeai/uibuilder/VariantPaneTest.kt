@@ -1,5 +1,13 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,7 +63,14 @@ class VariantPaneTest {
   fun `each claimed device becomes a pane at that device's frame`() {
     val panes = withDevices("id:pixel_6", "id:pixel_tablet").variantPanes(presets, emptySet())
 
-    assertEquals(listOf("Pixel 6", "Pixel Tablet"), panes.map { it.label })
+    // The label states what the pane applied, not just which device it is named for: a row of
+    // frames whose names are "Pixel 6" and "Pixel Tablet" leaves somebody comparing two of them to
+    // guess which of width, height and density moved. Nothing draws a bezel — a device pane *is*
+    // these three numbers.
+    assertEquals(
+      listOf("Pixel 6 · 411×914dp · 2.625×", "Pixel Tablet · 1280×800dp · 2×"),
+      panes.map { it.label },
+    )
     assertEquals(411f to 914f, panes[0].widthDp to panes[0].heightDp)
     assertEquals("411", panes[0].document.environment["widthDp"]?.let(::plain))
     assertEquals("2.625", panes[0].document.environment["density"]?.let(::plain))
@@ -69,7 +84,7 @@ class VariantPaneTest {
   fun `a device the host has no preset for is skipped`() {
     val panes = withDevices("id:pixel_6", "id:no_such_device").variantPanes(presets, emptySet())
 
-    assertEquals(listOf("Pixel 6"), panes.map { it.label })
+    assertEquals(listOf("Pixel 6"), panes.map { it.deviceName() })
   }
 
   /**
@@ -83,8 +98,16 @@ class VariantPaneTest {
       withDevices("id:pixel_6", "id:pixel_6", "id:pixel_tablet", "id:pixel_6")
         .variantPanes(presets, emptySet())
 
-    assertEquals(listOf("Pixel 6", "Pixel Tablet"), panes.map { it.label })
+    assertEquals(listOf("Pixel 6", "Pixel Tablet"), panes.map { it.deviceName() })
   }
+
+  /**
+   * The device a pane is named for, without the properties after it.
+   *
+   * Used by the tests about *which* devices get a pane, so the label's wording is pinned in exactly
+   * one place — the test above — rather than in every test that happens to read a label.
+   */
+  private fun UiBuilderVariantPane.deviceName(): String = label.substringBefore(" · ")
 
   @Test
   fun `an axis writes only its own field over the design's environment`() {
@@ -168,4 +191,38 @@ class VariantPaneTest {
     (value as JsonPrimitive).content
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
+
+  /**
+   * You build the UI once and watch it adapt beside you.
+   *
+   * The devices and axes used to be drawn on the authoring canvas, which made the one surface you
+   * edit on grow a row of surfaces you cannot. They are the preview pane's now and nowhere else:
+   * with that pane shut, the workspace holds one frame however many devices the design claims.
+   */
+  @OptIn(ExperimentalTestApi::class)
+  @Test
+  fun `the devices a design claims are drawn in the preview pane and nowhere else`() =
+    runDesktopComposeUiTest(width = 1600, height = 900) {
+      val claiming = withDevices("id:pixel_tablet")
+      var panes by mutableStateOf(setOf(EditorPane.Editor))
+      setContent {
+        MaterialTheme {
+          // Keyed on the pane set, because the editor reads `initialPanes` once — this stands in
+          // for the menu toggling the pane rather than testing the menu.
+          key(panes) {
+            UiBuilderEditor(
+              document = claiming,
+              catalog = catalog,
+              initialPanes = panes,
+              devicePresets = presets,
+            )
+          }
+        }
+      }
+      onNodeWithText("Pixel Tablet", substring = true).assertDoesNotExist()
+
+      runOnIdle { panes = setOf(EditorPane.Editor, EditorPane.Preview) }
+      waitForIdle()
+      onNodeWithText("Pixel Tablet", substring = true).assertExists()
+    }
 }

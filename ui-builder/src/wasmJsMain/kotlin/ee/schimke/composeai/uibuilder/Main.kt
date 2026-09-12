@@ -1360,6 +1360,9 @@ private fun LiveSessionApp(
       // The host container shape rides along for the same reason the revision does: the pane has to
       // draw the frame the canvas beside it is drawing, and a render that picked its own would be
       // the one disagreement this pane must not invent.
+      // The live half of the same lane. One instance per session: the editor opens it when a
+      // render names a session and closes it when that session changes or the pane goes away.
+      onOpenNativeStream = { live -> BrowserNativeStream(live) },
       onRequestNativeRender = { hostShape ->
         if (config.localStorage) UiBuilderNativeRender(failure = LOCAL_NATIVE_RENDER_UNAVAILABLE)
         else
@@ -1492,6 +1495,10 @@ private suspend fun requestNativeRender(
       result.nodeBounds.mapValues { (_, box) ->
         UiBuilderNativeNodeBounds(x = box.x, y = box.y, width = box.width, height = box.height)
       },
+    // Where the same compile can be *watched*. Absent on a host with no Stage-2 redemption, and on
+    // a design whose mode has no daemon backend here — in both cases the pane keeps the still.
+    live =
+      result.live?.let { UiBuilderNativeLive(sessionId = it.sessionId, previewId = it.previewId) },
   )
 }
 
@@ -1505,7 +1512,12 @@ private data class NativePreviewResult(
   /** Design node id → its box on the frame, in the frame's own pixels. See `nodeBounds` there. */
   val nodeBounds: Map<String, NativePreviewNodeBounds> = emptyMap(),
   val compileError: String? = null,
+  /** Where to open the live stream for this render — see `NativePreviewLiveV1` on the server. */
+  val live: NativePreviewLive? = null,
 )
+
+@kotlinx.serialization.Serializable
+private data class NativePreviewLive(val sessionId: String, val previewId: String)
 
 @kotlinx.serialization.Serializable
 private data class NativePreviewNodeBounds(

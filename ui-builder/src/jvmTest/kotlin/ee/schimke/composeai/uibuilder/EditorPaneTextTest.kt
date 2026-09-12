@@ -37,7 +37,7 @@ class EditorPaneTextTest {
   fun `authoritative wasm descriptions stay concise`() {
     assertEquals("Edit the design · Wasm", EditorPane.Editor.supportingText())
     assertEquals(
-      "Devices and configurations, not editable · Wasm",
+      "Devices, overrides and themes · not editable · Wasm",
       EditorPane.Preview.supportingText(),
     )
     assertEquals("Compiled on the host · the target platform", EditorPane.Native.supportingText())
@@ -48,6 +48,9 @@ class EditorPaneTextTest {
     // The whole reason it is a separate pane from the native one: switching it on costs nothing.
     assertTrue(EditorPane.Preview.supportingText().contains("not editable"))
     assertTrue(!EditorPane.Preview.supportingText().contains("Compiled"))
+    // A device here is a set of properties, not a drawing of a handset — see the supporting text's
+    // own comment for why a non-photoreal mock would be worse than none.
+    assertTrue(EditorPane.Preview.supportingText().contains("Devices"))
   }
 
   @Test

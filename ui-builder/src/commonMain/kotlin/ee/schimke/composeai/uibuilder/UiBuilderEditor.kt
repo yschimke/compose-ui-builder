@@ -105,6 +105,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -283,7 +284,73 @@ data class UiBuilderNativeRender(
    * inspection snapshot gives for a lazy slot that never composed.
    */
   val nodeBounds: Map<String, UiBuilderNativeNodeBounds> = emptyMap(),
+  /**
+   * Where this render can be *watched* rather than looked at, or null when it cannot.
+   *
+   * The compile lane has always stood a live session up behind the still — the same daemon, the
+   * same classes, the Android one on a catalog whose native backend is Android — and the editor has
+   * always thrown the coordinates away. With this present the native pane streams that session and
+   * forwards taps into it; without it the pane draws [image] and says it is a still.
+   */
+  val live: UiBuilderNativeLive? = null,
 )
+
+/**
+ * Where a native render's live session is, as the host reported it.
+ *
+ * Opaque to the editor on purpose: it is the host that knows how to reach a session (which origin,
+ * which token, which socket), and the editor's business is only to hand this back to
+ * [UiBuilderEditor]'s stream seam and draw what comes out.
+ */
+data class UiBuilderNativeLive(val sessionId: String, val previewId: String)
+
+/**
+ * One frame off a live native session, already decoded by the host.
+ *
+ * [image]'s own pixels are the coordinate space every [UiBuilderNativeInput] is stated in, which is
+ * why the frame carries the picture and nothing else: the pane scales it to fit and inverts that
+ * one factor to place a tap, exactly as it already does for a still render's node boxes.
+ */
+data class UiBuilderNativeFrame(val image: ImageBitmap, val sequence: Long = 0)
+
+/**
+ * One user input to dispatch into a live native composition.
+ *
+ * The wire spellings are the daemon's (`click`, `pointerDown`, `pointerMove`, `pointerUp`,
+ * `scroll`), named here rather than enumerated because this type crosses into a host that speaks
+ * that protocol already and an editor that invents no vocabulary of its own. Coordinates are in the
+ * frame's own pixels — see [UiBuilderNativeFrame].
+ */
+data class UiBuilderNativeInput(
+  val kind: String,
+  val pixelX: Int,
+  val pixelY: Int,
+  val pointerId: Int = 0,
+  val scrollDeltaY: Float? = null,
+)
+
+/**
+ * A live native session, opened by the host and driven by the native pane.
+ *
+ * Frames arrive as state rather than as a callback so the pane is an ordinary Compose reader of
+ * them: the newest frame is the one to draw, an older one that arrives late is not, and a pane that
+ * recomposes for another reason redraws what it already had rather than waiting for the next.
+ */
+interface UiBuilderNativeStream {
+  /** The newest frame, or null until the first one lands. */
+  val frame: UiBuilderNativeFrame?
+
+  /** Why there is no frame, or null while the stream is healthy or still connecting. */
+  val failure: String?
+
+  /**
+   * Dispatch one input. Dropped silently while the socket is not open, which is the honest no-op.
+   */
+  fun send(input: UiBuilderNativeInput)
+
+  /** Stop streaming and release the session's seat. Idempotent. */
+  fun close()
+}
 
 /** One node's rectangle on a native frame, in that frame's pixels, origin at its top-left. */
 data class UiBuilderNativeNodeBounds(
@@ -430,6 +497,15 @@ fun UiBuilderEditor(
   onRequestNativeRender: (suspend (WearWidgetHostShape) -> UiBuilderNativeRender)? = null,
   /** Compiles the saved design to a document for the existing player's interactive Preview mode. */
   onRequestDocumentPreview: (suspend (UiBuilderDocument) -> UiBuilderDocumentPreview)? = null,
+  /**
+   * Opens the live session a native render named, or null where this host cannot stream one.
+   *
+   * The seam is the host's because reaching a session is the host's business — which origin, which
+   * socket, which token — and `:ui-builder` is common Compose with no `WebSocket` in it, the same
+   * rule the comment host and the protocol transport already follow. Absent, the native pane draws
+   * the still it already drew; present, it draws the stream and taps reach the composition.
+   */
+  onOpenNativeStream: ((UiBuilderNativeLive) -> UiBuilderNativeStream)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
   /**
@@ -1187,7 +1263,6 @@ fun UiBuilderEditor(
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     PinnedDesignCanvas(
       document = state.document,
-      variants = variantPanes,
       selectedNodeId = state.selectedNodeId,
       onNodeSelected = {
         focusEditor()
@@ -1377,6 +1452,22 @@ fun UiBuilderEditor(
       }
     nativePending = false
   }
+  // The live session behind the still, where the render named one and this host can open it. Held
+  // against the coordinates rather than against the render, so a re-render that lands on the same
+  // session — the editor asks again on every revision — keeps the socket and its seat instead of
+  // tearing a daemon down and standing an identical one back up.
+  val nativeLive = nativeRender?.live?.takeIf { onOpenNativeStream != null }
+  var nativeStream by remember(document.id) { mutableStateOf<UiBuilderNativeStream?>(null) }
+  DisposableEffect(nativeLive, onOpenNativeStream) {
+    val opened = nativeLive?.let { live -> onOpenNativeStream?.invoke(live) }
+    nativeStream = opened
+    onDispose {
+      opened?.close()
+      // Only when it is still ours: a second effect may already have replaced it, and closing the
+      // live socket on the way out of the old one would take the new one's frames with it.
+      if (nativeStream === opened) nativeStream = null
+    }
+  }
   // The third pane: the design as the target platform draws it, compiled on the host — or played
   // from the host's own export where there is no compile lane. Either way it is the host's answer
   // rather than this browser's, which is why it is a separate pane from [EditorPane.Preview].
@@ -1392,6 +1483,8 @@ fun UiBuilderEditor(
       NativeRenderPane(
         render = nativeRender,
         pending = nativePending,
+        stream = nativeStream,
+        backend = catalog.previewSurfaces.native.backend,
         selectedNodeId = state.selectedNodeId,
         onNodeSelected = {
           focusEditor()
@@ -1578,11 +1671,9 @@ fun UiBuilderEditor(
         .toSet()
     } ?: emptySet()
   // `variantsDrawn` is a parameter rather than a captured value because only the layout knows it:
-  // the
-  // compact branch draws the canvas unconditionally, while the wide one hands the pane to the
-  // host's
-  // renderer when that is the chosen surface. Deciding it up here got the narrow window wrong — the
-  // strip was visibly drawn while the inspector said it was not.
+  // the compact branch has no preview pane at all, while the wide one draws the variants only when
+  // that pane is open. Deciding it up here got the narrow window wrong — the strip was visibly
+  // drawn while the inspector said it was not.
   val inspector: @Composable (Modifier, Boolean) -> Unit = { modifier, variantsDrawn ->
     PropertyInspector(
       state = state,
@@ -1898,9 +1989,10 @@ fun UiBuilderEditor(
                   else ->
                     inspector(
                       Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
-                      // The editor canvas and its variant strip are now present in every additive
-                      // pane layout, including the two-pane editor + native preview choice.
-                      true,
+                      // The devices and axes are drawn by the preview pane and nowhere else now, so
+                      // "is the strip on screen" is exactly "is that pane open". The authoring
+                      // canvas holds one frame whatever is switched on beside it.
+                      EditorPane.Preview in state.panes,
                     )
                 }
                 EditorRail(
@@ -1975,10 +2067,9 @@ fun UiBuilderEditor(
                     .fillMaxWidth()
                     .fillMaxHeight(0.72f)
                     .padding(bottom = 56.dp),
-                  // Always, here: this branch draws the canvas whatever surface is chosen, and
-                  // never
-                  // the host's pane.
-                  true,
+                  // Never, here: the compact layout draws the authoring canvas and has no room for
+                  // a preview pane beside it, so nothing on this branch draws a device or an axis.
+                  false,
                 )
               }
               if (mobilePanel == MobileEditorPanel.Code && generatedCode != null) {
@@ -3328,9 +3419,14 @@ internal fun EditorPane.supportingText(
     if (surfaces.wasm.fidelity.isAuthoritative) "Wasm" else "Wasm stand-in, for authoring"
   return when (this) {
     EditorPane.Editor -> "Edit the design · $wasmDescription"
-    // The two claims that matter about this pane: it does not edit, and it does not compile. The
-    // second is why it is worth switching on at all rather than waiting for the native one.
-    EditorPane.Preview -> "Devices and configurations, not editable · $wasmDescription"
+    // What it varies, and the two claims that matter: it does not edit, and it does not compile.
+    // The second is why it is worth switching on at all rather than waiting for the native one.
+    //
+    // "Devices" here means device *properties* — a width, a height and a density written over the
+    // design's environment — never a picture of a handset. Nothing in this pane draws a bezel, a
+    // notch or a rounded corner, and a mock that is not photoreal is worse than none: it invites a
+    // judgement about a screen from a drawing of a phone that is not the phone.
+    EditorPane.Preview -> "Devices, overrides and themes · not editable · $wasmDescription"
     EditorPane.Native ->
       if (surfaces.native.backend == UiBuilderPreviewSurfaces.BACKEND_ANDROID)
         "Compiled on the host · Android"
@@ -4381,17 +4477,6 @@ private fun NavigatorTab.icon(): ImageVector =
 @Composable
 internal fun PinnedDesignCanvas(
   document: UiBuilderDocument,
-  /**
-   * The read-only panes drawn beside the design, in strip order — see [UiBuilderVariantPane].
-   *
-   * Exactly one pane on this canvas takes edits, and it is the extent below: no variant carries a
-   * selection overlay, a hit-test, a drop target or a comment pin. That is the load-bearing rule of
-   * the feature rather than a limitation of it — a design has one document, so an edit made on the
-   * tablet pane would be an edit to the same tree the phone pane draws, and offering a coordinate
-   * space per pane for one shared outcome is what makes a multi-variant editor confusing
-   * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)).
-   */
-  variants: List<UiBuilderVariantPane> = emptyList(),
   selectedNodeId: String?,
   onNodeSelected: (String) -> Unit,
   onCanvasMetrics: (Int, Int, Float) -> Unit,
@@ -4471,25 +4556,13 @@ internal fun PinnedDesignCanvas(
     // Only a design that outgrows its frame gets the second pane. One that fits would be drawn
     // twice identically, and two identical pictures side by side say nothing the one said.
     val overflowsFrame = expandedHeightDp > sourceHeight + 0.5f
-    // Every pane in the strip, gap included, because fit has to frame what is actually drawn.
-    val stripWidth =
-      (if (overflowsFrame) sourceWidth + CANVAS_PANE_GAP_DP.value else 0f) +
-        variants.sumOf { (CANVAS_PANE_GAP_DP.value + it.widthDp).toDouble() }.toFloat()
-    val pairWidth = sourceWidth + stripWidth
-    // Fit frames the whole row, not the extent alone: zooming to fit a design whose companion or
-    // whose tablet variant is off the right edge is not fitting the design. Height is the tallest
-    // pane, which is the extent unless a variant's frame is longer than the design is.
-    val stripHeight = maxOf(expandedHeightDp, variants.maxOfOrNull { it.heightDp } ?: 0f)
-    // A variant's label is laid out *above* its scaled frame at a fixed size, so it does not shrink
-    // with the zoom: the room it needs comes off the workspace before the scale is worked out,
-    // rather than being scaled along with the frame. Folding it into `stripHeight` instead made the
-    // tallest variant overflow a workspace that claimed to be fitting it.
-    val labelRoom = if (variants.isEmpty()) 0f else VARIANT_LABEL_ROOM_DP
+    // The frame, plus the extent companion when the content outgrows it. Fit frames what is
+    // actually drawn rather than the frame alone: zooming to fit a design whose companion is off
+    // the right edge is not fitting the design.
+    val pairWidth =
+      sourceWidth + (if (overflowsFrame) sourceWidth + CANVAS_PANE_GAP_DP.value else 0f)
     val fitScale =
-      minOf(
-          workspaceWidth.value / pairWidth,
-          (workspaceHeight.value - labelRoom).coerceAtLeast(0f) / stripHeight,
-        )
+      minOf(workspaceWidth.value / pairWidth, workspaceHeight.value / expandedHeightDp)
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
     val scale = zoom ?: fitScale
     // The frame is laid out in the design's pixels, so it is drawn back down by the same ratio it
@@ -4662,13 +4735,6 @@ internal fun PinnedDesignCanvas(
               scale = scale,
               densityRatio = densityRatio,
             )
-          }
-          // Keyed by the pane rather than by its position in the row. Every pane draws the same
-          // document id, and `UiBuilderSurface` remembers its bounds and its design state against
-          // that id, so an unkeyed loop hands a removed pane's composition — and its scroll
-          // positions — to whichever pane slid into its slot.
-          variants.forEach { variant ->
-            key(variant.id) { VariantPane(pane = variant, scale = scale, hostDensity = density) }
           }
         }
       }
@@ -7449,6 +7515,26 @@ private fun GeneratedCodePane(
  * the two renderers is a thing a designer needs to *see*, and one that replaced the other would
  * hide exactly that.
  *
+ * ## Live where the host can stream, a still where it cannot
+ *
+ * The compile lane has always stood a live session up behind the still — the same daemon, the same
+ * classes, and on a catalog whose native backend is Android that daemon is Robolectric-backed
+ * Android. This pane now opens it: the frame is pushed rather than fetched, and a tap on it is
+ * dispatched into the real composition rather than resolved against a map of rectangles. That is
+ * what makes this the pane you can *use* the screen in, and the reason it is the only pane in the
+ * workspace that leaves the browser.
+ *
+ * The still does not go away, because it is what there is until the first frame lands and what
+ * there is when a host has no live backend for the design's mode. Two states, one pane, and the
+ * label says which you are looking at rather than leaving you to guess from whether taps work.
+ *
+ * ## Selection belongs to the still
+ *
+ * A still is a picture with a map of node boxes over it, so clicking it selects a layer. A live
+ * session is the screen, so clicking it *is* the click — a tap that both selected a node and
+ * pressed the button under it would be two answers to one gesture, and the one a designer wants
+ * here is the button. The layers panel still selects, on either.
+ *
  * ## Refusals, again, in the same place
  *
  * A design the generator cannot express has no native render, and the reasons are the actionable
@@ -7460,18 +7546,55 @@ private fun GeneratedCodePane(
 private fun NativeRenderPane(
   render: UiBuilderNativeRender?,
   pending: Boolean,
+  /** The live session, or null where the host opened none — see the function doc. */
+  stream: UiBuilderNativeStream? = null,
+  /** The catalog's own word for which daemon draws this, so the label can name it. */
+  backend: String = "",
   selectedNodeId: String?,
   onNodeSelected: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val liveFrame = stream?.frame
+  // Read once rather than through the interface at each use: it is an open property on a host's
+  // own implementation, so two reads could disagree and the second would be the one drawn.
+  val liveFailure = stream?.failure
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
       Text(
-        "Native render · compiled on the host",
+        nativePaneCaption(
+          live = liveFrame != null,
+          // A stream that has failed is not connecting. Left true it claimed "connecting to
+          // Android…" over a still that had given up on the live lane minutes ago.
+          connecting = stream != null && liveFailure == null,
+          backend = backend,
+        ),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelSmall,
       )
       when {
+        // The live frame wins over everything below it the moment one lands, including over a
+        // pending re-render: a stream that is painting is the most current thing this pane has,
+        // and dropping back to "Compiling this design…" because a still was re-requested would
+        // blank a working screen on every keystroke.
+        liveFrame != null ->
+          LiveNativeFrame(
+            frame = liveFrame,
+            onInput = { stream.send(it) },
+            modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+          )
+        // A stream that failed with no still to fall back to. Gated on the still being absent
+        // too: the live lane is the *optional* half of this pane, and a full live-seat budget or a
+        // grant without live scope would otherwise blank a compiled frame that arrived perfectly
+        // well. Said separately from a compile failure because the two are fixed differently.
+        liveFailure != null && render?.image == null ->
+          SelectionContainer {
+            Text(
+              liveFailure,
+              Modifier.padding(top = 12.dp),
+              color = MaterialTheme.colorScheme.error,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
         pending && render == null ->
           Text(
             "Compiling this design…",
@@ -7535,6 +7658,117 @@ private fun NativeRenderPane(
 }
 
 /**
+ * What the native pane calls itself, which is the one place a person learns whether taps will work.
+ *
+ * Three states rather than one label with a spinner: a still is a picture, a stream that has not
+ * painted yet is a promise, and a painting stream is the screen. Naming the backend where the
+ * catalog declared one ("live on Android") is the point of this whole pane — "native" is a claim
+ * about a toolkit, and Android is which one.
+ */
+internal fun nativePaneCaption(live: Boolean, connecting: Boolean, backend: String): String {
+  val where =
+    when (backend) {
+      UiBuilderPreviewSurfaces.BACKEND_ANDROID -> "Android"
+      UiBuilderPreviewSurfaces.BACKEND_DESKTOP -> "desktop"
+      else -> "the host"
+    }
+  return when {
+    live -> "Native · live on $where · taps reach the screen"
+    connecting -> "Native · connecting to $where…"
+    else -> "Native render · compiled on the host"
+  }
+}
+
+/**
+ * A live native frame, and the gestures that reach the composition drawing it.
+ *
+ * ## One factor, inverted
+ *
+ * The frame arrives in the daemon's own render pixels and is drawn scaled to fit this pane, so
+ * there is exactly one factor between the two spaces — `displayed / image` — and a press is turned
+ * back into image pixels by dividing by it. The same arithmetic [NativeRenderFrame] does for its
+ * node boxes, in the other direction, and for the same reason: the host cannot be told about a
+ * layout nobody on it can see.
+ *
+ * ## Why a tap is not a down and an up
+ *
+ * The daemon has a click fast-path that renders *between* press and release, so a batched
+ * down-then-up can race `Modifier.clickable` and land as nothing. A press that never moves is
+ * therefore sent as one `click` once it lifts, and the `pointerDown` is only sent when a drag
+ * actually starts — which is also what makes a drag a drag rather than a click followed by moves.
+ */
+@Composable
+private fun LiveNativeFrame(
+  frame: UiBuilderNativeFrame,
+  onInput: (UiBuilderNativeInput) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+    val imageWidth = frame.image.width.toFloat()
+    val imageHeight = frame.image.height.toFloat()
+    val density = LocalDensity.current
+    val scale =
+      minOf(
+          with(density) { maxWidth.toPx() } / imageWidth,
+          with(density) { maxHeight.toPx() } / imageHeight,
+        )
+        .coerceAtMost(1f)
+    val displayedWidth = with(density) { (imageWidth * scale).toDp() }
+    val displayedHeight = with(density) { (imageHeight * scale).toDp() }
+    Image(
+      bitmap = frame.image,
+      contentDescription = "Live native preview",
+      modifier =
+        Modifier.size(displayedWidth, displayedHeight)
+          // Keyed on the scale as well as the frame's size: the handler closes over the factor it
+          // inverts, and a pane resized under a running stream would otherwise keep sending
+          // coordinates in the old one.
+          .pointerInput(imageWidth, imageHeight, scale) {
+            awaitPointerEventScope {
+              while (true) {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                fun pixels(offset: Offset): Pair<Int, Int> =
+                  (offset.x / scale).roundToInt().coerceIn(0, imageWidth.toInt() - 1) to
+                    (offset.y / scale).roundToInt().coerceIn(0, imageHeight.toInt() - 1)
+                var dragging = false
+                var last = down.position
+                while (true) {
+                  val event = awaitPointerEvent()
+                  val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                  if (change.pressed) {
+                    // The threshold is the platform's own, so a press that wobbles by a pixel on
+                    // the way up is still a tap — which is what a mouse user means and what a
+                    // touch user cannot avoid.
+                    if (
+                      !dragging &&
+                        (change.position - down.position).getDistance() >
+                          viewConfiguration.touchSlop
+                    ) {
+                      dragging = true
+                      val (x, y) = pixels(down.position)
+                      onInput(UiBuilderNativeInput("pointerDown", x, y))
+                    }
+                    if (dragging && change.position != last) {
+                      last = change.position
+                      val (x, y) = pixels(change.position)
+                      onInput(UiBuilderNativeInput("pointerMove", x, y))
+                    }
+                    change.consume()
+                  } else {
+                    val (x, y) = pixels(change.position)
+                    onInput(UiBuilderNativeInput(if (dragging) "pointerUp" else "click", x, y))
+                    change.consume()
+                    break
+                  }
+                }
+              }
+            }
+          },
+    )
+  }
+}
+
+/**
  * The design with the editor taken off it: the same renderer, every device, no compile.
  *
  * ## Why this pane is not the native one
@@ -7582,7 +7816,7 @@ private fun DesignPreviewPane(
     listOf(
       UiBuilderVariantPane(
         id = "preview-design",
-        label = designFrameLabel(widthDp, heightDp),
+        label = designFrameLabel(document, widthDp, heightDp),
         widthDp = widthDp,
         heightDp = heightDp,
         document = document,
@@ -7639,11 +7873,22 @@ private fun DesignPreviewPane(
 /**
  * What the design's own frame is called in the preview row.
  *
- * Its geometry, because that is what the row is comparing: a frame labelled "Design" beside three
- * labelled `Pixel 7` is the one pane whose name says nothing about what is being compared.
+ * The same three properties a device pane states — size and density — because this pane is the
+ * baseline the others are being compared against, and a row where one label says "Design" and the
+ * rest say `412×915dp · 2.625×` hides the one number the comparison is about.
+ *
+ * Nothing here is a picture of a device: no bezel, no notch, no rounded corner. A frame is the
+ * design composed at a width, a height and a density, and the label is those.
  */
-private fun designFrameLabel(widthDp: Float, heightDp: Float): String =
-  "Design · ${widthDp.toInt()}×${heightDp.toInt()}dp"
+private fun designFrameLabel(
+  document: UiBuilderDocument,
+  widthDp: Float,
+  heightDp: Float,
+): String {
+  val density =
+    document.environment["density"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull() ?: 1.0
+  return "Design · ${widthDp.toInt()}×${heightDp.toInt()}dp · ${trimmedDensity(density)}×"
+}
 
 /**
  * The frame itself, with the overlay that makes it a surface rather than a picture.

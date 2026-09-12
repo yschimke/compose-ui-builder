@@ -13,7 +13,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /**
  * The editor's own chrome — toolbar, layers, canvas and inspector — rendered as a preview.
@@ -353,10 +356,16 @@ fun UiBuilderPreviewModePreview() {
 @Composable
 fun UiBuilderEditorAndPreviewPanesPreview() {
   UiBuilderEditor(
-    document = editorChromePreviewDocument,
+    // Claiming a tablet and asking the Dark question of it, so the preview pane draws what it is
+    // for: the design's own frame, the device it says it ships on, and an override — each labelled
+    // with the properties being applied rather than with a picture of a handset.
+    document =
+      editorChromePreviewDocument.onDevice(PREVIEW_PHONE).claiming(PREVIEW_TABLET).inLightTheme(),
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
     initialPanes = setOf(EditorPane.Editor, EditorPane.Preview),
+    initialVariantAxes = setOf(EditorVariantAxis.Dark),
+    devicePresets = PREVIEW_DEVICE_PRESETS,
   )
 }
 
@@ -636,6 +645,93 @@ fun UiBuilderNativeOverlayPreview() {
 }
 
 /**
+ * The native pane streaming, which is what that pane is now for on a catalog with an Android lane.
+ *
+ * The caption is the content here: a still says "compiled on the host" and a stream says where it
+ * is live and that taps reach it, and the difference between those two sentences is the difference
+ * between a picture of a screen and the screen. The frame under it is the same geometry fixture
+ * [UiBuilderNativeOverlayPreview] uses and claims no more than that one does — a preview cannot
+ * compile Kotlin, let alone hold a daemon open, so nothing here stands a real Android frame in for
+ * one Robolectric would have drawn.
+ */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderNativeLivePreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument,
+    // Declaring the Android lane rather than the chrome fixture's default, because the sentence
+    // this preview exists to show is the one a `remote-m3` or `wear-m3` design gets: *which*
+    // native toolkit is drawing. "live on desktop" would be a true caption about the wrong case.
+    catalog = androidNativePreviewCatalog,
+    initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
+    initialPanes = setOf(EditorPane.Editor, EditorPane.Native),
+    initialNativeRender = nativeLivePreviewRender,
+    onRequestNativeRender = { _ -> nativeLivePreviewRender },
+    onOpenNativeStream = { nativeLivePreviewStream },
+  )
+}
+
+/**
+ * The chrome fixture's catalog with an Android native lane declared on it.
+ *
+ * Patched here rather than shipped as a second fixture: the only thing this preview needs that
+ * `m3-catalog` does not say is `previewSurfaces.native.backend`, and a whole second copy of a
+ * hundred-component catalog to carry one string would drift from the first one immediately. The
+ * shape is the one `UiBuilderPreviewSurfaces.from` reads and `wear-m3` and `remote-m3` both write.
+ */
+private val androidNativePreviewCatalog: CapabilityCatalog by lazy {
+  val source = Json.parseToJsonElement(previewResource("/m3-catalog-capabilities-v1.json"))
+  val declared =
+    JsonObject(
+      source.jsonObject +
+        ("statusSemantics" to
+          JsonObject(
+            source.jsonObject["statusSemantics"]?.jsonObject.orEmpty() +
+              (UiBuilderPreviewSurfaces.KEY to
+                buildJsonObject {
+                  putJsonObject("native") {
+                    put("fidelity", JsonPrimitive("authoritative"))
+                    put("backend", JsonPrimitive(UiBuilderPreviewSurfaces.BACKEND_ANDROID))
+                  }
+                })
+          ))
+    )
+  CapabilityCatalogParser.parse(declared.toString())
+}
+
+/** A render that names a session and carries no still: what a live host answers with. */
+private val nativeLivePreviewRender =
+  UiBuilderNativeRender(live = UiBuilderNativeLive(sessionId = "session", previewId = "generated"))
+
+/**
+ * A stream that has already painted, so the preview draws the state worth diffing.
+ *
+ * Inputs are dropped. A preview has nobody to send them to, and a fixture that pretended otherwise
+ * would be the one thing on this page claiming to be connected to something.
+ */
+private val nativeLivePreviewStream =
+  object : UiBuilderNativeStream {
+    override val frame =
+      UiBuilderNativeFrame(
+        image =
+          overlayFixtureFrame(
+            800,
+            1600,
+            listOf(
+              UiBuilderNativeNodeBounds(x = 32, y = 96, width = 736, height = 112),
+              UiBuilderNativeNodeBounds(x = 32, y = 240, width = 736, height = 1120),
+            ),
+          )
+      )
+
+    override val failure: String? = null
+
+    override fun send(input: UiBuilderNativeInput) = Unit
+
+    override fun close() = Unit
+  }
+
+/**
  * The geometry fixture behind [UiBuilderNativeOverlayPreview]: boxes for a few of the fixture's own
  * nodes, and a frame with a flat block drawn at each of them.
  *
@@ -867,15 +963,16 @@ fun UiBuilderBoardPreview() {
 }
 
 /**
- * The variant strip: one document, drawn beside itself under two other frames.
+ * The variant strip, which lives in the preview pane: one document, drawn beside itself.
  *
  * The design claims a tablet — the same `exportDevices` the Compose export writes as
- * `@Preview(device = …)`, which until now nothing drew — and the Dark axis is switched on. So the
- * workspace holds the editing pane at the design's own frame, the tablet it says it works on, and
- * the question being asked of it. Exactly one of them takes edits.
+ * `@Preview(device = …)` — and the Dark axis is switched on. The authoring canvas holds **one**
+ * frame whatever is switched on: you build the UI once, and the pane beside it is where you watch
+ * it adapt. The variants were drawn on the canvas until this change, which made the surface you
+ * edit on grow a row of surfaces you cannot edit.
  *
- * The before is [UiBuilderCanvasForwardPreview], which is the same editor on a design claiming no
- * devices: one pane, which is what every design drew before this.
+ * The before is [UiBuilderCanvasForwardPreview], which is the same editor with the preview pane
+ * shut: one frame, and the whole workspace for it.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -889,6 +986,7 @@ fun UiBuilderVariantStripPreview() {
       editorChromePreviewDocument.onDevice(PREVIEW_PHONE).claiming(PREVIEW_TABLET).inLightTheme(),
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = "discover-grid",
+    initialPanes = setOf(EditorPane.Editor, EditorPane.Preview),
     initialVariantAxes = setOf(EditorVariantAxis.Dark),
     devicePresets = PREVIEW_DEVICE_PRESETS,
   )

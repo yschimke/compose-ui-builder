@@ -167,6 +167,14 @@ it:
   so a host with no compile lane plays the exported document in the native pane instead; for
   `remote-m3` that is the common CMP player on the same wire document.
 
+  **That pane is live.** The compile already mints a `/pg/` token over the classes it built, and the
+  route redeems it into a registered session, so the editor opens `/{session}/ws/{preview}` — the
+  socket the viewer's Live toggle opens — and streams frames rather than fetching one. Taps go the
+  other way as `input` messages in the frame's own pixels. `remote-m3` declares
+  `previewSurfaces.native.backend = android`, so that session is the Robolectric-backed Android
+  daemon and the pane says so: `Native · live on Android`. Evidence, and what the fixtures do and
+  do not claim, in [`renders/ui-builder-native-live`](../../renders/ui-builder-native-live).
+
 ![Editor, static target preview, and interactive preview](../evidence/ui-builder-remote-compose/workspace-three-panes.png)
 
 ## Two ways in, and one way back out
