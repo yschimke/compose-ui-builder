@@ -215,13 +215,14 @@ semantic component identity while its general adaptive Material adapter remains 
 unsupported. Inspect capability notes before treating a design as portable to another runtime.
 
 Operators select the reviewed adapters with `--ui-builder-catalogs`. The packaged deployment
-defaults to `m3-catalog,remote-m3`; other served catalogs — `wear-m3` among them — remain
-preview-only until added explicitly (`--ui-builder-catalogs m3-catalog,remote-m3,wear-m3`). Enabling
-an adapter is a claim that what an author sees is what they get, and `wear-m3` has a render behind
-that claim — the Kotlin it generates is compiled by real Wear Compose in compose-ai-tools' `wear-m3`
-harness catalog, and the stitched capture matches the canvas to a dp. It left the default for a
-deployment reason rather than a capability one: it is the only builder catalog needing Robolectric
-and an Android SDK, and nobody was authoring Wear designs on the public box.
+defaults to `m3-catalog,remote-m3,wear-m3`; a served catalog outside that list stays preview-only
+until added explicitly. Enabling an adapter is a claim that what an author sees is what they get,
+and `wear-m3` has a render behind that claim — the Kotlin it generates is compiled by real Wear
+Compose in compose-ai-tools' `wear-m3` harness catalog, and the stitched capture matches the canvas
+to a dp. It spent a period outside the default for a deployment reason rather than a capability one
+— it is the only builder catalog needing Robolectric and an Android SDK, and nobody was authoring
+Wear designs on the public box — and it is back because that lane is wanted again. A box that does
+not want to pay for it drops it with `--ui-builder-catalogs m3-catalog,remote-m3`.
 
 ### Which renderer is telling you the truth
 

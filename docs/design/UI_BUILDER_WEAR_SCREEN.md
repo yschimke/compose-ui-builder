@@ -454,11 +454,12 @@ viewport for an indicator to show a position within.
 
 ### On a deployed box
 
-`wear-m3` was in the packaged image's authoring allowlist, and is no longer: as of the catalog
-contract's phase 4, `SERVE_UI_BUILDER_CATALOGS` defaults to `m3-catalog,remote-m3` in
-`deploy/image/entrypoint.sh`, so the chooser offers Wear Material 3 only where an operator asks for
-it (`SERVE_UI_BUILDER_CATALOGS=m3-catalog,remote-m3,wear-m3`). Nothing below changed — the adapter,
-the render behind it and the round trip are as they were. What changed is the deployment's
+`wear-m3` is in the packaged image's authoring allowlist: `SERVE_UI_BUILDER_CATALOGS` defaults to
+`m3-catalog,remote-m3,wear-m3` in `deploy/image/entrypoint.sh`, so the chooser offers Wear Material
+3 out of the box. It was taken out at the catalog contract's phase 4 and put back afterwards; a box
+that does not want it sets `SERVE_UI_BUILDER_CATALOGS=m3-catalog,remote-m3`. Nothing below changed
+across either move — the adapter, the render behind it and the round trip are as they were. What
+changed, and changed back, is the deployment's
 arithmetic: `wear-m3` is the one builder catalog whose previews need Robolectric and whose native
 lane needs an Android SDK, and nobody is authoring Wear designs on this box, so it stopped earning
 that. `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4 has the way back.
