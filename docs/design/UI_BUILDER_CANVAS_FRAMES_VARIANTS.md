@@ -211,6 +211,11 @@ pane and one shared outcome.
 
 ### Where this is going: the real adaptive components
 
+The rung this sits on, and what each of the three is allowed to lie about, is
+[`UI_BUILDER_PREVIEW_FIDELITY.md`](UI_BUILDER_PREVIEW_FIDELITY.md) — the short version being that the
+preview pane is the one that owes you *real components*, and does not pay that debt yet.
+
+
 The point of building at a tablet frame and watching the design come down to a phone is that the
 **actual** Compose components adapt — that `SupportingPaneScaffold` collapses to one pane because the
 window says so, the way it will in the app. Today they do not, and the previews are correct only in

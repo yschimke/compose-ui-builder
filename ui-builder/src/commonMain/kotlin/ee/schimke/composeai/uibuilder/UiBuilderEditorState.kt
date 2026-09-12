@@ -595,6 +595,11 @@ sealed interface EditorGeneratedCode {
  * At least one is always on. A workspace with no panes is a blank window, so the reducer refuses to
  * switch off the last one standing and [WorkspacePanesMenu] draws that row disabled rather than
  * letting somebody find out by pressing it.
+ *
+ * The three are a **fidelity ladder** — mock components, real components, real platform — and which
+ * rung you are on decides what you may conclude from what you see. Which of them is allowed to lie
+ * about what, and what a disagreement between two of them means, is
+ * [`UI_BUILDER_PREVIEW_FIDELITY.md`](../../../../../../docs/design/UI_BUILDER_PREVIEW_FIDELITY.md).
  */
 enum class EditorPane(
   /** What the toolbar calls it, joined with the other open panes — so: short. */
