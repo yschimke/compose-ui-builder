@@ -614,7 +614,15 @@ public class PersistentUiBuilderService(
     val catalog = catalogs.resolve(pin) ?: return this
     val served = catalogs.reference(catalog) ?: return this
     if (served == pin || served.systemId != pin.systemId) return this
-    if (catalogs.validate(document, catalog) != null) return this
+    // Same probe as `unusableReason`, and for the same reason: a design the catalog merely
+    // outgrew a property of still fits the catalog well enough for its pin to be rewritten.
+    if (
+      catalogs.validate(
+        document.withoutProperties(undeclaredProperties(document, catalog)),
+        catalog,
+      ) != null
+    )
+      return this
     return copy(document = document.copy(catalogPin = served))
   }
 
@@ -695,7 +703,11 @@ public class PersistentUiBuilderService(
           ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
           "catalog unavailable for stored design $designId",
         )
-    catalogs.validate(design.document, catalog)?.let {
+    // Judged on the probe: a property the catalog stopped declaring is a warning about this
+    // design, not a reason to refuse every request naming it. What the probe still refuses is a
+    // real defect -- an unknown component has nothing to draw -- and stays fatal.
+    val probe = design.document.withoutProperties(undeclaredProperties(design.document, catalog))
+    catalogs.validate(probe, catalog)?.let {
       return internal("invalid stored design $designId: ${it.message}")
     }
     return null
@@ -1841,7 +1853,13 @@ public class PersistentUiBuilderService(
         )
     if (!catalog.supports(request.format))
       return invalid("catalog does not support ${request.format} export")
-    catalogs.validate(document, catalog)?.let {
+    // Exported WITHOUT the properties the catalog no longer declares, and validated in that shape.
+    // Not a silent edit of the design: the stored document keeps every one of them, and the catalog
+    // has no meaning to give a property it does not declare, so there is nothing an exporter could
+    // faithfully write for it. Emitting the original would put a value into generated source that
+    // the catalog cannot account for, which is the one outcome worse than leaving it out.
+    val exported = document.withoutProperties(undeclaredProperties(document, catalog))
+    catalogs.validate(exported, catalog)?.let {
       return UiBuilderServiceResponse.Error(it.toServiceError())
     }
     // The exporter receives only supplied content. No store lookup, asset resolution, audit write,
@@ -1852,7 +1870,7 @@ public class PersistentUiBuilderService(
         designId = document.id,
         revision = document.revision,
         documentHash = documentHash(document),
-        document = document,
+        document = exported,
         catalog = catalog,
         format = request.format,
       )
@@ -1992,7 +2010,14 @@ public class PersistentUiBuilderService(
     validateTopology(working.document)?.let {
       return rejectedReduction(design, command.operationId, it)
     }
-    catalogs.validate(working.document, catalog)?.let {
+    // The undeclared VALUES this design already carried are tolerated; anything else is not.
+    // `withoutProperties` drops a property only where the candidate still holds the stored value,
+    // so both a freshly invented undeclared property and a rewrite of a tolerated one stay in the
+    // probe, where `validate` rejects them as it always has -- nobody gets to author against a
+    // property the catalog does not have, under cover of one it once had. Without this the design
+    // would open and then refuse every edit, which is worse than plainly unusable.
+    val tolerated = undeclaredProperties(design.document, catalog)
+    catalogs.validate(working.document.withoutProperties(tolerated), catalog)?.let {
       return rejectedReduction(design, command.operationId, it.toRejection())
     }
     return accept(
@@ -2984,7 +3009,13 @@ public class PersistentUiBuilderService(
       val catalog =
         catalogs.resolve(working.document.catalogPin)
           ?: fail(RejectionCodeV1.INVALID_DOCUMENT, "catalog pin is unavailable")
-      catalogs.validate(working.document, catalog)?.let { throw ReductionFailure(it.toRejection()) }
+      // Same tolerance as `reduceBatch`: undoing or redoing an operation on a design the catalog
+      // outgrew must not be the thing that fails, or an edit made before the catalog moved could
+      // never be taken back.
+      val tolerated = undeclaredProperties(design.document, catalog)
+      catalogs.validate(working.document.withoutProperties(tolerated), catalog)?.let {
+        throw ReductionFailure(it.toRejection())
+      }
       return CompensationResult(working)
     } catch (failure: ReductionFailure) {
       return CompensationResult(error = failure.value)
