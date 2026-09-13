@@ -96,6 +96,8 @@ import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceV1
+import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
+import ee.schimke.composeai.uibuilder.protocol.ServiceErrorV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
 import kotlin.coroutines.resume
@@ -453,6 +455,12 @@ private fun LiveSessionApp(
   var catalogCapabilities by remember { mutableStateOf<List<CatalogCapabilityV1>>(emptyList()) }
   var devicePresets by remember { mutableStateOf<List<UiBuilderDevicePreset>>(emptyList()) }
   var sessionStatus by remember { mutableStateOf("Connecting…") }
+  // Why the design could not be opened, or null while it still might. Distinct from [sessionStatus]
+  // because that string is only ever read from inside the editor, which is exactly the branch a
+  // refused open never reaches — so the reason needs somewhere to live that the failure path can
+  // draw. Null is "not settled yet" and must stay that way: it is what keeps the first moments of
+  // a normal load from rendering as a failure.
+  var openFailure by remember { mutableStateOf<ServiceErrorV1?>(null) }
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
   var authoritativeGeneration by remember { mutableStateOf(0) }
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
@@ -855,7 +863,13 @@ private fun LiveSessionApp(
       is UiBuilderHttpResult.Response -> {
         val response = result.response as? SnapshotResponseV1
         if (response == null) {
+          // Same dead end as a refused open, and it used to end on the same white page: the
+          // service answered with something that is not a snapshot, so there is no document to
+          // draw and no service error to quote either. Synthesised as INTERNAL because that is
+          // what it is — this host's fault, not the caller's.
           sessionStatus = "Live error · unexpected open response"
+          openFailure =
+            ServiceErrorV1(ServiceErrorCodeV1.INTERNAL, "the design could not be opened")
           return@LaunchedEffect
         }
         acceptSnapshot(response)
@@ -988,9 +1002,14 @@ private fun LiveSessionApp(
         updates = client
         client.connect()
       }
-      is UiBuilderHttpResult.ServiceError -> sessionStatus = "Live error · ${result.error.message}"
-      is UiBuilderHttpResult.SnapshotRequired ->
+      is UiBuilderHttpResult.ServiceError -> {
+        sessionStatus = "Live error · ${result.error.message}"
+        openFailure = result.error
+      }
+      is UiBuilderHttpResult.SnapshotRequired -> {
         sessionStatus = "Snapshot required · ${result.error.message}"
+        openFailure = result.error
+      }
     }
   }
   val activeUpdates = updates
@@ -1412,6 +1431,26 @@ private fun LiveSessionApp(
         threadId = openThreadId.orEmpty(),
         inspectorMode = inspectorMode.name,
       )
+    }
+  } else {
+    // The branch that did not exist. Without it a refused open emitted nothing at all: the guard
+    // above is the only thing this composable draws, so a null document was a white page for as
+    // long as the tab stayed open, with the service's own explanation sitting unread in
+    // `sessionStatus`. Nothing about the failure was hidden — it was simply never rendered.
+    val failure = openFailure
+    if (failure != null) {
+      UiBuilderUnavailableScreen(
+        designId = config.designId,
+        catalogSystemId = config.catalogSystemId,
+        reason = failure.message,
+        code = failure.code,
+      )
+      // Ready means settled, not successful. The harness waits on this attribute for 60 seconds
+      // before failing, so leaving it unset on a design that will never open turns a precise
+      // "catalog unavailable" into a timeout that says nothing. Only on a settled failure: while
+      // `openFailure` is null the open may still succeed, and marking ready then would let the
+      // harness assert against a page that had not finished loading.
+      LaunchedEffect(failure) { markReady() }
     }
   }
 }

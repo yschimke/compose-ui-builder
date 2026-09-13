@@ -168,6 +168,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpOffset
@@ -177,6 +178,7 @@ import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -2306,6 +2308,98 @@ private fun NewDesignDialog(
     dismissButton = { if (onDismiss != null) TextButton(onClick = onDismiss) { Text("Cancel") } },
   )
 }
+
+/**
+ * Why a design could not be opened, when the editor has nothing to draw instead.
+ *
+ * This exists because the alternative was a white page. The editor's body is guarded by `if
+ * (loadedDocument != null && loadedCatalog != null)`, and that guard had no `else`: a refused open
+ * left the composable emitting nothing at all, forever, while the reason sat in a status string
+ * that is only read from inside the guarded branch. The server said `catalog unavailable for stored
+ * design <id>`, the client parsed it, and the page showed white. The whole fix is having somewhere
+ * to put the sentence the service already sent.
+ *
+ * [code] is the service's own, and decides the second paragraph. The distinction worth drawing is
+ * whether the reader can do anything: a design pinned to a catalog source this deployment stopped
+ * serving is an operator's problem, and telling that reader to try again wastes their time.
+ */
+@Composable
+fun UiBuilderUnavailableScreen(
+  designId: String,
+  catalogSystemId: String,
+  reason: String,
+  code: ServiceErrorCodeV1?,
+) {
+  MaterialTheme(colorScheme = EditorColors) {
+    Box(
+      Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
+      contentAlignment = Alignment.Center,
+    ) {
+      Column(
+        modifier = Modifier.widthIn(max = 560.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        Text(
+          text = "This design could not be opened",
+          style = MaterialTheme.typography.headlineSmall,
+          color = MaterialTheme.colorScheme.onBackground,
+          textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(12.dp))
+        // The service's own sentence, not a paraphrase. It names the condition precisely and a
+        // rewrite here would be a second description to keep in step with the first.
+        Text(
+          text = reason,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onBackground,
+          textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+          text = unopenableDesignGuidance(code),
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        // Both ids, because the first question anyone asks about a page that will not open is
+        // which design and which catalog, and the URL is not always what was typed.
+        Text(
+          text = "$catalogSystemId · $designId",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          textAlign = TextAlign.Center,
+        )
+      }
+    }
+  }
+}
+
+/**
+ * The one sentence that says whether the reader can act, keyed on the service's code.
+ *
+ * Separate from the composable so it can be asserted without rendering, and so the mapping lives in
+ * one place rather than being spelled out per call site.
+ */
+internal fun unopenableDesignGuidance(code: ServiceErrorCodeV1?): String =
+  when (code) {
+    ServiceErrorCodeV1.CATALOG_UNAVAILABLE ->
+      "This design is pinned to a catalog source this deployment no longer serves. Reloading will " +
+        "not change that — it needs an operator to restore the catalog or re-pin the design."
+    ServiceErrorCodeV1.NOT_FOUND ->
+      "No design with this id exists here, or it is not one this account may open."
+    ServiceErrorCodeV1.FORBIDDEN,
+    ServiceErrorCodeV1.UNAUTHORIZED ->
+      "This account may not open this design. Its owner can share it from the design's own share " +
+        "page."
+    ServiceErrorCodeV1.MIGRATION_REQUIRED ->
+      "The stored design is in an older format this build will not read until it is migrated. That " +
+        "is an operator step."
+    ServiceErrorCodeV1.INTERNAL ->
+      "The stored design could not be served. An operator can download and repair it, or retire it."
+    else ->
+      "Reloading the page may help. If it does not, an operator will need to look at the host."
+  }
 
 @Composable
 fun UiBuilderNewDesignScreen(
