@@ -432,9 +432,7 @@ abstract class CheckWindowSidecarVersion : org.gradle.api.DefaultTask() {
   fun verify() {
     val prefix = "window-core-desktop-"
     val jar =
-      runtimeClasspath.files.firstOrNull {
-        it.name.startsWith(prefix) && it.name.endsWith(".jar")
-      }
+      runtimeClasspath.files.firstOrNull { it.name.startsWith(prefix) && it.name.endsWith(".jar") }
         ?: error(
           "this module no longer resolves $prefix*.jar — if `androidx.window` has left the render " +
             "path, drop the `androidx-window` catalog entry and the server's sidecar dependency " +
