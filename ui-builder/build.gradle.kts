@@ -111,17 +111,60 @@ abstract class VerifyGeneratedSource : org.gradle.api.DefaultTask() {
  * record is the drift this module is removing. It lands as a Kotlin constant rather than a resource
  * because resource loading differs between the JVM and wasmJs, and the panel must behave the same
  * in both — the browser is where it actually runs.
+ *
+ * `compose-foundation-components-v1.json` is merged in for the same reason `ComponentRecordSource`
+ * unions it server-side: `layout/column` and `asset/image` belong to `androidx.compose.foundation`
+ * rather than to any catalog, and a panel judging a design without them would report every layout
+ * node as having no record while the server exported it happily. The two files share no component,
+ * so the merge is a concatenation; the server owns the rule for when they would, and this states
+ * the same outcome on the side that cannot see it.
  */
 abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.InputFile
   @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
   abstract val record: org.gradle.api.file.RegularFileProperty
 
+  @get:org.gradle.api.tasks.InputFile
+  @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  abstract val foundation: org.gradle.api.file.RegularFileProperty
+
   @get:org.gradle.api.tasks.OutputFile abstract val output: org.gradle.api.file.RegularFileProperty
+
+  /**
+   * [record] with [foundation]'s components appended, as JSON text.
+   *
+   * Parsed rather than spliced textually: both files are written by hand and a splice assuming
+   * either one's formatting would break the first time somebody reformatted it.
+   *
+   * The skip is `ComponentRecordSource.withFoundation`'s, rule for rule — the canonical id AND the
+   * component ids — because this constant and that union describe the same record to two readers.
+   * Keyed on the canonical id alone, a catalog that carried its own `Column` under a canonical id
+   * of its own would keep it on the server and get BOTH here, so the browser's panel would see
+   * `layout/column` claimed twice and refuse an export the server writes happily. The two files
+   * share neither key today; a rule that only holds while that is true is not the rule.
+   */
+  private fun merged(): String {
+    @Suppress("UNCHECKED_CAST")
+    val base = groovy.json.JsonSlurper().parse(record.get().asFile) as MutableMap<String, Any?>
+    @Suppress("UNCHECKED_CAST")
+    val extra = groovy.json.JsonSlurper().parse(foundation.get().asFile) as Map<String, Any?>
+    @Suppress("UNCHECKED_CAST") val components = base["components"] as List<Map<String, Any?>>
+    val taken = components.mapNotNull { it["canonicalId"] as? String }.toSet()
+    @Suppress("UNCHECKED_CAST")
+    val claimed = components.flatMap { (it["componentIds"] as? List<String>).orEmpty() }.toSet()
+    @Suppress("UNCHECKED_CAST")
+    val added =
+      (extra["components"] as List<Map<String, Any?>>).filterNot { candidate ->
+        candidate["canonicalId"] in taken ||
+          (candidate["componentIds"] as? List<String>).orEmpty().any { it in claimed }
+      }
+    base["components"] = components + added
+    return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(base))
+  }
 
   @org.gradle.api.tasks.TaskAction
   fun generate() {
-    val json = record.get().asFile.readText()
+    val json = merged()
     val file = output.get().asFile
     file.parentFile.mkdirs()
     file.writeText(
@@ -131,6 +174,7 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
         appendLine(
           "// Generated from docs/design/fixtures/ui-builder/m3-catalog-components-v1.json"
         )
+        appendLine("// merged with compose-foundation-components-v1.json beside it")
         appendLine("// by :ui-builder:embedComponentRecord. Do not edit.")
         appendLine()
         // A raw string, with every `$` escaped: `typeFqn` values carry them (a nested classifier
@@ -148,6 +192,9 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
 val embedComponentRecord =
   tasks.register<EmbedComponentRecord>("embedComponentRecord") {
     record.set(rootProject.file("docs/design/fixtures/ui-builder/m3-catalog-components-v1.json"))
+    foundation.set(
+      rootProject.file("docs/design/fixtures/ui-builder/compose-foundation-components-v1.json")
+    )
     output.set(
       layout.buildDirectory.file(
         "generated/componentRecord/ee/schimke/composeai/uibuilder/EmbeddedComponentRecord.kt"

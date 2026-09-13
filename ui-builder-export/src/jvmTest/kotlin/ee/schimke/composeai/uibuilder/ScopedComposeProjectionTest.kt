@@ -28,12 +28,38 @@ class ScopedComposeProjectionTest {
   private val root =
     generateSequence(File(".").absoluteFile) { it.parentFile }
       .first { File(it, "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json").isFile }
+  /**
+   * The m3 record plus the builder's own `layout/`, `shape/` and `asset/` components.
+   *
+   * Two files because they are two records: `androidx.compose.foundation` publishes one `Column`
+   * rather than one per design system, so it belongs to no catalog and lives in
+   * `compose-foundation-components-v1.json`. The fixture this test projects is mostly layout, so
+   * reading the m3 one alone would exercise an export that refuses every node in it.
+   *
+   * The skip is the server's, rule for rule — `ComponentRecordSource.withFoundation` drops a
+   * foundation entry whose canonical id OR whose component id the catalog already claims, and a
+   * projection judged against a looser record would see an id claimed twice and refuse what the
+   * server writes. This module cannot see that class, so the rule is restated rather than shared;
+   * the two files share neither key today, and a rule that only holds while that is true is not the
+   * rule.
+   */
   private val records = Json {
     ignoreUnknownKeys = true
   }
-    .decodeFromString<ComponentRecordFile>(
-      File(root, "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json").readText()
-    )
+    .let { json ->
+      fun read(name: String) =
+        json.decodeFromString<ComponentRecordFile>(
+          File(root, "docs/design/fixtures/ui-builder/$name").readText()
+        )
+      val m3 = read("m3-catalog-components-v1.json")
+      val taken = m3.components.map { it.canonicalId }.toSet()
+      val claimed = m3.components.flatMapTo(mutableSetOf()) { it.componentIds }
+      val extra =
+        read("compose-foundation-components-v1.json").components.filterNot { candidate ->
+          candidate.canonicalId in taken || candidate.componentIds.any { it in claimed }
+        }
+      m3.copy(components = m3.components + extra)
+    }
 
   private fun fixture() =
     Json.decodeFromString<DesignDocumentV1>(

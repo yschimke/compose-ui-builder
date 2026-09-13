@@ -322,20 +322,34 @@ class GeneratedDocumentTest {
     }
   }
 
-  /** The capability ids the shipped component record covers. */
+  /**
+   * The capability ids the shipped component record covers — BOTH files of it.
+   *
+   * The builder's own `layout/`, `shape/` and `asset/` components are their own record:
+   * `androidx.compose.foundation` publishes one `Column` rather than one per design system, so it
+   * belongs to no catalog. `:ui-builder:embedComponentRecord` merges the two into the constant this
+   * panel judges a design against, so a check of "what does the shipped record cover" has to read
+   * the same pair or it reports every layout node as uncovered.
+   */
   private val recordedComponentIds: Set<String> by lazy {
-    Json.parseToJsonElement(resource("/m3-catalog-components-v1.json"))
-      .jsonObject
-      .getValue("components")
-      .jsonArray
-      .flatMap { it.jsonObject["componentIds"]?.jsonArray.orEmpty() }
-      .map { it.jsonPrimitive.content }
+    RECORD_FILES.flatMap { name ->
+        Json.parseToJsonElement(resource("/$name"))
+          .jsonObject
+          .getValue("components")
+          .jsonArray
+          .flatMap { it.jsonObject["componentIds"]?.jsonArray.orEmpty() }
+          .map { it.jsonPrimitive.content }
+      }
       .toSet()
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 
   private companion object {
+    /** The two files `embedComponentRecord` merges; see [recordedComponentIds]. */
+    val RECORD_FILES =
+      listOf("m3-catalog-components-v1.json", "compose-foundation-components-v1.json")
+
     /**
      * Fixed rather than drawn from the clock: a generative test that cannot be re-run on the seed
      * that failed is a bug report nobody can act on. Twenty seeds is what fits in the `check` lane;

@@ -32,16 +32,26 @@ class PaletteExportStatusTest {
       selectedNodeId = "discover-grid",
     )
 
-  /** The capability ids the embedded record can print a call site for. */
+  /**
+   * The capability ids the embedded record can print a call site for — from BOTH of its files.
+   *
+   * The builder's own `layout/`, `shape/` and `asset/` components are a record of their own, and
+   * `:ui-builder:embedComponentRecord` merges the two into the constant this panel reads. A palette
+   * status computed from the m3 file alone would report every layout component as having no call
+   * site while the export writes one.
+   */
   private val covered: Set<String> =
-    Json.parseToJsonElement(resource("/m3-catalog-components-v1.json"))
-      .jsonObject
-      .getValue("components")
-      .jsonArray
-      .map { it.jsonObject }
-      .filter { it["code"]?.jsonObject?.get("call") != null }
-      .flatMap { it["componentIds"]?.jsonArray.orEmpty() }
-      .map { it.jsonPrimitive.content }
+    listOf("m3-catalog-components-v1.json", "compose-foundation-components-v1.json")
+      .flatMap { name ->
+        Json.parseToJsonElement(resource("/$name"))
+          .jsonObject
+          .getValue("components")
+          .jsonArray
+          .map { it.jsonObject }
+          .filter { it["code"]?.jsonObject?.get("call") != null }
+          .flatMap { it["componentIds"]?.jsonArray.orEmpty() }
+          .map { it.jsonPrimitive.content }
+      }
       .toSet()
 
   private fun items() =
