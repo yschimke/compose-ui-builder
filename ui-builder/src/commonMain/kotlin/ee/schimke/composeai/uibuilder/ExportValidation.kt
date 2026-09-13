@@ -70,19 +70,41 @@ private fun validateCatalogPin(
   document: UiBuilderDocument,
   catalog: CapabilityCatalog,
 ): List<ExportValidationIssue> {
-  // Candidate manifests do not yet expose a separate digest field. Until that wire shape moves to
-  // contracts, the frozen catalog revision is also the expected candidate digest.
+  // Candidate manifests do not yet expose a separate digest field, so neither writer of a pin has
+  // a digest to write and both write a placeholder — and they do not write the SAME placeholder.
+  // This editor spells it as the catalog's own revision; the server spells it `candidate`
+  // (`CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST`). On a synthesised catalog the
+  // two agree by accident, because that catalog's revision IS `candidate` — which is why a rule
+  // that only ever matched one of them survived this long. On a published catalog the revision is
+  // a content hash, so every pin the server writes, for a design created five seconds ago as much
+  // as for one re-pinned across a source flip (#818), failed this check and took the Issues panel
+  // and both export lanes with it.
+  //
+  // So the digest is checked against either spelling until there is a real digest to check. The
+  // three fields that name the served catalog are unchanged and are what actually catches a
+  // document pinned to something else.
   val expected =
     mapOf(
       "systemId" to catalog.benchmark.catalogSystemId,
       "catalogRevision" to catalog.benchmark.catalogRevision,
-      "capabilityDigest" to catalog.benchmark.catalogRevision,
       "nativeRuntimeId" to catalog.benchmark.nativeRuntimeId,
     )
+  val digests = setOf(catalog.benchmark.catalogRevision, CANDIDATE_CAPABILITY_DIGEST)
   val actual =
     document.catalogPin.mapValues { (_, value) ->
       (value as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
     }
+  val digestMismatch =
+    if (actual["capabilityDigest"] in digests) emptyList()
+    else
+      listOf(
+        ExportValidationIssue(
+          code = "CATALOG_PIN_MISMATCH",
+          message =
+            "catalogPin.capabilityDigest expected one of ${digests.sorted().joinToString(", ") { "'$it'" }}" +
+              " but was '${actual["capabilityDigest"] ?: "<missing>"}'",
+        )
+      )
   val mismatches = expected.mapNotNull { (field, expectedValue) ->
     val actualValue = actual[field]
     if (actualValue == expectedValue) null
@@ -93,15 +115,29 @@ private fun validateCatalogPin(
           "catalogPin.$field expected '$expectedValue' but was '${actualValue ?: "<missing>"}'",
       )
   }
+  // `capabilityDigest` is a field of the pin, checked above against either spelling rather than
+  // against one expected value — so it is named here too, or moving it out of [expected] would
+  // have turned every pin that carries it into an "unexpected field".
   val unexpected =
-    (actual.keys - expected.keys).sorted().map { field ->
+    (actual.keys - expected.keys - "capabilityDigest").sorted().map { field ->
       ExportValidationIssue(
         code = "CATALOG_PIN_MISMATCH",
         message = "catalogPin contains unexpected field '$field'",
       )
     }
-  return mismatches + unexpected
+  return digestMismatch + mismatches + unexpected
 }
+
+/**
+ * What a pin's `capabilityDigest` says when there is no digest to say.
+ *
+ * The server's own spelling of the same placeholder —
+ * `CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST` — repeated rather than imported:
+ * `:ui-builder` is reached as a distribution and never links the runtime that serves it
+ * (`docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`). Both disappear together the day a catalog
+ * manifest carries a real digest.
+ */
+private const val CANDIDATE_CAPABILITY_DIGEST = "candidate"
 
 /**
  * Where each component's body starts, by component key.

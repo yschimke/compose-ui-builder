@@ -441,7 +441,8 @@ public class PersistentUiBuilderService(
   private val lock = ReentrantLock()
   private val store: UiBuilderDesignStore = designStore.store
   private val loadedPersistence = store.load()
-  private var persisted: PersistedServiceV1 = PersistedServiceV1(loadedPersistence.designs)
+  private var persisted: PersistedServiceV1 =
+    PersistedServiceV1(loadedPersistence.designs.mapValues { (_, design) -> design.rePinned() })
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
@@ -566,6 +567,53 @@ public class PersistentUiBuilderService(
           )
         }
     )
+
+  /**
+   * The same design, pinned to the catalog reference this deployment actually serves.
+   *
+   * ## The half a stored design was left in
+   *
+   * `--ui-builder-published-catalogs` changes a catalog's `benchmark`, and therefore the reference
+   * built from it, without changing the catalog a document fits. `acceptedReferences` (#816) made
+   * the **server** accept both sources' references for one `systemId`, so a design written before
+   * the flip opens again instead of reporting `CATALOG_UNAVAILABLE`. The browser was not party to
+   * that: it holds the served catalog and nothing else, so `ExportValidation.validateCatalogPin`
+   * compared the stored pin field by field against the catalog in front of it, put
+   * `CATALOG_PIN_MISMATCH` in the Issues panel, and — because the Compose and SVG projections share
+   * that fail-closed validator — refused every export. The design came back and could not be used
+   * (#818).
+   *
+   * ## Why re-pinning, and why here
+   *
+   * Teaching the editor about alternate pins means shipping the other source's reference to the
+   * client, which turns a server-side compatibility detail into part of the wire contract and
+   * leaves two validators that have to agree about it forever. Re-pinning keeps that knowledge
+   * where it already lives, and the document the editor receives simply names the catalog it is
+   * being shown.
+   *
+   * This runs where `persisted.designs` is built, so every downstream `catalogs.resolve(...)` —
+   * `unusableReason` included, which is computed from this map — sees the re-pinned document
+   * without each call site needing to know. In memory only: nothing is written on a read path, and
+   * the stored file converges at the next save on its own, because a write carries
+   * `document.catalogPin` forward rather than re-stamping it.
+   *
+   * ## The conditions, which are the whole safety argument
+   *
+   * The pin must resolve to a catalog this deployment serves, name that catalog's **own
+   * `systemId`**, and the document must **validate against it**. That last clause is what keeps the
+   * drift check intact: a document that has drifted from the catalog fails validation, is not
+   * re-pinned, and goes on failing for its own reasons under its own pin. A design that is unusable
+   * for a topology or limit reason is untouched here as well — this changes one field of one
+   * document and nothing about what is checked afterwards.
+   */
+  private fun PersistedDesignV1.rePinned(): PersistedDesignV1 {
+    val pin = document.catalogPin
+    val catalog = catalogs.resolve(pin) ?: return this
+    val served = catalogs.reference(catalog) ?: return this
+    if (served == pin || served.systemId != pin.systemId) return this
+    if (catalogs.validate(document, catalog) != null) return this
+    return copy(document = document.copy(catalogPin = served))
+  }
 
   private fun unusableReason(designId: String, design: PersistedDesignV1): UnusableDesign? {
     fun internal(reason: String) = UnusableDesign(ServiceErrorCodeV1.INTERNAL, reason)

@@ -29,6 +29,17 @@ compose-multiplatform = "1.12.0"
 # panes. Its own version line rather than the Compose Multiplatform one, which is why it is a
 # separate ref: the adaptive artifacts ship independently of the CMP bundle.
 compose-material3-adaptive = "1.2.0"
+# `androidx.window`, as the JetBrains multiplatform port publishes it. Nothing in this build depends
+# on it directly — it arrives transitively under the adaptive artifacts above — and this ref exists
+# so the server's RENDERER SIDECAR can carry the same library onto the daemon's parent class loader.
+# `server/build.gradle.kts` says why that is necessary; it is the fix for
+# yschimke/compose-preview-server#812.
+#
+# So the number to hold it at is whatever the adaptive artifacts resolve, NOT the newest published:
+# the sidecar copy is the one the render links against, so a higher one here would silently swap the
+# library out from under the bundle. `:ui-builder:checkWindowSidecarVersion` fails the build if the
+# two ever disagree rather than leaving it to a `NoSuchMethodError` mid-render.
+androidx-window = "1.4.0"
 material-icons-extended = "1.7.3"
 graphics-shapes = "1.1.0"
 # One ref for every compose-ai-tools coordinate, and for the Gradle plugin id it also drives.
@@ -174,6 +185,7 @@ graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = 
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }
 compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
+androidx-window-core = { module = "org.jetbrains.androidx.window:window-core", version.ref = "androidx-window" }
 material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "material-icons-extended" }
 material-icons-extended-desktop = { module = "org.jetbrains.compose.material:material-icons-extended-desktop", version.ref = "material-icons-extended" }
 material-icons-core-desktop = { module = "org.jetbrains.compose.material:material-icons-core-desktop", version.ref = "material-icons-extended" }

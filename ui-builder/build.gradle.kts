@@ -1,3 +1,8 @@
+// Imported rather than written out at the use site: in a Kotlin build script `java` resolves to the
+// Java plugin's extension accessor, so a fully qualified `java.net.URLClassLoader` does not
+// compile.
+import java.net.URLClassLoader
+
 plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.multiplatform)
@@ -8,6 +13,78 @@ plugins {
 }
 
 ktfmt { googleStyle() }
+
+/**
+ * Formats one generated file the way `ktfmtCheck` will judge it — which is NOT `ktfmt
+ * --google-style`.
+ *
+ * Both gates resolve ktfmt 0.64 and both say `googleStyle`, so they read as interchangeable. They
+ * are not. `Formatter.GOOGLE_FORMAT`, which the CLI's `--google-style` uses as-is, carries
+ * `preserveLambdaBreaks = true`; `ktfmt-gradle` 0.27.0 builds its options through
+ * `FormattingOptionsBean`, whose six fields do not include that one, so the plugin formats with
+ * ktfmt's default of `false`. A lambda an author broke across lines and that would fit on one is
+ * therefore kept by the CLI and collapsed by the plugin — the same file, two answers, and the
+ * plugin's is the one CI enforces (#822).
+ *
+ * That mattered here because the Jetcaster fixture is formatted by one and checked by the other:
+ * this task's output is compared against
+ * `ui-builder-generated-jetcaster/.../JetcasterDiscoverExpanded.kt`, which `ktfmtCheckAll` holds to
+ * the plugin's formatting. The day `ScreenGenerator` emits such a lambda the two gates would want
+ * different bytes and neither could be satisfied.
+ *
+ * So this reproduces the plugin's options exactly rather than approximating them with a CLI flag —
+ * there is no flag: `--google-style`, `--meta-style` and `--kotlinlang-style` are the only styles
+ * the CLI exposes and none of them is what the plugin does. The numbers below are
+ * `KtfmtExtension.googleStyle()` plus that class's defaults, and the constructor chosen is the same
+ * six-argument one `KtfmtWorkAction.toFormattingOptions` calls, so anything ktfmt adds a default
+ * for lands here the way it lands there.
+ *
+ * ktfmt is loaded from the `ktfmtCli` configuration reflectively, under the platform loader: it
+ * keeps ONE version of ktfmt in the build (the version catalog's) and keeps its Kotlin runtime out
+ * of Gradle's.
+ */
+abstract class FormatLikeKtfmtPlugin : org.gradle.api.DefaultTask() {
+  @get:org.gradle.api.tasks.Classpath
+  abstract val ktfmtClasspath: org.gradle.api.file.ConfigurableFileCollection
+
+  @get:org.gradle.api.tasks.InputFile
+  @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  abstract val source: org.gradle.api.file.RegularFileProperty
+
+  @org.gradle.api.tasks.TaskAction
+  fun format() {
+    val urls = ktfmtClasspath.files.map { it.toURI().toURL() }.toTypedArray()
+    URLClassLoader(urls, ClassLoader.getPlatformClassLoader()).use { loader ->
+      val strategyClass =
+        loader.loadClass("com.facebook.ktfmt.format.TrailingCommaManagementStrategy")
+      val optionsClass = loader.loadClass("com.facebook.ktfmt.format.FormattingOptions")
+      val int = Int::class.javaPrimitiveType
+      val boolean = Boolean::class.javaPrimitiveType
+      val options =
+        optionsClass
+          .getConstructor(int, int, int, strategyClass, boolean, boolean)
+          .newInstance(
+            // KtfmtExtension.DEFAULT_MAX_WIDTH; googleStyle() leaves it alone.
+            100,
+            // googleStyle(): blockIndent and continuationIndent.
+            2,
+            2,
+            // googleStyle(): TrailingCommaManagementStrategy.COMPLETE.
+            strategyClass.getField("COMPLETE").get(null),
+            // KtfmtExtension.DEFAULT_REMOVE_UNUSED_IMPORTS.
+            true,
+            // KtfmtExtension.DEFAULT_DEBUGGING_PRINT_OPTS.
+            false,
+          )
+      val format =
+        loader
+          .loadClass("com.facebook.ktfmt.format.Formatter")
+          .getMethod("format", optionsClass, String::class.java)
+      val file = source.get().asFile
+      file.writeText(format.invoke(null, options, file.readText()) as String)
+    }
+  }
+}
 
 abstract class VerifyGeneratedSource : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.InputFile
@@ -304,14 +381,12 @@ val generateJetcasterComposeFixtureForCheck =
   }
 
 val formatJetcasterComposeFixtureForCheck =
-  tasks.register<JavaExec>("formatJetcasterComposeFixtureForCheck") {
+  tasks.register<FormatLikeKtfmtPlugin>("formatJetcasterComposeFixtureForCheck") {
     description = "Format the isolated generated fixture exactly like checked-in Kotlin."
     group = "verification"
     dependsOn(generateJetcasterComposeFixtureForCheck)
-    classpath(ktfmtCli)
-    mainClass.set("com.facebook.ktfmt.cli.Main")
-    args("--google-style", generatedJetcasterCheckFile.get().asFile.absolutePath)
-    inputs.file(generatedJetcasterCheckFile)
+    ktfmtClasspath.from(ktfmtCli)
+    source.set(generatedJetcasterCheckFile)
     outputs.file(generatedJetcasterCheckFile)
   }
 
@@ -326,6 +401,62 @@ tasks.register<VerifyGeneratedSource>("checkJetcasterComposeFixture") {
   )
   expected.set(generatedJetcasterCheckFile)
 }
+
+/**
+ * Fails when the `androidx.window` the server's renderer sidecar carries is not the one this
+ * module's design render actually links against.
+ *
+ * The sidecar copy exists because the daemon force-delegates `androidx.*` classes to its parent
+ * loader while promoting jars to that parent by GROUP, and the JetBrains port
+ * `org.jetbrains.androidx.window:window-core` matches the package rule but not the group rule —
+ * `server/build.gradle.kts` carries the full explanation and
+ * [#812](https://github.com/yschimke/compose-preview-server/issues/812) the failure it caused.
+ *
+ * The consequence for versions is the part worth a gate. The sidecar sits AHEAD of the bundle's own
+ * dependencies on the parent classpath, so its copy is the one the render links against whatever
+ * the bundle recorded. Pinned here and resolved there, the two can drift the next time the adaptive
+ * artifacts move — and the symptom would be a `NoSuchMethodError` in the middle of a render, on a
+ * lane only the visual harness exercises. Comparing them at build time costs nothing and names the
+ * two numbers.
+ *
+ * Lives in this module because this is where the version is decided: `window-core` arrives under
+ * `compose-material3-adaptive`, and reading it anywhere else would be reading a copy.
+ */
+abstract class CheckWindowSidecarVersion : org.gradle.api.DefaultTask() {
+  @get:org.gradle.api.tasks.Classpath
+  abstract val runtimeClasspath: org.gradle.api.file.ConfigurableFileCollection
+
+  @get:org.gradle.api.tasks.Input abstract val pinned: org.gradle.api.provider.Property<String>
+
+  @org.gradle.api.tasks.TaskAction
+  fun verify() {
+    val prefix = "window-core-desktop-"
+    val jar =
+      runtimeClasspath.files.firstOrNull {
+        it.name.startsWith(prefix) && it.name.endsWith(".jar")
+      }
+        ?: error(
+          "this module no longer resolves $prefix*.jar — if `androidx.window` has left the render " +
+            "path, drop the `androidx-window` catalog entry and the server's sidecar dependency " +
+            "with it (see #812)"
+        )
+    val resolved = jar.name.removePrefix(prefix).removeSuffix(".jar")
+    check(resolved == pinned.get()) {
+      "the renderer sidecar pins androidx.window ${pinned.get()} but this module renders against " +
+        "$resolved; the sidecar copy wins on the daemon's parent loader, so set " +
+        "`androidx-window` in gradle/libs.versions.toml to $resolved (#812)"
+    }
+  }
+}
+
+tasks.register<CheckWindowSidecarVersion>("checkWindowSidecarVersion") {
+  description = "Fail when the server's androidx.window sidecar pin drifts from this module's."
+  group = "verification"
+  runtimeClasspath.from(configurations.named("jvmRuntimeClasspath"))
+  pinned.set(libs.versions.androidx.window)
+}
+
+tasks.named("check") { dependsOn("checkWindowSidecarVersion") }
 
 tasks.register<Sync>("wasmFrontendDist") {
   description = "Assemble the standalone Compose UI builder Wasm fixture."
