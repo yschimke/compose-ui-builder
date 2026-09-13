@@ -955,20 +955,6 @@ internal const val REMOTE_COMPOSE_INLINE_COMPONENT_ID = "remote-compose/inline"
 internal const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID = "remote-compose/custom"
 
 /**
- * The id namespaces the BUILDER owns, on every shelf.
- *
- * Not a design system's: a box, a gradient, an image and the Remote Compose seams are the builder's
- * own vocabulary, which is why a catalog is right to publish components only under its own prefix
- * and why [composeFoundationCatalog] supplies the rest. Adding a namespace here widens what every
- * published catalog is handed, so it is a deliberate list rather than a pattern.
- *
- * Named rather than derived from the packaged catalog's prefix, deliberately: that catalog declares
- * no `componentIdPrefix`, and "everything the published catalog does not own" would hand a future
- * `m4/` catalog the whole `m3/` shelf.
- */
-internal val BUILDER_NAMESPACES = FOUNDATION_NAMESPACES + REMOTE_COMPOSE_NAMESPACE
-
-/**
  * The three namespaces `compose-foundation` owns: `androidx.compose.foundation` and
  * `androidx.compose.ui` publish one Box, one Column, one Row and one Image, not one per design
  * system.
@@ -988,6 +974,20 @@ internal val FOUNDATION_NAMESPACES = listOf("layout/", "shape/", "asset/")
  * right to publish only its own prefix, and a published shelf still needs these on it.
  */
 internal const val REMOTE_COMPOSE_NAMESPACE: String = "remote-compose/"
+
+/**
+ * The id namespaces the BUILDER owns, on every shelf.
+ *
+ * Not a design system's: a box, a gradient, an image and the Remote Compose seams are the builder's
+ * own vocabulary, which is why a catalog is right to publish components only under its own prefix
+ * and why [composeFoundationCatalog] supplies the rest. Adding a namespace here widens what every
+ * published catalog is handed, so it is a deliberate list rather than a pattern.
+ *
+ * Named rather than derived from the packaged catalog's prefix, deliberately: that catalog declares
+ * no `componentIdPrefix`, and "everything the published catalog does not own" would hand a future
+ * `m4/` catalog the whole `m3/` shelf.
+ */
+internal val BUILDER_NAMESPACES = FOUNDATION_NAMESPACES + REMOTE_COMPOSE_NAMESPACE
 
 internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   setOf(
