@@ -79,6 +79,7 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     "m3/surface",
     "m3/text",
     "remote-m3/lottie",
+    REMOTE_TEXT_COMPONENT_ID,
     "shape/linear-gradient",
     "remote-compose/document",
     REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
@@ -367,6 +368,14 @@ internal class RemoteContentEmitter(
     val pad = INDENT.repeat(depth)
     return when (node.componentId) {
       "m3/text" -> (pad + text(node, pad)).split("\n")
+      // The same hand, but only where the host PUBLISHED the component. Without its record this is
+      // a component this host never served, and writing a call to one anyway would put a name in
+      // generated source that nothing on the box can resolve -- so it falls through to the refusal
+      // it had before, which names the component. `RecordFreeComposeExportTest` pins both halves,
+      // export and native preview, because only the pair is evidence.
+      REMOTE_TEXT_COMPONENT_ID ->
+        if (node.componentId in components) (pad + text(node, pad)).split("\n")
+        else recordCall(node, depth) ?: refuseUnknown(node)
       "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node, pad))
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node, pad))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node, pad))
@@ -528,7 +537,8 @@ internal class RemoteContentEmitter(
         "layout/row" -> setOf("horizontalSpacingDp")
         "layout/column",
         "layout/for-each" -> setOf("verticalSpacingDp")
-        "m3/text" -> setOf("text")
+        "m3/text",
+        REMOTE_TEXT_COMPONENT_ID -> setOf("text")
         else -> components[node.componentId]?.parameters?.map { it.name }?.toSet().orEmpty()
       }
     node.properties.forEach { (key, value) ->
@@ -1734,7 +1744,12 @@ internal class RemoteContentEmitter(
             "color = RemoteMaterialTheme.colorScheme.$color"
           }
       }
-    node.properties["fontSizeSp"]
+    // Either spelling, because the two vocabularies name the same thing differently: a design
+    // authored against the borrowed `m3/text` says `fontSizeSp`, and one against the published
+    // component says whatever that catalog declares -- `fontSize`, where the properties are derived
+    // from `RemoteText`'s own signature. Reading both is what lets one writer serve both ids
+    // without the catalog having to pick a spelling before this works.
+    (node.properties["fontSizeSp"] ?: node.properties["fontSize"])
       ?.numberOrNull()
       ?.takeIf { it > 0f }
       ?.let { arguments += "fontSize = ${it.spLiteral()}" }
@@ -2199,6 +2214,10 @@ internal class RemoteContentEmitter(
       imports += "androidx.compose.remote.creation.compose.state.rs"
     }
     if (usesSp) imports += "androidx.compose.remote.creation.compose.state.rsp"
+    if (usesFractionalSp) {
+      imports += "androidx.compose.remote.creation.compose.state.asRemoteTextUnit"
+      imports += "androidx.compose.ui.unit.sp"
+    }
     imports += "androidx.compose.runtime.Composable"
     if (usesColorLiteral) imports += "androidx.compose.ui.graphics.Color"
     if (usesContentScale) imports += "androidx.compose.ui.layout.ContentScale"
@@ -2274,6 +2293,7 @@ internal class RemoteContentEmitter(
   private var usesLottie = false
   private var usesRemoteFloat = false
   private var usesSp = false
+  private var usesFractionalSp = false
   private var usesHorizontalGradient = false
   private var usesVerticalGradient = false
   private var usesRemoteScrollState = false
@@ -2575,9 +2595,17 @@ internal class RemoteContentEmitter(
     return if (this % 1f == 0f) "${toInt()}.rf" else "${this}f.rf"
   }
 
+  /**
+   * A size as Remote Compose spells one.
+   *
+   * `rsp` is `val Int.rsp` and the library publishes no `Float.rsp`, so `14.5f.rsp` is source that
+   * does not compile -- which is what this wrote for every design whose size was not whole. The
+   * fractional case goes the long way round, through the `TextUnit` the library does accept. Both
+   * spellings are compiled in the catalog's value vocabulary probe rather than assumed here.
+   */
   private fun Float.spLiteral(): String =
     if (this % 1f == 0f) "${toInt()}.rsp".also { usesSp = true }
-    else "${this}f.rsp".also { usesSp = true }
+    else "${this}f.sp.asRemoteTextUnit()".also { usesFractionalSp = true }
 
   private companion object {
     const val INDENT = "    "
@@ -2725,6 +2753,15 @@ private const val REMOTE_BOOLEAN_FQN =
   "androidx.compose.remote.creation.compose.state.RemoteBoolean"
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
+/**
+ * The published Remote Compose text component, which the borrowed `m3/text` writer also serves.
+ *
+ * One writer for two ids: the call it writes is the same `RemoteText`, and a design that moves from
+ * the borrowed id to this one keeps its type scale, size, alignment and colour rather than falling
+ * to the record fallback, whose vocabulary is six scalar types and none of those.
+ */
+public const val REMOTE_TEXT_COMPONENT_ID: String = "remote-m3/remote-text"
+
 private const val REMOTE_TEXT_UNIT_FQN =
   "androidx.compose.remote.creation.compose.state.RemoteTextUnit"
 
