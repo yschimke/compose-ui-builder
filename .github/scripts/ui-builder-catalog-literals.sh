@@ -60,7 +60,6 @@ allowed=(
   server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderInlineCapture.kt
   server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderNativePreview.kt
   server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeWeb.kt
-  ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/InlineRemoteContentExporter.kt
   ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteContentEmitter.kt
   ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteScopes.kt
   ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderCatalogPlatform.kt

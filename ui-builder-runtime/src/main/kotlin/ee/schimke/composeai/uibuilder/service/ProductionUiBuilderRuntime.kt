@@ -136,40 +136,49 @@ public class CurrentM3UiBuilderCatalogExecutor(
     )
 
   /**
-   * The builder's own vocabulary, taken from the packaged catalog.
+   * Where a published catalog's builder components come from: [composeFoundationCatalog].
    *
-   * A column is not a Material 3 component and this server does not render one on a catalog's
-   * behalf: the `layout/`, `shape/`, `asset/` and `remote-compose/` namespaces are the BUILDER's,
-   * offered on every shelf whatever design system it describes. m3-catalog's published policy says
-   * the same thing from the other side — it declares no builtins, on the stated grounds that
-   * declaring them "would be this catalog claiming to own the builder's own vocabulary".
+   * NOT one fixed set. The foundation curates the builder vocabulary per platform, and it has to:
+   * `wear` gets `layout/box`, `layout/column`, `layout/row` and `asset/image` and nothing else,
+   * because `WearScreenCodeExporter` refuses everything else with "no Wear Compose Material 3
+   * counterpart this generator can write". Handing a published Wear catalog all seventeen would put
+   * `layout/lazy-grid`, `layout/scaffold` and the shapes on a watch palette, where a design that
+   * uses one is guaranteed to fail export — a palette entry that cannot be exported is worse than a
+   * missing one, because it is only discovered at the end.
    *
-   * Which makes this the server's to supply. A published catalog replaces the synthesised one
-   * wholesale, so without this a catalog that correctly declines to claim `layout/box` ships a
-   * shelf with no box on it. Naming the namespaces here rather than deriving them from the base
-   * catalog's prefix is deliberate: the packaged catalog declares no `componentIdPrefix`, and
-   * "everything the published catalog does not own" would hand a future `m4/` catalog the whole
-   * `m3/` shelf.
+   * Keyed by PLATFORM, which is the axis the curation was always along -- the synthesised catalogs
+   * used to be the donors and this hop tried their ids first.
+   *
+   * [platformFor] keeps that id hop for the one case where dropping it would change an answer: a
+   * published catalog that declares NO platform. Such a catalog is mobile everywhere else in the
+   * system, because that is what [platform] defaults to, but the old chain handed a published
+   * `wear-m3` the Wear vocabulary off its id alone, and `WearM3ScreenCatalogTest` pins that. The
+   * hop goes when `synthesisedCatalogs` does (#819 step 3), and that is a change to review on its
+   * own rather than a side effect of this one.
+   *
+   * What is NOT kept is the id winning over a platform the catalog DID declare. A catalog saying
+   * `platform: mobile` under any id now gets the mobile vocabulary, which is the one its exporter
+   * can write, and which every other reader of `statusSemantics.platform` already assumed.
+   *
+   * Built once, at construction, for the platforms this deployment actually publishes something for
+   * -- `donorFor` is only reached from `withBuilderVocabulary`, which runs over `published` while
+   * `availableCatalogs` is initialised and never again. `getOrElse` rather than `getValue` so a
+   * later caller outside that loop gets a donor rather than an exception.
    */
-  /**
-   * Where a published catalog's builder components come from.
-   *
-   * NOT one fixed set. The synthesised catalogs curate the builder vocabulary per platform, and
-   * they are right to: `wear-m3` borrows `layout/box`, `layout/column`, `layout/row` and
-   * `asset/image` and nothing else, because `WearScreenCodeExporter` refuses everything else with
-   * "no Wear Compose Material 3 counterpart this generator can write". Handing a published Wear
-   * catalog all sixteen would put `layout/lazy-grid`, `layout/scaffold` and the shapes on a watch
-   * palette, where a design that uses one is guaranteed to fail export — a palette entry that
-   * cannot be exported is worse than a missing one, because it is only discovered at the end.
-   *
-   * So the donor is the synthesised catalog of the same id, then any synthesised catalog for the
-   * same platform, then the packaged one. A catalog this binary has never heard of still gets the
-   * vocabulary of its platform's peer rather than a set chosen for someone else.
-   */
+  private val composeFoundation: Map<String, CatalogCapabilityV1> =
+    published.values.map(::platformFor).distinct().associateWith {
+      composeFoundationCatalog(baseCatalog, it)
+    }
+
+  private fun platformFor(catalog: CatalogCapabilityV1): String =
+    catalog.declaredPlatform
+      ?: synthesisedCatalogs[catalog.benchmark.catalogSystemId]?.platform
+      ?: DEFAULT_PLATFORM
+
   private fun donorFor(catalog: CatalogCapabilityV1): CatalogCapabilityV1 =
-    synthesisedCatalogs[catalog.benchmark.catalogSystemId]
-      ?: synthesisedCatalogs.values.firstOrNull { it.platform == catalog.platform }
-      ?: baseCatalog
+    platformFor(catalog).let { platform ->
+      composeFoundation.getOrElse(platform) { composeFoundationCatalog(baseCatalog, platform) }
+    }
 
   /**
    * A published catalog, plus the builder components it does not offer itself.
@@ -909,37 +918,74 @@ public data class UiBuilderComponentPackSource(
  * document for no gain. `SlotAcceptanceTest`'s committed table is what keeps the two spellings
  * honest — a catalog naming an id no component declares shows up there.
  */
-private const val REMOTE_COMPOSE_INLINE_COMPONENT_ID = "remote-compose/inline"
+internal const val REMOTE_COMPOSE_INLINE_COMPONENT_ID = "remote-compose/inline"
 
 /** The node that switches back out of it — see [REMOTE_COMPOSE_INLINE_COMPONENT_ID]. */
-private const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID = "remote-compose/custom"
+internal const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID = "remote-compose/custom"
 
 /**
  * The id namespaces the BUILDER owns, on every shelf.
  *
  * Not a design system's: a box, a gradient, an image and the Remote Compose seams are the builder's
  * own vocabulary, which is why a catalog is right to publish components only under its own prefix
- * and why this server supplies the rest. Adding a namespace here widens what every published
- * catalog is handed, so it is a deliberate list rather than a pattern.
+ * and why [composeFoundationCatalog] supplies the rest. Adding a namespace here widens what every
+ * published catalog is handed, so it is a deliberate list rather than a pattern.
+ *
+ * Named rather than derived from the packaged catalog's prefix, deliberately: that catalog declares
+ * no `componentIdPrefix`, and "everything the published catalog does not own" would hand a future
+ * `m4/` catalog the whole `m3/` shelf.
  */
-private val BUILDER_NAMESPACES = listOf("layout/", "shape/", "asset/", "remote-compose/")
+internal val BUILDER_NAMESPACES = listOf("layout/", "shape/", "asset/", "remote-compose/")
 
-private val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
+internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   setOf(
     "remote-compose/document",
     REMOTE_COMPOSE_INLINE_COMPONENT_ID,
     REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
   )
 
+/**
+ * The note a borrowed foundation component carries on a Wear palette.
+ *
+ * It says the opposite of what a borrowed MATERIAL component's note said. A borrowed Material
+ * component was a stand-in drawn by the wrong library's lookalike; Box, Column, Row and Image are
+ * the same declarations on both platforms, so there is nothing to stand in for.
+ *
+ * Shared between `wearM3Catalog` and [composeFoundationCatalog] rather than written out twice. The
+ * two have to agree exactly — `ComposeFoundationFaithfulnessTest` compares the components they
+ * donate field for field — and one constant cannot drift the way a copied string can.
+ *
+ * It lives in THIS file rather than beside the foundation because it names a catalog, and
+ * `.github/scripts/ui-builder-catalog-literals.sh` holds that name to the files that already
+ * carried one; a new file may not add one. When `wearM3Catalog` goes (#819 step 3) this constant
+ * goes with it, and the note then has to say the same thing without naming a catalog — or move into
+ * the published catalog's own data, which is where the contract puts it.
+ */
+internal const val WEAR_FOUNDATION_NOTE: String =
+  "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +
+    "and `androidx.compose.ui` publish one of these, not two. It is the real " +
+    "component rather than a stand-in, which is why `wear-m3` borrows it and borrows " +
+    "no Material component at all."
+
 /** The platform word a catalog declares, or the default for one that says nothing. */
 internal val CatalogCapabilityV1.platform: String
+  get() = declaredPlatform ?: CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM
+
+/**
+ * The platform word a catalog declares, or null when it declares none.
+ *
+ * Separated from [platform] because the difference matters in exactly one place: choosing a catalog
+ * a published one borrows its builder vocabulary from. "Says mobile" and "says nothing" are the
+ * same answer everywhere else, and must not be here -- see `donorFor`.
+ */
+internal val CatalogCapabilityV1.declaredPlatform: String?
   get() =
     statusSemantics[CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY]
       ?.let { it as? JsonPrimitive }
       ?.contentOrNull
       ?.trim()
       ?.lowercase()
-      ?.takeIf(String::isNotEmpty) ?: CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM
+      ?.takeIf(String::isNotEmpty)
 
 /**
  * This catalog with [packs] merged in, or itself when there are none.
@@ -1156,7 +1202,7 @@ private fun widgetContainerProperties(): List<PropertyCapabilityV1> =
  * `wear-m3/text.style` is fifteen type scales, which is a property of a text rather than a kind of
  * Text. The same three calls the M3 declaration makes, for the same reasons.
  */
-private fun wearComponentMenu(): JsonObject {
+internal fun wearComponentMenu(): JsonObject {
   val shelves =
     listOf(
       "Screens" to listOf("wear-m3/screen-scaffold"),
@@ -1237,7 +1283,7 @@ private fun wearComponentMenu(): JsonObject {
  * has both — fails when this set and `REMOTE_CONTENT_MODIFIERS` disagree, so the copy cannot rot
  * quietly the way the last one did.
  */
-private val REMOTE_M3_MODIFIERS =
+internal val REMOTE_M3_MODIFIERS =
   setOf(
     "align",
     "alignHorizontal",
@@ -2318,17 +2364,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // the same declarations on both platforms, which is the whole reason these are the only ones
       // left.
       if (component.componentId in REMOTE_COMPOSE_BORROWED_AS_THEMSELVES) component
-      else
-        component.copy(
-          wasm =
-            component.wasm.copy(
-              notes =
-                "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +
-                  "and `androidx.compose.ui` publish one of these, not two. It is the real " +
-                  "component rather than a stand-in, which is why `wear-m3` borrows it and borrows " +
-                  "no Material component at all."
-            )
-        )
+      else component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
     }
 
   return base.copy(

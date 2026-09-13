@@ -1,0 +1,307 @@
+package ee.schimke.composeai.uibuilder.service
+
+import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
+import ee.schimke.composeai.uibuilder.protocol.WasmAdapterStatusV1
+import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
+/**
+ * `compose-foundation` donates exactly what the synthesised catalogs donate — component for
+ * component, note for note, shelf for shelf.
+ *
+ * ## Why this test can only be written now
+ *
+ * [#819](https://github.com/yschimke/compose-preview-server/issues/819) deletes `remoteM3Catalog`
+ * and `wearM3Catalog`, whose only remaining job is to be the donor
+ * [`withBuilderVocabulary`][CurrentM3UiBuilderCatalogExecutor] hands a published catalog its
+ * `layout/`, `shape/`, `asset/` and `remote-compose/` from. All three catalogs serve from their
+ * published files as of 3.27.0, so nothing else reads them.
+ *
+ * "Redundant" is a claim, and this is the check. It compares the new source against the old one
+ * **while both still exist**, which is a window that closes the moment the generators go: after
+ * that there is no left-hand side to compare to, only a golden of the thing being changed. So the
+ * order is deliberate — introduce, prove equal, then delete — and a reviewer of the deletion can
+ * read this test rather than re-derive three component lists by hand.
+ *
+ * ## What a failure means
+ *
+ * Before the deletion: the extraction dropped or changed something, and the diff says what. The
+ * per-platform sets are NOT interchangeable — a watch palette handed the mobile seventeen offers
+ * `layout/lazy-grid` and `layout/scaffold`, which `WearScreenCodeExporter` refuses by name, so the
+ * design fails at export rather than at insert.
+ *
+ * After the deletion this test goes with the generators, and `SynthesisedCatalogGoldenTest`'s
+ * frozen fixtures are what the foundation is measured against instead.
+ */
+class ComposeFoundationFaithfulnessTest {
+
+  private val executor =
+    CurrentM3UiBuilderCatalogExecutor(
+      catalogSystemIds =
+        linkedSetOf(
+          CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
+          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
+          CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+        )
+    )
+
+  private fun synthesised(systemId: String): CatalogCapabilityV1 =
+    executor.listCatalogs().single { it.benchmark.catalogSystemId == systemId }
+
+  /** What a donor is read for: its builder-namespace components, in its own order. */
+  private fun CatalogCapabilityV1.donated() = components.filter { component ->
+    BUILDER_NAMESPACES.any { namespace -> component.componentId.startsWith(namespace) }
+  }
+
+  /**
+   * The foundation for a synthesised catalog's platform, derived from the SERVED packaged catalog.
+   *
+   * `baseCatalog` is private to the runtime, so this takes the m3-catalog entry `listCatalogs`
+   * returns. It differs from `baseCatalog` only by the `UiBuilderBuildFeatures.remoteCompose`
+   * property filter, which is applied uniformly to every component of every catalog — so both sides
+   * of every assertion below see the same filtering, whichever way the flag is set.
+   */
+  private fun foundationFor(catalog: CatalogCapabilityV1) =
+    composeFoundationCatalog(synthesised(DEFAULT_CATALOG_SYSTEM_ID), catalog.platform)
+
+  private fun assertDonatesTheSame(systemId: String) {
+    val old = synthesised(systemId)
+    val new = foundationFor(old)
+
+    // Component by component rather than set-wise: the ORDER decides where an injected component
+    // lands in the insert panel, and the note and the modifier list are the two fields nothing else
+    // in the suite looks at.
+    assertEquals(
+      old.donated().map { it.componentId },
+      new.components.map { it.componentId },
+      "the $systemId foundation donates a different vocabulary, or in a different order",
+    )
+    assertEquals(old.donated(), new.components, "a donated component differs field-for-field")
+  }
+
+  /**
+   * The weak one of the three, and said so rather than left to look like proof.
+   *
+   * Mobile's curation is the identity applied to the same namespace filter, so this holds by
+   * construction and would keep holding if the filter were wrong. It is here to catch a later
+   * change that gives mobile a curation of its own -- the wear and remote-compose cases below are
+   * where the derivation is actually being checked against a different one.
+   */
+  @Test
+  fun `the mobile foundation donates what the packaged catalog donates`() {
+    assertDonatesTheSame(DEFAULT_CATALOG_SYSTEM_ID)
+  }
+
+  @Test
+  fun `the wear foundation donates what wear-m3 donates`() {
+    assertDonatesTheSame(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
+  }
+
+  @Test
+  fun `the remote-compose foundation donates what remote-m3 donates`() {
+    assertDonatesTheSame(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
+  }
+
+  /**
+   * The other two things a donor is read for, and neither is a component.
+   *
+   * `withBuilderVocabulary` takes the donor's asset registry (so `asset/image` arrives with keys
+   * that validate rather than with a null registry that accepts anything) and the donor's shelves
+   * AND shelf order (so `layout/box` is filed under "Layout" where the donor puts it, rather than
+   * appended below every catalog group under a generic role heading).
+   */
+  @Test
+  fun `every foundation carries the donor's asset registry and shelves`() {
+    val registryKey = CurrentM3UiBuilderCatalogExecutor.ASSET_REGISTRY_KEY
+    for (systemId in
+      listOf(
+        DEFAULT_CATALOG_SYSTEM_ID,
+        CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+        CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
+      )) {
+      val old = synthesised(systemId)
+      val new = foundationFor(old)
+
+      assertEquals(
+        old.statusSemantics[registryKey],
+        new.statusSemantics[registryKey],
+        "$systemId: the foundation's asset registry differs, so a donated asset/image validates " +
+          "against different keys",
+      )
+      // Per donated component rather than whole-object: `remote-m3`'s menu also carries a shelf
+      // for `remote-m3/lottie`, which is that catalog's own component and not the foundation's.
+      // What `withBuilderVocabulary` reads is each injected component's group, plus the order it
+      // places a NEW group relative to the ones a catalog already has.
+      for (componentId in new.components.map { it.componentId }) {
+        assertEquals(
+          old.statusSemantics.shelfOf(componentId),
+          new.statusSemantics.shelfOf(componentId),
+          "$systemId: $componentId is filed under a different shelf",
+        )
+      }
+      assertEquals(
+        old.statusSemantics.shelfOrder(),
+        new.statusSemantics.shelfOrder(),
+        "$systemId: a new shelf would be inserted in a different place",
+      )
+      assertEquals(
+        old.platform,
+        new.platform,
+        "$systemId: the foundation declares another platform",
+      )
+    }
+  }
+
+  /**
+   * The premise, asserted so these tests cannot pass by comparing one thing to itself.
+   *
+   * If the three platforms donated the same vocabulary there would be nothing to curate and a
+   * single list would do — and this suite would be green while checking nothing.
+   */
+  @Test
+  fun `the three platforms really do donate different vocabularies`() {
+    val sets =
+      listOf(
+          DEFAULT_CATALOG_SYSTEM_ID,
+          CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
+        )
+        .map { systemId ->
+          foundationFor(synthesised(systemId)).components.map { it.componentId }.toSet()
+        }
+
+    assertEquals(sets.size, sets.distinct().size, "two platforms donate the same set")
+    // The one that matters: a watch must not be offered what its exporter refuses by name.
+    val wear =
+      foundationFor(synthesised(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID))
+    val offered = wear.components.map { it.componentId }
+    assertTrue("layout/box" in offered, "a Wear palette with no box on it")
+    for (refused in listOf("layout/lazy-grid", "layout/scaffold", "shape/radial-gradient")) {
+      assertTrue(
+        refused !in offered,
+        "the Wear foundation offers $refused, which cannot be exported",
+      )
+    }
+  }
+
+  /** An unknown platform gets the mobile vocabulary, which is where the fallback always pointed. */
+  @Test
+  fun `a platform the foundation has never heard of falls back to mobile`() {
+    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+
+    assertEquals(
+      composeFoundationCatalog(base, CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM).components,
+      composeFoundationCatalog(base, "tv").components,
+    )
+  }
+
+  /**
+   * The one answer this change deliberately moves, pinned so it is a decision rather than a drift.
+   *
+   * The old chain picked a donor by catalog ID first, so a published catalog was handed the Wear
+   * vocabulary whenever its id was `wear-m3` -- even while declaring itself mobile, and even though
+   * `UiBuilderPreviewSurfaces` and `ComponentMenu` both read the declared platform and would have
+   * treated the same catalog as mobile. Now the declared platform wins, so the palette agrees with
+   * the exporter that has to write it.
+   *
+   * The id is still consulted when a catalog declares NO platform, which is what
+   * `WearM3ScreenCatalogTest."a published catalog wins over the synthesised one of the same id"`
+   * exercises; that hop goes with `synthesisedCatalogs` at #819 step 3.
+   */
+  @Test
+  fun `a declared platform beats the id, and no declaration still falls back to it`() {
+    val wearVocabulary =
+      synthesised(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID).donated().map {
+        it.componentId
+      }
+
+    fun vocabularyOf(catalog: CatalogCapabilityV1) =
+      CurrentM3UiBuilderCatalogExecutor(
+          catalogSystemIds =
+            linkedSetOf(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID),
+          published = mapOf(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID to catalog),
+        )
+        .listCatalogs()
+        .single()
+        .donated()
+        .map { it.componentId }
+
+    assertEquals(
+      wearVocabulary.toSortedSet(),
+      vocabularyOf(stub()).toSortedSet(),
+      "a published catalog that declares no platform stopped falling back to its id",
+    )
+    assertEquals(
+      foundationFor(synthesised(DEFAULT_CATALOG_SYSTEM_ID))
+        .components
+        .map { it.componentId }
+        .toSortedSet(),
+      vocabularyOf(stub(platform = "mobile")).toSortedSet(),
+      "the catalog's own declaration lost to its id",
+    )
+  }
+
+  /** The smallest thing that is a catalog, under the Wear id, optionally declaring a platform. */
+  private fun stub(platform: String? = null) =
+    CatalogCapabilityV1(
+      schema = "compose-catalog-capabilities/v1",
+      benchmark =
+        CatalogBenchmarkV1(
+          catalogRevision = "sha256:stub",
+          sourceRevision = "ui-builder.json",
+          catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+          nativeRuntimeId = "candidate",
+          id = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+        ),
+      components =
+        listOf(
+          ComponentCapabilityV1(
+            componentId = "stub/only",
+            displayName = "Only",
+            role = "Leaf",
+            wasm =
+              WasmCapabilityV1(
+                platformSupported = JsonPrimitive(false),
+                adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+              ),
+          )
+        ),
+      statusSemantics =
+        platform?.let {
+          JsonObject(mapOf(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive(it)))
+        } ?: JsonObject(emptyMap()),
+      exportCapabilities = ExportCapabilitiesV1(composeCode = false, svg = false, png = false),
+    )
+
+  /**
+   * The two things `withBuilderVocabulary` reads out of a donor's `componentMenu`, spelled here.
+   *
+   * The runtime's own `menuGroups`/`menuGroupOrder` are file-private to
+   * `ProductionUiBuilderRuntime` and widening them for a test would be widening the wrong thing --
+   * a second reading of the same JSON is what a golden would do anyway, and this one fails if the
+   * shape ever changes.
+   */
+  private fun JsonObject.shelfOf(componentId: String): String? =
+    ((((this["componentMenu"] as? JsonObject)?.get("components") as? JsonObject)?.get(componentId)
+          as? JsonObject)
+        ?.get("group") as? JsonPrimitive)
+      ?.content
+
+  private fun JsonObject.shelfOrder(): List<String> =
+    ((this["componentMenu"] as? JsonObject)?.get("groupOrder") as? JsonArray).orEmpty().mapNotNull {
+      (it as? JsonPrimitive)?.content
+    }
+
+  private companion object {
+    const val DEFAULT_CATALOG_SYSTEM_ID =
+      CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID
+  }
+}
