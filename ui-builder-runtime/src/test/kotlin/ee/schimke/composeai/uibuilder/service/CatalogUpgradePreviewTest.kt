@@ -38,74 +38,26 @@ class CatalogUpgradePreviewTest {
     val document =
       document("d")
         .withNode(
-          node(
-            "label",
-            "m3/text",
-            mapOf("text" to "Discover Weekly", "fontSizeSp" to "14", "color" to "#FFFFFF"),
-          )
+          node("label", "m3/text", mapOf("text" to "Discover Weekly", "color" to "#FFFFFF"))
         )
+        // A size is a NUMBER on both sides -- `fontSizeSp` is `jsonType: number` on the borrowed
+        // component and `fontSize` is one on the published one, because
+        // `ComponentRecordPacks.jsonTypeOf` maps `RemoteTextUnit` that way. Authoring it as a
+        // string would be a design production would refuse before this plan ever ran.
+        .withProperty("label", "fontSizeSp", DecimalValueV1(14.0))
 
     val outcome = planCatalogUpgrade(document, remoteM3(), TARGET)
 
     val moved = outcome.candidate.nodes.getValue("label")
     assertEquals("remote-m3/remote-text", moved.componentId)
     assertEquals(
-      setOf("text", "color"),
+      setOf("text", "color", "fontSize"),
       moved.properties.keys,
       "what the published catalog declares, and nothing the rename wished into it",
     )
-    // The size is renamed to the name the library uses and STILL does not survive, because the
-    // published catalog declares no `fontSize` at all. Reported rather than silent, which is the
-    // whole contract: a size this move cannot carry is something an owner has to agree to lose.
-    assertTrue(
-      outcome.issues.any {
-        it.path == "/nodes/label/properties/fontSizeSp" &&
-          it.severity == CatalogUpgradeIssueSeverityV1.WARNING
-      },
-      "the authored size is named as a loss",
-    )
-  }
-
-  /**
-   * The rename mechanism itself, on a catalog invented for it.
-   *
-   * Kept apart from the remote-m3 cases deliberately: today's published `remote-m3` declares no
-   * property that `m3/text` also has under another name, so a rename that LANDS cannot be shown
-   * against it without declaring capabilities that catalog does not have.
-   */
-  @Test
-  fun `a rename that the target does declare carries its value`() {
-    val target =
-      CatalogCapabilityV1(
-        schema = "compose-catalog-capabilities/v1",
-        benchmark = CatalogBenchmarkV1("x", "source", "x", "published", "runtime"),
-        statusSemantics =
-          JsonObject(
-            mapOf(
-              "supersedes" to
-                JsonObject(
-                  mapOf(
-                    "old/thing" to
-                      JsonObject(
-                        mapOf(
-                          "componentId" to JsonPrimitive("new/thing"),
-                          "properties" to JsonObject(mapOf("caption" to JsonPrimitive("label"))),
-                        )
-                      )
-                  )
-                )
-            )
-          ),
-        components = listOf(component("new/thing", listOf("label"))),
-        exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),
-      )
-    val document = document("d").withNode(node("n", "old/thing", mapOf("caption" to "hi")))
-
-    val outcome = planCatalogUpgrade(document, target, TARGET)
-
     assertEquals(
-      mapOf("label" to StringValueV1("hi")),
-      outcome.candidate.nodes.getValue("n").properties,
+      DecimalValueV1(14.0),
+      moved.properties["fontSize"],
       "a rename carries the value, it does not reset it",
     )
   }
@@ -114,7 +66,8 @@ class CatalogUpgradePreviewTest {
   fun `a property the target has no place for is reported rather than silently lost`() {
     val document =
       document("d")
-        .withNode(node("label", "m3/text", mapOf("text" to "hi", "letterSpacingSp" to "0.5")))
+        .withNode(node("label", "m3/text", mapOf("text" to "hi")))
+        .withProperty("label", "letterSpacingSp", DecimalValueV1(0.5))
 
     val outcome = planCatalogUpgrade(document, remoteM3(), TARGET)
 
@@ -135,7 +88,9 @@ class CatalogUpgradePreviewTest {
   @Test
   fun `planning does not touch the document it was given`() {
     val document =
-      document("d").withNode(node("label", "m3/text", mapOf("letterSpacingSp" to "0.5")))
+      document("d")
+        .withNode(node("label", "m3/text", emptyMap()))
+        .withProperty("label", "letterSpacingSp", DecimalValueV1(0.5))
 
     planCatalogUpgrade(document, remoteM3(), TARGET)
 
@@ -148,8 +103,15 @@ class CatalogUpgradePreviewTest {
     val document =
       document("d")
         .withNode(
-          node("panel", "m3/surface", mapOf("containerColor" to "#101010", "shapeDp" to "12"))
-            .copy(slots = mapOf("content" to listOf("label")))
+          node("panel", "m3/surface", emptyMap())
+            .copy(
+              properties =
+                mapOf(
+                  "containerColor" to StringValueV1("#101010"),
+                  "shapeDp" to DecimalValueV1(12.0),
+                ),
+              slots = mapOf("content" to listOf("label")),
+            )
         )
         .withNode(node("label", "m3/text", mapOf("text" to "hi")))
 
@@ -370,13 +332,13 @@ class CatalogUpgradePreviewTest {
         listOf(
           component(
             "remote-m3/remote-text",
-            // What the PUBLISHED catalog really declares, which is less than `RemoteText`'s
-            // signature: `ComponentRecordPacks.jsonTypeOf` maps `RemoteString`, `RemoteColor` and
-            // `kotlin.Int` and drops every parameter it has no JSON type for -- so `RemoteTextUnit`
-            // (`fontSize`), `RemoteTextStyle` and the `androidx.compose.ui.text` enums are not
-            // properties a design can author. Declaring them here would make this fixture agree
-            // with a catalog that does not exist.
-            listOf("text", "color", "maxLines"),
+            // What the PUBLISHED catalog really declares, which is still less than `RemoteText`'s
+            // signature: `ComponentRecordPacks.jsonTypeOf` drops every parameter it has no JSON
+            // type for. `RemoteTextUnit` joined the mapped types in #845, so `fontSize` is a
+            // property a design can author; `RemoteTextStyle` and the `androidx.compose.ui.text`
+            // enums (`fontWeight`, `textAlign`, `overflow`) are not, and declaring them here would
+            // make this fixture agree with a catalog that does not exist.
+            listOf("text", "color", "maxLines", "fontSize"),
           ),
           component("layout/box", listOf("contentAlignment")),
         ),
@@ -390,7 +352,11 @@ class CatalogUpgradePreviewTest {
       role = if (id == "layout/box") "Container" else "Leaf",
       properties =
         properties.map {
-          PropertyCapabilityV1(name = it, jsonType = JsonPrimitive("string"), required = false)
+          PropertyCapabilityV1(
+            name = it,
+            jsonType = JsonPrimitive(if (it in NUMERIC) "number" else "string"),
+            required = false,
+          )
         },
       wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
     )
@@ -448,9 +414,9 @@ class CatalogUpgradePreviewTest {
               "component ${node.componentId} is not in ${catalog.benchmark.catalogSystemId}",
               node.id,
             )
-        val names = component.properties.mapTo(mutableSetOf()) { it.name }
+        val declaredProperties = component.properties.associateBy { it.name }
         node.properties.keys
-          .firstOrNull { it !in names }
+          .firstOrNull { it !in declaredProperties }
           ?.let {
             return UiBuilderCatalogIssue(
               "UNKNOWN_PROPERTY",
@@ -459,6 +425,21 @@ class CatalogUpgradePreviewTest {
               it,
             )
           }
+        // The type rule, because a plan that moves a value into a property of another type is a
+        // candidate production would refuse. Production compares `jsonType` against the JSON the
+        // value unwraps to; two kinds is all this fixture carries, so this compares those.
+        node.properties.forEach { (name, value) ->
+          val wants = declaredProperties.getValue(name).jsonType.toString().trim('"')
+          val isNumber = value is DecimalValueV1 || value is IntegerValueV1
+          if ((wants == "number") != isNumber) {
+            return UiBuilderCatalogIssue(
+              "INVALID_PROPERTY_VALUE",
+              "property $name on ${node.componentId} wants $wants",
+              node.id,
+              name,
+            )
+          }
+        }
       }
       return null
     }
@@ -552,7 +533,21 @@ class CatalogUpgradePreviewTest {
     return assertNotNull(completion, "suspend function did not complete").getOrThrow()
   }
 
+  private fun DesignDocumentV1.withProperty(
+    nodeId: String,
+    property: String,
+    value: UiValueV1,
+  ): DesignDocumentV1 {
+    val node = nodes.getValue(nodeId)
+    return copy(
+      nodes = nodes + (nodeId to node.copy(properties = node.properties + (property to value)))
+    )
+  }
+
   private companion object {
+    /** The properties this fixture declares as `number`, on whichever component carries them. */
+    private val NUMERIC = setOf("fontSizeSp", "fontSize", "letterSpacingSp", "shapeDp")
+
     private val SOURCE = CatalogReferenceV1("remote-m3", "candidate", "candidate", "remote-runtime")
     private val TARGET = CatalogReferenceV1("remote-m3", "published", "published", "remote-runtime")
   }
