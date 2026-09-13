@@ -42,7 +42,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class SlotAcceptanceTest {
   private val catalogs =
-    CurrentM3UiBuilderCatalogExecutor(
+    PublishedCatalogFixtures.executor(
         catalogSystemIds =
           linkedSetOf(
             CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
@@ -200,7 +200,7 @@ class SlotAcceptanceTest {
   @Test
   fun `the server refuses a text as a widget background`() {
     val executor =
-      CurrentM3UiBuilderCatalogExecutor(
+      PublishedCatalogFixtures.executor(
         catalogSystemIds =
           linkedSetOf(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
       )

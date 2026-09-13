@@ -33,7 +33,7 @@ class ComponentPackCatalogTest {
 
   @Test
   fun `every packaged catalog declares its platform`() {
-    val catalogs = CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = all).listCatalogs()
+    val catalogs = PublishedCatalogFixtures.executor(catalogSystemIds = all).listCatalogs()
     assertEquals(
       mapOf("m3-catalog" to "mobile", "remote-m3" to "remote-compose", "wear-m3" to "wear"),
       catalogs.associate { it.benchmark.catalogSystemId to it.platform },
@@ -43,7 +43,7 @@ class ComponentPackCatalogTest {
   @Test
   fun `a mobile pack lands in the mobile catalog only, shelved under its own name`() {
     val executor =
-      CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = all, packs = listOf(confetti()))
+      PublishedCatalogFixtures.executor(catalogSystemIds = all, packs = listOf(confetti()))
     val byId = executor.listCatalogs().associateBy { it.benchmark.catalogSystemId }
 
     val m3 = byId.getValue("m3-catalog")

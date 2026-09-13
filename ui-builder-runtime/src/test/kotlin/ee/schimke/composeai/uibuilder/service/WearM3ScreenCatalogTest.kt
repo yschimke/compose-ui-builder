@@ -25,7 +25,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class WearM3ScreenCatalogTest {
   private val executor =
-    CurrentM3UiBuilderCatalogExecutor(
+    PublishedCatalogFixtures.executor(
       catalogSystemIds =
         setOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
@@ -248,7 +248,7 @@ class WearM3ScreenCatalogTest {
    * list here would pass while the donor logic pointed anywhere.
    */
   private val builderVocabulary =
-    CurrentM3UiBuilderCatalogExecutor(
+    PublishedCatalogFixtures.executor(
         catalogSystemIds = setOf(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
       )
       .listCatalogs()
