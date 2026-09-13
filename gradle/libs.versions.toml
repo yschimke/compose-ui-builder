@@ -65,7 +65,11 @@ graphics-shapes = "1.1.0"
 # .screenSizes` here. 2.1.0 is the first release carrying `ScreenGenerator.Preview.devices`
 # (compose-ai-tools#5248), which is what turns a design's export-device set into one
 # `@Preview(device = …)` per id rather than a multipreview that discards which devices it named.
-composeai-tools = "2.11.1"
+# 2.13.0 stops the CLI consuming this server's Maven jar and installs the newest release instead
+# (compose-ai-tools#5436); 2.13.1 is the design-pages kit guard (m3-catalog#398). Bumped by hand
+# rather than waiting for Renovate because the preview-host image resolves `tools_version` from
+# this line at release time, so the image ships whatever it says when 3.28.0 is cut.
+composeai-tools = "2.13.1"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
