@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.*
+import java.io.IOException
 import java.nio.file.Path
 import java.time.Clock
 import java.time.Instant
@@ -11,6 +12,7 @@ import kotlin.coroutines.startCoroutine
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -124,7 +126,9 @@ class CatalogSourceRePinTest {
       service(
         root,
         served = AFTER_FLIP,
-        store = { UnwritableStore(it, "state volume is read-only") },
+        // Shaped like the store's own message, so the assertions below are about a string that
+        // would really leak rather than a harmless one invented for the test.
+        store = { UnwritableStore(it, "cannot store UI-builder design checkout under $root") },
       )
 
     assertEquals(
@@ -134,7 +138,19 @@ class CatalogSourceRePinTest {
     )
     assertEquals(BEFORE_FLIP, storedPin(root, "checkout"))
     assertEquals(1, afterFlip.diagnostics().rePinnedDesigns)
-    assertEquals("state volume is read-only", afterFlip.diagnostics().rePinPersistenceFailure)
+    // The exception's CLASS reaches diagnostics. Its message must not: `/status.json` is
+    // unauthenticated on a `--public` host, this map is owner-free by contract, and the store's
+    // real messages name the design and the absolute state path. Asserted rather than promised,
+    // because the field is a String and nothing else would stop a later edit widening it.
+    assertEquals("IOException", afterFlip.diagnostics().rePinPersistenceFailure)
+    assertFalse(
+      afterFlip.diagnostics().rePinPersistenceFailure.orEmpty().contains("checkout"),
+      "the design id must not travel to an unauthenticated status page",
+    )
+    assertFalse(
+      afterFlip.diagnostics().rePinPersistenceFailure.orEmpty().contains(root.toString()),
+      "the state path must not travel to an unauthenticated status page",
+    )
   }
 
   /** Reads like the real store and refuses every batched write. */
@@ -144,7 +160,7 @@ class CatalogSourceRePinTest {
   ) : UiBuilderDesignStore by delegate {
     override fun commitAll(
       changed: Map<String, Pair<PersistedDesignV1?, PersistedDesignV1>>
-    ): Unit = throw java.io.IOException(reason)
+    ): Unit = throw IOException(reason)
   }
 
   /** The pin as the file holds it, read past every service that would re-pin what it hands out. */

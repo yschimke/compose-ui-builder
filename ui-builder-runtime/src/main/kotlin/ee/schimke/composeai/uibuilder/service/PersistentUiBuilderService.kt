@@ -664,10 +664,12 @@ public class PersistentUiBuilderService(
       store.commitAll(changed)
       RePinOutcome(designs = changed.size)
     } catch (failure: Exception) {
-      RePinOutcome(
-        designs = changed.size,
-        failure = failure.message?.takeIf { it.isNotBlank() } ?: failure::class.java.name,
-      )
+      // The CLASS, never the message. `/status.json` is unauthenticated on a `--public` host and
+      // this map is owner-free by contract, but the store says `cannot store UI-builder design
+      // <id> under <directory>` -- a design id and the absolute state path, published to anyone
+      // who can reach the host. The class name is bounded, identifies nobody, and still separates
+      // the store refusing the write from the filesystem refusing it.
+      RePinOutcome(designs = changed.size, failure = failure::class.java.simpleName)
     }
   }
 

@@ -339,7 +339,16 @@ public data class UiBuilderServiceDiagnostics(
    */
   val rePinnedDesigns: Int = 0,
   /**
-   * Why writing those rewrites through failed, or null when it did not.
+   * The **class** of the exception that stopped those rewrites being written, or null when none did
+   * — never its message.
+   *
+   * That distinction is the whole field. This class is owner-free by contract, and `/status.json`
+   * is unauthenticated on a `--public` host, but the store's messages name the design and the
+   * volume: `cannot store UI-builder design <id> under <directory>`. Forwarding one would publish a
+   * design id and the absolute state path to anyone who can reach the host. A class name is bounded
+   * by the set of exception types this build contains, identifies nobody, and still separates the
+   * two cases worth separating — the store refusing the write from the filesystem refusing it.
+   * Whoever needs the message has the host.
    *
    * Deliberately not fatal: the rewrite has already been applied in memory, so this process serves
    * correctly either way, and what a failure costs is that the stored files stay on the old pin
