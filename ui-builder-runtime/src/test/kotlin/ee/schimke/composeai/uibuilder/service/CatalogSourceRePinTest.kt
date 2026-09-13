@@ -46,18 +46,48 @@ class CatalogSourceRePinTest {
     )
   }
 
-  /** Re-pinning is a read-path decision: the file keeps what it had until something writes it. */
+  /**
+   * The re-pin is written through, at startup, for designs nobody opens.
+   *
+   * This was the opposite assertion until #819 step 3 came into view. Leaving the rewrite in memory
+   * was defensible only while both sources' references stayed computable — `acceptedReferences`
+   * keeps the other source's catalog resident, so an old pin still resolves. Retiring a synthesised
+   * catalog takes its reference out of the process, and `rePinned` asks `resolve` first: every
+   * design not saved since the flip would then be `CATALOG_UNAVAILABLE` with no way back. So the
+   * convergence has to have happened before the fallback is removed, and it has to reach designs
+   * nobody edits.
+   *
+   * Read the file directly rather than through a service — whichever source a service serves, it
+   * re-pins what it hands out, so only the stored bytes can tell the two apart.
+   */
   @Test
-  fun `re-pinning writes nothing`() {
+  fun `re-pinning writes through at startup`() {
     val root = createTempDirectory("ui-builder-repin")
     create(service(root, served = BEFORE_FLIP), "checkout")
 
-    // Load it on the flipped server, which re-pins in memory, then read the stored bytes. Reading
-    // them through a service would prove nothing: whichever source that service serves, it re-pins
-    // to it, so the file has to be opened directly.
-    openedDocument(service(root, served = AFTER_FLIP), "checkout")
+    // Constructed and never asked for the design: the write is the load's own doing.
+    val afterFlip = service(root, served = AFTER_FLIP)
 
-    assertEquals(BEFORE_FLIP, storedPin(root, "checkout"))
+    assertEquals(AFTER_FLIP, storedPin(root, "checkout"))
+    assertEquals(1, afterFlip.diagnostics().rePinnedDesigns)
+    assertEquals(null, afterFlip.diagnostics().rePinPersistenceFailure)
+  }
+
+  /** And having converged, it stays converged: the next boot has nothing to write. */
+  @Test
+  fun `a converged store is re-pinned no further`() {
+    val root = createTempDirectory("ui-builder-repin")
+    create(service(root, served = BEFORE_FLIP), "checkout")
+    service(root, served = AFTER_FLIP)
+
+    val reopened = service(root, served = AFTER_FLIP)
+
+    assertEquals(AFTER_FLIP, storedPin(root, "checkout"))
+    assertEquals(
+      0,
+      reopened.diagnostics().rePinnedDesigns,
+      "a count that stays non-zero across restarts is how a failing write shows up",
+    )
   }
 
   /** And the stored file converges on its own, because a write carries the pin it was handed. */
@@ -74,6 +104,47 @@ class CatalogSourceRePinTest {
       storedPin(root, "checkout"),
       "the saved document still names the source it was authored on",
     )
+  }
+
+  /**
+   * A store that cannot be written to reports and serves, rather than refusing to start.
+   *
+   * The rewrite has already been applied in memory by the time the write is attempted, so this
+   * process is correct either way; what a failure costs is the convergence, which the next boot
+   * retries. Dying here would put back exactly the trap that moving validation off startup removed
+   * — one content condition taking down a server that holds a thousand designs — and a read-only or
+   * full store is a condition an operator acts on, not one to crash over.
+   */
+  @Test
+  fun `a store that refuses the write is reported, not fatal`() {
+    val root = createTempDirectory("ui-builder-repin")
+    create(service(root, served = BEFORE_FLIP), "checkout")
+
+    val afterFlip =
+      service(
+        root,
+        served = AFTER_FLIP,
+        store = { UnwritableStore(it, "state volume is read-only") },
+      )
+
+    assertEquals(
+      AFTER_FLIP,
+      openedDocument(afterFlip, "checkout").catalogPin,
+      "the in-memory re-pin still holds, so the editor is handed a usable document",
+    )
+    assertEquals(BEFORE_FLIP, storedPin(root, "checkout"))
+    assertEquals(1, afterFlip.diagnostics().rePinnedDesigns)
+    assertEquals("state volume is read-only", afterFlip.diagnostics().rePinPersistenceFailure)
+  }
+
+  /** Reads like the real store and refuses every batched write. */
+  private class UnwritableStore(
+    private val delegate: UiBuilderDesignStore,
+    private val reason: String,
+  ) : UiBuilderDesignStore by delegate {
+    override fun commitAll(
+      changed: Map<String, Pair<PersistedDesignV1?, PersistedDesignV1>>
+    ): Unit = throw java.io.IOException(reason)
   }
 
   /** The pin as the file holds it, read past every service that would re-pin what it hands out. */
@@ -105,7 +176,12 @@ class CatalogSourceRePinTest {
     val response = execute(afterFlip, owner, UiBuilderServiceRequest.OpenDesign("checkout"))
     val refused = assertIs<UiBuilderServiceResponse.Error>(response)
     assertEquals(ServiceErrorCodeV1.INTERNAL, refused.error.code)
-    assertEquals(BEFORE_FLIP, storedPin(root, "checkout"))
+    assertEquals(
+      BEFORE_FLIP,
+      storedPin(root, "checkout"),
+      "a document that does not fit is not re-pinned, so there is nothing to write through either",
+    )
+    assertEquals(0, afterFlip.diagnostics().rePinnedDesigns)
   }
 
   private fun openedDocument(
@@ -123,9 +199,10 @@ class CatalogSourceRePinTest {
     root: Path,
     served: CatalogReferenceV1,
     draws: String = "m3.Text",
+    store: (UiBuilderDesignStore) -> UiBuilderDesignStore = { it },
   ): PersistentUiBuilderService =
     PersistentUiBuilderService(
-      designStore = UiBuilderDesignStateStore.open(root),
+      designStore = UiBuilderDesignStateStore(store(UiBuilderDesignStateStore.open(root).store)),
       catalogs = TwoSourceCatalogs(served, draws),
       exporter = UiBuilderExportExecutor { error("no export in this test") },
       clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),

@@ -331,6 +331,23 @@ public data class UiBuilderServiceDiagnostics(
    */
   val unusableDesigns: Int = 0,
   /**
+   * Stored designs whose catalog pin was rewritten to the served reference as they loaded.
+   *
+   * Non-zero on the first start after `--ui-builder-published-catalogs` changes a catalog's source,
+   * and zero on every start after that, because the rewrite is written through. A count that stays
+   * non-zero across restarts means the write is not landing — see [rePinPersistenceFailure].
+   */
+  val rePinnedDesigns: Int = 0,
+  /**
+   * Why writing those rewrites through failed, or null when it did not.
+   *
+   * Deliberately not fatal: the rewrite has already been applied in memory, so this process serves
+   * correctly either way, and what a failure costs is that the stored files stay on the old pin
+   * until a later boot succeeds. It matters because a synthesised catalog cannot be retired until
+   * they have converged.
+   */
+  val rePinPersistenceFailure: String? = null,
+  /**
    * Bytes the durable state currently occupies, and the ceiling a write is refused at.
    *
    * Both 0 when the storage bounds nothing (in-memory, tests) or cannot be measured. This is the

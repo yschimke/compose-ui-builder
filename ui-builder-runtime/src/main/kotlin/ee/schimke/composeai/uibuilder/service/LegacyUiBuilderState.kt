@@ -173,6 +173,22 @@ internal class LegacyStateStorageDesignStore(private val storage: UiBuilderState
     value = candidate
   }
 
+  /**
+   * One write for the whole batch, which is the difference between O(1) and O(n) full re-encodes.
+   *
+   * This store has no per-design granularity: [commit] rebuilds and rewrites the entire state every
+   * time. Letting the interface default loop over it would have the startup re-pin write the whole
+   * file once per design — 41 designs against a 28 MB state is over a gigabyte of writes before the
+   * server answers anything.
+   */
+  override fun commitAll(changed: Map<String, Pair<PersistedDesignV1?, PersistedDesignV1>>) {
+    if (changed.isEmpty()) return
+    val candidate =
+      value.copy(designs = value.designs + changed.mapValues { (_, values) -> values.second })
+    storage.replace(LegacyUiBuilderState.encode(candidate, format))
+    value = candidate
+  }
+
   override fun remove(designId: String) {
     val candidate = value.copy(designs = value.designs - designId)
     storage.replace(LegacyUiBuilderState.encode(candidate, format))

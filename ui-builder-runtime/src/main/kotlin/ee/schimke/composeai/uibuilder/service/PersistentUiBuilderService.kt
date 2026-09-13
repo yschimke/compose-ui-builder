@@ -443,6 +443,7 @@ public class PersistentUiBuilderService(
   private val loadedPersistence = store.load()
   private var persisted: PersistedServiceV1 =
     PersistedServiceV1(loadedPersistence.designs.mapValues { (_, design) -> design.rePinned() })
+  private val rePin: RePinOutcome = persistRePins()
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
@@ -480,6 +481,8 @@ public class PersistentUiBuilderService(
       activeMutationBuckets = mutationBuckets.size,
       persistenceMigrations = persistenceMigrations.get(),
       unusableDesigns = unusableDesigns.size,
+      rePinnedDesigns = rePin.designs,
+      rePinPersistenceFailure = rePin.failure,
       storageBytes = storageUsage?.bytes ?: 0,
       storageMaximumBytes = storageUsage?.maximumBytes ?: 0,
     )
@@ -613,6 +616,59 @@ public class PersistentUiBuilderService(
     if (served == pin || served.systemId != pin.systemId) return this
     if (catalogs.validate(document, catalog) != null) return this
     return copy(document = document.copy(catalogPin = served))
+  }
+
+  /** What the startup re-pin did, for the health surface. */
+  private data class RePinOutcome(val designs: Int = 0, val failure: String? = null)
+
+  /**
+   * Writes the re-pinned designs through to the store, once, at startup.
+   *
+   * ## Why this is not left in memory
+   *
+   * The re-pin above converges the stored file "at the next save on its own", and a design nobody
+   * edits is never saved — so its stored pin keeps naming the source it was written against for as
+   * long as nobody opens it. That is survivable only while BOTH references are still computable,
+   * which is the job `acceptedReferences` does by keeping the other source's catalog resident. The
+   * moment a synthesised catalog is retired (#819 step 3), its reference stops existing in the
+   * process, `resolve` returns null for an old pin, and `rePinned` cannot help — it asks `resolve`
+   * first. Every design not edited since the flip would go `CATALOG_UNAVAILABLE` permanently: the
+   * outage of 2026-09-13, made durable.
+   *
+   * So the convergence has to have happened BEFORE the fallback is removed, and it has to happen
+   * for designs nobody touches. One write at boot does that, and only for the designs whose pin
+   * actually moved — a store that is already converged writes nothing and the next boot is free.
+   *
+   * ## Why a failure here is not fatal
+   *
+   * The in-memory re-pin has already been applied, so this process serves correctly whether or not
+   * the write lands; what a failure costs is the convergence, which the next boot retries. Failing
+   * startup over it would put back exactly the trap the surrounding design removed — a content
+   * condition taking the whole server down — and a read-only or full store is a condition an
+   * operator acts on, not one the server should die of. It is reported instead: counted in
+   * [diagnostics] and carried to `status.json`.
+   *
+   * The count is what was attempted rather than what provably landed. [UiBuilderDesignStore.commit]
+   * is per design, so a failure part-way through leaves some written and some not, and claiming a
+   * number for that would be a guess; the failure string beside it is the honest signal.
+   */
+  private fun persistRePins(): RePinOutcome {
+    // Identity, not equality: `rePinned` returns the receiver untouched when it changes nothing, so
+    // a design that moved is the one that is no longer the same object the store handed over.
+    val changed =
+      persisted.designs
+        .filter { (designId, design) -> loadedPersistence.designs[designId] !== design }
+        .mapValues { (designId, design) -> loadedPersistence.designs[designId] to design }
+    if (changed.isEmpty()) return RePinOutcome()
+    return try {
+      store.commitAll(changed)
+      RePinOutcome(designs = changed.size)
+    } catch (failure: Exception) {
+      RePinOutcome(
+        designs = changed.size,
+        failure = failure.message?.takeIf { it.isNotBlank() } ?: failure::class.java.name,
+      )
+    }
   }
 
   private fun unusableReason(designId: String, design: PersistedDesignV1): UnusableDesign? {

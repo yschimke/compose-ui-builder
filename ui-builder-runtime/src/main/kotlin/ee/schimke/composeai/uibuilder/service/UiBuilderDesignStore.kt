@@ -54,6 +54,21 @@ internal interface UiBuilderDesignStore {
    */
   fun commit(designId: String, previous: PersistedDesignV1?, next: PersistedDesignV1)
 
+  /**
+   * Persists several designs together, each as [commit] would.
+   *
+   * [changed] maps a design id to what this store last held for it and what it should hold now, in
+   * the same order as [commit]'s two arguments.
+   *
+   * The default is one [commit] per design, which is exactly right for the per-design store: a
+   * write there already costs its own design and nothing else, so batching would buy nothing.
+   * [LegacyStateStorageDesignStore] overrides it because for that store the cost is not per design
+   * — every `commit` re-encodes the entire state — and the one caller changes many designs at once.
+   */
+  fun commitAll(changed: Map<String, Pair<PersistedDesignV1?, PersistedDesignV1>>) {
+    changed.forEach { (designId, values) -> commit(designId, values.first, values.second) }
+  }
+
   fun remove(designId: String)
 
   /**
