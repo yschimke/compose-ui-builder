@@ -77,7 +77,16 @@ composeai-tools = "2.13.1"
 # `preview-data-api`, `renderer-desktop`, `daemon-desktop` and the `data-*` runtimes below no
 # longer move with `composeai-tools`. (`composeai-data`, the tools repository's separately-versioned
 # data line, went with the move.) A point pin, for the same reason as the two above.
-composeai-preview-daemon = "3.4.3"
+#
+# 3.4.5 carries the fix for the live lane's `previewOverrideChoice` crash
+# (compose-preview-server#839, compose-preview-daemon#99): the JVM `PreviewOverrideOption` is an
+# `actual typealias` onto `ee.schimke.composeai.data.overrides.`, a package the daemon's
+# `mustDelegateToParent` did not pin to the parent loader, so on the bundle-backed Android lane the
+# option resolved child-first out of the bundle jar while the overrides runtime resolved to the
+# Robolectric sandbox copy — `ClassCastException: PreviewOverrideOption cannot be cast to
+# PreviewOverrideOption`. Any catalog shipping an option-bearing knob hit it; nothing here changes
+# but the pin. 3.4.4 rides along (contracts 2.18.0, third-party-rc-embedded-player 1.61.1).
+composeai-preview-daemon = "3.4.5"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
