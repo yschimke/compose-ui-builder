@@ -1366,6 +1366,8 @@ internal class RemoteContentEmitter(
         REMOTE_FLOAT_FQN,
         "kotlin.Float" -> setOf("int", "float")
         "kotlin.Int" -> setOf("int")
+        // A size is authored as a number; whether THIS number has a spelling is asked below.
+        REMOTE_TEXT_UNIT_FQN -> setOf("int", "float")
         REMOTE_COLOR_FQN -> setOf("color", "colorToken")
         else -> emptySet()
       }
@@ -1446,6 +1448,22 @@ internal class RemoteContentEmitter(
         value.numberOrNull()?.let {
           usesRemoteFloat = true
           "${it}f.rf"
+        }
+      REMOTE_TEXT_UNIT_FQN ->
+        value.numberOrNull()?.let { sp ->
+          // `22.rsp` is the whole of the spelling: the extension takes an Int and there is no
+          // `Float.rsp`. Rounding 14.5 to 14 would be this generator choosing a size the author did
+          // not, so it refuses and names the value. The parameter is defaulted, so the call is
+          // still written -- without a size, and with a refusal saying which one was left out.
+          if (sp != sp.toInt().toFloat()) {
+            refusals +=
+              "nodes.${node.id}.${parameter.name}: a text size is written `<Int>.rsp`, and " +
+                "$sp is not whole"
+            null
+          } else {
+            usesRemoteTextUnit = true
+            "${sp.toInt()}.rsp"
+          }
         }
       REMOTE_COLOR_FQN ->
         value
@@ -2143,6 +2161,7 @@ internal class RemoteContentEmitter(
     if (usesRow) imports += "androidx.compose.remote.creation.compose.layout.RemoteRow"
     if (usesLottie) imports += "com.google.android.horologist.remotecompose.lottie.LottieAnimation"
     if (usesRemoteFloat) imports += "androidx.compose.remote.creation.compose.state.rf"
+    if (usesRemoteTextUnit) imports += "androidx.compose.remote.creation.compose.state.rsp"
     if (usesRemoteBoolean) imports += "androidx.compose.remote.creation.compose.state.rb"
     if (usesCombinedAction)
       imports += "androidx.compose.remote.creation.compose.action.combinedAction"
@@ -2261,6 +2280,7 @@ internal class RemoteContentEmitter(
   private var usesRoundedCornerShape = false
   private var usesRemoteImage = false
   private var usesRemoteString = false
+  private var usesRemoteTextUnit = false
   private var usesContentScale = false
   private val usedModifierImports = mutableSetOf<String>()
 
@@ -2705,6 +2725,8 @@ private const val REMOTE_BOOLEAN_FQN =
   "androidx.compose.remote.creation.compose.state.RemoteBoolean"
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
+private const val REMOTE_TEXT_UNIT_FQN =
+  "androidx.compose.remote.creation.compose.state.RemoteTextUnit"
 
 /** A plain string field of an action or a state declaration — not the `{type, value}` wrapper. */
 private fun JsonObject.plainString(key: String): String? =
