@@ -62,6 +62,16 @@ class ComposeFoundationFaithfulnessTest {
   }
 
   /**
+   * The seam source the runtime builds when no published catalog declares a `remote-compose/`
+   * component -- which is every deployment today, so this is the live configuration rather than a
+   * convenience: the packaged catalog's own seams.
+   */
+  private fun packagedSeams(base: CatalogCapabilityV1) =
+    base.components
+      .filter { it.componentId.startsWith(REMOTE_COMPOSE_NAMESPACE) }
+      .associateBy { it.componentId }
+
+  /**
    * The foundation for a synthesised catalog's platform, derived from the SERVED packaged catalog.
    *
    * `baseCatalog` is private to the runtime, so this takes the m3-catalog entry `listCatalogs`
@@ -70,7 +80,9 @@ class ComposeFoundationFaithfulnessTest {
    * of every assertion below see the same filtering, whichever way the flag is set.
    */
   private fun foundationFor(catalog: CatalogCapabilityV1) =
-    composeFoundationCatalog(synthesised(DEFAULT_CATALOG_SYSTEM_ID), catalog.platform)
+    synthesised(DEFAULT_CATALOG_SYSTEM_ID).let { base ->
+      composeFoundationCatalog(base, catalog.platform, packagedSeams(base))
+    }
 
   private fun assertDonatesTheSame(systemId: String) {
     val old = synthesised(systemId)
@@ -198,8 +210,13 @@ class ComposeFoundationFaithfulnessTest {
     val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
 
     assertEquals(
-      composeFoundationCatalog(base, CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM).components,
-      composeFoundationCatalog(base, "tv").components,
+      composeFoundationCatalog(
+          base,
+          CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM,
+          packagedSeams(base),
+        )
+        .components,
+      composeFoundationCatalog(base, "tv", packagedSeams(base)).components,
     )
   }
 
@@ -246,6 +263,73 @@ class ComposeFoundationFaithfulnessTest {
         .toSortedSet(),
       vocabularyOf(stub(platform = "mobile")).toSortedSet(),
       "the catalog's own declaration lost to its id",
+    )
+  }
+
+  /**
+   * The `remote-compose/` seams are Remote Compose's, and the foundation only says where they sit.
+   *
+   * `remote-m3` describes Remote Compose, so a seam IT declares is the one handed out; the packaged
+   * catalog is the fallback for the ones it does not. Today it declares none — every published
+   * catalog publishes only its own prefix — so the fallback is always taken, which is why the
+   * faithfulness assertions above still hold unchanged. This is the part that will stop being a
+   * fallback (#819).
+   *
+   * Sourced from what a catalog PUBLISHED rather than from what the server serves it: the served
+   * `remote-m3` has seams injected into it by `withBuilderVocabulary`, so reading that one back
+   * would be circular.
+   */
+  @Test
+  fun `a seam remote-m3 declares itself wins over the packaged one`() {
+    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+    val packaged = packagedSeams(base).getValue("remote-compose/document")
+    val remoteM3Owned = packaged.copy(displayName = "Remote Compose document, as remote-m3 says it")
+
+    val foundation =
+      composeFoundationCatalog(
+        base,
+        "wear",
+        packagedSeams(base) + ("remote-compose/document" to remoteM3Owned),
+      )
+
+    assertEquals(
+      remoteM3Owned,
+      foundation.components.single { it.componentId == "remote-compose/document" },
+      "the packaged seam beat the catalog that owns Remote Compose",
+    )
+    // Only that one moved. `remote-compose/inline` is the case that matters: `remote-m3` refuses it
+    // on purpose, so it must keep coming from the packaged catalog rather than vanishing.
+    assertEquals(
+      packagedSeams(base).getValue(REMOTE_COMPOSE_INLINE_COMPONENT_ID),
+      foundation.components.single { it.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID },
+    )
+  }
+
+  /**
+   * A seam no source has is left off the palette rather than invented.
+   *
+   * The shape a deployment gets once `remote-m3` owns the seams and the packaged catalog stops
+   * carrying them: no Remote Compose catalog served means no Remote Compose on the shelf. Asserted
+   * now because the alternative — a `getValue` on the seam map — would be a startup crash rather
+   * than a missing palette entry, and the difference only shows up on someone's box.
+   */
+  @Test
+  fun `a seam no source declares is left off the palette`() {
+    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+
+    val foundation = composeFoundationCatalog(base, "wear", emptyMap())
+
+    assertEquals(
+      emptyList(),
+      foundation.components
+        .map { it.componentId }
+        .filter { it.startsWith(REMOTE_COMPOSE_NAMESPACE) },
+      "a seam was served from somewhere other than the seam source",
+    )
+    // The foundation's own three are untouched by a missing seam source.
+    assertEquals(
+      listOf("layout/box", "layout/column", "layout/row", "asset/image"),
+      foundation.components.map { it.componentId },
     )
   }
 

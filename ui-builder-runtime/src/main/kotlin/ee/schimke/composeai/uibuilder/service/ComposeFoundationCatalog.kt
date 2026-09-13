@@ -9,11 +9,19 @@ import kotlinx.serialization.json.JsonPrimitive
 /**
  * `compose-foundation`: the builder's own vocabulary, curated per platform.
  *
- * A box, a gradient, an image and the Remote Compose seams are not Material 3's and not Wear
- * Material 3's — they are `androidx.compose.foundation` and `androidx.compose.ui`, which publish
- * one of each rather than one per design system. m3-catalog says the same from the other side: it
- * declares no builtins at all, on the stated grounds that doing so "would be this catalog claiming
- * to own the builder's own vocabulary". Somebody still has to own them, and this is who.
+ * A box, a gradient and an image are not Material 3's and not Wear Material 3's — they are
+ * `androidx.compose.foundation` and `androidx.compose.ui`, which publish one of each rather than
+ * one per design system. m3-catalog says the same from the other side: it declares no builtins at
+ * all, on the stated grounds that doing so "would be this catalog claiming to own the builder's own
+ * vocabulary". Somebody still has to own them, and for `layout/`, `shape/` and `asset/` this is
+ * who.
+ *
+ * **The `remote-compose/` seams are not among them.** Remote Compose is a different library with a
+ * catalog of its own to describe it — so `document`, `inline` and `custom` arrive here through the
+ * `seams` parameter rather than being declared here. The curations below still say WHICH seam a
+ * platform takes and WHERE it sits on the shelf, because that is a statement about the palette
+ * rather than about the component; the component is Remote Compose's. A seam the source does not
+ * have is left off the palette rather than invented.
  *
  * **Local for now, external eventually.** The per-platform sets below are derived here from the
  * packaged Material 3 catalog because that is where the components are currently declared. The
@@ -33,12 +41,23 @@ import kotlinx.serialization.json.JsonPrimitive
 internal fun composeFoundationCatalog(
   base: CatalogCapabilityV1,
   platform: String,
+  seams: Map<String, ComponentCapabilityV1>,
 ): CatalogCapabilityV1 {
   val curation = FOUNDATION_CURATIONS[platform] ?: FOUNDATION_CURATIONS.getValue(MOBILE_PLATFORM)
   val declared = base.components.associateBy { it.componentId }
   val registryKey = CurrentM3UiBuilderCatalogExecutor.ASSET_REGISTRY_KEY
   return base.copy(
-    components = curation.componentIds(base).map { curation.curate(declared.getValue(it)) },
+    components =
+      curation.componentIds(base).mapNotNull { id ->
+        // A `remote-compose/` id says WHICH seam this platform takes and WHERE it sits on the
+        // shelf. The component itself comes from [seams] -- Remote Compose's, not the foundation's.
+        // Absent from the seam source means absent from the palette, which is the behaviour a
+        // deployment serving no Remote Compose catalog should get once one publishes them.
+        val component =
+          if (id.startsWith(REMOTE_COMPOSE_NAMESPACE)) seams[id] ?: return@mapNotNull null
+          else declared.getValue(id)
+        curation.curate(component)
+      },
     // Only what a donor is actually read for: `withBuilderVocabulary` takes the asset registry that
     // travels with `asset/image`, and the shelves and shelf ORDER an injected component is filed
     // under. Trimmed to those rather than carrying the whole Material 3 block, so this catalog
@@ -64,7 +83,14 @@ private const val MOBILE_PLATFORM = CurrentM3UiBuilderCatalogExecutor.DEFAULT_PL
  * redundant.
  */
 private class FoundationCuration(
-  /** Null means "every builder-namespace component the packaged catalog declares, in its order". */
+  /**
+   * Null means "every builder-namespace component the packaged catalog declares, in its order".
+   *
+   * So a mobile palette's SEAM ids also come from the packaged catalog, even though the seam
+   * components come from the seam source. That is right while the packaged catalog still declares
+   * all three; when it stops (#819), mobile needs an explicit list here the way wear and
+   * remote-compose already have one, or it silently loses them.
+   */
   private val ids: List<String>?,
   val curate: (ComponentCapabilityV1) -> ComponentCapabilityV1 = { it },
   val menu: (CatalogCapabilityV1) -> JsonObject,

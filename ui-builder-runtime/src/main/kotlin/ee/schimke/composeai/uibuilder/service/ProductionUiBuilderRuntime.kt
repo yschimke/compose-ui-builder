@@ -165,9 +165,38 @@ public class CurrentM3UiBuilderCatalogExecutor(
    * `availableCatalogs` is initialised and never again. `getOrElse` rather than `getValue` so a
    * later caller outside that loop gets a donor rather than an exception.
    */
+  /**
+   * Where the `remote-compose/` seams come from, which is NOT the foundation.
+   *
+   * `remote-m3` is the catalog that describes Remote Compose, so a seam it declares ITSELF is the
+   * one to hand out. It declares none today — like every published catalog it publishes only its
+   * own prefix — so every seam currently falls through to the packaged catalog, which is where they
+   * have always come from and why no deployment changes behaviour.
+   *
+   * Read off `published`, deliberately, rather than off `availableCatalogs`: the served `remote-m3`
+   * is itself a published catalog with seams injected INTO it by `withBuilderVocabulary`, so
+   * sourcing from the served one would be circular. What this asks is the narrower question the
+   * contract cares about — what did the catalog repository actually publish.
+   *
+   * When it publishes them (#819), this map picks them up and the packaged fallback stops being
+   * reached; a seam `remote-m3` declines, like `remote-compose/inline` today, keeps falling
+   * through. The fallback goes when the packaged catalog stops carrying a `remote-compose/` id at
+   * all, and not before — dropping it sooner takes the seams off every palette on a deployment that
+   * serves no Remote Compose catalog, which is what `--ui-builder-catalogs` defaults to.
+   */
+  private val remoteComposeSeams: Map<String, ComponentCapabilityV1> = buildMap {
+    baseCatalog.components
+      .filter { it.componentId.startsWith(REMOTE_COMPOSE_NAMESPACE) }
+      .forEach { put(it.componentId, it) }
+    published[REMOTE_M3_CATALOG_SYSTEM_ID]
+      ?.components
+      ?.filter { it.componentId.startsWith(REMOTE_COMPOSE_NAMESPACE) }
+      ?.forEach { put(it.componentId, it) }
+  }
+
   private val composeFoundation: Map<String, CatalogCapabilityV1> =
     published.values.map(::platformFor).distinct().associateWith {
-      composeFoundationCatalog(baseCatalog, it)
+      composeFoundationCatalog(baseCatalog, it, remoteComposeSeams)
     }
 
   private fun platformFor(catalog: CatalogCapabilityV1): String =
@@ -177,7 +206,9 @@ public class CurrentM3UiBuilderCatalogExecutor(
 
   private fun donorFor(catalog: CatalogCapabilityV1): CatalogCapabilityV1 =
     platformFor(catalog).let { platform ->
-      composeFoundation.getOrElse(platform) { composeFoundationCatalog(baseCatalog, platform) }
+      composeFoundation.getOrElse(platform) {
+        composeFoundationCatalog(baseCatalog, platform, remoteComposeSeams)
+      }
     }
 
   /**
@@ -935,7 +966,28 @@ internal const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID = "remote-compose/custom"
  * no `componentIdPrefix`, and "everything the published catalog does not own" would hand a future
  * `m4/` catalog the whole `m3/` shelf.
  */
-internal val BUILDER_NAMESPACES = listOf("layout/", "shape/", "asset/", "remote-compose/")
+internal val BUILDER_NAMESPACES = FOUNDATION_NAMESPACES + REMOTE_COMPOSE_NAMESPACE
+
+/**
+ * The three namespaces `compose-foundation` owns: `androidx.compose.foundation` and
+ * `androidx.compose.ui` publish one Box, one Column, one Row and one Image, not one per design
+ * system.
+ */
+internal val FOUNDATION_NAMESPACES = listOf("layout/", "shape/", "asset/")
+
+/**
+ * The fourth, and NOT the foundation's.
+ *
+ * `remote-compose/document`, `/inline` and `/custom` are the seams into Remote Compose — a
+ * different library from Compose UI, and `remote-m3` is the catalog that describes it. They are
+ * separated here so [composeFoundationCatalog] takes them from a Remote Compose source rather than
+ * declaring them, which is the shape that lets `remote-m3` publish them and this build stop
+ * carrying them (#819).
+ *
+ * Kept inside [BUILDER_NAMESPACES] because the INJECTION rule has not changed: a catalog is still
+ * right to publish only its own prefix, and a published shelf still needs these on it.
+ */
+internal const val REMOTE_COMPOSE_NAMESPACE: String = "remote-compose/"
 
 internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   setOf(
