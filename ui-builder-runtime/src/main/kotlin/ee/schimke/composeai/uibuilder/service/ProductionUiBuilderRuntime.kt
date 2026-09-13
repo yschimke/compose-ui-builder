@@ -318,7 +318,7 @@ public class CurrentM3UiBuilderCatalogExecutor(
   public val catalogSources: Map<String, String> =
     catalogs.keys.associateWith { if (it in published) "published" else "synthesised" }
 
-  private val references = catalogs.mapValues { (_, catalog) ->
+  private fun referenceOf(catalog: CatalogCapabilityV1) =
     CatalogReferenceV1(
       systemId = catalog.benchmark.catalogSystemId,
       catalogRevision = catalog.benchmark.catalogRevision,
@@ -328,7 +328,47 @@ public class CurrentM3UiBuilderCatalogExecutor(
       capabilityDigest = CURRENT_CAPABILITY_DIGEST,
       nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
     )
-  }
+
+  private val references = catalogs.mapValues { (_, catalog) -> referenceOf(catalog) }
+
+  /**
+   * Every reference a stored design may be pinned to for a catalog this deployment serves.
+   *
+   * A catalog's reference is built from its `benchmark`, and the SOURCE changes it: the synthesised
+   * `remote-m3` states `wear-widget-scaffolds-v1` where the published one takes a content-hash
+   * revision. So flipping `--ui-builder-published-catalogs` -- one variable, documented as per
+   * catalog and reversible -- used to strand every design persisted against the other source:
+   * `resolve` returned null, `unusableReason` turned that into `CATALOG_UNAVAILABLE`, and the
+   * runtime offered no upgrade path (#796).
+   *
+   * Both sources' references are accepted for the same `systemId`. No history is kept and nothing
+   * is persisted: the catalog the OTHER source would serve is already in this process --
+   * `synthesisedCatalogs` still holds its entry while the published one is being served -- so its
+   * reference is simply computed. Neither `withPacks` nor `withBuilderVocabulary` touches
+   * `benchmark`, so the value computed here is the one that catalog would carry if it were the one
+   * being served.
+   *
+   * ONE DIRECTION ONLY, and the asymmetry is in what the process holds rather than in this map. The
+   * synthesised catalog is generated here and always resident, so a server on the published source
+   * can always compute the synthesised reference. `ServeRunner` fetches a published file only for
+   * the ids `--ui-builder-published-catalogs` names, so a server that has flipped BACK has never
+   * seen the published file and cannot know the reference it would have produced.
+   * `CatalogSourceFlipTest` asserts that gap rather than leaving it to be discovered; #818's
+   * re-pinning is what closes it.
+   *
+   * This does NOT weaken the check that catches a document drifting from its catalog. The accepted
+   * set is only ever the references of the SAME catalog id as this build can produce it; a pin
+   * naming a revision from neither source is still refused, and a document that no longer fits the
+   * catalog still fails the component checks below on their own terms.
+   */
+  private val acceptedReferences: Map<String, Set<CatalogReferenceV1>> =
+    catalogs.mapValues { (systemId, catalog) ->
+      setOfNotNull(
+        referenceOf(catalog),
+        synthesisedCatalogs[systemId]?.let(::referenceOf),
+        published[systemId]?.let(::referenceOf),
+      )
+    }
   private val components = catalogs.mapValues { (_, catalog) ->
     catalog.components.associateBy { it.componentId }
   }
@@ -336,7 +376,9 @@ public class CurrentM3UiBuilderCatalogExecutor(
   override fun listCatalogs(): List<CatalogCapabilityV1> = catalogs.values.toList()
 
   override fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1? =
-    catalogs[reference.systemId]?.takeIf { reference == references[reference.systemId] }
+    catalogs[reference.systemId]?.takeIf {
+      reference in acceptedReferences.getValue(reference.systemId)
+    }
 
   override fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? =
     catalog.benchmark.catalogSystemId.takeIf { catalogs[it] == catalog }?.let(references::get)
@@ -348,8 +390,14 @@ public class CurrentM3UiBuilderCatalogExecutor(
     val systemId = catalog.benchmark.catalogSystemId
     if (catalog != catalogs[systemId])
       return issue("CATALOG_MISMATCH", "catalog is not an enabled UI-builder catalog")
-    if (document.catalogPin != references[systemId]) {
-      return issue("CATALOG_PIN_MISMATCH", "document catalog pin does not resolve exactly")
+    // Moves with `resolve`, and must: `unusableReason` calls `resolve` first and this second, so
+    // accepting a pin there and refusing it here would turn a stored design's CATALOG_UNAVAILABLE
+    // into an INTERNAL "invalid stored design" -- the same dead design, now blaming the document.
+    if (document.catalogPin !in acceptedReferences.getValue(systemId)) {
+      return issue(
+        "CATALOG_PIN_MISMATCH",
+        "document catalog pin names no catalog source this deployment serves",
+      )
     }
     val catalogComponents = components.getValue(systemId)
     val encodedDocument = json.encodeToJsonElement(document).jsonObject
