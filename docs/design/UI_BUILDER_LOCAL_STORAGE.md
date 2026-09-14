@@ -1,6 +1,6 @@
 # UI builder designs kept in the browser
 
-`/ui-builder/<catalog>/<designId>?storage=local` opens a design this browser holds, rather than one
+`/ui-builder/<designId>?storage=local` opens a design this browser holds, rather than one
 the server holds. Everything about the editor is the same — the same canvas, the same palette, the
 same inspector, the same undo — because the only thing that changed is where the design lives and
 who applies the edits.

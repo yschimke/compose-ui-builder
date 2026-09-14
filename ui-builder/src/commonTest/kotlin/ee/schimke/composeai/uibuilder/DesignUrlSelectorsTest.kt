@@ -65,8 +65,8 @@ class DesignUrlSelectorsTest {
   fun `revision zero is the revision a design was created at`() {
     assertEquals(0L, parseDesignUrlSelectors("?revision=0", null).revision)
     assertEquals(
-      "/ui-builder/m3-catalog/jetcaster-discover?revision=0",
-      designUrlPath("m3-catalog", "jetcaster-discover", DesignUrlSelectors(revision = 0)),
+      "/ui-builder/jetcaster-discover?revision=0",
+      designUrlPath("jetcaster-discover", DesignUrlSelectors(revision = 0)),
     )
   }
 
@@ -121,8 +121,8 @@ class DesignUrlSelectorsTest {
     val selectors = parseDesignUrlSelectors("?node=%20hero%20", null)
     assertEquals(" hero ", selectors.nodeId)
     assertEquals(
-      "/ui-builder/m3-catalog/d?node=%20hero%20",
-      designUrlPath("m3-catalog", "d", DesignUrlSelectors(nodeId = " hero ")),
+      "/ui-builder/d?node=%20hero%20",
+      designUrlPath("d", DesignUrlSelectors(nodeId = " hero ")),
     )
   }
 
@@ -132,19 +132,18 @@ class DesignUrlSelectorsTest {
   }
 
   @Test
-  fun `a link names the catalog and the design and nothing else`() {
+  fun `a link names the design and nothing else`() {
     assertEquals(
-      "/ui-builder/m3-catalog/jetcaster-discover",
-      designUrlPath("m3-catalog", "jetcaster-discover"),
+      "/ui-builder/jetcaster-discover",
+      designUrlPath("jetcaster-discover"),
     )
   }
 
   @Test
   fun `a node link pins the revision it was copied at`() {
     assertEquals(
-      "/ui-builder/m3-catalog/jetcaster-discover?revision=41&node=primary-button",
+      "/ui-builder/jetcaster-discover?revision=41&node=primary-button",
       designUrlPath(
-        "m3-catalog",
         "jetcaster-discover",
         DesignUrlSelectors(revision = 41, nodeId = "primary-button"),
       ),
@@ -154,9 +153,8 @@ class DesignUrlSelectorsTest {
   @Test
   fun `a thread link carries the thread in the fragment`() {
     assertEquals(
-      "/ui-builder/m3-catalog/jetcaster-discover?node=primary-button#thread=t-7",
+      "/ui-builder/jetcaster-discover?node=primary-button#thread=t-7",
       designUrlPath(
-        "m3-catalog",
         "jetcaster-discover",
         DesignUrlSelectors(nodeId = "primary-button", threadId = "t-7"),
       ),
@@ -166,7 +164,7 @@ class DesignUrlSelectorsTest {
   @Test
   fun `every selector survives a round trip`() {
     val original = DesignUrlSelectors(revision = 41, nodeId = "hero card", threadId = "t/7")
-    val url = designUrlPath("m3-catalog", "jetcaster-discover", original)
+    val url = designUrlPath("jetcaster-discover", original)
     val query = url.substringAfter('?', "").substringBefore('#')
     val fragment = url.substringAfter('#', "")
     assertEquals(original, parseDesignUrlSelectors(query, fragment))
@@ -177,22 +175,20 @@ class DesignUrlSelectorsTest {
     // The service stores any id that is not blank, but the editor will not start on a design named
     // in the path unless the id is path-safe. A link builder that encoded such an id would produce
     // an address its recipient could not open.
-    assertTrue(isDesignUrlPathSafe("m3-catalog", "jetcaster-discover"))
-    assertFalse(isDesignUrlPathSafe("m3-catalog", "hero design"))
-    assertFalse(isDesignUrlPathSafe("m3-catalog", "-leading-dash"))
-    assertFalse(isDesignUrlPathSafe("m3 catalog", "jetcaster-discover"))
+    assertTrue(isDesignUrlPathSafe("jetcaster-discover"))
+    assertFalse(isDesignUrlPathSafe("hero design"))
+    assertFalse(isDesignUrlPathSafe("-leading-dash"))
     // A design may legitimately be called this, and the app shell would route it as a file.
-    assertFalse(isDesignUrlPathSafe("m3-catalog", "screen.png"))
-    assertFalse(isDesignUrlPathSafe("m3-catalog", "prototype.mjs"))
-    assertTrue(isDesignUrlPathSafe("m3-catalog", "screen.v2"))
-    assertFailsWith<IllegalArgumentException> { designUrlPath("m3-catalog", "hero design") }
+    assertFalse(isDesignUrlPathSafe("screen.png"))
+    assertFalse(isDesignUrlPathSafe("prototype.mjs"))
+    assertTrue(isDesignUrlPathSafe("screen.v2"))
+    assertFailsWith<IllegalArgumentException> { designUrlPath("hero design") }
   }
 
   @Test
   fun `no identity key is ever written into a link`() {
     val url =
       designUrlPath(
-        "m3-catalog",
         "jetcaster-discover",
         DesignUrlSelectors(revision = 41, nodeId = "hero", threadId = "t-7"),
       )

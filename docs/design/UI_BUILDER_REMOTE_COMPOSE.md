@@ -21,7 +21,7 @@ The checked-in JVM Compose render evidence captures the same fixture immediately
 test regenerates both images while also asserting the nested slot's centre pixel.
 
 The preview deployment exposes this adapter as a second catalog-scoped builder at
-`/ui-builder/remote-m3/`. Catalog registration is intentionally insufficient: the server's
+`/ui-builder/?catalog=remote-m3`. Catalog registration is intentionally insufficient: the server's
 `--ui-builder-catalogs` allowlist admits only reviewed authoring adapters, currently `m3-catalog`
 and `remote-m3`. Each instance creates an exact catalog pin. The Remote M3 catalog starts with the
 two stable Wear widget host preview sizes as slot-bearing scaffolds—Small 216×76dp and Large
@@ -78,7 +78,7 @@ The palette is **not** a set of components. Declaring `remote-m3`'s 476 publishe
 and the exporter to describe content that is always the same component with different bytes. The
 component stays one; a source is a named set of bytes it can be given.
 
-Nothing new is configured to connect the two halves: `/ui-builder/remote-m3/` authors against the
+Nothing new is configured to connect the two halves: a document whose `catalogPin` is `remote-m3` authors against the
 capability adapter named `remote-m3` and `/remote-m3/` serves the published catalog of the same
 name from the same box, so the palette finds its content by that shared id. A box serving one
 without the other gets an empty palette rather than an error, exactly as a box with no device-preset

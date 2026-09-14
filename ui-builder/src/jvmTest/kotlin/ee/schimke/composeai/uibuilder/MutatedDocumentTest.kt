@@ -51,7 +51,7 @@ class MutatedDocumentTest {
 
   @Test
   fun `a child in a slot that does not accept it is refused`() {
-    // The `/ui-builder/m3-catalog/a` shape: a lazy grid in a scaffold's top bar. The grid is a
+    // The `/ui-builder/a` shape: a lazy grid in a scaffold's top bar. The grid is a
     // `Container`, which is what the old rule took as enough; the missing `TopBar` is the finding.
     val scaffold = valid.nodes.values.first { it.componentId == "layout/scaffold" }
     val grid = UiBuilderNode(id = "grid", componentId = "layout/lazy-grid")

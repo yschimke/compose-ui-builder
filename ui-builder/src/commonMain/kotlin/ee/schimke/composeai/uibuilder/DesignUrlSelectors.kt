@@ -3,11 +3,12 @@ package ee.schimke.composeai.uibuilder
 /**
  * What a design URL says it means, beyond which design it is.
  *
- * The canonical URL for a design is `/ui-builder/<catalog>/<designId>`, and the only thing it says
- * is which catalog and which design. Identity and transport — `actor`, `clientId`, `token`,
- * `endpoint` — live in the query because they configure *who* is editing. Neither says **what** in
- * the design a link means, so "look at this thread" could not be pasted into a chat and an agent
- * told "the button on the checkout design" had to search for it.
+ * The canonical URL for a design is `/ui-builder/<designId>`. Its catalog is document state,
+ * resolved from `catalogPin`, rather than a second identity embedded in the address. Identity and
+ * transport — `actor`, `clientId`, `token`, `endpoint` — live in the query because they configure
+ * *who* is editing. Neither says **what** in the design a link means, so "look at this thread"
+ * could not be pasted into a chat and an agent told "the button on the checkout design" had to
+ * search for it.
  *
  * These three selectors are that missing half, and they are additive: a URL carrying none of them
  * opens exactly what it opened before.
@@ -132,7 +133,7 @@ fun parseDesignUrlSelectors(query: String?, fragment: String?): DesignUrlSelecto
 }
 
 /**
- * Whether the path form can name this design and catalog at all.
+ * Whether the path form can name this design at all.
  *
  * The two ends of a design URL do not agree on what an id may contain, and this is the seam. The
  * service stores any id that is not blank; the editor's own entry point refuses to start on a
@@ -145,9 +146,8 @@ fun parseDesignUrlSelectors(query: String?, fragment: String?): DesignUrlSelecto
  * a different *kind* of URL for some designs would be a second address form to keep working, and
  * the one thing worse than no Copy link is a Copy link that produces a broken address.
  */
-fun isDesignUrlPathSafe(catalogSystemId: String, designId: String): Boolean =
-  PATH_SAFE_ID.matches(catalogSystemId) &&
-    PATH_SAFE_ID.matches(designId) &&
+fun isDesignUrlPathSafe(designId: String): Boolean =
+  PATH_SAFE_ID.matches(designId) &&
     designId.substringAfterLast('.', "").lowercase() !in DESIGN_PATH_ASSET_EXTENSIONS
 
 private val PATH_SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
@@ -190,20 +190,18 @@ private val DESIGN_PATH_ASSET_EXTENSIONS =
  * always produces the same string: a link copied twice is the same link, which is what makes it
  * safe to paste into a pull request and compare.
  *
- * The catalog and design must be [isDesignUrlPathSafe]; a caller asks first and withholds the
- * affordance rather than handing over an address the editor would refuse to open.
+ * The design must be [isDesignUrlPathSafe]; a caller asks first and withholds the affordance rather
+ * than handing over an address the editor would refuse to open.
  */
 fun designUrlPath(
-  catalogSystemId: String,
   designId: String,
   selectors: DesignUrlSelectors = DesignUrlSelectors(),
 ): String {
-  require(catalogSystemId.isNotBlank()) { "a design link needs a catalog" }
   require(designId.isNotBlank()) { "a design link needs a design id" }
-  require(isDesignUrlPathSafe(catalogSystemId, designId)) {
+  require(isDesignUrlPathSafe(designId)) {
     "the path form cannot name this design; see isDesignUrlPathSafe"
   }
-  val path = "/ui-builder/${encodeUrlComponent(catalogSystemId)}/${encodeUrlComponent(designId)}"
+  val path = "/ui-builder/${encodeUrlComponent(designId)}"
   val query = buildList {
     selectors.revision?.let { add("$DESIGN_URL_REVISION_KEY=$it") }
     selectors.nodeId?.let { add("$DESIGN_URL_NODE_KEY=${encodeUrlComponent(it)}") }

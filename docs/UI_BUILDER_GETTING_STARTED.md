@@ -1,8 +1,8 @@
 # Compose UI Builder: getting started
 
-The UI builder is a separate Compose/Wasm authoring surface. `/ui-builder/` remains the default
-`m3-catalog` instance, and explicitly enabled catalogs are also available at
-`/ui-builder/<catalog>/`. It does not replace the existing `/wasm/<catalog>/` preview application.
+The UI builder is a separate Compose/Wasm authoring surface at `/ui-builder/`. A catalog is chosen
+when a document is created and stored in that document's `catalogPin`; it is not part of the
+document URL. The builder does not replace the existing `/wasm/<catalog>/` preview application.
 Each design remains pinned to one catalog while the service can host a small operator-selected set.
 Publishing a preview catalog never enables authoring for it automatically.
 
@@ -146,35 +146,25 @@ The strip under the canvas is status rather than control: the committed revision
 the size of the selection, where a drag would land while one is in flight, the last rejection, and
 the session.
 
-A design has one URL, and it names the catalog and the design:
+A design has one URL, and it names only the design:
 
 ```text
-/ui-builder/remote-m3/my-remote-screen
+/ui-builder/my-remote-screen
 ```
 
 Opening it opens the design. It does not create one: a `GET` never writes, so a mistyped link
 reports a design that is not there rather than quietly making it.
 
-**Both segments are canonical, and the short form redirects to them.** `/ui-builder/<designId>`,
-with the catalog left out, is not a design URL: the routing reads the first segment as a catalog
-name, and the app reads the catalog back out of `location.pathname` before it has fetched anything.
-It is a link people and agents build anyway, because the design's *API* resource below **is**
-catalog-free — `/api/ui-builder/v1/designs/<designId>` names a design with its id alone, since the
-server reads the catalog out of the stored document's `catalogPin` — so an id that works against
-the API used to produce a `404` that looks like a deleted design
-([#509](https://github.com/yschimke/compose-preview-server/issues/509)).
-
-The server now answers it with `302` to `/ui-builder/<catalog>/<designId>`, reading the missing
-segment from that same `catalogPin`. It does that **as the caller**: designs are private to their
-owner and collaborators, and a redirect that fired for any id that exists would tell a stranger
-both that a (fairly guessable) id is taken and which catalog it pins. Whoever cannot open the
-design still gets a `404`, and so does an id that names nothing — which is also what keeps a
-genuinely missing asset a `404` instead of silently rendering the app shell.
+The server authorizes that URL before serving the editor shell: designs are private to their owner
+and collaborators, and a shell that appeared for any id that exists would be an existence oracle.
+Whoever cannot open the design gets a `404`, and so does an id that names nothing. Old
+`/ui-builder/<catalog>/<designId>` bookmarks redirect to this catalog-free URL; the opened document's
+`catalogPin` remains authoritative.
 
 Creating is a `POST`. The New design dialog opens on a form factor — Mobile, Wear, RemoteCompose
 — with a generated id already filled in (a `cheeky-raccoon`, reshuffled or overwritten as you
 like) and its state variables folded away until asked for. It submits an ordinary form to
-`/ui-builder/<catalog>` with the id, the template and any state variables, and the server answers
+`/ui-builder/designs` with the catalog, id, template and any state variables, and the server answers
 `303 See Other` with the design's permalink — which the browser follows, so the URL you end up on,
 bookmark and share is the plain one above, and reloading it re-opens rather than re-creates. A
 design id that already exists is not an error and is not overwritten: you land on the design that
@@ -835,7 +825,7 @@ works with the other.
 A design belongs to whoever created it, and nobody else can open it until you say so. Two doors,
 per design:
 
-- **The page.** `/ui-builder/<catalog>/<designId>/access` — visible to the owner, and to an agent
+- **The page.** `/ui-builder/<designId>/access` — visible to the owner, and to an agent
   acting for them. It lists who can open the design and shares it with somebody else.
 - **The MCP tools.** `ui_builder_design_access` reads that list; `ui_builder_share_design` changes
   it, so "share this with @colleague" is one tool call.

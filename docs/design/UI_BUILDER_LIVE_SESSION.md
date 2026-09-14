@@ -4,38 +4,33 @@ The `/ui-builder/` Wasm application opens the live New design chooser when neith
 `session` is specified. One shared, persistent design is named in the path:
 
 ```text
-/ui-builder/m3-catalog/jetcaster-discover
+/ui-builder/jetcaster-discover
 ```
 
-That is the canonical URL for a design, and the only thing it says is which catalog and which
-design. The identity and transport values — `actor`, `clientId`, `displayName`, `color`, `token`,
+That is the canonical URL for a design, and the only thing it says is which design. The catalog is
+the document's `catalogPin`. Identity and transport values — `actor`, `clientId`, `displayName`, `color`, `token`,
 `endpoint`, `updatesEndpoint` — remain a query, because they configure *who* is editing rather
-than *what*. The browser reads the design out of `location.pathname`; the server serves the app
-shell for a catalog-scoped segment that names no file, and redirects the trailing-slash spelling
-away, because the shell resolves `uiBuilder.mjs` relative to the document.
+than *what*. The browser reads the design out of `location.pathname`; the server authorizes that
+design before serving the app shell and redirects the trailing-slash spelling away.
 
-**A design named without its catalog redirects to the canonical URL.** `/ui-builder/<designId>`
-answers `302` to `/ui-builder/<catalogPin.systemId>/<designId>`. The catalog is a segment the *API*
-never asks for — `PUT /api/ui-builder/v1/designs/{designId}` is catalog-free, because the server
-reads the pin out of the stored document, and `ui_builder_create_design` takes an id and returns no
-URL — so anything holding only an id builds the shorter link, and it used to answer a bare `404`
-that reads like a deleted design
-([#509](https://github.com/yschimke/compose-preview-server/issues/509)).
+**The catalog is not URL identity.** Old `/ui-builder/<catalog>/<designId>` bookmarks answer `302`
+to `/ui-builder/<designId>`. The editor installs the catalog returned with the snapshot, and
+`PUT /api/ui-builder/v1/designs/{designId}` returns the same catalog-free location.
 
-The redirect is **not** an existence oracle, and that is what makes it safe to have. Designs are
+The canonical shell is **not** an existence oracle. Designs are
 private to their owner and collaborators, and `cheeky-raccoon`-style ids are guessable, so a
-redirect that fired for any id that exists would tell an unauthenticated stranger both that the id
-is taken and which catalog it pins. So the lookup is made as the caller, through the same
+shell that appeared for any id that exists would tell an unauthenticated stranger that the id is
+taken. So the lookup is made as the caller, through the same
 `GetSnapshot` the design API would answer: a caller who cannot open the design gets the `404` they
 got before, and an id that names nothing is a `404` for everyone. That last part also keeps the
-property the catalog-scoped branch protects — an asset that is simply missing must 404 rather than
+property the design branch protects — an asset that is simply missing must 404 rather than
 silently render the app shell.
 
 Opening a design is a `GET`, and a `GET` never creates one. A design that does not exist is
 reported as missing, not brought into existence by somebody following a link. Creating is its own
 request, in two shapes.
 
-**The New design form: `POST /ui-builder/<catalog>`.** Fields are `designId`, `template` and an
+**The New design form: `POST /ui-builder/designs`.** Fields are `catalog`, `designId`, `template` and an
 optional `state`; the answer is `303 See Other` to the design's permalink. An ordinary HTML form,
 which matters: the browser submits it and follows the redirect itself, so the URL left in the
 address bar and in history is the design's, and reloading it re-opens rather than re-creates. 303
@@ -76,7 +71,7 @@ checkout design" had to search for it. Three optional selectors say *what in the
 means, and a URL carrying none of them opens exactly what it opened before.
 
 ```text
-/ui-builder/m3-catalog/jetcaster-discover?revision=41&node=discover-grid#thread=t-4f2a
+/ui-builder/jetcaster-discover?revision=41&node=discover-grid#thread=t-4f2a
 ```
 
 **`?revision=<n>`** opens the design at one committed revision, read-only, with a banner naming it

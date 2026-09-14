@@ -504,6 +504,7 @@ private fun LiveSessionApp(
     }
   }
   var catalogQuery by remember { mutableStateOf("") }
+  var activeCatalogSystemId by remember { mutableStateOf(config.catalogSystemId) }
   // Which component packs are on, remembered per catalog in this browser. A setting rather than
   // document state: the same design opened by a collaborator shows their palette, not yours.
   var enabledPacks by
@@ -533,13 +534,10 @@ private fun LiveSessionApp(
     presenceState = presenceState.replace(response.snapshot.presence, browserNowMillis())
     authoritativeGeneration += 1
     sessionStatus =
-      "${config.catalogSystemId} · ${sessionModeLabel(config, localSession)} · ${config.actorId}/${config.clientId} · seq ${response.snapshot.state.lastSequence}"
+      "$activeCatalogSystemId · ${sessionModeLabel(config, localSession)} · ${config.actorId}/${config.clientId} · seq ${response.snapshot.state.lastSequence}"
   }
 
   fun acceptSnapshot(response: SnapshotResponseV1) {
-    require(response.snapshot.state.document.catalogPin.systemId == config.catalogSystemId) {
-      "design ${config.designId} belongs to ${response.snapshot.state.document.catalogPin.systemId}, not ${config.catalogSystemId}"
-    }
     when (
       sync.receiveSnapshot(
         sequence = response.snapshot.state.lastSequence,
@@ -793,10 +791,9 @@ private fun LiveSessionApp(
         NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId)
       }
     if (config.startWithNewDesign) return@LaunchedEffect
-    val selectedCatalog =
-      availableCatalogs.singleOrNull { it.benchmark.catalogSystemId == config.catalogSystemId }
-        ?: error("UI builder is not enabled for catalog ${config.catalogSystemId}")
     fun installCatalog(capability: CatalogCapabilityV1, revision: Long?) {
+      activeCatalogSystemId = capability.benchmark.catalogSystemId
+      enabledPacks = readEnabledPacks(activeCatalogSystemId)
       catalog =
         CapabilityCatalogParser.parse(
           Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
@@ -842,7 +839,6 @@ private fun LiveSessionApp(
           revision = revision,
         )
     }
-    installCatalog(selectedCatalog, null)
     // `?revision=` first, because a design pinned to a committed revision is a different opening:
     // one snapshot, no socket, no presence. A revision the service will not answer for — trimmed
     // out of the retained window, or one this design never reached — is *not* a failure to open.
@@ -864,7 +860,7 @@ private fun LiveSessionApp(
         // document this canvas is not showing — drawn over history for as long as they take to
         // expire, and pointing at node ids from the head revision.
         acceptSnapshot(pinned.copy(snapshot = pinned.snapshot.copy(presence = emptyList())))
-        canonicalizeUiBuilderUrl(config.catalogSystemId, config.designId, config.selectors)
+        canonicalizeUiBuilderUrl(config.designId, config.selectors)
         sessionStatus = "Revision $requested · read-only"
         markReady()
         return@LaunchedEffect
@@ -884,15 +880,12 @@ private fun LiveSessionApp(
             ServiceErrorV1(ServiceErrorCodeV1.INTERNAL, "the design could not be opened")
           return@LaunchedEffect
         }
+        installCatalog(response.snapshot.catalog, null)
         acceptSnapshot(response)
         // Without the revision: the page opened at head, whatever the link asked for, and an
         // address bar still naming an unavailable revision would be the one lie the banner is
         // there to prevent.
-        canonicalizeUiBuilderUrl(
-          config.catalogSystemId,
-          config.designId,
-          config.selectors.copy(revision = null),
-        )
+        canonicalizeUiBuilderUrl(config.designId, config.selectors.copy(revision = null))
         // A local design has no updates to subscribe to: the only writer is this page, and it has
         // already seen everything it wrote. Reported as connected because that is what it is —
         // the service is one call away — rather than leaving the editor offering a reconnect for a
@@ -1077,7 +1070,7 @@ private fun LiveSessionApp(
   LaunchedEffect(loadedCatalog) {
     remoteComposeSources =
       if (loadedCatalog?.componentsById?.containsKey(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID) == true)
-        loadRemoteComposeSources(config.catalogSystemId)
+        loadRemoteComposeSources(activeCatalogSystemId)
       else emptyList()
   }
   /**
@@ -1107,7 +1100,7 @@ private fun LiveSessionApp(
           if (failure != null) {
             sessionStatus = "Local error · $failure"
           } else {
-            canonicalizeUiBuilderUrl(catalogSystemId, designId, DesignUrlSelectors())
+            canonicalizeUiBuilderUrl(designId, DesignUrlSelectors())
             onOpenDesign(
               config.copy(
                 catalogSystemId = catalogSystemId,
@@ -1138,13 +1131,13 @@ private fun LiveSessionApp(
           val outcome =
             takeDesignOffline(
               wire = wire,
-              catalogSystemId = config.catalogSystemId,
+              catalogSystemId = activeCatalogSystemId,
               sequence = authoritativeSequence,
             )
           if (outcome != null) {
             sessionStatus = "Local error · $outcome"
           } else {
-            enterLocalDesignUrl(config.catalogSystemId, config.designId)
+            enterLocalDesignUrl(config.designId)
             onOpenDesign(config.copy(localStorage = true, startWithNewDesign = false))
           }
         }
@@ -1168,7 +1161,7 @@ private fun LiveSessionApp(
                 execute = { request -> syncClient.execute(request) },
               )
               .sync(storedRecord)
-          sessionStatus = "${config.catalogSystemId} · ${syncStatus(result)}"
+          sessionStatus = "$activeCatalogSystemId · ${syncStatus(result)}"
         }
       }
     }
@@ -1176,7 +1169,7 @@ private fun LiveSessionApp(
   if (config.startWithNewDesign && newDesignCatalogs.isNotEmpty()) {
     UiBuilderNewDesignScreen(
       catalogs = newDesignCatalogs,
-      initialCatalogSystemId = config.catalogSystemId,
+      initialCatalogSystemId = activeCatalogSystemId,
       onCreate = createDesign,
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
@@ -1297,11 +1290,8 @@ private fun LiveSessionApp(
       // path-safe, so such a design is reachable only through the legacy query form — and a link
       // to it would hand its recipient a page that will not open. See [isDesignUrlPathSafe].
       onCopyDesignLink =
-        if (!isDesignUrlPathSafe(config.catalogSystemId, config.designId)) null
-        else
-          { selectors ->
-            copyDesignLink(designUrlPath(config.catalogSystemId, config.designId, selectors))
-          },
+        if (!isDesignUrlPathSafe(config.designId)) null
+        else { selectors -> copyDesignLink(designUrlPath(config.designId, selectors)) },
       initialCatalogQuery = catalogQuery,
       initialEnabledPacks = enabledPacks,
       collaborators = collaborators,
@@ -1368,7 +1358,7 @@ private fun LiveSessionApp(
         catalogQuery = it.catalogQuery
         if (it.enabledPacks != enabledPacks) {
           enabledPacks = it.enabledPacks
-          writeEnabledPacks(config.catalogSystemId, it.enabledPacks)
+          writeEnabledPacks(activeCatalogSystemId, it.enabledPacks)
         }
         // Persisted from here rather than from each control, so every route that changes the
         // overlay — a slider, a stroke, a flatten, a paste — is stored by one path.
@@ -1407,11 +1397,11 @@ private fun LiveSessionApp(
       },
       remoteComposeSources = remoteComposeSources,
       resolveRemoteComposeDocument = { source ->
-        fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${source.id}.rc"))
+        fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.rc"))
       },
       resolveRemoteComposeThumbnail = { source ->
         val encoded =
-          fetchBase64(catalogAssetPath(config.catalogSystemId, "/render/${source.id}.png"))
+          fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.png"))
         Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
       },
       // The same fetch, for a URL the *design* names rather than one the palette built. Which URLs
@@ -1455,7 +1445,7 @@ private fun LiveSessionApp(
     if (failure != null) {
       UiBuilderUnavailableScreen(
         designId = config.designId,
-        catalogSystemId = config.catalogSystemId,
+        catalogSystemId = activeCatalogSystemId,
         reason = failure.message,
         code = failure.code,
       )
@@ -1872,10 +1862,9 @@ private fun ScheduleListItem(
 /**
  * The Remote Compose documents the *serving* catalog of the same name publishes.
  *
- * The two catalogs share an id by construction — `/ui-builder/remote-m3/` authors against the
- * capability adapter named `remote-m3`, and `/remote-m3/` serves the published catalog of the same
- * name from the same box — so the palette needs no second piece of configuration to find its
- * content. A box serving one without the other simply gets an empty palette.
+ * The document's catalog pin names the capability adapter and the published serving catalog, so the
+ * palette needs no second piece of configuration to find its content. A box serving one without the
+ * other simply gets an empty palette.
  *
  * A failure is not fatal, for the same reason [loadDevicePresets]'s is not: the builder without a
  * Remote Compose palette is where it was before this existed, while a builder that refuses to open
@@ -1998,7 +1987,7 @@ private fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
   val defaultDesignId =
     if (catalogSystemId == "m3-catalog") "jetcaster-discover"
     else "$catalogSystemId-jetcaster-discover"
-  // `/ui-builder/<catalog>/<designId>` is the canonical form. The `?designId=` query still works
+  // `/ui-builder/<designId>` is the canonical form. The `?designId=` query still works
   // — bookmarks and automation written against it must not break — and the path wins where both
   // are present. Neither creates anything: a GET opens a design, and bringing one into existence
   // is the `POST` the New design form submits, or a `PUT` of the design's own API resource.
@@ -2338,25 +2327,20 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
       )
   }
 
-@JsFun(
-  """() => {
-    const parts = globalThis.location.pathname.split('/').filter(Boolean);
-    return parts[0] === 'ui-builder' && parts.length > 1 ? parts[1] : 'm3-catalog';
-  }"""
-)
+@JsFun("""() => new URL(globalThis.location.href).searchParams.get('catalog') || 'm3-catalog'""")
 private external fun uiBuilderCatalogFromPath(): String
 
 @JsFun(
   """() => {
     const parts = globalThis.location.pathname.split('/').filter(Boolean);
-    if (parts[0] !== 'ui-builder' || parts.length < 3) return '';
-    return decodeURIComponent(parts[2]);
+    if (parts[0] !== 'ui-builder' || parts.length !== 2 || parts[1] === 'designs') return '';
+    return decodeURIComponent(parts[1]);
   }"""
 )
 private external fun uiBuilderDesignFromPath(): String
 
 /**
- * The canonical URL for one design: `/ui-builder/<catalog>/<designId>`.
+ * The canonical URL for one design: `/ui-builder/<designId>`.
  *
  * Only the identity and transport values survive as a query — they configure *who* is editing, not
  * *what*. `session`, `create`, `designId`, `template` and `state` do not: the first three are
@@ -2371,10 +2355,9 @@ private external fun uiBuilderDesignFromPath(): String
  * left the browser to begin with.
  */
 @JsFun(
-  """(catalogSystemId, designId, carried, revision, node) => {
+  """(designId, carried, revision, node) => {
     const current = new URL(globalThis.location.href);
-    const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
-      encodeURIComponent(designId);
+    const path = '/ui-builder/' + encodeURIComponent(designId);
     const next = new URL(path, current.origin);
     carried.split(',').forEach((name) => {
       const value = current.searchParams.get(name);
@@ -2389,7 +2372,6 @@ private external fun uiBuilderDesignFromPath(): String
   }"""
 )
 private external fun canonicalizeUiBuilderUrlWith(
-  catalogSystemId: String,
   designId: String,
   carried: String,
   revision: String,
@@ -2402,16 +2384,14 @@ private external fun canonicalizeUiBuilderUrlWith(
  * two hand-kept lists disagree is a token in a link somebody pasted into a chat.
  */
 private fun canonicalizeUiBuilderUrl(
-  catalogSystemId: String,
   designId: String,
   selectors: DesignUrlSelectors,
 ) =
   canonicalizeUiBuilderUrlWith(
-    catalogSystemId = catalogSystemId,
-    designId = designId,
-    carried = DESIGN_URL_IDENTITY_KEYS.joinToString(","),
-    revision = selectors.revision?.toString().orEmpty(),
-    node = selectors.nodeId.orEmpty(),
+    designId,
+    DESIGN_URL_IDENTITY_KEYS.joinToString(","),
+    selectors.revision?.toString().orEmpty(),
+    selectors.nodeId.orEmpty(),
   )
 
 @JsFun("() => globalThis.location.search") private external fun locationSearch(): String
@@ -2509,10 +2489,9 @@ private external fun goToLatestRevision()
  * may be about to leave behind. What the URL is for is the *next* visit.
  */
 @JsFun(
-  """(catalogSystemId, designId) => {
+  """(designId) => {
     const current = new URL(globalThis.location.href);
-    const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
-      encodeURIComponent(designId);
+    const path = '/ui-builder/' + encodeURIComponent(designId);
     const next = new URL(path, current.origin);
     ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
       .forEach((name) => {
@@ -2523,7 +2502,7 @@ private external fun goToLatestRevision()
     globalThis.history.replaceState(null, '', next.toString());
   }"""
 )
-private external fun enterLocalDesignUrl(catalogSystemId: String, designId: String)
+private external fun enterLocalDesignUrl(designId: String)
 
 /** Follow a `navigatePage` action while retaining only the identity and transport query values. */
 @JsFun(
@@ -2557,7 +2536,7 @@ private external fun navigateToUiBuilderPage(catalogSystemId: String, designId: 
   """(catalogSystemId, designId, templateId, state, carried) => {
     const current = new URL(globalThis.location.href);
     const action = new URL(
-      '/ui-builder/' + encodeURIComponent(catalogSystemId),
+      '/ui-builder/designs',
       current.origin,
     );
     carried.split(',').forEach((name) => {
@@ -2575,6 +2554,7 @@ private external fun navigateToUiBuilderPage(catalogSystemId: String, designId: 
       form.appendChild(input);
     };
     field('designId', designId);
+    field('catalog', catalogSystemId);
     field('template', templateId);
     if (state && state !== '[]') field('state', state);
     globalThis.document.body.appendChild(form);

@@ -1521,10 +1521,10 @@ class UiBuilderEditorStateTest {
   }
 
   /**
-   * The document from `/ui-builder/m3-catalog/a`, at the door a person uses. With the blank
-   * scaffold selected, a lazy grid used to be offered its `topBar` — a `Container` on its role
-   * alone — and every add after that landed inside the grid. Now the grid goes to the body box, and
-   * the top bar is offered only to what belongs in one.
+   * The document from `/ui-builder/a`, at the door a person uses. With the blank scaffold selected,
+   * a lazy grid used to be offered its `topBar` — a `Container` on its role alone — and every add
+   * after that landed inside the grid. Now the grid goes to the body box, and the top bar is
+   * offered only to what belongs in one.
    */
   @Test
   fun `a grid added with the blank scaffold selected goes into the body and not the top bar`() {

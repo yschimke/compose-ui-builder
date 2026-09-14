@@ -1,6 +1,6 @@
 # UI builder comments
 
-A design can be discussed where it is being built. `/ui-builder/{catalog}/{design}` grows a **Talk**
+A design can be discussed where it is being built. `/ui-builder/{design}` grows a **Talk**
 panel: threads pinned to a markup stroke, a design node, or a point on the frame, with replies under
 them — between the people looking at the design and the agents helping with it.
 
@@ -215,7 +215,7 @@ review loop, and `--ui-builder-comment-webhook <url>` (container
 **What fires** is what somebody *said* — four events, each carrying the author, their `authorKind`,
 the excerpt trimmed by the same 160-character rule the `comments` notice uses, where the thread is
 pinned, the design's id and title, and the thread permalink
-`https://<host>/ui-builder/<catalog>/<designId>#thread=<threadId>`:
+`https://<host>/ui-builder/<designId>#thread=<threadId>`:
 
 | event | when |
 | --- | --- |

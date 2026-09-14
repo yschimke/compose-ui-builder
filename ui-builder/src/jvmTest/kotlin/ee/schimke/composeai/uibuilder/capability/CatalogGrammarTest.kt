@@ -118,10 +118,10 @@ class CatalogGrammarTest {
   }
 
   /**
-   * The document from `/ui-builder/m3-catalog/a`: a lazy grid in the scaffold's top bar, holding
-   * cards, a text and icon buttons. The grid is a `Container`, which the old rule took as enough;
-   * now the missing `TopBar` trait is the finding. The grid's *own* children are fine — a lazy
-   * grid's items are an unconstrained lambda in Compose, and the catalog now says so.
+   * The document from `/ui-builder/a`: a lazy grid in the scaffold's top bar, holding cards, a text
+   * and icon buttons. The grid is a `Container`, which the old rule took as enough; now the missing
+   * `TopBar` trait is the finding. The grid's *own* children are fine — a lazy grid's items are an
+   * unconstrained lambda in Compose, and the catalog now says so.
    */
   @Test
   fun `a lazy grid in a top bar is an incompatible slot child`() {
