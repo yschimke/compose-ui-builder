@@ -238,6 +238,9 @@ internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { 
 internal val LocalUiBuilderCatalogComponentIds =
   staticCompositionLocalOf<Set<String>> { emptySet() }
 
+/** Destination selected by a `navigatePage` action in the live canvas. */
+internal val LocalUiBuilderNavigator = staticCompositionLocalOf<(String) -> Unit> { { _ -> } }
+
 /**
  * Which host container a Wear widget design is drawn inside.
  *
@@ -739,7 +742,8 @@ private fun RenderNode(
   // sees what the placement passed without knowing a placement happened.
   val node = authored.withArguments(arguments).withPreviewState(state)
   val enabled = node.bool("enabled", true)
-  val activate = { node.dispatch("click", state, onState) }
+  val navigate = LocalUiBuilderNavigator.current
+  val activate = { node.dispatch("click", state, onState, navigate) }
   if (node.eventBindings["click"] != null) {
     semanticActions[node.id] = UiBuilderSemanticActionEntry(enabled = enabled, activate = activate)
   }
@@ -904,7 +908,9 @@ private fun RenderNode(
         node = node,
         modifier = measured,
         state = state,
-        onEvent = { event -> event.bindingName()?.let { node.dispatch(it, state, onState) } },
+        onEvent = { event ->
+          event.bindingName()?.let { node.dispatch(it, state, onState, navigate) }
+        },
         slotContent = { name, next ->
           Box(next) { slot(name).forEach { child(it, Modifier.fillMaxSize()) } }
         },
@@ -3319,9 +3325,21 @@ private fun UiBuilderNode.dispatch(
   event: String,
   state: Map<String, String?>,
   onState: (String, String?) -> Unit,
+  onNavigate: (String) -> Unit,
 ) {
   val actions = eventBindings[event] as? JsonArray ?: return
-  uiBuilderStateWrites(actions, state).forEach { (variable, next) -> onState(variable, next) }
+  val working = state.toMutableMap()
+  actions.forEach { element ->
+    val action = element as? JsonObject ?: return@forEach
+    if (action.optionalString("type") == "navigatePage") {
+      action.optionalString("pageKey")?.takeIf(String::isNotBlank)?.let(onNavigate)
+    } else {
+      uiBuilderStateWrite(action, working)?.also { (name, value) ->
+        working[name] = value
+        onState(name, value)
+      }
+    }
+  }
 }
 
 /** Later actions observe earlier writes even when a host applies callbacks after dispatch. */

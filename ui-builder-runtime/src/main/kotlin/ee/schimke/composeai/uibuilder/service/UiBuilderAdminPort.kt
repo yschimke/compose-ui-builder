@@ -69,6 +69,16 @@ public interface UiBuilderAdminPort {
   public fun adminUnusableDesigns(): Map<String, String> = emptyMap()
 
   /**
+   * Stored designs that still open but carry properties their pinned catalog no longer declares.
+   *
+   * Unlike [adminUnusableDesigns], these designs remain editable and export by omitting the stale
+   * properties. Naming them separately keeps a survivable catalog change visible without turning it
+   * into quarantine. Defaulted empty so adding the diagnostic remains binary-compatible for other
+   * implementations of this port.
+   */
+  public fun adminDegradedDesigns(): Map<String, String> = emptyMap()
+
+  /**
    * Of those, the designs whose stored **files** could not be read.
    *
    * The two kinds of unusable design recover differently and the difference is not cosmetic. A

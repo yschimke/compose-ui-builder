@@ -464,6 +464,7 @@ public class PersistentUiBuilderService(
   private val mutationBuckets = mutableMapOf<Pair<String, String>, MutationBucket>()
 
   override fun diagnostics(): UiBuilderServiceDiagnostics = lock.withLock {
+    val degradedDesigns = degradedDesigns()
     UiBuilderServiceDiagnostics(
       activeSubscribers = runtime.values.sumOf { it.subscribers.size },
       peakSubscribers = peakSubscribers.get(),
@@ -481,6 +482,7 @@ public class PersistentUiBuilderService(
       activeMutationBuckets = mutationBuckets.size,
       persistenceMigrations = persistenceMigrations.get(),
       unusableDesigns = unusableDesigns.size,
+      degradedDesigns = degradedDesigns.size,
       rePinnedDesigns = rePin.designs,
       rePinPersistenceFailure = rePin.failure,
       storageBytes = storageUsage?.bytes ?: 0,
@@ -2103,6 +2105,7 @@ public class PersistentUiBuilderService(
           mutation,
           command,
           design,
+          actor,
           basePositions = batchPositions,
           index,
           catalog,
@@ -2363,6 +2366,7 @@ public class PersistentUiBuilderService(
     mutation: DesignMutationV1,
     command: DesignCommandV1,
     original: PersistedDesignV1,
+    actor: AuthenticatedUiBuilderActor,
     basePositions: Map<String, StableNodePositionV1>,
     index: Int,
     catalog: CatalogCapabilityV1,
@@ -2788,6 +2792,25 @@ public class PersistentUiBuilderService(
               field = issue.field,
             )
           }
+          val readableSiblingDesigns =
+            persisted.designs
+              .filterValues { candidate ->
+                candidate.document.catalogPin.systemId == document.catalogPin.systemId &&
+                  candidate.allows(actor, DesignAccessActionV1.READ)
+              }
+              .keys
+          mutation.actions
+            .filterIsInstance<NavigatePageActionV1>()
+            .firstOrNull { it.pageKey !in readableSiblingDesigns }
+            ?.let { action ->
+              fail(
+                RejectionCodeV1.INVALID_DOCUMENT,
+                "${mutation.event} navigates to unknown design ${action.pageKey}",
+                operationIndex = index,
+                nodeId = mutation.nodeId,
+                field = eventBindingField(mutation.event),
+              )
+            }
           // The same staleness question the property and modifier lanes ask, one field over: a
           // binding is a value, and the last writer wins.
           val conflicts =
@@ -3310,6 +3333,26 @@ public class PersistentUiBuilderService(
     unusableDesigns.mapValues { (_, unusable) ->
       unusable.reason
     }
+
+  override fun adminDegradedDesigns(): Map<String, String> = lock.withLock { degradedDesigns() }
+
+  private fun degradedDesigns(): Map<String, String> =
+    persisted.designs.entries
+      .asSequence()
+      .filter { (designId, _) -> designId !in unusableDesigns }
+      .mapNotNull { (designId, design) ->
+        val catalog = catalogs.resolve(design.document.catalogPin) ?: return@mapNotNull null
+        val stale = undeclaredProperties(design.document, catalog)
+        if (stale.isEmpty()) return@mapNotNull null
+        val details =
+          stale.entries
+            .sortedBy { it.key }
+            .joinToString("; ") { (nodeId, properties) ->
+              "node `$nodeId`: ${properties.keys.sorted().joinToString(", ") { "`$it`" }}"
+            }
+        designId to "catalog no longer declares properties on $details"
+      }
+      .toMap()
 
   /**
    * The stored document, read straight out of the loaded state and rendered as JSON.

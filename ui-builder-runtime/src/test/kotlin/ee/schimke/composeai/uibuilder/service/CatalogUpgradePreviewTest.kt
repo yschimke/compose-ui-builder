@@ -166,6 +166,61 @@ class CatalogUpgradePreviewTest {
     )
   }
 
+  @Test
+  fun `a legacy variant selects a concrete successor component`() {
+    val target =
+      remoteM3()
+        .copy(
+          statusSemantics =
+            JsonObject(
+              mapOf(
+                "supersedes" to
+                  JsonObject(
+                    mapOf(
+                      "m3/card" to
+                        JsonObject(
+                          mapOf(
+                            "componentId" to JsonPrimitive("m3/card"),
+                            "variants" to
+                              JsonObject(
+                                mapOf(
+                                  "property" to JsonPrimitive("variant"),
+                                  "components" to
+                                    JsonObject(
+                                      mapOf(
+                                        "filled" to JsonPrimitive("m3/card"),
+                                        "elevated" to JsonPrimitive("m3/elevated-card"),
+                                      )
+                                    ),
+                                )
+                              ),
+                          )
+                        )
+                    )
+                  )
+              )
+            ),
+          components =
+            listOf(
+              component("m3/card", listOf("containerColor")),
+              component("m3/elevated-card", listOf("containerColor")),
+            ),
+        )
+    val document =
+      document("d")
+        .withNode(
+          node("card", "m3/card", mapOf("variant" to "elevated", "containerColor" to "#fff"))
+        )
+
+    val outcome = planCatalogUpgrade(document, target, TARGET)
+    val card = outcome.candidate.nodes.getValue("card")
+
+    assertEquals("m3/elevated-card", card.componentId)
+    assertTrue("variant" !in card.properties)
+    assertEquals(StringValueV1("#fff"), card.properties["containerColor"])
+    assertTrue(outcome.issues.any { it.code == "VARIANT_BECOMES_COMPONENT" })
+  }
+
   // ── the service ───────────────────────────────────────────────────────────────────────────────
 
   @Test

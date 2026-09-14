@@ -208,7 +208,7 @@ class EditorProblemsTest {
         .map { it.code to it.message }
         .containsAll(
           CapabilityComposeCodeExporter.diagnose(broken, catalog)
-            .filter { it.severity == ComposeExportSeverity.ERROR }
+            .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
             .map { it.code to it.message }
         )
     )
@@ -216,15 +216,63 @@ class EditorProblemsTest {
     // refusal, never a rule this panel invented.
     val capability =
       CapabilityComposeCodeExporter.diagnose(broken, catalog)
-        .filter { it.severity == ComposeExportSeverity.ERROR }
+        .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
         .map { it.code to it.message }
         .toSet()
     assertTrue(
       problems(broken).all {
-        (it.code to it.message) in capability || it.code == "COMPOSE_EXPORT_REFUSED"
+        (it.code to it.message) in capability ||
+          it.code == "COMPOSE_EXPORT_REFUSED" ||
+          it.code == "PROPERTY_NOT_DECLARED"
       },
       problems(broken).toString(),
     )
+  }
+
+  @Test
+  fun `an undeclared property is preserved and can be explicitly dropped or mapped`() {
+    val original = document.nodes.getValue("search-placeholder")
+    val staleValue =
+      JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("normal")))
+    val stale =
+      document.copy(
+        nodes =
+          document.nodes +
+            (original.id to
+              original.copy(
+                properties = JsonObject(original.properties + ("oldText" to staleValue))
+              ))
+      )
+
+    val problem = problems(stale).single { it.code == "PROPERTY_NOT_DECLARED" }
+    assertEquals(original.id, problem.nodeId)
+    assertEquals("oldText", problem.propertyName)
+    assertTrue(!problem.blocking)
+    val replacement = "fontStyle"
+    assertTrue(replacement in problem.replacementProperties, problem.toString())
+
+    val initial = reducer.initial(stale, original.id)
+    val mapped =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.ResolveUndeclaredProperty(
+          original.id,
+          "oldText",
+          replacement,
+        ),
+      )
+    assertTrue(mapped.lastOutcome is CommandOutcome.Accepted, mapped.lastOutcome.toString())
+    val mappedProperties = mapped.document.nodes.getValue(original.id).properties
+    assertEquals(JsonPrimitive("normal"), mappedProperties[replacement]?.jsonObject?.get("value"))
+    assertEquals(JsonPrimitive("enum"), mappedProperties[replacement]?.jsonObject?.get("type"))
+    assertTrue("oldText" !in mappedProperties)
+
+    val dropped =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.ResolveUndeclaredProperty(original.id, "oldText"),
+      )
+    assertTrue("oldText" !in dropped.document.nodes.getValue(original.id).properties)
   }
 
   @Test

@@ -393,8 +393,19 @@ private class ComposeEmitter(
    */
   fun emit(): String {
     val functionName = document.exportFunctionName()
+    val navigates =
+      document.nodes.values.any { node ->
+        node.eventBindings.values.any { encoded ->
+          (encoded as? JsonArray).orEmpty().any { action ->
+            (action as? JsonObject)?.optionalString("type") == "navigatePage"
+          }
+        }
+      }
     appendLine("@Composable")
-    appendLine("fun $functionName() {")
+    appendLine(
+      if (navigates) "fun $functionName(onNavigatePage: (String) -> Unit = {}) {"
+      else "fun $functionName() {"
+    )
     emitState(1)
     document.roots.forEach { rootId -> emitNode(rootId, 1) }
     appendLine("}")
@@ -1670,6 +1681,10 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
     val variable = name?.identifier()
     val value = action["value"].kotlinLiteral()
     when (action.optionalString("type")) {
+      "navigatePage" ->
+        action.optionalString("pageKey")?.takeIf(String::isNotBlank)?.let {
+          "onNavigatePage(\"${it.escape()}\")"
+        } ?: "TODO(\"navigatePage needs a pageKey\")"
       "select",
       // `set` is the protocol's own name for an assignment and behaves exactly as `select` does.
       "set",
@@ -3219,7 +3234,8 @@ private val SUPPORTED_MODIFIERS =
     "weight",
   )
 
-private val SUPPORTED_ACTIONS = setOf("select", "selectOrClear", "setText", "set", "toggle")
+private val SUPPORTED_ACTIONS =
+  setOf("select", "selectOrClear", "setText", "set", "toggle", "navigatePage")
 
 /**
  * The components whose `click` binding the Compose export actually emits.

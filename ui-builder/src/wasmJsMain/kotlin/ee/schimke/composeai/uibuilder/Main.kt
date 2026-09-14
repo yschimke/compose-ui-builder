@@ -90,9 +90,11 @@ import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.ErrorResponseV1
 import ee.schimke.composeai.uibuilder.protocol.GetSnapshotRequestV1
 import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
+import ee.schimke.composeai.uibuilder.protocol.ListDesignsRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceV1
@@ -454,6 +456,7 @@ private fun LiveSessionApp(
   // own revision and runtime id, which only the capability document carries.
   var catalogCapabilities by remember { mutableStateOf<List<CatalogCapabilityV1>>(emptyList()) }
   var devicePresets by remember { mutableStateOf<List<UiBuilderDevicePreset>>(emptyList()) }
+  var pageDestinations by remember { mutableStateOf<List<UiBuilderPageDestination>>(emptyList()) }
   var sessionStatus by remember { mutableStateOf("Connecting…") }
   // Why the design could not be opened, or null while it still might. Distinct from [sessionStatus]
   // because that string is only ever read from inside the editor, which is exactly the branch a
@@ -484,6 +487,15 @@ private fun LiveSessionApp(
   // housekeeping as a navigation and undo the selection that caused it. Only the loop below counts,
   // and `replaceState` fires no `hashchange`, so nothing this host does can reach it.
   var threadNavigations by remember(config.designId) { mutableStateOf(0) }
+  LaunchedEffect(http, config.catalogSystemId) {
+    val result = http.execute(ListDesignsRequestV1(cursor = null, limit = 200))
+    pageDestinations =
+      ((result as? UiBuilderHttpResult.Response)?.response as? DesignsResponseV1)
+        ?.designs
+        .orEmpty()
+        .filter { it.catalogPin.systemId == config.catalogSystemId }
+        .map { UiBuilderPageDestination(it.designId, it.title) }
+  }
   LaunchedEffect(config.designId) {
     while (true) {
       val hash = awaitHashChange()
@@ -1213,6 +1225,8 @@ private fun LiveSessionApp(
       document = loadedDocument,
       catalog = loadedCatalog,
       catalogRecord = catalogRecord,
+      pageDestinations = pageDestinations,
+      onNavigatePage = { pageKey -> navigateToUiBuilderPage(config.catalogSystemId, pageKey) },
       actorId = config.actorId,
       clientId = config.clientId,
       operationIdPrefix = config.operationIdPrefix,
@@ -2510,6 +2524,23 @@ private external fun goToLatestRevision()
   }"""
 )
 private external fun enterLocalDesignUrl(catalogSystemId: String, designId: String)
+
+/** Follow a `navigatePage` action while retaining only the identity and transport query values. */
+@JsFun(
+  """(catalogSystemId, designId) => {
+    const current = new URL(globalThis.location.href);
+    const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
+      encodeURIComponent(designId);
+    const next = new URL(path, current.origin);
+    ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
+      .forEach((name) => {
+        const value = current.searchParams.get(name);
+        if (value !== null) next.searchParams.set(name, value);
+      });
+    globalThis.location.assign(next.toString());
+  }"""
+)
+private external fun navigateToUiBuilderPage(catalogSystemId: String, designId: String)
 
 /** The origin this page was served from, which is the server a design taken offline came from. */
 @JsFun("""() => globalThis.location.origin""") private external fun pageOrigin(): String

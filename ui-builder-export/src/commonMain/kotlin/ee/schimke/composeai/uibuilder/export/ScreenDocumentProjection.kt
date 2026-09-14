@@ -1060,6 +1060,9 @@ object ScreenDocumentProjection {
      * the failure this whole file exists to avoid.
      */
     private fun variantOf(node: DesignNodeV1): ComponentVariant? {
+      DIRECT_COMPONENTS[node.componentId]?.let {
+        return it
+      }
       val property = VARIANT_SELECTORS[node.componentId] ?: return null
       val choices = COMPONENT_VARIANTS[node.componentId] ?: return null
       val authored =
@@ -2735,6 +2738,18 @@ object ScreenDocumentProjection {
           "containerColor" to ParameterTarget("colors", TargetKind.CARD_COLORS),
           "elevationDp" to ParameterTarget("elevation", TargetKind.CARD_ELEVATION),
         ),
+      "m3/elevated-card" to
+        mapOf(
+          "shape" to ParameterTarget("shape", TargetKind.SHAPE_TOKEN),
+          "containerColor" to ParameterTarget("colors", TargetKind.CARD_COLORS),
+          "elevationDp" to ParameterTarget("elevation", TargetKind.CARD_ELEVATION),
+        ),
+      "m3/outlined-card" to
+        mapOf(
+          "shape" to ParameterTarget("shape", TargetKind.SHAPE_TOKEN),
+          "containerColor" to ParameterTarget("colors", TargetKind.CARD_COLORS),
+          "elevationDp" to ParameterTarget("elevation", TargetKind.CARD_ELEVATION),
+        ),
       "m3/icon" to
         mapOf(
           "iconKey" to ParameterTarget("imageVector", TargetKind.RENAME),
@@ -2754,6 +2769,10 @@ object ScreenDocumentProjection {
       // Same name on both sides, so this entry exists for the KIND rather than for a rename: the
       // catalog carries a number and Compose takes `() -> Float`.
       "m3/progress-indicator" to
+        mapOf("progress" to ParameterTarget("progress", TargetKind.FLOAT_LAMBDA)),
+      "m3/linear-progress-indicator" to
+        mapOf("progress" to ParameterTarget("progress", TargetKind.FLOAT_LAMBDA)),
+      "m3/circular-progress-indicator" to
         mapOf("progress" to ParameterTarget("progress", TargetKind.FLOAT_LAMBDA)),
       // Same name on both sides again, and again for the kind: the catalog holds a number and
       // `Slider` takes a `Float`, which a whole number in the document would not render as.
@@ -3170,6 +3189,9 @@ object ScreenDocumentProjection {
     mapOf(
       "m3/icon" to mapOf("sizeDp" to "$LAYOUT.size"),
       "m3/icon-button" to mapOf("sizeDp" to "$LAYOUT.size"),
+      "m3/filled-icon-button" to mapOf("sizeDp" to "$LAYOUT.size"),
+      "m3/filled-tonal-icon-button" to mapOf("sizeDp" to "$LAYOUT.size"),
+      "m3/outlined-icon-button" to mapOf("sizeDp" to "$LAYOUT.size"),
     )
 
   private const val CARD_DEFAULTS = "androidx.compose.material3.CardDefaults"
@@ -3304,6 +3326,22 @@ object ScreenDocumentProjection {
           "linear" to ComponentVariant(LINEAR_INDICATOR_ID, "linearProgressIndicator"),
           "circular" to ComponentVariant(CIRCULAR_INDICATOR_ID, "circularProgressIndicator"),
         ),
+    )
+
+  /** Concrete catalog ids replacing the legacy property-selected component families. */
+  private val DIRECT_COMPONENTS: Map<String, ComponentVariant> =
+    mapOf(
+      "m3/elevated-card" to ComponentVariant(ELEVATED_CARD_ID, "elevatedCard", COLUMN_CONTENT),
+      "m3/outlined-card" to ComponentVariant(OUTLINED_CARD_ID, "outlinedCard", COLUMN_CONTENT),
+      "m3/filled-icon-button" to ComponentVariant(FILLED_ICON_BUTTON_ID, "filledIconButton"),
+      "m3/filled-tonal-icon-button" to
+        ComponentVariant(FILLED_TONAL_ICON_BUTTON_ID, "filledTonalIconButton"),
+      "m3/outlined-icon-button" to ComponentVariant(OUTLINED_ICON_BUTTON_ID, "outlinedIconButton"),
+      "m3/linear-progress-indicator" to
+        ComponentVariant(LINEAR_INDICATOR_ID, "linearProgressIndicator"),
+      "m3/circular-progress-indicator" to
+        ComponentVariant(CIRCULAR_INDICATOR_ID, "circularProgressIndicator"),
+      "m3/outlined-text-field" to ComponentVariant(OUTLINED_TEXT_FIELD_ID, "outlinedTextField"),
     )
 
   // The variant table names CALLABLES, not catalog components: a `style` of `elevated` on

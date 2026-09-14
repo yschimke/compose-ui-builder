@@ -716,6 +716,10 @@ data class EditorProblem(
    * them makes that claim untrue and tells somebody their export will fail when it will not.
    */
   val blocking: Boolean = true,
+  /** Catalog property carried by a degraded design, when this is its recovery row. */
+  val propertyName: String? = null,
+  /** Declared properties the stale value can be explicitly moved to. */
+  val replacementProperties: List<String> = emptyList(),
 )
 
 data class EditorThemeSettings(
@@ -757,6 +761,13 @@ sealed interface UiBuilderEditorEvent {
    * design id, a base URL and a token, none of which the reducer has or should acquire.
    */
   data class SetComponentDrift(val findings: List<ComponentDriftFinding>) : UiBuilderEditorEvent
+
+  /** Explicit recovery for a property a catalog removed: null drops it, otherwise moves it. */
+  data class ResolveUndeclaredProperty(
+    val nodeId: String,
+    val property: String,
+    val replacement: String? = null,
+  ) : UiBuilderEditorEvent
 
   data class SelectNode(val nodeId: String) : UiBuilderEditorEvent
 
@@ -1129,6 +1140,9 @@ sealed interface UiBuilderEditorEvent {
 sealed interface EditorStateAction {
   val variable: String
 
+  /** Open another design in this project; it writes no local state. */
+  data class Navigate(val pageKey: String, override val variable: String = "") : EditorStateAction
+
   /** Flip a flag. */
   data class Toggle(override val variable: String) : EditorStateAction
 
@@ -1158,6 +1172,7 @@ sealed interface EditorStateAction {
 private fun EditorStateAction.valueRefusal(declaration: JsonObject?): String? {
   val raw =
     when (this) {
+      is EditorStateAction.Navigate -> return null
       is EditorStateAction.Toggle -> return null
       is EditorStateAction.Set -> value
       is EditorStateAction.SelectOrClear -> value
@@ -1237,6 +1252,10 @@ private fun typedStateValue(raw: String, declaration: JsonObject?): JsonPrimitiv
 private fun EditorStateAction.encoded(declaration: JsonObject?): JsonObject {
   fun typed(raw: String): JsonPrimitive = typedStateValue(raw, declaration)
   return when (this) {
+    is EditorStateAction.Navigate ->
+      JsonObject(
+        mapOf("type" to JsonPrimitive("navigatePage"), "pageKey" to JsonPrimitive(pageKey))
+      )
     is EditorStateAction.Toggle ->
       JsonObject(mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive(variable)))
     is EditorStateAction.Set ->
@@ -1470,6 +1489,7 @@ class UiBuilderEditorReducer(
       // the next rebuild to be taken back out.
       is UiBuilderEditorEvent.SetComponentDrift ->
         state.copy(componentDrift = event.findings.stillDescribing(state.document))
+      is UiBuilderEditorEvent.ResolveUndeclaredProperty -> resolveUndeclaredProperty(state, event)
       is UiBuilderEditorEvent.ToggleCatalogComponent ->
         state.copy(
           expandedCatalogComponents = state.expandedCatalogComponents.toggled(event.componentId)
@@ -2689,7 +2709,7 @@ class UiBuilderEditorReducer(
    */
   fun problems(document: UiBuilderDocument): List<EditorProblem> =
     (CapabilityComposeCodeExporter.diagnose(document, catalog)
-        .filter { it.severity == ComposeExportSeverity.ERROR }
+        .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
         .map { diagnostic ->
           EditorProblem(
             code = diagnostic.code,
@@ -2708,6 +2728,7 @@ class UiBuilderEditorReducer(
         // generator does not ask — catalog pin drift, a modifier the catalog disallows on a
         // component — and dropping them to unify the source would narrow the panel's promise.
         exportRefusals(document) +
+        undeclaredPropertyProblems(document) +
         // Not a refusal — the export runs — but the one property a whole design is judged by that
         // commits and changes nothing visible (#485). The same notice the served export attaches.
         listOfNotNull(
@@ -2726,6 +2747,87 @@ class UiBuilderEditorReducer(
           }
         ))
       .distinctBy { it.code to it.message }
+
+  private fun undeclaredPropertyProblems(document: UiBuilderDocument): List<EditorProblem> =
+    document.nodes.values.sortedBy(UiBuilderNode::id).flatMap { node ->
+      val capability = catalog.componentsById[node.componentId] ?: return@flatMap emptyList()
+      val declared = capability.propertiesByName.keys
+      node.properties.keys
+        .filter { it !in declared }
+        .sorted()
+        .map { property ->
+          EditorProblem(
+            code = "PROPERTY_NOT_DECLARED",
+            message =
+              "Catalog ${catalog.benchmark.catalogSystemId} no longer declares property " +
+                "$property on ${node.componentId}. Its value is preserved until you drop or map it.",
+            nodeId = node.id,
+            componentId = node.componentId,
+            blocking = false,
+            propertyName = property,
+            replacementProperties = compatibleReplacements(document, node, property),
+          )
+        }
+    }
+
+  private fun compatibleReplacements(
+    document: UiBuilderDocument,
+    node: UiBuilderNode,
+    property: String,
+  ): List<String> {
+    val capability = catalog.componentsById[node.componentId] ?: return emptyList()
+    return (capability.propertiesByName.keys - node.properties.keys).filter { replacement ->
+      val value = mappedPropertyValue(node, property, replacement) ?: return@filter false
+      val candidateNode =
+        node.copy(properties = JsonObject(node.properties - property + (replacement to value)))
+      capabilityValidator
+        .validate(document.copy(nodes = document.nodes + (node.id to candidateNode)))
+        .issues
+        .none { it.nodeId == node.id && it.field == replacement }
+    }
+  }
+
+  private fun mappedPropertyValue(
+    node: UiBuilderNode,
+    property: String,
+    replacement: String,
+  ): JsonObject? {
+    val encoded = node.properties[property] as? JsonObject ?: return null
+    val value = encoded["value"] ?: return null
+    val replacementCapability =
+      catalog.componentsById[node.componentId]?.propertiesByName?.get(replacement) ?: return null
+    return when (value) {
+      is JsonPrimitive,
+      JsonNull -> value.asLiteral(replacementCapability)
+      else -> encoded
+    }
+  }
+
+  private fun resolveUndeclaredProperty(
+    state: UiBuilderEditorState,
+    event: UiBuilderEditorEvent.ResolveUndeclaredProperty,
+  ): UiBuilderEditorState {
+    val node = state.document.nodes[event.nodeId] ?: return state
+    val capability = catalog.componentsById[node.componentId] ?: return state
+    if (event.property in capability.propertiesByName) return state
+    val operations = mutableListOf<DesignOperation>()
+    event.replacement?.let { replacement ->
+      if (
+        replacement !in capability.propertiesByName ||
+          replacement in node.properties ||
+          replacement !in compatibleReplacements(state.document, node, event.property)
+      )
+        return state
+      val value = mappedPropertyValue(node, event.property, replacement) ?: return state
+      operations += DesignOperation.SetProperty(node.id, replacement, value)
+    }
+    operations += DesignOperation.RemoveNodeProperty(node.id, event.property)
+    return state.apply(
+      state.operationSequence + 1,
+      operations,
+      selectionAfter = node.id,
+    )
+  }
 
   /**
    * The Kotlin the Compose export would write for [document], or why it would not.
@@ -3067,12 +3169,14 @@ class UiBuilderEditorReducer(
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val declaration =
-      state.document.stateVariables[event.action.variable] as? JsonObject
-        ?: return state.rejected(
-          sequence,
-          RejectionCode.INVALID_PROPERTY,
-          "Unknown state ${event.action.variable}",
-        )
+      if (event.action is EditorStateAction.Navigate) null
+      else
+        state.document.stateVariables[event.action.variable] as? JsonObject
+          ?: return state.rejected(
+            sequence,
+            RejectionCode.INVALID_PROPERTY,
+            "Unknown state ${event.action.variable}",
+          )
     event.action.valueRefusal(declaration)?.let {
       return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, it)
     }
@@ -3116,7 +3220,9 @@ class UiBuilderEditorReducer(
       return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, defaultError)
     }
     if (action != null) {
-      if (action.variable !in state.document.stateVariables) {
+      if (
+        action !is EditorStateAction.Navigate && action.variable !in state.document.stateVariables
+      ) {
         return state.rejected(
           sequence,
           RejectionCode.INVALID_PROPERTY,

@@ -81,6 +81,13 @@ private data class ComponentSuccessor(
   val properties: Map<String, String>,
   val slots: Map<String, String>,
   val modifiers: Map<String, String>,
+  val variants: VariantSuccessor?,
+)
+
+/** A legacy selector whose value chooses one of several concrete successor components. */
+private data class VariantSuccessor(
+  val property: String,
+  val components: Map<String, String>,
 )
 
 /**
@@ -114,6 +121,11 @@ private fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSucce
           properties = rule.stringMap("properties"),
           slots = rule.stringMap("slots"),
           modifiers = rule.stringMap("modifiers"),
+          variants =
+            (rule["variants"] as? JsonObject)?.let { variants ->
+              val property = variants["property"]?.stringOrNull() ?: return@let null
+              VariantSuccessor(property, variants.stringMap("components"))
+            },
         )
     }
     .toMap()
@@ -139,7 +151,10 @@ internal fun planCatalogUpgrade(
   val nodes =
     document.nodes.mapValues { (nodeId, node) ->
       val rule = rules[node.componentId]
-      val componentId = rule?.componentId ?: node.componentId
+      val componentId =
+        rule?.variants?.let { variant ->
+          node.properties[variant.property]?.literalStringOrNull()?.let(variant.components::get)
+        } ?: rule?.componentId ?: node.componentId
       val component = declared[componentId]
       if (component == null && componentId !in document.components) {
         // Nothing to move onto: the target declares no successor for this id and does not declare
@@ -167,6 +182,17 @@ internal fun planCatalogUpgrade(
       val properties = mutableMapOf<String, UiValueV1>()
       val modifiers = node.modifiers.toMutableList()
       node.properties.forEach { (name, value) ->
+        if (name == rule?.variants?.property) {
+          changes += RemoveCatalogUpgradeChangeV1(propertyPath(nodeId, name), value.encoded())
+          issues +=
+            CatalogUpgradeIssueV1(
+              CatalogUpgradeIssueSeverityV1.INFO,
+              "VARIANT_BECOMES_COMPONENT",
+              propertyPath(nodeId, name),
+              "$name selects $componentId and is no longer stored as a property",
+            )
+          return@forEach
+        }
         val asModifier = rule?.modifiers?.get(name)
         if (asModifier != null) {
           val write = MODIFIER_WRITERS[asModifier]
@@ -260,6 +286,9 @@ internal fun planCatalogUpgrade(
 }
 
 private fun JsonElement.stringOrNull(): String? = (this as? JsonPrimitive)?.contentOrNull
+
+private fun UiValueV1.literalStringOrNull(): String? =
+  ((encoded() as? JsonObject)?.get("value") as? JsonPrimitive)?.contentOrNull
 
 private fun JsonObject.stringMap(key: String): Map<String, String> =
   (this[key] as? JsonObject)

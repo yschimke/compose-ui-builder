@@ -267,6 +267,22 @@ Three rules keep this from becoming a second hand-written catalog:
   asserts the committed file equals its measurement, the way this repository's goldens work, so the
   numbers cannot be edited by hand without the test saying so.
 
+Two additive fields let that vocabulary evolve without putting catalog-specific code back in the
+server:
+
+- `supersedes` maps an old component id to its successor, plus property, slot and modifier renames.
+  A family that used a synthetic variant property may additionally name that property and map each
+  value to a concrete successor component. Upgrade preview reports the exact edits; apply performs
+  only the previewed migration, and an older producer or catalog simply publishes no map.
+- A builtin may set `implementation` to the canonical id of a wrapper in the catalog's own
+  `components.json`. The server aliases that record under the builtin id for generic native export
+  and streaming preview. The reference is data already inside the catalog's record trust boundary,
+  not remotely executable Wasm; a missing or unknown reference deliberately falls back to the
+  declaration-only placeholder.
+
+These fields keep both compatibility directions. New servers continue to load old catalogs, and a
+new catalog still reaches an old server with placeholders and without automatic migration.
+
 ### `ui-builder.json` — what the generator produces
 
 The full `CatalogCapabilityV1` the runtime loads today, produced by one function in the Gradle

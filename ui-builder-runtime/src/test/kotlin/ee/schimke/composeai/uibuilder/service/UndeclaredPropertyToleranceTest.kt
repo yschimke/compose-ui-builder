@@ -109,6 +109,21 @@ class UndeclaredPropertyToleranceTest {
     )
   }
 
+  @Test
+  fun `a degraded design is counted and named with each stale node property`() {
+    val root = createTempDirectory("undeclared")
+    create(service(root, declares = listOf("text", "tint")), "widget", withTint = true)
+
+    val narrowed = service(root, declares = listOf("text"))
+
+    assertEquals(1, narrowed.diagnostics().degradedDesigns)
+    assertEquals(
+      mapOf("widget" to "catalog no longer declares properties on node `label`: `tint`"),
+      narrowed.adminDegradedDesigns(),
+    )
+    assertEquals(0, narrowed.diagnostics().unusableDesigns)
+  }
+
   /** The claim the whole approach rests on: nothing is parked, moved or dropped on disk. */
   @Test
   fun `the stored document keeps the undeclared property`() {

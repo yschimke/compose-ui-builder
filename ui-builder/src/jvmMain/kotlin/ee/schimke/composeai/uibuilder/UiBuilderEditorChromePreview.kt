@@ -1,12 +1,20 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlinx.serialization.json.Json
@@ -235,7 +243,8 @@ private val editorChromePreviewDocument: UiBuilderDocument by lazy {
  *
  * The checked-in fixture is clean, which is the right baseline and a useless render: an empty panel
  * proves nothing about how a problem reads. Two are seeded here instead, one of each kind the gate
- * finds — a node missing a property its component requires, and a node no root can reach.
+ * finds — a node missing a property its component requires, a node no root can reach, and a stale
+ * catalog property with its explicit Drop / Map recovery actions.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -247,6 +256,34 @@ fun UiBuilderIssuesInspectorPreview() {
     initialInspectorMode = EditorInspectorMode.Issues,
     initialInspectorOpen = true,
   )
+}
+
+/** A degraded catalog property and the two explicit recovery paths it offers. */
+@Preview(widthDp = 520, heightDp = 320)
+@Composable
+fun UiBuilderDegradedDesignPreview() {
+  MaterialTheme {
+    Surface {
+      Column(Modifier.padding(24.dp)) {
+        Text("Issues", style = MaterialTheme.typography.titleMedium)
+        ProblemsInspector(
+          problems =
+            listOf(
+              EditorProblem(
+                code = "PROPERTY_NOT_DECLARED",
+                message = "property oldFontStyle is not declared by m3/text in the pinned catalog",
+                nodeId = "headline",
+                componentId = "m3/text",
+                blocking = false,
+                propertyName = "oldFontStyle",
+                replacementProperties = listOf("fontStyle", "fontWeight"),
+              )
+            ),
+          dispatch = {},
+        )
+      }
+    }
+  }
 }
 
 /**
@@ -323,6 +360,48 @@ fun UiBuilderStateBindingPreview() {
     initialSelectedNodeId = "chip-crime",
     initialInspectorOpen = true,
   )
+}
+
+/** The action editor offering another design in the same project as a named destination. */
+@Preview(widthDp = 520, heightDp = 900)
+@Composable
+fun UiBuilderNavigationActionPreview() {
+  val document = editorChromePreviewDocument
+  val node =
+    document.nodes
+      .getValue("toolbar-library")
+      .copy(
+        eventBindings =
+          buildJsonObject {
+            put(
+              "click",
+              JsonArray(
+                listOf(
+                  buildJsonObject {
+                    put("type", "navigatePage")
+                    put("pageKey", "confirmation")
+                  }
+                )
+              ),
+            )
+          }
+      )
+  MaterialTheme {
+    Surface {
+      CompositionLocalProvider(
+        LocalUiBuilderPageDestinations provides
+          listOf(
+            UiBuilderPageDestination("checkout", "Checkout"),
+            UiBuilderPageDestination("confirmation", "Confirmation"),
+          )
+      ) {
+        Column(Modifier.padding(24.dp)) {
+          Text("Button · ${node.componentId}", style = MaterialTheme.typography.titleMedium)
+          EventActionsInspector(document, node, {}, {})
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -789,9 +868,23 @@ private val editorIssuesPreviewDocument: UiBuilderDocument by lazy {
       document.nodes +
         mapOf(
           // `m3/text` requires `text`, and a node that lost it is not a rejected write — nothing
-          // wrote to it. It is a document that will not export.
+          // wrote to it. It is a document that will not export. `oldFontStyle` models a catalog
+          // rename: its value remains intact and the Issues panel offers recovery rather than
+          // silently throwing it away.
           placeholder.id to
-            placeholder.copy(properties = JsonObject(placeholder.properties - "text")),
+            placeholder.copy(
+              properties =
+                JsonObject(
+                  placeholder.properties - "text" +
+                    ("oldFontStyle" to
+                      JsonObject(
+                        mapOf(
+                          "type" to JsonPrimitive("string"),
+                          "value" to JsonPrimitive("normal"),
+                        )
+                      ))
+                )
+            ),
           // Dropping the child leaves the icon in `nodes` with no parent, which is the shape a
           // botched delete leaves behind. The slot it moves to names a node that was never there,
           // which is the other half: the canvas and the layers panel both walk that reference, and

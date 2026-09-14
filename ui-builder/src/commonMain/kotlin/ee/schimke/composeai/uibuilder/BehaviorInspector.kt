@@ -25,6 +25,11 @@ private enum class StateEditorKind(val label: String, val wire: String) {
     }
 }
 
+data class UiBuilderPageDestination(val designId: String, val title: String)
+
+internal val LocalUiBuilderPageDestinations =
+  staticCompositionLocalOf<List<UiBuilderPageDestination>> { emptyList() }
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun StateVariablesInspector(
@@ -182,6 +187,7 @@ internal fun EventActionsInspector(
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
+  val pages = LocalUiBuilderPageDestinations.current
   var expanded by remember(node.id) { mutableStateOf(node.eventBindings.isNotEmpty()) }
   var variable by
     remember(node.id) { mutableStateOf(document.stateVariables.keys.firstOrNull().orEmpty()) }
@@ -196,10 +202,12 @@ internal fun EventActionsInspector(
   val isNullable =
     (selectedDeclaration?.get("nullable") as? JsonPrimitive)?.booleanOrNull
       ?: (initialValue is JsonNull)
-  val actionKinds =
+  val stateActionKinds =
     listOf("set" to "Set") +
       (if (isFlag) listOf("toggle" to "Toggle") else emptyList()) +
       (if (isNullable) listOf("selectOrClear" to "Select / clear") else emptyList())
+  val actionKinds =
+    stateActionKinds + if (pages.isNotEmpty()) listOf("navigatePage" to "Navigate") else emptyList()
   LaunchedEffect(variable, selectedDeclaration) {
     if (kind !in actionKinds.map { it.first }) kind = "set"
   }
@@ -232,18 +240,24 @@ internal fun EventActionsInspector(
       val action = element as? JsonObject
       val actionKind = (action?.get("type") as? JsonPrimitive)?.content.orEmpty()
       val actionVariable = (action?.get("variable") as? JsonPrimitive)?.content.orEmpty()
+      val actionPage = (action?.get("pageKey") as? JsonPrimitive)?.content.orEmpty()
       Text(
-        "${index + 1}. $actionKind $actionVariable ${(action?.get("value") as? JsonPrimitive)?.contentOrNull.orEmpty()}",
+        "${index + 1}. $actionKind ${actionPage.ifBlank { actionVariable }} ${(action?.get("value") as? JsonPrimitive)?.contentOrNull.orEmpty()}",
         style = MaterialTheme.typography.bodySmall,
       )
       Row {
-        if (actionKind in setOf("set", "select", "setText", "toggle", "selectOrClear"))
+        if (
+          actionKind in setOf("set", "select", "setText", "toggle", "selectOrClear", "navigatePage")
+        )
           TextButton(
             onClick = {
               editingIndex = index
               kind = if (actionKind in setOf("select", "setText")) "set" else actionKind
-              variable = actionVariable
-              value = (action?.get("value") as? JsonPrimitive)?.contentOrNull.orEmpty()
+              if (actionKind == "navigatePage") value = actionPage
+              else {
+                variable = actionVariable
+                value = (action?.get("value") as? JsonPrimitive)?.contentOrNull.orEmpty()
+              }
             }
           ) {
             Text("Edit")
@@ -272,7 +286,7 @@ internal fun EventActionsInspector(
         }
       }
     }
-    if (document.stateVariables.isEmpty()) {
+    if (document.stateVariables.isEmpty() && pages.isEmpty()) {
       Text(
         "Add a state value in Screen to give this action something to change.",
         style = MaterialTheme.typography.bodySmall,
@@ -287,20 +301,30 @@ internal fun EventActionsInspector(
         if (editingIndex == null) "Add action" else "Edit action ${editingIndex!! + 1}",
         style = MaterialTheme.typography.labelLarge,
       )
-      var showVariables by remember { mutableStateOf(false) }
+      var showOperands by remember { mutableStateOf(false) }
+      val navigating = kind == "navigatePage"
+      val choices =
+        if (navigating) pages.map { it.designId to it.title }
+        else document.stateVariables.keys.map { it to it }
       Box {
-        OutlinedButton(onClick = { showVariables = true }) {
-          Text(variable.ifBlank { "Choose state" })
+        OutlinedButton(onClick = { showOperands = true }) {
+          Text(
+            if (navigating) pages.firstOrNull { it.designId == value }?.title ?: "Choose screen"
+            else variable.ifBlank { "Choose state" }
+          )
         }
-        DropdownMenu(showVariables, { showVariables = false }) {
-          document.stateVariables.keys.forEach { name ->
+        DropdownMenu(showOperands, { showOperands = false }) {
+          choices.forEach { (name, label) ->
             DropdownMenuItem(
-              text = { Text(name) },
+              text = { Text(label) },
               onClick = {
-                variable = name
-                showVariables = false
+                if (navigating) value = name else variable = name
+                showOperands = false
               },
-              modifier = Modifier.semantics { contentDescription = "Use state $name" },
+              modifier =
+                Modifier.semantics {
+                  contentDescription = "Use ${if (navigating) "screen" else "state"} $name"
+                },
             )
           }
         }
@@ -310,7 +334,7 @@ internal fun EventActionsInspector(
           FilterChip(kind == id, { kind = id }, label = { Text(label) })
         }
       }
-      if (kind != "toggle")
+      if (kind != "toggle" && kind != "navigatePage")
         OutlinedTextField(
           value,
           { value = it },
@@ -319,10 +343,13 @@ internal fun EventActionsInspector(
           singleLine = true,
         )
       TextButton(
-        enabled = variable in document.stateVariables,
+        enabled =
+          if (navigating) pages.any { it.designId == value }
+          else variable in document.stateVariables,
         onClick = {
           val action =
             when (kind) {
+              "navigatePage" -> EditorStateAction.Navigate(value)
               "toggle" -> EditorStateAction.Toggle(variable)
               "selectOrClear" -> EditorStateAction.SelectOrClear(variable, value)
               else -> EditorStateAction.Set(variable, value)

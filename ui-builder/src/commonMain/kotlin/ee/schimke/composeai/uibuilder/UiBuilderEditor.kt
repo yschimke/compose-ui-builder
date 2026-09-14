@@ -380,6 +380,8 @@ fun UiBuilderEditor(
    * it always read.
    */
   catalogRecord: ComponentRecordFile? = null,
+  pageDestinations: List<UiBuilderPageDestination> = emptyList(),
+  onNavigatePage: (String) -> Unit = {},
   onStateChanged: (UiBuilderEditorState) -> Unit = {},
   onCanvasMetrics: (Int, Int, Float) -> Unit = { _, _, _ -> },
   onCanvasBoundsChanged: (Rect) -> Unit = {},
@@ -1743,6 +1745,8 @@ fun UiBuilderEditor(
   CompositionLocalProvider(
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
+    LocalUiBuilderPageDestinations provides pageDestinations.filter { it.designId != document.id },
+    LocalUiBuilderNavigator provides onNavigatePage,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
     // Here for the same reason as the line above it: the canvas, the extent beside it and every
@@ -7299,7 +7303,7 @@ private fun DraftPropertyControl(
  * so by not reacting.
  */
 @Composable
-private fun ProblemsInspector(
+internal fun ProblemsInspector(
   problems: List<EditorProblem>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
@@ -7358,6 +7362,7 @@ private fun ProblemRow(
   blocking: Boolean,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
+  var replacementsOpen by remember(problem.nodeId, problem.propertyName) { mutableStateOf(false) }
   Column(
     Modifier.fillMaxWidth().padding(bottom = 12.dp).let { base ->
       problem.nodeId?.let { id -> base.clickable { dispatch(UiBuilderEditorEvent.SelectNode(id)) } }
@@ -7380,6 +7385,47 @@ private fun ProblemRow(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelSmall,
       )
+    }
+    if (!blocking && problem.nodeId != null && problem.propertyName != null) {
+      Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        TextButton(
+          onClick = {
+            dispatch(
+              UiBuilderEditorEvent.ResolveUndeclaredProperty(
+                problem.nodeId,
+                problem.propertyName,
+              )
+            )
+          }
+        ) {
+          Text("Drop")
+        }
+        if (problem.replacementProperties.isNotEmpty()) {
+          Box {
+            TextButton(onClick = { replacementsOpen = true }) { Text("Map to…") }
+            DropdownMenu(
+              expanded = replacementsOpen,
+              onDismissRequest = { replacementsOpen = false },
+            ) {
+              problem.replacementProperties.forEach { replacement ->
+                DropdownMenuItem(
+                  text = { Text(replacement) },
+                  onClick = {
+                    replacementsOpen = false
+                    dispatch(
+                      UiBuilderEditorEvent.ResolveUndeclaredProperty(
+                        problem.nodeId,
+                        problem.propertyName,
+                        replacement,
+                      )
+                    )
+                  },
+                )
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -883,6 +883,105 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `navigation actions name another design held by the project`() {
+    val service = service()
+    create(service)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.CreateDesign(
+          document().copy(id = "confirmation", title = "Confirmation")
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("seed", 0, InsertNodeMutationV1(textNode("node"), NodeLocationV1()))
+        ),
+      )
+    )
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "navigate",
+            1,
+            SetEventBindingMutationV1(
+              "node",
+              "click",
+              listOf(NavigatePageActionV1("confirmation")),
+            ),
+          )
+        ),
+      )
+    )
+    assertEquals(
+      listOf(NavigatePageActionV1("confirmation")),
+      currentNode(service, "node").eventBindings.getValue("click"),
+    )
+
+    val dangling =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "dangling",
+              2,
+              SetEventBindingMutationV1(
+                "node",
+                "click",
+                listOf(NavigatePageActionV1("missing")),
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, dangling.code)
+    assertEquals("node", dangling.nodeId)
+    assertEquals("eventBindings.click", dangling.field)
+    assertContains(dangling.message, "unknown design missing")
+
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        outsider,
+        UiBuilderServiceRequest.CreateDesign(
+          document().copy(id = "private", title = "Private sibling")
+        ),
+      )
+    )
+    val unreadable =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "unreadable",
+              2,
+              SetEventBindingMutationV1(
+                "node",
+                "click",
+                listOf(NavigatePageActionV1("private")),
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_DOCUMENT, unreadable.code)
+    assertContains(unreadable.message, "unknown design private")
+  }
+
+  @Test
   fun `an action is validated against the state it writes before it is committed`() {
     val service = service()
     create(service)

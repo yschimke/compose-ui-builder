@@ -128,6 +128,7 @@ public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderSer
 	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderDesignStateStore;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;Lee/schimke/composeai/uibuilder/service/IconOutlineResolver;)V
 	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;)V
 	public synthetic fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderStateStorage;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun adminDegradedDesigns ()Ljava/util/Map;
 	public fun adminDeleteDesign (Ljava/lang/String;)Z
 	public fun adminDesignDocument (Ljava/lang/String;)Ljava/lang/String;
 	public fun adminDesignSummary (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSummary;
@@ -244,6 +245,7 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSu
 }
 
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort {
+	public fun adminDegradedDesigns ()Ljava/util/Map;
 	public abstract fun adminDeleteDesign (Ljava/lang/String;)Z
 	public fun adminDesignDocument (Ljava/lang/String;)Ljava/lang/String;
 	public fun adminDesignSummary (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSummary;
@@ -254,6 +256,7 @@ public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilder
 }
 
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort$DefaultImpls {
+	public static fun adminDegradedDesigns (Lee/schimke/composeai/uibuilder/service/UiBuilderAdminPort;)Ljava/util/Map;
 	public static fun adminDesignDocument (Lee/schimke/composeai/uibuilder/service/UiBuilderAdminPort;Ljava/lang/String;)Ljava/lang/String;
 	public static fun adminDesignSummary (Lee/schimke/composeai/uibuilder/service/UiBuilderAdminPort;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderAdminDesignSummary;
 	public static fun adminRepairDesign (Lee/schimke/composeai/uibuilder/service/UiBuilderAdminPort;Ljava/lang/String;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderAdminRepair;
@@ -539,8 +542,8 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceCall {
 }
 
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics {
-	public fun <init> (IJJJJJIJJJJJJIJIILjava/lang/String;JJ)V
-	public synthetic fun <init> (IJJJJJIJJJJJJIJIILjava/lang/String;JJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (IJJJJJIJJJJJJIJIIILjava/lang/String;JJ)V
+	public synthetic fun <init> (IJJJJJIJJJJJJIJIIILjava/lang/String;JJILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component10 ()J
 	public final fun component11 ()J
@@ -550,10 +553,11 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagno
 	public final fun component15 ()J
 	public final fun component16 ()I
 	public final fun component17 ()I
-	public final fun component18 ()Ljava/lang/String;
-	public final fun component19 ()J
+	public final fun component18 ()I
+	public final fun component19 ()Ljava/lang/String;
 	public final fun component2 ()J
 	public final fun component20 ()J
+	public final fun component21 ()J
 	public final fun component3 ()J
 	public final fun component4 ()J
 	public final fun component5 ()J
@@ -561,12 +565,13 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagno
 	public final fun component7 ()I
 	public final fun component8 ()J
 	public final fun component9 ()J
-	public final fun copy (IJJJJJIJJJJJJIJIILjava/lang/String;JJ)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
-	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;IJJJJJIJJJJJJIJIILjava/lang/String;JJILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
+	public final fun copy (IJJJJJIJJJJJJIJIIILjava/lang/String;JJ)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;IJJJJJIJJJJJJIJIIILjava/lang/String;JJILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getActiveExports ()I
 	public final fun getActiveMutationBuckets ()I
 	public final fun getActiveSubscribers ()I
+	public final fun getDegradedDesigns ()I
 	public final fun getPeakExports ()J
 	public final fun getPeakSubscribers ()J
 	public final fun getPersistenceMigrations ()J

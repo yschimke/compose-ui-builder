@@ -330,6 +330,8 @@ public data class UiBuilderServiceDiagnostics(
    * operator learns they exist without opening one.
    */
   val unusableDesigns: Int = 0,
+  /** Stored, servable designs carrying properties their catalog no longer declares. */
+  val degradedDesigns: Int = 0,
   /**
    * Stored designs whose catalog pin was rewritten to the served reference as they loaded.
    *

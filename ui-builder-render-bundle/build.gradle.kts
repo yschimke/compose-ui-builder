@@ -38,9 +38,10 @@ val publishedArtifactId = "compose-preview-ui-builder-render-bundle"
  *
  * ## Why there is no source set
  *
- * Deliberately none, and it is the point: a module that compiles nothing has no JVM target to
- * inherit or impose. The frontend can move its own toolchain without this artifact acquiring an
- * opinion about the server's.
+ * Deliberately none, and it is the point: a module that compiles nothing has no class-file floor to
+ * inherit or impose. Gradle still publishes a target-JVM attribute for the Java variant, so that
+ * metadata is pinned to the server floor below; the opaque frontend can move its own toolchain
+ * without making this resource-only jar unresolvable by the server.
  */
 version =
   providers.environmentVariable("PLUGIN_VERSION").orNull
@@ -54,6 +55,11 @@ version =
     }
 
 base { archivesName.set(publishedArtifactId) }
+
+// This jar contains resources only, so it is loadable on every JVM supported by the server. The
+// Java plugin otherwise advertises the JVM running Gradle (21 on the UI-builder toolchain), which
+// makes the Java 17 runtime correctly reject an artifact that in fact contains no class files.
+java { targetCompatibility = JavaVersion.toVersion(libs.versions.java.server.get()) }
 
 /**
  * The resource path is the contract.
@@ -231,4 +237,3 @@ val verifyRenderBundlePackaged =
   }
 
 tasks.named("check") { dependsOn(verifyRenderBundlePackaged) }
-

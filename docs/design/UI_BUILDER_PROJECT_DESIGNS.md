@@ -197,3 +197,19 @@ public; the write half cannot.
 - **No staleness policy.** Nothing here decides that a design has rotted. A project that stops
   editing a design and leaves it in the directory keeps offering it; deciding it is finished with is
   the project's call, expressed by deleting the file.
+
+## Cross-screen navigation
+
+`NavigatePageActionV1.pageKey` is a design id in this project. The editor offers readable sibling
+designs from the same catalog system, the service refuses a newly-authored link outside that set,
+and the live canvas follows an accepted action to the sibling's canonical builder URL. A later
+delete can still leave a dangling link; opening and export diagnose it instead of discarding the
+action, because independent files cannot make deletion atomic.
+
+A one-design Compose export remains one file and therefore does not pretend to own an application's
+navigation graph. It exposes `onNavigatePage: (String) -> Unit` and emits the destination id through
+that callback, so the generated screen contains an executable navigation edge rather than a `TODO`
+or silent no-op. The consuming app or catalog host binds that edge to Nav3, a Wear swipe-dismiss
+stack, or its existing router. A future project-level export may generate the host graph once; doing
+so in every screen file would create duplicate hosts and code that only compiles when unrelated
+sibling exports happen to be present.

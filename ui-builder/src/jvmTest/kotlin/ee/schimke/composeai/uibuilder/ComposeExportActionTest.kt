@@ -114,6 +114,25 @@ class ComposeExportActionTest {
   }
 
   @Test
+  fun `navigatePage is an exported host callback rather than a throwing TODO`() {
+    val source =
+      exportOf(
+        listOf(
+          JsonObject(
+            mapOf(
+              "type" to JsonPrimitive("navigatePage"),
+              "pageKey" to JsonPrimitive("checkout-confirmation"),
+            )
+          )
+        )
+      )
+
+    assertTrue(source.contains("onNavigatePage: (String) -> Unit = {}"), source)
+    assertTrue(source.contains("onNavigatePage(\"checkout-confirmation\")"), source)
+    assertFalse(source.contains("Unsupported action navigatePage"), source)
+  }
+
+  @Test
   fun `an assignment a declared type cannot hold is refused rather than emitted`() {
     // The editor refuses these, and the editor is not the only author: `eventBindings` arrives on
     // the wire from other clients and future versions of this one. `expanded` is declared `bool`,

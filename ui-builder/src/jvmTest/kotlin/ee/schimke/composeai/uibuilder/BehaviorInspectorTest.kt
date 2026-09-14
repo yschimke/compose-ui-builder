@@ -75,22 +75,27 @@ class BehaviorInspectorTest {
       setContent {
         MaterialTheme {
           Surface {
-            Row(
-              Modifier.fillMaxSize().padding(24.dp),
-              horizontalArrangement = Arrangement.spacedBy(32.dp),
+            CompositionLocalProvider(
+              LocalUiBuilderPageDestinations provides
+                listOf(UiBuilderPageDestination("confirmation", "Confirmation"))
             ) {
-              Column(Modifier.width(420.dp).verticalScroll(rememberScrollState())) {
-                Text("Screen", style = MaterialTheme.typography.headlineSmall)
-                StateVariablesInspector(state.document, {}, { state = reducer.reduce(state, it) })
-              }
-              Column(Modifier.width(420.dp).verticalScroll(rememberScrollState())) {
-                Text("Toggle · properties", style = MaterialTheme.typography.headlineSmall)
-                EventActionsInspector(
-                  state.document,
-                  state.document.nodes.getValue(buttonId),
-                  {},
-                  { state = reducer.reduce(state, it) },
-                )
+              Row(
+                Modifier.fillMaxSize().padding(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
+              ) {
+                Column(Modifier.width(420.dp).verticalScroll(rememberScrollState())) {
+                  Text("Screen", style = MaterialTheme.typography.headlineSmall)
+                  StateVariablesInspector(state.document, {}, { state = reducer.reduce(state, it) })
+                }
+                Column(Modifier.width(420.dp).verticalScroll(rememberScrollState())) {
+                  Text("Toggle · properties", style = MaterialTheme.typography.headlineSmall)
+                  EventActionsInspector(
+                    state.document,
+                    state.document.nodes.getValue(buttonId),
+                    {},
+                    { state = reducer.reduce(state, it) },
+                  )
+                }
               }
             }
           }
@@ -142,5 +147,24 @@ class BehaviorInspectorTest {
       onNodeWithContentDescription("Remove action 1").performClick()
       onNodeWithContentDescription("Remove state expanded").performClick()
       runOnIdle { assertTrue(state.document.stateVariables.isEmpty()) }
+
+      onNodeWithText("Navigate", useUnmergedTree = true).performClick()
+      onNodeWithText("Choose screen").performClick()
+      onNodeWithContentDescription("Use screen confirmation").performClick()
+      onNodeWithContentDescription("Save event action").performClick()
+      runOnIdle {
+        assertEquals(
+          "confirmation",
+          state.document.nodes
+            .getValue(buttonId)
+            .eventBindings
+            .getValue("click")
+            .jsonArray
+            .single()
+            .jsonObject["pageKey"]
+            ?.jsonPrimitive
+            ?.content,
+        )
+      }
     }
 }
