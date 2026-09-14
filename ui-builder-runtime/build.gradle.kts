@@ -15,10 +15,9 @@ val publishedArtifactId = "compose-preview-ui-builder-runtime"
 kotlin {
   jvmToolchain(libs.versions.java.server.get().toInt())
 
-  // Published as `ee.schimke.composeai:compose-preview-ui-builder-runtime` and consumed across a
-  // repository boundary, so every declaration states its visibility and every public one its
-  // return type, and the committed `api/ui-builder-runtime.api` dump records, in a form a reviewer
-  // reads as a diff, exactly what a consumer may rely on.
+  // This is the service seam the server consumes, so every declaration states its visibility and
+  // every public one its return type. The committed `api/ui-builder-runtime.api` dump records, in a
+  // form a reviewer reads as a diff, exactly what the host may rely on.
   //
   // The gate fits HERE and deliberately not on `:server`: this module is five files whose surface
   // is already a designed service port (`UiBuilderServicePort` and its request/response algebra),
@@ -49,7 +48,7 @@ base { archivesName.set(publishedArtifactId) }
 
 dependencies {
   // The public service port deliberately speaks the released v1 contract types. Keeping this `api`
-  // makes the generated POM usable by a host implementing or decorating the port.
+  // makes those types available to the host implementing or decorating the port.
   api(libs.composeai.ui.builder.protocol)
   implementation(libs.kotlinx.serialization.json)
   // Shared binding semantics: the browser and persistent service must accept the same state reads.
@@ -65,7 +64,7 @@ dependencies {
   // "packaged UI-builder renderer bundle is missing" at the first render rather than at resolve.
   //
   // Why this is a dependency at all, when it used to be a `processResources` copy: the bundle is a
-  // frontend build output, and a published server-side artifact carrying `:ui-builder`'s compiled
+  // frontend build output, and a server-side jar carrying `:ui-builder`'s compiled
   // JVM previews was an edge across the layer line that a repository split cannot follow, and a
   // silent pin of the frontend's JVM target to this module's. See
   // yschimke/compose-preview-server#346
@@ -77,7 +76,7 @@ dependencies {
 
 // The catalog belongs to the runtime that controls its revision and persistence lifecycle. The
 // render bundle used to be copied in beside it, from `:ui-builder`'s build directory; it is now
-// `:ui-builder-render-bundle`'s published artifact, for the reasons that dependency records.
+// `:ui-builder-render-bundle`'s packaged artifact, for the reasons that dependency records.
 tasks.processResources {
   from(rootProject.file("docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json")) {
     into("ee/schimke/composeai/uibuilder/catalogs")

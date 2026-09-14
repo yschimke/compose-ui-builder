@@ -14,13 +14,10 @@
 // depend on it without inverting anything, and `:server` may without pulling Compose UI onto a
 // server classpath.
 //
-// **Published**, and it has to be. `:server` depends on it (`implementation(project(...))`), so
-// `compose-preview-serve`'s POM names it; an unpublished project dependency is recorded there as
-// `compose-preview-server:ui-builder-export-jvm:unspecified` — a coordinate nobody can resolve —
-// and that is what shipped in 3.1.0, breaking resolution of `compose-preview-serve` for every
-// consumer, this repository's own `:cli` wire-drift tests included. It publishes in lockstep with
-// `:server` and `:ui-builder-runtime` for the same reason they do: one version line, named by the
-// POM that depends on it.
+// **A named seam**, because both `:server` and `:ui-builder` depend on it. It used to publish for
+// that reason; an incomplete project-dependency POM is what broke `compose-preview-serve` 3.1.0.
+// Since #794 this repository ships distributions rather than Maven coordinates, while the module
+// boundary remains useful for keeping the browser and server on one implementation.
 plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.multiplatform)
@@ -32,8 +29,9 @@ group = "ee.schimke.composeai"
 val publishedArtifactId = "compose-preview-ui-builder-export"
 
 // Same derivation as `:server` and `:ui-builder-runtime` — `PLUGIN_VERSION` in CI, a patch-bumped
-// SNAPSHOT off `.release-please-manifest.json` locally. Without it Gradle leaves `project.version`
-// as `unspecified`, which is precisely the string that broke 3.1.0's POM.
+// SNAPSHOT off `.release-please-manifest.json` locally. It keeps every archive on the shared
+// release
+// line; `unspecified` was also the string that broke 3.1.0's former POM.
 version =
   providers.environmentVariable("PLUGIN_VERSION").orNull
     ?: run {
@@ -49,11 +47,9 @@ ktfmt { googleStyle() }
 
 kotlin {
   // Pinned to `java-server`, and pinned *explicitly*. This module had no toolchain at all, so its
-  // published JVM jar took whatever JVM happened to run Gradle — 17 on CI today, and silently
-  // whatever a contributor's `JAVA_HOME` says. That is a published artifact on `compose-ai-tools`'
-  // `:cli` compile classpath: the one place in this build where a drifting class-file version is
-  // someone else's red build rather than ours. It is stated here so it cannot drift, and so that a
-  // reader comparing this file with `:ui-builder`'s sees the line between the two floors.
+  // JVM jar once took whatever JVM happened to run Gradle — 17 on CI today, and silently whatever a
+  // contributor's `JAVA_HOME` says. It is stated here so the server distribution cannot drift, and
+  // so a reader comparing this file with `:ui-builder`'s sees the line between the two floors.
   jvmToolchain(libs.versions.java.server.get().toInt())
 
   jvm()

@@ -21,7 +21,7 @@ compose-ai-tools precisely so the server cannot move under the CLI without a pul
 
 *Not just "some modules".* The reason to draw the line anyway is that an undrawn one rots. Every
 edge across it was correct when it was written and wrong later — `:ui-builder-runtime` copying the
-frontend's build output into a published server jar
+frontend's build output into the server jar
 ([#350](https://github.com/yschimke/compose-preview-server/pull/350)), `:ui-builder` hiding a type
 its own public API is written in behind `implementation`
 ([#348](https://github.com/yschimke/compose-preview-server/pull/348)). Neither was a bad decision;
@@ -42,7 +42,7 @@ both were decisions nothing was checking.
 `:ui-builder-runtime` is inside the builder, not the server, even though `:server` links it. It is
 the builder's own service — design state, catalog validation, revision-pinned export — and the fact
 that the host links a service does not make the service part of the host. This is the one
-membership call worth stating: the alternative reading, "published and linked by the server, so
+membership call worth stating: the alternative reading, "linked by the server, so
 server-side", would have put the boundary in the middle of the builder's own stack.
 
 ## The rule
@@ -54,16 +54,16 @@ server-side", would have put the boundary in the middle of the builder's own sta
 2. **The server names only the seams.** `:server` and its siblings may depend on the UI-builder
    project through exactly four modules:
 
-   | Seam | Published as | What crosses |
-   | --- | --- | --- |
-   | `:ui-builder-runtime` | `compose-preview-ui-builder-runtime` | the service port and design state |
-   | `:ui-builder-export` | `compose-preview-ui-builder-export` | the design → screen-model projection |
-   | `:ui-builder-web` | `compose-preview-ui-builder-web` | the editor, as a Wasm distribution archive |
-   | `:ui-builder-render-bundle` | `compose-preview-ui-builder-render-bundle` | the packaged preview a design renders through |
+   | Seam | What crosses |
+   | --- | --- |
+   | `:ui-builder-runtime` | the service port and design state |
+   | `:ui-builder-export` | the design → screen-model projection |
+   | `:ui-builder-web` | the editor, as a Wasm distribution archive |
+   | `:ui-builder-render-bundle` | the packaged preview a design renders through |
 
-   The test for a seam is not "is it convenient": it is **published, with a POM a consumer outside
-   this repository could resolve.** If the server could not depend on it across a repository
-   boundary, it must not depend on it across this one.
+   The test for a seam is not "is it convenient": it is a deliberately named contract or packaged
+   distribution edge that the boundary check can keep narrow. This repository stopped publishing
+   Maven coordinates in #794, so resolvability from an external POM is no longer a criterion.
 
    `:ui-builder` itself is deliberately not a seam. The editor is reached as a distribution, never
    as a classpath.
@@ -103,5 +103,5 @@ agent-attribution gate uses for its own scanner.
 
 Moving a module between projects, or adding a seam, is a change to this document and to the lists in
 the script — in the same pull request as the code, so the reviewer sees the boundary move rather
-than discovering it later. Adding a seam means publishing the module first: the table above is a
-list of coordinates, not of conveniences.
+than discovering it later. The table above is a list of reviewed internal contracts and packaged
+artifacts, not a list of conveniences or Maven coordinates.
