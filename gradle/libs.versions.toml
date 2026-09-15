@@ -86,7 +86,7 @@ composeai-tools = "2.14.1"
 # Robolectric sandbox copy — `ClassCastException: PreviewOverrideOption cannot be cast to
 # PreviewOverrideOption`. Any catalog shipping an option-bearing knob hit it; nothing here changes
 # but the pin. 3.4.4 rides along (contracts 2.18.0, third-party-rc-embedded-player 1.61.1).
-composeai-preview-daemon = "3.4.5"
+composeai-preview-daemon = "3.4.7"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
