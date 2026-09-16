@@ -174,7 +174,6 @@ object WearScreenCodeExporter {
             appendLine("${INDENT}${INDENT}${INDENT}edgeButton = {")
             edgeButton.forEach { appendLine(it) }
             appendLine("${INDENT}${INDENT}${INDENT}},")
-            appendLine("${INDENT}${INDENT}${INDENT}},")
           }
           appendLine("${INDENT}${INDENT}) { contentPadding ->")
           body.forEach { appendLine(it) }

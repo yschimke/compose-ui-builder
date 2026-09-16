@@ -29,6 +29,36 @@ class WearComponentExportTest {
   private val pin = JsonObject(emptyMap())
   private val environment = JsonObject(emptyMap())
 
+  /**
+   * A cheap structural check on emitted Kotlin: brackets balance, and none closes before it opens.
+   *
+   * Not a parser, and deliberately not trying to be. It is the assertion that an emitter writing a
+   * stray closer fails, which is the class of bug that reaches "it renders fine and will not
+   * compile" — and string-presence assertions cannot see it by construction.
+   */
+  private fun assertBalanced(source: String) {
+    val pairs = mapOf(')' to '(', '}' to '{', ']' to '[')
+    val open = pairs.values.toSet()
+    val stack = ArrayDeque<Char>()
+    var line = 1
+    source.forEach { character ->
+      if (character == '\n') line++
+      when (character) {
+        in open -> stack.addLast(character)
+        in pairs.keys -> {
+          val expected = pairs.getValue(character)
+          val actual = stack.removeLastOrNull()
+          assertEquals(
+            expected,
+            actual,
+            "line $line closes `$character` with no matching `$expected` open:\n$source",
+          )
+        }
+      }
+    }
+    assertTrue(stack.isEmpty(), "unclosed ${stack.joinToString("")} at end of source:\n$source")
+  }
+
   private fun screenWith(vararg nodes: UiBuilderNode): UiBuilderDocument {
     val base = wearScreenUiBuilderDocument("activity", pin, environment)
     val list = base.nodes.getValue("wear-list")
@@ -328,6 +358,11 @@ class WearComponentExportTest {
 
     assertTrue("EdgeButton(onClick = {}, buttonSize = EdgeButtonSize.Medium)" in source, source)
     assertTrue("import androidx.wear.compose.material3.EdgeButtonSize" in source, source)
+    // And the result is Kotlin. The three assertions above all passed while the emitter wrote a
+    // second `},` after the `edgeButton` lambda, which closed an argument list that was already
+    // closed — so every Wear screen using this slot generated source that could not compile, and
+    // the only thing looking at it was checking for substrings.
+    assertBalanced(source)
   }
 
   /**

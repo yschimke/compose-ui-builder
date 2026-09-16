@@ -1,0 +1,1336 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "google-home-wear",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Google Home \u2014 Devices (Wear)",
+      "catalogPin": {
+        "systemId": "wear-m3",
+        "catalogRevision": "wear-screen-scaffold-v1",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 192,
+        "heightDp": 192,
+        "density": 2.0,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:wearos_small_round",
+          "id:wearos_xl_round"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-home-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "home-screen",
+        "componentId": "wear-m3/screen-scaffold",
+        "properties": {
+          "timeText": {
+            "type": "string",
+            "value": "10:10"
+          },
+          "scrollIndicator": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-home-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "home-list",
+        "componentId": "wear-m3/transforming-lazy-column",
+        "properties": {
+          "transformation": {
+            "type": "enum",
+            "value": "spec"
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-hdr-home",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "hdr-home",
+        "componentId": "wear-m3/list-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Home"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-home-summary",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "home-summary",
+        "componentId": "wear-m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "title"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "home-summary"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "hdr-home"
+    },
+    {
+      "operationId": "insert-home-summary-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-summary",
+        "slot": "content"
+      },
+      "node": {
+        "id": "home-summary-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-home-summary-line-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-summary-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "home-summary-line-0",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "2 lights on"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-home-summary-line-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-summary-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "home-summary-line-1",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Nest Hub \u00b7 21\u00b0C"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          }
+        }
+      },
+      "afterNodeId": "home-summary-line-0"
+    },
+    {
+      "operationId": "insert-sub-living",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "sub-living",
+        "componentId": "wear-m3/list-sub-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Living room"
+          }
+        }
+      },
+      "afterNodeId": "home-summary"
+    },
+    {
+      "operationId": "insert-living-lamp",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "living-lamp",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Floor lamp"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "On \u00b7 60%"
+          },
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      },
+      "afterNodeId": "sub-living"
+    },
+    {
+      "operationId": "insert-living-lamp-brightness",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "living-lamp-brightness",
+        "componentId": "wear-m3/slider",
+        "properties": {
+          "value": {
+            "type": "float",
+            "value": 6.0
+          },
+          "valueFrom": {
+            "type": "float",
+            "value": 0.0
+          },
+          "valueTo": {
+            "type": "float",
+            "value": 10.0
+          },
+          "steps": {
+            "type": "float",
+            "value": 9.0
+          },
+          "segmented": {
+            "type": "enum",
+            "value": "segmented"
+          }
+        }
+      },
+      "afterNodeId": "living-lamp"
+    },
+    {
+      "operationId": "insert-living-tv",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "living-tv",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "TV backlight"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "Off"
+          },
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "living-lamp-brightness"
+    },
+    {
+      "operationId": "insert-living-speaker",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "living-speaker",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Speaker"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "Playing"
+          },
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      },
+      "afterNodeId": "living-tv"
+    },
+    {
+      "operationId": "insert-sub-kitchen",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "sub-kitchen",
+        "componentId": "wear-m3/list-sub-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Kitchen"
+          }
+        }
+      },
+      "afterNodeId": "living-speaker"
+    },
+    {
+      "operationId": "insert-kitchen-ceiling",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "kitchen-ceiling",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Ceiling"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "On \u00b7 100%"
+          },
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      },
+      "afterNodeId": "sub-kitchen"
+    },
+    {
+      "operationId": "insert-kitchen-brightness",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "kitchen-brightness",
+        "componentId": "wear-m3/slider",
+        "properties": {
+          "value": {
+            "type": "float",
+            "value": 10.0
+          },
+          "valueFrom": {
+            "type": "float",
+            "value": 0.0
+          },
+          "valueTo": {
+            "type": "float",
+            "value": 10.0
+          },
+          "steps": {
+            "type": "float",
+            "value": 9.0
+          },
+          "segmented": {
+            "type": "enum",
+            "value": "segmented"
+          }
+        }
+      },
+      "afterNodeId": "kitchen-ceiling"
+    },
+    {
+      "operationId": "insert-kitchen-under-cabinet",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "kitchen-under-cabinet",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Under cabinet"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "Off"
+          },
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "kitchen-brightness"
+    },
+    {
+      "operationId": "insert-kitchen-nest",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "kitchen-nest",
+        "componentId": "wear-m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "plain"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "kitchen-nest"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "kitchen-under-cabinet"
+    },
+    {
+      "operationId": "insert-kitchen-nest-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "kitchen-nest",
+        "slot": "content"
+      },
+      "node": {
+        "id": "kitchen-nest-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-kitchen-nest-line-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "kitchen-nest-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "kitchen-nest-line-0",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Nest Mini"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-kitchen-nest-line-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "kitchen-nest-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "kitchen-nest-line-1",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Idle"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          }
+        }
+      },
+      "afterNodeId": "kitchen-nest-line-0"
+    },
+    {
+      "operationId": "insert-sub-bedroom",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "sub-bedroom",
+        "componentId": "wear-m3/list-sub-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Bedroom"
+          }
+        }
+      },
+      "afterNodeId": "kitchen-nest"
+    },
+    {
+      "operationId": "insert-bedroom-lamp",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "bedroom-lamp",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Bedside lamp"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "Off"
+          },
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "sub-bedroom"
+    },
+    {
+      "operationId": "insert-bedroom-fan",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "bedroom-fan",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Fan"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "On \u00b7 low"
+          },
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      },
+      "afterNodeId": "bedroom-lamp"
+    },
+    {
+      "operationId": "insert-bedroom-blinds",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "bedroom-blinds",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Blinds"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "Closed"
+          },
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "bedroom-fan"
+    },
+    {
+      "operationId": "insert-sub-thermostat",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "sub-thermostat",
+        "componentId": "wear-m3/list-sub-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Thermostat"
+          }
+        }
+      },
+      "afterNodeId": "bedroom-blinds"
+    },
+    {
+      "operationId": "insert-thermostat",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "thermostat",
+        "componentId": "wear-m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "title"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "thermostat"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "sub-thermostat"
+    },
+    {
+      "operationId": "insert-thermostat-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "thermostat",
+        "slot": "content"
+      },
+      "node": {
+        "id": "thermostat-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-thermostat-line-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "thermostat-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "thermostat-line-0",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "21\u00b0C"
+          },
+          "style": {
+            "type": "enum",
+            "value": "displaySmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-thermostat-line-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "thermostat-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "thermostat-line-1",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Heating to 22\u00b0C"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          }
+        }
+      },
+      "afterNodeId": "thermostat-line-0"
+    },
+    {
+      "operationId": "insert-thermostat-line-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "thermostat-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "thermostat-line-2",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Eco until 17:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          }
+        }
+      },
+      "afterNodeId": "thermostat-line-1"
+    },
+    {
+      "operationId": "insert-thermostat-target",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "thermostat-target",
+        "componentId": "wear-m3/slider",
+        "properties": {
+          "value": {
+            "type": "float",
+            "value": 22.0
+          },
+          "valueFrom": {
+            "type": "float",
+            "value": 15.0
+          },
+          "valueTo": {
+            "type": "float",
+            "value": 25.0
+          },
+          "steps": {
+            "type": "float",
+            "value": 9.0
+          },
+          "segmented": {
+            "type": "enum",
+            "value": "segmented"
+          }
+        }
+      },
+      "afterNodeId": "thermostat"
+    },
+    {
+      "operationId": "insert-sub-cameras",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "sub-cameras",
+        "componentId": "wear-m3/list-sub-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Cameras"
+          }
+        }
+      },
+      "afterNodeId": "thermostat-target"
+    },
+    {
+      "operationId": "insert-camera-front",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "camera-front",
+        "componentId": "wear-m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "app"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "camera-front"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "sub-cameras"
+    },
+    {
+      "operationId": "insert-camera-front-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "camera-front",
+        "slot": "content"
+      },
+      "node": {
+        "id": "camera-front-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-camera-front-line-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "camera-front-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "camera-front-line-0",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Front door"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-camera-front-line-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "camera-front-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "camera-front-line-1",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Person seen 4 min ago"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          }
+        }
+      },
+      "afterNodeId": "camera-front-line-0"
+    },
+    {
+      "operationId": "insert-camera-garden",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "camera-garden",
+        "componentId": "wear-m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "app"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "camera-garden"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "camera-front"
+    },
+    {
+      "operationId": "insert-camera-garden-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "camera-garden",
+        "slot": "content"
+      },
+      "node": {
+        "id": "camera-garden-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-camera-garden-line-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "camera-garden-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "camera-garden-line-0",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Garden"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-camera-garden-line-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "camera-garden-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "camera-garden-line-1",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Quiet"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          }
+        }
+      },
+      "afterNodeId": "camera-garden-line-0"
+    },
+    {
+      "operationId": "insert-sub-scenes",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "sub-scenes",
+        "componentId": "wear-m3/list-sub-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Scenes"
+          }
+        }
+      },
+      "afterNodeId": "camera-garden"
+    },
+    {
+      "operationId": "insert-scene-good-morning",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "scene-good-morning",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "sub-scenes"
+    },
+    {
+      "operationId": "insert-scene-good-morning-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "scene-good-morning",
+        "slot": "content"
+      },
+      "node": {
+        "id": "scene-good-morning-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Good morning"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-scene-movie",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "scene-movie",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "scene-good-morning"
+    },
+    {
+      "operationId": "insert-scene-movie-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "scene-movie",
+        "slot": "content"
+      },
+      "node": {
+        "id": "scene-movie-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Movie night"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-scene-away",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "scene-away",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "scene-movie"
+    },
+    {
+      "operationId": "insert-scene-away-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "scene-away",
+        "slot": "content"
+      },
+      "node": {
+        "id": "scene-away-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Away"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-scene-bedtime",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "scene-bedtime",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "scene-away"
+    },
+    {
+      "operationId": "insert-scene-bedtime-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "scene-bedtime",
+        "slot": "content"
+      },
+      "node": {
+        "id": "scene-bedtime-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Bedtime"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-sub-routines",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "sub-routines",
+        "componentId": "wear-m3/list-sub-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Routines"
+          }
+        }
+      },
+      "afterNodeId": "scene-bedtime"
+    },
+    {
+      "operationId": "insert-routine-sunset",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "routine-sunset",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Lights at sunset"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "Daily \u00b7 19:42"
+          },
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      },
+      "afterNodeId": "sub-routines"
+    },
+    {
+      "operationId": "insert-routine-away",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "routine-away",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Away mode"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "When everyone leaves"
+          },
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      },
+      "afterNodeId": "routine-sunset"
+    },
+    {
+      "operationId": "insert-routine-night",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "routine-night",
+        "componentId": "wear-m3/switch-button",
+        "properties": {
+          "label": {
+            "type": "string",
+            "value": "Night mode"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "value": "23:00"
+          },
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "routine-away"
+    },
+    {
+      "operationId": "insert-home-add",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-screen",
+        "slot": "edgeButton"
+      },
+      "node": {
+        "id": "home-add",
+        "componentId": "wear-m3/edge-button",
+        "properties": {
+          "size": {
+            "type": "enum",
+            "value": "small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-home-add-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "home-add",
+        "slot": "content"
+      },
+      "node": {
+        "id": "home-add-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "add"
+          }
+        }
+      }
+    }
+  ],
+  "expectedDocumentHash": "628b11474e383f1dd33bf70713b067861fe2282a203a5e7bba29ff2a64ab10c6"
+}

@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.fail
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -30,7 +31,35 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class DesignFixturesTest {
   private val json = Json { encodeDefaults = true }
-  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
+  /**
+   * The catalog a fixture pins, rather than one catalog for the whole directory.
+   *
+   * It was `m3-catalog` for everything, which was true while everything here was a mobile screen
+   * and silently wrong the moment one was not: a `wear-m3` design validated against a catalog that
+   * declares none of its components would fail with thirty "unknown component" issues, so the
+   * directory was effectively closed to every catalog but one. Both capability files already sit
+   * beside the designs and are already on this module's resources path, so the fixture's own
+   * `catalogPin.systemId` is enough to pick.
+   */
+  private val catalogs =
+    mutableMapOf<String, ee.schimke.composeai.uibuilder.capability.CapabilityCatalog>()
+
+  private fun catalogFor(systemId: String) =
+    catalogs.getOrPut(systemId) {
+      CapabilityCatalogParser.parse(resource("/$systemId-capabilities-v1.json"))
+    }
+
+  private fun File.pinnedCatalog() =
+    catalogFor(
+      (fixture()["operations"] as? kotlinx.serialization.json.JsonArray)?.firstNotNullOfOrNull {
+        operation ->
+        ((operation as? JsonObject)?.get("catalogPin") as? JsonObject)
+          ?.get("systemId")
+          ?.jsonPrimitive
+          ?.content
+      } ?: "m3-catalog"
+    )
+
   private val fixtures: List<File> =
     checkNotNull(designsDirectory().listFiles { file -> file.extension == "json" }) {
         "no designs directory at ${designsDirectory()}"
@@ -70,17 +99,35 @@ class DesignFixturesTest {
       val document = UiBuilderReducer.replay(file.fixture()).document
       assertEquals(
         emptyList(),
-        CapabilityValidator(catalog).validate(document).issues,
+        CapabilityValidator(file.pinnedCatalog()).validate(document).issues,
         "${file.name} no longer validates",
       )
     }
   }
 
+  /**
+   * Exported by whichever generator actually writes that design, which is not one generator.
+   *
+   * A Wear screen's `ScreenScaffold` takes a scroll state no component record can recover, and a
+   * Wear widget ships as Remote Compose, so both go through `RecordFreeExport` — the same call the
+   * editor's Code pane and the server's export make. Asking the record-driven exporter instead
+   * answers a question that design was never posed: every node came back `MISSING_CODE_CAPABILITY:
+   * no Kotlin symbol/import mapping exists`, which is true of that exporter and says nothing about
+   * the design.
+   */
   @Test
   fun `and therefore each exports as Compose`() {
     fixtures.forEach { file ->
       val document = UiBuilderReducer.replay(file.fixture()).document
-      val source = CapabilityComposeCodeExporter.export(document, catalog).requireSource()
+      val platform = file.pinnedCatalog().platform
+      val source =
+        when (val recordFree = RecordFreeExport.generate(document, platform)) {
+          is RecordFreeExport.Generated.Emitted -> recordFree.source
+          is RecordFreeExport.Generated.Refused ->
+            fail("${file.name} was refused by its own emitter: ${recordFree.reasons}")
+          null ->
+            CapabilityComposeCodeExporter.export(document, file.pinnedCatalog()).requireSource()
+        }
       assertTrue("@Composable" in source, "${file.name} exported no composable")
     }
   }
