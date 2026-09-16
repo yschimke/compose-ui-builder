@@ -91,11 +91,11 @@ internal fun SizedDesignFixture(designId: String) {
  * of reading this: it carries `Modifier.transformedHeight` and `SurfaceTransformation` on every
  * row.
  */
-@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@WearPreviewSmallRound
 @Composable
 fun GoogleHomeWearSmallPreview() = SizedDesignFixture("google-home-wear")
 
-@Preview(device = "spec:width=240dp,height=240dp,dpi=320")
+@WearPreviewLargeRound
 @Composable
 fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear")
 
@@ -111,10 +111,10 @@ fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear")
  * rest fall through to the undrawn-component placeholder, while its capability fixture declares
  * twenty-three of them `supported` (#907). The generated Kotlin is the half that is complete.
  */
-@Preview(device = "spec:width=192dp,height=760dp,dpi=320")
+@WearPreviewSmallRoundExtent
 @Composable
 fun GoogleHomeWearSmallExtentPreview() = SizedDesignFixture("google-home-wear")
 
-@Preview(device = "spec:width=240dp,height=760dp,dpi=320")
+@WearPreviewLargeRoundExtent
 @Composable
 fun GoogleHomeWearLargeExtentPreview() = SizedDesignFixture("google-home-wear")

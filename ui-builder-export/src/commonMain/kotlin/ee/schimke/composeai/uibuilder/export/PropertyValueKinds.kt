@@ -73,8 +73,8 @@ object PropertyValueKinds {
    * A property value is `{"type": <wrapper>, …}` and the set of wrappers is closed. It is assembled
    * from two enforcers rather than one, which is the fact that made it worth writing down:
    *
-   * - `CollaborationReducer`'s `propertyWrapperIssue` owns sixteen of them, and owns their
-   *   *shapes* — how many keys, which are numeric. It runs on `SetProperty` and nowhere else.
+   * - `CollaborationReducer`'s `propertyWrapperIssue` owns sixteen of them, and owns their *shapes*
+   *   — how many keys, which are numeric. It runs on `SetProperty` and nowhere else.
    * - `list` and `binding` are the repetition pair — a `layout/for-each`'s rows, and a row field
    *   read inside the loop. They arrive on **inserts**, which `propertyWrapperIssue` never sees,
    *   and their shapes are checked by `inspectUiBuilderArgumentBindings` instead.
