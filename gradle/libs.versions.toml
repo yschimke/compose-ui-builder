@@ -96,7 +96,29 @@ composeai-tools = "2.17.0"
 # but the pin. 3.4.4 rides along (contracts 2.18.0, third-party-rc-embedded-player 1.61.1).
 # 3.4.8 makes Glimmer Live start in touch mode, matching snapshots and physical devices, then enter
 # keyboard/focus mode only when pointer movement establishes gaze (compose-preview-daemon#111).
-composeai-preview-daemon = "3.6.0"
+#
+# 3.6.1 because 3.6.0's GITHUB RELEASE is a permanently empty draft, and this repository needs both
+# of a daemon release's channels, not one. Maven Central carries 3.6.0 fine -- the BOM and all
+# seventy coordinates resolve -- so Gradle never noticed. The preview-host image is what noticed:
+# its Dockerfile fetches `compose-preview-desktop-daemon-<version>.tar.gz` from
+# `releases/download/v<version>/`, which 404s for 3.6.0, and `--retry-all-errors` then spends ten
+# minutes retrying a 404 that cannot succeed before failing the build. That is what killed this
+# repository's v3.36.0 release and left preview.coo.ee unable to roll ANY new image.
+#
+# 3.6.0 will not heal: it is tagged, so its release cannot be re-cut, and its sidecars were never
+# attached (compose-preview-daemon#127 -- a `publish-maven` that uploaded to Central and then failed
+# on a protected-branch push, taking the `release` job with it). Moving forward is the only repair.
+#
+# 3.6.1 is verified on BOTH channels, which is the check this bump exists to make:
+#   * GitHub assets -- `compose-preview-desktop-daemon-3.6.1.tar.gz` (72.6 MB) and
+#     `compose-preview-android-daemon-3.6.1.zip` (248.9 MB), both present.
+#   * Maven Central -- the BOM pins all 70 coordinates at 3.6.1, a full publish with no gaps.
+#
+# NOT 3.7.0, which is published with its assets but whose Central sync had not landed when this was
+# written: every coordinate, the BOM included, still 404s there. Bumping to it would trade a broken
+# image build for a broken Gradle resolve. Renovate can take this line to 3.7.0 once Central catches
+# up, by which point it is a routine bump rather than the one unblocking a restart loop.
+composeai-preview-daemon = "3.6.1"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
