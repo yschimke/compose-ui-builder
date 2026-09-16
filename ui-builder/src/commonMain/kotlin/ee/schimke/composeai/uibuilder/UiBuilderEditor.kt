@@ -6693,6 +6693,7 @@ private fun InspectorBody(
         ScreenEnvironmentInspector(
           document = state.document,
           devicePresets = devicePresets,
+          platform = state.platform,
           variantAxes = state.variantAxes,
           variantsDrawn = variantsDrawn,
           onTextInputFocusChanged = onTextInputFocusChanged,
@@ -8114,6 +8115,8 @@ private fun NativeRenderFrame(
 private fun ScreenEnvironmentInspector(
   document: UiBuilderDocument,
   devicePresets: List<UiBuilderDevicePreset>,
+  /** The design's catalog platform, which decides which device families the pickers open on. */
+  platform: UiBuilderCatalogPlatform,
   /** The unstored axes the strip is drawing — see [UiBuilderEditorState.variantAxes]. */
   variantAxes: Set<EditorVariantAxis>,
   /**
@@ -8169,9 +8172,20 @@ private fun ScreenEnvironmentInspector(
     HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
   }
   if (devicePresets.isNotEmpty()) {
+    // The dock holds three controls that all name devices, and until now nothing said how they
+    // differ: one frame the design is measured in, a set of others to look at it on, and three
+    // ways of looking that are not devices at all. Three sibling headings and no sentence between
+    // them, so the only way to learn the split was to change something and watch what moved.
+    Text(
+      "One frame to build in, any number to check against.",
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+      modifier = Modifier.padding(bottom = 8.dp),
+    )
     DevicePresetPicker(
       presets = devicePresets,
       selected = current.matchingDevicePreset(devicePresets),
+      platform = platform,
       onPick = { preset ->
         // Width, height and density move together, in one dispatch, so the frame is one undoable
         // step — `updateEnvironment` folds the three `SetEnvironment` operations into a single
@@ -8188,6 +8202,7 @@ private fun ScreenEnvironmentInspector(
     ExportDevicePicker(
       presets = devicePresets,
       selected = current.exportDevices,
+      platform = platform,
       drawn = variantsDrawn,
       onToggle = { id ->
         // The whole set per edit, matching the protocol change and for its reason: a toggle that
@@ -8307,22 +8322,36 @@ private fun ScreenEnvironmentInspector(
   ) {
     Text("Apply screen settings")
   }
+  // Which is the other half of the confusion: the two device menus commit as you pick them and
+  // these fields do not, so a button sitting under all three looked like it applied all three —
+  // and picking a device, typing a width, then pressing it read as one action that was two.
+  Text(
+    "Applies the fields above. The device menus commit as you pick them.",
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+    modifier = Modifier.padding(top = 4.dp),
+  )
 }
 
 /**
  * The frame menu — grouped by device family, each entry carrying the geometry the render lane
  * resolves for it.
  *
- * Shows every device the catalog knows rather than a curated handful. A curated handful is exactly
- * the hand-maintained list this feature exists to avoid, and it is the list that goes stale the
- * first time the render catalog learns a device.
+ * Still backed by every device the catalog knows rather than a curated handful: a curated handful
+ * is the hand-maintained list this feature exists to avoid, and the one that goes stale the first
+ * time the render catalog learns a device. What is curated is only which families **open** — the
+ * design's own platform — with the rest one row away. Nothing is removed from the menu; the long
+ * tail is just no longer the first thing between you and a phone.
  */
 @Composable
 private fun DevicePresetPicker(
   presets: List<UiBuilderDevicePreset>,
   selected: UiBuilderDevicePreset?,
+  /** The design's platform, which decides which device families open by default. */
+  platform: UiBuilderCatalogPlatform,
   onPick: (UiBuilderDevicePreset) -> Unit,
 ) {
+  var showAll by remember { mutableStateOf(false) }
   var expanded by remember { mutableStateOf(false) }
   // "Set frame from" rather than "Device": picking one writes the width, the height and the density
   // and then stops mattering. The design does not become that device, which is why a frame that
@@ -8342,7 +8371,18 @@ private fun DevicePresetPicker(
       )
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-      presets.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
+      // The host serves every family it can render — 40-odd presets across phones, foldables,
+      // tablets, watches, desktops, TVs, cars and headsets — because the geometry comes from the
+      // render lane and the render lane does not care what you are authoring. The menus do: a
+      // mobile design has no use for a watch frame, and scrolling past eight families to find two
+      // phones was the whole of the difficulty here. So the design's own platform decides what
+      // opens, and **Show all devices** reveals the rest.
+      //
+      // The frame the design is already on is never hidden, even when it is off-platform: a menu
+      // that cannot show you where you are is worse than a long one.
+      val shown =
+        if (showAll) presets else presets.forPlatform(platform, listOfNotNull(selected?.id))
+      shown.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
         Text(
           group,
           Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp),
@@ -8372,6 +8412,20 @@ private fun DevicePresetPicker(
             },
           )
         }
+      }
+      if (!showAll && presets.size > shown.size) {
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        DropdownMenuItem(
+          text = {
+            Text(
+              "Show all devices (${presets.size - shown.size} more)",
+              style = MaterialTheme.typography.labelLarge,
+            )
+          },
+          // Stays open, unlike a device row: revealing the rest is not the choice, it is what you
+          // do just before making it.
+          onClick = { showAll = true },
+        )
       }
     }
   }
@@ -8433,11 +8487,14 @@ private fun VariantAxisPicker(
 private fun ExportDevicePicker(
   presets: List<UiBuilderDevicePreset>,
   selected: List<String>,
-  /** Whether the strip that draws these devices is on screen — see the heading below. */
+  /** The design's own platform, which decides which device families open by default. */
+  platform: UiBuilderCatalogPlatform,
+  /** Whether the strip that draws these devices is on screen — see the sentence below. */
   drawn: Boolean,
   onToggle: (String) -> Unit,
 ) {
   var expanded by remember { mutableStateOf(false) }
+  var showAll by remember { mutableStateOf(false) }
   // The list says what it does in both directions: it is still the set the export writes as
   // `@Preview(device = …)`, and it is also the set the workspace draws beside the design. Before
   // the
@@ -8454,18 +8511,28 @@ private fun ExportDevicePicker(
   // device this deployment does not offer would otherwise tell its author every exported target had
   // been looked at.
   val undrawable = selected.count { id -> presets.none { it.id == id } }
+  // One heading, always the same words. It used to gain and lose "shown" depending on whether the
+  // strip was drawn, which is a real difference said in a way you can only notice by comparison —
+  // nobody reads a heading twice. The difference is a sentence now, and the sentence is always
+  // there, so the control explains itself on the surface you are actually looking at.
   Text(
-    if (drawn && undrawable == 0) "Also shown and exported as" else "Also exported as",
+    "Also previewed at",
     style = MaterialTheme.typography.labelMedium,
     fontWeight = FontWeight.Bold,
   )
-  if (drawn && undrawable > 0) {
-    Text(
-      "$undrawable of these is not a device this host can draw, so it is exported without a pane.",
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-    )
-  }
+  Text(
+    when {
+      !drawn ->
+        "Written into the export as @Preview(device = …). Not drawn here: this design is on the " +
+          "host's renderer, which draws one frame. Switch to the builder's canvas to see them."
+      undrawable > 0 ->
+        "Drawn beside the design, and written into the export. $undrawable of them names a device " +
+          "this host cannot draw, so it is exported without a pane."
+      else -> "Drawn beside the design in the preview pane, and written into the export."
+    },
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+  )
   Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp)) {
     Button(
       onClick = { expanded = true },
@@ -8485,7 +8552,11 @@ private fun ExportDevicePicker(
       )
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-      presets.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
+      // Same rule as the frame menu above, with this menu's own notion of "already chosen": a
+      // ticked device is never hidden, because a tick you cannot find to clear is worse than a
+      // long menu — and that is the state a design arriving from MCP naming a TV can be in.
+      val shown = if (showAll) presets else presets.forPlatform(platform, selected)
+      shown.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
         Text(
           group,
           Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp),
@@ -8515,6 +8586,18 @@ private fun ExportDevicePicker(
             onClick = { onToggle(preset.id) },
           )
         }
+      }
+      if (!showAll && presets.size > shown.size) {
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        DropdownMenuItem(
+          text = {
+            Text(
+              "Show all devices (${presets.size - shown.size} more)",
+              style = MaterialTheme.typography.labelLarge,
+            )
+          },
+          onClick = { showAll = true },
+        )
       }
     }
   }

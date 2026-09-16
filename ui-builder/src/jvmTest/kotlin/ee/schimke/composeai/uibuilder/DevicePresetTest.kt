@@ -29,6 +29,48 @@ class DevicePresetTest {
   private val watch =
     UiBuilderDevicePreset("id:wearos_square", "Wear OS Square", "Wear OS", 180, 180, 2.0)
 
+  private val tv = UiBuilderDevicePreset("id:tv_1080p", "TV 1080p", "TV", 960, 540, 2.0)
+  private val fold =
+    UiBuilderDevicePreset("id:pixel_fold", "Pixel Fold", "Foldables", 841, 701, 2.625)
+
+  private val everything = listOf(phone, tablet, fold, watch, tv)
+
+  /**
+   * The host serves every family it can render, because the geometry comes from the render lane and
+   * the render lane does not care what is being authored. The menus do care, and this is the rule:
+   * a mobile design opens on handhelds, a Wear design on watches.
+   */
+  @Test
+  fun `a mobile design opens on handheld families only`() {
+    assertEquals(
+      listOf(phone, tablet, fold),
+      everything.forPlatform(UiBuilderCatalogPlatform.MOBILE),
+    )
+  }
+
+  @Test
+  fun `a Wear design opens on watches only`() {
+    assertEquals(listOf(watch), everything.forPlatform(UiBuilderCatalogPlatform.WEAR))
+  }
+
+  /** A widget body is drawn on a watch, so the Remote Compose catalog wants the watch frames. */
+  @Test
+  fun `a Remote Compose design opens on watches too`() {
+    assertEquals(listOf(watch), everything.forPlatform(UiBuilderCatalogPlatform.REMOTE_COMPOSE))
+  }
+
+  /**
+   * The one thing the filter must never do. A design arriving from MCP can name a device outside
+   * its platform's families, and a tick an author cannot find to clear is worse than a long menu.
+   */
+  @Test
+  fun `a device the design already names is never filtered away`() {
+    assertEquals(
+      listOf(phone, tablet, fold, tv),
+      everything.forPlatform(UiBuilderCatalogPlatform.MOBILE, keep = listOf("id:tv_1080p")),
+    )
+  }
+
   @Test
   fun `a preset replaces the frame and leaves the rest of the environment alone`() {
     val custom =

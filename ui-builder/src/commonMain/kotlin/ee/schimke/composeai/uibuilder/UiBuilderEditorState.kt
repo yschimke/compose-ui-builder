@@ -398,6 +398,15 @@ data class UiBuilderEditorState(
    */
   val selection: List<String> = emptyList(),
   val clipboard: EditorClipboard? = null,
+  /**
+   * What the pinned catalog authors for, carried so the inspector can ask without holding a
+   * catalog.
+   *
+   * The Screen dock needs it to decide which device families to open its menus on — a mobile design
+   * has no use for a watch frame — and the dock is three composables below anything that has a
+   * `CapabilityCatalog`. One field on the state beats threading a parameter through all three.
+   */
+  val platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.DEFAULT,
   val catalogQuery: String = "",
   /**
    * The insert panel's collapsed groups, by name.
@@ -1384,6 +1393,7 @@ class UiBuilderEditorReducer(
     UiBuilderEditorState(
       collaboration = CollaborationState(document),
       selection = listOfNotNull(selectedNodeId?.takeIf(document.nodes::containsKey)),
+      platform = catalog.platform,
     )
 
   /**

@@ -557,8 +557,23 @@ fun wearScreenEnvironment(environment: JsonObject): JsonObject =
       it["heightDp"] = JsonPrimitive(WEAR_SMALL_ROUND_DP)
       it["density"] = JsonPrimitive(WEAR_SMALL_ROUND_DENSITY)
       it["theme"] = JsonPrimitive("dark")
+      it["exportDevices"] = JsonArray(WEAR_EXPORT_DEVICES.map(::JsonPrimitive))
     }
   )
+
+/**
+ * The two round watches a Wear screen is checked on: 192dp and 240dp.
+ *
+ * Wear's layout question is where the list wraps, and it wraps differently at the small and the
+ * extra-large round — 48dp is a quarter of the small screen's width, so a row that fits one and not
+ * the other is the common case rather than a corner one. The screen opens *at* 192dp, the smaller
+ * of the two, because a list that works there works at 240 and not the other way round.
+ *
+ * Two rather than all four round sizes: 227dp sits between these and has never yet been the size
+ * that showed something 192 and 240 did not, and a default that draws four panes for a two-pane
+ * question spends the preview strip on nothing.
+ */
+private val WEAR_EXPORT_DEVICES = listOf("id:wearos_small_round", "id:wearos_xl_round")
 
 /**
  * [environment] on the frame a new mobile screen opens at: `pixel_6`.
@@ -580,7 +595,38 @@ fun mobileScreenEnvironment(environment: JsonObject): JsonObject =
       it["widthDp"] = JsonPrimitive(PIXEL_6_WIDTH_DP)
       it["heightDp"] = JsonPrimitive(PIXEL_6_HEIGHT_DP)
       it["density"] = JsonPrimitive(PIXEL_6_DENSITY)
+      it["exportDevices"] = JsonArray(MOBILE_EXPORT_DEVICES.map(::JsonPrimitive))
     }
+  )
+
+/**
+ * The five frames a new mobile screen is checked on, one per width the layout has to survive.
+ *
+ * Empty was the old default, which made "does this work on a phone?" a question you had to think to
+ * ask. These make it the thing you see. Real devices rather than round numbers, because the point
+ * of the strip is a frame somebody ships, and one per size class rather than per handset:
+ *
+ * |                  |          |why this one                                                                          |
+ * |------------------|----------|--------------------------------------------------------------------------------------|
+ * |`pixel_4a`        |393 × 851 |the narrowest real Pixel the render catalog knows — where a row runs out of room first|
+ * |`pixel_9`         |411 × 923 |the modal phone; four catalog entries share this geometry                             |
+ * |`pixel_9_pro_xl`  |438 × 997 |the widest phone, and the one whose 3.0 density catches dp-vs-px mistakes             |
+ * |`pixel_9_pro_fold`|791 × 819 |unfolded: the width where a pane scaffold is still deciding                           |
+ * |`pixel_tablet`    |1280 × 800|expanded, where two panes are the answer                                              |
+ *
+ * **What this set cannot cover**, and neither can any other set drawn from this catalog: a
+ * foldable's *outer* display. `pixel_9_pro_fold` is the inner screen, and the render catalog has no
+ * folded frame at all — so the one transition adaptive layout exists for, a device that is a narrow
+ * phone and then a small tablet, cannot be looked at here. Landscape is missing for the same
+ * reason: every preset is portrait, so a rotation is a hand-typed frame.
+ */
+private val MOBILE_EXPORT_DEVICES =
+  listOf(
+    "id:pixel_4a",
+    "id:pixel_9",
+    "id:pixel_9_pro_xl",
+    "id:pixel_9_pro_fold",
+    "id:pixel_tablet",
   )
 
 /** `pixel_6` from `DeviceDimensions`, which is what the frame menu matches this against. */

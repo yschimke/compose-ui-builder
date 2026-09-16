@@ -89,3 +89,54 @@ private fun Double.densityLabel(): String {
   val text = toString()
   return if (text.endsWith(".0")) text.dropLast(2) else text
 }
+
+/**
+ * The menu sections worth offering a design on this platform, in order.
+ *
+ * The host serves one device catalog for every catalog it hosts — 40-odd presets across eight
+ * families — because the geometry comes from the render lane and the render lane does not care what
+ * is being authored. The picker does care: a phone screen has no use for a watch frame, and a watch
+ * screen has no use for anything else. Offering all of them made the common choice a scroll through
+ * the uncommon ones.
+ *
+ * **Keyed on [UiBuilderCatalogPlatform], never on a catalog id**, which is the difference between
+ * this and the catalog knowledge `.github/scripts/ui-builder-catalog-literals.sh` exists to push
+ * out of these modules. `platform` is a declared contract field: a catalog says what it authors
+ * for, and this answers what that kind of screen runs on. A catalog the server learns tomorrow gets
+ * a sensible menu with no edit here, which a mapping from catalog ids could not offer.
+ *
+ * That said, and stated rather than reworded away, because a comment that stops naming a thing
+ * while still knowing it is the failure mode that gate documents: **this is still an opinion about
+ * devices held in this repository.** The policy schema already has the better home for it —
+ * `frame.seedDevice` is the same kind of claim, authored by the catalog — so when a catalog's own
+ * `ui-builder.policy.json` is the thing being read, the families it wants belong beside its seed
+ * device and this function becomes the fallback for a catalog that declares none.
+ *
+ * Sections rather than ids, so a device the render catalog learns lands in the right place for free
+ * — the same rule `UiBuilderDevicePresets.groupFor` follows on the server.
+ *
+ * It is a default, not a restriction. The picker's **Show all devices** row reveals the rest, and a
+ * design that already names a device outside these sections keeps it: an author who deliberately
+ * put a phone screen on a TV frame gets to keep that answer.
+ */
+fun UiBuilderCatalogPlatform.relevantDeviceGroups(): List<String> =
+  when (this) {
+    UiBuilderCatalogPlatform.MOBILE -> listOf("Phones", "Foldables", "Tablets")
+    // A widget body is drawn on a watch, so the widget catalog wants the watch frames too.
+    UiBuilderCatalogPlatform.WEAR,
+    UiBuilderCatalogPlatform.REMOTE_COMPOSE -> listOf("Wear OS")
+  }
+
+/**
+ * [presets] narrowed to what [platform] is for, plus anything [keep] already names.
+ *
+ * `keep` is the design's own `exportDevices`: a selection the picker hides is a selection whose
+ * tick an author cannot find to clear, which is worse than a long menu.
+ */
+fun List<UiBuilderDevicePreset>.forPlatform(
+  platform: UiBuilderCatalogPlatform,
+  keep: Collection<String> = emptyList(),
+): List<UiBuilderDevicePreset> {
+  val groups = platform.relevantDeviceGroups()
+  return filter { it.group in groups || it.id in keep }
+}
