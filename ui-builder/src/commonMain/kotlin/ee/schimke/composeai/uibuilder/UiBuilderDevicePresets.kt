@@ -45,6 +45,38 @@ fun ScreenEnvironmentSettings.withDevicePreset(
 ): ScreenEnvironmentSettings =
   copy(widthDp = preset.widthDp, heightDp = preset.heightDp, density = preset.density)
 
+/**
+ * [this] with the Screen dock's seven typed fields applied, and everything else carried forward.
+ *
+ * A `copy`, for the same reason [withDevicePreset] is one. The dock has three writers for this
+ * object — the frame menu, the export-device picker and the Apply button — and the two that build a
+ * *fresh* `ScreenEnvironmentSettings` from what they own silently reset what they do not. Apply did
+ * exactly that to `exportDevices`: the field defaults to the empty list, `updateEnvironment`
+ * compares it against the document's and cannot tell "the author did not touch the devices" from
+ * "the author cleared the devices", so every Apply wrote the clear (#903).
+ *
+ * Going through here instead means a field added to this class later is carried by default, and
+ * forgetting it is a compile error at the call site rather than quiet data loss at the dock.
+ */
+fun ScreenEnvironmentSettings.withScreenFields(
+  widthDp: Int,
+  heightDp: Int,
+  density: Double,
+  fontScale: Double,
+  locale: String,
+  theme: EditorScreenTheme,
+  layoutDirection: EditorLayoutDirection,
+): ScreenEnvironmentSettings =
+  copy(
+    widthDp = widthDp,
+    heightDp = heightDp,
+    density = density,
+    fontScale = fontScale,
+    locale = locale,
+    theme = theme,
+    layoutDirection = layoutDirection,
+  )
+
 /** The preset [this] currently sits on, or null when the frame has been hand-edited. */
 fun ScreenEnvironmentSettings.matchingDevicePreset(
   presets: List<UiBuilderDevicePreset>

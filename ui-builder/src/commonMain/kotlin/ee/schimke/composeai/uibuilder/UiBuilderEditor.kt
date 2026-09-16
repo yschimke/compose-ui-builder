@@ -8287,8 +8287,11 @@ private fun ScreenEnvironmentInspector(
   }
   Button(
     onClick = {
+      // `current.withScreenFields`, never a fresh `ScreenEnvironmentSettings`: this button owns
+      // seven fields and the dock's object has more, so building one from scratch here resets
+      // whatever the other writers own. That is #903 — every Apply cleared `exportDevices`.
       val parsed =
-        ScreenEnvironmentSettings(
+        current.withScreenFields(
           widthDp = width.toIntOrNull() ?: Int.MIN_VALUE,
           heightDp = height.toIntOrNull() ?: Int.MIN_VALUE,
           density = density.toDoubleOrNull() ?: Double.NaN,

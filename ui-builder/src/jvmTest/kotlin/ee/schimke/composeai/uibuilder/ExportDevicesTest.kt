@@ -77,6 +77,78 @@ class ExportDevicesTest {
     )
   }
 
+  /**
+   * #903: the Apply button used to build a fresh `ScreenEnvironmentSettings` from the seven fields
+   * it owns, so the empty default of every field it does not own was written over the document.
+   * `exportDevices` was the one that hurt — pick two devices, change the density, press Apply, and
+   * the devices were gone with no rejection and no undo step naming them.
+   *
+   * The assertion is on the helper the dock now goes through rather than on the dock, because the
+   * bug was never in the reducer: it faithfully wrote the empty list it was handed.
+   */
+  @Test
+  fun `applying the screen fields keeps the devices the picker chose`() {
+    val chosen =
+      document
+        .screenEnvironmentSettings()
+        .copy(exportDevices = listOf("id:pixel_3_xl", "id:pixel_9_pro"))
+
+    val applied =
+      chosen.withScreenFields(
+        widthDp = 1280,
+        heightDp = 800,
+        density = 2.0,
+        fontScale = 1.0,
+        locale = "en-US",
+        theme = EditorScreenTheme.Light,
+        layoutDirection = EditorLayoutDirection.Ltr,
+      )
+
+    assertEquals(listOf("id:pixel_3_xl", "id:pixel_9_pro"), applied.exportDevices)
+    assertEquals(2.0, applied.density)
+  }
+
+  /** And the reducer therefore writes only the field that moved, leaving the devices untouched. */
+  @Test
+  fun `an apply that changes only the density leaves the chosen devices in the document`() {
+    val initial = reducer.initial(document, selectedNodeId = null)
+    val withDevices =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.UpdateEnvironment(
+          initial.document.screenEnvironmentSettings().copy(exportDevices = listOf("id:pixel_6"))
+        ),
+      )
+    val current = withDevices.document.screenEnvironmentSettings()
+
+    val applied =
+      reducer.reduce(
+        withDevices,
+        UiBuilderEditorEvent.UpdateEnvironment(
+          current.withScreenFields(
+            widthDp = current.widthDp,
+            heightDp = current.heightDp,
+            density = 2.0,
+            fontScale = current.fontScale,
+            locale = current.locale,
+            theme = current.theme,
+            layoutDirection = current.layoutDirection,
+          )
+        ),
+      )
+
+    assertEquals(
+      listOf("id:pixel_6"),
+      applied.document.screenEnvironmentSettings().exportDevices,
+    )
+    val submission =
+      assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(withDevices, applied))
+    assertEquals(
+      listOf("density"),
+      submission.command.operations.map { assertIs<DesignOperation.SetEnvironment>(it).field },
+    )
+  }
+
   @Test
   fun `a chosen set reaches the wire as one Set change`() {
     val changes = environmentChanges(listOf("id:pixel_6", "id:pixel_tablet"))
