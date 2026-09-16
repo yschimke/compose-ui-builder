@@ -69,7 +69,15 @@ graphics-shapes = "1.1.0"
 # (compose-ai-tools#5436); 2.13.1 is the design-pages kit guard (m3-catalog#398). Bumped by hand
 # rather than waiting for Renovate because the preview-host image resolves `tools_version` from
 # this line at release time, so the image ships whatever it says when 3.28.0 is cut.
-composeai-tools = "2.15.0"
+#
+# 2.17.0 is required by the daemon bump below, not optional alongside it. `render-host` carries
+# `ServeDesignPageStore`, and 2.15.0 was compiled against `preview-data-api` 3.4.x, whose
+# `DesignPage` is a seven-field data class. Daemon 3.5.0 added `layers` and the two `PageBlendMode`
+# fields, so the `copy$default` signature `render-host` 2.15.0 calls no longer exists and every
+# design-page test dies with `NoSuchMethodError` at `ServeDesignPages.kt:158`. 2.17.0 is compiled
+# against `preview-data-api` 3.5.0 and so is binary-compatible with 3.6.0. The tools line and the
+# daemon line are a matched set across this boundary; move them together.
+composeai-tools = "2.17.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
