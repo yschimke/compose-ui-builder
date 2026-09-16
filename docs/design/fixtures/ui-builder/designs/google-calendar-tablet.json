@@ -1,0 +1,5646 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "google-calendar-tablet",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Google Calendar \u2014 Day and month (tablet)",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 1280,
+        "heightDp": 800,
+        "density": 1,
+        "theme": "light",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:pixel_tablet",
+          "id:pixel_fold",
+          "id:pixel_7"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-root",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "root",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-rail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 88
+          },
+          {
+            "type": "fillMaxHeight"
+          },
+          {
+            "type": "background",
+            "color": {
+              "type": "colorToken",
+              "value": "surfaceContainerLow"
+            }
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 12,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-day",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-day",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-day-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-day",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-day-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          },
+          {
+            "type": "background",
+            "color": {
+              "type": "colorToken",
+              "value": "surfaceContainerHighest"
+            },
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-day-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-day-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-day-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/viewDay"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Day"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-day-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-day",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-day-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Day"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      },
+      "afterNodeId": "cal-rail-day-pill"
+    },
+    {
+      "operationId": "insert-cal-rail-week",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-week",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-rail-day"
+    },
+    {
+      "operationId": "insert-cal-rail-week-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-week",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-week-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-week-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-week-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-week-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/viewWeek"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Week"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-week-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-week",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-week-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Week"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "cal-rail-week-pill"
+    },
+    {
+      "operationId": "insert-cal-rail-month",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-month",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-rail-week"
+    },
+    {
+      "operationId": "insert-cal-rail-month-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-month",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-month-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-month-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-month-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-month-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/calendarMonth"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Month"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-month-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-month",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-month-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Month"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "cal-rail-month-pill"
+    },
+    {
+      "operationId": "insert-cal-rail-tasks",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-tasks",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-rail-month"
+    },
+    {
+      "operationId": "insert-cal-rail-tasks-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-tasks",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-tasks-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-tasks-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-tasks-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-tasks-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/checkCircle"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Tasks"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-rail-tasks-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-rail-tasks",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-rail-tasks-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Tasks"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "cal-rail-tasks-pill"
+    },
+    {
+      "operationId": "insert-cal-panes",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-panes",
+        "componentId": "layout/supporting-pane-scaffold",
+        "properties": {
+          "layoutMode": {
+            "type": "enum",
+            "value": "expandedTwoPane"
+          },
+          "mainPaneVisible": {
+            "type": "bool",
+            "value": true
+          },
+          "supportingPaneVisible": {
+            "type": "bool",
+            "value": true
+          },
+          "mainPanePreferredWidthDp": {
+            "type": "float",
+            "value": 760.0
+          },
+          "supportingPanePreferredWidthDp": {
+            "type": "float",
+            "value": 380.0
+          },
+          "paneSpacingDp": {
+            "type": "float",
+            "value": 12.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "cal-rail"
+    },
+    {
+      "operationId": "insert-cal-day",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-panes",
+        "slot": "mainPane"
+      },
+      "node": {
+        "id": "cal-day",
+        "componentId": "layout/scaffold"
+      }
+    },
+    {
+      "operationId": "insert-cal-bar",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day",
+        "slot": "topBar"
+      },
+      "node": {
+        "id": "cal-bar",
+        "componentId": "m3/center-aligned-top-app-bar",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-bar-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-bar",
+        "slot": "title"
+      },
+      "node": {
+        "id": "cal-bar-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "May 2024"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-day-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-head",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-head",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 12.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 4,
+            "endDp": 24,
+            "bottomDp": 12
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-head",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Thursday 16 May"
+          },
+          "style": {
+            "type": "enum",
+            "value": "headlineSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "medium"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-search-button",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-head",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-search-button",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "standard"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Search"
+          }
+        }
+      },
+      "afterNodeId": "cal-day-title"
+    },
+    {
+      "operationId": "insert-cal-search-button-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-search-button",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-search-button-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/search"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-refresh-button",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-head",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-refresh-button",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "standard"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Refresh"
+          }
+        }
+      },
+      "afterNodeId": "cal-search-button"
+    },
+    {
+      "operationId": "insert-cal-refresh-button-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-refresh-button",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-refresh-button-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/refresh"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Refresh"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-add-button",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-head",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-add-button",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Create"
+          }
+        }
+      },
+      "afterNodeId": "cal-refresh-button"
+    },
+    {
+      "operationId": "insert-cal-add-button-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-add-button",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-add-button-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/add"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Create"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-hours",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-hours",
+        "componentId": "layout/lazy-column",
+        "properties": {
+          "scrollStateKey": {
+            "type": "string",
+            "value": "calendar-day-hours"
+          },
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 0,
+            "endDp": 0,
+            "bottomDp": 32
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-head"
+    },
+    {
+      "operationId": "insert-cal-slot-0800",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-0800",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-0800-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-0800",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-0800-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "08:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-0800-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-0800",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-0800-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-0800-label"
+    },
+    {
+      "operationId": "insert-cal-slot-0800-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-0800-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-0800-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-0900",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-0900",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-0800"
+    },
+    {
+      "operationId": "insert-cal-slot-0900-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-0900",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-0900-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "09:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-0900-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-0900",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-0900-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-0900-label"
+    },
+    {
+      "operationId": "insert-cal-slot-0900-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-0900-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-0900-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-0900",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-0900-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-0900",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-0900-rule"
+    },
+    {
+      "operationId": "insert-cal-event-0900-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-0900",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-event-0900-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 8,
+            "endDp": 12,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-0900-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-0900-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-0900-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Design review \u2014 adaptive panes"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-event-0900-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-0900-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-0900-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "09:00 \u2013 10:00 \u00b7 Meet"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        }
+      },
+      "afterNodeId": "cal-event-0900-title"
+    },
+    {
+      "operationId": "insert-cal-slot-1000",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1000",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-0900"
+    },
+    {
+      "operationId": "insert-cal-slot-1000-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1000",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1000-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "10:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1000-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1000",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1000-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1000-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1000-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1000-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1000-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1000",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1000-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1000",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1000-rule"
+    },
+    {
+      "operationId": "insert-cal-event-1000-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1000",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-event-1000-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 8,
+            "endDp": 12,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1000-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1000-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1000-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Catalog audit with Priya"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1000-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1000-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1000-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "10:00 \u2013 10:45 \u00b7 Room 4"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        }
+      },
+      "afterNodeId": "cal-event-1000-title"
+    },
+    {
+      "operationId": "insert-cal-slot-1100",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1100",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1000"
+    },
+    {
+      "operationId": "insert-cal-slot-1100-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1100",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1100-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "11:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1100-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1100",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1100-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1100-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1100-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1100-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1100-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1200",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1200",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1100"
+    },
+    {
+      "operationId": "insert-cal-slot-1200-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1200",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1200-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "12:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1200-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1200",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1200-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1200-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1200-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1200-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1200-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1200",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1200-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1200",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1200-rule"
+    },
+    {
+      "operationId": "insert-cal-event-1200-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1200",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-event-1200-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 8,
+            "endDp": 12,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1200-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1200-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1200-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Lunch"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1200-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1200-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1200-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "12:00 \u2013 13:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        }
+      },
+      "afterNodeId": "cal-event-1200-title"
+    },
+    {
+      "operationId": "insert-cal-slot-1300",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1300",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1200"
+    },
+    {
+      "operationId": "insert-cal-slot-1300-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1300",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1300-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "13:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1300-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1300",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1300-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1300-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1300-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1300-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1300-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1400",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1400",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1300"
+    },
+    {
+      "operationId": "insert-cal-slot-1400-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1400",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1400-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "14:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1400-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1400",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1400-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1400-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1400-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1400-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1400-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1400",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1400-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1400",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1400-rule"
+    },
+    {
+      "operationId": "insert-cal-event-1400-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1400",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-event-1400-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 8,
+            "endDp": 12,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1400-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1400-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1400-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Tablet layout spike"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1400-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1400-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1400-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "14:00 \u2013 15:30 \u00b7 Focus time"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        }
+      },
+      "afterNodeId": "cal-event-1400-title"
+    },
+    {
+      "operationId": "insert-cal-slot-1500",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1500",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1400"
+    },
+    {
+      "operationId": "insert-cal-slot-1500-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1500",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1500-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "15:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1500-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1500",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1500-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1500-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1500-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1500-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1500-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1600",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1600",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1500"
+    },
+    {
+      "operationId": "insert-cal-slot-1600-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1600",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1600-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "16:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1600-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1600",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1600-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1600-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1600-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1600-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1600-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1600",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1600-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1600",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1600-rule"
+    },
+    {
+      "operationId": "insert-cal-event-1600-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1600",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-event-1600-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 8,
+            "endDp": 12,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1600-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1600-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1600-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Weekly sync"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-event-1600-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-event-1600-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-event-1600-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "16:00 \u2013 16:30 \u00b7 Meet"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        }
+      },
+      "afterNodeId": "cal-event-1600-title"
+    },
+    {
+      "operationId": "insert-cal-slot-1700",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-hours",
+        "slot": "items"
+      },
+      "node": {
+        "id": "cal-slot-1700",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "height",
+            "heightDp": 72
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "topDp": 0,
+            "endDp": 24,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1600"
+    },
+    {
+      "operationId": "insert-cal-slot-1700-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1700",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1700-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "17:00"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 48
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-slot-1700-lane",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1700",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1700-lane",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          },
+          {
+            "type": "fillMaxHeight"
+          }
+        ]
+      },
+      "afterNodeId": "cal-slot-1700-label"
+    },
+    {
+      "operationId": "insert-cal-slot-1700-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-slot-1700-lane",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-slot-1700-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "align",
+            "alignment": "topStart"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-side",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-panes",
+        "slot": "supportingPane"
+      },
+      "node": {
+        "id": "cal-side",
+        "componentId": "layout/scaffold"
+      }
+    },
+    {
+      "operationId": "insert-cal-side-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side",
+        "slot": "content"
+      },
+      "node": {
+        "id": "cal-side-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 16.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "verticalScroll"
+          },
+          {
+            "type": "padding",
+            "startDp": 20,
+            "topDp": 20,
+            "endDp": 20,
+            "bottomDp": 24
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-mini-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-mini-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "May 2024"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleMedium"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-mini-weekdays",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-mini-weekdays",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          },
+          "horizontalArrangement": {
+            "type": "enum",
+            "value": "spaceBetween"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-mini-title"
+    },
+    {
+      "operationId": "insert-cal-weekday-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-weekdays",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-weekday-0",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "M"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 36
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-weekday-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-weekdays",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-weekday-1",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "T"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-weekday-0"
+    },
+    {
+      "operationId": "insert-cal-weekday-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-weekdays",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-weekday-2",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "W"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-weekday-1"
+    },
+    {
+      "operationId": "insert-cal-weekday-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-weekdays",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-weekday-3",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "T"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-weekday-2"
+    },
+    {
+      "operationId": "insert-cal-weekday-4",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-weekdays",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-weekday-4",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "F"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-weekday-3"
+    },
+    {
+      "operationId": "insert-cal-weekday-5",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-weekdays",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-weekday-5",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "S"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-weekday-4"
+    },
+    {
+      "operationId": "insert-cal-weekday-6",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-weekdays",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-weekday-6",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "S"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-weekday-5"
+    },
+    {
+      "operationId": "insert-cal-mini-grid",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-mini-grid",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-mini-weekdays"
+    },
+    {
+      "operationId": "insert-cal-week-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-grid",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-week-0",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          },
+          "horizontalArrangement": {
+            "type": "enum",
+            "value": "spaceBetween"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-1",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-1-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-1-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "1"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-2",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-1"
+    },
+    {
+      "operationId": "insert-cal-day-2-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-2-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "2"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-3",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-2"
+    },
+    {
+      "operationId": "insert-cal-day-3-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-3-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "3"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-4",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-4",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-3"
+    },
+    {
+      "operationId": "insert-cal-day-4-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-4-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "4"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-5",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-5",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-4"
+    },
+    {
+      "operationId": "insert-cal-day-5-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-5",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-5-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "5"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-6",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-6",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-5"
+    },
+    {
+      "operationId": "insert-cal-day-6-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-6",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-6-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "6"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-7",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-7",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-6"
+    },
+    {
+      "operationId": "insert-cal-day-7-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-7",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-7-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "7"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-week-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-grid",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-week-1",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          },
+          "horizontalArrangement": {
+            "type": "enum",
+            "value": "spaceBetween"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-week-0"
+    },
+    {
+      "operationId": "insert-cal-day-8",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-8",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-8-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-8",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-8-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "8"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-9",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-9",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-8"
+    },
+    {
+      "operationId": "insert-cal-day-9-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-9",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-9-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "9"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-10",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-10",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-9"
+    },
+    {
+      "operationId": "insert-cal-day-10-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-10",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-10-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "10"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-11",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-11",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-10"
+    },
+    {
+      "operationId": "insert-cal-day-11-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-11",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-11-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "11"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-12",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-12",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-11"
+    },
+    {
+      "operationId": "insert-cal-day-12-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-12",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-12-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "12"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-13",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-13",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-12"
+    },
+    {
+      "operationId": "insert-cal-day-13-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-13",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-13-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "13"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-14",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-14",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-13"
+    },
+    {
+      "operationId": "insert-cal-day-14-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-14",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-14-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "14"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-week-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-grid",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-week-2",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          },
+          "horizontalArrangement": {
+            "type": "enum",
+            "value": "spaceBetween"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-week-1"
+    },
+    {
+      "operationId": "insert-cal-day-15",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-15",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-15-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-15",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-15-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "15"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-16",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-16",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          },
+          {
+            "type": "background",
+            "color": {
+              "type": "colorToken",
+              "value": "primary"
+            },
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-15"
+    },
+    {
+      "operationId": "insert-cal-day-16-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-16",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-16-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "16"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onPrimary"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-17",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-17",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-16"
+    },
+    {
+      "operationId": "insert-cal-day-17-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-17",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-17-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "17"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-18",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-18",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-17"
+    },
+    {
+      "operationId": "insert-cal-day-18-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-18",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-18-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "18"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-19",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-19",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-18"
+    },
+    {
+      "operationId": "insert-cal-day-19-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-19",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-19-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "19"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-20",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-20",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-19"
+    },
+    {
+      "operationId": "insert-cal-day-20-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-20",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-20-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "20"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-21",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-21",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-20"
+    },
+    {
+      "operationId": "insert-cal-day-21-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-21",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-21-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "21"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-week-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-grid",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-week-3",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          },
+          "horizontalArrangement": {
+            "type": "enum",
+            "value": "spaceBetween"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-week-2"
+    },
+    {
+      "operationId": "insert-cal-day-22",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-22",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-22-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-22",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-22-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "22"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-23",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-23",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-22"
+    },
+    {
+      "operationId": "insert-cal-day-23-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-23",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-23-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "23"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-24",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-24",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-23"
+    },
+    {
+      "operationId": "insert-cal-day-24-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-24",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-24-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "24"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-25",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-25",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-24"
+    },
+    {
+      "operationId": "insert-cal-day-25-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-25",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-25-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "25"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-26",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-26",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-25"
+    },
+    {
+      "operationId": "insert-cal-day-26-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-26",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-26-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "26"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-27",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-27",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-26"
+    },
+    {
+      "operationId": "insert-cal-day-27-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-27",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-27-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "27"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-28",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-28",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-27"
+    },
+    {
+      "operationId": "insert-cal-day-28-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-28",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-28-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "28"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-week-4",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-mini-grid",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-week-4",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          },
+          "horizontalArrangement": {
+            "type": "enum",
+            "value": "spaceBetween"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-week-3"
+    },
+    {
+      "operationId": "insert-cal-day-29",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-29",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-cal-day-29-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-29",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-29-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "29"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-30",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-30",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-29"
+    },
+    {
+      "operationId": "insert-cal-day-30-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-30",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-30-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "30"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-day-31",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-31",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          },
+          {
+            "type": "clip",
+            "shape": "18"
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-30"
+    },
+    {
+      "operationId": "insert-cal-day-31-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-day-31",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-day-31-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "31"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          },
+          "alignment": {
+            "type": "enum",
+            "value": "center"
+          },
+          "textAlign": {
+            "type": "enum",
+            "value": "center"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-blank-4-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-blank-4-3",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-day-31"
+    },
+    {
+      "operationId": "insert-cal-blank-4-4",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-blank-4-4",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-blank-4-3"
+    },
+    {
+      "operationId": "insert-cal-blank-4-5",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-blank-4-5",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-blank-4-4"
+    },
+    {
+      "operationId": "insert-cal-blank-4-6",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-week-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-blank-4-6",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 36,
+            "heightDp": 36
+          }
+        ]
+      },
+      "afterNodeId": "cal-blank-4-5"
+    },
+    {
+      "operationId": "insert-cal-side-rule",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-side-rule",
+        "componentId": "m3/horizontal-divider",
+        "properties": {
+          "thicknessDp": {
+            "type": "float",
+            "value": 1.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "outlineVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-mini-grid"
+    },
+    {
+      "operationId": "insert-cal-next-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Up next"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      },
+      "afterNodeId": "cal-side-rule"
+    },
+    {
+      "operationId": "insert-cal-next-review",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-review",
+        "componentId": "m3/list-item",
+        "properties": {
+          "startAccentColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-next-title"
+    },
+    {
+      "operationId": "insert-cal-next-review-headline",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-review",
+        "slot": "headline"
+      },
+      "node": {
+        "id": "cal-next-review-headline",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Design review \u2014 adaptive panes"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-review-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-review",
+        "slot": "supporting"
+      },
+      "node": {
+        "id": "cal-next-review-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "09:00 \u00b7 Meet"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-audit",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-audit",
+        "componentId": "m3/list-item",
+        "properties": {
+          "startAccentColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-next-review"
+    },
+    {
+      "operationId": "insert-cal-next-audit-headline",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-audit",
+        "slot": "headline"
+      },
+      "node": {
+        "id": "cal-next-audit-headline",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Catalog audit with Priya"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-audit-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-audit",
+        "slot": "supporting"
+      },
+      "node": {
+        "id": "cal-next-audit-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "10:00 \u00b7 Room 4"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-spike",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-side-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-spike",
+        "componentId": "m3/list-item",
+        "properties": {
+          "startAccentColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "cal-next-audit"
+    },
+    {
+      "operationId": "insert-cal-next-spike-headline",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-spike",
+        "slot": "headline"
+      },
+      "node": {
+        "id": "cal-next-spike-headline",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Tablet layout spike"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-spike-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-spike",
+        "slot": "supporting"
+      },
+      "node": {
+        "id": "cal-next-spike-detail",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "14:00 \u00b7 Focus time"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    }
+  ],
+  "expectedDocumentHash": "279e98079d3eb953a1a9dd6b4caa40fada2e6f649ea591d3733b56384c14c708"
+}

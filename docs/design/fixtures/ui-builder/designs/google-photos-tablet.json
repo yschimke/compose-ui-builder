@@ -1,0 +1,1958 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "google-photos-tablet",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Google Photos \u2014 Library grid (tablet)",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 1280,
+        "heightDp": 800,
+        "density": 1,
+        "theme": "light",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:pixel_tablet",
+          "id:pixel_fold",
+          "id:pixel_7"
+        ]
+      },
+      "stateVariables": {
+        "photoQuery": {
+          "type": "value",
+          "valueType": "string",
+          "initialValue": "",
+          "nullable": false,
+          "persistence": "preview"
+        }
+      }
+    },
+    {
+      "operationId": "insert-root",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "root",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-rail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 88
+          },
+          {
+            "type": "fillMaxHeight"
+          },
+          {
+            "type": "background",
+            "color": {
+              "type": "colorToken",
+              "value": "surfaceContainerLow"
+            }
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 12,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-photos",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-photos",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-photos-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-photos",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-photos-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          },
+          {
+            "type": "background",
+            "color": {
+              "type": "colorToken",
+              "value": "surfaceContainerHighest"
+            },
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-photos-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-photos-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-photos-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/photo"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Photos"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-photos-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-photos",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-photos-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Photos"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      },
+      "afterNodeId": "photos-rail-photos-pill"
+    },
+    {
+      "operationId": "insert-photos-rail-search",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-search",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "photos-rail-photos"
+    },
+    {
+      "operationId": "insert-photos-rail-search-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-search",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-search-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-search-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-search-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-search-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/imageSearch"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Search"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-search-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-search",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-search-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Search"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "photos-rail-search-pill"
+    },
+    {
+      "operationId": "insert-photos-rail-collections",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-collections",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "photos-rail-search"
+    },
+    {
+      "operationId": "insert-photos-rail-collections-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-collections",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-collections-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-collections-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-collections-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-collections-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/photoAlbum"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Collections"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-collections-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-collections",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-collections-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Collections"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "photos-rail-collections-pill"
+    },
+    {
+      "operationId": "insert-photos-rail-sharing",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-sharing",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "photos-rail-collections"
+    },
+    {
+      "operationId": "insert-photos-rail-sharing-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-sharing",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-sharing-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-sharing-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-sharing-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-sharing-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/cloudUpload"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Sharing"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-rail-sharing-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-rail-sharing",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-rail-sharing-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Sharing"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "photos-rail-sharing-pill"
+    },
+    {
+      "operationId": "insert-photos-screen",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-screen",
+        "componentId": "layout/scaffold",
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "photos-rail"
+    },
+    {
+      "operationId": "insert-photos-search",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-screen",
+        "slot": "topBar"
+      },
+      "node": {
+        "id": "photos-search",
+        "componentId": "m3/search-bar",
+        "properties": {
+          "expanded": {
+            "type": "bool",
+            "value": false
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 8,
+            "endDp": 12,
+            "bottomDp": 4
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-search-field",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-search",
+        "slot": "inputField"
+      },
+      "node": {
+        "id": "photos-search-field",
+        "componentId": "m3/search-input-field",
+        "properties": {
+          "value": {
+            "type": "state",
+            "variable": "photoQuery"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-search-placeholder",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-search-field",
+        "slot": "placeholder"
+      },
+      "node": {
+        "id": "photos-search-placeholder",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Search your photos"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-search-leading",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-search-field",
+        "slot": "leadingIcon"
+      },
+      "node": {
+        "id": "photos-search-leading",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/search"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-search-trailing",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-search-field",
+        "slot": "trailingIcon"
+      },
+      "node": {
+        "id": "photos-search-trailing",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/accountCircle"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Google Account"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "photos-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-chips",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-chips",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 4,
+            "endDp": 16,
+            "bottomDp": 8
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-people",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chips",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-chip-people",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-people-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-people",
+        "slot": "label"
+      },
+      "node": {
+        "id": "photos-chip-people-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "People"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-people-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-people",
+        "slot": "leadingIcon"
+      },
+      "node": {
+        "id": "photos-chip-people-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/face"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "People"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-places",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chips",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-chip-places",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "photos-chip-people"
+    },
+    {
+      "operationId": "insert-photos-chip-places-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-places",
+        "slot": "label"
+      },
+      "node": {
+        "id": "photos-chip-places-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Places"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-places-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-places",
+        "slot": "leadingIcon"
+      },
+      "node": {
+        "id": "photos-chip-places-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/place"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Places"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-favourites",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chips",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-chip-favourites",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      },
+      "afterNodeId": "photos-chip-places"
+    },
+    {
+      "operationId": "insert-photos-chip-favourites-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-favourites",
+        "slot": "label"
+      },
+      "node": {
+        "id": "photos-chip-favourites-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Favourites"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-favourites-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-favourites",
+        "slot": "leadingIcon"
+      },
+      "node": {
+        "id": "photos-chip-favourites-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/favoriteBorder"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Favourites"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-screenshots",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chips",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-chip-screenshots",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "photos-chip-favourites"
+    },
+    {
+      "operationId": "insert-photos-chip-screenshots-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-screenshots",
+        "slot": "label"
+      },
+      "node": {
+        "id": "photos-chip-screenshots-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Screenshots"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-screenshots-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-screenshots",
+        "slot": "leadingIcon"
+      },
+      "node": {
+        "id": "photos-chip-screenshots-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/screenshot"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Screenshots"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-videos",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chips",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-chip-videos",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "photos-chip-screenshots"
+    },
+    {
+      "operationId": "insert-photos-chip-videos-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-videos",
+        "slot": "label"
+      },
+      "node": {
+        "id": "photos-chip-videos-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Videos"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-chip-videos-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-chip-videos",
+        "slot": "leadingIcon"
+      },
+      "node": {
+        "id": "photos-chip-videos-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/videocam"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Videos"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-photos-heading-today",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-heading-today",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Today"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleMedium"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 8,
+            "endDp": 16,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "photos-chips"
+    },
+    {
+      "operationId": "insert-photos-grid",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-grid",
+        "componentId": "layout/lazy-grid",
+        "properties": {
+          "columns": {
+            "type": "adaptiveGrid",
+            "minimumCellWidthDp": 190.0
+          },
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 4.0
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4.0
+          },
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 0,
+            "endDp": 16,
+            "bottomDp": 24
+          },
+          "scrollStateKey": {
+            "type": "string",
+            "value": "photos-library-grid"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      },
+      "afterNodeId": "photos-heading-today"
+    },
+    {
+      "operationId": "insert-photos-tile-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-0",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-0-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-0-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-1",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-0"
+    },
+    {
+      "operationId": "insert-photos-tile-1-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-1-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-1-badge",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-1-badge",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/playCircle"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 28.0
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "align",
+            "alignment": "bottomEnd"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 0,
+            "endDp": 8,
+            "bottomDp": 8
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-1-fill"
+    },
+    {
+      "operationId": "insert-photos-tile-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-2",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-1"
+    },
+    {
+      "operationId": "insert-photos-tile-2-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-2-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-3",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-2"
+    },
+    {
+      "operationId": "insert-photos-tile-3-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-3-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-4",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-4",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-3"
+    },
+    {
+      "operationId": "insert-photos-tile-4-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-4-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-4-badge",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-4",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-4-badge",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/favorite"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 28.0
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "align",
+            "alignment": "bottomEnd"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 0,
+            "endDp": 8,
+            "bottomDp": 8
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-4-fill"
+    },
+    {
+      "operationId": "insert-photos-tile-5",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-5",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-4"
+    },
+    {
+      "operationId": "insert-photos-tile-5-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-5",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-5-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-6",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-6",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-5"
+    },
+    {
+      "operationId": "insert-photos-tile-6-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-6",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-6-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-7",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-7",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-6"
+    },
+    {
+      "operationId": "insert-photos-tile-7-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-7",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-7-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-8",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-8",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-7"
+    },
+    {
+      "operationId": "insert-photos-tile-8-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-8",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-8-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-8-badge",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-8",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-8-badge",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/playCircle"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 28.0
+          },
+          "color": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "align",
+            "alignment": "bottomEnd"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 0,
+            "endDp": 8,
+            "bottomDp": 8
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-8-fill"
+    },
+    {
+      "operationId": "insert-photos-tile-9",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-9",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-8"
+    },
+    {
+      "operationId": "insert-photos-tile-9-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-9",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-9-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-10",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-10",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-9"
+    },
+    {
+      "operationId": "insert-photos-tile-10-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-10",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-10-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-photos-tile-11",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "photos-tile-11",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "aspectRatio",
+            "ratio": 1.0
+          },
+          {
+            "type": "clip",
+            "shape": "4"
+          }
+        ]
+      },
+      "afterNodeId": "photos-tile-10"
+    },
+    {
+      "operationId": "insert-photos-tile-11-fill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "photos-tile-11",
+        "slot": "children"
+      },
+      "node": {
+        "id": "photos-tile-11-fill",
+        "componentId": "shape/linear-gradient",
+        "properties": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "direction": {
+            "type": "enum",
+            "value": "leftToRight"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "matchParentSize"
+          }
+        ]
+      }
+    }
+  ],
+  "expectedDocumentHash": "785934085e9bf527c4e46c7433373352ce9bd2ba8f972094c9d9999762f81b37"
+}

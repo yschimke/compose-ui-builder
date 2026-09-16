@@ -77,6 +77,26 @@ fun DesignPacksDialogPreview() = DesignFixture("ui-builder-packs-dialog")
 @Composable
 fun DesignInsertPacksPreview() = DesignFixture("ui-builder-insert-packs")
 
+@Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
+@Composable
+fun DesignGmailTabletPreview() = DesignFixture("google-gmail-tablet")
+
+@Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
+@Composable
+fun DesignPhotosTabletPreview() = DesignFixture("google-photos-tablet")
+
+@Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
+@Composable
+fun DesignCalendarTabletPreview() = DesignFixture("google-calendar-tablet")
+
+@Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
+@Composable
+fun DesignKeepTabletPreview() = DesignFixture("google-keep-tablet")
+
+@Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
+@Composable
+fun DesignPlayTabletPreview() = DesignFixture("google-play-tablet")
+
 @Composable
 private fun DesignFixture(designId: String) {
   UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)

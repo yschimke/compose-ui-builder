@@ -1,0 +1,3747 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "google-keep-tablet",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Google Keep \u2014 Notes grid (tablet)",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 1280,
+        "heightDp": 800,
+        "density": 1,
+        "theme": "light",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:pixel_tablet",
+          "id:pixel_fold",
+          "id:pixel_7"
+        ]
+      },
+      "stateVariables": {
+        "keepQuery": {
+          "type": "value",
+          "valueType": "string",
+          "initialValue": "",
+          "nullable": false,
+          "persistence": "preview"
+        }
+      }
+    },
+    {
+      "operationId": "insert-root",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "root",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "width",
+            "widthDp": 88
+          },
+          {
+            "type": "fillMaxHeight"
+          },
+          {
+            "type": "background",
+            "color": {
+              "type": "colorToken",
+              "value": "surfaceContainerLow"
+            }
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 12,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-notes",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-notes",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-notes-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-notes",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-notes-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          },
+          {
+            "type": "background",
+            "color": {
+              "type": "colorToken",
+              "value": "surfaceContainerHighest"
+            },
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-notes-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-notes-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-notes-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/lightbulb"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Notes"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-notes-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-notes",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-notes-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Notes"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurface"
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-notes-pill"
+    },
+    {
+      "operationId": "insert-keep-rail-reminders",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-reminders",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "keep-rail-notes"
+    },
+    {
+      "operationId": "insert-keep-rail-reminders-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-reminders",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-reminders-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-reminders-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-reminders-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-reminders-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/notifications"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Reminders"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-reminders-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-reminders",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-reminders-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Reminders"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-reminders-pill"
+    },
+    {
+      "operationId": "insert-keep-rail-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-labels",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "keep-rail-reminders"
+    },
+    {
+      "operationId": "insert-keep-rail-labels-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-labels-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-labels-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-labels-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-labels-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/label"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Labels"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-labels-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-labels-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Labels"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-labels-pill"
+    },
+    {
+      "operationId": "insert-keep-rail-archive",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-archive",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "keep-rail-labels"
+    },
+    {
+      "operationId": "insert-keep-rail-archive-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-archive",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-archive-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-archive-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-archive-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-archive-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/archive"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Archive"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-archive-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-archive",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-archive-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Archive"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-archive-pill"
+    },
+    {
+      "operationId": "insert-keep-rail-bin",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-bin",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 4
+          }
+        ]
+      },
+      "afterNodeId": "keep-rail-archive"
+    },
+    {
+      "operationId": "insert-keep-rail-bin-pill",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-bin",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-bin-pill",
+        "componentId": "layout/box",
+        "modifiers": [
+          {
+            "type": "size",
+            "widthDp": 56,
+            "heightDp": 32
+          },
+          {
+            "type": "clip",
+            "shape": "16"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-bin-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-bin-pill",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-bin-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/delete"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Bin"
+          },
+          "sizeDp": {
+            "type": "float",
+            "value": 22.0
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-rail-bin-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-rail-bin",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-rail-bin-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Bin"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-bin-pill"
+    },
+    {
+      "operationId": "insert-keep-screen",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-screen",
+        "componentId": "layout/scaffold",
+        "properties": {
+          "containerColor": {
+            "type": "colorToken",
+            "value": "background"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-rail"
+    },
+    {
+      "operationId": "insert-keep-search",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-screen",
+        "slot": "topBar"
+      },
+      "node": {
+        "id": "keep-search",
+        "componentId": "m3/search-bar",
+        "properties": {
+          "expanded": {
+            "type": "bool",
+            "value": false
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 12,
+            "topDp": 8,
+            "endDp": 12,
+            "bottomDp": 4
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-search-field",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-search",
+        "slot": "inputField"
+      },
+      "node": {
+        "id": "keep-search-field",
+        "componentId": "m3/search-input-field",
+        "properties": {
+          "value": {
+            "type": "state",
+            "variable": "keepQuery"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-search-placeholder",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-search-field",
+        "slot": "placeholder"
+      },
+      "node": {
+        "id": "keep-search-placeholder",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Search your notes"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-search-leading",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-search-field",
+        "slot": "leadingIcon"
+      },
+      "node": {
+        "id": "keep-search-leading",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/menu"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Open navigation drawer"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-search-trailing",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-search-field",
+        "slot": "trailingIcon"
+      },
+      "node": {
+        "id": "keep-search-trailing",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/accountCircle"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Google Account"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-heading-pinned",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-heading-pinned",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Pinned"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 20,
+            "topDp": 8,
+            "endDp": 20,
+            "bottomDp": 4
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-grid",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-grid",
+        "componentId": "layout/lazy-grid",
+        "properties": {
+          "columns": {
+            "type": "adaptiveGrid",
+            "minimumCellWidthDp": 240.0
+          },
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 12.0
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 12.0
+          },
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 20,
+            "topDp": 4,
+            "endDp": 20,
+            "bottomDp": 96
+          },
+          "scrollStateKey": {
+            "type": "string",
+            "value": "keep-notes-grid"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      },
+      "afterNodeId": "keep-heading-pinned"
+    },
+    {
+      "operationId": "insert-keep-note-shopping",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-shopping",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFFFF8E1"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-shopping"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-shopping-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Shopping"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-0",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-title"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-0-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-0-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-0-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-0-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Oat milk"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "lineThrough"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-0-box"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-1",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-0"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-1-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-1-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-1-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-1-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Sourdough"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-1-box"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-2",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-1"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-2-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-2-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-2-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-2-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Coffee beans"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-2-box"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-3",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-2"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-3-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-3-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-3-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-item-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-item-3-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Chilli oil"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-3-box"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-labels",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-item-3"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-label-groceries",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-label-groceries",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-shopping-label-groceries-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-label-groceries",
+        "slot": "label"
+      },
+      "node": {
+        "id": "keep-note-shopping-label-groceries-text",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Groceries"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-adaptive",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-adaptive",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFE8F0FE"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-adaptive"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping"
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-adaptive-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-adaptive-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Adaptive checklist"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-prose",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-adaptive-prose",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Pane split, rail vs bar, list width, state across rotation."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-note-adaptive-title"
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-adaptive-labels",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-adaptive-prose"
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-label-work",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-adaptive-label-work",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-label-work-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive-label-work",
+        "slot": "label"
+      },
+      "node": {
+        "id": "keep-note-adaptive-label-work-text",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Work"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-label-compose",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-adaptive-label-compose",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "small"
+          }
+        }
+      },
+      "afterNodeId": "keep-note-adaptive-label-work"
+    },
+    {
+      "operationId": "insert-keep-note-adaptive-label-compose-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-adaptive-label-compose",
+        "slot": "label"
+      },
+      "node": {
+        "id": "keep-note-adaptive-label-compose-text",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Compose"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-talk",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFFCE8E6"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-talk"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-adaptive"
+    },
+    {
+      "operationId": "insert-keep-note-talk-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-talk-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Conference talk"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-0",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-title"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-0-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-0-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-0-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-0-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Draft outline"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "lineThrough"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-0-box"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-1",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-0"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-1-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-1-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-1-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-1-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Record demo"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-1-box"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-2",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-1"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-2-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-2-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-2-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-2-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Slides"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-2-box"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-3",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-2"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-3-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-3-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-3-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-item-3",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-item-3-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Dry run"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-3-box"
+    },
+    {
+      "operationId": "insert-keep-note-talk-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-labels",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-item-3"
+    },
+    {
+      "operationId": "insert-keep-note-talk-label-talks",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-label-talks",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-talk-label-talks-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-label-talks",
+        "slot": "label"
+      },
+      "node": {
+        "id": "keep-note-talk-label-talks-text",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Talks"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-quote",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-quote",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFE6F4EA"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-quote"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk"
+    },
+    {
+      "operationId": "insert-keep-note-quote-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-quote",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-quote-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-quote-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-quote-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-quote-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Quote"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-quote-prose",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-quote-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-quote-prose",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "\u201cMake the frame the window, and the rest follows.\u201d"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-note-quote-title"
+    },
+    {
+      "operationId": "insert-keep-note-trip",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-trip",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFF3E8FD"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-trip"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-quote"
+    },
+    {
+      "operationId": "insert-keep-note-trip-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-trip",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-trip-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-trip-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-trip-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-trip-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Trip \u2014 Tallinn"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-trip-prose",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-trip-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-trip-prose",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Ferry 08:30, old town walk, Telliskivi in the afternoon."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-note-trip-title"
+    },
+    {
+      "operationId": "insert-keep-note-trip-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-trip-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-trip-labels",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-trip-prose"
+    },
+    {
+      "operationId": "insert-keep-note-trip-label-travel",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-trip-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-trip-label-travel",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-trip-label-travel-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-trip-label-travel",
+        "slot": "label"
+      },
+      "node": {
+        "id": "keep-note-trip-label-travel-text",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Travel"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-icons",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-icons",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFFFFFFF"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-icons"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-trip"
+    },
+    {
+      "operationId": "insert-keep-note-icons-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-icons-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-icons-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Icon audit"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-0",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-title"
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-0-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-0-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-0-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-0-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Rail glyphs"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "lineThrough"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-item-0-box"
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-1",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-item-0"
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-1-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-1-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-1-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-1-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Filled vs outlined"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-item-1-box"
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-2",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-item-1"
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-2-box",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-item-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-2-box",
+        "componentId": "m3/checkbox",
+        "properties": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-2-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-item-2",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-item-2-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Auto-mirrored set"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-item-2-box"
+    },
+    {
+      "operationId": "insert-keep-note-icons-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-labels",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-item-2"
+    },
+    {
+      "operationId": "insert-keep-note-icons-label-work",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-label-work",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-icons-label-work-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-label-work",
+        "slot": "label"
+      },
+      "node": {
+        "id": "keep-note-icons-label-work-text",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Work"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-books",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-books",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFE0F7FA"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-books"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons"
+    },
+    {
+      "operationId": "insert-keep-note-books-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-books-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-books-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Reading"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-books-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-item-0",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-books-title"
+    },
+    {
+      "operationId": "insert-keep-note-books-item-0-dot",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-item-0-dot",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "diameterDp": {
+            "type": "float",
+            "value": 6.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-books-item-0-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-item-0",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-item-0-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Designing Data-Intensive\u2026"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-books-item-0-dot"
+    },
+    {
+      "operationId": "insert-keep-note-books-item-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-item-1",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 10.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-books-item-0"
+    },
+    {
+      "operationId": "insert-keep-note-books-item-1-dot",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-item-1-dot",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          },
+          "diameterDp": {
+            "type": "float",
+            "value": 6.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-books-item-1-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-item-1",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-item-1-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "The Art of Doing Science"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          },
+          "textDecoration": {
+            "type": "enum",
+            "value": "none"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-books-item-1-dot"
+    },
+    {
+      "operationId": "insert-keep-note-ideas",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-grid",
+        "slot": "items"
+      },
+      "node": {
+        "id": "keep-note-ideas",
+        "componentId": "m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "outlined"
+          },
+          "containerColor": {
+            "type": "color",
+            "value": "#FFFFF0F0"
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "medium"
+          },
+          "stableKey": {
+            "type": "string",
+            "value": "keep-ideas"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-books"
+    },
+    {
+      "operationId": "insert-keep-note-ideas-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-ideas",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-note-ideas-body",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "horizontalAlignment": {
+            "type": "enum",
+            "value": "start"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 14,
+            "endDp": 16,
+            "bottomDp": 14
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-keep-note-ideas-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-ideas-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-ideas-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Ideas"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "fontWeight": {
+            "type": "enum",
+            "value": "semiBold"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-ideas-prose",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-ideas-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-ideas-prose",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "A board of components, not a screen. Column with board defaults."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "color": {
+            "type": "colorToken",
+            "value": "onSurfaceVariant"
+          }
+        }
+      },
+      "afterNodeId": "keep-note-ideas-title"
+    },
+    {
+      "operationId": "insert-keep-note-ideas-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-ideas-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-ideas-labels",
+        "componentId": "layout/row",
+        "properties": {
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 6.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "top"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          },
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 4,
+            "endDp": 0,
+            "bottomDp": 0
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-ideas-prose"
+    },
+    {
+      "operationId": "insert-keep-note-ideas-label-ideas",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-ideas-labels",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-ideas-label-ideas",
+        "componentId": "m3/filter-chip",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          },
+          "shape": {
+            "type": "shapeToken",
+            "value": "small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-note-ideas-label-ideas-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-ideas-label-ideas",
+        "slot": "label"
+      },
+      "node": {
+        "id": "keep-note-ideas-label-ideas-text",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Ideas"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-create",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-create",
+        "componentId": "m3/horizontal-floating-toolbar",
+        "properties": {
+          "expanded": {
+            "type": "bool",
+            "value": true
+          },
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainerHigh"
+          },
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 10,
+            "topDp": 6,
+            "endDp": 10,
+            "bottomDp": 6
+          }
+        },
+        "modifiers": [
+          {
+            "type": "padding",
+            "startDp": 0,
+            "topDp": 8,
+            "endDp": 0,
+            "bottomDp": 20
+          }
+        ]
+      },
+      "afterNodeId": "keep-grid"
+    },
+    {
+      "operationId": "insert-keep-create-new-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-list",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "standard"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New list"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-create-new-list-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create-new-list",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-list-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/checkBox"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New list"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-create-new-drawing",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-drawing",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "standard"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New drawing"
+          }
+        }
+      },
+      "afterNodeId": "keep-create-new-list"
+    },
+    {
+      "operationId": "insert-keep-create-new-drawing-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create-new-drawing",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-drawing-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/brush"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New drawing"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-create-new-recording",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-recording",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "standard"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New recording"
+          }
+        }
+      },
+      "afterNodeId": "keep-create-new-drawing"
+    },
+    {
+      "operationId": "insert-keep-create-new-recording-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create-new-recording",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-recording-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/mic"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New recording"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-create-new-note-with-image",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-note-with-image",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "standard"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New note with image"
+          }
+        }
+      },
+      "afterNodeId": "keep-create-new-recording"
+    },
+    {
+      "operationId": "insert-keep-create-new-note-with-image-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create-new-note-with-image",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-note-with-image-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/image"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New note with image"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-keep-create-new-note",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-note",
+        "componentId": "m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New note"
+          }
+        }
+      },
+      "afterNodeId": "keep-create-new-note-with-image"
+    },
+    {
+      "operationId": "insert-keep-create-new-note-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-create-new-note",
+        "slot": "content"
+      },
+      "node": {
+        "id": "keep-create-new-note-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/add"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "New note"
+          }
+        }
+      }
+    }
+  ],
+  "expectedDocumentHash": "fb7dbeb4c988dc0c1b1df880706860373f6fdaa5b174d093323b5f042d8a4603"
+}
