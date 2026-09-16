@@ -283,6 +283,42 @@ server:
 These fields keep both compatibility directions. New servers continue to load old catalogs, and a
 new catalog still reaches an old server with placeholders and without automatic migration.
 
+#### What a builtin may state about itself, and what is derived when it does not
+
+A builtin has no call site, so its declaration is the only source there is — and five things the
+server otherwise **derives** were unstateable. That is not the same as a catalog being silent: the
+derived answer was composed and served as though the catalog had agreed with it.
+
+| field | derived when absent | what the derivation gets wrong |
+| --- | --- | --- |
+| `shelfRole` | `Scaffold` if `role` is `screen-root`, else `Container` if there are slots, else `Leaf` | nothing structural tells `layout/box` from `layout/scaffold`: both have one slot named `content` |
+| `wasm` | from the canvas adapter id | says `supported` or `unsupported` and never `planned`, and cannot carry a per-component note |
+| `code` | from `implementation`'s record entry | a builtin with no record entry published no code capability at all |
+| `svg` | nothing | every builtin claimed nothing, which reads as unverified rather than as the `verified` most are |
+| `slots.*.ordered` | `true` | six of the packaged builder vocabulary's fifteen slots are not ordered |
+
+`shelfRole` is the shelf's vocabulary — `Scaffold` / `Container` / `Leaf` — and `role` beside it is
+the template engine's. They are two vocabularies in one declaration, and the capability document
+serves `shelfRole` under the name `role`; crossing them is the mistake this shape makes easy, so
+each ignores the other's words.
+
+`code` does not displace `implementation`, which keeps precedence: a record entry is discovered, so
+it cannot drift from the source. `code` is for the builtin whose call site is in no record at all —
+every `androidx.compose.foundation` symbol, because discovery scopes library components to
+`material3`/`material`/`wear`.
+
+**An undecodable word costs its field and never the catalog.** `wasm.adapterStatus`, `svg.status`
+and `svg.fallback` are closed enums on the wire, and a capability document carrying a word the
+builder cannot decode fails the *whole* document rather than one field. A catalog is published once
+and read by builders of several vintages its publisher cannot upgrade, so an unknown word falls
+back to what a catalog stating nothing gets — and the publishing side reports it as a diagnostic,
+where the person who typed it is still looking.
+
+The structural role set grew with these: `container` joins `screen-root`, `list`, `list-item`,
+`overlay`, `controlled` and `decoration`. It is the one that is not about a screen's decomposition
+— children in a fixed arrangement, writing no repetition — and before it a box, a column and a row
+had to publish as `list`, the role whose template is handed a list state and an items hole.
+
 ### `ui-builder.json` — what the generator produces
 
 The full `CatalogCapabilityV1` the runtime loads today, produced by one function in the Gradle
