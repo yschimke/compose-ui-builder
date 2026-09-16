@@ -118,6 +118,14 @@ composeai-tools = "2.17.0"
 # written: every coordinate, the BOM included, still 404s there. Bumping to it would trade a broken
 # image build for a broken Gradle resolve. Renovate can take this line to 3.7.0 once Central catches
 # up, by which point it is a routine bump rather than the one unblocking a restart loop.
+#
+# 3.6.1 is also the release that restores the contract's unknown-enum rule. 3.5.0 shipped
+# `coerceInputValues` on `DesignPagesJson` (compose-preview-daemon#119), and that flag is Json-wide
+# rather than per-field, so it disabled the rule for EVERY enum the contract carries -- blend modes
+# included, where reinterpreting an unrecognised value composites a layer the reader believes is
+# authored. compose-preview-daemon#128 reverted it. ServeDesignPageStoreTest's "an unknown link
+# method" case is the assertion that states the rule, and it tracks this pin: on 3.6.0 it must
+# assert the degrade, on 3.6.1 the drop.
 composeai-preview-daemon = "3.6.1"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
