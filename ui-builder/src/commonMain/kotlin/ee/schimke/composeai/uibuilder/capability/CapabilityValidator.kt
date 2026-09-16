@@ -107,11 +107,55 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
     }
     document.nodes.values.sortedBy(UiBuilderNode::id).forEach { node ->
       validateNode(document, node, issues, bindings)
+      unsupportedWrapperIssues(node, issues)
       stateSelectionIssue(node, document.stateVariables)?.let {
         issues += issue(CapabilityIssueCode.INVALID_PROPERTY_VALUE, node, it, SHOW_BY_STATE)
       }
     }
     return CapabilityValidationResult(issues, wasmStatuses(document))
+  }
+
+  /**
+   * A property whose wrapper type is not a wrapper type at all.
+   *
+   * **A document-wide rule, unlike the two write-time ones below, and it is the one place that
+   * distinction flips.** Those exist because a design committed before a spelling rule must stay
+   * editable: the value is legal, the canvas draws it, and only its spelling is now discouraged. An
+   * invented wrapper is not that. The vocabulary is closed, `CollaborationReducer` has always
+   * refused an unknown one at its own boundary, and the server's own wire types are a sealed
+   * hierarchy — so **no design that ever committed can hold one**, and a rule here cannot break a
+   * design that got in legitimately. It can only catch one that never went through a writer.
+   *
+   * Which is exactly the gap. `{"type":"fixedGrid","columns":7}` was hand-authored into an
+   * operations fixture, and `UiBuilderReducer.replay` — the path a committed fixture, a
+   * `design-sync` import and `DesignFixturesTest` all take — keeps a property value without asking
+   * the reducer's question. So it passed replay, this validator, the Compose export, the renderer
+   * and a green `DesignFixturesTest`, then met the server's deserializer and came back as a
+   * kotlinx-serialization registration message naming a sealed base class: a sentence about the
+   * wire format rather than about the design (#901).
+   *
+   * The catalog cannot catch it either — `layout/lazy-grid.columns` is declared `object` and stops
+   * there, which is precisely the shape an invented wrapper claims to be.
+   */
+  private fun unsupportedWrapperIssues(
+    node: UiBuilderNode,
+    issues: MutableList<CapabilityValidationIssue>,
+  ) {
+    val declared = catalog.componentsById[node.componentId]?.propertiesByName ?: return
+    node.properties.forEach { (property, encoded) ->
+      if (property !in declared) return@forEach
+      val wrapper =
+        ((encoded as? JsonObject)?.get("type") as? JsonPrimitive)?.takeIf { it.isString }?.content
+          ?: return@forEach
+      if (wrapper in PropertyValueKinds.WRAPPER_TYPES) return@forEach
+      issues +=
+        issue(
+          CapabilityIssueCode.INVALID_PROPERTY_TYPE,
+          node,
+          "property $property uses unsupported wrapper type `$wrapper`",
+          property,
+        )
+    }
   }
 
   private fun wasmStatuses(document: UiBuilderDocument): List<WasmNodeStatus> =

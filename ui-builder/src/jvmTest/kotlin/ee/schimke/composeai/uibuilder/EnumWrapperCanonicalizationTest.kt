@@ -78,6 +78,43 @@ class EnumWrapperCanonicalizationTest {
     assertIs<CommandOutcome.Accepted>(application.outcome)
   }
 
+  /**
+   * The write path already refused an invented wrapper, and this pins that it still does.
+   *
+   * Worth having explicitly, because it is the half of #901 that was **not** broken and it is easy
+   * to assume otherwise: `CollaborationReducer` has always asked `propertyWrapperIssue` on a write,
+   * so a value with an invented type never reached a commit through the editor. It reaches
+   * `MALFORMED_PROPERTY` rather than `INVALID_PROPERTY` because the wrapper is malformed before it
+   * is a property value at all.
+   *
+   * What #901 was actually about is the document path — `UiBuilderReducer.replay`, which a
+   * committed fixture and a `design-sync` import take without passing through a writer.
+   * `CapabilityValidator.validate` now asks there; `WrapperVocabularyTest` holds the vocabulary the
+   * two share.
+   */
+  @Test
+  fun `an invented wrapper type is rejected on the write, by node and field`() {
+    val application =
+      CollaborationReducer.apply(
+        CollaborationState(document()),
+        command(
+          DesignOperation.SetProperty(
+            "text",
+            "text",
+            buildJsonObject {
+              put("type", "fixedGrid")
+              put("columns", 7)
+            },
+          )
+        ),
+        validator(),
+      )
+
+    val rejected = assertIs<CommandOutcome.Rejected>(application.outcome)
+    assertEquals(RejectionCode.MALFORMED_PROPERTY, rejected.code)
+    assertTrue("fixedGrid" in rejected.message, rejected.message)
+  }
+
   private fun typed(type: String, value: String): JsonObject = buildJsonObject {
     put("type", type)
     put("value", value)

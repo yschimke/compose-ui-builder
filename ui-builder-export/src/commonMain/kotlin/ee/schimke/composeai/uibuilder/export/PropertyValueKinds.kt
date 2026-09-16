@@ -68,6 +68,57 @@ object PropertyValueKinds {
     value.isEmpty() || COLOR_LITERAL.matches(value) || value in CANVAS_COLOR_TOKENS
 
   /**
+   * Every wrapper type a property value may carry, in one place.
+   *
+   * A property value is `{"type": <wrapper>, …}` and the set of wrappers is closed. It is assembled
+   * from two enforcers rather than one, which is the fact that made it worth writing down:
+   *
+   * - `CollaborationReducer`'s `propertyWrapperIssue` owns sixteen of them, and owns their
+   *   *shapes* — how many keys, which are numeric. It runs on `SetProperty` and nowhere else.
+   * - `list` and `binding` are the repetition pair — a `layout/for-each`'s rows, and a row field
+   *   read inside the loop. They arrive on **inserts**, which `propertyWrapperIssue` never sees,
+   *   and their shapes are checked by `inspectUiBuilderArgumentBindings` instead.
+   *
+   * So neither enforcer knows the whole vocabulary, and until this existed nothing did. A value
+   * with an invented type could be hand-authored into an operations fixture and pass every local
+   * lane: `{"type":"fixedGrid","columns":7}` was kept by `UiBuilderReducer.replay`, reported clean
+   * by [CapabilityValidator][ee.schimke.composeai.uibuilder.capability.CapabilityValidator],
+   * exported as Compose, drawn by the renderer and asserted green by `DesignFixturesTest` — then
+   * refused by the server at commit with a kotlinx-serialization registration message naming a
+   * sealed base class, which is a sentence about the wire format rather than about the design
+   * (#901). The catalog could not have caught it either: `layout/lazy-grid.columns` is declared
+   * `object` and stops there, which is precisely the shape an invented wrapper claims to be.
+   *
+   * `WrapperVocabularyTest` holds this against the corpus in both directions — every wrapper in
+   * every committed fixture is named here, and every name here is one some enforcer accepts — so a
+   * seventeenth wrapper added to a writer and not to this set fails the build rather than a commit.
+   */
+  val WRAPPER_TYPES: Set<String> =
+    setOf(
+      // Literals: `{"type": …, "value": …}`.
+      "assetKey",
+      "bool",
+      "color",
+      "colorToken",
+      "enum",
+      "float",
+      "insets",
+      "int",
+      "shapeToken",
+      "string",
+      "typographyToken",
+      // Carry a shape of their own, checked by `propertyWrapperIssue`.
+      "object",
+      "state",
+      "stateEquals",
+      "padding",
+      "adaptiveGrid",
+      // The repetition pair, checked by `inspectUiBuilderArgumentBindings`.
+      "list",
+      "binding",
+    )
+
+  /**
    * The `statusSemantics` entry under which a catalog lists the asset keys its canvas can draw, as
    * `{"keys": […]}`. `statusSemantics` rather than a property field for the reason every other
    * catalog fact that is not on the wire type sits there: `CatalogCapabilityV1` is published from

@@ -2073,7 +2073,7 @@ private val literalPropertyTypes =
     "typographyToken",
   )
 
-private fun propertyWrapperIssue(type: String, encodedValue: JsonObject): String? =
+internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): String? =
   when (type) {
     "object" -> {
       val fields = encodedValue["fields"] as? JsonObject
@@ -2116,6 +2116,10 @@ private fun propertyWrapperIssue(type: String, encodedValue: JsonObject): String
       )
         null
       else "adaptiveGrid wrapper must contain exactly type and numeric minimumCellWidthDp"
+    // Every name here is in `PropertyValueKinds.WRAPPER_TYPES`; that set is wider, because `list`
+    // and `binding` arrive on inserts this function never sees and are checked by
+    // `inspectUiBuilderArgumentBindings` instead. `WrapperVocabularyTest` holds the union against
+    // the corpus, which is what an invented wrapper slipped through before (#901).
     else -> "uses unsupported wrapper type $type"
   }
 
