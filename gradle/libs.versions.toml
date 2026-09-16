@@ -88,7 +88,7 @@ composeai-tools = "2.15.0"
 # but the pin. 3.4.4 rides along (contracts 2.18.0, third-party-rc-embedded-player 1.61.1).
 # 3.4.8 makes Glimmer Live start in touch mode, matching snapshots and physical devices, then enter
 # keyboard/focus mode only when pointer movement establishes gaze (compose-preview-daemon#111).
-composeai-preview-daemon = "3.4.9"
+composeai-preview-daemon = "3.6.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
@@ -145,7 +145,17 @@ composeai-remotecompose-json = { module = "ee.schimke.composeai:remotecompose-js
 # what lets `checkServeModuleBoundary` keep holding while the server gains the capability
 # yschimke/compose-preview-server#9 asked for.
 composeai-build-host-protocol = { module = "ee.schimke.composeai:build-host-protocol", version.ref = "composeai-tools" }
-composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api", version.ref = "composeai-preview-daemon" }
+# The daemon BOM. THE one coordinate carrying a version for everything published by
+# yschimke/compose-preview-daemon: the seven entries below deliberately carry none of their own.
+#
+# That repository publishes only the modules a release changes (compose-preview-daemon#123), so its
+# coordinates no longer all sit at the same version. Pinning them to one shared ref -- which this
+# catalog used to do -- resolves until the first reduced release and then fails on whichever module
+# did not publish at the new version. The BOM is the published record of which versions belong
+# together, so it is the only one that should name a version. Each consuming module imports it as a
+# platform; there are four.
+composeai-daemon-bom = { module = "ee.schimke.composeai:compose-preview-daemon-bom", version.ref = "composeai-preview-daemon" }
+composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api" }
 composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery", version.ref = "composeai-tools" }
 # `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
 # browser editor reach the same `ScreenGenerator` the server exports with.
@@ -153,19 +163,19 @@ composeai-screen-model = { module = "ee.schimke.composeai:screen-model", version
 composeai-common-image-crop = { module = "ee.schimke.composeai:common-image-crop", version.ref = "composeai-tools" }
 composeai-bundle-format = { module = "ee.schimke.composeai:bundle-format", version.ref = "composeai-tools" }
 composeai-bundle-coordinates = { module = "ee.schimke.composeai:bundle-coordinates", version.ref = "composeai-tools" }
-composeai-daemon-core = { module = "ee.schimke.composeai:daemon-core", version.ref = "composeai-preview-daemon" }
-composeai-daemon-client = { module = "ee.schimke.composeai:daemon-client", version.ref = "composeai-preview-daemon" }
+composeai-daemon-core = { module = "ee.schimke.composeai:daemon-core" }
+composeai-daemon-client = { module = "ee.schimke.composeai:daemon-client" }
 composeai-render-session-api = { module = "ee.schimke.composeai:render-session-api", version.ref = "composeai-tools" }
 composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-session-subprocess", version.ref = "composeai-tools" }
 # Render-matrix axis expansion and contact-sheet composition, shared by the CLI's `render-matrix`
 # command and `:mcp`'s `render_matrix` tool. Lifted out of compose-ai-tools' `:mcp` before the
 # module moved here, precisely so the offline CLI command did not have to follow it (#5188 there).
 composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix", version.ref = "composeai-tools" }
-composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core", version.ref = "composeai-preview-daemon" }
-composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core", version.ref = "composeai-preview-daemon" }
+composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core" }
+composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core" }
 # Slot marker/host API shared by JVM and Wasm catalogs. The daemon repository owns and publishes
 # both variants; this server consumes the release instead of compiling a second copy.
-composeai-slot-preview-runtime = { module = "ee.schimke.composeai:slot-preview-runtime", version.ref = "composeai-preview-daemon" }
+composeai-slot-preview-runtime = { module = "ee.schimke.composeai:slot-preview-runtime" }
 
 composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol", version.ref = "composeai-contracts" }
 composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol", version.ref = "composeai-contracts" }
@@ -173,7 +183,7 @@ composeai-common-io = { module = "ee.schimke.composeai:common-io", version.ref =
 composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core", version.ref = "composeai-contracts" }
 composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core", version.ref = "composeai-contracts" }
 composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-preview-overrides-core", version.ref = "composeai-contracts" }
-composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime", version.ref = "composeai-preview-daemon" }
+composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime" }
 composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core", version.ref = "composeai-contracts" }
 composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol", version.ref = "composeai-contracts" }
 composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose", version.ref = "rc-players" }

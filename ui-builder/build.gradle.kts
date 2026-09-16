@@ -297,6 +297,11 @@ kotlin {
       implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutines.core)
       implementation(libs.compose.ui.tooling.preview)
+      // Carries no version of its own; the platform supplies it (see the catalog).
+      // `project.dependencies.platform(...)`, not a bare `platform(...)`: inside a Kotlin
+      // Multiplatform source set the receiver is `KotlinDependencyHandler`, which has no
+      // `platform` function at all.
+      implementation(project.dependencies.platform(libs.composeai.daemon.bom))
       implementation(libs.composeai.data.preview.overrides.runtime)
     }
     getByName("jvmMain")
