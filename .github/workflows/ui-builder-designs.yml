@@ -10,9 +10,9 @@ name: Design Renders
 # now the only way to see what a change to one did was to run a server and open the editor.
 #
 # The pipeline is `compose-preview-server design render --local`: the design's generated Kotlin,
-# compiled and rasterised in-process. It lives in yschimke/compose-preview-server, which is why the
-# reusable workflow renders inside `ghcr.io/yschimke/compose-preview-host` — the image that already
-# carries that binary and the four sidecars a local render needs.
+# compiled and rasterised in-process. Both the reusable workflow and that binary are
+# yschimke/compose-preview-server, which also publishes the `compose-preview-host` image the render
+# runs in — so the lane, the CLI and the four sidecars a local render needs all version together.
 #
 # The designs are OPERATION LOGS rather than documents (`compose-ui-builder-operations/v1-candidate`),
 # so the lane replays them with this repository's own `scripts/ui-builder/design-sync.mjs` first.
@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-ai-tools/.github/workflows/ui-builder-designs-reusable.yml@main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@main
     with:
       # m3-catalog's own bundle, off its delivery branch. Every design in this directory is a
       # Material 3 design; a Wear one would need `wear-m3`'s bundle and its own call of this
