@@ -1,0 +1,50 @@
+name: Design Renders
+
+# Renders the committed UI-builder designs on every pull request that touches one, and posts a
+# before/after comment. The baseline refreshes on every push to main.
+#
+# This repository's review surface for a design is pixels, exactly as the catalogs' is: a design is
+# a JSON document of nodes, properties and modifiers, and a text diff of one says nothing about
+# whether the screen still looks right. `docs/design/fixtures/ui-builder/designs/` holds nineteen of
+# them — the editor's own chrome mocks, the Google app designs, the Jetcaster reference — and until
+# now the only way to see what a change to one did was to run a server and open the editor.
+#
+# The pipeline is `compose-preview-server design render --local`: the design's generated Kotlin,
+# compiled and rasterised in-process. It lives in yschimke/compose-preview-server, which is why the
+# reusable workflow renders inside `ghcr.io/yschimke/compose-preview-host` — the image that already
+# carries that binary and the four sidecars a local render needs.
+#
+# The designs are OPERATION LOGS rather than documents (`compose-ui-builder-operations/v1-candidate`),
+# so the lane replays them with this repository's own `scripts/ui-builder/design-sync.mjs` first.
+# That is what `documents: false` selects, and it is the default.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: ui-builder-designs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  designs:
+    # Guard against a fork's pull request trying to push a render branch into this repository.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: yschimke/compose-ai-tools/.github/workflows/ui-builder-designs-reusable.yml@main
+    with:
+      # m3-catalog's own bundle, off its delivery branch. Every design in this directory is a
+      # Material 3 design; a Wear one would need `wear-m3`'s bundle and its own call of this
+      # workflow, because a design only compiles against its own catalog's bundle.
+      catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog/design-artifacts/m3-catalog/bundle/bundle.png
+      # The record the generator proves each call site against. `m3-catalog` is record-driven, so
+      # without this every `m3/*` node is refused as an unproven component.
+      components: |
+        m3-catalog=docs/design/fixtures/ui-builder/m3-catalog-components-v1.json
