@@ -34,6 +34,13 @@ test "${#published_projects[@]}" -gt 0 || {
   exit 1
 }
 
+# The release's own assertions on the publish set, run here rather than only by the release. They
+# used to live inside `publishReleaseArtifacts`, so nothing but a real release ever executed them -
+# and a tripwire that demanded `:ui-builder-web`, a module that must never publish to Central, sat
+# unrun until it failed the 3.26.0 release after the upload had already gone out. The whole point of
+# this gate is that a release cannot discover something here for the first time.
+"${source_root}/gradlew" --no-daemon --quiet checkPublishSet
+
 publish_tasks=()
 for project_path in "${published_projects[@]}"; do
   publish_tasks+=("${project_path}:publishAllPublicationsToUiBuilderExtractionRepository")
