@@ -68,6 +68,21 @@ internal fun CapabilityCatalog.exportRecord(embedded: ComponentRecordFile?): Com
  * `wear-m3`'s native-only components: the component is in the catalog, it exports and it renders on
  * the native lane, just not here.
  */
+/**
+ * Which canvas adapter each component wants, for the ids whose catalog names one.
+ *
+ * Only the components that declare a `canvas` appear, so an empty map — today's state for every
+ * catalog — leaves the renderer keying on component ids exactly as before. See
+ * [WasmCapability.canvas].
+ */
+internal val CapabilityCatalog.canvasAdapterIds: Map<String, String>
+  get() =
+    components
+      .mapNotNull { component ->
+        component.wasm.canvas?.takeIf { it.isNotBlank() }?.let { component.componentId to it }
+      }
+      .toMap()
+
 internal val CapabilityCatalog.nativeOnlyComponentIds: Set<String>
   get() = componentPacks.packs.flatMapTo(mutableSetOf()) { it.componentIds }
 

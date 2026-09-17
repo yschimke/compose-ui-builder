@@ -103,7 +103,23 @@ class UiBuilderInspectionCollector(
   private val document: UiBuilderDocument,
   private val onSnapshot: (UiBuilderInspectionSnapshot) -> Unit = {},
   private val onInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
+  /**
+   * Which adapter draws each component, where the catalog names one.
+   *
+   * Needed because "is this a text node" is a question about what DREW the node, not about its id.
+   * The canvas keys its dispatch on the adapter id (`UI_BUILDER_CATALOG_CONTRACT.md` item 17), so a
+   * component the catalog points at the text adapter reports a text layout exactly as `m3/text`
+   * does — and a check keyed on the component id alone rejects it, which is an
+   * `IllegalArgumentException` out of a render rather than a wrong picture.
+   *
+   * Empty for every catalog today, which makes this inherit the previous behaviour exactly.
+   */
+  private val canvasAdapterIds: Map<String, String> = emptyMap(),
 ) {
+  /** The id the canvas drew this node with: the catalog's adapter, or the component's own id. */
+  private fun adapterFor(nodeId: String): String? =
+    document.nodes[nodeId]?.componentId?.let { canvasAdapterIds[it] ?: it }
+
   private val bounds = mutableMapOf<String, UiBuilderPixelBounds>()
   private val textLayouts = mutableMapOf<String, LocalTextLayout>()
   private var state: Map<String, String?> = initialState(document)
@@ -137,7 +153,7 @@ class UiBuilderInspectionCollector(
     // to `m3/text`, back when `wear-m3/text` was drawn as one — keyed on the mobile id alone it
     // failed the first Wear render after the rename. Wear text is drawn by Wear's own `Text` now,
     // and the question here was never about drawing: a node is a text node if it is one.
-    require(document.nodes[nodeId]?.componentId?.isUiBuilderTextComponent() == true) {
+    require(adapterFor(nodeId)?.isUiBuilderTextComponent() == true) {
       "text layout belongs to a native text node: $nodeId"
     }
     textLayouts[nodeId] =
@@ -163,7 +179,9 @@ class UiBuilderInspectionCollector(
           expectedAuthoredNodeIds = document.nodes.keys.sorted(),
           expectedAuthoredTextNodeIds =
             document.nodes.values
-              .filter { it.componentId.isUiBuilderTextComponent() }
+              .filter {
+                (canvasAdapterIds[it.componentId] ?: it.componentId).isUiBuilderTextComponent()
+              }
               .map { it.id }
               .sorted(),
           measuredNodeIds = bounds.keys.sorted(),

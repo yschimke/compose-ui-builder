@@ -1745,6 +1745,9 @@ fun UiBuilderEditor(
   CompositionLocalProvider(
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
+    // From the catalog for the same reason as the two lines above: which adapter draws a component
+    // is the catalog's statement, not this build's. Empty for every catalog today.
+    LocalUiBuilderCanvasAdapters provides catalog.canvasAdapterIds,
     LocalUiBuilderPageDestinations provides pageDestinations.filter { it.designId != document.id },
     LocalUiBuilderNavigator provides onNavigatePage,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },

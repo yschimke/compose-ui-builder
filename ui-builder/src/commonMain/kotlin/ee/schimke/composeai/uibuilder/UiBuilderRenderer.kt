@@ -211,6 +211,23 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
  * another catalog's record proved a call site for. Empty by default, so every other host of this
  * surface — the previews, the renderer bundle — is unchanged.
  */
+/**
+ * Component id to canvas adapter id, as the catalog names them.
+ *
+ * The dispatch below is keyed on this rather than on the component id —
+ * `UI_BUILDER_CATALOG_CONTRACT.md` item 17, "the adapter registry is the existing `when`, keyed by
+ * adapter id instead of component id". Provided by the editor from the catalog, exactly like
+ * [LocalUiBuilderNativeOnly].
+ *
+ * Empty by default and empty in practice today, which makes this change a no-op on every current
+ * catalog: with no entry, a component keys on its own id and draws what it drew before. What it
+ * buys is that a catalog CAN now say which adapter draws its component, so a new component needs no
+ * case written here — which is the coupling that made this repository hold a copy of every
+ * catalog's inventory.
+ */
+internal val LocalUiBuilderCanvasAdapters =
+  staticCompositionLocalOf<Map<String, String>> { emptyMap() }
+
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
 /**
@@ -468,6 +485,11 @@ fun UiBuilderSurface(
    */
   catalogComponentIds: Set<String> = LocalUiBuilderCatalogComponentIds.current,
   /**
+   * Which adapter draws each component, where the catalog names one. See
+   * [LocalUiBuilderCanvasAdapters]. Inherited from an enclosing provider, like the two sets above.
+   */
+  canvasAdapterIds: Map<String, String> = LocalUiBuilderCanvasAdapters.current,
+  /**
    * Draw the design at its whole extent rather than at its frame — see [LocalUiBuilderUnrolled] for
    * what that swaps and what it costs.
    */
@@ -497,7 +519,7 @@ fun UiBuilderSurface(
   val currentInspectionCallback = rememberUpdatedState(onInspectionSnapshot)
   val currentInspectionInvalidated = rememberUpdatedState(onInspectionInvalidated)
   val inspection =
-    remember(document.id, document.revision, renderSessionId) {
+    remember(document.id, document.revision, renderSessionId, canvasAdapterIds) {
       UiBuilderInspectionCollector(
         document = document,
         onSnapshot = { snapshot -> currentInspectionCallback.value?.invoke(snapshot) },
@@ -505,6 +527,7 @@ fun UiBuilderSurface(
           onInspectionInvalidated?.let {
             { collector -> currentInspectionInvalidated.value?.invoke(collector) }
           },
+        canvasAdapterIds = canvasAdapterIds,
       )
     }
   val state =
@@ -606,6 +629,7 @@ fun UiBuilderSurface(
     LocalUiBuilderCornerRadius provides cornerRadius,
     LocalUiBuilderNativeOnly provides nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
+    LocalUiBuilderCanvasAdapters provides canvasAdapterIds,
     LocalUiBuilderUnrolled provides unrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
   ) {
@@ -772,7 +796,11 @@ private fun RenderNode(
     )
   }
 
-  when (node.componentId) {
+  // The adapter the catalog names, or the component's own id when it names none — which is every
+  // component today. See [LocalUiBuilderCanvasAdapters].
+  val adapterId = LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
+
+  when (adapterId) {
     // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
     // from `hostSpec` rather than written here, so this canvas and the native render beside it
     // cannot disagree about what the host reserves — see [WearWidgetHostSpec].
@@ -1639,15 +1667,26 @@ private fun RenderNode(
     //
     // Below every specific case, so it can only ever catch an id that would otherwise have drawn
     // an error: nothing this renderer knows how to draw can be demoted to a placeholder by it.
-    in LocalUiBuilderCatalogComponentIds.current ->
-      NativeOnlyPlaceholder(node, measured) {
-        // The children, for the reason the Wear and pack placeholders keep theirs: an icon inside
-        // an icon button is the thing an author is looking for, and dropping it would hide whole
-        // subtrees from the canvas.
-        node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+    // Both of these ask about the COMPONENT id, not the adapter id above, which is why they are an
+    // `if` inside the `else` rather than two more `when` branches. Keying the membership test on
+    // the adapter would mean a component whose catalog names an adapter this build lacks — the one
+    // case item 17 exists to handle — comparing an adapter id against a set of component ids,
+    // missing, and drawing an ERROR where the contract says it must draw a placeholder.
+    else ->
+      if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {
+        // On the palette, exportable, rendered by its own catalog — and this canvas has no case
+        // for it, either because its id has no branch or because the adapter it named is one this
+        // build does not ship. The shelf already promises exactly this picture.
+        NativeOnlyPlaceholder(node, measured) {
+          // The children, for the reason the Wear and pack placeholders keep theirs: an icon
+          // inside an icon button is the thing an author is looking for, and dropping it would
+          // hide whole subtrees from the canvas.
+          node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+        }
+      } else {
+        // Not the catalog's at all. Now the only thing this says, and it is true when it says it.
+        UnsupportedComponentDiagnostic(node.componentId, measured)
       }
-    // Not the catalog's at all. Now the only thing this says, and it is true when it says it.
-    else -> UnsupportedComponentDiagnostic(node.componentId, measured)
   }
 }
 

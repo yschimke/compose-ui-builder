@@ -195,6 +195,23 @@ data class WasmCapability(
   val platformSupported: JsonElement,
   val adapterStatus: WasmAdapterStatus,
   val notes: String? = null,
+  /**
+   * Which canvas adapter draws this component, named by the catalog.
+   *
+   * The renderer's dispatch is a `when`, and until now it was keyed on the **component id** — so
+   * every id it could draw had to be written into this repository, and a catalog could not say
+   * "draw mine with the one you already have". That is the coupling
+   * `UI_BUILDER_CATALOG_CONTRACT.md` item 17 removes: an adapter id is a name this build either has
+   * a case for or does not, and the catalog chooses it.
+   *
+   * Null means "key on the component id", which is every component today — the published Wear
+   * catalog carries the field and leaves it null on all 78. So this reads as a no-op until a
+   * catalog populates it, which is the point: the consumer half can land first.
+   *
+   * An id this build has no case for is not an error. It draws the named placeholder, the same
+   * picture the shelf already promises for a component with no adapter.
+   */
+  val canvas: String? = null,
 )
 
 @Serializable
