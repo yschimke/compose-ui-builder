@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A pull request cancels its own superseded runs; a push to `main` does not cancel anything.
+# `${{ github.ref }}` alone puts every push to `main` in ONE group, so each merge cancels the
+# previous commit's run and commits reach `main` with no completed CI at all. A push therefore
+# takes `github.run_id` — unique per run, therefore a group of one, therefore never cancelled.
+# Carried over from compose-preview-server, where four commits landed untested on one day before
+# it was fixed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # Two JDKs, because this build has two JVM floors: `java-server` (17) for everything a
+          # consumer compiles against, and `java-ui-builder` (21) for the frontend lane. See the
+          # top of `gradle/libs.versions.toml`. 17 is last, so it is `JAVA_HOME` and Gradle itself
+          # runs on the floor consumers resolve; the 21 install is reached as a toolchain through
+          # `org.gradle.java.installations.fromEnv` in `gradle.properties`.
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - run: ./gradlew check ktfmtCheckAll
+      # The two archives the server consumes. `check` builds and verifies both, but naming them
+      # here is what fails the build if the *packaging* regresses without the verification task
+      # noticing — they are the artifacts a consumer actually resolves.
+      - run: ./gradlew :ui-builder-web:webArchive :ui-builder-render-bundle:jar
+
+  ui-builder-remote-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      # The normal Gradle job proves the shipping default. Keep the opt-in code compiled and
+      # exercised against released dependencies as well, without enabling it in distributions.
+      # `:mcp:test` and `:server:test` were in this list before the extraction and stayed with the
+      # server, which runs the same flag in its own CI — a release pairs the two.
+      - run: >-
+          ./gradlew -PuiBuilderRemoteCompose=true
+          :ui-builder-export:jvmTest :ui-builder:jvmTest :ui-builder-runtime:test
+          :ui-builder:compileKotlinWasmJs
+
+  ui-builder-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+      - run: npm test
+        working-directory: scripts/ui-builder
+      # The readiness gate's own tests. A check nobody invokes is indistinguishable from a check
+      # that passes.
+      - run: .github/scripts/test-ui-builder-equivalence.sh
+      - name: remote-m3 catalog-level equivalence
+        run: |
+          .github/scripts/ui-builder-equivalence.sh \
+            --policy docs/design/fixtures/ui-builder/remote-m3-published-v1.json \
+            --golden docs/design/fixtures/ui-builder/remote-m3-capabilities-v1.json \
+            --differences docs/design/fixtures/ui-builder/remote-m3-differences.json \
+            --catalog-id remote-m3 \
+            --component-id-prefix "remote-m3/" \
+            --strict
+      - name: wear-m3 catalog-level equivalence
+        run: |
+          .github/scripts/ui-builder-equivalence.sh \
+            --policy docs/design/fixtures/ui-builder/wear-m3-published-v1.json \
+            --golden docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json \
+            --differences docs/design/fixtures/ui-builder/wear-m3-differences.json \
+            --catalog-id wear-m3 \
+            --component-id-prefix "wear-m3/" \
+            --strict
+
+      - name: m3 catalog-level equivalence
+        run: |
+          .github/scripts/ui-builder-equivalence.sh \
+            --policy docs/design/fixtures/ui-builder/m3-catalog-generated-published-v1.json \
+            --golden docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json \
+            --differences docs/design/fixtures/ui-builder/m3-catalog-differences.json \
+            --catalog-id m3-catalog \
+            --component-id-prefix "m3/" \
+            --strict
+
+      - name: Wear port stays on the canvas
+        run: .github/scripts/wear-port-canvas-only.sh

@@ -1,5 +1,24 @@
 # The UI builder is a second project in this repository
 
+> **Superseded in part, and kept because the rest of it is still the rule.**
+>
+> The extraction this document argued against has happened: these nine modules are now
+> `yschimke/compose-ui-builder`, and the boundary below is a repository boundary. What changed is
+> the *mechanism* — rule 3 and `ui-builder-project-boundary.sh` are gone, because a module cannot
+> join the wrong project when the projects are different repositories, and the script's own
+> reasoning ("the usual way a boundary rots is a module nobody classified") no longer has a way to
+> happen.
+>
+> What did **not** change, and is why this document travelled with the code: the membership call in
+> *The two projects*, the seam table in rule 2 — still exactly the four modules the server
+> consumes — and *The test for a seam*. Those decide what a consumer may reach for, and they now
+> decide what this repository publishes.
+>
+> The cost estimate in *The decision* also stands, and is now being paid rather than predicted:
+> every change spanning the editor and the routes that serve it is two pull requests. Read it as
+> the record of what was known before, not as a claim about where the code is.
+
+
 **Status: normative.** The rule is enforced by
 [`.github/scripts/ui-builder-project-boundary.sh`](../../.github/scripts/ui-builder-project-boundary.sh),
 which CI runs on every pull request. Cited from [`AGENTS.md`](../../AGENTS.md); not restated there.

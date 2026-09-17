@@ -83,15 +83,15 @@ tasks.named("check") { dependsOn(checkMaterialIconCatalogFixture) }
 tasks.named("check") {
   group = "verification"
   dependsOn(
-    ":ui-builder-runtime:check",
-    ":ui-builder-renderer:check",
-    ":ui-builder-web:check",
-    ":server:check",
     ":ui-builder:check",
+    ":ui-builder-artwork:check",
+    ":ui-builder-export:check",
     ":ui-builder-generated-jetcaster:check",
     ":ui-builder-reference-jetcaster:check",
-    ":usage-source-psi:check",
-    ":wasm-ui:check",
+    ":ui-builder-render-bundle:check",
+    ":ui-builder-renderer:check",
+    ":ui-builder-runtime:check",
+    ":ui-builder-web:check",
   )
 }
 
@@ -158,29 +158,26 @@ subprojects {
 }
 
 // ---------------------------------------------------------------------------
-// No Maven set: this repository does not publish to Maven Central.
+// Publishing: not yet, and when it comes it will be DERIVED.
 // ---------------------------------------------------------------------------
 //
-// What it ships are the GitHub release assets — `compose-preview-server-<v>.tar.gz`,
-// `compose-preview-mcp-<v>.tar.gz` and `compose-preview-ui-builder-web-<v>.zip`, built by
-// `:server:distTar`, `:mcp:distTar` and `:ui-builder-web:webArchive`. `compose-preview serve`,
-// `browse`, `ui-builder` and `mcp serve` launch those; nothing links this build's classes.
+// The four modules `UI_BUILDER_PROJECT_BOUNDARY.md` names as seams -- `:ui-builder-runtime`,
+// `:ui-builder-export`, `:ui-builder-web` and `:ui-builder-render-bundle` -- are what
+// compose-preview-server consumes, and until they are on Maven Central it consumes them through
+// `includeBuild` against a checkout of this repository. They still carry their `publishedArtifactId`
+// and their version derivation, because those name the distribution archives and always did.
 //
-// Six modules used to publish, and five of them only because the sixth's POM named them. A project
-// dependency reaches a published POM as a coordinate, so `:server` depending on
-// `:ui-builder-export` meant `:ui-builder-export` had to be on Central too — which is how 3.1.0
-// shipped `compose-preview-server:ui-builder-export-jvm:unspecified` and 3.3.0 through 3.8.0 shipped
-// a `compose-preview-ui-builder-runtime` POM naming an artifact nobody had uploaded. Six releases
-// nobody could resolve, for a transitive nobody wanted.
-//
-// With no POM there is no coordinate to dangle, so the machinery those breakages produced —
-// `publishReleaseArtifacts`, `printPublishedProjectPaths`, `CheckPublishedPomCoordinates` and the
-// external-consumer gate that staged the derived set into a local repository — is gone with it. The
-// modules keep their `archivesName`, which names the distribution archives and always did.
-//
-// The one consumer this cost anything is compose-ai-tools, whose `:cli` compiled two wire-drift
-// tests against `compose-preview-serve`. Those tests launch the distribution now
-// (compose-ai-tools#5436), which is the artifact `serve` runs anyway.
+// When the Maven lane is added it must derive its set from which modules apply the publishing
+// plugin, never from a list. compose-preview-server learned that twice and expensively: 3.1.0
+// shipped `compose-preview-server:ui-builder-export-jvm:unspecified` because a project dependency
+// reached a POM as a coordinate for a module nothing published, and 3.3.0 through 3.8.0 shipped a
+// `compose-preview-ui-builder-runtime` POM naming a render-bundle artifact nobody had uploaded --
+// six consecutive unresolvable releases, caused by one hand-kept list in a release workflow
+// disagreeing with a second hand-kept list in a gate script. The machinery that came out of that
+// (`publishReleaseArtifacts`, `printPublishedProjectPaths`, `CheckPublishedPomCoordinates` and an
+// external-consumer gate staging the derived set into a local repository) was deleted with the
+// coordinates in compose-preview-server#794 and is in that repository's history, at 3c074dd.
+// Restore it from there rather than writing a new one.
 
 // One compile-time choice for the editor/server and the independently published MCP adapter.
 // No environment, URL or request parameter can turn a released build's feature set on.
@@ -188,9 +185,10 @@ val remoteComposeAuthoring = providers.gradleProperty("uiBuilderRemoteCompose").
   require(it == "true" || it == "false") { "uiBuilderRemoteCompose must be true or false" }
   it.toBooleanStrict()
 }
+// `generateMcpBuildFeatures` stayed behind with `:mcp`, which is the server's module. The flag is
+// still one compile-time choice; it is now made in two builds, and a release pairs them.
 listOf(
   Triple("generateUiBuilderBuildFeatures", "ee.schimke.composeai.uibuilder", "UiBuilderBuildFeatures"),
-  Triple("generateMcpBuildFeatures", "ee.schimke.composeai.mcp", "McpBuildFeatures"),
 ).forEach { (taskName, packageName, objectName) ->
   tasks.register(taskName) {
     val enabled = remoteComposeAuthoring

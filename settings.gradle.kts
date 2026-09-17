@@ -97,25 +97,81 @@ if (localDependencyVersions.isNotEmpty()) {
     }
   }
 }
+// ── Optional composite builds against sibling checkouts ───────────────────────────────────────
+//
+// This repository resolves its upstream — `ee.schimke.composeai:*` from compose-ai-tools, the
+// preview daemon, the contracts line — as PUBLISHED COORDINATES, and that is the default because
+// it is what CI and every fresh clone do. But the coordinates move under us constantly, and the
+// two ways to test a change to one of them from here were both bad: publish it to Maven Central
+// first, or run `scripts/stage-local-dependency.py` and rebuild the staged repository on every
+// edit.
+//
+// `includeBuild` is the third way, and it is the one that makes an edit in a sibling checkout show
+// up here on the next Gradle invocation with no publishing step at all. It is OPT-IN: naming no
+// sibling resolves everything from Maven exactly as before.
+//
+//     ./gradlew check -PlocalBuilds=tools
+//     ./gradlew check -PlocalBuilds=tools,daemon
+//     ./gradlew check -PlocalBuilds=all
+//
+// Each sibling defaults to a checkout beside this one, and `-PlocalBuild.<name>=<path>` overrides
+// that when yours lives somewhere else. A named sibling whose directory is missing is an error
+// rather than a silent fall back to Maven: "I asked for my local tools and got the released one"
+// is exactly the confusion this exists to remove.
+//
+// WHAT THIS DOES NOT DO: declare substitution rules. Gradle substitutes an included build's
+// projects for external coordinates automatically when the group and module name match, which is
+// the case for every upstream here — they publish the coordinates their projects are named after.
+// A sibling whose artifactId differs from its project name needs an explicit
+// `dependencySubstitution` rule, and the consumer that needs one should add it here rather than
+// rename a project to suit a coordinate.
+val localBuildRoots =
+  mapOf(
+    "tools" to "../compose-ai-tools",
+    "daemon" to "../compose-preview-daemon",
+    "contracts" to "../compose-preview-contracts",
+  )
 
-rootProject.name = "compose-preview-server"
+val requestedLocalBuilds =
+  providers.gradleProperty("localBuilds").orNull
+    ?.split(",")
+    ?.map(String::trim)
+    ?.filter(String::isNotEmpty)
+    .orEmpty()
+    .flatMap { requested ->
+      if (requested == "all") localBuildRoots.keys else listOf(requested)
+    }
+    .distinct()
 
-include(":ui-builder-runtime")
+requestedLocalBuilds.forEach { name ->
+  val default =
+    requireNotNull(localBuildRoots[name]) {
+      "Unknown local build '$name'. Known siblings: ${localBuildRoots.keys.sorted()}, or 'all'."
+    }
+  val directory =
+    file(providers.gradleProperty("localBuild.$name").orNull ?: default).canonicalFile
+  require(directory.resolve("settings.gradle.kts").isFile || directory.resolve("settings.gradle").isFile) {
+    "-PlocalBuilds names '$name' but $directory is not a Gradle build. Clone it there, or point " +
+      "at your checkout with -PlocalBuild.$name=<path>."
+  }
+  logger.lifecycle("Composite build: $name -> $directory")
+  includeBuild(directory)
+}
 
-include(":server")
+rootProject.name = "compose-ui-builder"
 
-// The MCP server — `compose-preview mcp serve`. Moved here from compose-ai-tools because the layer
-// rule places a module that needs an HTTP server in this repository (compose-ai-tools#5176); it
-// consumes the layer-1 daemon/render-session coordinates it used to reach as projects.
-include(":mcp")
-
-include(":usage-source-psi")
-
-include(":wasm-ui")
+// ── The UI builder ─────────────────────────────────────────────────────────────────────────────
+//
+// Nine modules, extracted from yschimke/compose-preview-server, where they were already a second
+// project with an enforced boundary (`docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`, which came with
+// them). That boundary is now a repository boundary, and the four modules its table named as seams
+// are what the server still consumes.
 
 include(":ui-builder")
 
 include(":ui-builder-export")
+
+include(":ui-builder-runtime")
 
 include(":ui-builder-renderer")
 
@@ -133,5 +189,3 @@ include(":ui-builder-artwork")
 include(":ui-builder-reference-jetcaster")
 
 include(":ui-builder-generated-jetcaster")
-
-include(":native-catalog-m3")
