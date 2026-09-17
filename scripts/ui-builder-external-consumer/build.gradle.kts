@@ -17,6 +17,22 @@ dependencies {
   implementation("ee.schimke.composeai:compose-preview-ui-builder-runtime")
 }
 
+// Every coordinate the BOM constrains, resolved — not just the one this fixture compiles against.
+//
+// A platform whose constraints name something nobody published is the 3.3.0-3.8.0 failure with one
+// more layer of indirection: it resolves fine for a consumer who does not use that constraint, and
+// fails for the one who does. Asserting the POM's `<dependencyManagement>` (below) says the BOM
+// PROMISES the right set; resolving this configuration says the promise can be kept.
+val bomMembers =
+  configurations.create("bomMembers") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+  }
+
+dependencies {
+  add(bomMembers.name, platform("ee.schimke.composeai:compose-preview-ui-builder-bom:$gateVersion"))
+}
+
 tasks.register<JavaExec>("runRuntimeProbe") {
   dependsOn(tasks.named("classes"))
   classpath = sourceSets.main.get().runtimeClasspath
