@@ -9,8 +9,6 @@ plugins {
   id("composeai.maven-publishing")
 }
 
-
-
 kotlin {
   jvmToolchain(libs.versions.java.server.get().toInt())
 
@@ -31,7 +29,6 @@ kotlin {
 tasks.named("check") { dependsOn("checkKotlinAbi") }
 
 ktfmt { googleStyle() }
-
 
 base { archivesName.set("compose-preview-" + project.name) }
 
@@ -181,6 +178,7 @@ composeAiMavenPublishing {
   coordinates(
     displayName = "Compose UI Builder — Runtime",
     description =
-      "Persistent collaborative UI-builder service, catalog validation, and revision-pinned export orchestration.",
+      "Persistent collaborative UI-builder service, catalog validation, and revision-pinned " +
+        "export orchestration.",
   )
 }

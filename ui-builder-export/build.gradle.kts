@@ -25,13 +25,6 @@ plugins {
   id("composeai.maven-publishing")
 }
 
-
-
-// Same derivation as `:server` and `:ui-builder-runtime` — `PLUGIN_VERSION` in CI, a patch-bumped
-// SNAPSHOT off `.release-please-manifest.json` locally. It keeps every archive on the shared
-// release
-// line; `unspecified` was also the string that broke 3.1.0's former POM.
-
 base { archivesName.set("compose-preview-" + project.name) }
 
 ktfmt { googleStyle() }
@@ -71,6 +64,8 @@ composeAiMavenPublishing {
   coordinates(
     displayName = "Compose UI Builder — Export",
     description =
-      "Projection from a saved UI-builder design onto the screen model the Compose generator consumes, shared by the service and the browser editor so the two agree about what a design exports.",
+      "Projection from a saved UI-builder design onto the screen model the Compose generator " +
+        "consumes, shared by the service and the browser editor so the two agree about what a " +
+        "design exports.",
   )
 }

@@ -8,9 +8,6 @@ plugins {
   id("composeai.maven-publishing")
 }
 
-
-
-
 val webArchive =
   tasks.register<Zip>("webArchive") {
     description = "Package the standalone UI-builder Wasm application as an immutable archive."
@@ -93,7 +90,6 @@ tasks.named("check") { dependsOn(verifyUiBuilderWebArchive) }
 composeAiMavenPublishing {
   coordinates(
     displayName = "Compose UI Builder — Web",
-    description =
-      "Immutable Compose/Wasm frontend archive for the Compose UI builder.",
+    description = "Immutable Compose/Wasm frontend archive for the Compose UI builder.",
   )
 }

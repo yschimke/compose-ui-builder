@@ -7,8 +7,6 @@ plugins {
   id("composeai.maven-publishing")
 }
 
-
-
 /**
  * The packaged UI-builder render bundle, as an artifact of its own.
  *
