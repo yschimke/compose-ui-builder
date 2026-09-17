@@ -1,0 +1,131 @@
+{
+  "designId": "remote-live-preview-1789119682416",
+  "initial": {
+    "revision": 0,
+    "bytes": 790,
+    "sha256": "105c3660935928be0976638aab9583418c427c1e100ca5e0d22f4667e20d53dd"
+  },
+  "updated": {
+    "revision": 1,
+    "bytes": 790,
+    "sha256": "8c38b6adc65002bef353b493ec7cc3296be84f6f2a3039ecf63dc96dccb62ec4"
+  },
+  "operation": {
+    "type": "setStateVariable",
+    "name": "page",
+    "declaration": {
+      "type": "value",
+      "valueType": "int",
+      "initialValue": 20,
+      "persistence": "preview"
+    }
+  },
+  "colors": [
+    {
+      "name": "first",
+      "expected": [
+        103,
+        80,
+        164
+      ],
+      "observed": {
+        "color": [
+          103,
+          80,
+          164
+        ],
+        "bounds": {
+          "x": 460,
+          "y": 396,
+          "width": 360,
+          "height": 360
+        }
+      }
+    },
+    {
+      "name": "second",
+      "expected": [
+        0,
+        133,
+        119
+      ],
+      "observed": {
+        "color": [
+          0,
+          133,
+          119
+        ],
+        "bounds": {
+          "x": 460,
+          "y": 396,
+          "width": 360,
+          "height": 360
+        }
+      }
+    },
+    {
+      "name": "fallback",
+      "expected": [
+        57,
+        73,
+        171
+      ],
+      "observed": {
+        "color": [
+          57,
+          73,
+          171
+        ],
+        "bounds": {
+          "x": 460,
+          "y": 396,
+          "width": 360,
+          "height": 360
+        }
+      }
+    },
+    {
+      "name": "first-again",
+      "expected": [
+        103,
+        80,
+        164
+      ],
+      "observed": {
+        "color": [
+          102,
+          80,
+          163
+        ],
+        "bounds": {
+          "x": 460,
+          "y": 396,
+          "width": 360,
+          "height": 360
+        }
+      }
+    },
+    {
+      "name": "mcp-edited",
+      "expected": [
+        0,
+        133,
+        119
+      ],
+      "observed": {
+        "color": [
+          0,
+          133,
+          119
+        ],
+        "bounds": {
+          "x": 460,
+          "y": 396,
+          "width": 360,
+          "height": 360
+        }
+      }
+    }
+  ],
+  "errors": []
+}

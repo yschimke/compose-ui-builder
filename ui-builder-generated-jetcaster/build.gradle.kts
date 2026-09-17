@@ -52,8 +52,6 @@ tasks.register<Sync>("wasmFrontendDist") {
   }
   from(layout.buildDirectory.dir("kotlin-multiplatform-resources/aggregated-resources/wasmJs"))
   from(layout.projectDirectory.dir("src/wasmJsMain/resources"))
-  from(rootProject.layout.projectDirectory.dir("assets/js-joda")) {
-    include("js-joda.esm.js")
-  }
+  from(rootProject.layout.projectDirectory.dir("assets/js-joda")) { include("js-joda.esm.js") }
   into(layout.buildDirectory.dir("wasmDist"))
 }

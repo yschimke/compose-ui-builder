@@ -43,6 +43,20 @@ checkout of this repository. That means **a change to a seam module can break th
 without anything here going red.** Until the publishing lane and a version pin exist, a change to
 one of the four is a change to be landed with the server's build checked against it.
 
+## Assets whose writer is in the other repository
+
+`.github/scripts/decoder-shapes.json` is READ by `ui-builder-equivalence.sh` here and WRITTEN by
+`DecoderShapeFixtureTest` in compose-preview-server's `:server` — it is generated from that
+repository's decoders rather than transcribed from them. The copy here is therefore a snapshot with
+no generator, and it goes stale silently the day those decoders change.
+
+It is the same open question as `docs/design/fixtures/ui-builder/`, which both repositories now
+carry: the component record is compiled into this editor's binary and verified against the live
+catalog by tests over there. `UI_BUILDER_EXTRACTION_AND_DESKTOP.md` §4 argues both belong in
+`compose-preview-contracts`, versioned as a contract, and that the split should have settled it
+first. Until it is settled, a decoder change in the server is a change that needs bringing across
+by hand.
+
 ## Things that stayed behind
 
 Named so nobody looks for them here: the HTTP/WebSocket routes and the MCP design tools

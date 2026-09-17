@@ -1,0 +1,174 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "remote-live-preview",
+  "title": "Stateful preview",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "remote-m3",
+    "catalogRevision": "wear-widget-scaffolds-v1",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 360,
+    "heightDp": 360,
+    "density": 1.0,
+    "theme": "light",
+    "dynamicColor": null,
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": null,
+    "fixedTime": null,
+    "animations": "settled",
+    "networkAccess": false,
+    "background": null,
+    "typeface": null,
+    "exportDevices": []
+  },
+  "stateVariables": {
+    "page": {
+      "type": "value",
+      "valueType": "int",
+      "initialValue": 10,
+      "persistence": "preview"
+    }
+  },
+  "roots": [
+    "choice"
+  ],
+  "nodes": {
+    "choice": {
+      "id": "choice",
+      "componentId": "layout/box",
+      "properties": {
+        "showByState": {
+          "type": "object",
+          "fields": {
+            "selector": {
+              "type": "state",
+              "variable": "page"
+            },
+            "cases": {
+              "type": "object",
+              "fields": {
+                "First": {
+                  "type": "int",
+                  "value": 10
+                },
+                "Second": {
+                  "type": "int",
+                  "value": 20
+                }
+              }
+            },
+            "fallback": {
+              "type": "string",
+              "value": "Fallback"
+            }
+          }
+        }
+      },
+      "slots": {
+        "children": [
+          "First",
+          "Second",
+          "Fallback"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ]
+    },
+    "First": {
+      "id": "First",
+      "componentId": "layout/box",
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "background",
+          "color": {
+            "type": "color",
+            "value": "#FF6750A4"
+          }
+        }
+      ],
+      "eventBindings": {
+        "click": [
+          {
+            "type": "set",
+            "variable": "page",
+            "value": 20
+          }
+        ]
+      }
+    },
+    "Second": {
+      "id": "Second",
+      "componentId": "layout/box",
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "background",
+          "color": {
+            "type": "color",
+            "value": "#FF008577"
+          }
+        }
+      ],
+      "eventBindings": {
+        "click": [
+          {
+            "type": "set",
+            "variable": "page",
+            "value": 30
+          }
+        ]
+      }
+    },
+    "Fallback": {
+      "id": "Fallback",
+      "componentId": "layout/box",
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "background",
+          "color": {
+            "type": "color",
+            "value": "#FF3949AB"
+          }
+        }
+      ],
+      "eventBindings": {
+        "click": [
+          {
+            "type": "set",
+            "variable": "page",
+            "value": 10
+          }
+        ]
+      }
+    }
+  },
+  "assets": {},
+  "tokenBindings": {},
+  "createdAtEpochMillis": null,
+  "updatedAtEpochMillis": null,
+  "components": {}
+}
