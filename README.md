@@ -43,15 +43,38 @@ Two Java floors, both named in `gradle/libs.versions.toml`: the editor's JVM lan
 `:ui-builder-runtime`, `:ui-builder-export`, `:ui-builder-web` and `:ui-builder-render-bundle` —
 and nothing here may depend on it.
 
-Those four, plus a BOM, are what this repository publishes:
+A release goes out in two halves, because the four seams are not the same kind of thing.
+
+**Maven Central — three jars and a BOM.** What a consumer compiles or resolves against:
 
 | Coordinate | |
 | --- | --- |
-| `ee.schimke.composeai:compose-preview-ui-builder-bom` | version constraints for all of the below |
+| `ee.schimke.composeai:compose-preview-ui-builder-bom` | version constraints for the three below |
 | `…:compose-preview-ui-builder-runtime` | the design service |
 | `…:compose-preview-ui-builder-export` | the design → screen-model projection |
-| `…:compose-preview-ui-builder-web` | the editor, as a Wasm distribution archive (a `zip`) |
 | `…:compose-preview-ui-builder-render-bundle` | the packaged preview a design renders through |
+
+`-render-bundle` is on that list even though nobody names it directly: it is an `api` dependency of
+the runtime, so its coordinate appears in the runtime's POM, and a POM naming an artifact nobody
+uploaded is what made `compose-preview-serve` unresolvable for six consecutive releases.
+
+**A GitHub release asset — one ZIP.** `compose-preview-ui-builder-web-<version>.zip`, the Wasm
+editor. A host unpacks it; nothing compiles against it, nothing resolves it transitively. It stays
+off Central because a 40 MB frontend distribution published there is permanent and serves no one.
+compose-preview-server reaches it through a group-fenced ivy repository over this repository's
+releases, so it remains an ordinary versioned dependency:
+
+```kotlin
+ivy("https://github.com/yschimke/compose-ui-builder/releases/download") {
+  patternLayout { artifact("[revision]/[module]-[revision].[ext]") }
+  content { includeModule("ee.schimke.composeai", "compose-preview-ui-builder-web") }
+  metadataSources { artifact() }
+}
+```
+
+`:ui-builder-web` therefore does **not** apply `composeai.maven-publishing`, and that absence is
+load-bearing: the release set is derived from which modules apply it, so a module that does not
+publish cannot be constrained by a BOM that promises it.
 
 A consumer takes the BOM and then names no versions at all:
 
@@ -89,7 +112,14 @@ Then, with the release version in `PLUGIN_VERSION`:
 
 ```bash
 PLUGIN_VERSION=0.1.0 ./gradlew publishReleaseArtifacts
+PLUGIN_VERSION=0.1.0 ./gradlew :ui-builder-web:webArchive
+gh release upload v0.1.0 \
+  ui-builder-web/build/distributions/compose-preview-ui-builder-web-0.1.0.zip
 ```
+
+`.github/workflows/release.yml` does all of this from a `v*` tag, given the four secrets, and runs
+the external-consumer gate first — so a POM naming an unresolvable coordinate fails before anything
+reaches Central, where it cannot be taken back.
 
 `publishReleaseArtifacts` publishes every module in the derived set and fails first if the set has
 lost one of the four seams or the BOM. Without `PLUGIN_VERSION` every module takes the next patch
