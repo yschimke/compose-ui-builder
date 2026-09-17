@@ -3,10 +3,33 @@ import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
 import java.util.zip.ZipFile
 
-plugins {
-  `java-library`
-  id("composeai.maven-publishing")
-}
+plugins { `java-library` }
+
+// NOT `composeai.maven-publishing`, and that absence is the decision.
+//
+// Applying it is what puts a module in the Central release set and in the BOM. This archive is a
+// 40 MB Wasm distribution that a host unpacks — nothing compiles against it, nothing resolves it
+// transitively — so it ships as a GitHub release asset instead, and compose-preview-server reaches
+// it through a group-fenced ivy repository over that release. Central carries the three jars a
+// consumer actually compiles or resolves against.
+//
+// Leaving the plugin off is also what keeps the BOM honest: the set is derived, so a module that
+// does not publish cannot be constrained by a platform that promises it. A BOM entry for a
+// coordinate nobody uploaded is exactly what made compose-preview-serve 3.3.0 through 3.8.0
+// unresolvable.
+group = "ee.schimke.composeai"
+
+// The same derivation the convention plugin applies to the published modules: `PLUGIN_VERSION` in
+// CI, a patch-bumped SNAPSHOT off `.release-please-manifest.json` locally. It names the release
+// asset, so it has to agree with the version the jars carry.
+version =
+  providers.environmentVariable("PLUGIN_VERSION").orNull
+    ?: run {
+      val manifest = rootDir.resolve(".release-please-manifest.json").readText()
+      val current = Regex(""""\.":\s*"([^"]+)"""").find(manifest)!!.groupValues[1]
+      val (major, minor, patch) = current.split(".").map { it.toInt() }
+      "$major.$minor.${patch + 1}-SNAPSHOT"
+    }
 
 val webArchive =
   tasks.register<Zip>("webArchive") {
@@ -86,10 +109,3 @@ val verifyUiBuilderWebArchive =
   }
 
 tasks.named("check") { dependsOn(verifyUiBuilderWebArchive) }
-
-composeAiMavenPublishing {
-  coordinates(
-    displayName = "Compose UI Builder — Web",
-    description = "Immutable Compose/Wasm frontend archive for the Compose UI builder.",
-  )
-}

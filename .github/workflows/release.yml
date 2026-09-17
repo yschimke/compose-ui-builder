@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The existing tag to release from (e.g. v0.1.0).
+        required: true
+
+permissions:
+  contents: write
+
+# What a release of this repository is:
+#
+#   - THREE JARS AND A BOM on Maven Central — `compose-preview-ui-builder-runtime`,
+#     `-export`, `-render-bundle` and `-bom`. These are what a consumer compiles or resolves
+#     against. `-render-bundle` is not optional even though nobody names it directly: it is an
+#     `api` dependency of the runtime, so its coordinate appears in the runtime's POM, and a POM
+#     naming an artifact nobody uploaded is what made compose-preview-serve unresolvable for six
+#     consecutive releases.
+#
+#   - ONE ZIP as a GitHub release asset — `compose-preview-ui-builder-web-<v>.zip`, the Wasm
+#     editor. A host unpacks it; nothing compiles against it. compose-preview-server resolves it
+#     through a group-fenced ivy repository over this release, which keeps it a normal versioned
+#     dependency without putting a 40 MB frontend distribution on Central forever.
+#
+# The Maven set is DERIVED, never listed: `publishReleaseArtifacts` publishes every module applying
+# `composeai.maven-publishing` and fails first if that set has lost a seam or the BOM.
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_VERSION: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+
+      - name: Derive version from tag
+        run: echo "PLUGIN_VERSION=${PLUGIN_VERSION#v}" >> "$GITHUB_ENV"
+
+      # Before anything leaves the machine. The gate stages the derived set into a throwaway local
+      # repository at a snapshot version and resolves it from a consumer outside this source tree,
+      # so a POM naming an unresolvable coordinate fails here rather than on Central, where it
+      # cannot be taken back.
+      - name: Verify the publishing lane
+        run: ./scripts/check-ui-builder-external-consumer.sh
+
+      - name: Publish to Maven Central
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+        run: ./gradlew publishReleaseArtifacts
+
+      - name: Build the editor archive
+        run: ./gradlew :ui-builder-web:webArchive
+
+      # The asset name is the coordinate compose-preview-server's ivy repository asks for, so this
+      # filename is a contract rather than a label. `:ui-builder-web`'s `archiveBaseName` and
+      # `archiveVersion` produce exactly it.
+      - name: Attach the editor archive to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ inputs.tag || github.ref_name }}" \
+            "ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip" \
+            --clobber

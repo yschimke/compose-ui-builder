@@ -1,11 +1,7 @@
 import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.util.zip.ZipFile
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
-import org.gradle.api.attributes.Category
-import org.gradle.api.attributes.LibraryElements
-import org.gradle.api.attributes.Usage
 
 plugins { java }
 
@@ -19,40 +15,6 @@ val forbiddenSourceRoot = file(providers.gradleProperty("forbiddenSourceRoot").g
 dependencies {
   implementation(platform("ee.schimke.composeai:compose-preview-ui-builder-bom:$gateVersion"))
   implementation("ee.schimke.composeai:compose-preview-ui-builder-runtime")
-}
-
-val webArchive =
-  configurations.create("uiBuilderWebArchive") {
-    isCanBeConsumed = false
-    isCanBeResolved = true
-    attributes {
-      attribute(Category.CATEGORY_ATTRIBUTE, objects.named("distribution"))
-      attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("ui-builder-web"))
-      attribute(Usage.USAGE_ATTRIBUTE, objects.named("ui-builder-web"))
-    }
-  }
-
-dependencies {
-  add(
-    webArchive.name,
-    "ee.schimke.composeai:compose-preview-ui-builder-web:$gateVersion",
-  )
-}
-
-// What the BOM promised, checked against what the release actually staged.
-//
-// A platform whose constraints name a coordinate nobody published is the 3.3.0-3.8.0 failure with
-// one more layer of indirection: resolution succeeds for a consumer who does not use that
-// constraint, and fails for the one who does. So every constraint is resolved here, not just the
-// two this fixture compiles against.
-val bomMembers =
-  configurations.create("bomMembers") {
-    isCanBeConsumed = false
-    isCanBeResolved = true
-  }
-
-dependencies {
-  add(bomMembers.name, platform("ee.schimke.composeai:compose-preview-ui-builder-bom:$gateVersion"))
 }
 
 tasks.register<JavaExec>("runRuntimeProbe") {
@@ -69,22 +31,9 @@ fun ByteArray.contains(needle: ByteArray): Boolean {
   }
 }
 
-fun File.sha256(): String {
-  val digest = MessageDigest.getInstance("SHA-256")
-  inputStream().buffered().use { input ->
-    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-    while (true) {
-      val count = input.read(buffer)
-      if (count < 0) break
-      digest.update(buffer, 0, count)
-    }
-  }
-  return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
-}
-
 tasks.register("verifyExtractionConsumer") {
   group = "verification"
-  description = "Consumes the published UI-builder runtime and exact web distribution variant."
+  description = "Consumes the published UI-builder runtime through the published BOM."
   dependsOn("runRuntimeProbe")
 
   doLast {
@@ -93,7 +42,7 @@ tasks.register("verifyExtractionConsumer") {
     }
 
     val runtimeClasspath = configurations.runtimeClasspath.get()
-    val resolvedConfigurations = listOf(runtimeClasspath, webArchive)
+    val resolvedConfigurations = listOf(runtimeClasspath, bomMembers)
     resolvedConfigurations.forEach { configuration ->
       val projectComponents =
         configuration.incoming.resolutionResult.allComponents
@@ -146,48 +95,6 @@ tasks.register("verifyExtractionConsumer") {
     check(bundleCarriers.size == 1) {
       "expected exactly one artifact carrying $bundleEntry, found $bundleCarriers"
     }
-
-    val webArtifact = webArchive.incoming.artifacts.artifacts.single()
-    check(webArtifact.file.extension == "zip") {
-      "exact UI-builder web variant resolved ${webArtifact.file.name}, not a ZIP"
-    }
-    val webAttributes = webArtifact.variant.attributes
-    check(webAttributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name == "distribution")
-    check(
-      webAttributes.getAttribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)?.name ==
-        "ui-builder-web"
-    )
-    check(webAttributes.getAttribute(Usage.USAGE_ATTRIBUTE)?.name == "ui-builder-web")
-
-    ZipFile(webArtifact.file).use { zip ->
-      val names = zip.entries().asSequence().map { it.name }.toSet()
-      val required =
-        setOf(
-          "index.html",
-          "uiBuilder.mjs",
-          "uiBuilder.wasm",
-          "skiko.mjs",
-          "skiko.wasm",
-          "m3-catalog-capabilities-v1.json",
-          "jetcaster-discover-operations-v1.json",
-          "fonts/fonts.json",
-        )
-      check(names.containsAll(required)) { "web archive is missing ${required - names}" }
-    }
-
-    val coordinateDirectory =
-      gateRepository.resolve("ee/schimke/composeai/compose-preview-ui-builder-web/$gateVersion")
-    val moduleMetadata =
-      coordinateDirectory.listFiles().orEmpty().single { it.extension == "module" }.readText()
-    val pom = coordinateDirectory.listFiles().orEmpty().single { it.extension == "pom" }.readText()
-    check(moduleMetadata.contains("\"org.gradle.category\": \"distribution\""))
-    check(moduleMetadata.contains("\"org.gradle.libraryelements\": \"ui-builder-web\""))
-    check(moduleMetadata.contains("\"org.gradle.usage\": \"ui-builder-web-api\""))
-    check(moduleMetadata.contains("\"org.gradle.usage\": \"ui-builder-web\""))
-    check(moduleMetadata.contains("\"sha256\": \"${webArtifact.file.sha256()}\"")) {
-      "published Gradle metadata does not authenticate the resolved web archive"
-    }
-    check(pom.contains("<packaging>zip</packaging>"))
 
     // Every constraint the BOM publishes must name something the same release staged.
     val bomPom =
