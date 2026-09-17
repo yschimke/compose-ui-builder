@@ -175,6 +175,11 @@ fun main() {
   ComposeViewport(viewportContainerId = "composeApp") { JetcasterReferenceApp() }
 }
 
+/** `jetcaster-discover-expanded`'s authored pane geometry, as the design states it. */
+private val JetcasterMainPaneWidth = 744.dp
+private val JetcasterSupportingPaneWidth = 512.dp
+private val JetcasterPaneSpacing = 24.dp
+
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 private fun JetcasterReferenceApp() {
@@ -188,7 +193,24 @@ private fun JetcasterReferenceApp() {
       // ~7.7% at expanded width from #788 onward, which is 7x the convergence bound. Nothing said
       // so, because the `toMatchSnapshot` assertions on the same tests failed first and the
       // convergence gate never ran.
-      val directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
+      // The design's own pane widths, which this app states because the design states them.
+      //
+      // It did not, and that was invisible while the builder did not read them either: two
+      // implementations ignoring the same three properties agree perfectly.
+      // yschimke/compose-preview-server#924
+      // taught the builder to honour `mainPanePreferredWidthDp`, `supportingPanePreferredWidthDp`
+      // and `paneSpacingDp`, and this app immediately disagreed with it by 7.67% at expanded width
+      // — the divergence the comment below describes, in mirror image, and for the same reason:
+      // one side placing the split where the design asked and the other where the library's
+      // default put it.
+      //
+      // So these are not here to match the builder. They are here because an author implementing
+      // `jetcaster-discover-expanded` would write them, and an oracle that leaves out what the
+      // design specifies is not an independent implementation of that design — it is an
+      // implementation of a different one that happened to agree.
+      val directive =
+        calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
+          .copy(horizontalPartitionSpacerSize = JetcasterPaneSpacing)
       // The library's own computation, so "two panes or one" is its answer rather than this app's,
       // exactly as `AdaptiveSupportingPaneScaffold` does it on the builder's side. Both panes are
       // always declared here, so there is no supporting-only case to name a destination for.
@@ -206,8 +228,12 @@ private fun JetcasterReferenceApp() {
             secondary = computed.secondary,
             tertiary = PaneAdaptedValue.Hidden,
           ),
-        mainPane = { MainDiscoverPane(Modifier.fillMaxSize()) },
-        supportingPane = { PodcastDetailPane(Modifier.fillMaxSize()) },
+        mainPane = {
+          MainDiscoverPane(Modifier.preferredWidth(JetcasterMainPaneWidth).fillMaxSize())
+        },
+        supportingPane = {
+          PodcastDetailPane(Modifier.preferredWidth(JetcasterSupportingPaneWidth).fillMaxSize())
+        },
         modifier = Modifier.fillMaxSize(),
       )
     }
