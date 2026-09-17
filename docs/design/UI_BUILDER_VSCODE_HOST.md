@@ -22,9 +22,19 @@ Checked against the repository, not assumed:
 | `compose-preview-server` | **not** run — the extension talks to Gradle and a daemon, never to the server distribution |
 
 The editor archive is **18.4 MB zipped** (measured from `compose-preview-ui-builder-web-3.39.0.zip`,
-the last release asset the old repository published). Since this repository split its release, that
-archive is an independently versioned GitHub release asset — which is exactly what an extension
-build step wants to fetch, with no Gradle and no dependency on either repository's build.
+the last release asset the old repository published; the spike below re-measured a current one at
+18.1 MB).
+
+**How the extension gets it: a checkout and a combined build, not a release.** This note originally
+reasoned from the archive being an independently versioned release asset, which an extension build
+step could fetch with no Gradle and no dependency on either repository's build. That is where this
+should end up, but it is not where it starts, and the decision is explicit: the extension builds
+the archive from a checkout of this repository first — `:ui-builder-web:webArchive` — and a
+published asset is a later step, if it happens at all. Two things follow. Consuming the editor does
+not wait on a release train or a version pin between the repositories, so the spike could start
+immediately. And this repository has not published a release yet — the first is being readied at
+3.26.0 (#10) — so at the time the spike was written, "fetch the release asset" described an
+intention rather than an available path.
 
 ## The spike that gates everything
 
@@ -42,6 +52,43 @@ Half a day: unpack the archive into a throwaway panel, point a `<base href>` at
 anything else.** If it does not paint, both shapes below are dead and the desktop routes in
 [`UI_BUILDER_EXTRACTION_AND_DESKTOP.md`](UI_BUILDER_EXTRACTION_AND_DESKTOP.md) §5–§6 are the only
 ones left.
+
+### The spike now exists, and is not throwaway
+
+It lives in the extension's repository, at
+[`spikes/ui-builder-wasm/`](https://github.com/yschimke/compose-preview-vscode/tree/main/spikes/ui-builder-wasm)
+(compose-preview-vscode#31): it stages the distribution, serves it with a webview's HTML shape —
+`<meta http-equiv="Content-Security-Policy">`, a per-load nonce on every script, a `<base href>` —
+takes the CSP as a parameter, and measures whether a canvas painted rather than eyeballing it. Its
+`selftest.mjs` checks the instruments before anything trusts them.
+
+**It stages from a checkout, not from a Maven release.** The archive is built by this repository's
+own `:ui-builder-web:webArchive` and unpacked; the plan is a combined build first, and a published
+asset only later, if ever. So a version pin between the two repositories is not a prerequisite for
+starting.
+
+**The verdict is still open, and the answer is not "no".** Two things came out of it:
+
+1. **The predicted CSP list is missing a directive.** `index.html` carries an inline
+   `<script type="importmap">` (it maps `@js-joda/core` to a relative file) as well as the
+   `uiBuilder.mjs` module. Under a nonce-only `script-src` that importmap is an inline script like
+   any other: unnonced it is blocked, the bare specifier then fails to resolve, and **the symptom is
+   a module-resolution error rather than a CSP report naming the importmap**. Nonce every script
+   tag, not just the module ones.
+2. **A software-GL container cannot answer the question.** With *no CSP at all*, the editor ran for
+   15 minutes without a first frame, a renderer pegged at ~100% CPU throughout — executing, not
+   erroring. The CSP variants were deliberately not run on top of that, because a control that
+   cannot paint makes any CSP result meaningless. Rule out 66 MB of WasmGC plus Skiko against
+   software WebGL on four cores before concluding anything: run it where there is hardware GL,
+   which is what a webview on a real desktop has.
+
+The measured archive, while there: **18.1 MB zipped, 80 MB unpacked, 52 files**, of which
+`uiBuilder.wasm` is 66.6 MB and `skiko.wasm` 8.6 MB. §"Open questions" asks about VSIX size below;
+the sharper number is the 80 MB on disk after install, not the 18 in the package.
+
+The other half — a **real** VS Code webview, with its `vscode-webview://` origin, `asWebviewUri`
+rewriting and `localResourceRoots` — remains unrun: `@vscode/test-electron` needs to download a VS
+Code binary, and the sandbox the spike was written in denies that host.
 
 ## Shape A — bundle the archive, run offline
 
