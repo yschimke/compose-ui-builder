@@ -58,6 +58,13 @@ jobs:
       - name: Verify the publishing lane
         run: ./scripts/check-ui-builder-external-consumer.sh
 
+      # Built BEFORE the Central upload, not after. Everything past `publishReleaseArtifacts` is
+      # irreversible - Central does not take a version back - so the last thing that can fail must
+      # fail first. The gate above never builds this archive, so this step is genuinely the
+      # remaining risk rather than a formality.
+      - name: Build the editor archive
+        run: ./gradlew :ui-builder-web:webArchive
+
       # These five secret names are the ones compose-preview-server used while it published these
       # same coordinates, so one set of repository secrets serves both. `signingInMemoryKeyId` is
       # the one that looks droppable and is not: without it the signing plugin uses the keyring's
@@ -71,9 +78,6 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: ./gradlew publishReleaseArtifacts
 
-      - name: Build the editor archive
-        run: ./gradlew :ui-builder-web:webArchive
-
       # The asset name is the coordinate compose-preview-server's ivy repository asks for, so this
       # filename is a contract rather than a label. `:ui-builder-web`'s `archiveBaseName` and
       # `archiveVersion` produce exactly it.
@@ -81,6 +85,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ inputs.tag || github.ref_name }}" \
-            "ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip" \
-            --clobber
+          tag="${{ inputs.tag || github.ref_name }}"
+          archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
+          # `gh release upload` needs a Release object, and a tag alone does not create one. In
+          # compose-preview-server release-please created it before this step ran; nothing runs
+          # release-please here, so a hand-pushed tag arrives with no Release and the upload fails
+          # AFTER the Central publish has already gone out. Create it when it is missing.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$archive" --clobber
+          else
+            gh release create "$tag" "$archive" --title "$tag" --generate-notes
+          fi
