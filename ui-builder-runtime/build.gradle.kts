@@ -47,6 +47,11 @@ version =
 base { archivesName.set(publishedArtifactId) }
 
 dependencies {
+  // `ui-builder-protocol` carries no version of its own; this platform supplies it (see the
+  // catalog). A BOM is metadata, not an artifact, so it adds nothing to `runtimeClasspath`'s
+  // resolved artifacts and `checkUiBuilderRuntimeBoundary` below neither sees it nor needs to
+  // allow it.
+  api(platform(libs.composeai.contracts.bom))
   // The public service port deliberately speaks the released v1 contract types. Keeping this `api`
   // makes those types available to the host implementing or decorating the port.
   api(libs.composeai.ui.builder.protocol)

@@ -265,6 +265,13 @@ kotlin {
       implementation(libs.wearcmp.compose.foundation)
       implementation(libs.material.icons.extended)
       @Suppress("DEPRECATION") implementation(compose.ui)
+      // These carry no version of their own; the platforms supply them (see the catalog).
+      // `project.dependencies.platform(...)`, not a bare `platform(...)`: inside a Kotlin
+      // Multiplatform source set the receiver is `KotlinDependencyHandler`, which has no
+      // `platform` function at all.
+      implementation(project.dependencies.platform(libs.composeai.tools.bom))
+      implementation(project.dependencies.platform(libs.composeai.contracts.bom))
+      implementation(project.dependencies.platform(libs.composeai.rc.players.bom))
       implementation(libs.composeai.ui.builder.protocol)
       // The real `ScreenGenerator`, compiled for wasmJs as well as the JVM. Before this the editor
       // had no way to ask the question the server's export answers, so it kept its own emitter.
@@ -307,6 +314,13 @@ kotlin {
       // `project.dependencies.platform(...)`, not a bare `platform(...)`: inside a Kotlin
       // Multiplatform source set the receiver is `KotlinDependencyHandler`, which has no
       // `platform` function at all.
+      //
+      // The daemon platform belongs HERE rather than in `commonMain` because the only daemon
+      // coordinate this module names is JVM-only. The other three platforms are in `commonMain`
+      // with the coordinates they version: a platform declared on `jvmMain` constrains the JVM
+      // compilation alone, so a `commonMain` dependency left to it resolves with no version at
+      // all on wasmJs -- which is `Could not find ee.schimke.composeai:ui-builder-protocol:`,
+      // with the empty version, out of `:ui-builder:wasmJsNpmAggregated`.
       implementation(project.dependencies.platform(libs.composeai.daemon.bom))
       implementation(libs.composeai.data.preview.overrides.runtime)
     }

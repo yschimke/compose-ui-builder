@@ -87,7 +87,11 @@ graphics-shapes = "1.1.0"
 # design-page test dies with `NoSuchMethodError` at `ServeDesignPages.kt:158`. 2.17.0 is compiled
 # against `preview-data-api` 3.5.0 and so is binary-compatible with 3.6.0. The tools line and the
 # daemon line are a matched set across this boundary; move them together.
-composeai-tools = "2.17.0"
+#
+# 2.18.1 is the first release publishing `compose-ai-tools-bom`, which is why this line stops being
+# named by any coordinate below. (2.18.0 exists as a tag and a GitHub Release and is NOT on Central:
+# its publish job died in configuration. Do not pin it.)
+composeai-tools = "2.18.1"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -136,15 +140,25 @@ composeai-tools = "2.17.0"
 # authored. compose-preview-daemon#128 reverted it. ServeDesignPageStoreTest's "an unknown link
 # method" case is the assertion that states the rule, and it tracks this pin: on 3.6.0 it must
 # assert the degrade, on 3.6.1 the drop.
-composeai-preview-daemon = "3.6.1"
+#
+# 3.8.0 puts the design-pages wire types behind builders: the constructors are `internal` and
+# `@ConsistentCopyVisibility` takes the generated `copy` with them, so neither can be the signature
+# a released consumer loses when a field is added upstream. That is the same break this pin's own
+# history records twice over, from the other side. Construction here moves to
+# `Type.Builder(...).build()` and derivation to `newBuilder()`, exactly as contracts 3.0.0 did in
+# #910; `ServeDesignPageStoreTest`'s unknown-enum case still asserts the drop.
+composeai-preview-daemon = "3.8.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
 # that reads the dictionary in scope (compose-preview-contracts#57) — which is the wire behind the
 # component placements and loop rows this repository's canvas and exporter already draw from its
 # own document model.
-composeai-contracts = "3.0.0"
-rc-players = "1.63.0"
+# 3.1.0 is the first release publishing `compose-preview-contracts-bom`.
+composeai-contracts = "3.1.0"
+# 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
+# whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
+rc-players = "1.65.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.5.2"
@@ -173,13 +187,13 @@ jmdns = "3.6.3"
 snipme-highlights = "1.1.0"
 
 [libraries]
-composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping", version.ref = "composeai-tools" }
+composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping" }
 # The render host, the bundle daemon and the git-backed preview history. Was this repository's own
 # `:render-host` module, published as `compose-preview-render-host`, until yschimke/compose-preview-server#180
 # moved it to the repository that owns everything it depends on. It has no web server and never did;
 # it lived here only because it was written inside the `serve` package and came along when the server
 # was extracted. Same version ref as the rest of compose-ai-tools, because it now ships on that line.
-composeai-render-host = { module = "ee.schimke.composeai:render-host", version.ref = "composeai-tools" }
+composeai-render-host = { module = "ee.schimke.composeai:render-host" }
 # The Remote Compose JSON codec: authoring JSON -> `.rc` bytes, and `.rc` bytes -> the
 # operation-level document JSON the viewer's `GET /render/<id>.rc.json` lane serves. Layer 1 by
 # `REPOSITORY_LAYERS.md`'s test (behaviour, opens no socket), consumed here as a published
@@ -187,54 +201,66 @@ composeai-render-host = { module = "ee.schimke.composeai:render-host", version.r
 # exactly one `remote-core` on the classpath and no split-family skew for `RemoteComposePairing` to
 # report. Runs on a plain JVM: `remote-core` and `remote-creation-core` are `java-library`
 # publications, so nothing Android reaches this server through them.
-composeai-remotecompose-json = { module = "ee.schimke.composeai:remotecompose-json", version.ref = "composeai-tools" }
+composeai-remotecompose-json = { module = "ee.schimke.composeai:remotecompose-json" }
 # The wire contract this server speaks to a `compose-preview build-host --stdio` process, so it can
 # ask for local Gradle work without linking the Gradle Tooling API. Shape and framing only — that is
 # what lets `checkServeModuleBoundary` keep holding while the server gains the capability
 # yschimke/compose-preview-server#9 asked for.
-composeai-build-host-protocol = { module = "ee.schimke.composeai:build-host-protocol", version.ref = "composeai-tools" }
-# The daemon BOM. THE one coordinate carrying a version for everything published by
-# yschimke/compose-preview-daemon: the seven entries below deliberately carry none of their own.
+composeai-build-host-protocol = { module = "ee.schimke.composeai:build-host-protocol" }
+# The four upstream BOMs. THE only `ee.schimke.composeai` entries in this file that carry a
+# version: every coordinate below deliberately carries none of its own.
 #
-# That repository publishes only the modules a release changes (compose-preview-daemon#123), so its
-# coordinates no longer all sit at the same version. Pinning them to one shared ref -- which this
-# catalog used to do -- resolves until the first reduced release and then fails on whichever module
-# did not publish at the new version. The BOM is the published record of which versions belong
-# together, so it is the only one that should name a version. Each consuming module imports it as a
-# platform; there are four.
+# The rule the daemon line arrived at now holds for all four. Each of those repositories publishes
+# only the modules a release changes -- compose-preview-daemon#123, and since then
+# compose-ai-tools#5485, compose-preview-contracts#80 and rc-players#196 -- so their coordinates no
+# longer all sit at the same version. Pinning a line's modules to one shared ref, which this
+# catalog used to do for three of the four, resolves until that line's first reduced release and
+# then fails on whichever module did not publish at the new version. It is not a slow failure
+# either: it arrives the first time a release skips a module this repository names.
+#
+# A BOM is the published record of which versions belong together, so it is the only thing that
+# should name one. It also answers the question the shared ref was really being asked: given this
+# release, what version is each of its modules at? Only the publisher can answer that now.
+#
+# Consuming modules import them as platforms. `docs/design/PREVIEW_SERVER_SPLIT.md` requires these
+# to resolve by coordinate from a repository rather than from an included build, so a BOM that is
+# missing from Central is a build failure here rather than something silently satisfied locally.
+composeai-tools-bom = { module = "ee.schimke.composeai:compose-ai-tools-bom", version.ref = "composeai-tools" }
+composeai-contracts-bom = { module = "ee.schimke.composeai:compose-preview-contracts-bom", version.ref = "composeai-contracts" }
 composeai-daemon-bom = { module = "ee.schimke.composeai:compose-preview-daemon-bom", version.ref = "composeai-preview-daemon" }
+composeai-rc-players-bom = { module = "ee.schimke.composeai:rc-players-bom", version.ref = "rc-players" }
 composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api" }
-composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery", version.ref = "composeai-tools" }
+composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery" }
 # `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
 # browser editor reach the same `ScreenGenerator` the server exports with.
-composeai-screen-model = { module = "ee.schimke.composeai:screen-model", version.ref = "composeai-tools" }
-composeai-common-image-crop = { module = "ee.schimke.composeai:common-image-crop", version.ref = "composeai-tools" }
-composeai-bundle-format = { module = "ee.schimke.composeai:bundle-format", version.ref = "composeai-tools" }
-composeai-bundle-coordinates = { module = "ee.schimke.composeai:bundle-coordinates", version.ref = "composeai-tools" }
+composeai-screen-model = { module = "ee.schimke.composeai:screen-model" }
+composeai-common-image-crop = { module = "ee.schimke.composeai:common-image-crop" }
+composeai-bundle-format = { module = "ee.schimke.composeai:bundle-format" }
+composeai-bundle-coordinates = { module = "ee.schimke.composeai:bundle-coordinates" }
 composeai-daemon-core = { module = "ee.schimke.composeai:daemon-core" }
 composeai-daemon-client = { module = "ee.schimke.composeai:daemon-client" }
-composeai-render-session-api = { module = "ee.schimke.composeai:render-session-api", version.ref = "composeai-tools" }
-composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-session-subprocess", version.ref = "composeai-tools" }
+composeai-render-session-api = { module = "ee.schimke.composeai:render-session-api" }
+composeai-render-session-subprocess = { module = "ee.schimke.composeai:render-session-subprocess" }
 # Render-matrix axis expansion and contact-sheet composition, shared by the CLI's `render-matrix`
 # command and `:mcp`'s `render_matrix` tool. Lifted out of compose-ai-tools' `:mcp` before the
 # module moved here, precisely so the offline CLI command did not have to follow it (#5188 there).
-composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix", version.ref = "composeai-tools" }
+composeai-render-matrix = { module = "ee.schimke.composeai:render-matrix" }
 composeai-data-pseudolocale-core = { module = "ee.schimke.composeai:data-pseudolocale-core" }
 composeai-data-remotecompose-core = { module = "ee.schimke.composeai:data-remotecompose-core" }
 # Slot marker/host API shared by JVM and Wasm catalogs. The daemon repository owns and publishes
 # both variants; this server consumes the release instead of compiling a second copy.
 composeai-slot-preview-runtime = { module = "ee.schimke.composeai:slot-preview-runtime" }
 
-composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol", version.ref = "composeai-contracts" }
-composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol", version.ref = "composeai-contracts" }
-composeai-common-io = { module = "ee.schimke.composeai:common-io", version.ref = "composeai-contracts" }
-composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core", version.ref = "composeai-contracts" }
-composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core", version.ref = "composeai-contracts" }
-composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-preview-overrides-core", version.ref = "composeai-contracts" }
+composeai-agent-grant-protocol = { module = "ee.schimke.composeai:agent-grant-protocol" }
+composeai-parity-issues-protocol = { module = "ee.schimke.composeai:parity-issues-protocol" }
+composeai-common-io = { module = "ee.schimke.composeai:common-io" }
+composeai-data-layoutinspector-core = { module = "ee.schimke.composeai:data-layoutinspector-core" }
+composeai-data-theme-core = { module = "ee.schimke.composeai:data-theme-core" }
+composeai-data-preview-overrides-core = { module = "ee.schimke.composeai:data-preview-overrides-core" }
 composeai-data-preview-overrides-runtime = { module = "ee.schimke.composeai:data-preview-overrides-runtime" }
-composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core", version.ref = "composeai-contracts" }
-composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol", version.ref = "composeai-contracts" }
-composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose", version.ref = "rc-players" }
+composeai-data-render-core = { module = "ee.schimke.composeai:data-render-core" }
+composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol" }
+composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

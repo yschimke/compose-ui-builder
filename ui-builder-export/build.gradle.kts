@@ -62,6 +62,12 @@ kotlin {
       kotlin.srcDir(rootProject.tasks.named("generateUiBuilderBuildFeatures"))
     }
     commonMain.dependencies {
+      // Both coordinates carry no version of their own; these platforms supply them (see the
+      // catalog). `project.dependencies.platform(...)`, not a bare `platform(...)`: inside a
+      // Kotlin Multiplatform source set the receiver is `KotlinDependencyHandler`, which has no
+      // `platform` function at all.
+      api(project.dependencies.platform(libs.composeai.tools.bom))
+      api(project.dependencies.platform(libs.composeai.contracts.bom))
       api(libs.composeai.screen.model)
       api(libs.composeai.ui.builder.protocol)
       implementation(libs.kotlinx.serialization.json)
