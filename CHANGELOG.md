@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.27.0](https://github.com/yschimke/compose-ui-builder/compare/v3.26.0...v3.27.0) (2026-09-17)
+
+
+### Bug Fixes
+
+* **release:** order the publish-set checks ahead of the Central upload ([#14](https://github.com/yschimke/compose-ui-builder/issues/14)) ([cd31a3e](https://github.com/yschimke/compose-ui-builder/commit/cd31a3e12e8e83dc43472bd40a59c8b121b6068c))
+
 ## [3.26.0](https://github.com/yschimke/compose-ui-builder/compare/v3.25.0...v3.26.0) (2026-09-17)
 
 
