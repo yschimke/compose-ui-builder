@@ -149,6 +149,15 @@ The rule now:
   — so borrowing one claims nothing about Material at all. Their capability notes say exactly that,
   where the Material borrows' notes used to say "drawn as the Material 3 component of the same
   name".
+  Four, and only four: the Remote Compose seams that used to sit beside them were withdrawn in
+  yschimke/compose-preview-server#917, because what a Remote Compose seam means inside a Wear
+  *screen* was never settled. Borrowing is a claim about the whole lane, so all four are drawn by
+  the canvas as themselves and written by the generator as themselves — including `asset/image`,
+  whose picture cannot travel in generated source (it is bytes in the design's asset store, and the
+  resource symbol that would name them is the receiving project's to declare). That one is written
+  as `Image(painter = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHigh))` with the asset
+  key named in a comment on the line to replace, which is what the mobile lane does and what the
+  catalog's own `assetKey` notes have always promised.
 - **Anything Material is Wear's own id.** `wear-m3/text`, `wear-m3/card` and `wear-m3/button` join
   `wear-m3/list-header` and the two containers. The canvas still draws the Material 3 lookalike —
   [it has no Wear Compose to draw with](#the-hard-constraint-the-canvas-has-no-wear-compose) — but
@@ -333,7 +342,7 @@ test.
 | Full screen | `wear-m3/date-picker`, `wear-m3/time-picker` |
 | Overlays | `wear-m3/alert-dialog`, `wear-m3/confirmation-dialog`, `wear-m3/open-on-phone-dialog` |
 | Containers | `wear-m3/screen-scaffold`, `wear-m3/transforming-lazy-column` |
-| Borrowed | `layout/box`, `layout/column`, `layout/row`, `asset/image`, `remote-compose/document` |
+| Borrowed | `layout/box`, `layout/column`, `layout/row`, `asset/image` |
 
 Three of those are not rows of a list, and the catalog says so structurally rather than in prose:
 

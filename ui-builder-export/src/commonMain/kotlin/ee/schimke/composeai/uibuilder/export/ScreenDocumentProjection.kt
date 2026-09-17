@@ -2817,13 +2817,16 @@ object ScreenDocumentProjection {
     EnumMembers(typeFqn, pairs.toMap().mapValues { (_, member) -> listOf(root, member) })
 
   /**
-   * The nine two-axis alignments, named once: `layout/box`'s `contentAlignment` reads them, and so
-   * does the `alignment` property a box's children carry (see [BOX_ALIGNED]).
+   * The nine two-axis alignments a catalog spells, as the `Alignment` members they name.
+   *
+   * Named once and read by three callers: `layout/box`'s `contentAlignment`, the `alignment`
+   * property a box's children carry (see [BOX_ALIGNED]), and `asset/image`'s own `alignment` — in
+   * this lane through [BOX_ALIGNMENT_MEMBERS], and in the Wear screen lane, which writes the same
+   * foundation component from the same catalog and would otherwise hold a second copy of this
+   * vocabulary to disagree with.
    */
-  private val BOX_ALIGNMENT_MEMBERS =
-    members(
-      ALIGNMENT,
-      ALIGNMENT,
+  val ALIGNMENT_MEMBERS: Map<String, String> =
+    mapOf(
       "topStart" to "TopStart",
       "topCenter" to "TopCenter",
       "topEnd" to "TopEnd",
@@ -2834,6 +2837,13 @@ object ScreenDocumentProjection {
       "bottomCenter" to "BottomCenter",
       "bottomEnd" to "BottomEnd",
     )
+
+  /** `asset/image`'s four content scales, named once for the same reason as [ALIGNMENT_MEMBERS]. */
+  val CONTENT_SCALE_MEMBERS: Map<String, String> =
+    mapOf("crop" to "Crop", "fit" to "Fit", "fillBounds" to "FillBounds", "inside" to "Inside")
+
+  private val BOX_ALIGNMENT_MEMBERS =
+    members(ALIGNMENT, ALIGNMENT, *ALIGNMENT_MEMBERS.toList().toTypedArray())
 
   /**
    * Which Kotlin member each catalog enum value names, per component and property.
@@ -2856,28 +2866,9 @@ object ScreenDocumentProjection {
       "asset/image" to
         mapOf(
           "contentScale" to
-            members(
-              CONTENT_SCALE,
-              CONTENT_SCALE,
-              "crop" to "Crop",
-              "fit" to "Fit",
-              "fillBounds" to "FillBounds",
-              "inside" to "Inside",
-            ),
-          "alignment" to
-            members(
-              ALIGNMENT,
-              ALIGNMENT,
-              "center" to "Center",
-              "topStart" to "TopStart",
-              "topCenter" to "TopCenter",
-              "topEnd" to "TopEnd",
-              "centerStart" to "CenterStart",
-              "centerEnd" to "CenterEnd",
-              "bottomStart" to "BottomStart",
-              "bottomCenter" to "BottomCenter",
-              "bottomEnd" to "BottomEnd",
-            ),
+            members(CONTENT_SCALE, CONTENT_SCALE, *CONTENT_SCALE_MEMBERS.toList().toTypedArray()),
+          // The same nine as a box's, which is what they were before they were spelled out twice.
+          "alignment" to BOX_ALIGNMENT_MEMBERS,
         ),
       "m3/text" to
         mapOf(

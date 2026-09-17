@@ -380,6 +380,9 @@ internal class WearContentEmitter(
   private var usesDp = false
   private var usesTestTag = false
   private var usesIcon = false
+  private var usesImage = false
+  private var usesContentScale = false
+  private var usesAlignment = false
   private var usesRememberState = false
   private var usesTime = false
   private var usesEdgeButtonSize = false
@@ -580,6 +583,66 @@ internal class WearContentEmitter(
       "layout/box" -> {
         usesBox = true
         container("Box", node, "children", pad, depth)
+      }
+      // The fourth borrowed foundation component, and the only one of the four that is not a
+      // container. It refused here until now, for no reason but that nobody had written the
+      // branch: the `else` below has always named `asset/image` among what `wear-m3` borrows,
+      // while this `when` had nothing to write it with, so the generator's own refusal contradicted
+      // its own list.
+      //
+      // What it writes is what the m3 lane writes, and what the Wear catalog already tells an
+      // author it writes: `Image(painter = ColorPainter(…))`. The picture cannot travel in
+      // generated source — it is bytes in the design's asset store, and the resource symbol that
+      // would name them (`R.drawable.…` on one host, `Res.drawable.…` on another) is declared by
+      // the project receiving this file, not by anything here. So the frame is drawn in the
+      // theme's own ground and the line to replace is called out in a comment above it, which is
+      // this lane's version of `ScreenDocumentProjection`'s `ASSET_PLACEHOLDER` warning: `Result`
+      // here carries a source and a name and has nowhere else to put it.
+      "asset/image" -> {
+        val key = node.string("assetKey")
+        if (key.isEmpty()) {
+          return refused(
+            "`asset/image` (node `$nodeId`) names no `assetKey`; the property is required, and " +
+              "without it there is no picture to stand in for"
+          )
+        }
+        val scaleValue = node.stringOrNull("contentScale")
+        val scale = scaleValue?.let {
+          ScreenDocumentProjection.CONTENT_SCALE_MEMBERS[it]
+            ?: return refused(
+              "`asset/image` (node `$nodeId`) names the content scale `$it`, which is not one " +
+                "of " +
+                ScreenDocumentProjection.CONTENT_SCALE_MEMBERS.keys.sorted().joinToString(", ")
+            )
+        }
+        val alignmentValue = node.stringOrNull("alignment")
+        val alignment = alignmentValue?.let {
+          ScreenDocumentProjection.ALIGNMENT_MEMBERS[it]
+            ?: return refused(
+              "`asset/image` (node `$nodeId`) names the alignment `$it`, which is not one of " +
+                ScreenDocumentProjection.ALIGNMENT_MEMBERS.keys.sorted().joinToString(", ")
+            )
+        }
+        usesImage = true
+        if (scale != null) usesContentScale = true
+        if (alignment != null) usesAlignment = true
+        val modifier = modifierChain(nodeId, transformedHeight(transformed))
+        listOf(
+          "${pad}// The asset `$key` is bytes in the design, not a resource this file can name.",
+          "${pad}// Replace this painter with the picture's own to draw it.",
+          "${pad}Image(",
+          "${pad}${INDENT}painter = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHigh),",
+          // Stated rather than defaulted, and taken from the design when the author wrote one:
+          // `Image`'s own parameter has no default, so it is written either way.
+          "${pad}${INDENT}contentDescription = " +
+            (node.stringOrNull("contentDescription")?.quoted() ?: "null") +
+            ",",
+        ) +
+          (scale?.let { listOf("${pad}${INDENT}contentScale = ContentScale.$it,") }
+            ?: emptyList()) +
+          (alignment?.let { listOf("${pad}${INDENT}alignment = Alignment.$it,") } ?: emptyList()) +
+          (modifier?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
+          listOf("${pad})")
       }
       WearScreenCodeExporter.ICON -> {
         val key = node.string("iconKey")
@@ -1241,6 +1304,10 @@ internal class WearContentEmitter(
     add("androidx.compose.ui.Modifier")
     if (usesTestTag) add("androidx.compose.ui.platform.testTag")
     if (usesDp) add("androidx.compose.ui.unit.dp")
+    if (usesImage) add("androidx.compose.foundation.Image")
+    if (usesImage) add("androidx.compose.ui.graphics.painter.ColorPainter")
+    if (usesContentScale) add("androidx.compose.ui.layout.ContentScale")
+    if (usesAlignment) add("androidx.compose.ui.Alignment")
     if (usesIcon) add("androidx.compose.foundation.layout.size")
     if (usesIcon) add("androidx.compose.material.icons.Icons")
     addAll(iconImports)
@@ -1253,6 +1320,7 @@ internal class WearContentEmitter(
     }
     if (usesTime) add("java.time.LocalDate")
     if (usesTime) add("java.time.LocalTime")
+    if (usesImage) add("androidx.wear.compose.material3.MaterialTheme")
     if (usesIcon) add("androidx.wear.compose.material3.Icon")
     usesIconButton.forEach { add("androidx.wear.compose.material3.$it") }
     usesTextButton.forEach { add("androidx.wear.compose.material3.$it") }
