@@ -1,0 +1,142 @@
+{
+  "exports": [
+    {
+      "stem": "repetition-initial",
+      "format": "json",
+      "state": 10,
+      "sha256": "72b4b5e5bc4679a1ea89af63f4c0f19acf343c7dd7cc7b25f9e0ad4ed81009d1",
+      "browserMatchesMcp": true
+    },
+    {
+      "stem": "repetition-initial",
+      "format": "rc",
+      "state": 10,
+      "sha256": "5b9caaa5fe917cf3c2c77efa4a5c280bd6b7f8fcd8db8859a03a9fd6e350ea9f",
+      "browserMatchesMcp": true
+    },
+    {
+      "stem": "repetition-initial",
+      "format": "png",
+      "state": 10,
+      "sha256": "083a742ccff0138dc547e595e54e0762d5b4f969f77d108e5b6cff88c1549d7e",
+      "browserMatchesMcp": true
+    },
+    {
+      "stem": "repetition-edited",
+      "format": "json",
+      "state": 20,
+      "sha256": "3b1112d06dd0cb6e540f3d6e52e4aec384cfcfd1a5cbe9874659a04406023578",
+      "browserMatchesMcp": true
+    },
+    {
+      "stem": "repetition-edited",
+      "format": "rc",
+      "state": 20,
+      "sha256": "0ee73ab8f85b6080b08883742e380dc29969cfcea29563e202ff3ea4e59f7259",
+      "browserMatchesMcp": true
+    },
+    {
+      "stem": "repetition-edited",
+      "format": "png",
+      "state": 20,
+      "sha256": "f20482bd25a101dec0cad169fae15adf44e2dc43f71dd6b0ff5c16fff993eae9",
+      "browserMatchesMcp": true
+    }
+  ],
+  "playback": [
+    {
+      "row": 0,
+      "name": "green",
+      "expected": [
+        0,
+        255,
+        0
+      ],
+      "actual": [
+        0,
+        255,
+        0
+      ]
+    },
+    {
+      "row": 0,
+      "name": "red",
+      "expected": [
+        255,
+        0,
+        0
+      ],
+      "actual": [
+        255,
+        0,
+        0
+      ]
+    },
+    {
+      "row": 1,
+      "name": "green",
+      "expected": [
+        0,
+        255,
+        0
+      ],
+      "actual": [
+        0,
+        255,
+        0
+      ]
+    },
+    {
+      "row": 1,
+      "name": "red",
+      "expected": [
+        255,
+        0,
+        0
+      ],
+      "actual": [
+        255,
+        0,
+        0
+      ]
+    },
+    {
+      "row": 2,
+      "name": "green",
+      "expected": [
+        0,
+        255,
+        0
+      ],
+      "actual": [
+        0,
+        255,
+        0
+      ]
+    },
+    {
+      "row": 2,
+      "name": "red",
+      "expected": [
+        255,
+        0,
+        0
+      ],
+      "actual": [
+        255,
+        0,
+        0
+      ]
+    }
+  ],
+  "localDesignSavedOnServer": false,
+  "mcpAuthoring": {
+    "created": true,
+    "editedRows": true,
+    "revision": 1,
+    "definitionsRetained": true,
+    "savedMatchesSupplied": true,
+    "contentDigest": "4969e7c0d36cc45cddbe9eea197a067c2401bc00b01fb8520928777d32146421"
+  },
+  "errors": []
+}
