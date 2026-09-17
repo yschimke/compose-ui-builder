@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -773,7 +772,7 @@ private fun RenderNode(
     )
   }
 
-  when (node.componentId.wearScreenStandIn()) {
+  when (node.componentId) {
     // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
     // from `hostSpec` rather than written here, so this canvas and the native render beside it
     // cannot disagree about what the host reserves — see [WearWidgetHostSpec].
@@ -808,42 +807,172 @@ private fun RenderNode(
       ) { next ->
         slot("content").forEach { child(it, next) }
       }
-    // A plain Column, deliberately. `TransformingLazyColumn` scales and fades its rows against the
-    // round display through `SurfaceTransformation` and `Modifier.transformedHeight`, and neither
-    // exists off Android — approximating the curve with a hand-rolled scale would draw a
-    // *different*
-    // wrong picture and imply it was the right one. The running order is what this shows.
-    // 48dp, and the height is the point. `ListHeader` is what a Wear list puts at the top, the
-    // generator emits one, and a design that faked it with a padded Text made the canvas agree
-    // with itself while disagreeing with the screen it generates — which the round trip found.
-    "wear-m3/list-header" ->
-      Box(
-        measured.fillMaxWidth().height(WEAR_LIST_HEADER_HEIGHT_DP.dp),
-        contentAlignment = Alignment.Center,
+    // Wear's own `ListHeader`, drawn by Wear Compose. This used to be a `Box` of
+    // `WEAR_LIST_HEADER_HEIGHT_DP` with a centred `Text` at `WEAR_LIST_HEADER_SP`, which is the
+    // hand-assembled replica `WearCanvasComponents`' KDoc explains the canvas no longer has to
+    // keep: those two numbers were read off upstream and nothing in this build could check them.
+    "wear-m3/list-header" -> WearCanvasListHeader(node.string("text"), measured)
+    // Previously undrawn entirely — there is no Material 3 component to rename a Wear sub-header
+    // to, so `google-home-wear`'s seven of these were dashed placeholders.
+    "wear-m3/list-sub-header" -> WearCanvasListSubHeader(node.string("text"), measured)
+    "wear-m3/switch-button" ->
+      WearCanvasSwitchButton(
+        label = node.string("label"),
+        secondaryLabel = node.string("secondaryLabel"),
+        checked = node.bool("checked"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      )
+    "wear-m3/slider" ->
+      WearCanvasSlider(
+        value = node.float("value"),
+        valueFrom = node.float("valueFrom"),
+        valueTo = node.float("valueTo", 1f),
+        steps = node.integer("steps"),
+        segmented = node.bool("segmented"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      )
+    "wear-m3/checkbox-button" ->
+      WearCanvasCheckboxButton(
+        label = node.string("label"),
+        secondaryLabel = node.string("secondaryLabel"),
+        checked = node.bool("checked"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      )
+    "wear-m3/radio-button" ->
+      WearCanvasRadioButton(
+        label = node.string("label"),
+        secondaryLabel = node.string("secondaryLabel"),
+        selected = node.bool("selected"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      )
+    "wear-m3/stepper" ->
+      WearCanvasStepper(
+        value = node.float("value"),
+        valueFrom = node.float("valueFrom"),
+        valueTo = node.float("valueTo", 1f),
+        steps = node.integer("steps"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
       ) {
-        Text(
-          node.string("text"),
-          Modifier,
-          color = WEAR_SCREEN_ON_SURFACE,
-          fontSize = WEAR_LIST_HEADER_SP.sp,
-          maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        slot("content").forEach { child(it, Modifier) }
+      }
+    "wear-m3/progress-indicator" ->
+      WearCanvasProgressIndicator(
+        variant = node.string("variant"),
+        progress = node.float("progress"),
+        segments = node.integer("segments", 1),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      )
+    "wear-m3/edge-button" ->
+      WearCanvasEdgeButton(
+        size = node.string("size"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      ) {
+        slot("content").forEach { child(it, Modifier) }
+      }
+    "wear-m3/button-group" -> {
+      val children = slot("children")
+      WearCanvasButtonGroup(childCount = children.size, modifier = measured) { index ->
+        child(children[index], Modifier)
+      }
+    }
+    "wear-m3/icon-button" ->
+      WearCanvasIconButton(
+        variant = node.string("variant"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      ) {
+        slot("content").forEach { child(it, Modifier) }
+      }
+    "wear-m3/text-button" ->
+      WearCanvasTextButton(
+        variant = node.string("variant"),
+        enabled = node.bool("enabled", true),
+        modifier = measured,
+      ) {
+        slot("content").forEach { child(it, Modifier) }
+      }
+    // Routed to the shared icon drawer rather than to Wear's `Icon`, and that is not the kind of
+    // borrow this file has been retiring. An icon is a tinted vector at a size on both platforms —
+    // Wear publishes no shape of its own here — and `BuilderIcon` is what owns this build's key
+    // table, its tint resolution and the structured-path export the SVG lane needs. Drawing it
+    // twice would be two answers to one question.
+    "wear-m3/icon" -> BuilderIcon(node, measured)
+    // The last three that were Material 3 borrows. Wear's own now — see `WearCanvasComponents`.
+    "wear-m3/text" ->
+      Text(
+        node.string("text"),
+        measured,
+        color = node.color("color", Color.Unspecified),
+        style = wearTextStyle(node.string("style")),
+        maxLines = node.integer("maxLines", Int.MAX_VALUE),
+      )
+    "wear-m3/card" ->
+      WearCanvasCard(node.string("variant"), measured) {
+        slot("content").forEach { child(it, Modifier) }
+      }
+    "wear-m3/button" ->
+      WearCanvasButton(node.string("variant"), node.bool("enabled", true), measured) {
+        slot("content").forEach { child(it, Modifier) }
+      }
+    // The dialogs. Drawn only when the document says they are showing: `visible` is the flag the
+    // generated screen hangs them on, and a canvas that drew every dialog at once would describe a
+    // screen nobody can reach.
+    "wear-m3/alert-dialog" ->
+      if (node.bool("visible", true)) {
+        WearCanvasAlertDialog(
+          title = node.string("title"),
+          text = node.string("text"),
+          modifier = measured,
+          hasConfirm = slot("confirmButton").isNotEmpty(),
+          hasDismiss = slot("dismissButton").isNotEmpty(),
+        ) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      }
+    "wear-m3/confirmation-dialog" ->
+      if (node.bool("visible", true)) {
+        WearCanvasConfirmationDialog(
+          text = node.string("text"),
+          variant = node.string("variant"),
+          modifier = measured,
         )
       }
-    "wear-m3/transforming-lazy-column" ->
-      Column(
-        modifier = measured.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp", 4f).dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-      ) {
-        // `IntrinsicSize.Min`, because a Wear list row has to wrap. `m3/card` — which is what a
-        // borrowed row is — used to draw its content slot in a `Box(Modifier.fillMaxSize())`, and
-        // inside a Column with a bounded parent that made the first card eat every remaining pixel
-        // and the rest of the list vanish; the card wraps its content now (#483, `cardContentFill`)
-        // and this stays as the list's own statement of it. The real `TransformingLazyColumn`
-        // measures each item's own height too, through `Modifier.transformedHeight`; this is the
-        // same question asked with the tool the canvas has.
-        slot("items").forEach { child(it, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) }
+    "wear-m3/open-on-phone-dialog" ->
+      if (node.bool("visible", true)) {
+        WearCanvasOpenOnPhoneDialog(text = node.string("text"), modifier = measured)
       }
+    "wear-m3/date-picker" ->
+      WearCanvasDatePicker(
+        initialDate = node.string("initialDate"),
+        type = node.string("type"),
+        modifier = measured,
+      )
+    "wear-m3/time-picker" ->
+      WearCanvasTimePicker(
+        initialTime = node.string("initialTime"),
+        type = node.string("type"),
+        modifier = measured,
+      )
+    "wear-m3/transforming-lazy-column" -> {
+      // The real lazy column, scaling and fading its rows through the library's own
+      // `transformedHeight`. The `Column` this replaces said in its own comment that the
+      // transformation "does not exist off Android"; it does now, via the CMP port.
+      val items = slot("items")
+      WearCanvasTransformingLazyColumn(
+        itemCount = items.size,
+        verticalSpacingDp = node.float("verticalSpacingDp", 4f),
+        modifier = measured,
+      ) { index, itemModifier ->
+        child(items[index], itemModifier)
+      }
+    }
     "layout/supporting-pane-scaffold" ->
       AdaptiveSupportingPaneScaffold(
         node,
@@ -1922,11 +2051,11 @@ private const val WEAR_TIME_TEXT_CENTRE_DP = 10.75f
 /** Sized so "10:10" measures the reference's 41.5dp; Wear's clock is bigger than it looks. */
 private const val WEAR_TIME_TEXT_SP = 14.5f
 
-/** `ListHeader`'s item height, measured at 192, 225 and 240dp alike. */
-private const val WEAR_LIST_HEADER_HEIGHT_DP = 48f
-
-/** Sized so the label measures the reference header's 53.5dp of glyphs. */
-private const val WEAR_LIST_HEADER_SP = 14.5f
+// `WEAR_LIST_HEADER_HEIGHT_DP` (48f) and `WEAR_LIST_HEADER_SP` (14.5f) stood here. Both were
+// measured off upstream renders to size a `Box`+`Text` replica of `ListHeader`, and both are gone
+// because the canvas draws the real `ListHeader` now — see `WearCanvasComponents`. A number read
+// off a screenshot that nothing in the build can re-check is the cost the old approach carried;
+// deleting the numbers rather than leaving them unreferenced is what makes that cost actually go.
 
 /** How far the edge button floats off the bottom cap, as a fraction of the diameter. */
 private const val WEAR_EDGE_BUTTON_INSET = 0.04f
@@ -3861,38 +3990,19 @@ private val JetcasterDarkColorScheme =
   )
 
 /**
- * The Material 3 component a Wear content id is drawn as, or the id itself.
+ * Whether a component id is a text node, on either platform.
  *
- * `wear-m3/text`, `wear-m3/card` and `wear-m3/button` are Wear Material 3 components — the
- * generated screen names `Text`, `TitleCard` and `Button` from `androidx.wear.compose.material3` —
- * and this canvas cannot draw them, because that library is an Android AAR the Wasm build cannot
- * link. So it draws the nearest Material 3 shape, which is what the `wear-m3` catalog's
- * `wasm.notes` say it does.
+ * This replaces `wearScreenStandIn`, a table that mapped `wear-m3/text`, `wear-m3/card` and
+ * `wear-m3/button` onto their Material 3 near-twins so the canvas could draw *something* for them.
+ * Every Wear id is drawn by Wear Compose now, so the table has no drawing left to do — but it had
+ * quietly acquired a second job, which is this one: `UiBuilderInspection` used "maps to `m3/text`"
+ * as its test for "is a text node", and deleting the table without replacing that would have
+ * silently stopped Wear text reporting its layout.
  *
- * One mapping rather than three duplicated branches, and a mapping rather than a borrow: the ids
- * used to *be* `m3/text` and friends, and a Wear design holding a component named after the mobile
- * Material library claimed something no watch screen can mean. The drawing is borrowed; the
- * identity is not.
- *
- * ## Do not add a fourth
- *
- * Each of these three is a *rename* of a Material 3 component this canvas was already drawing. That
- * is the only reason a lookalike is acceptable here. A Wear component with no Material 3
- * counterpart — `CheckboxButton`, `Slider`, `DatePicker` — cannot be added by extending this table:
- * it would have to be hand-assembled out of Material pieces at sizes read off a screenshot,
- * producing an impression of upstream that nothing in this build can check and that is wrong
- * silently in the one surface an author trusts. A `wear-m3` design gets its fidelity from the
- * streaming preview lane, which compiles the generated Wear Kotlin against a real classpath, not
- * from a replica maintained here. The decision and what it costs are in
- * `docs/design/UI_BUILDER_WEAR_SCREEN.md`; the cap is pinned by `WearCanvasStandInTest`.
+ * A predicate rather than a mapping, because that is what the caller actually wanted to ask.
  */
-internal fun String.wearScreenStandIn(): String =
-  when (this) {
-    "wear-m3/text" -> "m3/text"
-    "wear-m3/card" -> "m3/card"
-    "wear-m3/button" -> "m3/button"
-    else -> this
-  }
+internal fun String.isUiBuilderTextComponent(): Boolean =
+  this == "m3/text" || this == "wear-m3/text"
 
 /**
  * A dialog drawn where it sits, with `AlertDialog`'s own surface, spacing and button row.

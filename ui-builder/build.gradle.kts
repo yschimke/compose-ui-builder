@@ -257,6 +257,12 @@ kotlin {
       // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md` for why the preview pane owes real components.
       implementation(libs.compose.material3.adaptive)
       implementation(libs.compose.material3.adaptive.layout)
+      // Wear Compose, for real, on the canvas. See `docs/design/UI_BUILDER_WEAR_SCREEN.md`: this
+      // is the CMP port rather than `androidx.wear.compose`, because that one is an Android AAR
+      // with no `wasmJs` variant to resolve. The port keeps the upstream package names, so a
+      // `TransformingLazyColumn` here is `androidx.wear.compose.material3`'s by import.
+      implementation(libs.wearcmp.compose.material3)
+      implementation(libs.wearcmp.compose.foundation)
       implementation(libs.material.icons.extended)
       @Suppress("DEPRECATION") implementation(compose.ui)
       implementation(libs.composeai.ui.builder.protocol)

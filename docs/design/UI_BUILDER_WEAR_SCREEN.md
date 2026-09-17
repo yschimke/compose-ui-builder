@@ -72,7 +72,49 @@ Round is included, though its spec varies per screen diameter — so does the sq
 widest-entry rule above already resolves. Excluding it on that ground would be wrong rather than
 conservative.
 
-## The hard constraint: the canvas has no Wear Compose
+## The constraint that was not one: the canvas has Wear Compose
+
+> **Correction, and it is the load-bearing one for this whole document.** The section below was
+> wrong, and most of what follows inherits from it. Its premise — `androidx.wear.compose:compose-material3`
+> is an Android AAR with no `wasmJs` variant — is true, and still checkable: that artifact's Gradle
+> module metadata carries exactly two variants, `releaseVariantReleaseApiPublication` and its
+> runtime twin, and one `.aar`.
+>
+> Its conclusion does not follow, and the phrase **"not a gap somebody could close with more work in
+> this repository"** was the specific mistake. The canvas never had to link *that artifact*.
+> `yschimke/wear-m3-catalog` maintains a Compose Multiplatform port of the same library —
+> `ee.schimke.wearcmp:wear-compose-material3` and `-foundation`, published from that repository's
+> `wear-compose-cmp-maven` branch — which keeps the `androidx.wear.compose.material3` package names
+> and publishes `jvm` and `wasmJs` variants. Those are exactly `:ui-builder`'s two targets. That
+> catalog has been rendering its entire kit through the port in `:catalog-desktop` for some time;
+> this repository simply did not know.
+>
+> The port is wired into `:ui-builder` and **all twenty-three** of this catalog's components are
+> drawn by Wear Compose — the controls, the buttons, the cards, the progress indicators, the edge
+> button, the button group, the three dialogs and both pickers. Several are named in the rule below
+> as examples of what could *never* be drawn here. The 48dp/14.5sp constants that sized the
+> hand-rolled `ListHeader` replica are deleted; `TransformingLazyColumn` scales and fades its rows
+> through the library's own `transformedHeight` rather than being a `Column` with a comment
+> explaining why it could not be; and the Material 3 rename table is gone entirely, along with the
+> last three borrows it held.
+>
+> `WearCatalogIsCompleteTest` holds the two halves together from here: what the catalog declares
+> `supported` and what the renderer has a branch for must be the same set, which is the check whose
+> absence let the two drift in the first place.
+>
+> **The shape the architecture should have, and now does:** the Wasm port for visual editing and the
+> first line of previews; the real AndroidX library, under Robolectric through the native
+> `wear-m3-catalog` bundle, for device previews and for the published kit rendition. Those two
+> disagreeing is a finding about the port, not about the design — which is a far better position
+> than a lookalike nothing could check.
+>
+> What remains is tracked under [Known gaps](#known-gaps), and it is a much shorter list than it
+> was: the screen scaffold is still the hand-drawn host, and a handful of components are drawn in a
+> shape the catalog does not yet carry enough properties to specify fully. Ordinary work, not a
+> constraint.
+>
+> The original section is kept below rather than deleted, because a document that quietly loses the
+> argument it lost teaches nobody why it was believed.
 
 `androidx.wear.compose:compose-material3` is an Android AAR. The builder's canvas is Compose
 Multiplatform for Wasm, which cannot link one. There is no version of this adapter that draws with
@@ -551,24 +593,27 @@ parameter when it declares one.
   `ScreenScaffold` takes a scroll state that has to agree with the list inside its content lambda,
   which `ScreenGenerator`'s call-site emitter cannot write from a record, so the whole-screen
   generator writes it instead.
-- **The content ids are Wear's, and the drawing is still borrowed.** `wear-m3/text`, `wear-m3/card`
-  and `wear-m3/button` now exist beside `wear-m3/list-header`, so no Material id is offered on a
-  watch — but each is still *drawn* as its Material 3 lookalike, and the template still makes up the
-  difference with type sizes and padding measured off the reference. What is left is the sizes, not
-  the naming.
-- **No Wear controls, and none are coming on the canvas.** Wear Material 3 publishes
-  `CheckboxButton`, `SwitchButton`, `RadioButton`, `Slider`, `Stepper`, `DatePicker`, `TimePicker`
-  and its own `AlertDialog`, and none of them has an id here. They are not borrowable — a Wear
-  `CheckboxButton` is a full-width labelled row, not the mobile 20dp square — and the version of
-  this that hand-assembles each one for Wasm is
-  [the thing this document rules out](#the-line-a-component-is-never-faked-so-it-can-run-in-wasm).
-  They arrive with the streaming preview or they do not arrive.
-- **`EdgeButton` is placed, not shaped.** The slot generates a real `EdgeButton`; the canvas draws
-  the borrowed flat button at the bottom cap, because the shape comes from the screen. The parity
-  template carries none for that reason.
-- **The streaming preview does not take a Wear design yet, and that is now the blocking one.**
-  `ScreenGeneratorComposeExportExecutor.generate` refuses a record-free design because the lane
-  compiles against the catalog bundle and no bundle here carries Wear Compose. Every question this
-  adapter defers — the single frame, `SurfaceTransformation` against the bezel, a control that is
-  not a rename of a borrow — is downstream of that one bundle
-  ([why it is the work rather than more lookalikes](#where-a-wear-design-gets-looked-at-instead)).
+- **~~The content ids are Wear's, and the drawing is still borrowed.~~** Closed. Wear's text, card
+  and button are drawn by Wear Compose, and the rename table that mapped them onto Material 3 is
+  deleted. Text in particular was the borrow that looked harmless and was not: both libraries
+  publish the same fifteen type-scale role names, so a `titleMedium` resolved against the mobile
+  theme drew *a* title and not *this* one — a silently wrong size in the surface an author reads
+  sizes off.
+- **~~No Wear controls, and none are coming on the canvas.~~** Closed. This entry used to read "they
+  arrive with the streaming preview or they do not arrive", on the premise the correction at the top
+  of this document retires. Every control the catalog declares — `CheckboxButton`, `SwitchButton`,
+  `RadioButton`, `Slider`, `Stepper`, `DatePicker`, `TimePicker` and Wear's own `AlertDialog` — is
+  drawn by Wear Compose in `WearCanvasComponents`. They were never borrowable and still are not: a
+  Wear `CheckboxButton` is a full-width labelled row, not the mobile 20dp square. The answer was
+  always the real component; what changed is that it became available.
+- **~~`EdgeButton` is placed, not shaped.~~** Closed. The canvas draws the real `EdgeButton` at the
+  `EdgeButtonSize` the document names, so its hugging curve is the library's rather than a flat
+  button standing where one should be.
+- **~~The streaming preview does not take a Wear design yet, and that is now the blocking one.~~**
+  Stale on two counts. The native lane *does* take a Wear design — `ServeUiBuilderWearNativePreviewTest`
+  renders one through the `wear-m3-catalog` bundle on the `COMPOSE_ANDROID` confType, emitting real
+  `androidx.wear.compose.material3.ScreenScaffold` with no component record — so what remains there
+  is deployment configuration, tracked in
+  [#911](https://github.com/yschimke/compose-preview-server/issues/911). And it was never "the
+  blocking one" for the canvas: nothing the canvas defers was downstream of that bundle, because the
+  canvas could have had Wear Compose all along.

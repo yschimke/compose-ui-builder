@@ -133,11 +133,11 @@ class UiBuilderInspectionCollector(
     lastBaseline: Float,
     contentOffsetY: Float = 0f,
   ) {
-    // Through the same stand-in mapping the canvas draws by: `wear-m3/text` is a Wear component
-    // that this renderer draws as a Material 3 `Text`, so it reports a text layout exactly as one —
-    // and this check, keyed on the mobile id alone, is what failed the first Wear render after the
-    // rename. A node is a text node here if the canvas measured it as one.
-    require(document.nodes[nodeId]?.componentId?.wearScreenStandIn() == "m3/text") {
+    // Both platforms' text ids. This used to ask the canvas's stand-in table whether the id mapped
+    // to `m3/text`, back when `wear-m3/text` was drawn as one — keyed on the mobile id alone it
+    // failed the first Wear render after the rename. Wear text is drawn by Wear's own `Text` now,
+    // and the question here was never about drawing: a node is a text node if it is one.
+    require(document.nodes[nodeId]?.componentId?.isUiBuilderTextComponent() == true) {
       "text layout belongs to a native text node: $nodeId"
     }
     textLayouts[nodeId] =
@@ -163,7 +163,7 @@ class UiBuilderInspectionCollector(
           expectedAuthoredNodeIds = document.nodes.keys.sorted(),
           expectedAuthoredTextNodeIds =
             document.nodes.values
-              .filter { it.componentId.wearScreenStandIn() == "m3/text" }
+              .filter { it.componentId.isUiBuilderTextComponent() }
               .map { it.id }
               .sorted(),
           measuredNodeIds = bounds.keys.sorted(),

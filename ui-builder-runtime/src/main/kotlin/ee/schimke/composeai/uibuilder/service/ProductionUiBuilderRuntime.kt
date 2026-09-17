@@ -33,6 +33,7 @@ import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.SvgCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UploadedAssetSourceV1
+import ee.schimke.composeai.uibuilder.protocol.WasmAdapterStatusV1
 import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import ee.schimke.composeai.uibuilder.stateBindingMatchesCatalog
 import ee.schimke.composeai.uibuilder.stateSelectionIssue
@@ -2295,10 +2296,18 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         displayName = displayName,
         wasm =
           source.wasm.copy(
+            // Stated, not inherited. This used to take whatever `borrowedFrom`'s status happened
+            // to be, which is why `wear-m3/card` and `wear-m3/button` declared `planned` while the
+            // canvas drew them and most of the rest declared `supported` while it drew a dashed
+            // box — the field was wrong in both directions because it was never being decided per
+            // component at all (#907).
+            adapterStatus = WasmAdapterStatusV1.SUPPORTED,
+            platformSupported = JsonPrimitive(true),
             notes =
-              "Wear Material 3's $generatesAs. Drawn on the canvas as $drawnAs, because the Wasm " +
-                "canvas cannot link `androidx.wear.compose:compose-material3`; the generated " +
-                "screen names the Wear composable."
+              "Wear Material 3's $generatesAs, drawn on the canvas by Wear Compose itself. The " +
+                "canvas links a Compose Multiplatform build of the library rather than " +
+                "`androidx.wear.compose:compose-material3`, which publishes an Android AAR with " +
+                "no browser variant; the generated screen and the native render use the real AAR.",
           ),
         // The Compose call site comes from `WearScreenCodeExporter`, which writes the whole screen,
         // rather than from a per-component record: a Wear component's arguments are not the

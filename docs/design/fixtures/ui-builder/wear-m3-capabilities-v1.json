@@ -426,7 +426,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Text`. Drawn on the canvas as a Material 3 Text, because the Wasm canvas cannot link `androidx.wear.compose:compose-material3`; the generated screen names the Wear composable.",
+                "notes": "Wear Material 3's `Text`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
                 "platformSupported": true
             }
         },
@@ -542,8 +542,8 @@
                 "OverlayContent"
             ],
             "wasm": {
-                "adapterStatus": "planned",
-                "notes": "Wear Material 3's `TitleCard`. Drawn on the canvas as a Material 3 Card, because the Wasm canvas cannot link `androidx.wear.compose:compose-material3`; the generated screen names the Wear composable.",
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `TitleCard`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
                 "platformSupported": true
             }
         },
@@ -649,8 +649,8 @@
                 "ToolbarItem"
             ],
             "wasm": {
-                "adapterStatus": "planned",
-                "notes": "Wear Material 3's `Button`. Drawn on the canvas as a Material 3 Button, because the Wasm canvas cannot link `androidx.wear.compose:compose-material3`; the generated screen names the Wear composable.",
+                "adapterStatus": "supported",
+                "notes": "Wear Material 3's `Button`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
                 "platformSupported": true
             }
         },

@@ -29,6 +29,16 @@ compose-multiplatform = "1.12.0"
 # panes. Its own version line rather than the Compose Multiplatform one, which is why it is a
 # separate ref: the adaptive artifacts ship independently of the CMP bundle.
 compose-material3-adaptive = "1.2.0"
+# Wear Compose Material 3 / Foundation, compiled for Compose Multiplatform. `androidx.wear.compose`
+# publishes an Android AAR and nothing else — its Gradle module metadata carries exactly two
+# variants, both `releaseVariantRelease*Publication` — so the canvas cannot link the real library.
+# This port is that library's source built for `jvm` and `wasmJs`, keeping the
+# `androidx.wear.compose.material3` package names, and it is what the canvas draws.
+#
+# Version-locked to the CATALOG's ref, not floated: `yschimke/wear-m3-catalog` pins the same
+# `1.7.0-beta02-cmp09` for `:catalog-desktop`, and the two drifting would mean the canvas and the
+# kit rendition disagreeing about a component for a reason no render could explain.
+wearcmp-port = "1.7.0-beta02-cmp09"
 # `androidx.window`, as the JetBrains multiplatform port publishes it. Nothing in this build depends
 # on it directly — it arrives transitively under the adaptive artifacts above — and this ref exists
 # so the server's RENDERER SIDECAR can carry the same library onto the daemon's parent class loader.
@@ -249,6 +259,8 @@ compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-pre
 compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }
 compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
 androidx-window-core = { module = "org.jetbrains.androidx.window:window-core", version.ref = "androidx-window" }
+wearcmp-compose-material3 = { module = "ee.schimke.wearcmp:wear-compose-material3", version.ref = "wearcmp-port" }
+wearcmp-compose-foundation = { module = "ee.schimke.wearcmp:wear-compose-foundation", version.ref = "wearcmp-port" }
 material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "material-icons-extended" }
 material-icons-extended-desktop = { module = "org.jetbrains.compose.material:material-icons-extended-desktop", version.ref = "material-icons-extended" }
 material-icons-core-desktop = { module = "org.jetbrains.compose.material:material-icons-core-desktop", version.ref = "material-icons-extended" }
