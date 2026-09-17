@@ -4,11 +4,10 @@ import java.util.zip.ZipFile
 
 plugins {
   `java-library`
+  id("composeai.maven-publishing")
 }
 
-group = "ee.schimke.composeai"
 
-val publishedArtifactId = "compose-preview-ui-builder-render-bundle"
 
 /**
  * The packaged UI-builder render bundle, as an artifact of its own.
@@ -43,18 +42,8 @@ val publishedArtifactId = "compose-preview-ui-builder-render-bundle"
  * metadata is pinned to the server floor below; the opaque frontend can move its own toolchain
  * without making this resource-only jar unresolvable by the server.
  */
-version =
-  providers.environmentVariable("PLUGIN_VERSION").orNull
-    ?: run {
-      val current =
-        Regex(""""\.":\s*"([^"]+)"""")
-          .find(rootDir.resolve(".release-please-manifest.json").readText())!!
-          .groupValues[1]
-      val (major, minor, patch) = current.split(".").map { it.toInt() }
-      "$major.$minor.${patch + 1}-SNAPSHOT"
-    }
 
-base { archivesName.set(publishedArtifactId) }
+base { archivesName.set("compose-preview-" + project.name) }
 
 // This jar contains resources only, so it is loadable on every JVM supported by the server. The
 // Java plugin otherwise advertises the JVM running Gradle (21 on the UI-builder toolchain), which
@@ -145,13 +134,13 @@ val verifyRenderBundlePackaged =
     group = "verification"
     val jarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
     // Locals for the same reason the copy above takes them: a `doLast` action is cached, and
-    // reading `publishedArtifactId` straight from the script would drag the script into the cache.
+    // reading the artifact id straight from the script would drag the script into the cache.
     val entry = "$bundleResourceDirectory/$bundleResourceName"
     // The manifest is checked beside the bundle rather than separately: a jar carrying the preview
     // without its Java floor turns the server's preflight into a hard failure on a host that could
     // have run it, which is a worse outcome than the missing diagnostic it was added to replace.
     val manifestEntry = "$bundleResourceDirectory/$bundleManifestResourceName"
-    val artifactId = publishedArtifactId
+    val artifactId = "compose-preview-" + project.name
     // A local, so the `doLast` lambda captures a List<String>. Reading a script-level `val` from
     // inside it captures the whole script object, which the configuration cache refuses -- the
     // same trap the `processResources` block above takes locals to avoid, which I walked into
@@ -237,3 +226,11 @@ val verifyRenderBundlePackaged =
   }
 
 tasks.named("check") { dependsOn(verifyRenderBundlePackaged) }
+
+composeAiMavenPublishing {
+  coordinates(
+    displayName = "Compose UI Builder — Render Bundle",
+    description =
+      "The packaged Compose preview the UI-builder runtime renders a saved design through.",
+  )
+}

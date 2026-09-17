@@ -6,11 +6,10 @@ plugins {
   alias(libs.plugins.kotlin.jvm)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.ktfmt)
+  id("composeai.maven-publishing")
 }
 
-group = "ee.schimke.composeai"
 
-val publishedArtifactId = "compose-preview-ui-builder-runtime"
 
 kotlin {
   jvmToolchain(libs.versions.java.server.get().toInt())
@@ -33,18 +32,8 @@ tasks.named("check") { dependsOn("checkKotlinAbi") }
 
 ktfmt { googleStyle() }
 
-version =
-  providers.environmentVariable("PLUGIN_VERSION").orNull
-    ?: run {
-      val current =
-        Regex(""""\.":\s*"([^"]+)"""")
-          .find(rootDir.resolve(".release-please-manifest.json").readText())!!
-          .groupValues[1]
-      val (major, minor, patch) = current.split(".").map { it.toInt() }
-      "$major.$minor.${patch + 1}-SNAPSHOT"
-    }
 
-base { archivesName.set(publishedArtifactId) }
+base { archivesName.set("compose-preview-" + project.name) }
 
 dependencies {
   // `ui-builder-protocol` carries no version of its own; this platform supplies it (see the
@@ -187,3 +176,11 @@ tasks.register<CheckUiBuilderRuntimeBoundary>("checkUiBuilderRuntimeBoundary") {
 }
 
 tasks.named("check") { dependsOn("checkUiBuilderRuntimeBoundary") }
+
+composeAiMavenPublishing {
+  coordinates(
+    displayName = "Compose UI Builder — Runtime",
+    description =
+      "Persistent collaborative UI-builder service, catalog validation, and revision-pinned export orchestration.",
+  )
+}

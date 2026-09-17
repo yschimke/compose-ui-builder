@@ -8,6 +8,7 @@ plugins {
   alias(libs.plugins.compose.multiplatform) apply false
   alias(libs.plugins.compose.compiler) apply false
   alias(libs.plugins.ktfmt) apply false
+  alias(libs.plugins.maven.publish) apply false
 }
 
 val materialIconGeneratorClasspath =
@@ -158,33 +159,198 @@ subprojects {
 }
 
 // ---------------------------------------------------------------------------
-// Publishing: not yet, and when it comes it will be DERIVED.
+// The release's Maven set — DERIVED, never listed.
 // ---------------------------------------------------------------------------
 //
-// The four modules `UI_BUILDER_PROJECT_BOUNDARY.md` names as seams -- `:ui-builder-runtime`,
-// `:ui-builder-export`, `:ui-builder-web` and `:ui-builder-render-bundle` -- are what
-// compose-preview-server consumes, and until they are on Maven Central it consumes them through
-// `includeBuild` against a checkout of this repository. They still carry their `publishedArtifactId`
-// and their version derivation, because those name the distribution archives and always did.
+// Restored from compose-preview-server at 3c074dd, which deleted it along with the coordinates in
+// that repository's #794. It is reinstated rather than rewritten because it is the residue of two
+// expensive failures, and a fresh implementation would have to rediscover both. The module names
+// in the history below are that repository's; the shapes are this one's.
 //
-// When the Maven lane is added it must derive its set from which modules apply the publishing
-// plugin, never from a list. compose-preview-server learned that twice and expensively: 3.1.0
-// shipped `compose-preview-server:ui-builder-export-jvm:unspecified` because a project dependency
-// reached a POM as a coordinate for a module nothing published, and 3.3.0 through 3.8.0 shipped a
-// `compose-preview-ui-builder-runtime` POM naming a render-bundle artifact nobody had uploaded --
-// six consecutive unresolvable releases, caused by one hand-kept list in a release workflow
-// disagreeing with a second hand-kept list in a gate script. The machinery that came out of that
-// (`publishReleaseArtifacts`, `printPublishedProjectPaths`, `CheckPublishedPomCoordinates` and an
-// external-consumer gate staging the derived set into a local repository) was deleted with the
-// coordinates in compose-preview-server#794 and is in that repository's history, at 3c074dd.
-// Restore it from there rather than writing a new one.
+// What a release publishes to Maven Central used to be a list typed into
+// `release.yml`'s `run:` line, and a SECOND list typed into
+// `scripts/check-ui-builder-external-consumer.sh`. Two hand-maintained copies of one set, with
+// nothing checking that they agreed — and they stopped agreeing.
+//
+// `:ui-builder-render-bundle` became an `api` dependency of `:ui-builder-runtime` in #346 and was
+// added to the gate script's list. Nobody added it to `release.yml`. From 3.3.0 to 3.8.0 every
+// release therefore published a `compose-preview-ui-builder-runtime` POM naming
+// `compose-preview-ui-builder-render-bundle:<version>` at `compile` scope, an artifact that has
+// never existed on Maven Central — so `compose-preview-serve` was unresolvable for six consecutive
+// releases. It went unnoticed because compose-ai-tools pins 3.2.0, the last release before the
+// break.
+//
+// `:server`'s `checkPublishedPomCoordinates` could not catch it. That task looks for the 3.1.0
+// failure — a project with NO publishing configuration, which reaches the POM as `unspecified`.
+// `:ui-builder-render-bundle` has a group, a version and coordinates, so its POM entry is
+// well-formed in every way except that nothing ever uploaded it.
+//
+// Deriving the set closes both failures at once: a module is in the release exactly when it applies
+// the publishing plugin, which is also exactly when it can reach a POM as a resolvable coordinate.
+// Add the plugin and the release publishes it; don't, and `checkPublishedPomCoordinates` fails the
+// build the moment it reaches a POM. There is no longer a list to forget.
+val publishedProjectPaths: SetProperty<String> = objects.setProperty(String::class.java)
 
-// One compile-time choice for the editor/server and the independently published MCP adapter.
+val publishReleaseArtifacts =
+  tasks.register("publishReleaseArtifacts") {
+    group = "publishing"
+    description = "Publishes every module of this release to Maven Central."
+
+    // A tripwire, not a second list. The derived set is only as good as the plugin detection above:
+    // rename the plugin id, move publishing into a convention plugin, and the set silently empties
+    // while the release job stays green and publishes nothing. These two are the modules whose
+    // absence would be a release with no library in it at all.
+    val paths = publishedProjectPaths
+    doFirst {
+      val derived = paths.get()
+      // The four seams `UI_BUILDER_PROJECT_BOUNDARY.md` names. A release that publishes fewer than
+      // these is a release compose-preview-server cannot consume.
+      val missing =
+        listOf(
+            ":ui-builder-runtime",
+            ":ui-builder-export",
+            ":ui-builder-web",
+            ":ui-builder-render-bundle",
+            ":bom",
+          )
+          .filterNot(derived::contains)
+      check(missing.isEmpty()) {
+        "The derived Maven publish set is missing ${missing.joinToString(", ")} - it resolved to " +
+          "${derived.sorted()}. The set is every subproject applying the maven-publish plugin; if " +
+          "publishing moved somewhere this no longer detects, fix the detection rather than " +
+          "listing modules by hand."
+      }
+
+      // The set is derived TWICE, and the two derivations have to agree.
+      //
+      // This one is what a plugin is applied to, resolved after configuration. `settings.gradle.kts`
+      // derives the other by reading the build scripts as text, before any project is configured,
+      // because `:bom` needs it at configuration time and a system property is the only closure-free
+      // way to hand it over under Isolated Projects.
+      //
+      // Two derivations of one set is the shape of the failure this whole file is about, so they are
+      // compared rather than trusted. They disagree the moment a module applies the plugin somewhere
+      // the text scan cannot see it -- through another convention plugin, say -- and the symptom
+      // would otherwise be a BOM quietly missing a coordinate it was supposed to constrain.
+      //
+      // `:bom` is the one legitimate difference: it applies the PLATFORM plugin, so it belongs to
+      // the release set but not to the set the BOM constrains.
+      val scanned =
+        (System.getProperty("composeai.publishedProjectPaths") ?: "")
+          .split(",")
+          .filter(String::isNotBlank)
+          .toSet()
+      check(scanned == derived - ":bom") {
+        "The release set and the BOM's set disagree. Applying the plugin says " +
+          "${(derived - ":bom").sorted()}; reading the build scripts in settings.gradle.kts says " +
+          "${scanned.sorted()}. One of them cannot see something the other can."
+      }
+    }
+  }
+
+// The same set, as project paths, one per line, for callers that cannot depend on a Gradle task —
+// `scripts/check-ui-builder-external-consumer.sh` builds its own publish task names from this so the
+// gate and the release cannot drift apart again.
+tasks.register("printPublishedProjectPaths") {
+  group = "publishing"
+  description = "Prints the project path of every module this release publishes, one per line."
+  val paths = publishedProjectPaths
+  doLast { paths.get().sorted().forEach { println(it) } }
+}
+
+// Every published POM must name coordinates a consumer can resolve — checked for EVERY published
+// module, not just `:server`.
+//
+// 3.1.0 shipped one that could not. `:server` gained `implementation(project(":ui-builder-export"))`
+// while that module had no publishing configuration, so Gradle wrote the only identity it had into
+// the POM — `compose-preview-server:ui-builder-export-jvm:unspecified` — and every consumer of
+// `compose-preview-serve:3.1.0` failed to resolve it, including compose-ai-tools' own wire-drift
+// tests. Nothing caught it: the build was green, the publish succeeded, and the artifact was broken
+// only for the people downloading it.
+//
+// The check that came out of that lived in `server/build.gradle.kts`, where `tasks` is `:server`'s
+// tasks, so it only ever read `:server`'s own POM. Six modules publish. A project dependency on an
+// unpublished project added to `:ui-builder-runtime` — or `:mcp`, `-export`, `-web`,
+// `-render-bundle` — reaches THAT module's POM as `unspecified` and nothing looked at it, while
+// `compose-preview-serve` becomes unresolvable all the same because consumers resolve it
+// transitively. That is not hypothetical: the 3.3.0-3.8.0 breakage was a dangling coordinate in
+// `ui-builder-runtime`'s POM, the one module shape the old check could not see.
+//
+// So it is registered here, once, against every project that applies the publishing plugin — the
+// same derivation `publishReleaseArtifacts` uses, so the set that gets published and the set that
+// gets checked cannot drift apart.
+//
+// It reads the GENERATED POM rather than the build files. `unspecified` is the tell for an
+// unpublished project dependency, and a `groupId` equal to the Gradle root project name is the tell
+// for the same thing wearing a different mask — neither can appear in a POM anyone can use.
+abstract class CheckPublishedPomCoordinates : DefaultTask() {
+  @get:InputFiles abstract val pomFiles: ConfigurableFileCollection
+
+  @get:Input abstract val rootProjectName: Property<String>
+
+  @get:Input abstract val modulePath: Property<String>
+
+  @TaskAction
+  fun check() {
+    val root = rootProjectName.get()
+    val bad =
+      pomFiles.files
+        .filter { it.isFile }
+        .flatMap { pom ->
+          Regex("<dependency>(.*?)</dependency>", RegexOption.DOT_MATCHES_ALL)
+            .findAll(pom.readText())
+            .map { it.groupValues[1] }
+            .filter { dep ->
+              dep.contains("<version>unspecified</version>") ||
+                dep.contains("<groupId>$root</groupId>")
+            }
+            .map { dep ->
+              val field = { name: String ->
+                Regex("<$name>([^<]*)</$name>").find(dep)?.groupValues?.get(1) ?: "?"
+              }
+              "${field("groupId")}:${field("artifactId")}:${field("version")}"
+            }
+            .toList()
+        }
+        .sorted()
+
+    check(bad.isEmpty()) {
+      "${modulePath.get()} publishes a POM naming dependencies nobody can resolve: " +
+        "${bad.joinToString(", ")}.\n" +
+        "A project dependency reaches the POM as a coordinate, so every project this module " +
+        "depends on at runtime has to be published - give it the maven-publish plugin, a group, a " +
+        "version and coordinates, and it joins the release set automatically. This is what broke " +
+        "compose-preview-serve 3.1.0, and again 3.3.0 through 3.8.0."
+    }
+  }
+}
+
+subprojects {
+  val modulePath = path
+  plugins.withId("com.vanniktech.maven.publish") {
+    publishedProjectPaths.add(modulePath)
+    publishReleaseArtifacts.configure { dependsOn("$modulePath:publishAndReleaseToMavenCentral") }
+
+    val pomCheck =
+      tasks.register<CheckPublishedPomCoordinates>("checkPublishedPomCoordinates") {
+        description = "Fails if this module's published POM names an unresolvable coordinate."
+        group = "verification"
+        dependsOn(tasks.withType<GenerateMavenPom>())
+        pomFiles.from(tasks.withType<GenerateMavenPom>().map { it.destination })
+        rootProjectName.set(rootProject.name)
+        this.modulePath.set(modulePath)
+      }
+    tasks.named("check") { dependsOn(pomCheck) }
+  }
+}
+
+// One compile-time choice for the editor and the MCP adapter that hosts it.
 // No environment, URL or request parameter can turn a released build's feature set on.
 val remoteComposeAuthoring = providers.gradleProperty("uiBuilderRemoteCompose").orElse("false").map {
   require(it == "true" || it == "false") { "uiBuilderRemoteCompose must be true or false" }
   it.toBooleanStrict()
 }
+
 // `generateMcpBuildFeatures` stayed behind with `:mcp`, which is the server's module. The flag is
 // still one compile-time choice; it is now made in two builds, and a release pairs them.
 listOf(
