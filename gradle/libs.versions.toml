@@ -147,7 +147,7 @@ composeai-tools = "2.18.1"
 # history records twice over, from the other side. Construction here moves to
 # `Type.Builder(...).build()` and derivation to `newBuilder()`, exactly as contracts 3.0.0 did in
 # #910; `ServeDesignPageStoreTest`'s unknown-enum case still asserts the drop.
-composeai-preview-daemon = "3.8.0"
+composeai-preview-daemon = "3.8.1"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
