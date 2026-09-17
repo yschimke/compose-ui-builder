@@ -335,6 +335,38 @@ object WearScreenCodeExporter {
       TIME_PICKER,
     ) + OVERLAYS
 
+  /**
+   * Every Wear Material 3 composable that declares a `transformation: SurfaceTransformation`.
+   *
+   * Read off the library rather than reasoned about: these are exactly the symbols whose signature
+   * carries the parameter (`wear-compose-material3` 1.7.0-beta02). A surface treatment belongs to
+   * things that draw a surface, so the sliders, steppers, progress indicators, pickers, icon
+   * buttons and text buttons are deliberately absent — passing it to any of them is a compile error
+   * in the receiving project, which is what this set exists to prevent. See
+   * [WearContentEmitter.surfaceArguments].
+   */
+  val SURFACE_TRANSFORMATION_SYMBOLS: Set<String> =
+    setOf(
+      "AppCard",
+      "Button",
+      "ButtonGroup",
+      "Card",
+      "CheckboxButton",
+      "ChildButton",
+      "CompactButton",
+      "FilledTonalButton",
+      "ListHeader",
+      "ListSubHeader",
+      "OutlinedButton",
+      "OutlinedCard",
+      "RadioButton",
+      "SplitCheckboxButton",
+      "SplitRadioButton",
+      "SplitSwitchButton",
+      "SwitchButton",
+      "TitleCard",
+    )
+
   internal const val INDENT = "    "
 
   /** The two parameter types a pack component's row treatment reaches; see [emitPack]. */
@@ -504,7 +536,7 @@ internal class WearContentEmitter(
         usesListHeader = true
         usesText = true
         listOf("${pad}ListHeader(") +
-          surfaceArguments(pad + INDENT, nodeId, transformed) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, "ListHeader") +
           listOf(
             "${pad}) {",
             "${pad}${INDENT}Text(text = ${node.string("text").quoted()})",
@@ -522,7 +554,7 @@ internal class WearContentEmitter(
           val symbol = if (variant == "outlined") "OutlinedCard" else "Card"
           usesPlainCard += symbol
           return listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
-            surfaceArguments(pad + INDENT, nodeId, transformed) +
+            surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
             listOf("${pad}) {") +
             content.flatMap { emit(it, depth + 1) } +
             listOf("${pad}}")
@@ -548,7 +580,7 @@ internal class WearContentEmitter(
           }
         listOf("${pad}TitleCard(", "${pad}${INDENT}onClick = {},") +
           slots +
-          surfaceArguments(pad + INDENT, nodeId, transformed) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, "TitleCard") +
           listOf("${pad})")
       }
       WearScreenCodeExporter.BUTTON -> {
@@ -564,7 +596,7 @@ internal class WearContentEmitter(
         usesButtonSymbol += symbol
         val content = node.slots["content"].orEmpty()
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
-          surfaceArguments(pad + INDENT, nodeId, transformed) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
           listOf("${pad}) {") +
           content.flatMap { emit(it, depth + 1) } +
           listOf("${pad}}")
@@ -690,7 +722,7 @@ internal class WearContentEmitter(
         val symbol = iconButtonSymbol(node.string("variant"))
         usesIconButton += symbol
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
-          surfaceArguments(pad + INDENT, nodeId, transformed) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
           listOf("${pad}) {") +
           node.slots["content"].orEmpty().flatMap { emit(it, depth + 1) } +
           listOf("${pad}}")
@@ -699,7 +731,7 @@ internal class WearContentEmitter(
         val symbol = textButtonSymbol(node.string("variant"))
         usesTextButton += symbol
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
-          surfaceArguments(pad + INDENT, nodeId, transformed) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
           listOf("${pad}) {") +
           node.slots["content"].orEmpty().flatMap { emit(it, depth + 1) } +
           listOf("${pad}}")
@@ -708,7 +740,7 @@ internal class WearContentEmitter(
         usesListSubHeader = true
         usesText = true
         listOf("${pad}ListSubHeader(") +
-          surfaceArguments(pad + INDENT, nodeId, transformed) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, "ListSubHeader") +
           listOf(
             "${pad}) {",
             "${pad}${INDENT}Text(text = ${node.string("text").quoted()})",
@@ -736,7 +768,7 @@ internal class WearContentEmitter(
             "${pad}${INDENT}steps = ${(node.number("steps") ?: 0f).toInt()},",
             "${pad}${INDENT}segmented = $segmented,",
           ) +
-          surfaceArguments(pad + INDENT, nodeId, transformed) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, "Slider") +
           listOf("${pad})")
       }
       WearScreenCodeExporter.STEPPER -> {
@@ -1106,14 +1138,35 @@ internal class WearContentEmitter(
    * `transformation = SurfaceTransformation(spec)` is a real argument of `ListHeader`, `TitleCard`
    * and `Button` rather than a modifier, which is why this is a pair of lines and not one chain.
    */
+  /**
+   * The modifier a list row takes, and `transformation` only where the component declares one.
+   *
+   * ## Why the symbol has to be named
+   *
+   * `SurfaceTransformation` is a **surface** treatment, and Wear Material 3 declares the parameter
+   * only on the components that draw a surface: the cards, the buttons, the three selection rows,
+   * `ButtonGroup`, `ListHeader` and `ListSubHeader`. `Slider`, `Stepper`, the progress indicators,
+   * `IconButton` and `TextButton` have no such parameter.
+   *
+   * This wrote it unconditionally, so a `wear-m3/slider` placed in a `TransformingLazyColumn`
+   * generated `Slider(…, transformation = SurfaceTransformation(spec))` — which does not compile.
+   * Nothing here caught it, because every test of this generator asserted the call's *text*; the
+   * first thing that actually put the emitted Kotlin in front of a compiler was exporting the
+   * committed `google-home-wear` sample and building it, and all three of its sliders failed.
+   *
+   * So the set below is not a style choice, it is the library's own signature list, and
+   * [WearSurfaceTransformationTest] pins it against what this generator emits for every component.
+   */
   private fun surfaceArguments(
     pad: String,
     nodeId: String,
     transformed: Boolean,
+    symbol: String,
   ): List<String> =
     (modifierChain(nodeId, transformedHeight(transformed))?.let { listOf("${pad}modifier = $it,") }
       ?: emptyList()) +
-      if (transformed) listOf("${pad}transformation = SurfaceTransformation(spec),")
+      if (transformed && symbol in WearScreenCodeExporter.SURFACE_TRANSFORMATION_SYMBOLS)
+        listOf("${pad}transformation = SurfaceTransformation(spec),")
       else emptyList()
 
   private fun refused(reason: String): List<String> {
@@ -1156,7 +1209,7 @@ internal class WearContentEmitter(
       ) +
       (if (secondary.isEmpty()) emptyList()
       else listOf("${pad}${INDENT}secondaryLabel = { Text(text = ${secondary.quoted()}) },")) +
-      surfaceArguments(pad + INDENT, nodeId, transformed) +
+      surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
       listOf("${pad})")
   }
 
