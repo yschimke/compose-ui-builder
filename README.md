@@ -43,9 +43,66 @@ Two Java floors, both named in `gradle/libs.versions.toml`: the editor's JVM lan
 `:ui-builder-runtime`, `:ui-builder-export`, `:ui-builder-web` and `:ui-builder-render-bundle` —
 and nothing here may depend on it.
 
-Those four are **not on Maven Central yet**. Until they are, the server resolves them by including
-a checkout of this repository as a composite build. When the publishing lane lands, the root
-`build.gradle.kts` says what shape it has to take and why.
+Those four, plus a BOM, are what this repository publishes:
+
+| Coordinate | |
+| --- | --- |
+| `ee.schimke.composeai:compose-preview-ui-builder-bom` | version constraints for all of the below |
+| `…:compose-preview-ui-builder-runtime` | the design service |
+| `…:compose-preview-ui-builder-export` | the design → screen-model projection |
+| `…:compose-preview-ui-builder-web` | the editor, as a Wasm distribution archive (a `zip`) |
+| `…:compose-preview-ui-builder-render-bundle` | the packaged preview a design renders through |
+
+A consumer takes the BOM and then names no versions at all:
+
+```kotlin
+implementation(platform("ee.schimke.composeai:compose-preview-ui-builder-bom:<version>"))
+implementation("ee.schimke.composeai:compose-preview-ui-builder-runtime")
+implementation("ee.schimke.composeai:compose-preview-ui-builder-export")
+```
+
+That matters here beyond convenience: the runtime and the export share the screen-model generator,
+and a version skew between them does not fail resolution — it produces an export that differs
+between the browser and the service.
+
+**Nothing has been published yet.** The lane is configured and verified, but no release has gone
+out, so compose-preview-server still resolves these four by including a checkout of this repository
+as a composite build.
+
+### Publishing a release
+
+The set is derived, never listed: a module publishes if and only if its build script applies
+`composeai.maven-publishing`, and `:bom` constrains exactly that set. Adding a module to the
+release is applying the plugin; there is no list to update.
+
+Publishing needs Maven Central credentials and a signing key, which nothing in this repository
+carries. Supply them as Gradle properties (`~/.gradle/gradle.properties`) or environment variables:
+
+```properties
+mavenCentralUsername=<Central portal token username>
+mavenCentralPassword=<Central portal token password>
+signingInMemoryKey=<ASCII-armoured secret key, newlines as \n>
+signingInMemoryKeyPassword=<key passphrase>
+```
+
+Then, with the release version in `PLUGIN_VERSION`:
+
+```bash
+PLUGIN_VERSION=0.1.0 ./gradlew publishReleaseArtifacts
+```
+
+`publishReleaseArtifacts` publishes every module in the derived set and fails first if the set has
+lost one of the four seams or the BOM. Without `PLUGIN_VERSION` every module takes the next patch
+as a `-SNAPSHOT`, which is unsigned and safe for `publishToMavenLocal`.
+
+To exercise the whole lane without credentials — which is what CI does on every pull request:
+
+```bash
+./scripts/check-ui-builder-external-consumer.sh
+```
+
+It stages the derived set into a throwaway repository at a snapshot version, then resolves it from
+a synthetic consumer outside this source tree.
 
 ## Building against local checkouts of the upstream
 

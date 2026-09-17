@@ -22,26 +22,17 @@ plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.multiplatform)
   alias(libs.plugins.kotlin.serialization)
+  id("composeai.maven-publishing")
 }
 
-group = "ee.schimke.composeai"
 
-val publishedArtifactId = "compose-preview-ui-builder-export"
 
 // Same derivation as `:server` and `:ui-builder-runtime` — `PLUGIN_VERSION` in CI, a patch-bumped
 // SNAPSHOT off `.release-please-manifest.json` locally. It keeps every archive on the shared
 // release
 // line; `unspecified` was also the string that broke 3.1.0's former POM.
-version =
-  providers.environmentVariable("PLUGIN_VERSION").orNull
-    ?: run {
-      val manifest = rootDir.resolve(".release-please-manifest.json").readText()
-      val current = Regex(""""\.":\s*"([^"]+)"""").find(manifest)!!.groupValues[1]
-      val (major, minor, patch) = current.split(".").map { it.toInt() }
-      "$major.$minor.${patch + 1}-SNAPSHOT"
-    }
 
-base { archivesName.set(publishedArtifactId) }
+base { archivesName.set("compose-preview-" + project.name) }
 
 ktfmt { googleStyle() }
 
@@ -74,4 +65,12 @@ kotlin {
     }
     commonTest.dependencies { implementation(kotlin("test")) }
   }
+}
+
+composeAiMavenPublishing {
+  coordinates(
+    displayName = "Compose UI Builder — Export",
+    description =
+      "Projection from a saved UI-builder design onto the screen model the Compose generator consumes, shared by the service and the browser editor so the two agree about what a design exports.",
+  )
 }

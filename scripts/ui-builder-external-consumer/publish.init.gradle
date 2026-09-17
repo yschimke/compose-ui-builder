@@ -1,0 +1,15 @@
+import org.gradle.api.publish.PublishingExtension
+
+gradle.projectsEvaluated {
+    rootProject.subprojects.each { project ->
+        if (project.pluginManager.hasPlugin("maven-publish")) {
+            PublishingExtension publishing = project.extensions.getByType(PublishingExtension)
+            publishing.repositories.maven {
+                name = "uiBuilderExtraction"
+                def repositoryPath =
+                    project.providers.gradleProperty("uiBuilderExtractionRepository").get()
+                url = project.uri(repositoryPath)
+            }
+        }
+    }
+}

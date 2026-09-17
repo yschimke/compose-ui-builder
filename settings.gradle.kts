@@ -1,4 +1,9 @@
+// The convention plugins (`composeai.maven-publishing`, `composeai.maven-publishing-platform`).
+// An included build rather than `buildSrc`: `buildSrc` is rebuilt for every invocation of any
+// task, and this one already carries `buildSrc` for the Material icon generators.
 pluginManagement {
+  includeBuild("build-logic")
+
   repositories {
     gradlePluginPortal()
     google()
@@ -150,7 +155,9 @@ requestedLocalBuilds.forEach { name ->
     }
   val directory =
     file(providers.gradleProperty("localBuild.$name").orNull ?: default).canonicalFile
-  require(directory.resolve("settings.gradle.kts").isFile || directory.resolve("settings.gradle").isFile) {
+  require(
+    directory.resolve("settings.gradle.kts").isFile || directory.resolve("settings.gradle").isFile
+  ) {
     "-PlocalBuilds names '$name' but $directory is not a Gradle build. Clone it there, or point " +
       "at your checkout with -PlocalBuild.$name=<path>."
   }
@@ -189,3 +196,35 @@ include(":ui-builder-artwork")
 include(":ui-builder-reference-jetcaster")
 
 include(":ui-builder-generated-jetcaster")
+
+// The BOM. It is not a member of the set it constrains, which is why it applies the platform
+// plugin rather than the library one, and why the scan below cannot match it.
+include(":bom")
+
+// ── The published set, derived ─────────────────────────────────────────────────────────────────
+//
+// Project paths that publish to Maven Central, handed to `:bom` as a closure-free system property.
+//
+// Read out of the build scripts rather than kept as a list here. The build file is where the
+// decision to publish is actually made, so that is what this reads. A hand-kept list goes stale
+// silently, and going stale means a BOM that omits a coordinate (a consumer pins it by hand and
+// skews) or names one that was never published (resolution fails). compose-preview-server shipped
+// six consecutive unresolvable releases from exactly that, with two hand-kept copies of one set.
+//
+// Matched with its closing quote (`composeai.maven-publishing")`) rather than as a bare substring:
+// `composeai.maven-publishing-platform` starts with the same 26 characters, so a prefix match would
+// pull `:bom` into the list of things the BOM constrains and it would constrain itself.
+val publishedProjectPaths = buildList {
+  fun visit(descriptor: org.gradle.api.initialization.ProjectDescriptor) {
+    if (
+      descriptor.buildFile.exists() &&
+        descriptor.buildFile.readText().contains("composeai.maven-publishing\")")
+    ) {
+      add(descriptor.path)
+    }
+    descriptor.children.forEach(::visit)
+  }
+  rootProject.children.forEach(::visit)
+}
+
+System.setProperty("composeai.publishedProjectPaths", publishedProjectPaths.joinToString(","))

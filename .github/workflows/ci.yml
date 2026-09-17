@@ -42,6 +42,16 @@ jobs:
         with:
           cache-provider: basic
       - run: ./gradlew check ktfmtCheckAll
+      # The publishing lane, proven WITHOUT credentials. It stages the derived release set into a
+      # throwaway local repository at a snapshot version (so nothing is signed and nothing reaches
+      # Maven Central), then resolves it from a synthetic consumer outside this source tree: the
+      # runtime through the BOM, the web archive by its exact distribution variant, and every
+      # coordinate the BOM constrains.
+      #
+      # This is the check that would have caught compose-preview-server's 3.3.0-3.8.0 breakage,
+      # where six releases shipped a POM naming an artifact nobody had uploaded.
+      - name: Verify the publishing lane
+        run: ./scripts/check-ui-builder-external-consumer.sh
       # The two archives the server consumes. `check` builds and verifies both, but naming them
       # here is what fails the build if the *packaging* regresses without the verification task
       # noticing — they are the artifacts a consumer actually resolves.
