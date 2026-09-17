@@ -5,22 +5,11 @@ import java.util.zip.ZipFile
 
 plugins {
   `java-library`
+  id("composeai.maven-publishing")
 }
 
-group = "ee.schimke.composeai"
 
-val publishedArtifactId = "compose-preview-ui-builder-web"
 
-version =
-  providers.environmentVariable("PLUGIN_VERSION").orNull
-    ?: run {
-      val current =
-        Regex(""""\.":\s*"([^"]+)"""")
-          .find(rootDir.resolve(".release-please-manifest.json").readText())!!
-          .groupValues[1]
-      val (major, minor, patch) = current.split(".").map { it.toInt() }
-      "$major.$minor.${patch + 1}-SNAPSHOT"
-    }
 
 val webArchive =
   tasks.register<Zip>("webArchive") {
@@ -28,7 +17,7 @@ val webArchive =
     group = "distribution"
     dependsOn(project(":ui-builder").tasks.named("wasmFrontendDist"))
     from(project(":ui-builder").layout.buildDirectory.dir("wasmDist"))
-    archiveBaseName.set(publishedArtifactId)
+    archiveBaseName.set("compose-preview-" + project.name)
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     isPreserveFileTimestamps = false
@@ -100,3 +89,11 @@ val verifyUiBuilderWebArchive =
   }
 
 tasks.named("check") { dependsOn(verifyUiBuilderWebArchive) }
+
+composeAiMavenPublishing {
+  coordinates(
+    displayName = "Compose UI Builder — Web",
+    description =
+      "Immutable Compose/Wasm frontend archive for the Compose UI builder.",
+  )
+}
