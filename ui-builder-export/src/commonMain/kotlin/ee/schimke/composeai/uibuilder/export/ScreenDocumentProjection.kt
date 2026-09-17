@@ -1903,7 +1903,7 @@ object ScreenDocumentProjection {
       when (value) {
         is BindingValueV1 -> binding(value, COLOR, where) { colour(it, where) }
         is ColorValueV1 -> color(value.value, where)
-        is ColorTokenValueV1 -> token(value.value, COLOR_TOKENS, COLOR, "colour", where)
+        is ColorTokenValueV1 -> colourToken(value.value, where)
         else ->
           refuse(
             "$where is a colour, which is written as a `#RRGGBB` literal or as a theme role and " +
@@ -1911,18 +1911,47 @@ object ScreenDocumentProjection {
           )
       }
 
-    /** The `Shape` a shape name resolves to — theme role first, then the two constants. */
+    /**
+     * The `Shape` a shape name resolves to — theme role first, then the two constants, then a
+     * corner radius.
+     *
+     * The third case is the one a document most often carries and the one this refused for several
+     * rounds. A modifier's `shape` is a free string on the wire, and the builder writes a
+     * **number** into it for a corner the designer sized by hand: `"16"` is 16dp, which is what
+     * `UiBuilderRenderer.shapeFor` draws and what the capability exporter's `shapeDp` writes. Every
+     * one of the committed Google-app designs clips or fills that way, so refusing it made the
+     * record-driven export unusable on the designs this repository ships — 112 of the 196 refusals
+     * across them were this one sentence.
+     *
+     * Named roles stay roles rather than becoming their dp equivalents: `medium` exports as
+     * `MaterialTheme.shapes.medium`, which follows a re-themed catalog, and collapsing it to
+     * `12.dp` would silently pin it.
+     */
     private fun shapeOf(name: String): ScreenValue? =
       SHAPE_TOKENS[name]?.let { path ->
         ScreenValue.Reference(path.first(), path.drop(1), typeFqn = SHAPE)
-      } ?: SHAPE_CONSTANTS[name]?.let { ScreenValue.Reference(it, typeFqn = SHAPE) }
+      }
+        ?: SHAPE_CONSTANTS[name]?.let { ScreenValue.Reference(it, typeFqn = SHAPE) }
+        ?: name.toDoubleOrNull()?.let { radius ->
+          dp(radius)?.let { corner ->
+            ScreenValue.Construct(
+              callableFqn = ROUNDED_CORNER_SHAPE_FQN,
+              positional = listOf(corner),
+              // `Shape`, not `RoundedCornerShape`: the generator compares this claim against the
+              // parameter's own `typeFqn` as a string, exactly as the property-side
+              // `ROUNDED_CORNER_SHAPE` target kind does one screen over.
+              typeFqn = SHAPE,
+            )
+          }
+        }
 
     /** Records a shape nothing resolves, naming both sets a document may choose from. */
     private fun refuseShape(nodeId: String, verb: String, name: String): ChainLink? {
       reasons +=
         "node `$nodeId` $verb shape `$name`, which is neither a theme shape " +
-          "(${SHAPE_TOKENS.keys.sorted().joinToString(", ")}) nor one of " +
-          SHAPE_CONSTANTS.keys.sorted().joinToString(", ")
+          "(${SHAPE_TOKENS.keys.sorted().joinToString(", ")}), one of " +
+          SHAPE_CONSTANTS.keys.sorted().joinToString(", ") +
+          ", nor a corner radius in dp"
       return null
     }
 
@@ -2155,7 +2184,7 @@ object ScreenDocumentProjection {
           )
         TargetKind.ROUNDED_CORNER_SHAPE ->
           ScreenValue.Construct(
-            callableFqn = "androidx.compose.foundation.shape.RoundedCornerShape",
+            callableFqn = ROUNDED_CORNER_SHAPE_FQN,
             positional = listOf(dp),
             // The parameter's own type, not the expression's. `RoundedCornerShape` is a `Shape`,
             // and the generator compares this claim to `TargetParameter.typeFqn` as a string — the
@@ -2206,10 +2235,14 @@ object ScreenDocumentProjection {
         is IntegerValueV1 -> ScreenValue.Whole(value.value)
         is DecimalValueV1 -> ScreenValue.Fractional(value.value)
         is ColorValueV1 -> color(value.value, where)
-        is ColorTokenValueV1 -> token(value.value, COLOR_TOKENS, COLOR, "colour", where)
+        is ColorTokenValueV1 -> colourToken(value.value, where)
         is TypographyTokenValueV1 ->
           token(value.value, TYPOGRAPHY_TOKENS, TEXT_STYLE, "typography", where)
-        is ShapeTokenValueV1 -> token(value.value, SHAPE_TOKENS, SHAPE, "shape", where)
+        // Through `shapeOf` rather than the table alone, so a corner radius written as a number
+        // reads the same on a property as it does in a `clip` modifier. `token` still writes the
+        // refusal for a name that is neither.
+        is ShapeTokenValueV1 ->
+          shapeOf(value.value) ?: token(value.value, SHAPE_TOKENS, SHAPE, "shape", where)
         is DimensionValueV1 -> dimension(value, where)
         is PaddingValueV1 -> {
           val axes = buildMap {
@@ -2271,6 +2304,23 @@ object ScreenDocumentProjection {
         }
       }
     }
+
+    /**
+     * A `colorToken` wrapper's value, which is a theme role **or** a literal.
+     *
+     * The wrapper does not decide: `UiBuilderRenderer.uiBuilderColor` and the property reader
+     * beside it both test `startsWith("#")` before consulting the token table, so a `#AARRGGBB`
+     * under a `colorToken` draws as that colour on the canvas. The editor writes the right wrapper
+     * today (`colourWrapper` sends a `#` value to `color`), but every design committed before that
+     * rule carries the old spelling, and reading it as a token name asked the theme for a role
+     * called `#FF0D0E11` and refused the whole export over a colour the canvas draws correctly.
+     *
+     * Same widening, same reason, as the `string`-on-a-colour-property case this file already
+     * carries: a document that renders must export.
+     */
+    private fun colourToken(name: String, where: String): ScreenValue? =
+      if (name.startsWith("#")) color(name, where)
+      else token(name, COLOR_TOKENS, COLOR, "colour", where)
 
     private fun color(value: String, where: String): ScreenValue? {
       val digits = value.removePrefix("#")
@@ -2500,6 +2550,10 @@ object ScreenDocumentProjection {
   private const val COLOR = "androidx.compose.ui.graphics.Color"
   private const val DP = "androidx.compose.ui.unit.Dp"
   private const val SHAPE = "androidx.compose.ui.graphics.Shape"
+
+  /** Named once: a corner radius reaches it from a modifier and from a property alike. */
+  private const val ROUNDED_CORNER_SHAPE_FQN =
+    "androidx.compose.foundation.shape.RoundedCornerShape"
   private const val TEXT_STYLE = "androidx.compose.ui.text.TextStyle"
   private const val THEME = "androidx.compose.material3.MaterialTheme"
 

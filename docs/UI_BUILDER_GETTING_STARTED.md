@@ -840,6 +840,20 @@ compose-preview-server design export my-widget --local --components m3-catalog=c
 - **The output says why.** A missing frame prints the compiler's own diagnostics, the classpath
   entry count and which daemon opener was built — being chattier than the HTTP surface is the point
   of the mode rather than a slip.
+- **A local render needs three sidecars beside the install**, and says which one is missing:
+  `lib-bta/` (the Kotlin compiler — `compiler: none` without it), `lib-daemon-desktop/` +
+  `lib-renderer/` (staged by `:server:installDist`), and the Skiko **native** for this host, named
+  through `-Dcomposeai.cli.skikoDir`. The preview image assembles the first and last from the
+  compose-ai-tools CLI tarball and a `lib-skiko/` of its own (see `deploy/image/Dockerfile`);
+  this repository's own distribution carries neither, so a render from a bare `installDist` needs
+  them pointed at. Without the Skiko native every frame dies inside `Library`'s static initialiser
+  with `Cannot find libskiko-<os>-<arch>.so.sha256`, which reaches the lane as a render that drew
+  nothing.
+- **A bundle is a catalog's own artifact.** `<catalog>/bundle/bundle.png` on the
+  `design-artifacts/<system>` branch is the file `--catalog` takes, and `bundle.json` inside it
+  declares the backend the daemon is picked from. A design only compiles against its own catalog's
+  bundle: a Wear design against `m3-catalog`'s desktop bundle fails at `Unresolved reference
+  'wear'`, which is the honest answer rather than a missing frame.
 
 It does **not** replace [`scripts/ui-builder/design-sync.mjs`](../scripts/ui-builder/design-sync.mjs),
 which moves a design's *document* between a live host and a committed operations fixture in both
