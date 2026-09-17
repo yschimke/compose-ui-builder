@@ -714,6 +714,12 @@ Only needed before a catalog authors its first `templates` entry, and no catalog
 its own step because it was previously miscounted as part of phase 0, which made that phase look
 finished while this was not done.
 
+**The plan for this phase, and the readiness measurement it rests on, is
+[`UI_BUILDER_SEED_TEMPLATES.md`](UI_BUILDER_SEED_TEMPLATES.md).** Two results from it belong here:
+`jetcaster` does not export and is not a template a catalog should carry, so seven documents move
+rather than eight; and `templates` as a list of paths cannot carry the label, supporting text and
+default the chooser holds today, so each entry has to be an object.
+
 15. **Templates become documents.** `UiBuilderNewDesignSeed`'s Wear screen, the widget samples and
     the blank seeds are serialised to `ui-builder/designs/*.json` fixtures — one per
     `templateIds(catalog)` entry, per catalog — with a `template` marker and the seed device in
