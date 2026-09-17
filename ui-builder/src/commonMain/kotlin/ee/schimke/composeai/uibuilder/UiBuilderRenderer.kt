@@ -1168,6 +1168,27 @@ private fun RenderNode(
           child(id, aligned)
         }
       }
+    // A row that wraps. The one layout primitive in this catalog whose response to a narrow
+    // window needs no breakpoint, no `if` and no second design: children that do not fit the line
+    // go on the next one, which is what a Material chip group has always done and what
+    // `layout/row` cannot do — at 411 dp a row of four filter chips squeezes each one to a letter
+    // per line rather than wrapping (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 3).
+    //
+    // Every property it reads is one `layout/row` and `layout/lazy-grid` already declare, read by
+    // the same two helpers: the main axis is a row's `horizontalArrangement`/`horizontalSpacingDp`
+    // and the cross axis — the gap BETWEEN lines — is a column's pair. Nothing new to learn, and
+    // nothing new for the wire to carry.
+    "layout/flow-row" ->
+      FlowRow(
+        measured,
+        horizontalArrangement = node.horizontalArrangement(),
+        verticalArrangement = node.verticalArrangement(),
+        // Absent and zero both mean "as many as fit", which is the whole point of the component;
+        // a design that wants three per line says three.
+        maxItemsInEachRow = node.integer("maxItemsInEachRow").takeIf { it > 0 } ?: Int.MAX_VALUE,
+      ) {
+        slot("children").forEach { child(it, Modifier) }
+      }
     "layout/lazy-row" -> {
       val lazyState = rememberLazyListState()
       LazyRow(

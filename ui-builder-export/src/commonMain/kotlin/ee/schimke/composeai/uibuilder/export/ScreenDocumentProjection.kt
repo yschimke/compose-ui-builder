@@ -111,6 +111,11 @@ private val SLOT_PARAMETERS: Map<String, Map<String, String>> =
     "layout/box" to mapOf("children" to "content"),
     "layout/column" to mapOf("children" to "content"),
     "layout/row" to mapOf("children" to "content"),
+    // A flow row's slot is `content` like every other layout primitive's. Named here because
+    // without it the generator is handed the catalog's `children` against `FlowRow`'s signature
+    // and refuses with "`FlowRow` has no slot `children`" — a true statement about a component
+    // that is perfectly writable.
+    "layout/flow-row" to mapOf("children" to "content"),
     // The lazy family names its slot `items`, which reads as a list of children and is a
     // `content` lambda on every one of the three Compose signatures.
     "layout/lazy-column" to mapOf("items" to "content"),
@@ -1174,7 +1179,9 @@ object ScreenDocumentProjection {
       fromProperties: MutableList<ChainLink>,
     ): Set<String> {
       val spent = mutableSetOf<String>()
-      ARRANGEMENTS[node.componentId]?.let { axis ->
+      // Every axis the component has, not one: a flow row arranges along its lines AND down them,
+      // and reading only the first would drop whichever of the two the document listed second.
+      ARRANGEMENTS[node.componentId].orEmpty().forEach { axis ->
         if (axis.property in node.properties && axis.spacing in node.properties) {
           spent += axis.property
           spent += axis.spacing
@@ -2782,6 +2789,15 @@ object ScreenDocumentProjection {
           "horizontalSpacingDp" to
             ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL)
         ),
+      // Both axes, because a flow row has both: along a line it arranges like a row, and down the
+      // lines it arranges like a column.
+      "layout/flow-row" to
+        mapOf(
+          "horizontalSpacingDp" to
+            ParameterTarget("horizontalArrangement", TargetKind.SPACED_BY_HORIZONTAL),
+          "verticalSpacingDp" to
+            ParameterTarget("verticalArrangement", TargetKind.SPACED_BY_VERTICAL),
+        ),
       "layout/column" to
         mapOf(
           "verticalSpacingDp" to
@@ -2844,6 +2860,37 @@ object ScreenDocumentProjection {
 
   private val BOX_ALIGNMENT_MEMBERS =
     members(ALIGNMENT, ALIGNMENT, *ALIGNMENT_MEMBERS.toList().toTypedArray())
+
+  /**
+   * The six ways a row distributes its children, and the six a column does.
+   *
+   * Named once for the reason [ALIGNMENT_MEMBERS] is: `layout/flow-row` reads BOTH of them — a flow
+   * row arranges like a row along a line and like a column down the lines — and a third spelling of
+   * the same twelve members is a third chance for them to disagree.
+   */
+  private val ROW_ARRANGEMENT_MEMBERS =
+    members(
+      ARRANGEMENT_HORIZONTAL,
+      ARRANGEMENT,
+      "start" to "Start",
+      "center" to "Center",
+      "end" to "End",
+      "spaceBetween" to "SpaceBetween",
+      "spaceAround" to "SpaceAround",
+      "spaceEvenly" to "SpaceEvenly",
+    )
+
+  private val COLUMN_ARRANGEMENT_MEMBERS =
+    members(
+      ARRANGEMENT_VERTICAL,
+      ARRANGEMENT,
+      "top" to "Top",
+      "center" to "Center",
+      "bottom" to "Bottom",
+      "spaceBetween" to "SpaceBetween",
+      "spaceAround" to "SpaceAround",
+      "spaceEvenly" to "SpaceEvenly",
+    )
 
   /**
    * Which Kotlin member each catalog enum value names, per component and property.
@@ -2918,17 +2965,7 @@ object ScreenDocumentProjection {
       // are read together instead — see `arranged`.
       "layout/row" to
         mapOf(
-          "horizontalArrangement" to
-            members(
-              ARRANGEMENT_HORIZONTAL,
-              ARRANGEMENT,
-              "start" to "Start",
-              "center" to "Center",
-              "end" to "End",
-              "spaceBetween" to "SpaceBetween",
-              "spaceAround" to "SpaceAround",
-              "spaceEvenly" to "SpaceEvenly",
-            ),
+          "horizontalArrangement" to ROW_ARRANGEMENT_MEMBERS,
           "verticalAlignment" to
             members(
               ALIGNMENT_VERTICAL,
@@ -2938,19 +2975,14 @@ object ScreenDocumentProjection {
               "bottom" to "Bottom",
             ),
         ),
+      "layout/flow-row" to
+        mapOf(
+          "horizontalArrangement" to ROW_ARRANGEMENT_MEMBERS,
+          "verticalArrangement" to COLUMN_ARRANGEMENT_MEMBERS,
+        ),
       "layout/column" to
         mapOf(
-          "verticalArrangement" to
-            members(
-              ARRANGEMENT_VERTICAL,
-              ARRANGEMENT,
-              "top" to "Top",
-              "center" to "Center",
-              "bottom" to "Bottom",
-              "spaceBetween" to "SpaceBetween",
-              "spaceAround" to "SpaceAround",
-              "spaceEvenly" to "SpaceEvenly",
-            ),
+          "verticalArrangement" to COLUMN_ARRANGEMENT_MEMBERS,
           "horizontalAlignment" to
             members(
               ALIGNMENT_HORIZONTAL,
@@ -2981,26 +3013,37 @@ object ScreenDocumentProjection {
     val aligned: Map<String, String>,
   )
 
-  private val ARRANGEMENTS: Map<String, ArrangementAxis> =
+  private val ROW_AXIS =
+    ArrangementAxis(
+      property = "horizontalArrangement",
+      spacing = "horizontalSpacingDp",
+      parameter = "horizontalArrangement",
+      typeFqn = ARRANGEMENT_HORIZONTAL,
+      alignment = ALIGNMENT_HORIZONTAL,
+      aligned = mapOf("start" to "Start", "center" to "CenterHorizontally", "end" to "End"),
+    )
+
+  private val COLUMN_AXIS =
+    ArrangementAxis(
+      property = "verticalArrangement",
+      spacing = "verticalSpacingDp",
+      parameter = "verticalArrangement",
+      typeFqn = ARRANGEMENT_VERTICAL,
+      alignment = ALIGNMENT_VERTICAL,
+      aligned = mapOf("top" to "Top", "center" to "CenterVertically", "bottom" to "Bottom"),
+    )
+
+  /**
+   * The axes each container arranges on, by component.
+   *
+   * A list rather than one axis because `layout/flow-row` has two of them and they are the same two
+   * a row and a column already have — along a line it is a row, down the lines it is a column.
+   */
+  private val ARRANGEMENTS: Map<String, List<ArrangementAxis>> =
     mapOf(
-      "layout/row" to
-        ArrangementAxis(
-          property = "horizontalArrangement",
-          spacing = "horizontalSpacingDp",
-          parameter = "horizontalArrangement",
-          typeFqn = ARRANGEMENT_HORIZONTAL,
-          alignment = ALIGNMENT_HORIZONTAL,
-          aligned = mapOf("start" to "Start", "center" to "CenterHorizontally", "end" to "End"),
-        ),
-      "layout/column" to
-        ArrangementAxis(
-          property = "verticalArrangement",
-          spacing = "verticalSpacingDp",
-          parameter = "verticalArrangement",
-          typeFqn = ARRANGEMENT_VERTICAL,
-          alignment = ALIGNMENT_VERTICAL,
-          aligned = mapOf("top" to "Top", "center" to "CenterVertically", "bottom" to "Bottom"),
-        ),
+      "layout/row" to listOf(ROW_AXIS),
+      "layout/column" to listOf(COLUMN_AXIS),
+      "layout/flow-row" to listOf(ROW_AXIS, COLUMN_AXIS),
     )
 
   /**
@@ -3411,6 +3454,10 @@ object ScreenDocumentProjection {
   private const val INDETERMINATE = "indeterminate"
   private const val WEIGHT = "weight"
   private const val ROW_SCOPE = "androidx.compose.foundation.layout.RowScope"
+  // `FlowRowScope` extends `RowScope`, so a weighted child inside a flow row is legal for the
+  // same reason it is inside a row — but the generator checks the scope it was told, not its
+  // supertypes, so the real one has to be named.
+  private const val FLOW_ROW_SCOPE = "androidx.compose.foundation.layout.FlowRowScope"
   /** The card whose content is a box (see `cardContentBox`), and the box it becomes. */
   private const val CARD_CATALOG_ID = "m3/card"
   private const val CARD_CONTENT_SLOT = "content"
@@ -3479,6 +3526,7 @@ object ScreenDocumentProjection {
     mapOf(
       "layout/column" to mapOf("children" to COLUMN_SCOPE),
       "layout/row" to mapOf("children" to ROW_SCOPE),
+      "layout/flow-row" to mapOf("children" to FLOW_ROW_SCOPE),
       "layout/box" to mapOf("children" to BOX_SCOPE),
       // A colour dot is `Box` by alias (see `colourDot`), so the record attests `Box`'s
       // `content` slot for it too. Keyed by the parameter name because the catalog gives the dot

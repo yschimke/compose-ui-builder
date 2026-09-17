@@ -416,7 +416,14 @@ private class ComposeEmitter(
     val body = out.toString()
 
     out.clear()
-    appendLine("@file:OptIn(ExperimentalMaterial3Api::class)")
+    // `FlowRow` is `@ExperimentalLayoutApi`, and the opt-in rides only on a file that wrote one:
+    // an unused opt-in is a warning in a project on source they did not author. No import goes
+    // with it — `androidx.compose.foundation.layout.*` is unconditional in [GENERATED_IMPORTS] and
+    // already carries both the composable and the annotation.
+    val optIns =
+      listOf("ExperimentalMaterial3Api") +
+        if (emittedFlowLayout) listOf("ExperimentalLayoutApi") else emptyList()
+    appendLine("@file:OptIn(${optIns.joinToString { "$it::class" }})")
     appendLine()
     appendLine("package generated.uibuilder")
     appendLine()
@@ -668,6 +675,7 @@ private class ComposeEmitter(
       "layout/box" -> emitSimpleContainer(node, bodyLevel, "Box", "children")
       "layout/column" -> emitColumn(node, bodyLevel)
       "layout/row" -> emitRow(node, bodyLevel)
+      "layout/flow-row" -> emitFlowRow(node, bodyLevel)
       "layout/lazy-row" -> emitLazy(node, bodyLevel, "LazyRow", "items")
       "layout/lazy-column" -> emitLazy(node, bodyLevel, "LazyColumn", "items")
       "layout/lazy-grid" -> emitGrid(node, bodyLevel)
@@ -989,6 +997,31 @@ private class ComposeEmitter(
     emitChildren(node.slot("children"), level + 1)
     line(level, "}")
   }
+
+  /**
+   * A `FlowRow`: a row whose children wrap onto the next line instead of squeezing.
+   *
+   * Both arrangements are written, and both are the ones this file already computes for a row and a
+   * column, because that is what a flow row's two axes are: along a line it is a row, and down the
+   * lines it is a column. `maxItemsInEachRow` is written only where the design set one — its
+   * default is "as many as fit", which is the reason to reach for the component, and writing
+   * `Int.MAX_VALUE` into somebody's source says nothing they did not already have.
+   */
+  private fun emitFlowRow(node: UiBuilderNode, level: Int) {
+    emittedFlowLayout = true
+    val maximum = node.number("maxItemsInEachRow").toInt().takeIf { it > 0 }
+    line(
+      level,
+      "FlowRow(${node.modifierArgument()}, horizontalArrangement = ${node.horizontalArrangementExpression()}, verticalArrangement = ${node.verticalArrangementExpression()}" +
+        (maximum?.let { ", maxItemsInEachRow = $it" } ?: "") +
+        ") {",
+    )
+    emitChildren(node.slot("children"), level + 1)
+    line(level, "}")
+  }
+
+  /** Set by [emitFlowRow], so nothing but an emitted call turns the experimental opt-in on. */
+  private var emittedFlowLayout = false
 
   private fun emitLazy(node: UiBuilderNode, level: Int, symbol: String, slot: String) {
     val contentPadding = node.obj("contentPadding").paddingValuesExpression()
@@ -3162,6 +3195,7 @@ private val EMITTER_IDS =
     FOR_EACH_COMPONENT_ID,
     "layout/box",
     "layout/column",
+    "layout/flow-row",
     "layout/horizontal-carousel",
     "layout/lazy-column",
     "layout/lazy-grid",
@@ -3278,6 +3312,19 @@ private val HANDLED_FIELDS =
           "verticalSpacingDp",
           "verticalArrangement",
           "horizontalAlignment",
+          "weight",
+          "alignment",
+        ),
+        setOf("children"),
+      ),
+    "layout/flow-row" to
+      HandledFields(
+        setOf(
+          "horizontalArrangement",
+          "horizontalSpacingDp",
+          "verticalArrangement",
+          "verticalSpacingDp",
+          "maxItemsInEachRow",
           "weight",
           "alignment",
         ),

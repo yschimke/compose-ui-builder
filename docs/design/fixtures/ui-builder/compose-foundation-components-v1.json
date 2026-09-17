@@ -110,6 +110,78 @@
       "signatureKnown": true
     },
     {
+      "canonicalId": "compose-foundation/androidx.compose.foundation.layout.FlowLayoutKt.FlowRow",
+      "componentIds": [
+        "layout/flow-row"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.foundation.layout.FlowLayoutKt",
+        "callable": "androidx.compose.foundation.layout.FlowRow",
+        "name": "FlowRow",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "horizontalArrangement",
+          "type": "Arrangement.Horizontal",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.Arrangement$Horizontal"
+        },
+        {
+          "name": "verticalArrangement",
+          "type": "Arrangement.Vertical",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.Arrangement$Vertical"
+        },
+        {
+          "name": "itemVerticalAlignment",
+          "type": "Alignment.Vertical",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Alignment$Vertical"
+        },
+        {
+          "name": "maxItemsInEachRow",
+          "type": "Int",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Int"
+        },
+        {
+          "name": "maxLines",
+          "type": "Int",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Int"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.FlowRowScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.FlowRowScope"
+        }
+      ],
+      "code": {
+        "call": "FlowRow()",
+        "imports": [
+          "androidx.compose.foundation.layout.ExperimentalLayoutApi",
+          "androidx.compose.foundation.layout.FlowRow"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
       "canonicalId": "compose-foundation/androidx.compose.foundation.layout.BoxKt.Box",
       "componentIds": [
         "layout/box",

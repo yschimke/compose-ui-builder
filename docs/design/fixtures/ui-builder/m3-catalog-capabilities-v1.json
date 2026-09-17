@@ -36,6 +36,7 @@
         "asset/image": { "group": "Content" },
         "layout/box": { "group": "Layout" },
         "layout/column": { "group": "Layout" },
+        "layout/flow-row": { "group": "Layout" },
         "layout/horizontal-carousel": { "group": "Containment" },
         "layout/for-each": { "group": "Layout" }, "layout/lazy-column": { "group": "Layout" },
         "layout/lazy-grid": { "group": "Layout" },
@@ -142,6 +143,28 @@
       "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "verticalScroll", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported" },
       "code": { "symbol": "Column", "imports": ["androidx.compose.foundation.layout.Column"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "layout/flow-row",
+      "displayName": "Flow row",
+      "role": "Container",
+      "traits": ["OrderedContent", "HorizontalContent", "LayoutPrimitive"],
+      "slots": [
+        { "name": "children", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
+      ],
+      "properties": [
+        { "name": "horizontalArrangement", "jsonType": "string", "required": false, "allowedValues": ["start", "center", "end", "spaceBetween", "spaceAround", "spaceEvenly"], "notes": "Distribution along a line, exactly as on layout/row, and composing with horizontalSpacingDp the same way." },
+        { "name": "horizontalSpacingDp", "jsonType": "number", "required": false },
+        { "name": "verticalArrangement", "jsonType": "string", "required": false, "allowedValues": ["top", "center", "bottom", "spaceBetween", "spaceAround", "spaceEvenly"], "notes": "Distribution of the LINES, not of the children: a flow row's cross axis is the stack of rows it wrapped into, so this is a Column's vocabulary and verticalSpacingDp is the gap between lines." },
+        { "name": "verticalSpacingDp", "jsonType": "number", "required": false },
+        { "name": "maxItemsInEachRow", "jsonType": "number", "required": false, "notes": "A ceiling on the children one line may hold, for a design that wants a fixed number per row however much space there is. Absent means as many as fit, which is the reason to reach for this component at all." },
+        { "name": "alignment", "jsonType": "string", "required": false, "allowedValues": ["topStart", "topCenter", "topEnd", "centerStart", "center", "centerEnd", "bottomStart", "bottomCenter", "bottomEnd"], "notes": "How a parent Box aligns this flow row, read off any Box child exactly as on layout/column." },
+        { "name": "weight", "jsonType": "number", "required": false }
+      ],
+      "modifierCapabilities": ["size", "fillMaxSize", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "FlowRow", "imports": ["androidx.compose.foundation.layout.ExperimentalLayoutApi", "androidx.compose.foundation.layout.FlowRow"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {

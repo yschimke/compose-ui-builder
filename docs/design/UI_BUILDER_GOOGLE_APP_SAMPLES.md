@@ -65,12 +65,25 @@ Gmail asks for a 400 dp list beside a 760 dp conversation and gets roughly 810/3
 the opposite. There is no diagnostic: unlike `variant` or `contentAlignment` below, these three drop
 silently.
 
-### 3. No flow row, so a chip group cannot wrap
+### 3. No flow row, so a chip group cannot wrap — **fixed**
 
 Material chip groups wrap. `layout/row` does not, and there is no `FlowRow`. At 411 dp Gmail's four
 filter chips and Photos' five squeeze until "Attachments" is one letter per line — the single worst
 thing in the compact renders, and there is no way to author around it short of branching on width,
 which is what an adaptive layout exists to avoid.
+
+`layout/flow-row` now exists, in the **foundation** (see [Where each gap
+belongs](#where-each-gap-belongs)). It is `androidx.compose.foundation.layout.FlowRow`, on the
+Layout shelf beside `layout/row`, and every property it reads is one a row or a column already
+declared: along a line it arranges like a row (`horizontalArrangement`, `horizontalSpacingDp`) and
+down the lines like a column (`verticalArrangement`, `verticalSpacingDp`), plus a
+`maxItemsInEachRow` ceiling for a design that wants a fixed number per line. The canvas draws it,
+both export lanes write it, and the generated file carries the `ExperimentalLayoutApi` opt-in only
+when it actually wrote one.
+
+The five samples do not use it yet — they are authored against the vocabulary they were built with,
+and swapping a `layout/row` for a `layout/flow-row` in each is an edit to five designs rather than a
+change to the builder.
 
 ### 4. No staggered grid
 
@@ -134,6 +147,42 @@ inspector offers, and neither the renderer nor the exporter reads.
 `m3/search-input-field.value` must be an object, so a screen that only wants to *show* a query has
 to declare a state variable for it. Every one of these five designs carries a `*Query` state variable
 that nothing reads.
+
+## Where each gap belongs
+
+The question every gap above eventually becomes is *which repository owns the fix*, and the answer
+is not the same for all of them. It follows from which library publishes the component, not from
+which screen wanted it:
+
+| Gap | Library | Owner | State |
+| --- | --- | --- | --- |
+| Flow row (3) | `androidx.compose.foundation.layout` | **foundation**, this repository | `layout/flow-row` |
+| Staggered grid (4) | `androidx.compose.foundation.lazy.staggeredgrid` | **foundation**, this repository | open |
+| Fixed grid columns (5) | `GridCells.Fixed`, foundation | **m3-catalog** for the vocabulary | [m3-catalog#465](https://github.com/yschimke/m3-catalog/issues/465); the wrapper half closed with [#906](https://github.com/yschimke/compose-preview-server/pull/906) |
+| `NavigationSuiteScaffold` (1) | `androidx.compose.material3.adaptive.navigationsuite` | **m3-catalog** | discovered, unshelved |
+| `ListDetailPaneScaffold` (1) | `androidx.compose.material3.adaptive.layout` | **m3-catalog** | discovered, unshelved, and unexportable |
+
+**Nothing here needs a new catalog.** The split is the one `ComposeFoundationCatalog` already
+states: `layout/`, `shape/` and `asset/` are the builder's own vocabulary, owned here because they
+are `androidx.compose.foundation` and `androidx.compose.ui` — one declaration per component rather
+than one per design system — and m3-catalog declines to claim them on exactly those grounds.
+Anything under `androidx.compose.material3`, adaptive or not, is m3-catalog's, and arrives through
+discovery.
+
+So the two halves of gap 1 are not this repository's to close. The published m3 catalog already
+*discovers* `m3/navigation-suite-scaffold`, `m3/navigation-suite-item` and
+`m3/list-detail-pane-scaffold` — they are in its 110 components — but no sticker declares them, so
+no catalog id gives them a shelf and nothing offers them on a palette. The pane scaffolds are
+refused by the export lane on top of that: *"no placeholder can be written for required parameter
+`directive: PaneScaffoldDirective`"*. A sticker in m3-catalog is what unblocks the first; a
+directive the projection can construct is what unblocks the second, and that half **is** this
+repository's.
+
+What the published catalog does already offer is the plain navigation family —
+`m3/navigation-rail`, `m3/wide-navigation-rail`, `m3/short-navigation-bar` and their items, shelved
+under "Navigation rail" and "Navigation bar". Those replace `Kit.rail`'s eleven hand-rolled nodes
+with one, which is worth having; they are not adaptive, and the rail still does not become a bottom
+bar at 411 dp.
 
 ## Two process notes
 

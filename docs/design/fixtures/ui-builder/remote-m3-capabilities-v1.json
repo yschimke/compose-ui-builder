@@ -1381,6 +1381,9 @@
                 "layout/column": {
                     "group": "Layout"
                 },
+                "layout/flow-row": {
+                    "group": "Layout"
+                },
                 "layout/for-each": {
                     "group": "Layout"
                 },

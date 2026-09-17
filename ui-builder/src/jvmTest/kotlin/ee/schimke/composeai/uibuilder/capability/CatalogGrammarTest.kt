@@ -109,6 +109,9 @@ class CatalogGrammarTest {
       listOf(
         "layout/box",
         "layout/column",
+        // A layout primitive like the other three, and admitted on the same trait. A bar of
+        // filter chips that wraps rather than squeezes is what this slot most wants it for.
+        "layout/flow-row",
         "layout/row",
         "m3/center-aligned-top-app-bar",
         "m3/search-bar",
