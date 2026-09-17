@@ -1,0 +1,459 @@
+{
+    "record": {
+        "kind": "object",
+        "members": {
+            "builderOrphans": {
+                "kind": "objectList",
+                "members": {
+                    "candidates": {
+                        "kind": "stringList",
+                        "optional": true
+                    },
+                    "component": {
+                        "kind": "string"
+                    },
+                    "previewId": {
+                        "kind": "string"
+                    }
+                },
+                "optional": true
+            },
+            "components": {
+                "kind": "objectList",
+                "members": {
+                    "androidxOptIns": {
+                        "kind": "stringList",
+                        "optional": true
+                    },
+                    "bindings": {
+                        "kind": "objectList",
+                        "members": {
+                            "componentId": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "group": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "previewId": {
+                                "kind": "string"
+                            }
+                        },
+                        "optional": true
+                    },
+                    "builder": {
+                        "kind": "object",
+                        "members": {
+                            "ambiguousWith": {
+                                "kind": "stringList",
+                                "optional": true
+                            },
+                            "canvas": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "component": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "conflicting": {
+                                "kind": "stringList",
+                                "optional": true
+                            },
+                            "declaredBy": {
+                                "kind": "stringList",
+                                "optional": true
+                            },
+                            "declaredForCatalogId": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "displayName": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "exclude": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "group": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "id": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "malformed": {
+                                "kind": "stringList",
+                                "optional": true
+                            },
+                            "nativeOnly": {
+                                "kind": "boolean",
+                                "optional": true
+                            },
+                            "slots": {
+                                "kind": "objectList",
+                                "members": {
+                                    "key": {
+                                        "kind": "string"
+                                    },
+                                    "value": {
+                                        "kind": "string"
+                                    }
+                                },
+                                "optional": true
+                            },
+                            "starter": {
+                                "kind": "objectList",
+                                "members": {
+                                    "key": {
+                                        "kind": "string"
+                                    },
+                                    "value": {
+                                        "kind": "string"
+                                    }
+                                },
+                                "optional": true
+                            },
+                            "stateCallbacks": {
+                                "kind": "objectList",
+                                "members": {
+                                    "key": {
+                                        "kind": "string"
+                                    },
+                                    "value": {
+                                        "kind": "string"
+                                    }
+                                },
+                                "optional": true
+                            },
+                            "traits": {
+                                "kind": "stringList",
+                                "optional": true
+                            },
+                            "variantProperty": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "variants": {
+                                "kind": "objectList",
+                                "members": {
+                                    "key": {
+                                        "kind": "string"
+                                    },
+                                    "value": {
+                                        "kind": "string"
+                                    }
+                                },
+                                "optional": true
+                            }
+                        },
+                        "optional": true,
+                        "nullable": true
+                    },
+                    "callableFromAnotherFile": {
+                        "kind": "boolean",
+                        "optional": true
+                    },
+                    "canonicalId": {
+                        "kind": "string"
+                    },
+                    "code": {
+                        "kind": "object",
+                        "members": {
+                            "androidxOptIns": {
+                                "kind": "stringList",
+                                "optional": true
+                            },
+                            "call": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "imports": {
+                                "kind": "stringList",
+                                "optional": true
+                            },
+                            "refusedReason": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "requiredOptIns": {
+                                "kind": "stringList",
+                                "optional": true
+                            }
+                        },
+                        "optional": true,
+                        "nullable": true
+                    },
+                    "componentIds": {
+                        "kind": "stringList",
+                        "optional": true
+                    },
+                    "hasContextReceivers": {
+                        "kind": "boolean",
+                        "optional": true
+                    },
+                    "hasTypeParameters": {
+                        "kind": "boolean",
+                        "optional": true
+                    },
+                    "overloadsCollided": {
+                        "kind": "boolean",
+                        "optional": true
+                    },
+                    "parameters": {
+                        "kind": "objectList",
+                        "members": {
+                            "composableSlot": {
+                                "kind": "boolean",
+                                "optional": true
+                            },
+                            "composableSlotReceiver": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "hasDefault": {
+                                "kind": "boolean",
+                                "optional": true
+                            },
+                            "lambdaReturnTypeFqn": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "name": {
+                                "kind": "string"
+                            },
+                            "noArgConstructible": {
+                                "kind": "boolean",
+                                "optional": true
+                            },
+                            "noArgFactory": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "nullable": {
+                                "kind": "boolean",
+                                "optional": true
+                            },
+                            "scopeDslReceiver": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "type": {
+                                "kind": "string"
+                            },
+                            "typeFqn": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            }
+                        },
+                        "optional": true
+                    },
+                    "requiredOptIns": {
+                        "kind": "stringList",
+                        "optional": true
+                    },
+                    "signatureKnown": {
+                        "kind": "boolean",
+                        "optional": true
+                    },
+                    "slots": {
+                        "kind": "objectList",
+                        "members": {
+                            "name": {
+                                "kind": "string"
+                            },
+                            "receiverScope": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "required": {
+                                "kind": "boolean"
+                            }
+                        },
+                        "optional": true
+                    },
+                    "symbol": {
+                        "kind": "object",
+                        "members": {
+                            "callable": {
+                                "kind": "string"
+                            },
+                            "descriptor": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "docs": {
+                                "kind": "string",
+                                "optional": true
+                            },
+                            "jvmName": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "jvmOwner": {
+                                "kind": "string"
+                            },
+                            "name": {
+                                "kind": "string"
+                            },
+                            "origin": {
+                                "kind": "enum",
+                                "values": [
+                                    "PROJECT",
+                                    "LIBRARY"
+                                ]
+                            },
+                            "receiver": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "sourceFile": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            }
+                        }
+                    }
+                }
+            },
+            "module": {
+                "kind": "string"
+            },
+            "schemaVersion": {
+                "kind": "int",
+                "optional": true
+            },
+            "variant": {
+                "kind": "string"
+            }
+        }
+    },
+    "componentPolicy": {
+        "kind": "object",
+        "members": {
+            "canvas": {
+                "kind": "string",
+                "optional": true,
+                "nullable": true
+            },
+            "catalogId": {
+                "kind": "string",
+                "optional": true,
+                "nullable": true
+            },
+            "displayName": {
+                "kind": "string",
+                "optional": true,
+                "nullable": true
+            },
+            "excluded": {
+                "kind": "string",
+                "optional": true,
+                "nullable": true
+            },
+            "modifierCapabilities": {
+                "kind": "stringList",
+                "optional": true,
+                "nullable": true
+            },
+            "nativeOnly": {
+                "kind": "boolean",
+                "optional": true
+            },
+            "propertyCapabilities": {
+                "kind": "objectList",
+                "members": {
+                    "allowedValues": {
+                        "kind": "anyList",
+                        "optional": true
+                    },
+                    "jsonType": {
+                        "kind": "any"
+                    },
+                    "name": {
+                        "kind": "string"
+                    },
+                    "notes": {
+                        "kind": "string",
+                        "optional": true
+                    },
+                    "required": {
+                        "kind": "boolean",
+                        "optional": true
+                    }
+                },
+                "optional": true,
+                "nullable": true
+            },
+            "record": {
+                "kind": "string",
+                "optional": true
+            },
+            "slotCapabilities": {
+                "kind": "objectList",
+                "members": {
+                    "acceptedRoles": {
+                        "kind": "stringList",
+                        "optional": true
+                    },
+                    "acceptedTraits": {
+                        "kind": "stringList",
+                        "optional": true
+                    },
+                    "cardinality": {
+                        "kind": "object",
+                        "members": {
+                            "max": {
+                                "kind": "int",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "min": {
+                                "kind": "int",
+                                "optional": true
+                            }
+                        },
+                        "optional": true
+                    },
+                    "name": {
+                        "kind": "string"
+                    },
+                    "ordered": {
+                        "kind": "boolean",
+                        "optional": true
+                    }
+                },
+                "optional": true,
+                "nullable": true
+            },
+            "traits": {
+                "kind": "stringList",
+                "optional": true
+            }
+        }
+    }
+}
