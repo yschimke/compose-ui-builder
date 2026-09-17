@@ -910,9 +910,18 @@ private class ComposeEmitter(
    * is the point of emitting the real symbol: the preview and the app can no longer disagree about
    * the width a design expands at, because neither of them owns a threshold any more.
    *
-   * `mainPanePreferredWidthDp`, `supportingPanePreferredWidthDp` and `paneSpacingDp` are not
-   * written: the scaffold partitions the window itself. They stay authored properties because the
-   * canvas's own fit still reads them, and a design that carries them exports the same layout.
+   * The three widths ARE written, and for a while were not. `mainPanePreferredWidthDp`,
+   * `supportingPanePreferredWidthDp` and `paneSpacingDp` were declared by the catalog, stored in
+   * the document, carried on the wire and echoed into the provenance comment — and read by nobody,
+   * with no diagnostic to say so, because "the scaffold partitions the window itself" was taken to
+   * mean it could not be told otherwise. It can: a pane's preferred width is
+   * `PaneScaffoldScope.preferredWidth`, parent data its measure policy reads, and the gap between
+   * partitions is the directive's `horizontalPartitionSpacerSize`. Gmail asked for a 400dp list
+   * beside a 760dp conversation and got roughly 810/360 — close to the opposite
+   * (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 2).
+   *
+   * An unstated width is written as `null` and changes nothing, so a design that never touched
+   * these exports exactly the source it did before.
    */
   private fun emitSupportingPane(node: UiBuilderNode, level: Int) {
     emittedSupportingPaneScaffold = true
@@ -921,6 +930,9 @@ private class ComposeEmitter(
     line(level + 1, "singlePane = ${node.string("layoutMode") == "singlePane"},")
     line(level + 1, "mainPaneVisible = ${node.boolValue("mainPaneVisible", true)},")
     line(level + 1, "supportingPaneVisible = ${node.boolValue("supportingPaneVisible", true)},")
+    line(level + 1, "mainPaneWidth = ${node.dpArgument("mainPanePreferredWidthDp")},")
+    line(level + 1, "supportingPaneWidth = ${node.dpArgument("supportingPanePreferredWidthDp")},")
+    line(level + 1, "paneSpacing = ${node.dpArgument("paneSpacingDp")},")
     line(level + 1, "mainPane = {")
     emitChildren(node.slot("mainPane"), level + 2)
     line(level + 1, "},")
@@ -1163,6 +1175,7 @@ private class ComposeEmitter(
         "androidx.compose.material3.adaptive.WindowAdaptiveInfo",
         "androidx.compose.material3.adaptive.currentWindowAdaptiveInfo",
         "androidx.compose.material3.adaptive.layout.PaneAdaptedValue",
+        "androidx.compose.material3.adaptive.layout.PaneScaffoldScope",
         "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold",
         "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults",
         "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole",
@@ -1528,12 +1541,12 @@ private class ComposeEmitter(
   private fun emitAdaptiveHelper() {
     if (!emittedSupportingPaneScaffold) return
     appendLine(
-      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) {"
+      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPaneWidth: Dp?, supportingPaneWidth: Dp?, paneSpacing: Dp?, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) {"
     )
     appendLine("  val posture = currentWindowAdaptiveInfo().windowPosture")
     appendLine("  BoxWithConstraints(modifier) {")
     appendLine(
-      "    val frameDirective = calculatePaneScaffoldDirective(WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)); val directive = if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective"
+      "    val frameDirective = calculatePaneScaffoldDirective(WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)); val partitioned = if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective; val directive = if (paneSpacing != null) partitioned.copy(horizontalPartitionSpacerSize = paneSpacing) else partitioned"
     )
     // A supporting-only design must name the supporting pane as the destination, or the sole
     // partition goes to the primary and masking it afterwards leaves a blank frame.
@@ -1541,10 +1554,15 @@ private class ComposeEmitter(
       "    val computed = calculateThreePaneScaffoldValue(maxHorizontalPartitions = directive.maxHorizontalPartitions, adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(), currentDestination = if (!mainPaneVisible && supportingPaneVisible) ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting) else null)"
     )
     appendLine(
-      "    SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { mainPane() }, supportingPane = { supportingPane() }, modifier = Modifier.fillMaxSize())"
+      "    SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { BuilderPane(mainPaneWidth, mainPane) }, supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) }, modifier = Modifier.fillMaxSize())"
     )
     appendLine("  }")
     appendLine("}")
+    // A pane whose width the design did not state is composed exactly as it was before this
+    // existed — no wrapper, no parent data — so those designs export byte-identical source.
+    appendLine(
+      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun PaneScaffoldScope.BuilderPane(width: Dp?, content: @Composable () -> Unit) { if (width == null) content() else Box(Modifier.preferredWidth(width)) { content() } }"
+    )
   }
 
   private fun emitCompatibilityHelpers() {
@@ -3109,6 +3127,15 @@ private fun String?.nullableStringLiteral(): String =
   if (isNullOrEmpty()) "null" else "\"${escape()}\""
 
 private fun Float.dpLiteral(): String = if (this % 1f == 0f) "${toInt()}.dp" else "${this}f.dp"
+
+/**
+ * A dimension the design stated, as a `Dp` literal, or `null` where it stated none.
+ *
+ * Absent is not zero. A pane with no authored width is one the scaffold should size itself, and
+ * writing `0.dp` would be this exporter inventing a decision out of a missing property.
+ */
+private fun UiBuilderNode.dpArgument(name: String): String =
+  (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.floatOrNull?.dpLiteral() ?: "null"
 
 private fun Float.floatLiteral(): String = if (this % 1f == 0f) "${toInt()}f" else "${this}f"
 

@@ -67,20 +67,28 @@ class StructuredSvgExportBridgeTest {
       textElements.map { it.attributes.getValue("data-compose-node-id") }.toSet()
     // Skia may split a wrapped text node into a different number of line fragments across its
     // Linux and macOS backends. Authored node identity is the stable structural contract.
-    assertEquals(23, emittedTextNodeIds.size)
+    assertEquals(26, emittedTextNodeIds.size)
     // The supporting pane is `androidx.compose.material3.adaptive`'s own, and the real scaffold
     // spends height on the margins and partition spacing the stand-in did not have. The design's
-    // last episode row is what that costs: it used to clip mid-row, leaving a headline with no
-    // metadata under it, and now it falls wholly below the fold. Both are honest answers from a
-    // bounded composition — see `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md`. What is being pinned
-    // is that the boundary is a *row*: a design must not lose a title while keeping its summary.
-    val belowTheFold =
-      setOf(
-        "detail-episode-139-title",
-        "detail-episode-139-podcast",
-        "detail-episode-139-summary",
-        "detail-episode-139-meta",
-      )
+    // last episode row is what that costs, and where the fold falls has now moved twice.
+    //
+    // It first clipped mid-row, then — once the real scaffold arrived — fell wholly below the
+    // fold, and this assertion was written to pin that clean boundary: *a design must not lose a
+    // title while keeping its summary*.
+    //
+    // It is mid-row again, and this time for a reason that is not a regression in the renderer.
+    // The design asks for a 744dp main pane beside a 512dp supporting one, and until
+    // yschimke/compose-preview-server#924 nothing read those numbers: the panes were whatever the
+    // library's own partitioning made them. Honouring them widens the supporting pane, its rows
+    // wrap over fewer lines, and three quarters of episode 139 now fits where none of it did.
+    // Only `-meta` is still under the fold.
+    //
+    // So the boundary is no longer a row, and the renderer cannot make it one: where the fold
+    // falls is the design's content measured against the design's own frame, and the only inputs
+    // this repository has are the ones the design set. Pinned here as the new truth rather than
+    // waived, because the number moving is how a future change to pane sizing gets noticed. See
+    // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md`.
+    val belowTheFold = setOf("detail-episode-139-meta")
     assertEquals(
       document.nodes.values.filter { it.componentId == "m3/text" }.map { it.id }.toSet() -
         belowTheFold,

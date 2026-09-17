@@ -1,4 +1,4 @@
-// Generator content SHA-256: 511e54e210f3eb634b89ed79e4d48a10533cc8074ffffe48aedd36df4baf35cd
+// Generator content SHA-256: ebd2fc01bd448cc3f241623ae0e355bb7269920d385fa58a420a5c553c0c29ca
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -26,6 +26,7 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.PaneScaffoldScope
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
@@ -80,6 +81,9 @@ fun JetcasterDiscoverExpandedSupportingPane() {
       singlePane = false,
       mainPaneVisible = true,
       supportingPaneVisible = true,
+      mainPaneWidth = 744.dp,
+      supportingPaneWidth = 512.dp,
+      paneSpacing = 24.dp,
       mainPane = {
         // node:main-background component:layout/box symbol:Box
         // typed-properties:{}
@@ -1249,6 +1253,9 @@ private fun BuilderSupportingPaneScaffold(
   singlePane: Boolean,
   mainPaneVisible: Boolean,
   supportingPaneVisible: Boolean,
+  mainPaneWidth: Dp?,
+  supportingPaneWidth: Dp?,
+  paneSpacing: Dp?,
   mainPane: @Composable () -> Unit,
   supportingPane: @Composable () -> Unit,
 ) {
@@ -1258,8 +1265,11 @@ private fun BuilderSupportingPaneScaffold(
       calculatePaneScaffoldDirective(
         WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)
       )
-    val directive =
+    val partitioned =
       if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective
+    val directive =
+      if (paneSpacing != null) partitioned.copy(horizontalPartitionSpacerSize = paneSpacing)
+      else partitioned
     val computed =
       calculateThreePaneScaffoldValue(
         maxHorizontalPartitions = directive.maxHorizontalPartitions,
@@ -1277,11 +1287,17 @@ private fun BuilderSupportingPaneScaffold(
           secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden,
           tertiary = PaneAdaptedValue.Hidden,
         ),
-      mainPane = { mainPane() },
-      supportingPane = { supportingPane() },
+      mainPane = { BuilderPane(mainPaneWidth, mainPane) },
+      supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) },
       modifier = Modifier.fillMaxSize(),
     )
   }
+}
+
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@Composable
+private fun PaneScaffoldScope.BuilderPane(width: Dp?, content: @Composable () -> Unit) {
+  if (width == null) content() else Box(Modifier.preferredWidth(width)) { content() }
 }
 
 @Composable

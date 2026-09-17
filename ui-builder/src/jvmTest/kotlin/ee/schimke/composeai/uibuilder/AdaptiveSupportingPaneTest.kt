@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import kotlin.test.Test
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -30,6 +31,9 @@ class AdaptiveSupportingPaneTest {
     layoutMode: String = "expandedTwoPane",
     mainPaneVisible: Boolean = true,
     supportingPaneVisible: Boolean = true,
+    mainPaneWidthDp: Int? = null,
+    supportingPaneWidthDp: Int? = null,
+    paneSpacingDp: Int? = null,
   ) =
     UiBuilderDocument(
       schema = "ui-builder/v1",
@@ -65,7 +69,15 @@ class AdaptiveSupportingPaneTest {
                       ),
                     "mainPaneVisible" to bool(mainPaneVisible),
                     "supportingPaneVisible" to bool(supportingPaneVisible),
-                  )
+                  ) +
+                    listOfNotNull(
+                        mainPaneWidthDp?.let { "mainPanePreferredWidthDp" to float(it) },
+                        supportingPaneWidthDp?.let {
+                          "supportingPanePreferredWidthDp" to float(it)
+                        },
+                        paneSpacingDp?.let { "paneSpacingDp" to float(it) },
+                      )
+                      .toMap()
                 ),
               slots = mapOf("mainPane" to listOf("main"), "supportingPane" to listOf("support")),
             ),
@@ -76,6 +88,9 @@ class AdaptiveSupportingPaneTest {
 
   private fun bool(value: Boolean) =
     JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(value)))
+
+  private fun float(value: Int) =
+    JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(value)))
 
   private fun text(id: String, value: String) =
     UiBuilderNode(
@@ -179,4 +194,59 @@ class AdaptiveSupportingPaneTest {
       onNodeWithText("SupportPaneWord").assertIsDisplayed()
       onNodeWithText("MainPaneWord").assertIsNotDisplayed()
     }
+
+  /**
+   * Where the supporting pane starts, at a tablet width, for an authored pair of pane widths.
+   *
+   * The left edge rather than a measured pane box, because the panes are the scaffold's own
+   * partitions and nothing in the design wraps them: the supporting pane's content cannot begin
+   * before the main pane's partition ends, so where its text starts IS where the split fell.
+   */
+  private fun supportingPaneLeft(mainWidthDp: Int, supportingWidthDp: Int): Float {
+    var left = 0f
+    runDesktopComposeUiTest(width = 1280, height = 800) {
+      setContent {
+        MaterialTheme {
+          UiBuilderSurface(
+            document(mainPaneWidthDp = mainWidthDp, supportingPaneWidthDp = supportingWidthDp)
+          )
+        }
+      }
+      left = onNodeWithText("SupportPaneWord").fetchSemanticsNode().boundsInRoot.left
+    }
+    return left
+  }
+
+  /**
+   * The three widths the catalog declares reach the real scaffold.
+   *
+   * `docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md`, gap 2: *"`mainPanePreferredWidthDp`,
+   * `supportingPanePreferredWidthDp` and `paneSpacingDp` are declared by the catalog, stored in the
+   * document, carried through the wire, echoed into the generated source's provenance comment — and
+   * never read. Gmail asks for a 400 dp list beside a 760 dp conversation and gets roughly 810/360,
+   * which is close to the opposite. There is no diagnostic."*
+   *
+   * So this asserts the direction, which is the part that was wrong. A narrow main pane must put
+   * the split early and a wide one must put it late; the bug drew both the same, and drew the pair
+   * Gmail asked for backwards.
+   */
+  @Test
+  fun `an authored pane width moves the split, in the direction it was authored`() {
+    val narrowMain = supportingPaneLeft(mainWidthDp = 400, supportingWidthDp = 760)
+    val wideMain = supportingPaneLeft(mainWidthDp = 760, supportingWidthDp = 400)
+
+    assertTrue(
+      narrowMain < wideMain,
+      "the authored main-pane width did not move the split: a 400dp main pane put the supporting " +
+        "pane at $narrowMain and a 760dp one put it at $wideMain. Equal values mean the widths " +
+        "are being ignored, which is the whole of gap 2.",
+    )
+    // Not merely ordered but on the right sides of centre, so a change that honoured the widths by
+    // some small fraction would not pass. 1280 wide, so the halfway mark is 640.
+    assertTrue(
+      narrowMain < 640f,
+      "a 400dp main pane should split left of centre, not at $narrowMain",
+    )
+    assertTrue(wideMain > 640f, "a 760dp main pane should split right of centre, not at $wideMain")
+  }
 }

@@ -91,6 +91,7 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.PaneScaffoldScope
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
@@ -2560,6 +2561,12 @@ private fun AdaptiveSupportingPaneScaffold(
   }
   val mainVisible = node.bool("mainPaneVisible", true)
   val supportingVisible = node.bool("supportingPaneVisible", true)
+  // The three widths the catalog declares. Absent is not zero: an unstated width means "whatever
+  // the library would have chosen", which is what every design authored before these were read
+  // has been getting.
+  val mainWidth = node.dimension("mainPanePreferredWidthDp")
+  val supportingWidth = node.dimension("supportingPanePreferredWidthDp")
+  val paneSpacing = node.dimension("paneSpacingDp")
   val posture = currentWindowAdaptiveInfo().windowPosture
   BoxWithConstraints(modifier) {
     val frameInfo =
@@ -2569,9 +2576,14 @@ private fun AdaptiveSupportingPaneScaffold(
       )
     val frameDirective = calculatePaneScaffoldDirective(frameInfo)
     val directive =
-      if (node.string("layoutMode") == "singlePane")
-        frameDirective.copy(maxHorizontalPartitions = 1)
-      else frameDirective
+      (if (node.string("layoutMode") == "singlePane")
+          frameDirective.copy(maxHorizontalPartitions = 1)
+        else frameDirective)
+        // The gap BETWEEN partitions is the directive's, not a pane's, which is why it is the one
+        // of the three that is set here rather than on a pane modifier.
+        .let {
+          if (paneSpacing != null) it.copy(horizontalPartitionSpacerSize = paneSpacing) else it
+        }
     // The library's own computation, so "two panes or one" is its answer rather than ours.
     //
     // The destination decides which pane wins a sole partition, and it is the supporting pane
@@ -2596,12 +2608,25 @@ private fun AdaptiveSupportingPaneScaffold(
     SupportingPaneScaffold(
       directive = directive,
       value = value,
-      mainPane = { mainPane(Modifier.fillMaxSize()) },
-      supportingPane = { supportingPane(Modifier.fillMaxSize()) },
+      // `preferredWidth` is parent data the scaffold's measure policy reads, not a size modifier,
+      // so it decides the partition and `fillMaxSize` still fills whatever partition it got. This
+      // is how the authored widths reach a REAL scaffold: they were declared, stored, carried on
+      // the wire and echoed into provenance, and then read by nobody, so Gmail's 400-beside-760
+      // drew as roughly 810/360 — close to the opposite of what it asked for, with no diagnostic
+      // saying so (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 2).
+      mainPane = { mainPane(preferredPaneWidth(Modifier, mainWidth).fillMaxSize()) },
+      supportingPane = {
+        supportingPane(preferredPaneWidth(Modifier, supportingWidth).fillMaxSize())
+      },
       modifier = Modifier.fillMaxSize(),
     )
   }
 }
+
+/** [PaneScaffoldScope.preferredWidth] where a width was authored, and nothing where none was. */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+private fun PaneScaffoldScope.preferredPaneWidth(modifier: Modifier, width: Dp?): Modifier =
+  if (width == null) modifier else modifier.preferredWidth(width)
 
 /**
  * The unrolled canvas's stand-in for the adaptive scaffold, and only its stand-in.

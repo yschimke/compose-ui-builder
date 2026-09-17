@@ -54,7 +54,7 @@ component.
 `ListDetailPaneScaffold` is missing too, and it is the more common of the two pane scaffolds. Gmail
 and Calendar are both list-detail screens wearing `SupportingPaneScaffold`.
 
-### 2. The pane scaffold's width properties are accepted and ignored
+### 2. The pane scaffold's width properties are accepted and ignored — **fixed**
 
 `mainPanePreferredWidthDp`, `supportingPanePreferredWidthDp` and `paneSpacingDp` are declared by the
 catalog, stored in the document, carried through the wire, echoed into the generated source's
@@ -64,6 +64,22 @@ generated `BuilderSupportingPaneScaffold` takes no width arguments at all.
 Gmail asks for a 400 dp list beside a 760 dp conversation and gets roughly 810/360, which is close to
 the opposite. There is no diagnostic: unlike `variant` or `contentAlignment` below, these three drop
 silently.
+
+All three are read now, through the library's own API rather than by this repository partitioning
+anything itself: a pane's preferred width is `PaneScaffoldScope.preferredWidth`, parent data the
+scaffold's measure policy reads, and the gap between partitions is the directive's
+`horizontalPartitionSpacerSize`. The generated `BuilderSupportingPaneScaffold` takes all three, and
+a design that stated none of them exports byte-identical source, because an unstated width is
+written as `null` and wraps nothing.
+
+The belief that blocked this was that "the scaffold partitions the window itself", so it could not
+be told otherwise. It can — that is what `preferredWidth` is for.
+
+One consequence worth knowing about, because it is visible in the Jetcaster benchmark: honouring the
+widths widens that design's supporting pane, its rows wrap over fewer lines, and content that used
+to fall below the fold now fits. The fold therefore lands mid-row where it used to land cleanly
+between rows. That is the design's content measured against the design's own frame; nothing in the
+renderer chooses it.
 
 ### 3. No flow row, so a chip group cannot wrap — **fixed**
 
@@ -157,6 +173,7 @@ which screen wanted it:
 | Gap | Library | Owner | State |
 | --- | --- | --- | --- |
 | Flow row (3) | `androidx.compose.foundation.layout` | **foundation**, this repository | `layout/flow-row` |
+| Pane widths (2) | `androidx.compose.material3.adaptive.layout` | **this repository** — the authored `layout/` scaffold is ours | read through `preferredWidth` |
 | Staggered grid (4) | `androidx.compose.foundation.lazy.staggeredgrid` | **foundation**, this repository | open |
 | Fixed grid columns (5) | `GridCells.Fixed`, foundation | **m3-catalog** for the vocabulary | [m3-catalog#465](https://github.com/yschimke/m3-catalog/issues/465); the wrapper half closed with [#906](https://github.com/yschimke/compose-preview-server/pull/906) |
 | `NavigationSuiteScaffold` (1) | `androidx.compose.material3.adaptive.navigationsuite` | **m3-catalog** | discovered, unshelved |
