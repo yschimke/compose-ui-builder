@@ -191,25 +191,31 @@ subprojects {
 // build the moment it reaches a POM. There is no longer a list to forget.
 val publishedProjectPaths: SetProperty<String> = objects.setProperty(String::class.java)
 
-val publishReleaseArtifacts =
-  tasks.register("publishReleaseArtifacts") {
-    group = "publishing"
-    description = "Publishes every module of this release to Maven Central."
+// The tripwires on the publish set, as their own task so something OTHER than the release can run
+// them. They used to live inside `publishReleaseArtifacts`, where the only thing that ever executed
+// them was the release itself - which is how a tripwire demanding `:ui-builder-web` survived to
+// fail the 3.26.0 release, having never once run. `check-ui-builder-external-consumer.sh` runs this
+// now, so the gate covers the assertions as well as the publishing.
+val checkPublishSet =
+  tasks.register("checkPublishSet") {
+    group = "verification"
+    description = "Verifies the derived Maven publish set before anything is uploaded."
 
     // A tripwire, not a second list. The derived set is only as good as the plugin detection above:
     // rename the plugin id, move publishing into a convention plugin, and the set silently empties
-    // while the release job stays green and publishes nothing. These two are the modules whose
-    // absence would be a release with no library in it at all.
+    // while the release job stays green and publishes nothing.
     val paths = publishedProjectPaths
     doFirst {
       val derived = paths.get()
-      // The four seams `UI_BUILDER_PROJECT_BOUNDARY.md` names. A release that publishes fewer than
-      // these is a release compose-preview-server cannot consume.
+      // The modules this release uploads to Central. NOT the same set as the four seams
+      // `UI_BUILDER_PROJECT_BOUNDARY.md` names, and conflating the two is what broke the 3.26.0
+      // release: `:ui-builder-web` is a seam, but it reaches compose-preview-server as a GitHub
+      // release asset, never as a Central coordinate. Requiring it here demanded a module that must
+      // never be in this set, so the check could only ever fail.
       val missing =
         listOf(
             ":ui-builder-runtime",
             ":ui-builder-export",
-            ":ui-builder-web",
             ":ui-builder-render-bundle",
             ":bom",
           )
@@ -219,6 +225,16 @@ val publishReleaseArtifacts =
           "${derived.sorted()}. The set is every subproject applying the maven-publish plugin; if " +
           "publishing moved somewhere this no longer detects, fix the detection rather than " +
           "listing modules by hand."
+      }
+
+      // The inverse tripwire, and the reason the one above can safely shrink. `:ui-builder-web`
+      // packages a ~40 MB Wasm frontend; applying the publishing plugin to it would put that on
+      // Central under a version that can never be withdrawn. Its absence from this set is a
+      // decision, so it is asserted rather than left to a comment in its build script.
+      check(":ui-builder-web" !in derived) {
+        "`:ui-builder-web` is in the Maven publish set. It ships as a GitHub release asset, not a " +
+          "Central coordinate - see the ivy repository in compose-preview-server's " +
+          "settings.gradle.kts. Remove the publishing plugin from it rather than relaxing this."
       }
 
       // The set is derived TWICE, and the two derivations have to agree.
@@ -246,6 +262,13 @@ val publishReleaseArtifacts =
           "${scanned.sorted()}. One of them cannot see something the other can."
       }
     }
+  }
+
+val publishReleaseArtifacts =
+  tasks.register("publishReleaseArtifacts") {
+    group = "publishing"
+    description = "Publishes every module of this release to Maven Central."
+    dependsOn(checkPublishSet)
   }
 
 // The same set, as project paths, one per line, for callers that cannot depend on a Gradle task —
@@ -330,6 +353,15 @@ subprojects {
   plugins.withId("com.vanniktech.maven.publish") {
     publishedProjectPaths.add(modulePath)
     publishReleaseArtifacts.configure { dependsOn("$modulePath:publishAndReleaseToMavenCentral") }
+
+    // `dependsOn` alone does NOT order these against `checkPublishSet` - Gradle is free to run them
+    // in any order, or at once. That is not a theoretical gap: the 3.26.0 release uploaded to
+    // Central and THEN failed its own tripwire, because the assertions ran on the aggregating task,
+    // which by definition runs after everything it depends on. An upload cannot be undone, so the
+    // check has to be ordered ahead of it rather than merely required alongside it.
+    tasks.matching { it.name == "publishAndReleaseToMavenCentral" }.configureEach {
+      mustRunAfter(checkPublishSet)
+    }
 
     val pomCheck =
       tasks.register<CheckPublishedPomCoordinates>("checkPublishedPomCoordinates") {
