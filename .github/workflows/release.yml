@@ -58,12 +58,17 @@ jobs:
       - name: Verify the publishing lane
         run: ./scripts/check-ui-builder-external-consumer.sh
 
+      # These five secret names are the ones compose-preview-server used while it published these
+      # same coordinates, so one set of repository secrets serves both. `signingInMemoryKeyId` is
+      # the one that looks droppable and is not: without it the signing plugin uses the keyring's
+      # primary key, which is the wrong key whenever the signing key is a subkey.
       - name: Publish to Maven Central
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: ./gradlew publishReleaseArtifacts
 
       - name: Build the editor archive
