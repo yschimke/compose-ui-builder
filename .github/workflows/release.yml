@@ -1,16 +1,24 @@
 name: Release
 
+# Triggered by a push to main, not by a tag. release-please watches the Conventional Commit
+# subjects, keeps a release PR open proposing the next version, and cuts the release when that PR
+# merges. A `push: tags` trigger CANNOT coexist with it: release-please creates the tag itself, so
+# the tag push would fire a second, duplicate publish, and Maven Central rejects a version it
+# already has. One trigger, one publish.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: The existing tag to release from (e.g. v0.1.0).
-        required: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  # Quoted: the `chore(main): release ` literal contains `: `, which YAML would otherwise read as a
+  # nested mapping. A merged release PR gets its own slot so an ordinary push cannot replace it
+  # while the publish is still pending.
+  group: "release-${{ github.ref }}-${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore(main): release ') && github.sha || 'updates' }}"
+  cancel-in-progress: false
 
 # What a release of this repository is:
 #
@@ -29,14 +37,62 @@ permissions:
 # The Maven set is DERIVED, never listed: `publishReleaseArtifacts` publishes every module applying
 # `composeai.maven-publishing` and fails first if that set has lost a seam or the BOM.
 jobs:
-  release:
+  # The release half. `skip-github-pull-request` is deliberate — the PR half is `update-release-pr`
+  # below. A single invocation computes the next candidate PR in the same run that cuts the
+  # release, and because our releases are drafts (`"draft": true` in release-please-config.json)
+  # that half reads the PREVIOUS release as its baseline and re-proposes the version being
+  # released. That produced a phantom PR in compose-preview-vscode#5.
+  release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-pull-request: true
+
+      # A draft release does not create its tag — GitHub writes the ref only on publish — and
+      # `publish` below checks out `ref: <tag>`, then addresses the release by that tag for the
+      # asset upload and the un-drafting. Without this the first release cuts a draft and then
+      # dies at checkout. Idempotent, and `!cancelled()` so a late failure in the action cannot
+      # leave the manifest naming a version with no tag.
+      - name: Ensure the release tag exists for the draft
+        if: ${{ !cancelled() && steps.release.outputs.release_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/{owner}/{repo}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
+            echo "tag ${TAG} already exists"
+            exit 0
+          fi
+          gh api --method POST "repos/{owner}/{repo}/git/refs" \
+            -f "ref=refs/tags/${TAG}" -f "sha=${SHA}" >/dev/null
+          echo "created tag ${TAG} at ${SHA}"
+
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
-      PLUGIN_VERSION: ${{ inputs.tag || github.ref_name }}
+      PLUGIN_VERSION: ${{ needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ needs.release-please.outputs.tag_name }}
           persist-credentials: false
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -81,18 +137,52 @@ jobs:
       # The asset name is the coordinate compose-preview-server's ivy repository asks for, so this
       # filename is a contract rather than a label. `:ui-builder-web`'s `archiveBaseName` and
       # `archiveVersion` produce exactly it.
+      #
+      # Deliberately does NOT un-draft: `finish-release` does that once the asset is attached, so
+      # the release is never visible to the ivy repository without the zip it asks for.
       - name: Attach the editor archive to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          tag="${{ inputs.tag || github.ref_name }}"
+          tag="${{ needs.release-please.outputs.tag_name }}"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
-          # `gh release upload` needs a Release object, and a tag alone does not create one. In
-          # compose-preview-server release-please created it before this step ran; nothing runs
-          # release-please here, so a hand-pushed tag arrives with no Release and the upload fails
-          # AFTER the Central publish has already gone out. Create it when it is missing.
+          # release-please has already created the (draft) Release, so `view` normally succeeds.
+          # The create branch covers a tag that reached here without one - a manual re-run, or a
+          # release whose draft was deleted - because `gh release upload` cannot create a Release
+          # and would otherwise fail AFTER the Central publish had gone out.
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$archive" --clobber
           else
-            gh release create "$tag" "$archive" --title "$tag" --generate-notes
+            gh release create "$tag" "$archive" --title "$tag" --generate-notes --draft
           fi
+
+  finish-release:
+    needs: [release-please, publish]
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      # No checkout in this job, so `gh` has no git remote to infer the repository from.
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Publish the draft GitHub release
+        run: gh release edit "${{ needs.release-please.outputs.tag_name }}" --draft=false --latest
+
+  # The PR half, split from the release half above and run after it, for the phantom-PR reason
+  # documented on `release-please`. On an ordinary push this is the only job that does anything.
+  update-release-pr:
+    needs: [release-please, finish-release]
+    if: >-
+      ${{ !cancelled()
+      && (needs.release-please.outputs.release_created != 'true'
+      || needs.finish-release.result == 'success') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true
