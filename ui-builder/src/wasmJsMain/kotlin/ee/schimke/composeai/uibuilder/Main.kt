@@ -487,14 +487,33 @@ private fun LiveSessionApp(
   // housekeeping as a navigation and undo the selection that caused it. Only the loop below counts,
   // and `replaceState` fires no `hashchange`, so nothing this host does can reach it.
   var threadNavigations by remember(config.designId) { mutableStateOf(0) }
+  // What this account may open, asked once and read by two very different things: the page
+  // destinations a design's own navigation offers (this catalog only — a page cannot navigate to a
+  // watch face) and the home screen's list of everything, which is not catalog-scoped because the
+  // question there is "what was I working on", not "what can this screen link to".
+  var homeDesigns by remember { mutableStateOf(emptyList<UiBuilderHomeDesign>()) }
   LaunchedEffect(http, config.catalogSystemId) {
     val result = http.execute(ListDesignsRequestV1(cursor = null, limit = 200))
+    val listed =
+      ((result as? UiBuilderHttpResult.Response)?.response as? DesignsResponseV1)?.designs.orEmpty()
     pageDestinations =
-      ((result as? UiBuilderHttpResult.Response)?.response as? DesignsResponseV1)
-        ?.designs
-        .orEmpty()
+      listed
         .filter { it.catalogPin.systemId == config.catalogSystemId }
         .map { UiBuilderPageDestination(it.designId, it.title) }
+    homeDesigns =
+      listed
+        .sortedByDescending { it.updatedAtEpochMillis ?: 0L }
+        .map {
+          UiBuilderHomeDesign(
+            designId = it.designId,
+            title = it.title,
+            catalogSystemId = it.catalogPin.systemId,
+            updatedLabel =
+              it.updatedAtEpochMillis
+                ?.let { at -> "updated ${formatLocalDateTime(at.toDouble())}" }
+                .orEmpty(),
+          )
+        }
   }
   LaunchedEffect(config.designId) {
     while (true) {
@@ -1170,6 +1189,15 @@ private fun LiveSessionApp(
     UiBuilderNewDesignScreen(
       catalogs = newDesignCatalogs,
       initialCatalogSystemId = activeCatalogSystemId,
+      // A design kept in this browser has no server index behind it, and nothing on the server to
+      // copy: the home screen then shows the create panel alone, which is what it always was.
+      designs = if (localSession == null) homeDesigns else emptyList(),
+      onOpenDesign = if (localSession == null) ::navigateToDesign else null,
+      onCopyDesign =
+        if (localSession == null) {
+          { source -> navigateToCopyDesign(source, NewDesignNames.random()) }
+        } else null,
+      onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
       onCreate = createDesign,
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
@@ -1299,6 +1327,7 @@ private fun LiveSessionApp(
       devicePresets = devicePresets,
       newDesignCatalogs = newDesignCatalogs,
       onCreateDesign = createDesign,
+      onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
       onHelp = ::openUiBuilderGuide,
       onTakeOffline = takeOffline,
       onSyncToServer = syncToServer,
@@ -2588,6 +2617,96 @@ private fun navigateToNewDesign(
   """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
 )
 private external fun openUiBuilderGuide()
+
+/**
+ * Leave for the host's index of every design this account may open.
+ *
+ * The identity query rides along for the same reason it does on every other navigation here: on a
+ * token-gated host the page that lands without it is a page that cannot list anything.
+ */
+@JsFun(
+  """(carried) => {
+    const current = new URL(globalThis.location.href);
+    const next = new URL('/ui-builder/designs', current.origin);
+    carried.split(',').forEach((name) => {
+      const value = current.searchParams.get(name);
+      if (value !== null) next.searchParams.set(name, value);
+    });
+    globalThis.location.assign(next.toString());
+  }"""
+)
+private external fun navigateToDesignsIndexWith(carried: String)
+
+private fun navigateToDesignsIndex() =
+  navigateToDesignsIndexWith(DESIGN_URL_IDENTITY_KEYS.joinToString(","))
+
+/**
+ * An epoch millisecond as the reader's own locale writes it.
+ *
+ * The browser's job, not this module's: the home screen is drawn by common code that has no locale,
+ * no time zone and no calendar, and an ISO instant is not what "when did I last touch this" looks
+ * like to a person.
+ */
+@JsFun("""(millis) => new Date(millis).toLocaleString()""")
+private external fun formatLocalDateTime(millis: Double): String
+
+/** Open one design by id, which is the home screen's row press. */
+@JsFun(
+  """(designId, carried) => {
+    const current = new URL(globalThis.location.href);
+    const next = new URL('/ui-builder/' + encodeURIComponent(designId), current.origin);
+    carried.split(',').forEach((name) => {
+      const value = current.searchParams.get(name);
+      if (value !== null) next.searchParams.set(name, value);
+    });
+    globalThis.location.assign(next.toString());
+  }"""
+)
+private external fun navigateToDesignWith(designId: String, carried: String)
+
+private fun navigateToDesign(designId: String) =
+  navigateToDesignWith(designId, DESIGN_URL_IDENTITY_KEYS.joinToString(","))
+
+/**
+ * Start a new design as a copy of an existing one: the same POST/Redirect/GET the New design form
+ * uses, against the copy route, so the copy's permalink is what ends up in the address bar.
+ */
+@JsFun(
+  """(sourceDesignId, designId, carried) => {
+    const current = new URL(globalThis.location.href);
+    const action = new URL('/ui-builder/designs/copy', current.origin);
+    carried.split(',').forEach((name) => {
+      const value = current.searchParams.get(name);
+      if (value !== null) action.searchParams.set(name, value);
+    });
+    const form = globalThis.document.createElement('form');
+    form.method = 'post';
+    form.action = action.toString();
+    const field = (name, value) => {
+      const input = globalThis.document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    };
+    field('sourceDesignId', sourceDesignId);
+    field('designId', designId);
+    globalThis.document.body.appendChild(form);
+    form.submit();
+  }"""
+)
+private external fun navigateToCopyDesignWith(
+  sourceDesignId: String,
+  designId: String,
+  carried: String,
+)
+
+private fun navigateToCopyDesign(sourceDesignId: String, designId: String) =
+  navigateToCopyDesignWith(
+    sourceDesignId,
+    designId,
+    DESIGN_URL_IDENTITY_KEYS.joinToString(","),
+  )
 
 @JsFun(
   """(name, fallback) => {

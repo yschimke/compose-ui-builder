@@ -358,6 +358,16 @@ enum class NewDesignStateType(val wireType: String, val valueType: String, val l
 val NEW_DESIGN_STATE_NAME: Regex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
 /**
+ * The id a new design may take: the shape the create route validates and the shape a
+ * `/ui-builder/<designId>` path segment can hold.
+ *
+ * Stated here because three surfaces ask the same question — the New design form in the browser,
+ * the server's create and copy routes, and the Designs page's own `pattern` attribute — and an id
+ * one of them accepts and another refuses is a create that fails after the click.
+ */
+val NEW_DESIGN_ID: Regex = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
+
+/**
  * State declarations as one string, for a host that has to carry them across a navigation.
  *
  * JSON rather than a separator scheme, because a `Text` variable's initial value is free text and

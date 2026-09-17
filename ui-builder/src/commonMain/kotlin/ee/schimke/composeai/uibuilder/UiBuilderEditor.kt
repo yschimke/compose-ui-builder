@@ -66,6 +66,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Keyboard
@@ -660,6 +661,16 @@ fun UiBuilderEditor(
     ) -> Unit)? =
     null,
   onHelp: (() -> Unit)? = null,
+  /**
+   * Leaves the editor for the host's index of every design this account may open, or null where the
+   * host has no such page.
+   *
+   * On the toolbar rather than behind the browser's Back button, because Back is not where a design
+   * goes: the editor is normally arrived at from a link, so "the rest of my designs" was a URL you
+   * had to already know. It sits beside **New design** — the other way out of this design and into
+   * another one.
+   */
+  onBrowseDesigns: (() -> Unit)? = null,
   /**
    * Copies this design into the browser's own storage and opens it there, or null where it cannot.
    *
@@ -1814,6 +1825,7 @@ fun UiBuilderEditor(
                 if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
                   { showNewDesign = true }
                 } else null,
+              onBrowseDesigns = onBrowseDesigns,
               onReconnect = onReconnect,
               onHelp = onHelp,
               onTakeOffline = onTakeOffline,
@@ -1832,6 +1844,7 @@ fun UiBuilderEditor(
                 if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
                   { showNewDesign = true }
                 } else null,
+              onBrowseDesigns = onBrowseDesigns,
               onReconnect = onReconnect,
               onHelp = onHelp,
               onTakeOffline = onTakeOffline,
@@ -2125,6 +2138,205 @@ fun UiBuilderEditor(
 }
 
 @Composable
+private fun rememberNewDesignFormState(
+  catalogs: List<UiBuilderNewDesignCatalog>,
+  initialCatalogSystemId: String,
+): NewDesignFormState =
+  remember(catalogs, initialCatalogSystemId) {
+    NewDesignFormState(catalogs, initialCatalogSystemId)
+  }
+
+/**
+ * The New design form's fields, hoisted out of the dialog that used to own them.
+ *
+ * The form is asked for in two places now — the dialog the editor opens, and the panel the home
+ * screen leads with — and two copies of nine interdependent fields is two forms that can disagree
+ * about what a valid design id is. A holder rather than parameters and setters for the same reason:
+ * every one of these fields is only meaningful next to the others.
+ */
+private class NewDesignFormState(
+  val catalogs: List<UiBuilderNewDesignCatalog>,
+  initialCatalogSystemId: String,
+) {
+  private val initialCatalog =
+    catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
+
+  var selectedCatalogId by mutableStateOf(initialCatalog.systemId)
+  var selectedTemplateId by mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
+  // Pre-filled, so a design can be created in one click; a person who wants their own name
+  // overwrites it, and one who wants another roll asks for it.
+  var designId by mutableStateOf(NewDesignNames.random())
+  var declared by mutableStateOf(listOf<NewDesignState>())
+  // Folded away until asked for: most new designs declare no state at all, and the three
+  // controls it takes to add one made the dialog read as a form with a required last section.
+  var stateExpanded by mutableStateOf(false)
+  var variableName by mutableStateOf("")
+  var variableKind by mutableStateOf(NewDesignStateType.Flag)
+  var variableInitial by mutableStateOf("")
+
+  val selectedCatalog: UiBuilderNewDesignCatalog
+    get() = catalogs.first { it.systemId == selectedCatalogId }
+
+  val selectedTemplate: UiBuilderNewDesignTemplate
+    get() =
+      selectedCatalog.templates.firstOrNull { it.id == selectedTemplateId }
+        ?: selectedCatalog.templates.first()
+
+  val designIdValid: Boolean
+    get() = designId.matches(NEW_DESIGN_ID)
+
+  val variableNameValid: Boolean
+    get() = NEW_DESIGN_STATE_NAME.matches(variableName) && declared.none { it.name == variableName }
+}
+
+/** The New design form itself: catalog, starting point, id, and the optional state variables. */
+@Composable
+private fun NewDesignFormFields(form: NewDesignFormState) {
+
+  Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Text("Catalog", style = MaterialTheme.typography.labelLarge)
+    // In platform order — phone, watch, Remote Compose widget — and grouped under a platform
+    // heading only where a platform has more than one catalog to choose between. With one
+    // catalog per platform the chip already says which platform it is, and a heading over a
+    // single chip would say it twice.
+    val byPlatform = form.catalogs.groupBy { it.platform }.entries.sortedBy { it.key.ordinal }
+    byPlatform.forEach { (platform, platformCatalogs) ->
+      if (platformCatalogs.size > 1) {
+        Text(
+          platform.label,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelMedium,
+        )
+      }
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        platformCatalogs.forEach { catalog ->
+          FilterChip(
+            selected = catalog.systemId == form.selectedCatalogId,
+            onClick = {
+              form.selectedCatalogId = catalog.systemId
+              form.selectedTemplateId = catalog.templates.first().id
+            },
+            label = { Text(catalog.label) },
+          )
+        }
+      }
+    }
+    Text("Starting point", style = MaterialTheme.typography.labelLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      form.selectedCatalog.templates.forEach { template ->
+        FilterChip(
+          selected = template.id == form.selectedTemplate.id,
+          onClick = { form.selectedTemplateId = template.id },
+          label = { Text(template.label) },
+        )
+      }
+    }
+    Text(
+      form.selectedTemplate.supportingText,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
+    Text("Design ID", style = MaterialTheme.typography.labelLarge)
+    OutlinedTextField(
+      value = form.designId,
+      onValueChange = { form.designId = it },
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Design ID" },
+      placeholder = { Text("my-widget") },
+      trailingIcon = {
+        TextButton(
+          onClick = { form.designId = NewDesignNames.random() },
+          modifier = Modifier.semantics { contentDescription = "Suggest another name" },
+        ) {
+          Text("Shuffle")
+        }
+      },
+      supportingText = {
+        Text(
+          if (form.designId.isEmpty() || form.designIdValid) {
+            "Letters, numbers, dots, underscores, and hyphens"
+          } else {
+            "Start with a letter or number and use only path-safe characters"
+          }
+        )
+      },
+      isError = form.designId.isNotEmpty() && !form.designIdValid,
+      singleLine = true,
+    )
+    // Optional starting state. The Screen inspector can add and edit declarations later.
+    if (!form.stateExpanded && form.declared.isEmpty()) {
+      TextButton(
+        onClick = { form.stateExpanded = true },
+        modifier = Modifier.semantics { contentDescription = "Add state variables" },
+      ) {
+        Text("Add state variables…")
+      }
+    } else {
+      Text("State", style = MaterialTheme.typography.labelLarge)
+      Text(
+        "Variables this screen reacts to. A property can be bound to one once the design exists.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+      )
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        NewDesignStateType.entries.forEach { kind ->
+          FilterChip(
+            selected = kind == form.variableKind,
+            onClick = { form.variableKind = kind },
+            label = { Text(kind.label) },
+          )
+        }
+      }
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        OutlinedTextField(
+          value = form.variableName,
+          onValueChange = { form.variableName = it },
+          modifier = Modifier.weight(1f).semantics { contentDescription = "State name" },
+          placeholder = { Text("expanded") },
+          isError = form.variableName.isNotEmpty() && !form.variableNameValid,
+          singleLine = true,
+        )
+        OutlinedTextField(
+          value = form.variableInitial,
+          onValueChange = { form.variableInitial = it },
+          modifier = Modifier.weight(1f).semantics { contentDescription = "State initial value" },
+          placeholder = { Text(form.variableKind.placeholder) },
+          singleLine = true,
+        )
+        TextButton(
+          onClick = {
+            form.declared +=
+              NewDesignState(
+                form.variableName,
+                form.variableKind,
+                form.variableKind.parse(form.variableInitial),
+              )
+            form.variableName = ""
+            form.variableInitial = ""
+          },
+          enabled = form.variableNameValid,
+        ) {
+          Text("Add")
+        }
+      }
+      if (form.declared.isNotEmpty()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          form.declared.forEach { variable ->
+            FilterChip(
+              selected = false,
+              onClick = { form.declared = form.declared - variable },
+              label = { Text("${variable.name} · ${variable.type.label}") },
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
 private fun NewDesignDialog(
   catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
@@ -2137,177 +2349,22 @@ private fun NewDesignDialog(
       state: List<NewDesignState>,
     ) -> Unit,
 ) {
-  val initialCatalog =
-    catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
-  var selectedCatalogId by remember { mutableStateOf(initialCatalog.systemId) }
-  var selectedTemplateId by remember {
-    mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
-  }
-  // Pre-filled, so a design can be created in one click; a person who wants their own name
-  // overwrites it, and one who wants another roll asks for it.
-  var designId by remember { mutableStateOf(NewDesignNames.random()) }
-  val selectedCatalog = catalogs.first { it.systemId == selectedCatalogId }
-  val selectedTemplate =
-    selectedCatalog.templates.firstOrNull { it.id == selectedTemplateId }
-      ?: selectedCatalog.templates.first()
-  val designIdValid = designId.matches(Regex("[A-Za-z0-9][A-Za-z0-9._-]*"))
-  var declared by remember { mutableStateOf(listOf<NewDesignState>()) }
-  // Folded away until asked for: most new designs declare no state at all, and the three
-  // controls it takes to add one made the dialog read as a form with a required last section.
-  var stateExpanded by remember { mutableStateOf(false) }
-  var variableName by remember { mutableStateOf("") }
-  var variableKind by remember { mutableStateOf(NewDesignStateType.Flag) }
-  var variableInitial by remember { mutableStateOf("") }
-  val variableNameValid =
-    NEW_DESIGN_STATE_NAME.matches(variableName) && declared.none { it.name == variableName }
-
+  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId)
   AlertDialog(
     onDismissRequest = { onDismiss?.invoke() },
     title = { Text("Create a new design") },
-    text = {
-      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Catalog", style = MaterialTheme.typography.labelLarge)
-        // In platform order — phone, watch, Remote Compose widget — and grouped under a platform
-        // heading only where a platform has more than one catalog to choose between. With one
-        // catalog per platform the chip already says which platform it is, and a heading over a
-        // single chip would say it twice.
-        val byPlatform = catalogs.groupBy { it.platform }.entries.sortedBy { it.key.ordinal }
-        byPlatform.forEach { (platform, platformCatalogs) ->
-          if (platformCatalogs.size > 1) {
-            Text(
-              platform.label,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              style = MaterialTheme.typography.labelMedium,
-            )
-          }
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            platformCatalogs.forEach { catalog ->
-              FilterChip(
-                selected = catalog.systemId == selectedCatalogId,
-                onClick = {
-                  selectedCatalogId = catalog.systemId
-                  selectedTemplateId = catalog.templates.first().id
-                },
-                label = { Text(catalog.label) },
-              )
-            }
-          }
-        }
-        Text("Starting point", style = MaterialTheme.typography.labelLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          selectedCatalog.templates.forEach { template ->
-            FilterChip(
-              selected = template.id == selectedTemplate.id,
-              onClick = { selectedTemplateId = template.id },
-              label = { Text(template.label) },
-            )
-          }
-        }
-        Text(
-          selectedTemplate.supportingText,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.bodySmall,
-        )
-        Text("Design ID", style = MaterialTheme.typography.labelLarge)
-        OutlinedTextField(
-          value = designId,
-          onValueChange = { designId = it },
-          modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Design ID" },
-          placeholder = { Text("my-widget") },
-          trailingIcon = {
-            TextButton(
-              onClick = { designId = NewDesignNames.random() },
-              modifier = Modifier.semantics { contentDescription = "Suggest another name" },
-            ) {
-              Text("Shuffle")
-            }
-          },
-          supportingText = {
-            Text(
-              if (designId.isEmpty() || designIdValid) {
-                "Letters, numbers, dots, underscores, and hyphens"
-              } else {
-                "Start with a letter or number and use only path-safe characters"
-              }
-            )
-          },
-          isError = designId.isNotEmpty() && !designIdValid,
-          singleLine = true,
-        )
-        // Optional starting state. The Screen inspector can add and edit declarations later.
-        if (!stateExpanded && declared.isEmpty()) {
-          TextButton(
-            onClick = { stateExpanded = true },
-            modifier = Modifier.semantics { contentDescription = "Add state variables" },
-          ) {
-            Text("Add state variables…")
-          }
-        } else {
-          Text("State", style = MaterialTheme.typography.labelLarge)
-          Text(
-            "Variables this screen reacts to. A property can be bound to one once the design exists.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-          )
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NewDesignStateType.entries.forEach { kind ->
-              FilterChip(
-                selected = kind == variableKind,
-                onClick = { variableKind = kind },
-                label = { Text(kind.label) },
-              )
-            }
-          }
-          Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            OutlinedTextField(
-              value = variableName,
-              onValueChange = { variableName = it },
-              modifier = Modifier.weight(1f).semantics { contentDescription = "State name" },
-              placeholder = { Text("expanded") },
-              isError = variableName.isNotEmpty() && !variableNameValid,
-              singleLine = true,
-            )
-            OutlinedTextField(
-              value = variableInitial,
-              onValueChange = { variableInitial = it },
-              modifier =
-                Modifier.weight(1f).semantics { contentDescription = "State initial value" },
-              placeholder = { Text(variableKind.placeholder) },
-              singleLine = true,
-            )
-            TextButton(
-              onClick = {
-                declared +=
-                  NewDesignState(variableName, variableKind, variableKind.parse(variableInitial))
-                variableName = ""
-                variableInitial = ""
-              },
-              enabled = variableNameValid,
-            ) {
-              Text("Add")
-            }
-          }
-          if (declared.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-              declared.forEach { variable ->
-                FilterChip(
-                  selected = false,
-                  onClick = { declared = declared - variable },
-                  label = { Text("${variable.name} · ${variable.type.label}") },
-                )
-              }
-            }
-          }
-        }
-      }
-    },
+    text = { NewDesignFormFields(form) },
     confirmButton = {
       Button(
-        onClick = { onCreate(selectedCatalog.systemId, designId, selectedTemplate.id, declared) },
-        enabled = designIdValid,
+        onClick = {
+          onCreate(
+            form.selectedCatalog.systemId,
+            form.designId,
+            form.selectedTemplate.id,
+            form.declared,
+          )
+        },
+        enabled = form.designIdValid,
       ) {
         Text("Create")
       }
@@ -2408,10 +2465,51 @@ internal fun unopenableDesignGuidance(code: ServiceErrorCodeV1?): String =
       "Reloading the page may help. If it does not, an operator will need to look at the host."
   }
 
+/**
+ * One design on [UiBuilderNewDesignScreen], as the home screen needs it.
+ *
+ * Deliberately not the protocol's `DesignListItemV1`: this module draws screens and the home screen
+ * needs four strings, so the host does the flattening — including turning an epoch millisecond into
+ * whatever "yesterday" is in the reader's locale, which is a browser question.
+ */
+data class UiBuilderHomeDesign(
+  val designId: String,
+  val title: String,
+  val catalogSystemId: String,
+  /** Already-formatted, e.g. `updated 3 days ago`. Empty renders nothing. */
+  val updatedLabel: String = "",
+)
+
+/**
+ * The builder's **home page**: what `/ui-builder/` draws when no design is named.
+ *
+ * It used to be the New design dialog on an empty background, which made the front door of the
+ * whole product a modal with one way through it: make something new. Anyone whose work was already
+ * on the host — which, after the first day, is everyone — arrived at a create form and had no way
+ * from here to the thing they were working on yesterday short of a URL they had to remember.
+ *
+ * So the page answers both questions a person actually arrives with. **Start something new** is the
+ * same form as before, now a panel rather than a modal. **Your designs** is what is already here:
+ * open one, or start a new design *from* one, which is the option that was missing entirely — most
+ * designs begin as a variation of a design that exists, and the only way to have one was to build
+ * it again by hand. [onBrowseDesigns] leads to the server-rendered index, which is where a design
+ * is renamed, shared, deleted, and seen as a picture rather than a row.
+ *
+ * Every callback is nullable and the panel for it is simply absent when the host cannot do it: a
+ * design kept in this browser has no server index to browse and nothing to copy on one.
+ */
 @Composable
 fun UiBuilderNewDesignScreen(
   catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
+  /** Every design this account may open, newest first. Empty hides the panel that lists them. */
+  designs: List<UiBuilderHomeDesign> = emptyList(),
+  /** Opens one in the editor, or null where the host cannot navigate. */
+  onOpenDesign: ((designId: String) -> Unit)? = null,
+  /** Starts a new design as a copy of an existing one, or null where the host cannot. */
+  onCopyDesign: ((designId: String) -> Unit)? = null,
+  /** Leaves for the host's full designs index, or null where there is none. */
+  onBrowseDesigns: (() -> Unit)? = null,
   onCreate:
     (
       catalogSystemId: String,
@@ -2421,16 +2519,189 @@ fun UiBuilderNewDesignScreen(
     ) -> Unit,
 ) {
   require(catalogs.isNotEmpty()) { "new design screen requires at least one catalog" }
+  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId)
   MaterialTheme(colorScheme = EditorColors) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-    NewDesignDialog(
-      catalogs = catalogs,
-      initialCatalogSystemId = initialCatalogSystemId,
-      onDismiss = null,
-      onCreate = onCreate,
-    )
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+      BoxWithConstraints {
+        // One breakpoint, and the same one the editor's own toolbar uses: side by side where both
+        // panels are legible at once, stacked where a two-column layout would make each of them
+        // too narrow to read the design titles in.
+        val sideBySide = maxWidth >= 840.dp
+        Column(
+          modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+          horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+          Column(
+            modifier = Modifier.widthIn(max = 1040.dp).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+          ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+              Text(
+                "UI Builder",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+              )
+              Text(
+                "Start a design, or carry on with one you already have.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
+            val newPanel: @Composable (Modifier) -> Unit = { modifier ->
+              NewDesignHomePanel(modifier, form, onCreate)
+            }
+            val designsPanel: @Composable (Modifier) -> Unit = { modifier ->
+              ExistingDesignsPanel(
+                modifier = modifier,
+                designs = designs,
+                onOpenDesign = onOpenDesign,
+                onCopyDesign = onCopyDesign,
+                onBrowseDesigns = onBrowseDesigns,
+              )
+            }
+            val showDesigns = designs.isNotEmpty() || onBrowseDesigns != null
+            if (sideBySide && showDesigns) {
+              Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                newPanel(Modifier.weight(1f))
+                designsPanel(Modifier.weight(1f))
+              }
+            } else {
+              newPanel(Modifier.fillMaxWidth())
+              if (showDesigns) designsPanel(Modifier.fillMaxWidth())
+            }
+          }
+        }
+      }
+    }
   }
 }
+
+/** **Start something new**: the New design form, as a panel rather than a modal. */
+@Composable
+private fun NewDesignHomePanel(
+  modifier: Modifier,
+  form: NewDesignFormState,
+  onCreate:
+    (
+      catalogSystemId: String,
+      designId: String,
+      templateId: String,
+      state: List<NewDesignState>,
+    ) -> Unit,
+) {
+  Surface(
+    modifier = modifier,
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 2.dp,
+  ) {
+    Column(
+      modifier = Modifier.padding(20.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+      Text("Start something new", style = MaterialTheme.typography.titleMedium)
+      NewDesignFormFields(form)
+      Button(
+        onClick = {
+          onCreate(
+            form.selectedCatalog.systemId,
+            form.designId,
+            form.selectedTemplate.id,
+            form.declared,
+          )
+        },
+        enabled = form.designIdValid,
+        modifier = Modifier.semantics { contentDescription = "Create design" },
+      ) {
+        Text("Create")
+      }
+    }
+  }
+}
+
+/** **Your designs**: what is already on this host, and the two things to do with one from here. */
+@Composable
+private fun ExistingDesignsPanel(
+  modifier: Modifier,
+  designs: List<UiBuilderHomeDesign>,
+  onOpenDesign: ((designId: String) -> Unit)?,
+  onCopyDesign: ((designId: String) -> Unit)?,
+  onBrowseDesigns: (() -> Unit)?,
+) {
+  Surface(
+    modifier = modifier,
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 2.dp,
+  ) {
+    Column(
+      modifier = Modifier.padding(20.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      Text("Your designs", style = MaterialTheme.typography.titleMedium)
+      if (designs.isEmpty()) {
+        Text(
+          "Nothing here yet. The first design you create will be listed here.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      } else {
+        // The most recent handful, not the lot: this is a way back into today's work, and the
+        // full index — with its previews, its sharing and its delete — is one press away.
+        designs.take(HOME_DESIGN_LIMIT).forEach { design ->
+          Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+              design.title.ifBlank { design.designId },
+              style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+              listOf(design.designId, design.catalogSystemId, design.updatedLabel)
+                .filter { it.isNotBlank() }
+                .joinToString(" · "),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+              if (onOpenDesign != null) {
+                TextButton(
+                  onClick = { onOpenDesign(design.designId) },
+                  modifier = Modifier.semantics { contentDescription = "Open ${design.designId}" },
+                ) {
+                  Text("Open")
+                }
+              }
+              if (onCopyDesign != null) {
+                TextButton(
+                  onClick = { onCopyDesign(design.designId) },
+                  modifier =
+                    Modifier.semantics { contentDescription = "Start from ${design.designId}" },
+                ) {
+                  Text("Start from this")
+                }
+              }
+            }
+          }
+          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        }
+      }
+      if (onBrowseDesigns != null) {
+        TextButton(
+          onClick = onBrowseDesigns,
+          modifier = Modifier.semantics { contentDescription = "All designs" },
+        ) {
+          Icon(Icons.Filled.FolderOpen, contentDescription = null, Modifier.size(18.dp))
+          Spacer(Modifier.width(8.dp))
+          Text(
+            if (designs.size > HOME_DESIGN_LIMIT) "All ${designs.size} designs" else "All designs"
+          )
+        }
+      }
+    }
+  }
+}
+
+/** How many designs the home screen lists before deferring to the full index. */
+private const val HOME_DESIGN_LIMIT = 6
 
 @Composable
 private fun MobileEditorToolbar(
@@ -2445,6 +2716,7 @@ private fun MobileEditorToolbar(
   canUndo: Boolean,
   canRedo: Boolean,
   onNewDesign: (() -> Unit)?,
+  onBrowseDesigns: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onTakeOffline: (() -> Unit)?,
@@ -2501,6 +2773,15 @@ private fun MobileEditorToolbar(
               onClick = {
                 expanded = false
                 onNewDesign()
+              },
+            )
+          }
+          if (onBrowseDesigns != null) {
+            DropdownMenuItem(
+              text = { Text("My designs") },
+              onClick = {
+                expanded = false
+                onBrowseDesigns()
               },
             )
           }
@@ -2651,6 +2932,10 @@ private fun EditorToolbar(
   canRedo: Boolean,
   collaborators: List<UiBuilderCollaborator>,
   onNewDesign: (() -> Unit)?,
+  /**
+   * Leaves for the host's index of every design this account may open; null where there is none.
+   */
+  onBrowseDesigns: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onTakeOffline: (() -> Unit)? = null,
@@ -2730,6 +3015,16 @@ private fun EditorToolbar(
           overflowOpen = true
         }
         DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
+          if (onBrowseDesigns != null) {
+            DropdownMenuItem(
+              text = { Text("My designs") },
+              leadingIcon = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
+              onClick = {
+                overflowOpen = false
+                onBrowseDesigns()
+              },
+            )
+          }
           DropdownMenuItem(
             text = { Text("Keyboard shortcuts") },
             leadingIcon = { Icon(Icons.Filled.Keyboard, contentDescription = null) },

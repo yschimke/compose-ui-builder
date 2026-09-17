@@ -13,6 +13,11 @@ import kotlin.random.Random
  *
  * The words are chosen to be mildly disreputable — a `shady-raccoon` is more fun to open than a
  * `design-17` — and no further: every word here is fine to read out in a meeting.
+ *
+ * In this module rather than in the editor because both ends now ask for one: the New design dialog
+ * in the browser, and the server, which pre-fills the Designs page's create and duplicate forms.
+ * Two generators would be two vocabularies, and the whole point of the name is that it is
+ * recognisable.
  */
 object NewDesignNames {
   val adjectives: List<String> =

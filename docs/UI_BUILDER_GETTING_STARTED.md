@@ -170,6 +170,33 @@ bookmark and share is the plain one above, and reloading it re-opens rather than
 design id that already exists is not an error and is not overwritten: you land on the design that
 is already there.
 
+### Finding your designs
+
+`/ui-builder/designs` is the index of every design this account may open, and it is a file manager
+rather than a list: each design is a card led by its own render — the SVG that
+`/api/ui-builder/v1/designs/<id>/export.svg` already serves, so the picture follows the design — with
+its id, catalog, revision and when it was last touched underneath, newest first. A filter box
+narrows the grid by name, id or catalog.
+
+Everything a design can have done to it from outside the editor is on its card:
+
+- **Open** it.
+- **Duplicate** it — a copy at revision zero with its own history, comments and access list; the
+  design it was copied from is untouched. This is the same `POST /ui-builder/designs/copy` the home
+  screen's **Start from this** uses.
+- **Share** it, which is the design's own access page.
+- **Delete** it, behind a disclosure that says what is about to be lost. Owner-only, and it is the
+  service that says so — a grantee cannot delete somebody else's work however wide its grant. The
+  design's history, comments, reference overlay and links record go with it. `POST
+  /ui-builder/<designId>/delete` with `confirm=delete`, same-origin.
+
+The page is also where a design is created: **Start a new design** picks one starting point (a
+catalog and a template, as one control) and **Start from an existing design** copies one.
+
+The builder's home page — `/ui-builder/` with no design named — offers the same two beginnings
+beside the designs you already have, and **My designs** in the editor's overflow menu leads back
+here from inside a design.
+
 Automation that already holds a document uses the design's own API resource instead:
 
 ```shell
