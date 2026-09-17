@@ -46,9 +46,7 @@ val runtimeAssets =
     }
     from(layout.buildDirectory.dir("kotlin-multiplatform-resources/aggregated-resources/wasmJs"))
     from(layout.projectDirectory.dir("src/wasmJsMain/resources")) { include("index.html") }
-    from(rootProject.layout.projectDirectory.dir("assets/js-joda")) {
-      include("js-joda.esm.js")
-    }
+    from(rootProject.layout.projectDirectory.dir("assets/js-joda")) { include("js-joda.esm.js") }
     from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
       include("*.ttf", "fonts.json", "*OFL.txt", "LICENSE.txt")
       into("fonts")
