@@ -57,7 +57,6 @@ class WearM3ScreenCatalogTest {
         "Containment",
         "Communication",
         "Content",
-        "Embedded",
       ),
       menu?.get("groupOrder")?.jsonArray?.map { it.jsonPrimitive.content },
     )
@@ -145,15 +144,10 @@ class WearM3ScreenCatalogTest {
     val borrowed = wear.components.map { it.componentId }.filterNot { it.startsWith("wear-m3/") }
 
     assertEquals(
-      listOf(
-        "layout/box",
-        "layout/column",
-        "layout/row",
-        "asset/image",
-        "remote-compose/document",
-        "remote-compose/inline",
-        "remote-compose/custom",
-      ),
+      // Four, and every one of them exports. The three Remote Compose seams stood here and did
+      // not: the whole-screen generator has no case for any of them, so they were palette entries
+      // that refused at export. Withdrawn until that has an answer.
+      listOf("layout/box", "layout/column", "layout/row", "asset/image"),
       borrowed,
     )
     assertTrue(borrowed.none { it.startsWith("m3/") }, borrowed.toString())

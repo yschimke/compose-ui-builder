@@ -285,23 +285,32 @@ class ComposeFoundationFaithfulnessTest {
     val packaged = packagedSeams(base).getValue("remote-compose/document")
     val remoteM3Owned = packaged.copy(displayName = "Remote Compose document, as remote-m3 says it")
 
+    // The Remote Compose platform rather than Wear. Wear used to take all three seams and no
+    // longer takes any — they were offered there without being exportable — so this reads through
+    // the platform Remote Compose content is actually authored on.
     val foundation =
       composeFoundationCatalog(
         base,
-        "wear",
+        "remote-compose",
         packagedSeams(base) + ("remote-compose/document" to remoteM3Owned),
       )
 
+    // On the display name rather than the whole component: this platform's curation narrows
+    // `modifierCapabilities` on everything it donates, so whole-object equality would be asserting
+    // the curation as well as the override. The name is the mark this test varies, and it is the
+    // one that says WHICH seam won.
     assertEquals(
-      remoteM3Owned,
-      foundation.components.single { it.componentId == "remote-compose/document" },
+      remoteM3Owned.displayName,
+      foundation.components.single { it.componentId == "remote-compose/document" }.displayName,
       "the packaged seam beat the catalog that owns Remote Compose",
     )
-    // Only that one moved. `remote-compose/inline` is the case that matters: `remote-m3` refuses it
-    // on purpose, so it must keep coming from the packaged catalog rather than vanishing.
-    assertEquals(
-      packagedSeams(base).getValue(REMOTE_COMPOSE_INLINE_COMPONENT_ID),
-      foundation.components.single { it.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID },
+    // `remote-compose/inline` is donated to NO platform now, and that is a consequence worth
+    // asserting rather than losing. It was on Wear's borrow list alone, so withdrawing the seams
+    // there withdrew it everywhere; the Remote Compose platform never took it, because a document
+    // does not embed a switch into itself. It returns with the Wear seams.
+    assertTrue(
+      foundation.components.none { it.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID },
+      "the inline seam is donated to no platform while the Wear seams are withdrawn",
     )
   }
 

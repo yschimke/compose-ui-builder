@@ -1293,12 +1293,8 @@ internal fun wearComponentMenu(): JsonObject {
         ),
       "Communication" to listOf("wear-m3/progress-indicator"),
       "Content" to listOf("wear-m3/text", "wear-m3/icon", "asset/image"),
-      "Embedded" to
-        listOf(
-          "remote-compose/document",
-          REMOTE_COMPOSE_INLINE_COMPONENT_ID,
-          REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
-        ),
+      // The "Embedded" shelf held the three Remote Compose seams and is gone with them. It comes
+      // back when they do; a shelf with nothing on it is a heading an author opens for nothing.
     )
   val variantProperties =
     mapOf(
@@ -2381,51 +2377,29 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   // through a table this export module cannot reach, so `wear-m3/icon` would be a palette entry
   // that
   // refuses on export — which is what `m3/icon` already was here.
-  val borrowedIds =
-    listOf(
-      "layout/box",
-      "layout/column",
-      "layout/row",
-      "asset/image",
-      // Every published `remote-m3` component, reachable from a Wear screen.
-      //
-      // Offering `remote-compose/document` is what lights up the builder's "Remote Compose
-      // documents" palette, which lists every preview the *serving* catalog of that name publishes
-      // an `ir/<id>.rc` for — on preview.coo.ee, the 28 Remote Compose components of
-      // wear-m3-catalog's `:remote-catalog`, in all their published states. The bytes are fetched,
-      // decoded and played in-process by the same `RcComposePlayer` the deployed player lanes use,
-      // so a row dropped into a Wear list is drawn by the renderer a watch would use rather than by
-      // a re-creation.
-      //
-      // This is the one component in the catalog that is not a stand-in for anything. It is also
-      // the one the Compose generator refuses by name: a Remote Compose document has no Wear
-      // Compose call site, so a screen holding one exports as a refusal that names the node rather
-      // than as Kotlin that does not compile.
-      "remote-compose/document",
-      // The vocabulary switch and the way back out of it. `remote-compose/inline` says "everything
-      // below me is @RemoteComposable", which is the second way a Wear screen embeds Remote Compose
-      // content: `remote-compose/document` plays bytes somebody else published, and this one is
-      // authored here, in this design, out of the same `layout/column` and `m3/text` stand-ins the
-      // `remote-m3` catalog already publishes for exactly that purpose.
-      //
-      // `remote-compose/custom` is the return direction, and it is why the pair is worth having:
-      // a Remote Compose document cannot call an application's composables, so the only way host
-      // content gets inside one is a custom component the host registers a renderer under. A design
-      // can therefore nest Compose inside Remote Compose inside Compose, which is the shape the
-      // Wear catalogs' own stickers already take.
-      REMOTE_COMPOSE_INLINE_COMPONENT_ID,
-      REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
-    )
+  // Four, and all four are genuinely shared: `Box`, `Column`, `Row` and `Image` are
+  // `androidx.compose.foundation` / `androidx.compose.ui`, the same declarations on both platforms,
+  // taken from the base catalog here rather than restated — which is what keeps one source for
+  // them. Wear publishes no `Image` of its own (it does publish `Icon`, which is why `wear-m3/icon`
+  // is a Wear component and not a borrow).
+  //
+  // The three Remote Compose seams — `remote-compose/document`, `-inline` and `-custom` — were here
+  // too, and were offered without being usable: the whole-screen Wear generator has no case for any
+  // of them, so a design that placed one was refused at export. An entry that cannot be exported is
+  // worse than a missing one, because it is only discovered at the end. Withdrawn rather than
+  // fixed, because what a Remote Compose seam means inside a Wear SCREEN is a real question — they
+  // are widget vocabulary and this generator writes plain Compose — and is tracked to come back
+  // once it has an answer.
+  val borrowedIds = listOf("layout/box", "layout/column", "layout/row", "asset/image")
   val borrowed =
     borrowedIds.map(components::getValue).map { component ->
-      // The note every borrowed component carries, and it now says the opposite of what it used to.
-      // A borrowed Material component was a stand-in — "drawn as the Material 3 component of the
-      // same name" — because Wear publishes its own and this drew the wrong one. A borrowed
-      // foundation component is not a stand-in for anything: `Box`, `Column`, `Row` and `Image` are
-      // the same declarations on both platforms, which is the whole reason these are the only ones
-      // left.
-      if (component.componentId in REMOTE_COMPOSE_BORROWED_AS_THEMSELVES) component
-      else component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
+      // The note every borrowed component carries, and it now says the opposite of what it used
+      // to. A borrowed Material component was a stand-in — "drawn as the Material 3 component of
+      // the same name" — because Wear publishes its own and this drew the wrong one. A borrowed
+      // foundation component is not a stand-in for anything, which is the whole reason these four
+      // are the only ones left. The `REMOTE_COMPOSE_BORROWED_AS_THEMSELVES` branch that stood here
+      // went with the seams.
+      component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
     }
 
   return base.copy(

@@ -109,27 +109,28 @@ private val FOUNDATION_CURATIONS =
     // claim `layout/box` still ships a shelf with a box on it.
     MOBILE_PLATFORM to
       FoundationCuration(ids = null, menu = { base -> base.statusSemantics.componentMenuObject() }),
-    // Wear borrows four foundation components and the three Remote Compose seams, and nothing else
-    // — the same seven `wearM3Catalog` borrows, in its order, because the order decides where they
-    // land in the insert panel.
+    // Wear borrows four foundation components, and nothing else.
+    //
+    // The three Remote Compose seams were here too, and they were offered rather than usable: the
+    // whole-screen Wear generator has no case for any of them, so a design that placed one was
+    // refused at export. That is the failure a curated borrow set exists to prevent — a palette
+    // entry that cannot be exported is worse than a missing one, because it is only discovered at
+    // the end, after the design is drawn.
+    //
+    // Withdrawn rather than fixed, for now, because making them work is a question about what a
+    // Remote Compose seam even means inside a Wear SCREEN — these are widget vocabulary, and the
+    // screen generator writes plain Compose. Tracked to come back once that has an answer.
+    //
+    // The four that remain are the ones that are genuinely shared: `layout/box`, `layout/column`,
+    // `layout/row` and `asset/image` are `androidx.compose.foundation` and `androidx.compose.ui`,
+    // which both platforms have, and all four export.
     "wear" to
       FoundationCuration(
-        ids =
-          listOf(
-            "layout/box",
-            "layout/column",
-            "layout/row",
-            "asset/image",
-            "remote-compose/document",
-            REMOTE_COMPOSE_INLINE_COMPONENT_ID,
-            REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
-          ),
-        // The Remote Compose seams are already themselves and keep their own note; everything
-        // else takes [WEAR_FOUNDATION_NOTE], which the generator this replaces still shares, so
-        // the two cannot drift apart while both exist.
+        ids = listOf("layout/box", "layout/column", "layout/row", "asset/image"),
+        // Every remaining borrow is foundation, so every one takes [WEAR_FOUNDATION_NOTE]. The
+        // `REMOTE_COMPOSE_BORROWED_AS_THEMSELVES` branch that stood here went with the seams.
         curate = { component ->
-          if (component.componentId in REMOTE_COMPOSE_BORROWED_AS_THEMSELVES) component
-          else component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
+          component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
         },
         menu = { wearComponentMenu() },
       ),
