@@ -189,6 +189,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -3582,14 +3583,20 @@ private fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Mod
   }
 
 /**
- * The press that becomes a canvas move: pick up the node under the pointer past the drag threshold,
- * carry it, and land or cancel it on release.
+ * The press that becomes a canvas move: hold a node still, then carry it, and land or cancel it on
+ * release.
  *
- * A tap must stay a tap, so nothing is consumed until the pointer has travelled past the slop — the
- * selection tap underneath still answers a still press, and a press on empty ground is left to the
- * workspace's scroll. Once a node is picked up every change is consumed, which is what keeps the
- * scroll from chasing the drag; a gesture somebody else took first (a pin, a menu) is left alone
- * entirely.
+ * Moving a layer is the deliberate act, not the default one — the default is to drop components
+ * into slots, where the component's own defaults and the container's layout decide what happens. So
+ * the drag arms only after the platform's long-press time with the pointer still: a press that
+ * moves sooner is a scroll or a tap, and belongs to the gesture underneath. That friction is the
+ * point — a canvas that rearranged itself under every hurried swipe would be a canvas nobody trusts
+ * — and the ghost appearing after the hold is what says the node is now in hand.
+ *
+ * A tap must stay a tap, so nothing is consumed until the hold lands — the selection tap underneath
+ * still answers a still press, and a press on empty ground is left to the workspace's scroll. Once
+ * a node is picked up every change is consumed, which is what keeps the scroll from chasing the
+ * drag; a gesture somebody else took first (a pin, a menu) is left alone entirely.
  *
  * [hitTest] is asked about the **press** position, not the current one: the node picked up is the
  * node that was under the finger, however far the design has scrolled since.
@@ -3616,47 +3623,60 @@ private fun Modifier.canvasNodeDrag(
     Modifier.pointerInput(key) {
       awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
-        var draggedNode: String? = null
-        var lastRoot: Offset? = null
+        // The hold: wait out the long-press timeout with the pointer still and unconsumed. A press
+        // that is released, taken by somebody else, or moved past the slop before the timeout ends
+        // the gesture here, and whatever is underneath — a tap, the workspace's scroll — gets it.
+        val armed =
+          withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+            var outcome: Boolean? = null
+            while (outcome == null) {
+              val event = awaitPointerEvent()
+              // A right-drag belongs to the context menu, which took the press in the initial pass.
+              if (event.buttons.isSecondaryPressed) {
+                outcome = false
+                break
+              }
+              val change = event.changes.firstOrNull { it.id == down.id } ?: break
+              if (!change.pressed || change.isConsumed) {
+                outcome = false
+                break
+              }
+              if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                outcome = false
+                break
+              }
+            }
+            outcome ?: false
+          } ?: true
+        if (!armed) return@awaitEachGesture
+        val node =
+          currentHitTest.value(currentRootPoint.value(down.position)) ?: return@awaitEachGesture
+        var lastRoot = currentRootPoint.value(down.position)
         var lastLocal = down.position
+        currentOnStarted.value(node, lastRoot)
         try {
           while (true) {
             val event = awaitPointerEvent()
-            // A right-drag belongs to the context menu, which took the press in the initial pass
-            // and whose button this check answers to as well. A middle-drag picking a layer up is
-            // an edge this editor has never had a use for policing further.
-            if (event.buttons.isSecondaryPressed) return@awaitEachGesture
+            if (event.buttons.isSecondaryPressed) {
+              currentOnEnded.value(null)
+              return@awaitEachGesture
+            }
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
             if (change.pressed) {
-              if (draggedNode == null) {
-                if (change.isConsumed) break
-                // The threshold is the platform's own, the same one a tap is judged against.
-                if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
-                  val node = currentHitTest.value(currentRootPoint.value(down.position))
-                  if (node == null) break
-                  draggedNode = node
-                  lastRoot = currentRootPoint.value(change.position)
-                  currentOnStarted.value(node, lastRoot ?: Offset.Zero)
-                  change.consume()
-                }
-              } else {
-                change.consume()
-                if (change.position != lastLocal) {
-                  lastLocal = change.position
-                  lastRoot = currentRootPoint.value(change.position)
-                  currentOnDragged.value(lastRoot ?: Offset.Zero)
-                }
+              change.consume()
+              if (change.position != lastLocal) {
+                lastLocal = change.position
+                lastRoot = currentRootPoint.value(change.position)
+                currentOnDragged.value(lastRoot)
               }
             } else {
-              if (draggedNode != null) {
-                change.consume()
-                currentOnEnded.value(lastRoot)
-              }
+              change.consume()
+              currentOnEnded.value(lastRoot)
               break
             }
           }
         } catch (cancelled: CancellationException) {
-          if (draggedNode != null) currentOnEnded.value(null)
+          currentOnEnded.value(null)
           throw cancelled
         }
       }
@@ -4610,7 +4630,7 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
     "Shift + click a layer" to "Extend the selection to that layer",
     "Drag a layer row" to "Drop it on the layer or the slot it should join",
     "Drag a catalog component" to "Insert it where it is dropped",
-    "Drag a node on the canvas" to "Move it into the slot and seam it is dropped at",
+    "Hold a node, then drag" to "Move it into the slot and seam it is dropped at",
     "Click a rung above the canvas" to "Select that layer — the path is a way back up",
   )
 
