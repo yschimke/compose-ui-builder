@@ -277,13 +277,17 @@ absent from the stored tree and defaulted after.
   or a header that will not parse writes `quarantine.json` beside the design and leaves every other
   design serving — the property the single file could not have, because its checksum covered all of
   them at once. Its bytes still count against the store's gauge, because they are still on the disk,
-  and `adminDeleteDesign` still retires it: reading a design and retiring it are different
-  permissions on different failures, and a quarantine that could not be cleared would be the
-  one-way door this mechanism exists to avoid. Downloading or repairing it cannot work, and says so
-  — both need the document that would not decode, so `/admin/ui-builder` gives it a row of its own
-  (it is not a design in memory and nothing else would list it) and offers only the action that
-  works on it. The startup warning sends an operator to that page; a row that was not there, or
-  buttons that could not work, would send them nowhere.
+  and retiring it stays possible two ways: `adminDeleteDesign` for the operator, and — when the
+  header parsed, so the record carries it — the owner's own delete, answered from the access record
+  the quarantine kept. Reading a design and retiring it are different permissions on different
+  failures, and a quarantine that could not be cleared would be the one-way door this mechanism
+  exists to avoid. Downloading or repairing it cannot work, and says so — both need the document
+  that would not decode, so `/admin/ui-builder` gives it a row of its own (it is not a design in
+  memory and nothing but the owner's listing would show it elsewhere) and offers only the action
+  that works on it. The startup warning sends an operator to that page; a row that was not there,
+  or buttons that could not work, would send them nowhere. The record itself stays readable at any
+  size: a header that would push it past the bound every stored file is read under — an access list
+  has no bound of its own — is left out, and the id travels alone.
 - **A design directory is only that design where its name says so.** The slug is the address, not a
   label: a commit and a delete both derive `designs/<slug(designId)>` from the id rather than from
   the directory the design was read out of. So a design restored or copied under some other basename
@@ -312,7 +316,9 @@ absent from the stored tree and defaulted after.
   chose, which can be anything, including the id of a design that loads perfectly well from its own
   directory. On a collision the quarantine yields the name: it is the one of the two with no id of
   its own to insist on, and left colliding it would mark a working design unusable and let a delete
-  aimed at the quarantine take it out of the service.
+  aimed at the quarantine take it out of the service. The name it yields is `designs-<slug>` — one
+  path segment, so a route or an operator can act on it, still saying that it names a directory
+  rather than a design.
 - **Creating a design asks the store for the place, not the id.** A quarantine is not always
   reported under the id it holds: a design whose header will not parse has no id to be read out of
   it and is reported under its directory. Both still occupy the directory an id resolves to, and

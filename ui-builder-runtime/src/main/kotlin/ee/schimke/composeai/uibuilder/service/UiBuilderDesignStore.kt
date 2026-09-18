@@ -30,7 +30,7 @@ import kotlinx.serialization.json.jsonObject
  */
 internal data class StoredDesigns(
   val designs: Map<String, PersistedDesignV1> = emptyMap(),
-  val quarantined: Map<String, String> = emptyMap(),
+  val quarantined: Map<String, StoredQuarantineV3> = emptyMap(),
 )
 
 /**
@@ -252,12 +252,19 @@ internal data class JournalEntryV3(
  * [designId] is recorded because the header it came from is, by definition, the thing that could
  * not be read: recovering the id a second time on the next start would fall back to the directory's
  * hash, and the id an operator uses to retire the design would change under them at a restart.
+ *
+ * [header] is the opposite: the header as it *did* parse, when it parsed and a later part failed.
+ * It carries the access record, so a quarantined design stays its owner's to see and to retire
+ * rather than becoming an orphan only an operator can name — and the title and pin a listing row
+ * needs to be more than an id. Absent for a header this build could not read, which is why such a
+ * design is reported under its directory and has nobody left to check ownership against.
  */
 @Serializable
 internal data class StoredQuarantineV3(
   val reason: String,
   val recordedAtEpochMillis: Long,
   val designId: String? = null,
+  val header: StoredDesignHeaderV3? = null,
 )
 
 @Serializable
@@ -316,7 +323,7 @@ internal class FileUiBuilderDesignStore(
 
   override fun load(): StoredDesigns = locked {
     val designs = linkedMapOf<String, PersistedDesignV1>()
-    val quarantined = linkedMapOf<String, String>()
+    val quarantined = linkedMapOf<String, StoredQuarantineV3>()
     storedBytes = 0
     for (slug in designSlugs()) {
       val designDirectory = designsDirectory.resolve(slug)
@@ -324,11 +331,18 @@ internal class FileUiBuilderDesignStore(
       if (misplaced != null) {
         // Reported before the quarantine file is even read: a copy carries the original's
         // `quarantine.json` too, and that record names the design id, which is exactly the id this
-        // directory must not be allowed to answer for.
+        // directory must not be allowed to answer for. The header parsed — that is how the id was
+        // read — so it travels into the record, and the design's owner can retire the copy too.
+        val header = runCatching { readHeader(designDirectory) }.getOrNull()
         quarantined[slug] =
-          "design $misplaced is stored at $DESIGNS_DIRECTORY/$slug rather than at " +
-            "$DESIGNS_DIRECTORY/${slug(misplaced)}; move it back under that name to serve it, or " +
-            "retire it by the name it has"
+          StoredQuarantineV3(
+            "design $misplaced is stored at $DESIGNS_DIRECTORY/$slug rather than at " +
+              "$DESIGNS_DIRECTORY/${slug(misplaced)}; move it back under that name to serve it, or " +
+              "retire it by the name it has",
+            System.currentTimeMillis(),
+            header?.designId,
+            header,
+          )
         quarantinedSlugs[slug] = slug
         storedBytes += runCatching { directoryBytes(designDirectory) }.getOrDefault(0L)
         continue
@@ -368,10 +382,12 @@ internal class FileUiBuilderDesignStore(
         files[header.designId] = DesignFiles(header, bytes)
         storedBytes += bytes
       } catch (failure: Exception) {
-        val designId = quarantineDesignId(designDirectory, slug)
+        val header = runCatching { readHeader(designDirectory) }.getOrNull()
+        val designId = header?.designId ?: quarantineDesignId(designDirectory, slug)
         val reason = failure.message ?: failure::class.simpleName ?: "unreadable"
-        writeQuarantine(designDirectory, designId, reason)
-        quarantined[designId] = reason
+        val record = StoredQuarantineV3(reason, System.currentTimeMillis(), designId, header)
+        writeQuarantine(designDirectory, designId, reason, header)
+        quarantined[designId] = record
         quarantinedSlugs[designId] = slug
         storedBytes += runCatching { directoryBytes(designDirectory) }.getOrDefault(0L)
       }
@@ -381,11 +397,13 @@ internal class FileUiBuilderDesignStore(
     // id of a design that loads perfectly well from its own directory. Left colliding, the live
     // design is reported unusable and a delete aimed at the quarantine takes it out of the service
     // while removing the backup from the disk. So the quarantine yields the name: it is the one of
-    // the two that has no id of its own to insist on.
+    // the two that has no id of its own to insist on. The name stays a single path segment — the
+    // shape of a design id is what routes and operators act through, and `designs/<slug>` would be
+    // two — while `designs-` keeps saying that this key names a directory, not a design.
     for (key in quarantined.keys.toList()) {
       if (key !in designs) continue
       val slug = quarantinedSlugs.getValue(key)
-      var renamed = "$DESIGNS_DIRECTORY/$slug"
+      var renamed = "${DESIGNS_DIRECTORY}-${slug}"
       while (renamed in designs || renamed in quarantined) renamed += "'"
       quarantined[renamed] = quarantined.remove(key)!!
       quarantinedSlugs[renamed] = quarantinedSlugs.remove(key)!!
@@ -1211,7 +1229,15 @@ internal class FileUiBuilderDesignStore(
     return designId.takeIf { slug(it) != slug }
   }
 
-  private fun readQuarantine(designDirectory: Path): Pair<String, String>? {
+  /**
+   * The quarantine occupying [designDirectory], if there is one: the id it is reported under and
+   * the record itself.
+   *
+   * A record written before the header travelled with it is enriched from the header here, when the
+   * header parses — the same record an older build wrote becomes an owner's row instead of an
+   * operator's orphan, without waiting for a fresh failure to rewrite it.
+   */
+  private fun readQuarantine(designDirectory: Path): Pair<String, StoredQuarantineV3>? {
     val path = designDirectory.resolve(QUARANTINE_FILE)
     if (!Files.exists(path)) return null
     val record = runCatching {
@@ -1221,11 +1247,19 @@ internal class FileUiBuilderDesignStore(
       )
     }
       .getOrNull()
+    val header = record?.header ?: runCatching { readHeader(designDirectory) }.getOrNull()
     val designId =
       record?.designId
-        ?: runCatching { readHeader(designDirectory).designId }.getOrNull()
+        ?: header?.designId
         ?: quarantineDesignId(designDirectory, designDirectory.fileName.toString())
-    return designId to (record?.reason ?: "quarantined")
+    val enriched =
+      when {
+        record == null -> StoredQuarantineV3("quarantined", 0L, designId, header)
+        record.designId == null || record.header == null ->
+          record.copy(designId = designId, header = header)
+        else -> record
+      }
+    return designId to enriched
   }
 
   private fun quarantineDesignId(designDirectory: Path, slug: String): String =
@@ -1243,15 +1277,30 @@ internal class FileUiBuilderDesignStore(
         .getOrNull()
       ?: slug
 
-  private fun writeQuarantine(designDirectory: Path, designId: String, reason: String) {
+  private fun writeQuarantine(
+    designDirectory: Path,
+    designId: String,
+    reason: String,
+    header: StoredDesignHeaderV3?,
+  ) {
     runCatching {
+      // A record the next open cannot read would fall back to the directory's hash, and the id an
+      // operator uses would change under them. The header is the part of the record that can be
+      // large -- an access list has no bound of its own -- so when carrying it would push the
+      // record past the bound every stored file is read under, the header is left out: the id
+      // travels alone, and the design stays one nobody can prove ownership of rather than one
+      // whose name changes at a restart.
+      val record = StoredQuarantineV3(reason, System.currentTimeMillis(), designId, header)
+      val encoded = json.encodeToString(StoredQuarantineV3.serializer(), record)
       val bytes =
-        json
-          .encodeToString(
-            StoredQuarantineV3.serializer(),
-            StoredQuarantineV3(reason, System.currentTimeMillis(), designId),
-          )
-          .encodeToByteArray()
+        if (encoded.encodeToByteArray().size > limits.maximumDesignBytes)
+          json
+            .encodeToString(
+              StoredQuarantineV3.serializer(),
+              record.copy(header = null),
+            )
+            .encodeToByteArray()
+        else encoded.encodeToByteArray()
       val temporary = writeTemporary(designDirectory, QUARANTINE_FILE, bytes)
       replaceAtomically(temporary, designDirectory.resolve(QUARANTINE_FILE))
     }
@@ -1381,6 +1430,7 @@ internal class FileUiBuilderDesignStore(
         "did not migrate: $name is $size bytes and the per-design limit is " +
           "${limits.maximumDesignBytes}; the state it was migrated from is kept as " +
           "${FileUiBuilderStateStorage.STATE_FILE}$MIGRATED_SUFFIX",
+        header,
       )
       // The directory was just deleted and made again, after the fsync above and before the marker
       // that ends the migration. Forcing a directory does not make its own name durable in its

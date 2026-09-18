@@ -27,6 +27,7 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 class PersistentUiBuilderServiceFileStoreTest {
   private val owner = AuthenticatedUiBuilderActor("owner")
+  private val outsider = AuthenticatedUiBuilderActor("outsider")
 
   @Test
   fun `designs survive a restart onto the same directory`() {
@@ -258,7 +259,72 @@ class PersistentUiBuilderServiceFileStoreTest {
   }
 
   @Test
-  fun `a quarantined design is still not its owner's to delete`() {
+  fun `a design whose header will not parse is not its owner's to delete`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val first = service(root)
+    create(first, "checkout")
+    create(first, "settings")
+    // The header is the thing that names the design and says who owns it. One that will not parse
+    // as a header — here: valid JSON whose checksum no longer matches, so the id is still
+    // recoverable but nothing else is — leaves no access record to check `delete`'s ownership
+    // question against: even the actor that created it is refused, with the reason and the
+    // directory intact. The operator's door is the one that opens.
+    val headerFile = designDirectory(root, "checkout").resolve("design.json")
+    val stored = Files.readString(headerFile)
+    val checksum = Regex("\"checksumSha256\":\"([0-9a-f]+)\"").find(stored)!!.groupValues[1]
+    Files.writeString(headerFile, stored.replace(checksum, "0".repeat(checksum.length)))
+    val reopened = service(root)
+
+    val refused =
+      assertIs<UiBuilderServiceResponse.Error>(
+        execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("checkout"))
+      )
+    assertEquals(ServiceErrorCodeV1.INTERNAL, refused.error.code)
+    assertTrue(refused.error.message.contains("cannot be read"), refused.error.message)
+    assertTrue(Files.exists(designDirectory(root, "checkout")), "nothing was removed")
+
+    assertTrue(reopened.adminDeleteDesign("checkout"))
+    assertFalse(Files.exists(designDirectory(root, "checkout")))
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("settings")),
+      "and every other design still serves",
+    )
+  }
+
+  @Test
+  fun `a design the store cannot read is still its owner's to delete`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val first = service(root)
+    create(first, "checkout")
+    create(first, "settings")
+    // The document part is corrupt, but the header parsed, and it travels with the quarantine: the
+    // access record answers the ownership question, so the actor that created the design retires it
+    // through the ordinary delete -- the same door the file manager's button posts through.
+    Files.writeString(
+      Files.list(designDirectory(root, "checkout"))
+        .use { paths -> paths.filter { it.fileName.toString().startsWith("document-") }.toList() }
+        .single(),
+      "not json",
+    )
+    val reopened = service(root)
+
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("checkout"),
+      execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("checkout")),
+    )
+    assertFalse(Files.exists(designDirectory(root, "checkout")))
+    assertTrue("checkout" !in reopened.adminUnusableDesigns(), "the quarantine went with it")
+    // And the id is free again, which the quarantine had held.
+    create(reopened, "checkout")
+
+    val restarted = service(root)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(restarted, owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+    )
+  }
+
+  @Test
+  fun `a quarantined design whose header parsed is listed to its owner, and to nobody else`() {
     val root = createTempDirectory("ui-builder-service-store")
     val first = service(root)
     create(first, "checkout")
@@ -271,23 +337,24 @@ class PersistentUiBuilderServiceFileStoreTest {
     )
     val reopened = service(root)
 
-    // The store could not read the design, so no access record survived and nobody can be proved
-    // its owner: even the actor that created it is refused, with the reason, and the directory
-    // stays. The owner-scoped exemption in `execute` covers only a design whose access list read.
-    val refused =
-      assertIs<UiBuilderServiceResponse.Error>(
-        execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("checkout"))
+    val ownerListed =
+      assertIs<UiBuilderServiceResponse.Designs>(
+        execute(reopened, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
       )
-    assertEquals(ServiceErrorCodeV1.INTERNAL, refused.error.code)
-    assertTrue(refused.error.message.contains("cannot be read"), refused.error.message)
-    assertTrue(Files.exists(designDirectory(root, "checkout")), "nothing was removed")
-
-    // The operator's door is the one that opens.
-    assertTrue(reopened.adminDeleteDesign("checkout"))
-    assertFalse(Files.exists(designDirectory(root, "checkout")))
-    assertIs<UiBuilderServiceResponse.Snapshot>(
-      execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("settings")),
-      "and every other design still serves",
+    val row =
+      ownerListed.designs.singleOrNull { it.designId == "checkout" }
+        ?: error("the quarantined design is listed: ${ownerListed.designs.map { it.designId }}")
+    assertEquals(DesignAccessRoleV1.OWNER, row.requesterAccess.role)
+    assertEquals("checkout", row.title, "titled from the header the quarantine kept")
+    assertEquals(
+      emptySet(),
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(reopened, outsider, UiBuilderServiceRequest.ListDesigns(null, 10))
+        )
+        .designs
+        .map { it.designId }
+        .toSet(),
+      "a design nobody can read is not listed to an actor it does not belong to",
     )
   }
 
