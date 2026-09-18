@@ -143,6 +143,9 @@ class UnusableStoredDesignTest {
       .exceptionOrNull()
     val rejected = assertIs<UiBuilderSubscriptionRejectedException>(rejection)
     assertEquals(ServiceErrorCodeV1.CATALOG_UNAVAILABLE, rejected.error.code)
+
+    // `DeleteDesign` is the one request exempted above that this list could name: its owner may
+    // still delete the design, so it must not join these requests.
   }
 
   @Test
@@ -162,6 +165,52 @@ class UnusableStoredDesignTest {
     // reason the copy has to come first.
     assertTrue(reopened.adminDeleteDesign("orphaned"))
     assertNull(reopened.adminDesignDocument("orphaned"))
+  }
+
+  @Test
+  fun `an unusable design can still be deleted by its owner, through the ordinary delete`() {
+    val storage = MemoryStorage()
+    val stocked = service(storage, PinnedCatalogs(resolves = true))
+    create(stocked, "orphaned")
+    create(stocked, "overgrown", nodes = 3)
+
+    // One design the catalog no longer resolves, one a tightened node limit refuses. Both stay
+    // listed, and the page that lists them offers their owner a delete button.
+    val reopened =
+      service(
+        storage,
+        PinnedCatalogs(resolves = false),
+        limits = UiBuilderServiceLimits(maximumNodesPerDesign = 2),
+      )
+    assertEquals(setOf("orphaned", "overgrown"), reopened.adminUnusableDesigns().keys)
+
+    // Not the owner: the refusal is about the actor, not the document.
+    val outsider = AuthenticatedUiBuilderActor("outsider")
+    val forbidden =
+      assertIs<UiBuilderServiceResponse.Error>(
+        execute(reopened, outsider, UiBuilderServiceRequest.DeleteDesign("orphaned"))
+      )
+    assertEquals(ServiceErrorCodeV1.FORBIDDEN, forbidden.error.code)
+
+    // The owner: ownership is answered from the access record the design loaded with, so the
+    // delete button the file manager offers actually works.
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("orphaned"),
+      execute(reopened, OWNER, UiBuilderServiceRequest.DeleteDesign("orphaned")),
+    )
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("overgrown"),
+      execute(reopened, OWNER, UiBuilderServiceRequest.DeleteDesign("overgrown")),
+    )
+
+    // Gone means gone: not counted, not answered, and not back after a restart.
+    assertEquals(emptyMap(), reopened.adminUnusableDesigns())
+    assertEquals(0, reopened.diagnostics().unusableDesigns)
+    val restarted = service(storage, PinnedCatalogs(resolves = true))
+    listOf("orphaned", "overgrown").forEach { designId ->
+      val gone = assertIs<UiBuilderServiceResponse.Error>(open(restarted, designId))
+      assertEquals(ServiceErrorCodeV1.NOT_FOUND, gone.error.code)
+    }
   }
 
   @Test

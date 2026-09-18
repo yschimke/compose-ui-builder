@@ -257,6 +257,40 @@ class PersistentUiBuilderServiceFileStoreTest {
     assertFalse(service.adminDeleteDesign("nothing-here"))
   }
 
+  @Test
+  fun `a quarantined design is still not its owner's to delete`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val first = service(root)
+    create(first, "checkout")
+    create(first, "settings")
+    Files.writeString(
+      Files.list(designDirectory(root, "checkout"))
+        .use { paths -> paths.filter { it.fileName.toString().startsWith("document-") }.toList() }
+        .single(),
+      "not json",
+    )
+    val reopened = service(root)
+
+    // The store could not read the design, so no access record survived and nobody can be proved
+    // its owner: even the actor that created it is refused, with the reason, and the directory
+    // stays. The owner-scoped exemption in `execute` covers only a design whose access list read.
+    val refused =
+      assertIs<UiBuilderServiceResponse.Error>(
+        execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("checkout"))
+      )
+    assertEquals(ServiceErrorCodeV1.INTERNAL, refused.error.code)
+    assertTrue(refused.error.message.contains("cannot be read"), refused.error.message)
+    assertTrue(Files.exists(designDirectory(root, "checkout")), "nothing was removed")
+
+    // The operator's door is the one that opens.
+    assertTrue(reopened.adminDeleteDesign("checkout"))
+    assertFalse(Files.exists(designDirectory(root, "checkout")))
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(reopened, owner, UiBuilderServiceRequest.OpenDesign("settings")),
+      "and every other design still serves",
+    )
+  }
+
   private fun designDirectory(root: Path, designId: String): Path =
     root.resolve("designs/${FileUiBuilderDesignStore.slug(designId)}")
 

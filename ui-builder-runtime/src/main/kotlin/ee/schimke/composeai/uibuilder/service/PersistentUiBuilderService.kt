@@ -758,15 +758,27 @@ public class PersistentUiBuilderService(
   override suspend fun execute(call: UiBuilderServiceCall): UiBuilderServiceResponse {
     call.request.designId()?.let { designId ->
       unusableDesigns[designId]?.let { unusable ->
-        // One exception, and only one: a design the CATALOG outgrew may still be asked what moving
-        // it would cost. Refusing that refuses the only repair such a design has -- the designs the
-        // preview was written for are exactly the ones quarantined here, so a gate in front of it
-        // would put the feature permanently out of their reach. Everything the store could not
-        // read,
-        // and every document that is itself wrong -- key mismatch, node count, quota, topology --
-        // stays refused, because no catalog move repairs any of those.
-        val previewing = call.request is UiBuilderServiceRequest.PreviewCatalogUpgrade
-        if (!previewing || !unusable.catalogFault) {
+        // Two exceptions, and only two.
+        //
+        // A design the CATALOG outgrew may still be asked what moving it would cost. Refusing that
+        // refuses the only repair such a design has -- the designs the preview was written for are
+        // exactly the ones quarantined here, so a gate in front of it would put the feature
+        // permanently out of their reach.
+        //
+        // And a design whose access record survived may be deleted by its owner, however wrong the
+        // document itself is -- key mismatch, node count, quota, topology, a catalog nobody serves.
+        // The listing keeps an unusable design visible and the page that lists it offers the
+        // owner a delete button; a delete that always answered with the reason it is unusable is
+        // not a warning, it is a trap -- corruption would then be removable only by an operator
+        // with an admin token. Ownership is [delete]'s question, answered from the design's own
+        // record, not this gate's. A design the STORE could not read stays refused: no access
+        // record survived, so nobody can be proved its owner, and [adminDeleteDesign] remains the
+        // door.
+        val previewing =
+          call.request is UiBuilderServiceRequest.PreviewCatalogUpgrade && unusable.catalogFault
+        val deleting =
+          call.request is UiBuilderServiceRequest.DeleteDesign && !unusable.storeQuarantine
+        if (!previewing && !deleting) {
           return UiBuilderServiceResponse.Error(
             UiBuilderServiceError(unusable.code, unusable.reason)
           )
@@ -1105,6 +1117,11 @@ public class PersistentUiBuilderService(
    * See [UiBuilderServiceRequest.DeleteDesign] for who may. The removal itself is the operator's
    * [adminDeleteDesign], reached through an ownership check rather than an admin token; the two
    * share [removeLocked] so they cannot disagree about what "gone" means.
+   *
+   * Reached for an unusable design too — [execute] lets the request past its guard, because a
+   * corrupted design its owner cannot delete is a trap the file manager pages straight into. The
+   * access record read at load answers [ownedBy] even for a document nothing else will serve; only
+   * a design the store could not read is out of reach here, since no record survived.
    */
   private fun delete(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
     val design = persisted.designs[designId] ?: return serviceError(notFound(designId))

@@ -153,6 +153,11 @@ public sealed interface UiBuilderServiceRequest {
    * cannot reach past that. The operator's [UiBuilderAdminPort.adminDeleteDesign] remains the way
    * to remove a design whose owner is gone.
    *
+   * The owner may delete a design the service refuses to *serve*: an unusable document is not an
+   * unknown access list, so ownership is checked against the record the design loaded with, and
+   * corruption does not turn the delete button into a dead end. Only a design the store could not
+   * read — no access record at all — stays out of reach here.
+   *
    * Has no `ui-builder-protocol` request shape yet, so it is answered outside the released
    * envelope; see [UiBuilderProtocolMapper.toProtocolRequest].
    */
