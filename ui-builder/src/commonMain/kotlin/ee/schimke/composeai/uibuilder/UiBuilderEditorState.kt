@@ -242,6 +242,66 @@ sealed interface EditorLayerRow {
 /** Why a move was refused, in the words the panel shows and the code the reducer reports. */
 data class EditorMoveRefusal(val code: RejectionCode, val message: String)
 
+/** Which way a slot's children run, as the geometry the renderer measured says they do. */
+enum class UiBuilderDropAxis {
+  Horizontal,
+  Vertical,
+}
+
+/**
+ * Where a drag hovering at a measured point would land, resolved to a place in the document.
+ *
+ * Both drags the canvas carries answer the same question — a palette drag asks which slot and which
+ * gap between that slot's children the pointer is over, and a canvas move asks the same about the
+ * node it picked up — so both are answered by one plan: the slot, the child the drop lands after,
+ * and the index that is, plus everything the canvas needs to draw the marker at the seam rather
+ * than merely tint the slot.
+ *
+ * [children] is the target slot's children **in spatial order along [axis]**, not document order:
+ * the marker sits where the pointer is against the layout the renderer drew, and a z-order that
+ * disagrees with document order is exactly the layout the author sees.
+ */
+data class UiBuilderDropPlan(
+  val target: ParentSlot,
+  /** The child the drop lands after, or null for first in the slot. */
+  val afterNodeId: String?,
+  /**
+   * Where the drop lands among the slot's children, zero-based against the current layout — for a
+   * canvas move, against the layout **without** the node being moved, which is the list the release
+   * is computed against and the one a drop-over-itself no-ops against.
+   */
+  val index: Int,
+  /**
+   * The slot's landing bounds in root pixels: the child union where the slot has one, the parent
+   * node's bounds where it does not — the same region [UiBuilderSlotInspection] reports and the
+   * same one the empty-slot fallback below falls back to.
+   */
+  val bounds: UiBuilderPixelBounds,
+  /** The slot's children with their measured bounds, ordered along [axis]. */
+  val children: List<Pair<String, UiBuilderPixelBounds>>,
+  val axis: UiBuilderDropAxis,
+)
+
+/**
+ * One rung of the selection's path from a root to the selected node.
+ *
+ * [label] follows the layer row's own rule — what the node says when it says anything, its
+ * component otherwise — because a breadcrumb that renames a layer the panel has been calling
+ * something else all session is a second name to keep in one's head.
+ *
+ * [inSlot] names the slot of the rung above this one sits in, and only where saying it is
+ * information: a parent that declares more than one slot, or a slot the catalog does not declare at
+ * all, is exactly the distinction the layers panel draws slot lines for. A parent with a single
+ * declared slot leaves it null — "children of the only children slot" says nothing the rung above
+ * does not.
+ */
+data class UiBuilderBreadcrumbEntry(
+  val nodeId: String,
+  val label: String,
+  val componentId: String,
+  val inSlot: String? = null,
+)
+
 enum class EditorMoveDirection {
   Before,
   After,
@@ -849,11 +909,19 @@ sealed interface UiBuilderEditorEvent {
    * the same thing to a collaborator: an insert followed by a property write is a filled card
    * appearing on their canvas and turning outlined a frame later, and a rejected second operation
    * would leave the wrong one there for good. One event, one batch, one revision.
+   *
+   * [afterNodeId] is where a canvas drop lands — the seam the marker was drawn at, which is a fact
+   * about the pointer and not about the selection. Null is the long-standing Add: after whatever
+   * the slot already holds. A name the slot no longer holds falls back to that, the same way a
+   * stale variant does: the geometry a plan was resolved against can age while the drag is in
+   * flight, and an edit that would otherwise be legal must never be refused by an out-of-date
+   * neighbour.
    */
   data class InsertComponent(
     val componentId: String,
     val target: ParentSlot,
     val variant: EditorCatalogVariant? = null,
+    val afterNodeId: String? = null,
   ) : UiBuilderEditorEvent
 
   /**
@@ -1536,7 +1604,13 @@ class UiBuilderEditorReducer(
         if (event.nodeId in state.document.nodes) state.copy(selection = listOf(event.nodeId))
         else state
       is UiBuilderEditorEvent.InsertComponent ->
-        insert(state, event.componentId, event.target, variant = event.variant)
+        insert(
+          state,
+          event.componentId,
+          event.target,
+          variant = event.variant,
+          afterNodeId = event.afterNodeId,
+        )
       is UiBuilderEditorEvent.InsertComponentBeside ->
         insertBeside(state, event.componentId, variant = event.variant)
       UiBuilderEditorEvent.ToggleAddBeside -> state.copy(addBeside = !state.addBeside)
@@ -2095,6 +2169,91 @@ class UiBuilderEditorReducer(
         ),
     )
   }
+
+  /**
+   * The component carried beside a drag, drawn the size it would land.
+   *
+   * The thumbnail's document answers "what is this" at 44 dp; the ghost answers "what will this
+   * look like where I let go", and that is the component at its own size, in the design's own
+   * theme, unconstrained by a frame — the canvas bounds it by the slot it is hovering over, so a
+   * field that will fill its slot is drawn filling it while it is still in the air.
+   *
+   * The frame cell therefore carries no `size` modifier (a fixed cell would cap the component at
+   * the thumbnail's 176 dp whatever the landing slot says) and no centring pass (there is nothing
+   * to centre in), and the environment is the design's own with the design's density taken out: the
+   * ghost is drawn into the workspace's density and then scaled by the canvas, which is what makes
+   * one of its dp land as one of the design's dp on screen.
+   *
+   * Null is a guard rather than a live case — the catalog accepts every component into a bare box,
+   * the same list `CatalogThumbnailTest` keeps empty — and the canvas answers a null with a chip
+   * naming the component instead of faking a picture of it.
+   */
+  fun dragGhostDocument(
+    state: UiBuilderEditorState,
+    componentId: String,
+    variant: EditorCatalogVariant? = null,
+  ): UiBuilderDocument? {
+    val frame = ghostFrame(state)
+    val ghostState = initial(frame, selectedNodeId = DRAG_GHOST_CELL_ID)
+    val target = dropTarget(ghostState, componentId) ?: return null
+    val inserted =
+      reduce(ghostState, UiBuilderEditorEvent.InsertComponent(componentId, target, variant))
+    return inserted.takeIf { it.lastOutcome is CommandOutcome.Accepted }?.document
+  }
+
+  /**
+   * The subtree a canvas move is carrying, as a document the ghost can draw.
+   *
+   * A moved component has no palette row to preview from; the honest preview is the thing itself —
+   * the node and everything under it, in the design's own theme, unconstrained so the canvas can
+   * size it to the slot it is hovering over. Rooted at the node alone: wherever it came from, a
+   * ghost is what will land, not where it will land.
+   */
+  fun nodeGhostDocument(state: UiBuilderEditorState, nodeId: String): UiBuilderDocument? {
+    val document = state.document
+    val subtree = document.subtreeOf(nodeId)
+    if (nodeId !in document.nodes) return null
+    val nodes = subtree.mapNotNull(document.nodes::get).associateBy(UiBuilderNode::id)
+    if (nodes.isEmpty()) return null
+    return document.copy(
+      id = "drag-ghost-$nodeId",
+      revision = 0,
+      environment = ghostEnvironment(document),
+      roots = listOf(nodeId),
+      nodes = nodes,
+    )
+  }
+
+  /** The design's own environment, with the density taken out — see [dragGhostDocument]. */
+  private fun ghostEnvironment(document: UiBuilderDocument): JsonObject =
+    JsonObject(document.environment.toMap() - "density")
+
+  /**
+   * The unconstrained cell a drag ghost renders its component into, per environment the design's
+   * own would produce. A bare `layout/box` like the thumbnail's frame, minus the fixed size: the
+   * cell wraps its child, so the ghost is the component's size and the canvas's to cap.
+   */
+  private fun ghostFrame(state: UiBuilderEditorState): UiBuilderDocument =
+    ghostFrames.getOrPut(ghostEnvironment(state.document).toString()) {
+      previewFrame.copy(
+        id = "drag-ghost-frame",
+        environment = ghostEnvironment(state.document),
+        roots = listOf(DRAG_GHOST_CELL_ID),
+        nodes =
+          mapOf(
+            DRAG_GHOST_CELL_ID to
+              UiBuilderNode(
+                id = DRAG_GHOST_CELL_ID,
+                componentId = "layout/box",
+                properties = JsonObject(emptyMap()),
+                modifiers = JsonArray(emptyList()),
+                slots = mapOf("children" to emptyList()),
+              )
+          ),
+      )
+    }
+
+  private val ghostFrames = mutableMapOf<String, UiBuilderDocument>()
 
   fun catalogItems(query: String): List<EditorCatalogItem> {
     val needle = query.trim().lowercase()
@@ -3012,12 +3171,60 @@ class UiBuilderEditorReducer(
     )
   }
 
+  /**
+   * The selection's path from a root to the selected node, root first.
+   *
+   * The layers panel answers "where does this live" by indentation the reader scrolls through; the
+   * breadcrumb answers it in one line above the canvas, and every rung but the last is a way back
+   * up as much as a name. Walked from the selection upward through each node's location, so the
+   * slot a rung sits in is the slot the document put it in rather than the one the catalog wishes
+   * for — a dynamic slot still names itself.
+   *
+   * A cycle in the document (which the Issues panel reports rather than assumes away) ends the walk
+   * at the first repeat instead of spinning, and an ancestor the document has lost ends it there: a
+   * path with a hole is worse than a shorter one.
+   */
+  fun selectionPath(state: UiBuilderEditorState): List<UiBuilderBreadcrumbEntry> {
+    val selected = state.selectedNodeId ?: return emptyList()
+    val document = state.document
+    val path = ArrayDeque<UiBuilderBreadcrumbEntry>()
+    val visited = mutableSetOf<String>()
+    var current: String? = selected
+    while (current != null && visited.add(current)) {
+      val node = document.nodes[current] ?: break
+      val capability = catalog.componentsById[node.componentId]
+      val componentLabel = capability?.displayName ?: node.componentId
+      val location = document.location(current)
+      val parentCapability =
+        location?.let { document.nodes[it.nodeId] }?.let { catalog.componentsById[it.componentId] }
+      // The slot is named only where the name is information — the layers panel's own rule for
+      // drawing a slot line, applied to a line above the canvas.
+      val inSlot =
+        location?.slot?.takeIf {
+          parentCapability == null ||
+            parentCapability.slot(it) == null ||
+            parentCapability.slots.size > 1
+        }
+      path.addFirst(
+        UiBuilderBreadcrumbEntry(
+          nodeId = current,
+          label = capability?.let(node::contentLabel) ?: componentLabel,
+          componentId = node.componentId,
+          inSlot = inSlot,
+        )
+      )
+      current = location?.nodeId
+    }
+    return path.toList()
+  }
+
   private fun insert(
     state: UiBuilderEditorState,
     componentId: String,
     target: ParentSlot,
     action: EditorStateAction? = null,
     variant: EditorCatalogVariant? = null,
+    afterNodeId: String? = null,
   ): UiBuilderEditorState {
     val component = catalog.componentsById[componentId] ?: return state
     val sequence = state.operationSequence + 1
@@ -3028,7 +3235,14 @@ class UiBuilderEditorReducer(
         "${component.displayName} cannot be inserted into ${target.nodeId}.${target.slot}",
       )
     }
-    return insertAt(state, component, target, action, component.variantProperties(variant))
+    return insertAt(
+      state,
+      component,
+      target,
+      action,
+      component.variantProperties(variant),
+      afterNodeId,
+    )
   }
 
   /**
@@ -3211,10 +3425,20 @@ class UiBuilderEditorReducer(
     action: EditorStateAction? = null,
     /** Encoded values written over the inserted root's own defaults — see [variantProperties]. */
     presetProperties: Map<String, JsonObject> = emptyMap(),
+    /**
+     * Where a canvas drop asked to land — after this child of [target], or appended when null.
+     *
+     * Resolved against the slot's children at command time: a neighbour the plan named that a
+     * concurrent edit has since removed falls back to appending, because the drag held up its half
+     * of the bargain and the document moved under it.
+     */
+    requestedAfter: String? = null,
   ): UiBuilderEditorState {
     val componentId = component.componentId
     val sequence = state.operationSequence + 1
     val nodeId = "editor-${componentId.replace('/', '-')}-${sequence.toString().padStart(3, '0')}"
+    val slotChildren = state.document.children(target)
+    val afterNodeId = requestedAfter?.takeIf { it in slotChildren } ?: slotChildren.lastOrNull()
     val operations = mutableListOf<DesignOperation>()
     val defaultError =
       component.appendDefaultSubtree(
@@ -3222,7 +3446,7 @@ class UiBuilderEditorReducer(
         document = state.document,
         nodeId = nodeId,
         parent = target,
-        afterNodeId = state.document.children(target).lastOrNull(),
+        afterNodeId = afterNodeId,
         operations = operations,
         presetProperties = presetProperties,
       )
@@ -3723,15 +3947,78 @@ class UiBuilderEditorReducer(
     nodeBounds: Map<String, UiBuilderPixelBounds>,
     pointX: Float,
     pointY: Float,
-  ): ParentSlot? {
+  ): ParentSlot? = catalogDropPlan(state, componentId, slots, nodeBounds, pointX, pointY)?.target
+
+  /**
+   * Where a catalog drag hovering at a point would land — the slot and the seam between its
+   * children.
+   *
+   * The slot is the same smallest-containing answer [catalogDropTarget] has always given; the rest
+   * of the plan is what turns a slot tint into a marker at the seam the drop actually lands at.
+   */
+  fun catalogDropPlan(
+    state: UiBuilderEditorState,
+    componentId: String,
+    slots: List<UiBuilderSlotInspection>,
+    nodeBounds: Map<String, UiBuilderPixelBounds>,
+    pointX: Float,
+    pointY: Float,
+  ): UiBuilderDropPlan? {
     val component = catalog.componentsById[componentId] ?: return null
+    return dropSlotUnderPoint(state, pointX, pointY, slots, nodeBounds) {
+        acceptsComponent(state.document, it, component)
+      }
+      ?.let { (target, bounds) -> dropPlan(state, target, bounds, nodeBounds, pointX, pointY) }
+  }
+
+  /**
+   * Where a canvas move of [nodeId] hovering at a point would land, or null while no legal slot is
+   * under the pointer.
+   *
+   * The same geometry question as [catalogDropPlan], answered with the move's own legality —
+   * [moveRefusal], which is what the layers panel greys a row out with — so the canvas marker and
+   * the panel marker refuse for the same reasons and say it in the same words. A slot that refuses
+   * is no plan at all: the canvas draws nothing there rather than a marker the release would
+   * betray, and the ghost keeps travelling until the pointer reaches somewhere legal.
+   */
+  fun canvasMovePlan(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    slots: List<UiBuilderSlotInspection>,
+    nodeBounds: Map<String, UiBuilderPixelBounds>,
+    pointX: Float,
+    pointY: Float,
+  ): UiBuilderDropPlan? {
+    if (nodeId !in state.document.nodes) return null
+    return dropSlotUnderPoint(state, pointX, pointY, slots, nodeBounds) {
+        moveRefusal(state, nodeId, it) == null
+      }
+      ?.let { (target, bounds) ->
+        dropPlan(state, target, bounds, nodeBounds, pointX, pointY, exclude = nodeId)
+      }
+  }
+
+  /**
+   * The smallest slot region that contains the point and answers to [legal], or null.
+   *
+   * Containment is asked first and legality second, the cheaper question first: a document's
+   * declared slots outnumber the two or three under any one pointer many times over, and the canvas
+   * re-asks this on every move of a drag.
+   */
+  private fun dropSlotUnderPoint(
+    state: UiBuilderEditorState,
+    pointX: Float,
+    pointY: Float,
+    slots: List<UiBuilderSlotInspection>,
+    nodeBounds: Map<String, UiBuilderPixelBounds>,
+    legal: (ParentSlot) -> Boolean,
+  ): Pair<ParentSlot, UiBuilderPixelBounds>? {
     val inspectedSlots = slots.associateBy { it.parentNodeId to it.slotName }
     return state.document.nodes.values
       .flatMap { parent ->
         val capability = catalog.componentsById[parent.componentId] ?: return@flatMap emptyList()
         capability.slots.mapNotNull { declared ->
           val target = ParentSlot(parent.id, declared.name)
-          if (!acceptsComponent(state.document, target, component)) return@mapNotNull null
           val children = parent.slots[declared.name].orEmpty()
           val bounds =
             inspectedSlots[parent.id to declared.name]?.bounds
@@ -3748,8 +4035,87 @@ class UiBuilderEditorReducer(
           target to bounds
         }
       }
+      .filter { (target, _) -> legal(target) }
       .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-      ?.first
+  }
+
+  /**
+   * The seam of [target] the pointer sits against, as a place in the document.
+   *
+   * The slot's children are ordered along the axis the layout measured — pairwise disjoint along
+   * one coordinate with overlap along the other is a row or a column; anything tangled, and a slot
+   * with a single child, falls back to the slot's own shape. The pointer's coordinate along that
+   * axis picks the seam: before the first child whose centre is past it, after the last otherwise.
+   */
+  private fun dropPlan(
+    state: UiBuilderEditorState,
+    target: ParentSlot,
+    bounds: UiBuilderPixelBounds,
+    nodeBounds: Map<String, UiBuilderPixelBounds>,
+    pointX: Float,
+    pointY: Float,
+    /**
+     * A child the plan must not count, which a canvas move passes as the node it picked up.
+     *
+     * The seam a move lands at is a seam between the slot's *remaining* children — the same list
+     * the release is computed against — and counting the dragged node would name it as its own
+     * neighbour, a request the move has to throw away.
+     */
+    exclude: String? = null,
+  ): UiBuilderDropPlan {
+    val measured =
+      state.document
+        .children(target)
+        .filter { it != exclude }
+        .mapNotNull { child -> nodeBounds[child]?.let { child to it } }
+    val axis = dropAxis(measured.map(Pair<String, UiBuilderPixelBounds>::second), bounds)
+    val ordered = measured.sortedBy { (_, childBounds) ->
+      if (axis == UiBuilderDropAxis.Horizontal) childBounds.x else childBounds.y
+    }
+    val pointer = if (axis == UiBuilderDropAxis.Horizontal) pointX else pointY
+    val index =
+      ordered
+        .indexOfFirst { (_, childBounds) ->
+          val centre =
+            if (axis == UiBuilderDropAxis.Horizontal) childBounds.x + childBounds.width / 2f
+            else childBounds.y + childBounds.height / 2f
+          pointer < centre
+        }
+        .let { if (it < 0) ordered.size else it }
+    return UiBuilderDropPlan(
+      target = target,
+      afterNodeId = ordered.getOrNull(index - 1)?.first,
+      index = index,
+      bounds = bounds,
+      children = ordered,
+      axis = axis,
+    )
+  }
+
+  /** How a slot's children run, read off the geometry rather than trusted to the document. */
+  private fun dropAxis(
+    children: List<UiBuilderPixelBounds>,
+    slot: UiBuilderPixelBounds,
+  ): UiBuilderDropAxis {
+    if (children.size >= 2) {
+      val disjointX =
+        children.sortedBy(UiBuilderPixelBounds::x).zipWithNext { above, below ->
+          above.right <= below.x + 0.5f
+        }
+      val disjointY =
+        children.sortedBy(UiBuilderPixelBounds::y).zipWithNext { above, below ->
+          above.bottom <= below.y + 0.5f
+        }
+      return when {
+        disjointX.all { it } && !disjointY.all { it } -> UiBuilderDropAxis.Horizontal
+        disjointY.all { it } && !disjointX.all { it } -> UiBuilderDropAxis.Vertical
+        else ->
+          if (slot.width >= slot.height) UiBuilderDropAxis.Horizontal
+          else UiBuilderDropAxis.Vertical
+      }
+    }
+    return if (slot.width >= slot.height) UiBuilderDropAxis.Horizontal
+    else UiBuilderDropAxis.Vertical
   }
 
   /** Whether the node owning [slot] declares it, accepts [component] there, and has room. */
@@ -4840,6 +5206,9 @@ internal const val PREVIEW_FRAME_WIDTH_DP = 176
 internal const val PREVIEW_FRAME_HEIGHT_DP = 128
 
 internal const val PREVIEW_FRAME_CELL_ID = "catalog-thumbnail-cell"
+
+/** The unconstrained cell a drag ghost's component is inserted into. */
+internal const val DRAG_GHOST_CELL_ID = "drag-ghost-cell"
 
 private fun ComponentCapability.defaultNode(
   nodeId: String,
