@@ -1992,6 +1992,16 @@ fun UiBuilderEditor(
               onTakeOffline = onTakeOffline,
               onSyncToServer = onSyncToServer,
               exportHost = exportHost,
+              onTidy = {
+                focusEditor()
+                val edits = reducer.tidyPlan(state).changedValues
+                if (edits == 0) {
+                  say("Every dp value is already on the 4dp grid")
+                } else {
+                  dispatch(UiBuilderEditorEvent.Tidy)
+                  say("Tidied $edits values to the 4dp grid")
+                }
+              },
               onComponentPacks = onComponentPacks,
               panes = state.panes,
               previewSurfaces = catalog.previewSurfaces,
@@ -3092,6 +3102,8 @@ private fun EditorToolbar(
   onSyncToServer: (() -> Unit)? = null,
   /** Copies, links and downloads the render, or null where the host cannot; hides the menu. */
   exportHost: UiBuilderExportHost?,
+  /** Snaps the design's authored dp values onto the 4dp grid, with the outcome as a sentence. */
+  onTidy: (() -> Unit)? = null,
   /** Opens the component-pack settings, or null where the catalog offers no pack. */
   onComponentPacks: (() -> Unit)? = null,
   /** Which design panes are open — see [EditorPane]. */
@@ -3183,6 +3195,16 @@ private fun EditorToolbar(
               showShortcuts = true
             },
           )
+          if (onTidy != null) {
+            DropdownMenuItem(
+              text = { Text("Tidy to the 4dp grid") },
+              leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null) },
+              onClick = {
+                overflowOpen = false
+                onTidy.invoke()
+              },
+            )
+          }
           if (onReconnect != null) {
             DropdownMenuItem(
               text = { Text("Reconnect") },
