@@ -144,8 +144,34 @@ class UnusableStoredDesignTest {
     val rejected = assertIs<UiBuilderSubscriptionRejectedException>(rejection)
     assertEquals(ServiceErrorCodeV1.CATALOG_UNAVAILABLE, rejected.error.code)
 
-    // `DeleteDesign` is the one request exempted above that this list could name: its owner may
-    // still delete the design, so it must not join these requests.
+    // `DeleteDesign` and `RenameDesign` are the two requests exempted above that this list could
+    // name: the owner may still delete the design, and an actor with write may rename it, so
+    // neither must join these requests.
+  }
+
+  @Test
+  fun `an unusable design can still be renamed by an actor with write`() {
+    val storage = MemoryStorage()
+    create(service(storage, PinnedCatalogs(resolves = true)), "orphaned")
+    val reopened = service(storage, PinnedCatalogs(resolves = false))
+
+    // Naming a design is not serving it. A corrupted design is refused at open, so its title can
+    // no longer be reached through the editor; the rename request is the only door, and refusing
+    // it would leave every unusable design called what it was called before it broke.
+    val renamed =
+      assertIs<UiBuilderServiceResponse.DesignRenamed>(
+        execute(reopened, OWNER, UiBuilderServiceRequest.RenameDesign("orphaned", "broken"))
+      )
+    assertEquals("broken", renamed.design.title)
+
+    // Still listed, still refused for everything a listing is not: the rename changed the name and
+    // nothing about why the design cannot be served.
+    val listed =
+      assertIs<UiBuilderServiceResponse.Designs>(
+        execute(reopened, OWNER, UiBuilderServiceRequest.ListDesigns(null, 10))
+      )
+    assertEquals("broken", listed.designs.single().title)
+    assertEquals(1, reopened.diagnostics().unusableDesigns)
   }
 
   @Test

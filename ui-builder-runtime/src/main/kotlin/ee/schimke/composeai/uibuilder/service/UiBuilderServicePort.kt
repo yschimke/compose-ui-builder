@@ -155,8 +155,10 @@ public sealed interface UiBuilderServiceRequest {
    *
    * The owner may delete a design the service refuses to *serve*: an unusable document is not an
    * unknown access list, so ownership is checked against the record the design loaded with, and
-   * corruption does not turn the delete button into a dead end. Only a design the store could not
-   * read — no access record at all — stays out of reach here.
+   * corruption does not turn the delete button into a dead end. A design the store could not read
+   * is answered from the access record its quarantine kept, when it kept one — only a header this
+   * build could not read leaves no record to check against, and that design stays the operator's to
+   * retire.
    *
    * Has no `ui-builder-protocol` request shape yet, so it is answered outside the released
    * envelope; see [UiBuilderProtocolMapper.toProtocolRequest].

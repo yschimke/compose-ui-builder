@@ -13,6 +13,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 
@@ -269,7 +271,7 @@ class FileUiBuilderDesignStoreTest {
 
     assertEquals(emptyMap(), reopened.designs)
     assertTrue(
-      reopened.quarantined.getValue("checkout").contains("checksum"),
+      reopened.quarantined.getValue("checkout").reason.contains("checksum"),
       reopened.quarantined.toString(),
     )
   }
@@ -410,6 +412,58 @@ class FileUiBuilderDesignStoreTest {
     // The second open reads `quarantine.json` rather than the header, and must answer the same id:
     // an operator retiring the design types the id, not the hash of a directory.
     assertContains(FileUiBuilderDesignStore(root).load().quarantined.keys, "checkout")
+  }
+
+  @Test
+  fun `a quarantined design keeps the header that did parse with its record`() {
+    val root = createTempDirectory("ui-builder-store")
+    FileUiBuilderDesignStore(root).commit("checkout", null, design("checkout"))
+    Files.writeString(documentFiles(root, "checkout").single(), "not json")
+
+    val record = FileUiBuilderDesignStore(root).load().quarantined.getValue("checkout")
+
+    // The header is what names the design and who owns it; it parsed, so it travels. This is what
+    // makes the quarantined design its owner's to see and to retire rather than an operator's
+    // orphan.
+    val header = assertNotNull(record.header, "a part failed, not the header")
+    assertEquals("checkout", header.designId)
+    assertEquals("checkout", record.designId)
+  }
+
+  @Test
+  fun `a quarantined design whose header did not parse carries no header to check against`() {
+    val root = createTempDirectory("ui-builder-store")
+    FileUiBuilderDesignStore(root).commit("checkout", null, design("checkout"))
+    // Valid JSON, so the id is still recoverable from the payload, but the checksum no longer
+    // matches: nothing this build will trust as a header.
+    val header = root.resolve("designs/${slugOf("checkout")}/design.json")
+    val stored = Files.readString(header)
+    val checksum = Regex("\"checksumSha256\":\"([0-9a-f]+)\"").find(stored)!!.groupValues[1]
+    Files.writeString(header, stored.replace(checksum, "0".repeat(checksum.length)))
+
+    val record = FileUiBuilderDesignStore(root).load().quarantined.getValue("checkout")
+
+    assertNull(record.header, "a header that fails its checksum is not an access record")
+    assertEquals("checkout", record.designId, "the id came from the payload instead")
+  }
+
+  @Test
+  fun `a quarantine written before the header was recorded is enriched from the header`() {
+    val root = createTempDirectory("ui-builder-store")
+    FileUiBuilderDesignStore(root).commit("checkout", null, design("checkout"))
+    Files.writeString(documentFiles(root, "checkout").single(), "not json")
+    val loaded = FileUiBuilderDesignStore(root).load()
+    assertTrue(loaded.quarantined.getValue("checkout").header != null)
+    // What an older build wrote: the reason and nothing else. The header beside it still parses.
+    Files.writeString(
+      root.resolve("designs/${slugOf("checkout")}/quarantine.json"),
+      "{\"reason\":\"unreadable\",\"recordedAtEpochMillis\":1}",
+    )
+
+    val record = FileUiBuilderDesignStore(root).load().quarantined.getValue("checkout")
+
+    assertEquals("checkout", record.designId, "named from the header the record did not carry")
+    assertEquals("checkout", assertNotNull(record.header).designId)
   }
 
   @Test
@@ -598,7 +652,11 @@ class FileUiBuilderDesignStoreTest {
     )
     val misplaced = copy.fileName.toString()
     assertContains(reopened.quarantined.keys, misplaced, "and the copy is named by its directory")
-    assertContains(reopened.quarantined.getValue(misplaced), "checkout")
+    assertContains(reopened.quarantined.getValue(misplaced).reason, "checkout")
+    assertNotNull(
+      reopened.quarantined.getValue(misplaced).header,
+      "the copy's header parsed to be detected at all, so it travels with the record",
+    )
   }
 
   @Test
@@ -651,6 +709,10 @@ class FileUiBuilderDesignStoreTest {
     val reported = loaded.quarantined.keys.single()
     assertNotEquals("settings", reported, "the quarantine yields the name, not the design")
     assertTrue(reported.contains("settings"), "and still says which directory it is: $reported")
+    assertFalse(
+      '/' in reported,
+      "the reported name stays one path segment, so routes and operators can act on it: $reported",
+    )
 
     reopened.remove(reported)
 
@@ -793,8 +855,13 @@ class FileUiBuilderDesignStoreTest {
 
     assertEquals(setOf("settings"), loaded.designs.keys, "every other design migrates")
     assertContains(loaded.quarantined.keys, "checkout")
-    assertContains(loaded.quarantined.getValue("checkout"), "did not migrate")
-    assertContains(loaded.quarantined.getValue("checkout"), "per-design limit")
+    assertContains(loaded.quarantined.getValue("checkout").reason, "did not migrate")
+    assertContains(loaded.quarantined.getValue("checkout").reason, "per-design limit")
+    // The header is the part that would not fit -- it IS the oversize file here -- so it does not
+    // travel: the record stays readable and the id stays stable, and the design stays one an
+    // operator retires because no access record could be kept for it.
+    assertNull(loaded.quarantined.getValue("checkout").header)
+    assertEquals("checkout", loaded.quarantined.getValue("checkout").designId)
     assertTrue(
       Files.exists(root.resolve(FileUiBuilderStateStorage.STATE_FILE + ".migrated")),
       "and the copy that still holds it is named in the reason",

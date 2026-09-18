@@ -519,10 +519,11 @@ public class PersistentUiBuilderService(
    * nobody asks for costs nothing, the rest of the store works, and `diagnostics()` counts them so
    * this is visible without opening one.
    *
-   * What it must not become is a one-way door. A quarantined design is still the operator's
-   * content, and the rule that invalidated it is as likely to be wrong as the document; so
-   * `adminDesignDocument` reads the stored document out regardless of whether it can be served, and
-   * retiring it with `adminDeleteDesign` is a choice rather than the only move left.
+   * What it must not become is a one-way door. A quarantined design is still its owner's content as
+   * much as the operator's: the header a quarantine carries names who owns it, so the owner can
+   * delete it from the same file manager that lists it, and `adminDesignDocument` reads the stored
+   * document out regardless of whether it can be served — retiring it with [adminDeleteDesign] is a
+   * choice rather than the only move left.
    *
    * The line this does **not** cross is integrity. A state file whose checksum does not match, that
    * is truncated, or that declares a format this build cannot read is still refused by the storage
@@ -573,14 +574,29 @@ public class PersistentUiBuilderService(
         // entry: its checksum covered every design at once, so one bad byte was the whole lane
         // rather than one design. Reported like any other unusable design, and repaired the same
         // way — by an operator who can now see which one it is.
-        loadedPersistence.quarantined.mapValues { (_, reason) ->
+        loadedPersistence.quarantined.mapValues { (_, record) ->
           UnusableDesign(
             ServiceErrorCodeV1.INTERNAL,
-            "stored design cannot be read: $reason",
+            "stored design cannot be read: ${record.reason}",
             storeQuarantine = true,
           )
         }
     )
+
+  /**
+   * The designs the store could not read, by the id each is reported under, with what the store
+   * still knows about them.
+   *
+   * [unusableDesigns] answers "may this request name this design"; this answers "who does this
+   * quarantined design belong to, and what was it called". The header a quarantine carries is the
+   * access record read at load, which is what lets [delete] and [list] treat the design as its
+   * owner's rather than an operator's orphan; a record without one (a header this build could not
+   * read) has nobody left to check against and stays the operator's.
+   *
+   * Written under [lock] only — loaded once, removed by the two paths that retire a quarantine.
+   */
+  private val quarantinedDesigns: MutableMap<String, StoredQuarantineV3> =
+    ConcurrentHashMap(loadedPersistence.quarantined)
 
   /**
    * The same design, pinned to the catalog reference this deployment actually serves.
@@ -758,27 +774,30 @@ public class PersistentUiBuilderService(
   override suspend fun execute(call: UiBuilderServiceCall): UiBuilderServiceResponse {
     call.request.designId()?.let { designId ->
       unusableDesigns[designId]?.let { unusable ->
-        // Two exceptions, and only two.
+        // Three exceptions, and only three.
         //
         // A design the CATALOG outgrew may still be asked what moving it would cost. Refusing that
         // refuses the only repair such a design has -- the designs the preview was written for are
         // exactly the ones quarantined here, so a gate in front of it would put the feature
         // permanently out of their reach.
         //
-        // And a design whose access record survived may be deleted by its owner, however wrong the
-        // document itself is -- key mismatch, node count, quota, topology, a catalog nobody serves.
-        // The listing keeps an unusable design visible and the page that lists it offers the
-        // owner a delete button; a delete that always answered with the reason it is unusable is
-        // not a warning, it is a trap -- corruption would then be removable only by an operator
-        // with an admin token. Ownership is [delete]'s question, answered from the design's own
-        // record, not this gate's. A design the STORE could not read stays refused: no access
-        // record survived, so nobody can be proved its owner, and [adminDeleteDesign] remains the
-        // door.
+        // And a design may be deleted by whoever owns it, however wrong the document itself is --
+        // key mismatch, node count, quota, topology, a catalog nobody serves, files the store
+        // cannot read. The listing keeps an unusable design visible and the page that lists it
+        // offers the owner a delete button; a delete that always answered with the reason it is
+        // unusable is not a warning, it is a trap -- corruption would then be removable only by an
+        // operator with an admin token. Ownership is [delete]'s question, answered from the access
+        // record the design or its quarantine carries, not this gate's.
+        //
+        // A design whose files loaded may also be renamed by an actor with write, for the same
+        // reason one step smaller: naming a design is not serving it. One the STORE could not read
+        // has no document in memory to rename, and stays refused.
         val previewing =
           call.request is UiBuilderServiceRequest.PreviewCatalogUpgrade && unusable.catalogFault
-        val deleting =
-          call.request is UiBuilderServiceRequest.DeleteDesign && !unusable.storeQuarantine
-        if (!previewing && !deleting) {
+        val deleting = call.request is UiBuilderServiceRequest.DeleteDesign
+        val renaming =
+          call.request is UiBuilderServiceRequest.RenameDesign && !unusable.storeQuarantine
+        if (!previewing && !deleting && !renaming) {
           return UiBuilderServiceResponse.Error(
             UiBuilderServiceError(unusable.code, unusable.reason)
           )
@@ -1119,20 +1138,47 @@ public class PersistentUiBuilderService(
    * share [removeLocked] so they cannot disagree about what "gone" means.
    *
    * Reached for an unusable design too — [execute] lets the request past its guard, because a
-   * corrupted design its owner cannot delete is a trap the file manager pages straight into. The
-   * access record read at load answers [ownedBy] even for a document nothing else will serve; only
-   * a design the store could not read is out of reach here, since no record survived.
+   * corrupted design its owner cannot delete is a trap the file manager pages straight into. A
+   * design the store could not read is removed through its quarantine record: when the record
+   * carries the header the store read at load, the access record answers [ownedBy] and the owner
+   * retires it as their own; when it does not — a header this build could not read — there is
+   * nothing left to check ownership against, and the answer is the reason it is quarantined, which
+   * is the operator's door.
    */
   private fun delete(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
-    val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
-    if (!design.ownedBy(actor)) {
-      return serviceError(forbidden("delete", designId))
+    val design = persisted.designs[designId]
+    if (design != null) {
+      if (!design.ownedBy(actor)) {
+        return serviceError(forbidden("delete", designId))
+      }
+      // Closed under the lock, as [updateAccess] closes the streams of an actor it revoked: a
+      // subscriber learns the design is gone only after the removal is durable, which
+      // [removeLocked] guarantees by committing first.
+      removeLocked(designId).forEach(SubscriberMailbox::close)
+      return LockedExecution(UiBuilderServiceResponse.DesignDeleted(designId))
     }
-    // Closed under the lock, as [updateAccess] closes the streams of an actor it revoked: a
-    // subscriber learns the design is gone only after the removal is durable, which
-    // [removeLocked] guarantees by committing first.
-    removeLocked(designId).forEach(SubscriberMailbox::close)
-    return LockedExecution(UiBuilderServiceResponse.DesignDeleted(designId))
+    val quarantined = quarantinedDesigns[designId]
+    if (quarantined != null) {
+      val header =
+        quarantined.header
+          ?: return serviceError(
+            UiBuilderServiceError(
+              ServiceErrorCodeV1.INTERNAL,
+              "stored design cannot be read: ${quarantined.reason}",
+            )
+          )
+      if (!header.access.ownedBy(actor)) {
+        return serviceError(forbidden("delete", designId))
+      }
+      store.remove(designId)
+      // The same two clears [adminDeleteDesign]'s quarantine branch makes: a stale entry would
+      // answer this id with the reason rather than "not found", and would follow a design
+      // re-created under it.
+      unusableDesigns.remove(designId)
+      quarantinedDesigns.remove(designId)
+      return LockedExecution(UiBuilderServiceResponse.DesignDeleted(designId))
+    }
+    return serviceError(notFound(designId))
   }
 
   private fun create(
@@ -1236,20 +1282,35 @@ public class PersistentUiBuilderService(
     if (request.limit !in 1..200) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "list limit must be between 1 and 200")
     }
-    val accessible =
+    // Items are built lazily, and only for the page: the mapping reads access records, and a host
+    // walking a thousand designs ten pages at a time must not pay for all of them ten times.
+    val candidates = buildList {
       persisted.designs.values
         .filter { it.allows(actor, DesignAccessActionV1.READ) }
-        .sortedBy { it.document.id }
+        .forEach { add(it.document.id to { it.listItem(actor) }) }
+      // A design the store could not read is listed too, when its quarantine knows who owns it:
+      // a design the owner cannot see is one they cannot delete, and the file manager is where
+      // both happen. Reported under the id its header named and never under the renamed key a
+      // collision forced — that key shares its owner with a live design of the same id, and a
+      // second row for it would be a lie about how many designs there are.
+      quarantinedDesigns.forEach { (designId, record) ->
+        val header = record.header ?: return@forEach
+        if (designId != record.designId || designId in persisted.designs) return@forEach
+        if (!header.access.allows(actor, DesignAccessActionV1.READ)) return@forEach
+        add(designId to { header.quarantinedListItem(designId, actor) })
+      }
+    }
+      .sortedBy { it.first }
     val offset =
       request.cursor?.toIntOrNull()?.takeIf { it >= 0 }
         ?: if (request.cursor == null) 0
         else return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "invalid list cursor")
-    if (offset > accessible.size) {
+    if (offset > candidates.size) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "list cursor is past the result set")
     }
-    val page = accessible.drop(offset).take(request.limit)
-    val next = (offset + page.size).takeIf { it < accessible.size }?.toString()
-    return LockedExecution(UiBuilderServiceResponse.Designs(page.map { it.listItem(actor) }, next))
+    val page = candidates.drop(offset).take(request.limit)
+    val next = (offset + page.size).takeIf { it < candidates.size }?.toString()
+    return LockedExecution(UiBuilderServiceResponse.Designs(page.map { it.second() }, next))
   }
 
   private fun open(
@@ -3471,6 +3532,7 @@ public class PersistentUiBuilderService(
         if (unusableDesigns[designId]?.storeQuarantine != true) return false
         store.remove(designId)
         unusableDesigns.remove(designId)
+        quarantinedDesigns.remove(designId)
         return@withLock emptyList()
       }
       removeLocked(designId)
@@ -3490,6 +3552,9 @@ public class PersistentUiBuilderService(
     // The design is gone, so its quarantine goes with it: leaving the entry would answer this id
     // with a catalog error rather than "not found", and would follow a re-created design here.
     unusableDesigns.remove(designId)
+    // Never populated for a design that loaded, by the store's own invariant — cleared so the
+    // invariant survives whatever wrote both.
+    quarantinedDesigns.remove(designId)
     val removed = runtime.remove(designId)
     mutationBuckets.keys.removeIf { (_, bucketDesignId) -> bucketDesignId == designId }
     return removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
@@ -3947,9 +4012,17 @@ internal fun DesignAccessControlV1.effectiveGrants(): List<DesignActorGrantV1> {
 private fun DesignAccessControlV1.collapsed(): DesignAccessControlV1 =
   effectiveGrants().let { if (it.size == actorGrants.size) this else copy(actorGrants = it) }
 
+private fun DesignAccessControlV1.allows(actorId: String, action: DesignAccessActionV1): Boolean =
+  sameActor(actorId, ownerActorId) ||
+    effectiveGrants().any { sameActor(it.actorId, actorId) && action in it.allowedActions }
+
+private fun DesignAccessControlV1.allows(
+  actor: AuthenticatedUiBuilderActor,
+  action: DesignAccessActionV1,
+): Boolean = actor.accessIdentities.any { allows(it, action) }
+
 private fun PersistedDesignV1.allows(actorId: String, action: DesignAccessActionV1): Boolean =
-  sameActor(actorId, access.ownerActorId) ||
-    access.effectiveGrants().any { sameActor(it.actorId, actorId) && action in it.allowedActions }
+  access.allows(actorId, action)
 
 /**
  * The same question asked of a whole identity: an actor may act, or the human it acts for may.
@@ -3965,25 +4038,14 @@ private fun PersistedDesignV1.allows(
 ): Boolean = actor.accessIdentities.any { allows(it, action) }
 
 /** True when this actor owns the design outright, or acts for the human who does. */
-private fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
-  actor.accessIdentities.any { sameActor(it, access.ownerActorId) }
+private fun DesignAccessControlV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
+  actor.accessIdentities.any { sameActor(it, ownerActorId) }
 
-private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): DesignListItemV1 {
-  // Reported under the *actor's own* id — the caller asked what it may do here, and being told
-  // about an id it does not use would be an answer to a question nobody asked. What it may do is
-  // resolved through its principal when it has one, which is what put this design in the listing.
-  val actorId = actor.actorId
-  val requester =
-    if (ownedBy(actor))
-      DesignActorAccessV1(actorId, DesignAccessRoleV1.OWNER, DesignAccessActionV1.entries)
-    else {
-      val grant =
-        actor.accessIdentities.firstNotNullOf { identity ->
-          access.effectiveGrants().firstOrNull { sameActor(it.actorId, identity) }
-        }
-      DesignActorAccessV1(actorId, grant.role, grant.allowedActions)
-    }
-  return DesignListItemV1(
+private fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
+  access.ownedBy(actor)
+
+private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): DesignListItemV1 =
+  DesignListItemV1(
     document.id,
     document.title,
     document.revision,
@@ -3992,9 +4054,50 @@ private fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): Desi
     createdAtEpochMillis,
     updatedAtEpochMillis,
     access.ownerActorId,
-    requester,
+    access.requesterAccess(actor),
   )
-}
+
+/**
+ * The list row for a design the store could not read, built from the header its quarantine kept.
+ *
+ * The same nine fields a served design reports, from the record that describes it — so a
+ * quarantined design is listed as what it is, titled and owned, rather than as a bare id an
+ * operator has to decode.
+ */
+private fun StoredDesignHeaderV3.quarantinedListItem(
+  designId: String,
+  actor: AuthenticatedUiBuilderActor,
+): DesignListItemV1 =
+  DesignListItemV1(
+    designId,
+    title,
+    revision,
+    access.accessRevision,
+    catalogPin,
+    createdAtEpochMillis,
+    updatedAtEpochMillis,
+    access.ownerActorId,
+    access.requesterAccess(actor),
+  )
+
+/**
+ * What the asking actor is told it may do here, reported under the *actor's own* id — the caller
+ * asked about itself, and being told about an id it does not use would be an answer to a question
+ * nobody asked. What it may do is resolved through its principal when it has one, which is what put
+ * the design in front of it.
+ */
+private fun DesignAccessControlV1.requesterAccess(
+  actor: AuthenticatedUiBuilderActor
+): DesignActorAccessV1 =
+  if (ownedBy(actor))
+    DesignActorAccessV1(actor.actorId, DesignAccessRoleV1.OWNER, DesignAccessActionV1.entries)
+  else {
+    val grant =
+      actor.accessIdentities.firstNotNullOf { identity ->
+        effectiveGrants().firstOrNull { sameActor(it.actorId, identity) }
+      }
+    DesignActorAccessV1(actor.actorId, grant.role, grant.allowedActions)
+  }
 
 private fun PersistedDesignV1.retainedFromSequence(): Long =
   history.firstOrNull()?.outcome?.sequence?.minus(1) ?: lastSequence
