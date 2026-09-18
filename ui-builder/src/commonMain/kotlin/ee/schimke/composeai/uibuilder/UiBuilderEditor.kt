@@ -54,6 +54,8 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -462,6 +464,12 @@ fun UiBuilderEditor(
    */
   initialEnabledPacks: Set<String> = emptySet(),
   /**
+   * The components the reader has pinned to the top of the insert panel, or null while they have
+   * never said — in which case the catalog's own declaration answers. See
+   * [UiBuilderEditorState.pinnedComponents].
+   */
+  initialPinnedComponents: Set<String>? = null,
+  /**
    * Which panels the editor starts with open: the components, the layers, the inspector.
    *
    * All three default to closed, because the canvas is what this editor is for and a panel is a
@@ -782,6 +790,7 @@ fun UiBuilderEditor(
             historyBarVisible = initialHistoryBarVisible,
             enabledPacks =
               initialEnabledPacks.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
+            pinnedComponents = initialPinnedComponents,
             // A catalog whose canvas is only a stand-in opens with the host's renderer beside it,
             // where the host has one. Not a preference — on `wear-m3` the canvas draws Material 3
             // lookalikes because a Wasm build cannot link `androidx.wear.compose:compose-material3`
@@ -1201,6 +1210,7 @@ fun UiBuilderEditor(
         catalogSystemId = catalog.benchmark.catalogSystemId,
         catalogRows = reducer.catalogRows(state),
         totalCatalogComponents = catalog.components.size,
+        pinnedComponents = reducer.pinnedComponents(state),
         packs = catalog.componentPacks,
         onManagePacks = onComponentPacks,
         thumbnailOf = reducer::previewDocument,
@@ -4646,6 +4656,8 @@ private fun EditorNavigator(
   catalogSystemId: String,
   catalogRows: List<EditorCatalogRow>,
   totalCatalogComponents: Int,
+  /** The components at the top of the panel — see [UiBuilderEditorReducer.pinnedComponents]. */
+  pinnedComponents: Set<String> = emptySet(),
   /** The packs the catalog carries, for the palette's own summary row. */
   packs: UiBuilderComponentPacks = UiBuilderComponentPacks.NONE,
   /** Opens the pack settings, or null where there is nothing to switch. */
@@ -4698,6 +4710,7 @@ private fun EditorNavigator(
             state = state,
             catalogRows = catalogRows,
             totalCatalogComponents = totalCatalogComponents,
+            pinnedComponents = pinnedComponents,
             packs = packs,
             onManagePacks = onManagePacks,
             thumbnailOf = thumbnailOf,
@@ -4750,6 +4763,8 @@ private fun InsertPanel(
    * Every component the catalog has, which is what the All row counts — not what survived a filter.
    */
   totalCatalogComponents: Int,
+  /** The components at the top of the panel — see [UiBuilderEditorReducer.pinnedComponents]. */
+  pinnedComponents: Set<String> = emptySet(),
   /** The packs the catalog carries, for the palette's own summary row. */
   packs: UiBuilderComponentPacks = UiBuilderComponentPacks.NONE,
   /** Opens the pack settings, or null where there is nothing to switch. */
@@ -4852,6 +4867,10 @@ private fun InsertPanel(
               onAdd = { onCatalogAdd(row.item.componentId, null) },
               onToggleVariants = {
                 dispatch(UiBuilderEditorEvent.ToggleCatalogComponent(row.item.componentId))
+              },
+              pinned = row.item.componentId in pinnedComponents,
+              onTogglePinned = {
+                dispatch(UiBuilderEditorEvent.TogglePinnedComponent(row.item.componentId))
               },
             )
           is EditorCatalogRow.Variant ->
@@ -6481,6 +6500,9 @@ private fun CatalogRow(
   refusal: String?,
   onAdd: () -> Unit,
   onToggleVariants: () -> Unit,
+  /** Whether this component is at the top of the panel — see [PinnedStar]. */
+  pinned: Boolean = false,
+  onTogglePinned: () -> Unit = {},
 ) {
   Row(
     // Exactly 44 dp unless this row is refused. `heightIn` alone was applied to every row, and in a
@@ -6551,7 +6573,38 @@ private fun CatalogRow(
         style = MaterialTheme.typography.labelSmall,
       )
     }
+    PinnedStar(item.displayName, pinned, onTogglePinned)
     CatalogAddButton(canAdd, onAdd, item.displayName, refusal)
+  }
+}
+
+/**
+ * The star that keeps a component at the top of the panel.
+ *
+ * A press here is a fact about the palette rather than about the design: it takes no revision,
+ * reaches no collaborator and is remembered in this browser, the same bargain the pack switches and
+ * the collapsed groups make. Drawn always rather than on hover, because a control that appears only
+ * under a mouse is one touch never finds.
+ */
+@Composable
+private fun PinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
+  Box(
+    // A merging node of its own, so the star stays a control a screen reader — and a test — can
+    // reach: without this the row's merged semantics swallow it, and a press aimed at the star
+    // lands on whatever the row answers with instead.
+    Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).clickable(onClick = onToggle).semantics(
+      mergeDescendants = true
+    ) {
+      contentDescription = if (pinned) "Unpin $componentName" else "Pin $componentName"
+    },
+    contentAlignment = Alignment.Center,
+  ) {
+    Icon(
+      if (pinned) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+      contentDescription = null,
+      modifier = Modifier.size(16.dp),
+      tint = if (pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+    )
   }
 }
 
@@ -6875,8 +6928,12 @@ private fun Modifier.catalogDrag(
 private fun EditorCatalogRow.catalogRowKey(): String =
   when (this) {
     is EditorCatalogRow.Group -> "group:$name"
-    is EditorCatalogRow.Component -> "component:${item.componentId}"
-    is EditorCatalogRow.Variant -> "variant:${variant.componentId}#${variant.value}"
+    // The pinned copy is the same component twice, so which copy is part of the key: a list that
+    // saw two rows with one key would drop one of them rather than draw the component twice.
+    is EditorCatalogRow.Component ->
+      if (pinned) "pinned:${item.componentId}" else "component:${item.componentId}"
+    is EditorCatalogRow.Variant ->
+      (if (pinned) "pinned-variant:" else "variant:") + "${variant.componentId}#${variant.value}"
   }
 
 /**

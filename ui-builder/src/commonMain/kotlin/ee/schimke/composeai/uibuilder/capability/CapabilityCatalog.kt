@@ -12,6 +12,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -69,6 +70,68 @@ data class CapabilityCatalog(
   val componentPacks: UiBuilderComponentPacks by lazy {
     UiBuilderComponentPacks.from(statusSemantics)
   }
+
+  /**
+   * The components this catalog asks the insert panel to keep at the top.
+   *
+   * Read out of [statusSemantics] for the same reason [previewSurfaces] is, and for the reason
+   * [ComponentMenu] states at length: the catalog is the only thing that knows what its typical app
+   * is made of, and a list here can only ever name the catalogs this repository has heard of. A
+   * catalog that says nothing pins nothing, and the panel is what it always was.
+   *
+   * Ids the catalog does not offer are dropped rather than kept: a pin naming a component that is
+   * no longer there would be a row that inserts nothing.
+   */
+  val pinnedComponents: Set<String> by lazy {
+    (statusSemantics["pinnedComponents"] as? JsonArray)
+      .orEmpty()
+      .mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+      .filterTo(mutableSetOf()) { it in componentsById }
+  }
+
+  /**
+   * Which slot each component considers its main one — the place an empty container invites a drop
+   * into, and the slot a drop prefers when two regions tie.
+   *
+   * Declared by the catalog under `recommendedSlots`, because it is a fact about how that catalog's
+   * components are meant to be assembled (`m3/scaffold`'s content is the screen; its topBar is
+   * optional trim) and not something this repository can know for a catalog it has not seen. A
+   * catalog that declares nothing gets [derivedRecommendedSlot]: the slot that accepts the most of
+   * the catalog, which lands on `content` and `children` for the obvious reasons.
+   *
+   * Only slots the component actually declares are considered, from either source — a stale
+   * declaration must not invent a destination.
+   */
+  val recommendedSlots: Map<String, String> by lazy {
+    val declared =
+      (statusSemantics["recommendedSlots"] as? JsonObject)
+        .orEmpty()
+        .mapNotNull { (componentId, value) ->
+          val slotNames =
+            (value as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+          val declaredSlots = componentsById[componentId]?.slotsByName.orEmpty()
+          slotNames.firstOrNull { it in declaredSlots }?.let { componentId to it }
+        }
+        .toMap()
+    components
+      .mapNotNull { component ->
+        val slot =
+          declared[component.componentId]
+            ?: when (component.slots.size) {
+              0 -> null
+              1 -> component.slots.single().name
+              // The widest acceptance wins: the slot that takes the most of this catalog is the
+              // one a person means when they say "drop something in here". `maxByOrNull` answers
+              // ties with the first declared slot, which is the catalog's own order of preference.
+              else -> component.slots.maxByOrNull { slot -> components.count(slot::accepts) }?.name
+            }
+        slot?.let { component.componentId to it }
+      }
+      .toMap()
+  }
+
+  /** The slot [componentId] considers its main one, or null where it declares no slots. */
+  fun recommendedSlot(componentId: String): String? = recommendedSlots[componentId]
 }
 
 @Serializable

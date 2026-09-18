@@ -528,6 +528,13 @@ private fun LiveSessionApp(
   // document state: the same design opened by a collaborator shows their palette, not yours.
   var enabledPacks by
     remember(config.catalogSystemId) { mutableStateOf(readEnabledPacks(config.catalogSystemId)) }
+  // Which components the reader pinned to the top of the palette, remembered per catalog in this
+  // browser, like the pack switches. Null is "never said", which is what lets the catalog's own
+  // defaults keep reaching a reader who has not customised anything.
+  var pinnedComponents by
+    remember(config.catalogSystemId) {
+      mutableStateOf(readPinnedComponents(config.catalogSystemId))
+    }
   var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
   var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
   // Which snapshot may be shown, and which revision the next command claims as its base. See
@@ -813,6 +820,7 @@ private fun LiveSessionApp(
     fun installCatalog(capability: CatalogCapabilityV1, revision: Long?) {
       activeCatalogSystemId = capability.benchmark.catalogSystemId
       enabledPacks = readEnabledPacks(activeCatalogSystemId)
+      pinnedComponents = readPinnedComponents(activeCatalogSystemId)
       catalog =
         CapabilityCatalogParser.parse(
           Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
@@ -1322,6 +1330,7 @@ private fun LiveSessionApp(
         else { selectors -> copyDesignLink(designUrlPath(config.designId, selectors)) },
       initialCatalogQuery = catalogQuery,
       initialEnabledPacks = enabledPacks,
+      initialPinnedComponents = pinnedComponents,
       collaborators = collaborators,
       componentDrift = componentDrift,
       devicePresets = devicePresets,
@@ -1388,6 +1397,10 @@ private fun LiveSessionApp(
         if (it.enabledPacks != enabledPacks) {
           enabledPacks = it.enabledPacks
           writeEnabledPacks(activeCatalogSystemId, it.enabledPacks)
+        }
+        if (it.pinnedComponents != pinnedComponents) {
+          pinnedComponents = it.pinnedComponents
+          writePinnedComponents(activeCatalogSystemId, it.pinnedComponents)
         }
         // Persisted from here rather than from each control, so every route that changes the
         // overlay — a slider, a stroke, a flatten, a paste — is stored by one path.
@@ -3070,6 +3083,35 @@ private fun writeEnabledPacks(catalogSystemId: String, packs: Set<String>) {
 }
 
 private fun enabledPacksKey(catalogSystemId: String): String = "ui-builder.packs.$catalogSystemId"
+
+/**
+ * The reader's pins for a catalog, or null while they have never said.
+ *
+ * The marker is what separates "never said" from "said none": an empty stored value is a reader who
+ * unpinned everything, and reading that back as null would hand them the catalog's defaults again
+ * on the next reload — the one behaviour that makes unstarring a default look broken.
+ */
+private fun readPinnedComponents(catalogSystemId: String): Set<String>? {
+  val stored = readBrowserSetting(pinnedComponentsKey(catalogSystemId))
+  if (!stored.startsWith(PINNED_MARKER)) return null
+  return stored
+    .removePrefix(PINNED_MARKER)
+    .split(',')
+    .map(String::trim)
+    .filterTo(mutableSetOf(), String::isNotEmpty)
+}
+
+private fun writePinnedComponents(catalogSystemId: String, pins: Set<String>?) {
+  writeBrowserSetting(
+    pinnedComponentsKey(catalogSystemId),
+    PINNED_MARKER + pins.orEmpty().sorted().joinToString(","),
+  )
+}
+
+private const val PINNED_MARKER = "v1:"
+
+private fun pinnedComponentsKey(catalogSystemId: String): String =
+  "ui-builder.pins.$catalogSystemId"
 
 @JsFun(
   """(key) => {
