@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
@@ -135,6 +136,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -855,6 +857,9 @@ fun UiBuilderEditor(
   var catalogDragPosition by remember { mutableStateOf<Offset?>(null) }
   var draggedComponentId by remember { mutableStateOf<String?>(null) }
   var draggedComponentVariant by remember { mutableStateOf<EditorCatalogVariant?>(null) }
+  // The node a canvas move has picked up, and the root-space point it is being carried at — the
+  // same point the palette drag reports, so one plan resolver and one marker serve both drags.
+  var draggedNodeId by remember { mutableStateOf<String?>(null) }
   var draggedRemoteThumbnail by remember { mutableStateOf<ImageBitmap?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
   // The scale the design is pinned at, or null while it is framed to the workspace. Local rather
@@ -942,10 +947,10 @@ fun UiBuilderEditor(
     selectedThreadId = threadId
     onSelectedThreadChanged?.invoke(threadId)
   }
-  fun canvasTarget(componentId: String, position: Offset): ParentSlot? {
+  fun canvasDropPlan(componentId: String, position: Offset): UiBuilderDropPlan? {
     if (!canvasBounds.contains(position)) return null
     return canvasInspection?.let { snapshot ->
-      reducer.catalogDropTarget(
+      reducer.catalogDropPlan(
         state,
         componentId,
         snapshot.slots,
@@ -955,10 +960,31 @@ fun UiBuilderEditor(
       )
     }
   }
-  val draggedTarget = draggedComponentId?.let { componentId ->
-    catalogDragPosition?.let { position -> canvasTarget(componentId, position) }
+
+  fun canvasMovePlan(nodeId: String, position: Offset): UiBuilderDropPlan? {
+    if (!canvasBounds.contains(position)) return null
+    return canvasInspection?.let { snapshot ->
+      reducer.canvasMovePlan(
+        state,
+        nodeId,
+        snapshot.slots,
+        snapshot.nodes.mapNotNull { node -> node.bounds?.let { node.nodeId to it } }.toMap(),
+        position.x,
+        position.y,
+      )
+    }
   }
-  val canvasDropHovered = draggedTarget != null
+
+  // Resolved on every move of either drag: the plan is what the marker is drawn from, what the
+  // release is landed with, and what the status bar narrates — one answer, asked once.
+  val draggedCatalogPlan = draggedComponentId?.let { componentId ->
+    catalogDragPosition?.let { position -> canvasDropPlan(componentId, position) }
+  }
+  val draggedMovePlan = draggedNodeId?.let { nodeId ->
+    catalogDragPosition?.let { position -> canvasMovePlan(nodeId, position) }
+  }
+  val draggedPlan = draggedCatalogPlan ?: draggedMovePlan
+  val canvasDropHovered = draggedPlan != null
   /**
    * One editor event, and the one place a pinned revision stops being editable.
    *
@@ -1047,10 +1073,10 @@ fun UiBuilderEditor(
   }
   LaunchedEffect(state) { onStateChanged(state) }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
-  LaunchedEffect(canvasDropHovered, draggedTarget) {
+  LaunchedEffect(canvasDropHovered, draggedPlan) {
     onDropTargetChanged(
       canvasDropHovered,
-      draggedTarget?.let { "${it.nodeId}.${it.slot}" } ?: "No compatible slot",
+      dropPlanLabel(draggedPlan),
     )
   }
   // Cached for the same reason as the issues scan further down, at a smaller scale: the filter
@@ -1173,10 +1199,18 @@ fun UiBuilderEditor(
           // landed in the selected node's slot, so dragging onto a card put the component wherever
           // the last click had been. The renderer already reports each slot's box, and the
           // reference
-          // overlay already promotes a piece into the slot under it — this asks the same question.
-          val target = canvasTarget(componentId, position)
-          if (target != null) {
-            dispatch(UiBuilderEditorEvent.InsertComponent(componentId, target, variant))
+          // overlay already promotes a piece into the slot under it — this asks the same question,
+          // and now the seam as well: the marker the pointer watched is the seam the drop lands at,
+          // not an append after the fact.
+          canvasDropPlan(componentId, position)?.let { plan ->
+            dispatch(
+              UiBuilderEditorEvent.InsertComponent(
+                componentId,
+                plan.target,
+                variant,
+                plan.afterNodeId,
+              )
+            )
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
           }
           draggedComponentId = null
@@ -1240,7 +1274,7 @@ fun UiBuilderEditor(
           }
         },
         onRemoteComposeDrop = { source, position ->
-          val target = canvasTarget(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID, position)
+          val target = canvasDropPlan(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID, position)?.target
           if (target != null && pendingRemoteSource == null) {
             pendingRemoteTarget = target
             pendingRemoteSource = source
@@ -1258,6 +1292,35 @@ fun UiBuilderEditor(
         modifier = modifier,
       )
     }
+  // The ghosts the two drags carry, built once per drag rather than per pointer move: a palette
+  // drag carries the component itself at its own size in the design's own theme, a canvas move
+  // carries the subtree it picked up. The canvas scales and caps them to the slot under the
+  // pointer, so what is in the air is what would land. A Remote Compose drag carries no generated
+  // ghost at all — its published capture is the picture, and a ghost document without its bytes
+  // would render the component's own error diagnostic.
+  val dragGhostPreview =
+    remember(
+      draggedComponentId,
+      draggedComponentVariant,
+      state.document.id,
+      state.document.revision,
+      draggedRemoteThumbnail == null,
+    ) {
+      if (draggedRemoteThumbnail != null) {
+        null
+      } else {
+        draggedComponentId?.let { reducer.dragGhostDocument(state, it, draggedComponentVariant) }
+      }
+    }
+  val moveDragGhostPreview =
+    remember(draggedNodeId, state.document.id, state.document.revision) {
+      draggedNodeId?.let { reducer.nodeGhostDocument(state, it) }
+    }
+  // What the ghost names when the component cannot stand alone in a frame — a named chip, never a
+  // faked picture of a Tab or a Scaffold.
+  val dragGhostLabel =
+    draggedComponentId?.let { catalog.componentsById[it]?.displayName ?: it }
+      ?: draggedNodeId?.let { state.document.nodes[it]?.componentId }
   // The strip beside the design: the devices it claims, plus whichever unstored axes are switched
   // on. Computed here rather than in the canvas because it is a question about the *design* — its
   // stored `exportDevices` and the editor's own axes — and the canvas draws what it is handed.
@@ -1289,14 +1352,32 @@ fun UiBuilderEditor(
         onCanvasBoundsChanged(it)
       },
       dropHovered = canvasDropHovered,
-      dropTarget = draggedTarget,
-      dragPreview =
-        if (draggedRemoteThumbnail == null)
-          draggedComponentId?.let { reducer.previewDocument(it, draggedComponentVariant) }
-        else null,
+      dropPlan = draggedPlan,
+      // A catalogue drag carries the component as the ghost, drawn at landing size; a canvas move
+      // carries the subtree it picked up, built from the same document the canvas is drawing.
+      dragPreview = dragGhostPreview,
       dragPreviewBitmap = draggedRemoteThumbnail,
+      moveDragPreview = moveDragGhostPreview,
+      dragGhostLabel = dragGhostLabel,
       dragPosition = catalogDragPosition,
       showSelectionOverlay = showSelectionOverlay,
+      moveDragEnabled = true,
+      onNodeDragStarted = { nodeId, position ->
+        focusEditor()
+        if (nodeId != state.selectedNodeId) dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
+        draggedNodeId = nodeId
+        catalogDragPosition = position
+      },
+      onNodeDragged = { position -> catalogDragPosition = position },
+      onNodeDragEnded = { position ->
+        val nodeId = draggedNodeId
+        val plan = nodeId?.let { id -> position?.let { canvasMovePlan(id, it) } }
+        if (nodeId != null && plan != null) {
+          dispatch(UiBuilderEditorEvent.MoveNodeInto(nodeId, plan.target, plan.afterNodeId))
+        }
+        draggedNodeId = null
+        catalogDragPosition = null
+      },
       reference = state.reference,
       onMarkDrawn = { kind, points ->
         dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
@@ -1902,6 +1983,15 @@ fun UiBuilderEditor(
                   if (state.selection.isNotEmpty()) {
                     SelectionActionBar(
                       selectionLabel = selectionLabel,
+                      breadcrumbs =
+                        remember(state.document, state.selection) {
+                          if (state.selection.size == 1) reducer.selectionPath(state)
+                          else emptyList()
+                        },
+                      onBreadcrumbSelected = {
+                        focusEditor()
+                        dispatch(UiBuilderEditorEvent.SelectNode(it))
+                      },
                       // The way to the properties of the thing you just selected, from beside the
                       // thing you just selected — offered only while they are not already showing.
                       onOpenProperties =
@@ -1980,9 +2070,8 @@ fun UiBuilderEditor(
                   CanvasStatusBar(
                     state = state,
                     sessionLabel = sessionLabel,
-                    dropTargetLabel =
-                      draggedTarget?.let { "${it.nodeId}.${it.slot}" } ?: "No compatible slot",
-                    dragging = draggedComponentId != null,
+                    dropTargetLabel = dropPlanLabel(draggedPlan),
+                    dragging = draggedComponentId != null || draggedNodeId != null,
                   )
                 }
                 when (dock) {
@@ -3432,6 +3521,89 @@ private fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Mod
   }
 
 /**
+ * The press that becomes a canvas move: pick up the node under the pointer past the drag threshold,
+ * carry it, and land or cancel it on release.
+ *
+ * A tap must stay a tap, so nothing is consumed until the pointer has travelled past the slop — the
+ * selection tap underneath still answers a still press, and a press on empty ground is left to the
+ * workspace's scroll. Once a node is picked up every change is consumed, which is what keeps the
+ * scroll from chasing the drag; a gesture somebody else took first (a pin, a menu) is left alone
+ * entirely.
+ *
+ * [hitTest] is asked about the **press** position, not the current one: the node picked up is the
+ * node that was under the finger, however far the design has scrolled since.
+ */
+private fun Modifier.canvasNodeDrag(
+  key: Any?,
+  enabled: Boolean,
+  /** The press/drag position in this element's local space, as a point in editor root space. */
+  rootPoint: (Offset) -> Offset,
+  /** The deepest node containing a root-space point, or null when the point is over nothing. */
+  hitTest: (Offset) -> String?,
+  onStarted: (String, Offset) -> Unit,
+  onDragged: (Offset) -> Unit,
+  onEnded: (Offset?) -> Unit,
+): Modifier = composed {
+  if (!enabled) {
+    Modifier
+  } else {
+    val currentRootPoint = rememberUpdatedState(rootPoint)
+    val currentHitTest = rememberUpdatedState(hitTest)
+    val currentOnStarted = rememberUpdatedState(onStarted)
+    val currentOnDragged = rememberUpdatedState(onDragged)
+    val currentOnEnded = rememberUpdatedState(onEnded)
+    Modifier.pointerInput(key) {
+      awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        var draggedNode: String? = null
+        var lastRoot: Offset? = null
+        var lastLocal = down.position
+        try {
+          while (true) {
+            val event = awaitPointerEvent()
+            // A right-drag belongs to the context menu, which took the press in the initial pass
+            // and whose button this check answers to as well. A middle-drag picking a layer up is
+            // an edge this editor has never had a use for policing further.
+            if (event.buttons.isSecondaryPressed) return@awaitEachGesture
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            if (change.pressed) {
+              if (draggedNode == null) {
+                if (change.isConsumed) break
+                // The threshold is the platform's own, the same one a tap is judged against.
+                if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                  val node = currentHitTest.value(currentRootPoint.value(down.position))
+                  if (node == null) break
+                  draggedNode = node
+                  lastRoot = currentRootPoint.value(change.position)
+                  currentOnStarted.value(node, lastRoot ?: Offset.Zero)
+                  change.consume()
+                }
+              } else {
+                change.consume()
+                if (change.position != lastLocal) {
+                  lastLocal = change.position
+                  lastRoot = currentRootPoint.value(change.position)
+                  currentOnDragged.value(lastRoot ?: Offset.Zero)
+                }
+              }
+            } else {
+              if (draggedNode != null) {
+                change.consume()
+                currentOnEnded.value(lastRoot)
+              }
+              break
+            }
+          }
+        } catch (cancelled: CancellationException) {
+          if (draggedNode != null) currentOnEnded.value(null)
+          throw cancelled
+        }
+      }
+    }
+  }
+}
+
+/**
  * Everything that can be done to the current selection, as menu rows.
  *
  * One list, three places: the layers tree's context menu, the canvas's, and the overflow beside the
@@ -3679,10 +3851,17 @@ private fun MenuShortcut(chord: String) {
  *
  * Icons for the six that every tool draws the same way, words for the two that no icon conveys —
  * wrapping a selection in a container, and taking it back out.
+ *
+ * The label is the selection's path, read root to leaf, when the selection is a single layer: each
+ * rung is a press away from being the selection, which is the question "which component is this,
+ * inside what" answered in the order the layers panel draws it. Multi-select keeps the count — a
+ * path is a fact about one layer, and a count about several.
  */
 @Composable
 private fun SelectionActionBar(
   selectionLabel: String,
+  breadcrumbs: List<UiBuilderBreadcrumbEntry>,
+  onBreadcrumbSelected: (String) -> Unit,
   onOpenProperties: (() -> Unit)?,
   /** The same rows the context menus carry; the bar holds no second copy of the verbs. */
   selectionMenu: @Composable (() -> Unit) -> Unit,
@@ -3699,14 +3878,20 @@ private fun SelectionActionBar(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-      Text(
-        selectionLabel,
-        Modifier.weight(1f),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
+      if (breadcrumbs.size >= 2) {
+        // Horizontally scrollable rather than elided: a deep path that loses its middle to an
+        // ellipsis loses the rungs the reader would have pressed. The verbs to the right stay put.
+        SelectionBreadcrumbs(breadcrumbs, onBreadcrumbSelected, Modifier.weight(1f))
+      } else {
+        Text(
+          selectionLabel,
+          Modifier.weight(1f),
+          style = MaterialTheme.typography.labelLarge,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
       if (onOpenProperties != null) {
         TextButton(
           onClick = onOpenProperties,
@@ -3730,6 +3915,76 @@ private fun SelectionActionBar(
     }
   }
 }
+
+/**
+ * The selection's path, read root to leaf, as pressable rungs.
+ *
+ * A rung carries the layer's name and, where saying it is information, the slot it sits in from the
+ * rung above — the same distinction the layers panel draws slot lines for. The leaf is the
+ * selection and is drawn selected rather than pressable-elsewhere; pressing an ancestor re-roots
+ * the selection there, which is the only verb a path can honestly offer.
+ */
+@Composable
+private fun SelectionBreadcrumbs(
+  entries: List<UiBuilderBreadcrumbEntry>,
+  onSelect: (String) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  Row(
+    modifier.horizontalScroll(rememberScrollState()),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(2.dp),
+  ) {
+    entries.forEachIndexed { index, entry ->
+      if (index > 0) {
+        // A glyph rather than an icon: the separator is punctuation, not a control, and the code
+        // the toolbar's own labels already spell this way.
+        Text(
+          "›",
+          style = MaterialTheme.typography.labelLarge,
+          color = MaterialTheme.colorScheme.outline,
+        )
+        entry.inSlot?.let { slot ->
+          Text(
+            slot,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+            maxLines = 1,
+          )
+          Text(
+            "›",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.outline,
+          )
+        }
+      }
+      val selected = index == entries.lastIndex
+      Text(
+        entry.label,
+        Modifier
+          // A crumb is text with a press, not a button: the affordance is the chevron between
+          // rungs, and a filled chip per rung would turn a path into a row of pills.
+          .clip(RoundedCornerShape(6.dp))
+          .clickable(enabled = !selected) { onSelect(entry.nodeId) }
+          .padding(horizontal = 4.dp, vertical = 2.dp),
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        color =
+          if (selected) MaterialTheme.colorScheme.primary
+          else MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+  }
+}
+
+/** What the status bar and the host hear about a drag: the slot, and the seam inside it. */
+private fun dropPlanLabel(plan: UiBuilderDropPlan?): String =
+  when (plan) {
+    null -> "No compatible slot"
+    else -> "${plan.target.nodeId}.${plan.target.slot} · position ${plan.index + 1}"
+  }
 
 /**
  * The line under the canvas: what the document is at, where a drag would land, and the session.
@@ -4262,6 +4517,8 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
     "Shift + click a layer" to "Extend the selection to that layer",
     "Drag a layer row" to "Drop it on the layer or the slot it should join",
     "Drag a catalog component" to "Insert it where it is dropped",
+    "Drag a node on the canvas" to "Move it into the slot and seam it is dropped at",
+    "Click a rung above the canvas" to "Select that layer — the path is a way back up",
   )
 
 /**
@@ -4878,15 +5135,36 @@ internal fun PinnedDesignCanvas(
   onCanvasMetrics: (Int, Int, Float) -> Unit,
   onCanvasBounds: (Rect) -> Unit,
   dropHovered: Boolean,
-  /** The exact slot under the dragged pointer, or null outside a compatible target. */
-  dropTarget: ParentSlot? = null,
-  /** The same generated document the palette thumbnail draws, carried beside the pointer. */
+  /**
+   * Where the drag hovering over the canvas would land, or null while no legal slot is under the
+   * pointer. Both a palette drag and a canvas move resolve one, and the marker is drawn from it.
+   */
+  dropPlan: UiBuilderDropPlan? = null,
+  /**
+   * The dragged component carried beside the pointer, at the size it would land — a ghost of the
+   * component itself, not of the thumbnail frame it was pictured in.
+   */
   dragPreview: UiBuilderDocument? = null,
   /** The published Remote Compose capture carried while its document bytes are still remote. */
   dragPreviewBitmap: ImageBitmap? = null,
+  /** The subtree a canvas move is carrying, at the size it would land. */
+  moveDragPreview: UiBuilderDocument? = null,
+  /** What the ghost names when no picture of the dragged component can be drawn. */
+  dragGhostLabel: String? = null,
   /** Pointer position in the editor root coordinate space. */
   dragPosition: Offset? = null,
   showSelectionOverlay: Boolean,
+  /**
+   * Whether the canvas move gesture is on. The editor wires the handlers below; a canvas composed
+   * without them — the tests, the read-only panes — must not let a press-and-hold eat a scroll.
+   */
+  moveDragEnabled: Boolean = false,
+  /** A press-and-hold that becomes a drag of the node under the pointer. */
+  onNodeDragStarted: (String, Offset) -> Unit = { _, _ -> },
+  /** Positions while a canvas move is in flight, in the editor root coordinate space. */
+  onNodeDragged: (Offset) -> Unit = {},
+  /** The pointer position a move lands at, or null when the drag was cancelled. */
+  onNodeDragEnded: (Offset?) -> Unit = {},
   reference: ReferenceOverlayState,
   onMarkDrawn: (ReferenceMarkupKind, List<Float>) -> Unit,
   onPieceMoved: (String, Float, Float) -> Unit,
@@ -5033,37 +5311,71 @@ internal fun PinnedDesignCanvas(
               // while no menu is open.
               var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
               CanvasExtentLayout(
-                Modifier.fillMaxSize().onSecondaryClick(document.id) { position ->
-                  if (!showSelectionOverlay) return@onSecondaryClick
-                  // The inspection reports each box in root pixels, which is the space this press
-                  // has to be asked in: the frame is offset in the workspace and its own pixels
-                  // reach the screen through [drawScale].
-                  val point =
-                    Offset(
-                      frameBounds.left + position.x * drawScale,
-                      frameBounds.top + position.y * drawScale,
-                    )
-                  // The design already reports every node's box, which is what the presence
-                  // overlay and the catalog drop both hit-test against. Smallest box wins: the
-                  // deepest node containing the point is the one under the pointer.
-                  val hit =
-                    inspection
-                      ?.nodes
-                      .orEmpty()
-                      .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-                      .filter { (_, bounds) ->
-                        point.x >= bounds.x &&
-                          point.x <= bounds.x + bounds.width &&
-                          point.y >= bounds.y &&
-                          point.y <= bounds.y + bounds.height
-                      }
-                      .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-                      ?.first
-                  if (hit != null) {
-                    if (hit != selectedNodeId) onNodeSelected(hit)
-                    menuAt = position
+                Modifier.fillMaxSize()
+                  .canvasNodeDrag(
+                    key = document.id,
+                    enabled = moveDragEnabled && showSelectionOverlay,
+                    // The frame's own pixels reach the screen through [drawScale]; a press arrives
+                    // in the frame's space, so the same conversion the secondary click and the
+                    // drop hit-test use answers for this gesture too.
+                    rootPoint = { position ->
+                      Offset(
+                        frameBounds.left + position.x * drawScale,
+                        frameBounds.top + position.y * drawScale,
+                      )
+                    },
+                    // The design already reports every node's box; the smallest containing one is
+                    // the deepest node under the point — the same answer the tap and the context
+                    // menu give, so a drag picks up exactly what a click would have selected.
+                    hitTest = { point ->
+                      inspection
+                        ?.nodes
+                        .orEmpty()
+                        .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                        .filter { (_, bounds) ->
+                          point.x >= bounds.x &&
+                            point.x <= bounds.right &&
+                            point.y >= bounds.y &&
+                            point.y <= bounds.bottom
+                        }
+                        .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                        ?.first
+                    },
+                    onStarted = onNodeDragStarted,
+                    onDragged = onNodeDragged,
+                    onEnded = onNodeDragEnded,
+                  )
+                  .onSecondaryClick(document.id) { position ->
+                    if (!showSelectionOverlay) return@onSecondaryClick
+                    // The inspection reports each box in root pixels, which is the space this press
+                    // has to be asked in: the frame is offset in the workspace and its own pixels
+                    // reach the screen through [drawScale].
+                    val point =
+                      Offset(
+                        frameBounds.left + position.x * drawScale,
+                        frameBounds.top + position.y * drawScale,
+                      )
+                    // The design already reports every node's box, which is what the presence
+                    // overlay and the catalog drop both hit-test against. Smallest box wins: the
+                    // deepest node containing the point is the one under the pointer.
+                    val hit =
+                      inspection
+                        ?.nodes
+                        .orEmpty()
+                        .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                        .filter { (_, bounds) ->
+                          point.x >= bounds.x &&
+                            point.x <= bounds.x + bounds.width &&
+                            point.y >= bounds.y &&
+                            point.y <= bounds.y + bounds.height
+                        }
+                        .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                        ?.first
+                    if (hit != null) {
+                      if (hit != selectedNodeId) onNodeSelected(hit)
+                      menuAt = position
+                    }
                   }
-                }
               ) {
                 Box {
                   DropdownMenu(
@@ -5096,8 +5408,7 @@ internal fun PinnedDesignCanvas(
                   onInspectionInvalidated = onInspectionInvalidated,
                 )
                 DropTargetOverlay(
-                  dropTarget = dropTarget,
-                  inspection = inspection,
+                  dropPlan = dropPlan,
                   frameBounds = frameBounds,
                   drawScale = drawScale,
                 )
@@ -5161,17 +5472,65 @@ internal fun PinnedDesignCanvas(
         hoverEditor()
       }
     }
-    if (dropHovered && dragPosition != null) {
+    if (dragPosition != null) {
+      // The ghost follows the pointer wherever it goes. Vanishing over an illegal region would
+      // answer "can it land here" twice — once with the marker, once by taking the preview away —
+      // and only one of those answers says anything.
+      //
+      // Keyed on the drag itself, not on the document: consecutive drags of different things must
+      // not inherit each other's measurement, or the first frame of the second drag would anchor
+      // on the first drag's content.
+      var ghostContentBounds by
+        remember(document.id, dragPosition == null) { mutableStateOf<UiBuilderPixelBounds?>(null) }
+      // Capped by the slot under the pointer, in the ghost's own pixels: a component that will
+      // fill its landing slot is drawn filling it while still in the air. The conversion is the
+      // design's density, which the ghost deliberately does not carry — see [dragGhostDocument].
+      val landing = dropPlan?.bounds
+      val ghostConstraints = landing?.let {
+        Modifier.sizeIn(
+          maxWidth = with(density) { (it.width / densityRatio).toDp() },
+          maxHeight = with(density) { (it.height / densityRatio).toDp() },
+        )
+      }
+      // Anchored on the ghost's content, not its cell: the component itself rides under the
+      // pointer, the way the part rides under the cursor in every canvas tool. Until the ghost has
+      // been measured once it is drawn empty rather than one frame in the wrong place.
       val ghostModifier =
         Modifier.align(Alignment.TopStart)
           .offset(
-            x = with(density) { (dragPosition.x - workspaceBounds.left + 14f).toDp() },
-            y = with(density) { (dragPosition.y - workspaceBounds.top + 14f).toDp() },
+            x =
+              with(density) {
+                val anchorX = ghostContentBounds?.let { it.x + it.width / 2f } ?: 0f
+                (dragPosition.x - workspaceBounds.left - anchorX * scale).toDp()
+              },
+            y =
+              with(density) {
+                val anchorY = ghostContentBounds?.let { it.y + it.height / 2f } ?: 0f
+                (dragPosition.y - workspaceBounds.top - anchorY * scale).toDp()
+              },
           )
       when {
-        dragPreview != null -> DragPreviewGhost(document = dragPreview, modifier = ghostModifier)
+        moveDragPreview != null ->
+          DragLivePreviewGhost(
+            document = moveDragPreview,
+            scale = scale,
+            ghostConstraints = ghostConstraints,
+            hidden = ghostContentBounds == null,
+            onContentBounds = { ghostContentBounds = it },
+            modifier = ghostModifier,
+          )
+        dragPreview != null ->
+          DragLivePreviewGhost(
+            document = dragPreview,
+            scale = scale,
+            ghostConstraints = ghostConstraints,
+            hidden = ghostContentBounds == null,
+            onContentBounds = { ghostContentBounds = it },
+            modifier = ghostModifier,
+          )
         dragPreviewBitmap != null ->
           DragBitmapPreviewGhost(bitmap = dragPreviewBitmap, modifier = ghostModifier)
+        dragGhostLabel != null -> DragPlaceholderGhost(dragGhostLabel, ghostModifier)
       }
     }
     // Over the workspace rather than in the status bar, where every canvas tool puts it, and
@@ -5185,24 +5544,22 @@ internal fun PinnedDesignCanvas(
   }
 }
 
-/** The compatible slot the pointer will insert into, on the geometry the renderer reported. */
+/**
+ * Where a drag would land, drawn so the eye never has to ask.
+ *
+ * The slot it is entering is tinted, the way it always was; the seam between the children the drop
+ * lands between is drawn as a bar across the slot — the honest answer to "where in here", which a
+ * slot tint alone never gave. An empty slot has no seams, so it keeps the full highlight: its whole
+ * box is the landing region, and saying so is the highlight's job.
+ */
 @Composable
 private fun DropTargetOverlay(
-  dropTarget: ParentSlot?,
-  inspection: UiBuilderInspectionSnapshot?,
+  dropPlan: UiBuilderDropPlan?,
   frameBounds: Rect,
   drawScale: Float,
 ) {
-  val target = dropTarget ?: return
-  val slotBounds =
-    inspection
-      ?.slots
-      ?.firstOrNull { it.parentNodeId == target.nodeId && it.slotName == target.slot }
-      ?.bounds
-  // An empty slot has no child-union box yet. Its parent is the honest visible landing region;
-  // once it has children the tighter slot union wins.
-  val bounds =
-    slotBounds ?: inspection?.nodes?.firstOrNull { it.nodeId == target.nodeId }?.bounds ?: return
+  val plan = dropPlan ?: return
+  val bounds = plan.bounds
   val local =
     UiBuilderPixelBounds(
       x = (bounds.x - frameBounds.left) / drawScale,
@@ -5212,45 +5569,146 @@ private fun DropTargetOverlay(
     )
   val color = MaterialTheme.colorScheme.primary
   Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
+    // The seam is the message; the tint is the container it sits in. Dimmer than it used to be,
+    // so the two read as background and figure rather than as two boxes.
     drawRect(
-      color = color.copy(alpha = 0.16f),
+      color = color.copy(alpha = 0.10f),
       topLeft = Offset(local.x, local.y),
       size = Size(local.width, local.height),
     )
+    if (plan.children.isEmpty()) {
+      drawRect(
+        color = color,
+        topLeft = Offset(local.x, local.y),
+        size = Size(local.width, local.height),
+        style = Stroke(width = 4f),
+      )
+      return@Canvas
+    }
     drawRect(
-      color = color,
+      color = color.copy(alpha = 0.55f),
       topLeft = Offset(local.x, local.y),
       size = Size(local.width, local.height),
-      style = Stroke(width = 4f),
+      style = Stroke(width = 2f),
     )
+    val before = plan.children.getOrNull(plan.index - 1)?.second
+    val after = plan.children.getOrNull(plan.index)?.second
+    if (plan.axis == UiBuilderDropAxis.Horizontal) {
+      val seamX =
+        when {
+          before != null && after != null -> (before.right + after.x) / 2f
+          before != null -> before.right
+          after != null -> after.x
+          else -> bounds.x
+        }
+      val x = (seamX - frameBounds.left) / drawScale
+      drawLine(
+        color = color.copy(alpha = 0.25f),
+        start = Offset(x, local.y),
+        end = Offset(x, local.y + local.height),
+        strokeWidth = 10f,
+        cap = StrokeCap.Round,
+      )
+      drawLine(
+        color = color,
+        start = Offset(x, local.y),
+        end = Offset(x, local.y + local.height),
+        strokeWidth = 3.5f,
+        cap = StrokeCap.Round,
+      )
+    } else {
+      val seamY =
+        when {
+          before != null && after != null -> (before.bottom + after.y) / 2f
+          before != null -> before.bottom
+          after != null -> after.y
+          else -> bounds.y
+        }
+      val y = (seamY - frameBounds.top) / drawScale
+      drawLine(
+        color = color.copy(alpha = 0.25f),
+        start = Offset(local.x, y),
+        end = Offset(local.x + local.width, y),
+        strokeWidth = 10f,
+        cap = StrokeCap.Round,
+      )
+      drawLine(
+        color = color,
+        start = Offset(local.x, y),
+        end = Offset(local.x + local.width, y),
+        strokeWidth = 3.5f,
+        cap = StrokeCap.Round,
+      )
+    }
   }
 }
 
-/** A translucent live rendering of the component travelling with a catalog drag. */
+/**
+ * The dragged thing itself, travelling with the pointer at the size it would land.
+ *
+ * The ghost used to be a 88x66 stamp of the thumbnail frame — a picture of a picture, half the size
+ * of what would land. This renders the component (or, for a canvas move, the subtree being carried)
+ * into an unconstrained cell, scales it by the canvas zoom so one of its dp lands as one of the
+ * design's dp, and caps it by the landing slot so a component that will fill that slot is drawn
+ * filling it while still in the air.
+ *
+ * [onContentBounds] reports where the document's root drew inside the surface, so the canvas can
+ * anchor the **content** on the pointer rather than the cell around it — and until the first
+ * measurement lands the ghost is drawn empty rather than one frame in the wrong place.
+ */
 @Composable
-private fun DragPreviewGhost(document: UiBuilderDocument, modifier: Modifier = Modifier) {
-  val width = 88.dp
-  val height = 66.dp
-  val scale = width.value / PREVIEW_FRAME_WIDTH_DP
+private fun DragLivePreviewGhost(
+  document: UiBuilderDocument,
+  scale: Float,
+  ghostConstraints: Modifier?,
+  hidden: Boolean,
+  onContentBounds: (UiBuilderPixelBounds?) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val rootId = document.roots.firstOrNull() ?: return
+  Box(modifier) {
+    Box(
+      (ghostConstraints ?: Modifier)
+        .alpha(if (hidden) 0f else 0.92f)
+        .graphicsLayer {
+          scaleX = scale
+          scaleY = scale
+          transformOrigin = TransformOrigin(0f, 0f)
+        }
+        // A picture of a Switch is not a Switch — the same rule the palette row keeps.
+        .clearAndSetSemantics {}
+    ) {
+      UiBuilderSurface(
+        document = document,
+        editorOverlay = false,
+        // The same answer the editing surface gives: a list in the air is drawn unrolled, which
+        // is what will land on the extent — not a clipped scroll nobody is dropping.
+        unrolled = true,
+        onInspectionSnapshot = { snapshot ->
+          onContentBounds(snapshot.nodes.firstOrNull { it.nodeId == rootId }?.bounds)
+        },
+      )
+    }
+  }
+}
+
+/** The named chip that stands in where no picture of the dragged component can be drawn. */
+@Composable
+private fun DragPlaceholderGhost(label: String, modifier: Modifier = Modifier) {
   Surface(
-    modifier.size(width, height).alpha(0.88f),
+    modifier.alpha(0.92f),
     shape = RoundedCornerShape(8.dp),
     color = MaterialTheme.colorScheme.surfaceContainerHighest,
     border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
     tonalElevation = 6.dp,
   ) {
-    Box(Modifier.clipToBounds(), contentAlignment = Alignment.Center) {
-      Box(
-        Modifier.requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
-          .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-          }
-          .clearAndSetSemantics {}
-      ) {
-        UiBuilderSurface(document = document, editorOverlay = false)
-      }
-    }
+    Text(
+      label,
+      Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+      style = MaterialTheme.typography.labelMedium,
+      color = MaterialTheme.colorScheme.onSurface,
+      maxLines = 1,
+    )
   }
 }
 
