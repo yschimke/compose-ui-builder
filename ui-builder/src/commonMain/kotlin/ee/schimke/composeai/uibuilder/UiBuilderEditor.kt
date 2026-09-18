@@ -4,6 +4,7 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -118,6 +119,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -947,6 +949,11 @@ fun UiBuilderEditor(
     selectedThreadId = threadId
     onSelectedThreadChanged?.invoke(threadId)
   }
+  // The canvas's current scroll offset, reported by the canvas so a follow-up can reconcile the
+  // drag hit-test with the scroll — see the auto-scroll: the inspection's boxes and the drawn
+  // pointer do not currently agree once the workspace has scrolled, which predates this change.
+  var canvasScroll by remember(document.id) { mutableStateOf(Offset.Zero) }
+
   fun canvasDropPlan(componentId: String, position: Offset): UiBuilderDropPlan? {
     if (!canvasBounds.contains(position)) return null
     return canvasInspection?.let { snapshot ->
@@ -1360,6 +1367,7 @@ fun UiBuilderEditor(
       moveDragPreview = moveDragGhostPreview,
       dragGhostLabel = dragGhostLabel,
       dragPosition = catalogDragPosition,
+      onCanvasScroll = { canvasScroll = it },
       showSelectionOverlay = showSelectionOverlay,
       moveDragEnabled = true,
       onNodeDragStarted = { nodeId, position ->
@@ -3987,6 +3995,38 @@ private fun dropPlanLabel(plan: UiBuilderDropPlan?): String =
   }
 
 /**
+ * The step this frame's auto-scroll should take for a pointer at [offsetInView], or zero.
+ *
+ * The band is an edge zone, not a line: the deeper the pointer is into it, the faster the scroll,
+ * so reaching for the edge slows into the stop rather than jumping. Direction is the edge's — the
+ * start edge scrolls back, the end edge scrolls on — and an edge with nothing left to give scrolls
+ * nothing, which is what lets the frame-step loop above stop instead of spinning.
+ */
+private fun edgeAutoScrollDelta(
+  offsetInView: Float,
+  viewSize: Float,
+  band: Float,
+  maxStep: Float,
+  scroll: ScrollState,
+): Float {
+  if (maxStep <= 0f) return 0f
+  val strength =
+    when {
+      offsetInView < band -> -1f + offsetInView / band
+      offsetInView > viewSize - band -> (offsetInView - (viewSize - band)) / band
+      else -> return 0f
+    }
+  val remaining =
+    if (strength < 0f) scroll.value.toFloat() else (scroll.maxValue - scroll.value).toFloat()
+  if (remaining <= 0f) return 0f
+  return (strength * maxStep).coerceIn(-remaining, remaining)
+}
+
+/** How close to a workspace edge a drag begins to scroll, and how fast it scrolls there. */
+private val DRAG_AUTO_SCROLL_BAND_DP = 56f
+private val DRAG_AUTO_SCROLL_SPEED_DP = 720f
+
+/**
  * The line under the canvas: what the document is at, where a drag would land, and the session.
  *
  * Every one of these was in the top bar, competing with controls. None of them is a control — they
@@ -5153,6 +5193,11 @@ internal fun PinnedDesignCanvas(
   dragGhostLabel: String? = null,
   /** Pointer position in the editor root coordinate space. */
   dragPosition: Offset? = null,
+  /**
+   * The workspace's current scroll offset, reported so the drag hit-test can read the pointer in
+   * the same (unshifted) layout space the inspection's node boxes answer in.
+   */
+  onCanvasScroll: (Offset) -> Unit = {},
   showSelectionOverlay: Boolean,
   /**
    * Whether the canvas move gesture is on. The editor wires the handlers below; a canvas composed
@@ -5259,6 +5304,47 @@ internal fun PinnedDesignCanvas(
     var workspaceBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
+    // While a drag is in the air, the pointer near an edge scrolls the workspace under it.
+    //
+    // A long design's lower slots are off-screen, and without this the only way to reach them was
+    // to let go, scroll, and start the drag again — which the seam marker made more painful, not
+    // less, since the plan it promised is lost on the way. The effect restarts on every pointer
+    // move (so a moving drag re-arms continuously) and runs one frame-step at a time until the
+    // pointer is out of the band or the edge has nothing left to give, which is also what keeps
+    // the test clock idle once the content is exhausted.
+    val currentDragPosition = rememberUpdatedState(dragPosition)
+    val currentWorkspaceBounds = rememberUpdatedState(workspaceBounds)
+    // The scroll offset, reported upward: the inspection's node boxes are in the content's own
+    // (unshifted) layout space, while a pointer arrives in the drawn space the scroll shifted, and
+    // the resolver that answers "what is under the pointer" needs both in one space. Scrolling
+    // does not re-fire position callbacks — it translates a layer — so this is the one place the
+    // two spaces can be reconciled from.
+    LaunchedEffect(horizontalScrollState.value, verticalScrollState.value) {
+      onCanvasScroll(
+        Offset(horizontalScrollState.value.toFloat(), verticalScrollState.value.toFloat())
+      )
+    }
+    LaunchedEffect(dragPosition) {
+      if (dragPosition == null) return@LaunchedEffect
+      val band = with(density) { DRAG_AUTO_SCROLL_BAND_DP.dp.toPx() }
+      val speed = with(density) { DRAG_AUTO_SCROLL_SPEED_DP.dp.toPx() }
+      var lastNanos = withFrameNanos { it }
+      while (true) {
+        val nanos = withFrameNanos { it }
+        val seconds = ((nanos - lastNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
+        lastNanos = nanos
+        val pointer = currentDragPosition.value ?: break
+        val box = currentWorkspaceBounds.value
+        val step = seconds * speed
+        val dx =
+          edgeAutoScrollDelta(pointer.x - box.left, box.width, band, step, horizontalScrollState)
+        val dy =
+          edgeAutoScrollDelta(pointer.y - box.top, box.height, band, step, verticalScrollState)
+        if (dx == 0f && dy == 0f) break
+        if (dx != 0f) horizontalScrollState.dispatchRawDelta(dx)
+        if (dy != 0f) verticalScrollState.dispatchRawDelta(dy)
+      }
+    }
     Box(
       Modifier.fillMaxSize()
         .onGloballyPositioned { workspaceBounds = it.boundsInRoot() }
