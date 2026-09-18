@@ -137,6 +137,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
@@ -1414,6 +1415,10 @@ fun UiBuilderEditor(
       moveDragPreview = moveDragGhostPreview,
       dragGhostLabel = dragGhostLabel,
       dragPosition = catalogDragPosition,
+      moveOrigin =
+        draggedNodeId?.let { id ->
+          canvasInspection?.nodes?.firstOrNull { node -> node.nodeId == id }?.bounds
+        },
       onCanvasScroll = { canvasScroll = it },
       onWorkspaceBounds = { canvasWorkspaceBounds = it },
       showSelectionOverlay = showSelectionOverlay,
@@ -5241,6 +5246,11 @@ internal fun PinnedDesignCanvas(
   dragGhostLabel: String? = null,
   /** Pointer position in the editor root coordinate space. */
   dragPosition: Offset? = null,
+  /**
+   * Where the node a canvas move picked up still sits, in root pixels — drawn as a dashed outline
+   * so the original and the ghost are two things the eye can tell apart.
+   */
+  moveOrigin: UiBuilderPixelBounds? = null,
   /** The canvas pane's own box — the workspace a beside-drop's empty ground is measured against. */
   onWorkspaceBounds: (Rect) -> Unit = {},
   /**
@@ -5551,6 +5561,11 @@ internal fun PinnedDesignCanvas(
                   frameBounds = frameBounds,
                   drawScale = drawScale,
                 )
+                MoveOriginOverlay(
+                  moveOrigin = moveOrigin,
+                  frameBounds = frameBounds,
+                  drawScale = drawScale,
+                )
                 // Over the document and under the collaborators: the reference is being compared
                 // against
                 // what the document draws, so it goes on top of that; another person's selection is
@@ -5779,6 +5794,37 @@ private fun DropTargetOverlay(
         cap = StrokeCap.Round,
       )
     }
+  }
+}
+
+/**
+ * Where the node a canvas move picked up still sits, dashed.
+ *
+ * A carried button and its own ghost are two pictures of the same thing; without this outline the
+ * eye has to work out which one follows the pointer. It is drawn for as long as the move is in
+ * flight and vanishes with it — the origin is the one place the drop cannot land, because the
+ * release there is the no-op it should be.
+ */
+@Composable
+private fun MoveOriginOverlay(
+  moveOrigin: UiBuilderPixelBounds?,
+  frameBounds: Rect,
+  drawScale: Float,
+) {
+  val bounds = moveOrigin ?: return
+  val color = MaterialTheme.colorScheme.primary
+  Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
+    drawRect(
+      color = color.copy(alpha = 0.6f),
+      topLeft =
+        Offset((bounds.x - frameBounds.left) / drawScale, (bounds.y - frameBounds.top) / drawScale),
+      size = Size(bounds.width / drawScale, bounds.height / drawScale),
+      style =
+        Stroke(
+          width = 2.5f,
+          pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f),
+        ),
+    )
   }
 }
 
