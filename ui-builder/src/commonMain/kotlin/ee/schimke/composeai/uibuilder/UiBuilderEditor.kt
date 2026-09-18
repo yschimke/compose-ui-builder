@@ -864,6 +864,10 @@ fun UiBuilderEditor(
   var draggedNodeId by remember { mutableStateOf<String?>(null) }
   var draggedRemoteThumbnail by remember { mutableStateOf<ImageBitmap?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
+  // The canvas pane's own rectangle — the workspace, not the design. It is what tells an
+  // empty-ground drop apart from a drop on another pane: the pointer over the pane but not over
+  // the design is the beside gesture's ground.
+  var canvasWorkspaceBounds by remember { mutableStateOf(Rect.Zero) }
   // The scale the design is pinned at, or null while it is framed to the workspace. Local rather
   // than in [UiBuilderEditorState] for the same reason the open panels are: how far somebody has
   // zoomed in is a fact about their window, not about the design, and an authoritative snapshot
@@ -992,6 +996,23 @@ fun UiBuilderEditor(
   }
   val draggedPlan = draggedCatalogPlan ?: draggedMovePlan
   val canvasDropHovered = draggedPlan != null
+  // Over the workspace but not over the design: the beside ground. The status bar names what a
+  // release there would do — the panel's own add-beside, or the reason it would refuse — because
+  // a gesture that acts on release must say so while the pointer is still down.
+  val draggingOverBesideGround =
+    draggedComponentId != null &&
+      draggedPlan == null &&
+      catalogDragPosition?.let { position ->
+        canvasWorkspaceBounds.contains(position) && !canvasBounds.contains(position)
+      } == true
+  val dropTargetLabel =
+    when {
+      draggedPlan != null -> dropPlanLabel(draggedPlan)
+      draggingOverBesideGround ->
+        reducer.besideRefusal(state, draggedComponentId ?: "")?.let { "Won't land here: $it" }
+          ?: "Release to add beside the design"
+      else -> "No compatible slot"
+    }
   /**
    * One editor event, and the one place a pinned revision stops being editable.
    *
@@ -1080,11 +1101,8 @@ fun UiBuilderEditor(
   }
   LaunchedEffect(state) { onStateChanged(state) }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
-  LaunchedEffect(canvasDropHovered, draggedPlan) {
-    onDropTargetChanged(
-      canvasDropHovered,
-      dropPlanLabel(draggedPlan),
-    )
+  LaunchedEffect(canvasDropHovered, draggedPlan, draggingOverBesideGround, dropTargetLabel) {
+    onDropTargetChanged(canvasDropHovered || draggingOverBesideGround, dropTargetLabel)
   }
   // Cached for the same reason as the issues scan further down, at a smaller scale: the filter
   // lowercases and scans four strings for every node in the document, and the panel recomposes far
@@ -1220,6 +1238,23 @@ fun UiBuilderEditor(
             )
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
           }
+            ?: run {
+              // Empty ground: the pointer is over the workspace but not over the design. That is a
+              // place nothing can be inserted *into*, and the honest answer to a drop there is the
+              // panel's own "add beside" — a top-level item on the board — rather than nothing. A
+              // design that cannot take one (a Wear screen is exported as itself) says so instead
+              // of
+              // swallowing the gesture.
+              if (canvasWorkspaceBounds.contains(position) && !canvasBounds.contains(position)) {
+                val refusal = reducer.besideRefusal(state, componentId)
+                if (refusal == null) {
+                  dispatch(UiBuilderEditorEvent.InsertComponentBeside(componentId, variant))
+                  if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+                } else {
+                  say(refusal)
+                }
+              }
+            }
           draggedComponentId = null
           draggedComponentVariant = null
           draggedRemoteThumbnail = null
@@ -1284,6 +1319,18 @@ fun UiBuilderEditor(
           val target = canvasDropPlan(REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID, position)?.target
           if (target != null && pendingRemoteSource == null) {
             pendingRemoteTarget = target
+            pendingRemoteSource = source
+            if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
+          } else if (
+            target == null &&
+              pendingRemoteSource == null &&
+              canvasWorkspaceBounds.contains(position) &&
+              !canvasBounds.contains(position) &&
+              reducer.besideRefusal(state, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID) == null
+          ) {
+            // The same empty-ground answer the catalog drop gives: a played document is exactly
+            // the kind of asset a board holds, and the pointer said "not inside anything".
+            pendingRemoteTarget = null
             pendingRemoteSource = source
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
           }
@@ -1368,6 +1415,7 @@ fun UiBuilderEditor(
       dragGhostLabel = dragGhostLabel,
       dragPosition = catalogDragPosition,
       onCanvasScroll = { canvasScroll = it },
+      onWorkspaceBounds = { canvasWorkspaceBounds = it },
       showSelectionOverlay = showSelectionOverlay,
       moveDragEnabled = true,
       onNodeDragStarted = { nodeId, position ->
@@ -2078,7 +2126,7 @@ fun UiBuilderEditor(
                   CanvasStatusBar(
                     state = state,
                     sessionLabel = sessionLabel,
-                    dropTargetLabel = dropPlanLabel(draggedPlan),
+                    dropTargetLabel = dropTargetLabel,
                     dragging = draggedComponentId != null || draggedNodeId != null,
                   )
                 }
@@ -5193,6 +5241,8 @@ internal fun PinnedDesignCanvas(
   dragGhostLabel: String? = null,
   /** Pointer position in the editor root coordinate space. */
   dragPosition: Offset? = null,
+  /** The canvas pane's own box — the workspace a beside-drop's empty ground is measured against. */
+  onWorkspaceBounds: (Rect) -> Unit = {},
   /**
    * The workspace's current scroll offset, reported so the drag hit-test can read the pointer in
    * the same (unshifted) layout space the inspection's node boxes answer in.
@@ -5347,7 +5397,10 @@ internal fun PinnedDesignCanvas(
     }
     Box(
       Modifier.fillMaxSize()
-        .onGloballyPositioned { workspaceBounds = it.boundsInRoot() }
+        .onGloballyPositioned {
+          workspaceBounds = it.boundsInRoot()
+          onWorkspaceBounds(workspaceBounds)
+        }
         .horizontalScroll(horizontalScrollState)
         .verticalScroll(verticalScrollState)
     ) {
