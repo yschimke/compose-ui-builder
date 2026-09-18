@@ -43,16 +43,18 @@ class CanvasDropPlanTest {
   /**
    * The slot geometry the tests read: a scaffold above, a column in its content, and a box with one
    * child inside the column. The content and the column deliberately do not share their union's
-   * area — a tie would make the smallest-slot answer depend on map order.
+   * area — a tie would make the smallest-slot answer depend on map order — and the column's
+   * children are narrower than the column, leaving a sparse strip the container rule must answer
+   * for.
    */
   private val nodeBounds =
     bounds(
       "plan-scaffold" to Rect(0f, 0f, 300f, 300f),
       "plan-column" to Rect(10f, 20f, 290f, 280f),
-      "plan-a" to Rect(10f, 20f, 290f, 100f),
+      "plan-a" to Rect(10f, 20f, 150f, 100f),
       "plan-box" to Rect(10f, 100f, 290f, 200f),
       "plan-n1" to Rect(20f, 110f, 280f, 190f),
-      "plan-c" to Rect(10f, 200f, 290f, 280f),
+      "plan-c" to Rect(10f, 200f, 150f, 280f),
     )
 
   private val slots =
@@ -81,6 +83,19 @@ class CanvasDropPlanTest {
     // Past the last child's centre: appended.
     assertEquals(3, dropPlan(150f, 250f)?.index)
     assertEquals("plan-c", dropPlan(150f, 250f)?.afterNodeId)
+  }
+
+  @Test
+  fun `a sparse single-slot container is hit anywhere in itself`() {
+    // plan-column holds three children in its left half; the point is in the right half — inside
+    // the container, outside every child. The drop is into the column, at the seam the pointer's
+    // own coordinate picks.
+    val plan = dropPlan(250f, 250f)
+
+    assertEquals("plan-column", plan?.target?.nodeId)
+    assertEquals(Rect(10f, 20f, 290f, 280f).toPixelBounds(), plan?.bounds)
+    assertEquals(3, plan?.index)
+    assertEquals("plan-c", plan?.afterNodeId)
   }
 
   @Test

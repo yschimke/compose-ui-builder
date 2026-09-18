@@ -272,9 +272,9 @@ data class UiBuilderDropPlan(
    */
   val index: Int,
   /**
-   * The slot's landing bounds in root pixels: the child union where the slot has one, the parent
-   * node's bounds where it does not — the same region [UiBuilderSlotInspection] reports and the
-   * same one the empty-slot fallback below falls back to.
+   * The slot's landing bounds in root pixels: the container the slot fills, or the child union
+   * where several slots share the container and the unions are what tell them apart — the parent
+   * node's bounds where nothing has been measured yet.
    */
   val bounds: UiBuilderPixelBounds,
   /** The slot's children with their measured bounds, ordered along [axis]. */
@@ -4004,6 +4004,13 @@ class UiBuilderEditorReducer(
    * Containment is asked first and legality second, the cheaper question first: a document's
    * declared slots outnumber the two or three under any one pointer many times over, and the canvas
    * re-asks this on every move of a drag.
+   *
+   * A slot's region is the container it fills, not the union of the children it happens to have: a
+   * column holding one short line leaves the rest of itself empty, and a drop into that emptiness
+   * is a drop into the column — that is what "into this container" means to the hand holding the
+   * pointer. A parent that declares several slots keeps the child union, because there the unions
+   * are what tell its slots apart (a Scaffold's app bar and its content have no boxes of their own
+   * to report), and an unmaterialized slot falls back to its parent's box as it always has.
    */
   private fun dropSlotUnderPoint(
     state: UiBuilderEditorState,
@@ -4017,13 +4024,18 @@ class UiBuilderEditorReducer(
     return state.document.nodes.values
       .flatMap { parent ->
         val capability = catalog.componentsById[parent.componentId] ?: return@flatMap emptyList()
+        val container = nodeBounds[parent.id]
         capability.slots.mapNotNull { declared ->
           val target = ParentSlot(parent.id, declared.name)
           val children = parent.slots[declared.name].orEmpty()
+          val union = inspectedSlots[parent.id to declared.name]?.bounds
           val bounds =
-            inspectedSlots[parent.id to declared.name]?.bounds
-              ?: nodeBounds[parent.id]?.takeIf { children.isEmpty() }
-              ?: return@mapNotNull null
+            when {
+              capability.slots.size == 1 -> container ?: union ?: return@mapNotNull null
+              union != null -> union
+              children.isEmpty() -> container ?: return@mapNotNull null
+              else -> return@mapNotNull null
+            }
           if (
             pointX < bounds.x ||
               pointX > bounds.right ||
@@ -4036,16 +4048,34 @@ class UiBuilderEditorReducer(
         }
       }
       .filter { (target, _) -> legal(target) }
-      .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+      .minWithOrNull(
+        compareBy(
+          { (_, bounds) -> bounds.width * bounds.height },
+          // Equal regions are one region nested in the other: the deeper slot is the more
+          // specific answer, and which candidate arrives first must not decide.
+          { (target, _) -> state.document.slotDepth(target.nodeId) },
+        )
+      )
+  }
+
+  /** How many ancestors [nodeId] has — the depth the equal-region tie-break prefers. */
+  private fun UiBuilderDocument.slotDepth(nodeId: String): Int {
+    var depth = 0
+    var current: String? = nodeId
+    val visited = mutableSetOf<String>()
+    while (current != null && visited.add(current)) {
+      depth += 1
+      current = location(current)?.nodeId
+    }
+    return depth
   }
 
   /**
-   * The seam of [target] the pointer sits against, as a place in the document.
-   *
-   * The slot's children are ordered along the axis the layout measured — pairwise disjoint along
-   * one coordinate with overlap along the other is a row or a column; anything tangled, and a slot
-   * with a single child, falls back to the slot's own shape. The pointer's coordinate along that
-   * axis picks the seam: before the first child whose centre is past it, after the last otherwise.
+   * The seam of [target] the pointer sits against, as a place in the document. The slot's children
+   * are ordered along the axis the layout measured — pairwise disjoint along one coordinate with
+   * overlap along the other is a row or a column; anything tangled, and a slot with a single child,
+   * falls back to the slot's own shape. The pointer's coordinate along that axis picks the seam:
+   * before the first child whose centre is past it, after the last otherwise.
    */
   private fun dropPlan(
     state: UiBuilderEditorState,
