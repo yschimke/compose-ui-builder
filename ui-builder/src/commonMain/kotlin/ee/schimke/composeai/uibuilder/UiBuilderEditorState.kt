@@ -13,6 +13,7 @@ import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -283,11 +284,23 @@ data class UiBuilderDropPlan(
 )
 
 /**
- * One rung of the selection's path from a root to the selected node.
+ * What [UiBuilderEditorEvent.Tidy] would do, before it is done.
  *
- * [label] follows the layer row's own rule — what the node says when it says anything, its
- * component otherwise — because a breadcrumb that renames a layer the panel has been calling
- * something else all session is a second name to keep in one's head.
+ * [operations] is the whole command — every property write and every modifier chain that moves a
+ * value onto the grid — and [changedValues] counts the authored numbers that move, which is the
+ * sentence the toolbar says when the press lands. Empty operations mean the grid already holds
+ * everything in scope, and the press should say that too rather than costing a revision.
+ */
+data class UiBuilderTidyPlan(
+  val operations: List<DesignOperation>,
+  val changedValues: Int,
+)
+
+/**
+ * One rung of the selection's path from a root to the selected node. [label] follows the layer
+ * row's own rule — what the node says when it says anything, its component otherwise — because a
+ * breadcrumb that renames a layer the panel has been calling something else all session is a second
+ * name to keep in one's head.
  *
  * [inSlot] names the slot of the rung above this one sits in, and only where saying it is
  * information: a parent that declares more than one slot, or a slot the catalog does not declare at
@@ -1093,6 +1106,12 @@ sealed interface UiBuilderEditorEvent {
 
   data object CopySelected : UiBuilderEditorEvent
 
+  /**
+   * Snap every authored dp value in scope — the selection's subtree, else the design — to the 4dp
+   * grid, as one command. See [UiBuilderEditorReducer.tidyPlan].
+   */
+  data object Tidy : UiBuilderEditorEvent
+
   data object CutSelected : UiBuilderEditorEvent
 
   /** Paste the clipboard into the selected node's first accepting slot, or beside it. */
@@ -1684,6 +1703,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.InsertRemoteComposeDocumentBeside ->
         insertRemoteComposeDocument(state, event.source, event.documentBase64, target = null)
       UiBuilderEditorEvent.CopySelected -> copySelected(state)
+      UiBuilderEditorEvent.Tidy -> tidy(state)
       UiBuilderEditorEvent.CutSelected -> cutSelected(state)
       UiBuilderEditorEvent.Paste -> paste(state)
       UiBuilderEditorEvent.Undo -> undo(state)
@@ -4070,6 +4090,34 @@ class UiBuilderEditorReducer(
     return depth
   }
 
+  /** The grid the tidy command snaps authored dp values to. */
+  private val TIDY_GRID_DP = 4
+
+  /**
+   * The literal with its dp value moved onto the grid, or null where there is nothing to move.
+   *
+   * Only a plain number moves: a binding has no value to snap, a colour and an enum are not
+   * lengths, and a value already on the grid is left exactly as it was written — including whether
+   * it was written as a whole number or a decimal, so the validator sees the shape it saw before.
+   */
+  private fun JsonObject.snappedDpLiteral(): JsonObject? {
+    val snapped = snappedDpNumber(get("value") ?: return null) ?: return null
+    return JsonObject(this + ("value" to snapped))
+  }
+
+  private fun snappedDpNumber(value: JsonElement): JsonElement? {
+    val primitive = value as? JsonPrimitive ?: return null
+    if (primitive.isString) return null
+    val number = primitive.doubleOrNull ?: return null
+    val snapped = (number / TIDY_GRID_DP).roundToInt() * TIDY_GRID_DP.toDouble()
+    if (snapped == number) return null
+    return if (primitive.content.contains('.') || primitive.content.contains('e')) {
+      JsonPrimitive(snapped)
+    } else {
+      JsonPrimitive(snapped.toInt())
+    }
+  }
+
   /**
    * The seam of [target] the pointer sits against, as a place in the document. The slot's children
    * are ordered along the axis the layout measured — pairwise disjoint along one coordinate with
@@ -4321,6 +4369,74 @@ class UiBuilderEditorReducer(
           literal("float", JsonPrimitive(settings.cornerRadiusDp)),
         )
     return state.apply(sequence, operations, selectionAfter = state.selectedNodeId)
+  }
+
+  /**
+   * Where [UiBuilderEditorEvent.Tidy] would move values onto the grid, and how many would move.
+   *
+   * Pure, so the toolbar can count the edits for its sentence before the command is built, and so
+   * the tests can pin the rule without a dispatch.
+   */
+  fun tidyPlan(state: UiBuilderEditorState): UiBuilderTidyPlan {
+    val document = state.document
+    // The selection's subtree when there is one — "tidy this card" means the card and everything
+    // in it — and the whole design otherwise.
+    val scope =
+      state.selectedNodeId?.let { selected -> document.subtreeOf(selected) } ?: document.nodes.keys
+    val operations = mutableListOf<DesignOperation>()
+    var changedValues = 0
+    scope.sorted().forEach { nodeId ->
+      val node = document.nodes[nodeId] ?: return@forEach
+      val capability = catalog.componentsById[node.componentId]
+      // Properties the catalog declares as a dp number. A value the catalog does not declare is
+      // not the editor's to move, and a value that is not a plain number — a binding, a colour, an
+      // enum — has no place on a grid.
+      capability
+        ?.properties
+        ?.filter { it.name.endsWith("Dp") }
+        ?.forEach { property ->
+          val current = node.properties[property.name] as? JsonObject ?: return@forEach
+          val snapped = current.snappedDpLiteral() ?: return@forEach
+          changedValues += 1
+          operations += DesignOperation.SetProperty(nodeId, property.name, snapped)
+        }
+      // The layout modifiers carry the other half of the authored numbers: a size's width and
+      // height, a padding's four edges, an offset's pair.
+      var modifiersChanged = false
+      val snappedModifiers =
+        JsonArray(
+          node.modifiers.map { modifier ->
+            if (modifier !is JsonObject) return@map modifier
+            var touched = 0
+            val rebuilt =
+              JsonObject(
+                modifier.mapValues { (field, value) ->
+                  if (!field.endsWith("Dp")) return@mapValues value
+                  val snapped = snappedDpNumber(value) ?: return@mapValues value
+                  if (snapped != value) touched += 1
+                  snapped
+                }
+              )
+            changedValues += touched
+            if (touched > 0) modifiersChanged = true
+            rebuilt
+          }
+        )
+      if (modifiersChanged) operations += DesignOperation.SetModifiers(nodeId, snappedModifiers)
+    }
+    return UiBuilderTidyPlan(operations, changedValues)
+  }
+
+  private fun tidy(state: UiBuilderEditorState): UiBuilderEditorState {
+    val plan = tidyPlan(state)
+    // Nothing off the grid, nothing to do: no operation, no revision, no undo step, and no
+    // collaborator watching an empty command arrive.
+    if (plan.operations.isEmpty()) return state
+    return state.apply(
+      state.operationSequence + 1,
+      plan.operations,
+      selectionAfter = state.selectedNodeId,
+    )
   }
 
   private fun deleteSelected(state: UiBuilderEditorState): UiBuilderEditorState {
