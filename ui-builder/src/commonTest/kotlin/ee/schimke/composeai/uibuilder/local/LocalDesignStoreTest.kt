@@ -30,9 +30,31 @@ class LocalDesignStoreTest {
 
     val listed = store.list()
 
-    assertEquals(listOf("newer", "older"), listed.map { it.designId })
+    assertEquals(listOf("newer", "older", "broken"), listed.map { it.designId })
     assertEquals("Local fixture", listed.first().title)
     assertTrue(listed.first().storedBytes > 0)
+  }
+
+  @Test
+  fun `a record that will not parse is listed as unreadable, and its delete still reaches it`() {
+    storage.write("${LocalDesignStore.DESIGN_KEY_PREFIX}broken", "{not json")
+    storage.write("${LocalDesignStore.DESIGN_KEY_PREFIX}worse key", "{not json")
+
+    val listed = store.list()
+
+    val broken = listed.filter { it.corrupted }
+    assertEquals(
+      listOf("broken", "worse key"),
+      broken.map { it.designId },
+      "sorted last: updatedAt 0",
+    )
+    assertEquals("(unreadable)", broken.single { it.designId == "broken" }.title)
+
+    // Listed is what makes it cleanable: the delete takes the key the row names, whatever shape it
+    // has -- the store never wrote `worse key`, so it was never held to the id shape either.
+    store.delete("broken")
+    store.delete("worse key")
+    assertTrue(store.list().isEmpty(), "the bytes are gone from the quota, not kept forever")
   }
 
   @Test

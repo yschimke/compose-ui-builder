@@ -10,6 +10,13 @@ data class LocalDesignSummary(
   val title: String,
   val updatedAtEpochMillis: Long,
   val storedBytes: Int,
+  /**
+   * True when the record under this id would not parse. The row is still listed — keyed by the id
+   * in its storage key, so [LocalDesignStore.delete] can reach it — because a record that is
+   * invisible is not cleaned up, it is kept: the bytes stay in this origin's quota forever, and the
+   * only thing that can free them is a delete nobody can name.
+   */
+  val corrupted: Boolean = false,
 )
 
 /**
@@ -33,9 +40,11 @@ class LocalDesignStore(
   /**
    * The designs this browser holds, newest first.
    *
-   * A record that will not parse is skipped rather than thrown on. It is somebody else's key in
-   * this origin's namespace, or one written by a builder newer than this page, and neither is a
-   * reason to refuse to list the designs that do parse.
+   * A record that will not parse is listed as [LocalDesignSummary.corrupted] rather than skipped:
+   * it may be somebody else's key in this origin's namespace or one written by a builder newer than
+   * this page, but it is under this store's prefix and holds this store's quota, and a delete is
+   * the only thing that can free it. Skipped entirely is the key whose remainder is empty, which is
+   * not a design under any reading.
    */
   fun list(): List<LocalDesignSummary> =
     storage
@@ -43,14 +52,27 @@ class LocalDesignStore(
       .filter { it.startsWith(DESIGN_KEY_PREFIX) }
       .mapNotNull { key ->
         val encoded = storage.read(key) ?: return@mapNotNull null
-        val record = decode(encoded) ?: return@mapNotNull null
-        LocalDesignSummary(
-          designId = record.designId,
-          catalogSystemId = record.catalogSystemId,
-          title = record.seed.title,
-          updatedAtEpochMillis = record.updatedAtEpochMillis,
-          storedBytes = encoded.length,
-        )
+        val record = decode(encoded)
+        if (record == null) {
+          val designId = key.removePrefix(DESIGN_KEY_PREFIX)
+          if (designId.isEmpty()) return@mapNotNull null
+          LocalDesignSummary(
+            designId = designId,
+            catalogSystemId = "",
+            title = "(unreadable)",
+            updatedAtEpochMillis = 0L,
+            storedBytes = encoded.length,
+            corrupted = true,
+          )
+        } else {
+          LocalDesignSummary(
+            designId = record.designId,
+            catalogSystemId = record.catalogSystemId,
+            title = record.seed.title,
+            updatedAtEpochMillis = record.updatedAtEpochMillis,
+            storedBytes = encoded.length,
+          )
+        }
       }
       .sortedWith(
         compareByDescending<LocalDesignSummary> { it.updatedAtEpochMillis }.thenBy { it.designId }
@@ -73,8 +95,16 @@ class LocalDesignStore(
   fun encodedSize(record: LocalDesignRecordV1): Int =
     json.encodeToString(LocalDesignRecordV1.serializer(), record).length
 
+  /**
+   * Removes the record stored under [designId].
+   *
+   * Deliberately without [designKey]'s shape check: the id may have come from a corrupted record's
+   * own key, which the store never wrote and so never held to the shape. Removing
+   * `DESIGN_KEY_PREFIX + id` can only ever remove a key under this store's prefix, which is this
+   * store's to remove whatever wrote it.
+   */
   fun delete(designId: String) {
-    storage.remove(designKey(designId))
+    storage.remove("$DESIGN_KEY_PREFIX$designId")
   }
 
   private fun decode(encoded: String): LocalDesignRecordV1? =
