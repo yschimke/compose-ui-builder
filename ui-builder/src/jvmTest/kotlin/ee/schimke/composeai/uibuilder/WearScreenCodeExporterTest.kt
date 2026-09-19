@@ -430,6 +430,84 @@ class WearScreenCodeExporterTest {
     )
   }
 
+  /**
+   * Three properties the generated screen reads and the canvas cannot, each of which was declared
+   * and honoured nowhere.
+   *
+   * `scrollIndicator` is the design's choice of chrome and the capture guard is not: the emitter
+   * always drew an indicator, so a design that turned it off still generated one. `stableKey` is
+   * the item's identity, which only the generated `item(key = …)` can carry — the canvas draws the
+   * extent as a Column, with no item identity to keep, which is the same division the mobile lane
+   * already makes. `maxLines` and `overflow` belong to the label rather than the header, because
+   * upstream's `ListHeader` takes a content lambda and the string is a `Text` inside it.
+   */
+  @Test
+  fun `the properties only the generated screen can honour are written`() {
+    val base = wearScreenUiBuilderDocument("activity", pin, environment)
+    val document =
+      base.copy(
+        nodes =
+          base.nodes +
+            ("wear-screen" to
+              base.nodes
+                .getValue("wear-screen")
+                .copy(
+                  properties =
+                    JsonObject(
+                      base.nodes.getValue("wear-screen").properties +
+                        ("scrollIndicator" to property("boolean", JsonPrimitive(false)))
+                    )
+                )) +
+            ("row-0" to
+              base.nodes
+                .getValue("row-0")
+                .copy(
+                  properties =
+                    JsonObject(
+                      base.nodes.getValue("row-0").properties +
+                        ("stableKey" to property("string", JsonPrimitive("session-1")))
+                    )
+                )) +
+            ("list-header" to
+              base.nodes
+                .getValue("list-header")
+                .copy(
+                  properties =
+                    JsonObject(
+                      base.nodes.getValue("list-header").properties +
+                        ("maxLines" to property("number", JsonPrimitive(1))) +
+                        ("overflow" to property("string", JsonPrimitive("ellipsis")))
+                    )
+                ))
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    write("WearPropertyScreen.kt", source)
+    assertTrue("scrollIndicator = null," in source, source)
+    assertTrue("ScrollIndicator(listState)" !in source, source)
+    assertTrue("item(key = \"session-1\") {" in source, source)
+    assertTrue("maxLines = 1," in source, source)
+    assertTrue("overflow = TextOverflow.Ellipsis," in source, source)
+    assertTrue("import androidx.compose.ui.text.style.TextOverflow" in source, source)
+  }
+
+  /** A design that says nothing keeps upstream's own answers. */
+  @Test
+  fun `an undeclared property leaves the generated screen at its default`() {
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(
+          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
+        )
+        .source
+
+    assertTrue("scrollIndicator = { if (!LocalScrollCaptureInProgress.current)" in source, source)
+    assertTrue("item(key = " !in source, source)
+    assertTrue("TextOverflow" !in source, source)
+  }
+
   private fun write(name: String, source: String) {
     val directory = Path.of("build", "generated-wear-screen-source")
     Files.createDirectories(directory)

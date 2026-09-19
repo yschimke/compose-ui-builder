@@ -2476,8 +2476,16 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         card
           .newBuilder()
           .also {
+            // Three of the mobile card's properties are dropped rather than inherited, because
+            // Wear's cards take none of them: `containerColor` (Wear colours a card through
+            // `CardDefaults.cardColors()`, not a raw colour), `elevationDp` (a Wear card has no
+            // elevation argument at all) and `shape` (Wear publishes ONE card shape —
+            // `CardDefaults.shape` — where Material 3 publishes three). Inheriting them declared a
+            // control an author could move that moved nothing, on either lane.
             it.properties =
-              card.properties.filterNot { it.name == "variant" } +
+              card.properties.filterNot {
+                it.name in setOf("variant", "containerColor", "elevationDp", "shape")
+              } +
                 PropertyCapabilityV1.Builder("variant", JsonPrimitive("string"))
                   .also {
                     it.allowedValues =

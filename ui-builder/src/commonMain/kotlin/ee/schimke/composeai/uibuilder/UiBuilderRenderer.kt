@@ -882,10 +882,25 @@ private fun RenderNode(
     // `WEAR_LIST_HEADER_HEIGHT_DP` with a centred `Text` at `WEAR_LIST_HEADER_SP`, which is the
     // hand-assembled replica `WearCanvasComponents`' KDoc explains the canvas no longer has to
     // keep: those two numbers were read off upstream and nothing in this build could check them.
-    "wear-m3/list-header" -> WearCanvasListHeader(node.string("text"), measured)
+    "wear-m3/list-header" ->
+      WearCanvasListHeader(
+        text = node.string("text"),
+        modifier = measured,
+        // The label's truncation, which upstream's `ListHeader` cannot take — it takes a content
+        // lambda — so it belongs on the `Text` inside. Both properties were declared and read by
+        // nobody, so a header a design clipped to one line drew as many as it wrapped to.
+        maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        overflow = node.textOverflow(),
+      )
     // Previously undrawn entirely — there is no Material 3 component to rename a Wear sub-header
     // to, so `google-home-wear`'s seven of these were dashed placeholders.
-    "wear-m3/list-sub-header" -> WearCanvasListSubHeader(node.string("text"), measured)
+    "wear-m3/list-sub-header" ->
+      WearCanvasListSubHeader(
+        text = node.string("text"),
+        modifier = measured,
+        maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        overflow = node.textOverflow(),
+      )
     "wear-m3/switch-button" ->
       WearCanvasSwitchButton(
         label = node.string("label"),
@@ -1082,6 +1097,10 @@ private fun RenderNode(
           itemCount = items.size,
           verticalSpacingDp = node.float("verticalSpacingDp", 4f),
           modifier = measured,
+          // `transformation` is the design's choice, and the canvas read it nowhere: the rows
+          // always
+          // carried the treatment here while the generated screen honoured the property.
+          transformation = node.string("transformation") != "none",
         ) { index, itemModifier ->
           child(items[index], itemModifier)
         }

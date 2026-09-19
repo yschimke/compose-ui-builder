@@ -467,28 +467,7 @@
                 {
                     "allowedValues": [],
                     "jsonType": "string",
-                    "name": "containerColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "shape",
-                    "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
                     "name": "stableKey",
-                    "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "elevationDp",
                     "notes": null,
                     "required": false
                 },
