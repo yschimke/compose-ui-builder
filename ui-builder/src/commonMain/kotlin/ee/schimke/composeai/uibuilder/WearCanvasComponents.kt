@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,7 @@ import androidx.wear.compose.material3.Slider
 import androidx.wear.compose.material3.SliderDefaults
 import androidx.wear.compose.material3.Stepper
 import androidx.wear.compose.material3.SuccessConfirmationDialogContent
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TextButton
@@ -189,9 +192,31 @@ internal fun WearCanvasTransformingLazyColumn(
     modifier = modifier.fillMaxWidth(),
     verticalArrangement = Arrangement.spacedBy(verticalSpacingDp.dp),
   ) {
-    items(itemCount) { index -> item(index, Modifier.fillMaxWidth().transformedHeight(this, spec)) }
+    items(itemCount) { index ->
+      // **Both halves of the transformation.** `transformedHeight` is the layout half — the row
+      // gets shorter as it approaches the bezel — and `SurfaceTransformation` is the drawing half:
+      // the scale and the fade, which the component applies to itself. Passing only the first is
+      // what made the canvas's Wear list look like a plain column of full-size rows while the
+      // generated screen beside it scaled and faded. The library's own components take the second
+      // as a parameter, so it travels to them by a local rather than by rewriting every call.
+      CompositionLocalProvider(
+        LocalWearSurfaceTransformation provides SurfaceTransformation(spec)
+      ) {
+        item(index, Modifier.fillMaxWidth().transformedHeight(this, spec))
+      }
+    }
   }
 }
+
+/**
+ * The row transformation the enclosing Wear list is applying, or null outside one.
+ *
+ * The canvas dispatches a component by id, so a component cannot be handed the transformation its
+ * parent would pass it in generated code. This is that argument, carried the way a
+ * `CompositionLocal` carries anything else the tree knows and the call site does not.
+ */
+internal val LocalWearSurfaceTransformation =
+  staticCompositionLocalOf<SurfaceTransformation?> { null }
 
 // ── The rest of the catalog
 // ───────────────────────────────────────────────────────────────────────
@@ -553,16 +578,55 @@ internal fun WearCanvasCard(
   modifier: Modifier = Modifier,
   content: @Composable () -> Unit,
 ) {
+  // **Both halves of the row transformation.** Outside a `TransformingLazyColumn` there is none and
+  // the library's own default applies — it is internal, so the honest way to leave it in place is
+  // not to pass the argument. Inside one, the list provides the real thing and it is passed here,
+  // which is what makes a card scale and fade as it approaches the bezel instead of only getting
+  // shorter.
+  val transformation = LocalWearSurfaceTransformation.current
   when (variant) {
     // The authored content is the card's TITLE, and the body slot is left empty. A `TitleCard` has
     // both and the catalog declares one, so this puts it in the slot that is the card's primary
     // line rather than under an empty heading.
-    "title" -> TitleCard(onClick = {}, title = { content() }, modifier = modifier) {}
+    "title" ->
+      if (transformation == null) {
+        TitleCard(onClick = {}, title = { content() }, modifier = modifier) {}
+      } else {
+        TitleCard(
+          onClick = {},
+          title = { content() },
+          modifier = modifier,
+          transformation = transformation,
+        ) {}
+      }
     // Same placement. `AppCard` also wants an app name, and the catalog declares no property for
     // one, so it is left empty rather than invented.
-    "app" -> AppCard(onClick = {}, appName = {}, title = { content() }, modifier = modifier) {}
-    "outlined" -> OutlinedCard(onClick = {}, modifier = modifier) { content() }
-    else -> Card(onClick = {}, modifier = modifier) { content() }
+    "app" ->
+      if (transformation == null) {
+        AppCard(onClick = {}, appName = {}, title = { content() }, modifier = modifier) {}
+      } else {
+        AppCard(
+          onClick = {},
+          appName = {},
+          title = { content() },
+          modifier = modifier,
+          transformation = transformation,
+        ) {}
+      }
+    "outlined" ->
+      if (transformation == null) {
+        OutlinedCard(onClick = {}, modifier = modifier) { content() }
+      } else {
+        OutlinedCard(onClick = {}, modifier = modifier, transformation = transformation) {
+          content()
+        }
+      }
+    else ->
+      if (transformation == null) {
+        Card(onClick = {}, modifier = modifier) { content() }
+      } else {
+        Card(onClick = {}, modifier = modifier, transformation = transformation) { content() }
+      }
   }
 }
 
@@ -575,11 +639,55 @@ internal fun WearCanvasButton(
   label: @Composable () -> Unit,
 ) {
   val slot: @Composable RowScope.() -> Unit = { label() }
+  val transformation = LocalWearSurfaceTransformation.current
   when (variant) {
     "filled-tonal" ->
-      FilledTonalButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
-    "outlined" -> OutlinedButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
-    "child" -> ChildButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
-    else -> Button(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+      if (transformation == null) {
+        FilledTonalButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+      } else {
+        FilledTonalButton(
+          onClick = {},
+          modifier = modifier,
+          enabled = enabled,
+          label = slot,
+          transformation = transformation,
+        )
+      }
+    "outlined" ->
+      if (transformation == null) {
+        OutlinedButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+      } else {
+        OutlinedButton(
+          onClick = {},
+          modifier = modifier,
+          enabled = enabled,
+          label = slot,
+          transformation = transformation,
+        )
+      }
+    "child" ->
+      if (transformation == null) {
+        ChildButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+      } else {
+        ChildButton(
+          onClick = {},
+          modifier = modifier,
+          enabled = enabled,
+          label = slot,
+          transformation = transformation,
+        )
+      }
+    else ->
+      if (transformation == null) {
+        Button(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+      } else {
+        Button(
+          onClick = {},
+          modifier = modifier,
+          enabled = enabled,
+          label = slot,
+          transformation = transformation,
+        )
+      }
   }
 }
