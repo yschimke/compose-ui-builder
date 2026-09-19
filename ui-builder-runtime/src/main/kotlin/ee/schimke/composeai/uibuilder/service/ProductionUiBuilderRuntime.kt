@@ -2424,15 +2424,14 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
    * `m3/card` on a Wear screen says the design holds a `androidx.compose.material3.Card` when
    * `WearScreenCodeExporter` has always written it out as a `TitleCard`.
    *
-   * So the id is Wear's and the drawing is borrowed, which is the same trade
-   * [wear-m3/screen-scaffold][wearM3Catalog] and `wear-m3/list-header` already make: the Wasm
-   * canvas cannot link `androidx.wear.compose:compose-material3` — it is an Android AAR — so it
-   * draws the nearest Material 3 shape and says so in `wasm.notes`, while the generated Kotlin
-   * names the real Wear composable.
+   * The rename came first and the drawing followed. These three ids are drawn by Wear Compose's own
+   * components now, out of the Compose Multiplatform build of the library the canvas links — so
+   * there is no borrow left in them at all, and [drawnAs] is what keeps the catalog's sentence and
+   * the renderer's branch saying the same thing.
    *
-   * What is *actually* borrowed after this is foundation only: `layout/box`, `layout/column`,
-   * `layout/row` and `asset/image` are `androidx.compose.foundation` and `androidx.compose.ui`,
-   * which both platforms share, so borrowing them claims nothing about Material at all.
+   * What is borrowed after this is foundation only: `layout/box`, `layout/column`, `layout/row` and
+   * `asset/image` are `androidx.compose.foundation` and `androidx.compose.ui`, which both platforms
+   * share, so borrowing them claims nothing about Material at all.
    */
   fun wearOwn(
     borrowedFrom: String,
@@ -2463,21 +2462,7 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         .build()
     }
 
-  val wearText =
-    wearOwn(
-      "m3/text",
-      "wear-m3/text",
-      "Text",
-      // The one borrow the port has NOT retired, and it says so rather than claiming Wear's `Text`:
-      // the renderer draws `androidx.compose.material3.Text` with `wearTextStyle` resolving Wear's
-      // role names against the canvas's theme. That theme is the mobile one, so Wear's roles arrive
-      // as sizes rather than as Wear's own typography — which is why the screen template pins a
-      // `fontSizeSp` on every label, and why swapping the composable without also providing Wear's
-      // type scale would change nothing but the claim.
-      "a Material 3 `Text` at Wear's role sizes, because the canvas's theme still carries the " +
-        "mobile type scale",
-      "`Text`",
-    )
+  val wearText = wearOwn("m3/text", "wear-m3/text", "Text", "Wear Compose's own `Text`", "`Text`")
   val wearCard =
     wearOwn("m3/card", "wear-m3/card", "Card", "Wear Compose's own `TitleCard`", "`TitleCard`")
       .let { card ->
