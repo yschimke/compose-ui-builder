@@ -1972,6 +1972,9 @@ fun UiBuilderEditor(
     // From the catalog for the same reason as the two lines above: which adapter draws a component
     // is the catalog's statement, not this build's. Empty for every catalog today.
     LocalUiBuilderCanvasAdapters provides catalog.canvasAdapterIds,
+    // And the frame, from the same place and for the same reason: which drawing frames a catalog's
+    // screens, and how much room its content gets inside that drawing, is the catalog's statement.
+    LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
     LocalUiBuilderPageDestinations provides pageDestinations.filter { it.designId != document.id },
     LocalUiBuilderNavigator provides onNavigatePage,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
@@ -6329,6 +6332,7 @@ private fun ConstrainedFramePane(
             LocalUiBuilderNativeOnly provides LocalUiBuilderNativeOnly.current,
             LocalUiBuilderCatalogComponentIds provides LocalUiBuilderCatalogComponentIds.current,
             LocalUiBuilderCanvasAdapters provides LocalUiBuilderCanvasAdapters.current,
+            LocalUiBuilderFrameGeometry provides LocalUiBuilderFrameGeometry.current,
             LocalWearWidgetHostShape provides LocalWearWidgetHostShape.current,
             LocalRemoteComposeDocuments provides LocalRemoteComposeDocuments.current,
             LocalUiBuilderAssetBitmaps provides LocalUiBuilderAssetBitmaps.current,

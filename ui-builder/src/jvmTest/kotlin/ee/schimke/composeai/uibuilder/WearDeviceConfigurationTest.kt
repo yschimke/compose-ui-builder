@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -16,6 +17,21 @@ import kotlinx.serialization.json.JsonPrimitive
  * a watch for yet, and a 411dp watch is a worse answer than the smallest real one.
  */
 class WearDeviceConfigurationTest {
+
+  /**
+   * The frame the Wear catalog declares, from the golden on the test classpath.
+   *
+   * Read rather than written: a test that restated the diameters would keep passing after the
+   * catalog changed them, which is the failure this reader exists to remove.
+   */
+  private val declaredFrame =
+    CapabilityCatalogParser.parse(
+        checkNotNull(javaClass.getResource("/wear-m3-capabilities-v1.json")) {
+            "missing the wear capability golden on the test resources path"
+          }
+          .readText()
+      )
+      .frameGeometry
 
   private fun document(widthDp: Int?, heightDp: Int? = widthDp): UiBuilderDocument =
     UiBuilderDocument(
@@ -39,7 +55,7 @@ class WearDeviceConfigurationTest {
   @Test
   fun `each round watch size is answered as itself`() {
     listOf(192, 204, 216, 227, 240).forEach { dp ->
-      val device = document(dp).wearDeviceConfiguration()
+      val device = document(dp).wearDeviceConfiguration(declaredFrame)
       assertEquals(dp, device.screenWidthDp, "screen width at ${dp}dp")
       // A round watch's screen is as tall as it is wide, and the port reads `screenHeightDp` for
       // its
@@ -50,14 +66,31 @@ class WearDeviceConfigurationTest {
   }
 
   @Test
-  fun `a frame that is not a watch falls back to the reference watch`() {
-    // A phone frame, a tablet frame, a nonsense frame and an absent one. `wearScreenWidthDp`'s
-    // rule,
-    // and the reason it exists: the components must be laid out against a real watch even when the
+  fun `a frame outside the declared range falls back to the smallest declared diameter`() {
+    // A phone frame, a tablet frame, a nonsense frame and an absent one, against a catalog that
+    // declares round watches: the components must be laid out against a real watch even when the
     // document has not picked one.
     listOf(411, 1280, 0, -1, null).forEach { dp ->
-      assertEquals(192, document(dp).wearDeviceConfiguration().screenWidthDp, "screen width at $dp")
+      assertEquals(
+        declaredFrame.contentPadding.first().screenDp,
+        document(dp).wearDeviceConfiguration(declaredFrame).screenWidthDp,
+        "screen width at $dp",
+      )
     }
+  }
+
+  @Test
+  fun `a catalog that declares no frame draws the frame the document names`() {
+    // The other half of the rule, and the reason it is the catalog's rather than this build's: with
+    // nothing declared there is no claim to fall back to, so the document's own frame stands. A
+    // builder that invented a diameter here would be answering a question the catalog never
+    // answered.
+    assertEquals(411, document(411).wearDeviceConfiguration().screenWidthDp)
+    assertEquals(1280, document(1280).wearDeviceConfiguration().screenWidthDp)
+    assertEquals(
+      UiBuilderFrameGeometry.REFERENCE_DIAMETER_DP,
+      document(null).wearDeviceConfiguration().screenWidthDp,
+    )
   }
 
   @Test

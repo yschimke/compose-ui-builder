@@ -43,42 +43,6 @@
     "frozen": null
   },
   {
-    "field": "frame.adapter",
-    "why": "The frozen catalog names no adapter: the server picks the Wear frame from `when (catalogSystemId)`, so the fact exists only as a branch and never as data. `frame/round-screen` is the adapter this build already ships and already draws this catalog with, which is what makes the move a transcription rather than a change. Reviewed against the renderer's own Wear branch.",
-    "policy": "frame/round-screen",
-    "frozen": null
-  },
-  {
-    "field": "frame.seedDevice",
-    "why": "The device a new design opens on, which the frozen catalog does not carry because the server picks the Wear frame from `when (catalogSystemId)` and never states a seed. Reviewed against two things that already agree on it rather than against the golden: `id:wearos_small_round` is the FIRST breakpoint in wear-m3-catalog's own `catalog.spec.json` (192dp), which is the documented default for this field, and it is the frame this build already opens a new Wear screen on — `UiBuilderTemplates` seeds the small-round canvas and `WearScreenCodeExporter.WEAR_PARITY_DEVICE` is the same id. So this states existing behaviour rather than choosing anything.",
-    "policy": "id:wearos_small_round",
-    "frozen": null
-  },
-  {
-    "field": "frame.geometry",
-    "why": "The measured contentPadding table, which the frozen catalog does not carry because the server holds these three numbers as transcribed constants in UiBuilderRenderer rather than in the catalog. They are the SAME three pairs, and the catalog's copy is the one written by a test — ScreenScaffoldContentPaddingTest composes a real ScreenScaffold at each round size and asserts the committed file equals its measurement, in both directions. So this is reviewed against a probe rather than against the golden, which is the stronger check of the two and the entire reason the block moved.",
-    "policy": {
-      "contentPadding": [
-        {
-          "screenDp": 192,
-          "horizontalDp": 10,
-          "verticalDp": 20
-        },
-        {
-          "screenDp": 227,
-          "horizontalDp": 12,
-          "verticalDp": 23
-        },
-        {
-          "screenDp": 240,
-          "horizontalDp": 13,
-          "verticalDp": 24
-        }
-      ]
-    },
-    "frozen": null
-  },
-  {
     "field": "componentMenu.components.wear-m3/button-group",
     "why": "Reshelved by wear-m3-catalog#455, and covered in principle by the `componentMenu.groupOrder` entry above: the frozen shelf name is from the taxonomy this repository invented, the policy's is the catalog's own `@file:CatalogGroup(name = …)`. Listed component by component anyway rather than waived at the `componentMenu.components` level, because a per-component entry pins BOTH values and so fails if this component is moved again or loses a field, where a blanket waiver would hide it. The record symbol is unchanged, which is what makes this a move rather than a substitution: `androidx.wear.compose.material3.ButtonGroupKt.ButtonGroup`.",
     "policy": {

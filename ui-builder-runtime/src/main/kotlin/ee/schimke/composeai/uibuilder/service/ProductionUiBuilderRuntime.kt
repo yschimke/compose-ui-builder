@@ -2908,6 +2908,43 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             // chooser, and offered no mobile pack — Wear Material 3 and Material 3 are not used
             // together, which is the rule this whole catalog is written around.
             (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("wear")) +
+            // The frame, which used to exist only as branches in the renderer: `wear-m3`'s screen
+            // root was special-cased by id, and the measured content padding was a constant there
+            // while the catalog's own `ui-builder.policy.json` declared it — the same three pairs,
+            // written by a test in that repository and by hand here. The catalog states it now and
+            // the renderer reads it, which is what makes the frame a catalog fact rather than a
+            // Wear fact. `wear-m3-differences.json` recorded the gap in three `frame.*` exemptions;
+            // they are gone, because both sides state this block.
+            ("frame" to
+              buildJsonObject {
+                put("adapter", JsonPrimitive("frame/round-screen"))
+                put("seedDevice", JsonPrimitive("id:wearos_small_round"))
+                putJsonObject("geometry") {
+                  put(
+                    "contentPadding",
+                    // `ScreenScaffoldContentPaddingTest` in wear-m3-catalog composes the real
+                    // `ScreenScaffold` at each round size and asserts its own policy file equals
+                    // the
+                    // measurement; these are that measurement.
+                    JsonArray(
+                      listOf(
+                          Triple(192, 10, 20),
+                          Triple(227, 12, 23),
+                          Triple(240, 13, 24),
+                        )
+                        .map { (screen, horizontal, vertical) ->
+                          JsonObject(
+                            mapOf(
+                              "screenDp" to JsonPrimitive(screen),
+                              "horizontalDp" to JsonPrimitive(horizontal),
+                              "verticalDp" to JsonPrimitive(vertical),
+                            )
+                          )
+                        }
+                    ),
+                  )
+                }
+              }) +
             ("previewSurfaces" to
               buildJsonObject {
                 putJsonObject("wasm") {
