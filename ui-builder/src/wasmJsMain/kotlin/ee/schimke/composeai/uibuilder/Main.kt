@@ -2714,7 +2714,7 @@ private fun navigateToNewDesign(
   )
 
 @JsFun(
-  """() => globalThis.open('https://github.com/yschimke/compose-preview-server/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
+  """() => globalThis.open('https://github.com/yschimke/compose-ui-builder/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
 )
 private external fun openUiBuilderGuide()
 
@@ -3318,8 +3318,7 @@ private fun takeDesignOffline(
   if (store.read(wire.id) != null) {
     return "this browser already holds a design called ${wire.id}"
   }
-  val document =
-    wire.toRendererDocument() ?: return "this design does not fit the editor's own document shape"
+  val document = wire.toRendererDocument()
   return try {
     store.write(
       localCheckoutRecord(

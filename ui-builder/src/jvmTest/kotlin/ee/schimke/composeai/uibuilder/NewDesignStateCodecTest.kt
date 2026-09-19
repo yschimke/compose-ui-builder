@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -72,6 +73,16 @@ class NewDesignStateCodecTest {
     assertEquals(JsonPrimitive(0L), NewDesignStateType.Number.parse("three"))
     assertEquals(JsonPrimitive(12L), NewDesignStateType.Number.parse(" 12 "))
     assertEquals(JsonPrimitive("  spaces kept  "), NewDesignStateType.Text.parse("  spaces kept  "))
+  }
+
+  @Test
+  fun `new design form refuses values the total codec would silently replace`() {
+    assertTrue(newDesignInitialValueValid(NewDesignStateType.Flag, ""))
+    assertTrue(newDesignInitialValueValid(NewDesignStateType.Flag, " true "))
+    assertFalse(newDesignInitialValueValid(NewDesignStateType.Flag, "yes"))
+    assertTrue(newDesignInitialValueValid(NewDesignStateType.Number, "-12"))
+    assertFalse(newDesignInitialValueValid(NewDesignStateType.Number, "three"))
+    assertTrue(newDesignInitialValueValid(NewDesignStateType.Text, "anything"))
   }
 
   @Test

@@ -590,26 +590,21 @@ class RemoteContentRecordFallbackTest {
    * Without a case and without a record the refusal is the one it always was, so nothing that has
    * neither changes.
    *
-   * The example was `remote-m3/remote-text` until that id gained a writer of its own: it is the
-   * *published* Remote Compose text component, and refusing it meant a saved `remote-m3` document
-   * refused in the code pane for a component its own catalog had offered. So the case arrived and
-   * this test broke — which is the right way round for a test whose subject is the *absence* of a
-   * case, and the id below is one nothing has a writer for.
+   * Use a deliberately nonexistent id rather than a real catalog component: real components can
+   * gain a writer or record as coverage improves, which would stop exercising this fallback.
    */
   @Test
   fun `a component with no case and no record is refused by name`() {
     val result =
       WearWidgetCodeExporter.export(
         widget(
-          mapOf("label" to UiBuilderNode(id = "label", componentId = "remote-m3/remote-checkbox")),
+          mapOf("label" to UiBuilderNode(id = "label", componentId = "remote-m3/no-record")),
           childId = "label",
         )
       )
     val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
     assertTrue(
-      refused.reasons.any {
-        "remote-m3/remote-checkbox" in it && "no Remote Compose counterpart" in it
-      },
+      refused.reasons.any { "remote-m3/no-record" in it && "no Remote Compose counterpart" in it },
       refused.reasons.toString(),
     )
   }

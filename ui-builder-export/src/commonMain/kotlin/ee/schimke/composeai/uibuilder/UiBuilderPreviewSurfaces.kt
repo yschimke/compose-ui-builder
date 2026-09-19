@@ -10,10 +10,12 @@ import kotlinx.serialization.json.jsonPrimitive
  * ## Why a catalog gets to say this at all
  *
  * The builder has two renderers and they are not interchangeable. The editor's canvas is Compose
- * Multiplatform for Wasm, and for `m3-catalog` it draws the same Material 3 the export names — the
- * canvas *is* the answer. For `wear-m3` it cannot be, and not for want of work:
- * `androidx.wear.compose:compose-material3` is an Android AAR, which a Wasm build can never link,
- * so every Wear component on that canvas is a Material 3 lookalike standing where a Wear one goes
+ * Multiplatform for Wasm, and for `m3-catalog` it can link Material 3 directly. Most components are
+ * therefore real, while the remaining component-level adapters are tracked separately in the
+ * fidelity audit; this catalog-level claim must not be read as proof that every component is real.
+ * For `wear-m3` it cannot be, and not for want of work: `androidx.wear.compose:compose-material3`
+ * is an Android AAR, which a Wasm build can never link, so every Wear component on that canvas is a
+ * Material 3 lookalike standing where a Wear one goes
  * ([`docs/design/UI_BUILDER_WEAR_SCREEN.md`](../../../../../../../docs/design/UI_BUILDER_WEAR_SCREEN.md)).
  * The honest picture comes from the **native lane**, which compiles the design's generated Kotlin
  * against a real Wear classpath and renders it on the Android/Robolectric daemon.

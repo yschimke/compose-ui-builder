@@ -30,7 +30,6 @@ import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.toUiBuilderDocument
-import java.net.URI
 import java.nio.file.Path
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.json.Json
@@ -153,15 +152,7 @@ private data class DesktopLaunchOptions(val remoteServer: String?) {
       require(args.size == 2 && args[0] == "--server") {
         "usage: Compose UI Builder [--server https://preview.coo.ee]"
       }
-      val server = args[1].trimEnd('/')
-      val uri = URI(server)
-      require(
-        uri.scheme == "https" ||
-          (uri.scheme == "http" && uri.host in setOf("localhost", "127.0.0.1", "::1"))
-      ) {
-        "the remote preview server must use https (http is allowed only on loopback)"
-      }
-      return DesktopLaunchOptions(server)
+      return DesktopLaunchOptions(validatedServerOrigin(args[1]).toString())
     }
   }
 }

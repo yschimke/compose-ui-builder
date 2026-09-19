@@ -1229,5 +1229,7 @@ the other's UI.
 
 The UI-builder tools keep their own named read/write/export capabilities, while the catalog tools
 beside them use cumulative `preview`/`live` scopes; both are checked per call, off the request the
-credential arrived on. [`design/CATALOG_MCP.md`](design/CATALOG_MCP.md) carries the whole surface
-and explains why this is one endpoint rather than the sidecar the product spec planned.
+credential arrived on. The host repository's
+[`design/CATALOG_MCP.md`](https://github.com/yschimke/compose-preview-server/blob/main/docs/design/CATALOG_MCP.md)
+carries the whole surface and explains why this is one endpoint rather than the sidecar the product
+spec planned.

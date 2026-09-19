@@ -14,6 +14,7 @@ import java.time.Duration
 import java.util.Base64
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -33,7 +34,7 @@ import org.jetbrains.skia.Image
  * server's device-grant page; the token never appears in a command line, URL, or persisted file.
  */
 internal class RemotePreviewClient(server: String) {
-  private val base = URI(server.trimEnd('/'))
+  private val base = validatedServerOrigin(server)
   private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build()
   private val json = Json { ignoreUnknownKeys = true }
   private var token: String? = null
@@ -55,7 +56,7 @@ internal class RemotePreviewClient(server: String) {
       }
     }
 
-  private fun authorizeIfNeeded() {
+  private suspend fun authorizeIfNeeded() {
     if (token != null) return
     val opened =
       postJson(
@@ -74,11 +75,17 @@ internal class RemotePreviewClient(server: String) {
     Desktop.getDesktop().browse(URI(approvalUrl))
     val deadline = System.nanoTime() + Duration.ofMinutes(10).toNanos()
     while (System.nanoTime() < deadline) {
-      Thread.sleep(retryAfterSeconds.coerceAtLeast(1) * 1000)
+      val remainingMillis = (deadline - System.nanoTime()).coerceAtLeast(0) / 1_000_000
+      val requestedMillis =
+        retryAfterSeconds.coerceAtLeast(1).let { seconds ->
+          if (seconds > Long.MAX_VALUE / 1_000) Long.MAX_VALUE else seconds * 1_000
+        }
+      delay(minOf(requestedMillis, remainingMillis))
+      if (System.nanoTime() >= deadline) break
       val poll =
         postJson(
-          URI(response.requiredString("pollUrl")),
-          """{"requestId":"$requestId","deviceSecret":"$deviceSecret","waitSeconds":30}""",
+          sameOriginTarget(base, URI(response.requiredString("pollUrl"))),
+          json.encodeToString(DevicePollRequest(requestId, deviceSecret)),
           authenticated = false,
         )
       require(poll.statusCode() in 200..299) { "preview server stopped the authentication request" }
@@ -200,10 +207,60 @@ internal class RemotePreviewClient(server: String) {
       ?: error("preview server authentication response has no positive $name")
 }
 
+internal fun validatedServerOrigin(server: String): URI {
+  val uri = URI(server.trimEnd('/'))
+  val scheme = uri.scheme?.lowercase()
+  require(
+    !uri.isOpaque &&
+      uri.host != null &&
+      uri.userInfo == null &&
+      uri.query == null &&
+      uri.fragment == null &&
+      (uri.path.isNullOrEmpty() || uri.path == "/") &&
+      (scheme == "https" ||
+        (scheme == "http" &&
+          uri.host.lowercase().removeSurrounding("[", "]") in
+            setOf("localhost", "127.0.0.1", "::1")))
+  ) {
+    "the remote preview server must be an https origin (http is allowed only on loopback)"
+  }
+  return URI(scheme, null, uri.host, uri.port, null, null, null)
+}
+
+internal fun sameOriginTarget(origin: URI, target: URI): URI {
+  val resolved = origin.resolve(target)
+  fun URI.effectivePort(): Int =
+    if (port >= 0) port
+    else
+      when (scheme?.lowercase()) {
+        "http" -> 80
+        "https" -> 443
+        else -> -1
+      }
+  require(
+    !resolved.isOpaque &&
+      resolved.userInfo == null &&
+      resolved.fragment == null &&
+      resolved.scheme.equals(origin.scheme, ignoreCase = true) &&
+      resolved.host.equals(origin.host, ignoreCase = true) &&
+      resolved.effectivePort() == origin.effectivePort()
+  ) {
+    "preview server authentication poll URL must be same-origin"
+  }
+  return resolved
+}
+
 @Serializable
 private data class NativePreviewResult(
   val imageBase64: String? = null,
   val compileError: String? = null,
+)
+
+@Serializable
+private data class DevicePollRequest(
+  val requestId: String,
+  val deviceSecret: String,
+  val waitSeconds: Int = 30,
 )
 
 @Serializable private data class NativePreviewRefusal(val reasons: List<String> = emptyList())
