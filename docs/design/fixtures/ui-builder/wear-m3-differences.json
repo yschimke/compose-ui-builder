@@ -37,31 +37,6 @@
     ]
   },
   {
-    "field": "previewSurfaces",
-    "why": "Prose only, and the load-bearing halves agree exactly: native is authoritative/android and wasm is approximate on both sides. What differs is the `reason` each states, and the catalog's is the one that should survive — the frozen text was written here, about a catalog this repository has never compiled, and says 'drawn by its nearest Material 3 lookalike' where the catalog can say which of its components actually claim an adapter and which fall back to a placeholder. That is a fact only the catalog holds. Pinned rather than waived by field name: both exact values are recorded, so if either side's fidelity or backend ever moves, this entry stops applying and the difference comes back — which is the whole reason previewSurfaces is compared at all rather than carried.",
-    "policy": {
-      "wasm": {
-        "fidelity": "approximate",
-        "reason": "The builder's canvas is Compose Multiplatform for Wasm, which cannot link an Android AAR and therefore cannot call Wear Compose Material 3 at all. It draws the screen frame from the measured geometry below, and every component as a placeholder or — where this catalog claims one — through a Material 3 adapter the builder already ships. It is a drawing aid; it is not what a watch shows."
-      },
-      "native": {
-        "fidelity": "authoritative",
-        "backend": "android",
-        "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric: the same lane that produces this catalog's stickers."
-      }
-    },
-    "frozen": {
-      "native": {
-        "backend": "android",
-        "fidelity": "authoritative"
-      },
-      "wasm": {
-        "fidelity": "approximate",
-        "reason": "The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an Android AAR, so every Wear component here is drawn by its nearest Material 3 lookalike. Author on it; do not read a size, a colour or a shape off it. The Android preview compiles this design's own generated Kotlin against real Wear Compose."
-      }
-    }
-  },
-  {
     "field": "platformLabel",
     "why": "The frozen catalog carries no platformLabel at all — the synthesised Wear catalog was never asked for one, and the builder derives a label from the platform word today. 'Wear' is what the catalog calls itself and what its own published sticker sheet is titled, so it is the string a person recognises. Nothing here can check it; this entry is somebody having read it.",
     "policy": "Wear",

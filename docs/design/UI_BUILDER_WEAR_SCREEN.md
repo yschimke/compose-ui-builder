@@ -159,10 +159,12 @@ The rule now:
   key named in a comment on the line to replace, which is what the mobile lane does and what the
   catalog's own `assetKey` notes have always promised.
 - **Anything Material is Wear's own id.** `wear-m3/text`, `wear-m3/card` and `wear-m3/button` join
-  `wear-m3/list-header` and the two containers. The canvas still draws the Material 3 lookalike —
-  [it has no Wear Compose to draw with](#the-hard-constraint-the-canvas-has-no-wear-compose) — but
-  the id, the notes and the generated Kotlin all name the Wear composable. Those three are also
-  where the lookalikes stop: renaming a borrow the canvas already drew is not the same act as
+  `wear-m3/list-header` and the two containers. The id, the notes and the generated Kotlin all name
+  the Wear composable — and, since the port landed, so does the drawing: `wear-m3/card` and
+  `wear-m3/button` are Wear Compose's own `TitleCard` and `Button` on the canvas, and only
+  `wear-m3/text` is still a Material 3 `Text`, for the type-scale reason
+  [the three ids](#what-this-leaves-the-three-ids-that-are-already-drawn-that-way) sets out. Renaming
+  a borrow the canvas already drew is not the same act as
   [assembling a component it never had](#the-line-a-component-is-never-faked-so-it-can-run-in-wasm).
 - **`m3/surface` and `m3/icon` are gone rather than renamed.** Wear publishes no `Surface`, and an
   icon key resolves to a vector through a table the export module cannot reach, so `wear-m3/icon`
@@ -179,16 +181,21 @@ what the design says it holds.
 ## The line: a component is never faked so it can run in Wasm
 
 > **Update.** The rule below still stands word for word. What changed is the sentence it ends on —
-> *"they arrive with the streaming preview or they do not arrive"* — because the streaming preview
-> arrived. `wear-m3` now declares its canvas **approximate** and the Android render lane
-> **authoritative**, and seventeen Wear components have joined the catalog *without* a Wasm
-> lookalike between them: the canvas gives each a named placeholder and the picture comes from real
-> Wear Compose on the Robolectric daemon. See
+> *"they arrive with the streaming preview or they do not arrive"* — because two things arrived. The
+> streaming preview came first: `wear-m3` declares its canvas **approximate** and the Android render
+> lane **authoritative**, and seventeen Wear components joined the catalog without a Wasm lookalike
+> between them, drawn as named placeholders with the picture coming from real Wear Compose on the
+> Robolectric daemon. Then the port arrived: the canvas draws those seventeen with Wear Compose
+> itself, through `ee.schimke.wearcmp:*` — the same library's source compiled for Compose
+> Multiplatform — so there is no placeholder and no lookalike left in this group. See
 > [The canvas is not the preview](#the-canvas-is-not-the-preview-and-now-says-so) and
 > [What the catalog offers now](#what-the-catalog-offers-now).
 
-The three ids above are the last of their kind *drawn as lookalikes*. `wear-m3/checkbox-button`,
-`wear-m3/switch-button` and `wear-m3/radio-button` were built, reviewed and
+The three ids above were the last of their kind *drawn as lookalikes*, and that is history rather
+than a current claim: `wear-m3/card` and `wear-m3/button` are Wear Compose's own on the canvas now,
+and `wear-m3/text` is the one borrow left, for a reason that is about the theme rather than about
+the library. `wear-m3/checkbox-button`, `wear-m3/switch-button` and `wear-m3/radio-button` were
+built, reviewed and
 [closed unmerged](https://github.com/yschimke/compose-preview-server/pull/395), and the reason is the
 rule this section states:
 
@@ -394,12 +401,24 @@ output and renders it for real ([the round trip](#the-round-trip-closes)).
 
 ### What this leaves the three ids that are already drawn that way
 
-`wear-m3/text`, `wear-m3/card` and `wear-m3/button` keep their lookalikes. Each is a rename of a
-borrow the canvas was drawing anyway, the whole mapping is three lines of one function
-(`wearScreenStandIn` in [`UiBuilderRenderer.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt)),
-and taking them out would leave a palette of containers with nothing to put in them. The cap is the
-point: `WearCanvasStandInTest` pins that mapping to exactly those three, so a fourth is a test
-somebody has to edit, in a change that has to argue with this section first.
+`wear-m3/card` and `wear-m3/button` are no longer drawn that way: the canvas calls Wear Compose's
+own `TitleCard` and `Button` through the port, so the borrow this section was written about is
+retired for both. What is left is `wear-m3/text`.
+
+**Text is the one borrow still standing, and the reason is the theme rather than the library.** The
+renderer draws `androidx.compose.material3.Text` with `wearTextStyle` resolving Wear's role names
+against the canvas's `MaterialTheme` — and that theme is the mobile one, so Wear's roles arrive as
+*sizes* (`wearTextStyle` maps fifteen role names onto the mobile scale) rather than as Wear's own
+typography. Swapping the composable for Wear's `Text` would change nothing on its own, because both
+read the same theme; what would change the picture is providing Wear's type scale on the canvas,
+which is a fidelity change with a visual diff rather than a rename. Until then the screen template
+pins a `fontSizeSp` on every label so the two agree, and the catalog's `wear-m3/text` note says
+exactly this rather than claiming Wear's `Text`.
+
+The mapping is three lines of one function (`wearTextStyle` in
+[`WearCanvasComponents.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearCanvasComponents.kt))
+and it is pinned by `WearTextComponentTest` — the rename table that used to be the other half
+(`wearScreenStandIn`) is deleted, so a fourth id cannot join it by being borrowed.
 
 ## The stadium is the scroll extent, and it is the real one
 
@@ -565,10 +584,11 @@ own content — takes no transformation because there is no scope to build one i
 generator forgot. This is also the answer to the question this repository could not check for itself
 while it carried no compiled Wear dependency.
 
-The content components are still Material 3's, borrowed. The type sizes and the card shape are set
-by the template to Wear's measured values, which is what makes this design match; another design
-built from the same components starts from the mobile defaults again. Real Wear content ids are the
-change that fixes that properly.
+The content components are Wear's own, drawn by Wear Compose through the port. The type sizes and
+the card shape are still set by the template — `fontSizeSp` on every label, because the canvas's
+theme carries the mobile type scale rather than Wear's — which is what makes this design match; a
+design built without those pins starts from the mobile sizes again. Providing Wear's type scale on
+the canvas is the change that removes the need for them.
 
 ## What the design generates
 
@@ -602,12 +622,15 @@ parameter when it declares one.
   `ScreenScaffold` takes a scroll state that has to agree with the list inside its content lambda,
   which `ScreenGenerator`'s call-site emitter cannot write from a record, so the whole-screen
   generator writes it instead.
-- **~~The content ids are Wear's, and the drawing is still borrowed.~~** Closed. Wear's text, card
-  and button are drawn by Wear Compose, and the rename table that mapped them onto Material 3 is
-  deleted. Text in particular was the borrow that looked harmless and was not: both libraries
-  publish the same fifteen type-scale role names, so a `titleMedium` resolved against the mobile
-  theme drew *a* title and not *this* one — a silently wrong size in the surface an author reads
-  sizes off.
+- **~~The content ids are Wear's, and the drawing is still borrowed.~~** Closed for card and
+  button, which are Wear Compose's own on the canvas; still true of **text**, and the entry is split
+  rather than marked closed wholesale because the two halves have different answers. Wear's `Text`
+  and a Material 3 `Text` resolve the same fifteen role names against whichever theme is installed,
+  and the canvas installs the mobile one — so a `titleMedium` here is the mobile face at Wear's
+  measured size, which is what the template's `fontSizeSp` pins compensate for. Swapping the
+  composable would change nothing; providing Wear's type scale on the canvas is the change, and it
+  is a fidelity change with a visual diff rather than a rename. The catalog's `wear-m3/text` note
+  says this rather than claiming Wear's `Text`.
 - **~~No Wear controls, and none are coming on the canvas.~~** Closed. This entry used to read "they
   arrive with the streaming preview or they do not arrive", on the premise the correction at the top
   of this document retires. Every control the catalog declares — `CheckboxButton`, `SwitchButton`,

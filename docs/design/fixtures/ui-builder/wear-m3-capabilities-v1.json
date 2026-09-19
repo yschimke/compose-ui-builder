@@ -90,7 +90,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp.",
+                "notes": "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose's own scaffold, and that is about the shape of the page rather than about the library: this pane draws the design's EXTENT — the long-screenshot form, with no viewport for a scroll state to be live in — and `ScreenScaffold` is a viewport. What it does claim is the geometry: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -161,7 +161,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "An untransformed stand-in must not claim structured SVG parity with the real list.",
+                "notes": "No structured SVG from this catalog's own record: `TransformingLazyColumn` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The extent's untransformed rows could not be claimed as the list's own layout in any case.",
                 "status": "unsupported"
             },
             "traits": [
@@ -173,7 +173,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it.",
+                "notes": "Drawn by Wear Compose's own `TransformingLazyColumn` in a bounded frame, where it scales and fades each row through the library's `transformedHeight` and its own `SurfaceTransformation`. At the extent it is a plain Column at the list's own spacing, which is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -429,7 +429,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Text`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
+                "notes": "Wear Material 3's `Text`. The canvas draws it with a Material 3 `Text` at Wear's role sizes, because the canvas's theme still carries the mobile type scale; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -547,7 +547,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `TitleCard`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
+                "notes": "Wear Material 3's `TitleCard`. The canvas draws it with Wear Compose's own `TitleCard`; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -655,7 +655,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Button`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
+                "notes": "Wear Material 3's `Button`. The canvas draws it with Wear Compose's own `Button`; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12121,7 +12121,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with Icon.",
+                "notes": "No structured SVG from this catalog's own record: `Icon` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12129,7 +12129,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Icon`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `Icon`. The canvas draws it with the canvas's own icon drawer, not Wear's `Icon` — an icon is a tinted vector on both platforms, and that drawer owns this build's key table, tint resolution and structured-path export; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12172,7 +12172,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with IconButton.",
+                "notes": "No structured SVG from this catalog's own record: `IconButton` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12181,7 +12181,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `IconButton`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `IconButton`. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12224,7 +12224,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with TextButton.",
+                "notes": "No structured SVG from this catalog's own record: `TextButton` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12233,7 +12233,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `TextButton`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `TextButton`. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12257,7 +12257,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with ListSubHeader.",
+                "notes": "No structured SVG from this catalog's own record: `ListSubHeader` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12266,7 +12266,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `ListSubHeader`. The second level of list heading, under `wear-m3/list-header`: smaller, start-aligned, and the one used to divide a long list into named runs. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `ListSubHeader`. The second level of list heading, under `wear-m3/list-header`: smaller, start-aligned, and the one used to divide a long list into named runs. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12307,7 +12307,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with CheckboxButton.",
+                "notes": "No structured SVG from this catalog's own record: `CheckboxButton` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12317,7 +12317,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `CheckboxButton`. A full-width labelled row with the checkbox at its end — not the mobile 20dp square, which is the whole reason `m3/checkbox` could never have been borrowed for it. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `CheckboxButton`. A full-width labelled row with the checkbox at its end — not the mobile 20dp square, which is the whole reason `m3/checkbox` could never have been borrowed for it. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12358,7 +12358,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with SwitchButton.",
+                "notes": "No structured SVG from this catalog's own record: `SwitchButton` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12368,7 +12368,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `SwitchButton`. The same labelled row as `wear-m3/checkbox-button`, with a switch as its control. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `SwitchButton`. The same labelled row as `wear-m3/checkbox-button`, with a switch as its control. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12409,7 +12409,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with RadioButton.",
+                "notes": "No structured SVG from this catalog's own record: `RadioButton` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12419,7 +12419,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `RadioButton`. The same labelled row again, with a radio control and single-choice semantics. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `RadioButton`. The same labelled row again, with a radio control and single-choice semantics. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12486,7 +12486,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with Slider.",
+                "notes": "No structured SVG from this catalog's own record: `Slider` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12495,7 +12495,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Slider`. Wear's slider is a row with a decrement and an increment button around the track, not a bare thumb on a line. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `Slider`. Wear's slider is a row with a decrement and an increment button around the track, not a bare thumb on a line. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12565,7 +12565,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with Stepper.",
+                "notes": "No structured SVG from this catalog's own record: `Stepper` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12573,7 +12573,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Stepper`. A full-screen control: increment and decrement buttons at the top and bottom of the round display with the current value between them. It is not a list row, which is why it carries `ScreenContent` rather than `ListItem`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `Stepper`. A full-screen control: increment and decrement buttons at the top and bottom of the round display with the current value between them. It is not a list row, which is why it carries `ScreenContent` rather than `ListItem`. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12622,7 +12622,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with CircularProgressIndicator.",
+                "notes": "No structured SVG from this catalog's own record: `CircularProgressIndicator` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12632,7 +12632,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `CircularProgressIndicator`. Wear publishes four, and which one you get is the `variant`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `CircularProgressIndicator`. Wear publishes four, and which one you get is the `variant`. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12674,7 +12674,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with EdgeButton.",
+                "notes": "No structured SVG from this catalog's own record: `EdgeButton` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12682,7 +12682,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `EdgeButton`. The button that hugs the bottom of a round screen. It belongs in the scaffold's `edgeButton` slot, where `ScreenScaffold` reveals it from the scroll state; it is a component of its own now rather than a `wear-m3/button` placed there, because `EdgeButton` is a different composable with a different shape and a size enum. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `EdgeButton`. The button that hugs the bottom of a round screen. It belongs in the scaffold's `edgeButton` slot, where `ScreenScaffold` reveals it from the scroll state; it is a component of its own now rather than a `wear-m3/button` placed there, because `EdgeButton` is a different composable with a different shape and a size enum. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12711,7 +12711,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with ButtonGroup.",
+                "notes": "No structured SVG from this catalog's own record: `ButtonGroup` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12720,7 +12720,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `ButtonGroup`. A row of buttons that share the width and grow the one being pressed. Its children are buttons; anything else has no `ButtonGroupScope` to be laid out in. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `ButtonGroup`. A row of buttons that share the width and grow the one being pressed. Its children are buttons; anything else has no `ButtonGroupScope` to be laid out in. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12798,7 +12798,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with AlertDialog.",
+                "notes": "No structured SVG from this catalog's own record: `AlertDialog` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12806,7 +12806,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `AlertDialog`. Wear's own, which is a full-screen scrolling dialog with its buttons on the bottom curve — not a card floating over a scrim. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `AlertDialog`. Wear's own, which is a full-screen scrolling dialog with its buttons on the bottom curve — not a card floating over a scrim. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12851,7 +12851,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with ConfirmationDialog.",
+                "notes": "No structured SVG from this catalog's own record: `ConfirmationDialog` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12859,7 +12859,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `ConfirmationDialog`. The brief full-screen acknowledgement Wear shows after an action and then dismisses. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `ConfirmationDialog`. The brief full-screen acknowledgement Wear shows after an action and then dismisses. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12893,7 +12893,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with OpenOnPhoneDialog.",
+                "notes": "No structured SVG from this catalog's own record: `OpenOnPhoneDialog` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12901,7 +12901,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `OpenOnPhoneDialog`. The one Wear surface with no mobile analogue at all: it tells the wearer the rest of this journey happens on their phone. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `OpenOnPhoneDialog`. The one Wear surface with no mobile analogue at all: it tells the wearer the rest of this journey happens on their phone. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12936,7 +12936,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with DatePicker.",
+                "notes": "No structured SVG from this catalog's own record: `DatePicker` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12944,7 +12944,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `DatePicker`. A full-screen three-column picker, driven by the rotary side button. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `DatePicker`. A full-screen three-column picker, driven by the rotary side button. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12979,7 +12979,7 @@
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",
-                "notes": "A placeholder on the canvas must not claim structured SVG parity with TimePicker.",
+                "notes": "No structured SVG from this catalog's own record: `TimePicker` has no per-component call site to walk — `WearScreenCodeExporter` writes the whole screen — so the lane has nothing to emit from. The canvas draws the component itself.",
                 "status": "unsupported"
             },
             "traits": [
@@ -12987,7 +12987,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `TimePicker`. The time counterpart of `wear-m3/date-picker`, and the same full-screen shape. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
+                "notes": "Wear Material 3's `TimePicker`. The time counterpart of `wear-m3/date-picker`, and the same full-screen shape. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -13571,11 +13571,12 @@
         "previewSurfaces": {
             "native": {
                 "backend": "android",
-                "fidelity": "authoritative"
+                "fidelity": "authoritative",
+                "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric: the same lane that produces this catalog's stickers."
             },
             "wasm": {
                 "fidelity": "approximate",
-                "reason": "The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an Android AAR, so every Wear component here is drawn by its nearest Material 3 lookalike. Author on it; do not read a size, a colour or a shape off it. The Android preview compiles this design's own generated Kotlin against real Wear Compose."
+                "reason": "The canvas draws this catalog's components with a Compose Multiplatform build of Wear Compose — the Android AAR has no browser variant — so each is the component itself rather than an impression of it. What is still the canvas's own: the screen frame (the extent has no viewport for a real scaffold), the unrolled list (a long screenshot turns the row transformation off), and the type scale, which is the mobile theme's. Author on it; check a size on the Android preview, which compiles this design's own generated Kotlin against the real AAR."
             }
         },
         "svgStatus": {

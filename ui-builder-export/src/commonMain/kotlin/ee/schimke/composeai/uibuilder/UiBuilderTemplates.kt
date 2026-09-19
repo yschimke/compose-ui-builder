@@ -732,16 +732,16 @@ fun wearScreenUiBuilderDocument(
         componentId = "layout/column",
         properties =
           JsonObject(mapOf("horizontalAlignment" to literal("enum", JsonPrimitive("start")))),
-        // Padding, so the row lands on the reference card's 64dp. A Wear `TitleCard` carries its
-        // own; a borrowed `m3/card` carries Material 3's, and the design is what makes up the
-        // difference rather than the renderer inventing a size for somebody's card.
-        modifiers =
-          JsonArray(
-            listOf(
-              modifier("fillMaxWidth"),
-              padding(WEAR_CARD_PADDING_DP, WEAR_CARD_TOP_PADDING_DP, WEAR_CARD_BOTTOM_PADDING_DP),
-            )
-          ),
+        // NO padding, and the absence is the point. This column used to carry a measured
+        // 12.2 / 9.7 / 14.7dp to make the row reach the reference card's 64dp, because the canvas
+        // drew `wear-m3/card` as a borrowed mobile Material 3 card, which has none of Wear's
+        // padding. Since the CMP port landed, `wear-m3/card` is the real Wear `TitleCard` and
+        // carries `CardDefaults.ContentPadding` (12dp on every edge) itself — so that compensation
+        // was applied on top of it and the row drew 82dp with its text 24.2dp in from the card
+        // edge, against the reference's 64dp and 12dp. Measured, not reasoned: with the padding
+        // removed the row is exactly 64dp and the title starts exactly 12dp in, which is what the
+        // kit's own render measures and what `WearScreenParityTest` now pins.
+        modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
         slots = mapOf("children" to listOf("row-$index-title", "row-$index-subtitle")),
       ),
       wearScreenText(
@@ -843,38 +843,29 @@ private const val WEAR_CARD_TITLE_SP = 14f
 
 private const val WEAR_CARD_SUBTITLE_SP = 13f
 
-private const val WEAR_LIST_HEADER_SP = 14.5f
+// `WEAR_LIST_HEADER_SP` (14.5f) stood here, and it is deleted rather than left unused.
+//
+// It was the label size for a padded `m3/text` faking `ListHeader`'s 48dp. `wear-m3/list-header` is
+// the real one now and carries its own height and type, so the constant stopped being read — the
+// renderer's copy went with the stand-in it belonged to, and this one stayed behind because nothing
+// fails when a private constant goes quiet. A dead number beside live ones is worse than dead code:
+// the next reader has to work out which of the three still matters.
 
-/**
- * Reference-measured, and asymmetric because the reference is.
- *
- * The row is 64dp, of which a borrowed card's own content is about 24dp short; the split is what
- * puts the title's glyphs at 87.5dp rather than 2.5dp lower, which is where an even split left
- * them. `padding` here is the design's, not the renderer's: a Wear `TitleCard` carries its own and
- * a Material 3 one carries Material 3's, so the design makes up the difference rather than the
- * canvas inventing a size for somebody else's card.
- */
-private const val WEAR_CARD_PADDING_DP = 12.2f
-
-private const val WEAR_CARD_TOP_PADDING_DP = 9.7f
-
-private const val WEAR_CARD_BOTTOM_PADDING_DP = 14.7f
-
-/** Reference-measured: the list header's item is 48dp, with its label sitting low in it. */
-private const val WEAR_LIST_HEADER_TOP_DP = 16f
-
-private const val WEAR_LIST_HEADER_BOTTOM_DP = 12f
-
-private fun padding(horizontalDp: Float, topDp: Float, bottomDp: Float): JsonObject =
-  JsonObject(
-    mapOf(
-      "type" to JsonPrimitive("padding"),
-      "startDp" to JsonPrimitive(horizontalDp),
-      "topDp" to JsonPrimitive(topDp),
-      "endDp" to JsonPrimitive(horizontalDp),
-      "bottomDp" to JsonPrimitive(bottomDp),
-    )
-  )
+// The row's own padding constants are GONE, and this note is what stops them coming back.
+//
+// `WEAR_CARD_PADDING_DP` (12.2), `WEAR_CARD_TOP_PADDING_DP` (9.7) and
+// `WEAR_CARD_BOTTOM_PADDING_DP` (14.7) sat on `row-N-lines` to bring a *borrowed* mobile Material 3
+// card up to the reference row's 64dp. `wear-m3/card` is the real Wear `TitleCard` now — it carries
+// `CardDefaults.ContentPadding`, 12dp on every edge, and is 64dp on its own — so the same numbers
+// made the canvas draw an 82dp row with its text 24.2dp in, while the generated Kotlin (which
+// collapses the column into `TitleCard(title = …, subtitle = …)`) drew the right thing. Canvas and
+// native disagreed by 18dp a row, in the direction the canvas was wrong.
+//
+// `WEAR_LIST_HEADER_TOP_DP` / `WEAR_LIST_HEADER_BOTTOM_DP` were the same story one component over:
+// they padded a `Text` faking `ListHeader`, and went unused the day `wear-m3/list-header` became
+// the
+// real one. Dead constants are how a compensation outlives its reason, so they are deleted rather
+// than left for the next reader to wonder about.
 
 private fun wearScreenText(
   id: String,
