@@ -15,6 +15,21 @@ Which rung you are on decides what you are allowed to conclude from what you see
 Read it left to right: fidelity goes up, and what you can *do* goes down. You author on rung 1,
 check on rung 2, and confirm on rung 3.
 
+## The workspace opens on authoring plus comparison
+
+Every design opens with **Visual editor** and **Preview**. Native is never opened implicitly, even
+for a catalog whose browser rendering is approximate: compiling through the host is an explicit,
+potentially expensive action, not a cost of opening a document.
+
+There is exactly **one editable view**. It is the Visual editor's direct, unrolled canvas. A preview
+frame is a read-only mirror; device, resolution, scheme, direction and font-scale variants belong
+there precisely so an edit never has an ambiguous target. Native is also a single read-only view: it
+confirms one selected frame at platform fidelity after the free preview has compared the variants.
+
+Wear widgets follow the same rule. Their editor uses the largest rectangular host so every widget
+node remains direct and selectable. Their Preview shows the three launcher hosts — **Pixel Watch**
+(round), **Samsung** (squircle), and **Rectangular** — while Native renders only the selected host.
+
 ## 1. The visual editor is the one that is allowed to lie
 
 This is the load-bearing asymmetry of the whole workspace, and it is deliberate rather than a gap.
@@ -106,8 +121,9 @@ catalog like `wear-m3`, rung 2 **cannot** be real, and the honest move is for th
 rather than for the pane to imply otherwise — which is exactly what
 [`UiBuilderPreviewSurfaces`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderPreviewSurfaces.kt)'s
 `wasm` claim is for. Where it reads `APPROXIMATE`, rungs 1 and 2 collapse into each other and rung 3
-is the only honest picture; the pane chooser and the preview pane's own caption both repeat the
-catalog's sentence about why.
+is the only honest picture. That does not make Native the default: the approximate browser view is
+still the direct editing surface and the free place to compare variants; the catalog's surface claim
+explains its limit where Native is chosen.
 
 ## 3. Native is real source on the real platform
 
@@ -141,7 +157,8 @@ Two consequences worth stating about the compiled modes:
   a click selects a layer instead.
 
 **Single frame**, because each one is a daemon: multiplying frames here multiplies JVMs, live seats
-and boot time. The device question was already answered a rung down, for free.
+and boot time. The frame is one the author chooses from the Preview's variants; the device question
+was already answered a rung down, for free.
 
 ## What the ladder buys you
 

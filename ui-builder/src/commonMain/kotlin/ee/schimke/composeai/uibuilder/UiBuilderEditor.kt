@@ -799,22 +799,15 @@ fun UiBuilderEditor(
             enabledPacks =
               initialEnabledPacks.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
             pinnedComponents = initialPinnedComponents,
-            // A catalog whose canvas is only a stand-in opens with the host's renderer beside it,
-            // where the host has one. Not a preference — on `wear-m3` the canvas draws Material 3
-            // lookalikes because a Wasm build cannot link `androidx.wear.compose:compose-material3`
-            // at all, so a Wasm-only workspace opens every Wear design on a picture of the wrong
-            // library. An explicit [initialPanes] from the host still wins: a host naming its panes
-            // is a host saying which surfaces it wants captured.
+            // Opening a design always gives its editable canvas a free browser preview beside it.
+            // Native compiles a whole design through the host and is therefore explicit-only — a
+            // document opening must not spend a render merely because its catalog's browser canvas
+            // is a stand-in. Widgets use the same policy; their preview additionally fans out over
+            // the launcher host shapes. An explicit [initialPanes] from the host still wins.
             panes =
-              if (
-                initialPanes == setOf(EditorPane.Editor) &&
-                  !catalog.previewSurfaces.wasm.fidelity.isAuthoritative &&
-                  onRequestNativeRender != null
-              ) {
-                setOf(EditorPane.Editor, EditorPane.Native)
-              } else {
-                initialPanes
-              },
+              if (initialPanes == setOf(EditorPane.Editor)) {
+                setOf(EditorPane.Editor, EditorPane.Preview)
+              } else initialPanes,
           )
       )
     }
@@ -1459,7 +1452,6 @@ fun UiBuilderEditor(
     DesignPreviewPane(
       document = state.document,
       variants = variantPanes,
-      canvasClaim = catalog.previewSurfaces.wasm,
       modifier = modifier,
     )
   }
@@ -6281,6 +6273,7 @@ private fun ConstrainedFramePane(
   densityRatio: Float,
   /** Distinct per pane, for the reason the function doc gives. */
   renderSessionId: String = FRAME_COMPANION_SESSION,
+  wearWidgetHostShape: WearWidgetHostShape? = null,
 ) {
   Box(Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)) {
     Surface(
@@ -6329,7 +6322,8 @@ private fun ConstrainedFramePane(
             LocalUiBuilderNativeOnly provides LocalUiBuilderNativeOnly.current,
             LocalUiBuilderCatalogComponentIds provides LocalUiBuilderCatalogComponentIds.current,
             LocalUiBuilderCanvasAdapters provides LocalUiBuilderCanvasAdapters.current,
-            LocalWearWidgetHostShape provides LocalWearWidgetHostShape.current,
+            LocalWearWidgetHostShape provides
+              (wearWidgetHostShape ?: LocalWearWidgetHostShape.current),
             LocalRemoteComposeDocuments provides LocalRemoteComposeDocuments.current,
             LocalUiBuilderAssetBitmaps provides LocalUiBuilderAssetBitmaps.current,
           ) {
@@ -6380,6 +6374,7 @@ private fun VariantPane(pane: UiBuilderVariantPane, scale: Float, hostDensity: D
       // Pixel Fold drawn at the watch's 2.0 would be the right box around the wrong measurements.
       densityRatio = pane.document.renderDensity(hostDensity).density / hostDensity.density,
       renderSessionId = pane.id,
+      wearWidgetHostShape = pane.wearWidgetHostShape,
     )
   }
 }
@@ -9302,8 +9297,6 @@ private fun DesignPreviewPane(
    * [UiBuilderDocument.variantPanes].
    */
   variants: List<UiBuilderVariantPane>,
-  /** What this catalog says its browser renderer is worth, said where somebody is reading it. */
-  canvasClaim: UiBuilderPreviewSurfaces.SurfaceClaim = UiBuilderPreviewSurfaces.DEFAULT.wasm,
   modifier: Modifier = Modifier,
 ) {
   val widthDp =
@@ -9315,24 +9308,19 @@ private fun DesignPreviewPane(
   // session id is distinct from the canvas's for the reason [UiBuilderVariantPane] gives: two
   // panes of one design are separated by the session, never by the document id.
   val panes =
-    listOf(
-      UiBuilderVariantPane(
-        id = "preview-design",
-        label = designFrameLabel(document, widthDp, heightDp),
-        widthDp = widthDp,
-        heightDp = heightDp,
-        document = document,
-      )
-    ) + variants
+    document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes)
+      ?: (listOf(
+        UiBuilderVariantPane(
+          id = "preview-design",
+          label = designFrameLabel(document, widthDp, heightDp),
+          widthDp = widthDp,
+          heightDp = heightDp,
+          document = document,
+        )
+      ) + variants)
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
-      Text(
-        if (canvasClaim.fidelity.isAuthoritative) "Preview · not editable"
-        else "Preview · not editable · ${canvasClaim.reason.ifEmpty { "stand-in components" }}",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-      )
-      BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
+      BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
         // One scale for the whole row, so two devices in it are drawn at the same ratio and are
         // actually comparable — picking a scale per frame would make a watch and a tablet look the
         // same size, which is the one thing this row exists to contradict.
