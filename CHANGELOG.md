@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.28.0](https://github.com/yschimke/compose-ui-builder/compare/v3.27.0...v3.28.0) (2026-09-19)
+
+
+### Features
+
+* **ui-builder:** a canvas move is a hold, not a hurried drag ([#29](https://github.com/yschimke/compose-ui-builder/issues/29)) ([11a00b3](https://github.com/yschimke/compose-ui-builder/commit/11a00b318be1752522f693344ebcba4e786d0b8e))
+* **ui-builder:** a drag at the workspace edge scrolls the design under it ([#19](https://github.com/yschimke/compose-ui-builder/issues/19)) ([4ff8cfb](https://github.com/yschimke/compose-ui-builder/commit/4ff8cfb961af5b89750be680ff6147670febca62))
+* **ui-builder:** a palette drop on the empty ground adds beside the design ([#20](https://github.com/yschimke/compose-ui-builder/issues/20)) ([75dcc84](https://github.com/yschimke/compose-ui-builder/commit/75dcc84130bde6c1fb12d8c84e3eeccc5b2301a5))
+* **ui-builder:** a slot is hit anywhere in the container it fills ([#24](https://github.com/yschimke/compose-ui-builder/issues/24)) ([918346a](https://github.com/yschimke/compose-ui-builder/commit/918346a215c140ae72faa02e1d05b352e44bdca7))
+* **ui-builder:** a tidy command that snaps authored dp values to the 4dp grid ([#27](https://github.com/yschimke/compose-ui-builder/issues/27)) ([13d1635](https://github.com/yschimke/compose-ui-builder/commit/13d1635cd899fdb83a875fda06e39ac05e5011db))
+* **ui-builder:** an empty recommended slot invites a drop, and stops inviting once filled ([#33](https://github.com/yschimke/compose-ui-builder/issues/33)) ([7cf5ecb](https://github.com/yschimke/compose-ui-builder/commit/7cf5ecbbcc3b8502bfed930ab77d2a038e70cbda))
+* **ui-builder:** land drags at the seam they show, and breadcrumb the selection ([#16](https://github.com/yschimke/compose-ui-builder/issues/16)) ([21b4340](https://github.com/yschimke/compose-ui-builder/commit/21b4340a9becd9412fc6d9eda6931acefe7bd138))
+* **ui-builder:** make a corrupted design its owner's to list, rename and delete ([#25](https://github.com/yschimke/compose-ui-builder/issues/25)) ([cfab73a](https://github.com/yschimke/compose-ui-builder/commit/cfab73a4f82b0ff3ca7dd2a96693b0f492ff5bbe))
+* **ui-builder:** pin components to the top of the palette, and let each catalog say which ([#31](https://github.com/yschimke/compose-ui-builder/issues/31)) ([8bad0d9](https://github.com/yschimke/compose-ui-builder/commit/8bad0d90c8d57779bd8a407c812c0cae9bb21aca))
+* **ui-builder:** the canvas move marks where the carried node came from ([#21](https://github.com/yschimke/compose-ui-builder/issues/21)) ([3bfbe66](https://github.com/yschimke/compose-ui-builder/commit/3bfbe6655e1eaf1fc6dba366b63658fd172558cf))
+
+
+### Bug Fixes
+
+* **ui-builder:** draw the unrolled Wear list as a column, not a lazy layout ([#34](https://github.com/yschimke/compose-ui-builder/issues/34)) ([450833b](https://github.com/yschimke/compose-ui-builder/commit/450833b8cb69bc01998672bd059f20730403e4b1))
+* **ui-builder:** import the box an empty widget host frame is filled with ([#30](https://github.com/yschimke/compose-ui-builder/issues/30)) ([0f1f10b](https://github.com/yschimke/compose-ui-builder/commit/0f1f10b4bdc4b13b4e8ec6f95aad3a54ba6878b4))
+* **ui-builder:** let a design's owner delete it while it is unusable ([#17](https://github.com/yschimke/compose-ui-builder/issues/17)) ([128c686](https://github.com/yschimke/compose-ui-builder/commit/128c6863caf27a03f9dc61af22a29261cbadc7fc))
+* **ui-builder:** the drag ghost holds still, and the marker reads at any zoom ([#32](https://github.com/yschimke/compose-ui-builder/issues/32)) ([227a7ef](https://github.com/yschimke/compose-ui-builder/commit/227a7ef3ff936534cf54e4820d16caef5fcdc458))
+
 ## [3.27.0](https://github.com/yschimke/compose-ui-builder/compare/v3.26.0...v3.27.0) (2026-09-17)
 
 
