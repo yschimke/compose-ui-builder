@@ -88,7 +88,7 @@ class WearCanvasDeviceSizeTest {
         "acme/watch-screen",
         adapters = mapOf("acme/watch-screen" to "frame/round-screen"),
       )
-    val byId = screenFrame("wear-m3/screen-scaffold", adapters = emptyMap())
+    val byId = screenFrame("wear-m3/screen-scaffold", adapters = wearCatalogAdapters)
 
     assertEquals(
       byId,

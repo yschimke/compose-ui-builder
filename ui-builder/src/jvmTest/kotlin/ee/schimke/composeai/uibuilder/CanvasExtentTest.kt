@@ -34,7 +34,9 @@ class CanvasExtentTest {
 
   @Test
   fun `an unrolled lazy column grows past the frame to its content height`() {
-    val height = measureUnbounded { UiBuilderSurface(listDocument(root = "list"), unrolled = true) }
+    val height = measureUnbounded {
+      WearCatalogAdapters { UiBuilderSurface(listDocument(root = "list"), unrolled = true) }
+    }
 
     assertTrue(
       height >= ITEMS * ITEM_DP,
@@ -49,7 +51,7 @@ class CanvasExtentTest {
   @Test
   fun `an unrolled scaffold grows past the frame, top bar included`() {
     val height = measureUnbounded {
-      UiBuilderSurface(listDocument(root = "screen"), unrolled = true)
+      WearCatalogAdapters { UiBuilderSurface(listDocument(root = "screen"), unrolled = true) }
     }
 
     assertTrue(
@@ -85,7 +87,9 @@ class CanvasExtentTest {
    */
   @Test
   fun `an unrolled wear transforming list grows past the frame`() {
-    val height = measureUnbounded { UiBuilderSurface(wearScreenDocument(), unrolled = true) }
+    val height = measureUnbounded {
+      WearCatalogAdapters { UiBuilderSurface(wearScreenDocument(), unrolled = true) }
+    }
 
     assertTrue(
       height in ITEMS * ITEM_DP until 100_000,

@@ -2542,6 +2542,11 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
           canvasSupported
             .newBuilder()
             .also {
+              // The drawing that frames this screen root, named rather than left to the renderer to
+              // recognise by id. `frame/round-screen` is an adapter this build ships; a catalog
+              // whose screen root is called something else names the same adapter and gets the same
+              // frame.
+              it.canvas = "frame/round-screen"
               it.notes =
                 "Drawn as a Wear long-screenshot stadium at the document frame's width, with the " +
                   "content padding the real `ScreenScaffold` computes for that screen size, the " +

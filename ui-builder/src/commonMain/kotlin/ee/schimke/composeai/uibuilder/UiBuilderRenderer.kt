@@ -597,7 +597,7 @@ fun UiBuilderSurface(
   val wearScreen =
     document.roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
       val adapter = LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
-      adapter == ROUND_SCREEN_FRAME || adapter == WEAR_SCREEN_SCAFFOLD
+      adapter == ROUND_SCREEN_FRAME
     } == true
   val baseColorScheme =
     when {
@@ -690,7 +690,7 @@ fun UiBuilderSurface(
               document.nodes[root]?.let { node ->
                 val adapter =
                   LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
-                adapter == ROUND_SCREEN_FRAME || adapter == WEAR_SCREEN_SCAFFOLD
+                adapter == ROUND_SCREEN_FRAME
               } == true -> Modifier.align(Alignment.TopCenter)
               else -> Modifier
             }
@@ -880,8 +880,7 @@ private fun RenderNode(
     // The Wear screen. Unlike the widget container above, this stand-in is EMITTED rather than
     // erased: `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter` names
     // it. What is faked is only the drawing — the canvas has no Wear Compose to draw with.
-    ROUND_SCREEN_FRAME,
-    WEAR_SCREEN_SCAFFOLD ->
+    ROUND_SCREEN_FRAME ->
       WearScreenScaffold(
         node = node,
         modifier = measured,
@@ -2280,19 +2279,14 @@ private val WEAR_SCREEN_ON_SURFACE = Color(0xFFF6EDFF)
 
 private val WEAR_SCREEN_ON_SURFACE_VARIANT = Color(0xFFFFDCC2)
 
-/** The component id the renderer keys the Wear screen's theme and geometry off. */
-private const val WEAR_SCREEN_SCAFFOLD = "wear-m3/screen-scaffold"
-
 /**
  * The drawing that frames a round screen: a stadium at the frame's width, the clock over it, and
  * the slot that hugs the bottom curve.
  *
- * A catalog names it in `wasm.canvas` for its screen root (`frame/round-screen`), which is what
+ * A catalog names it in `wasm.canvas` for its screen root, which is what
  * [LocalUiBuilderCanvasAdapters] reads, so the same drawing serves a catalog whose screen root is
- * called something else — or is called nothing this build has heard of. `wear-m3/screen-scaffold`
- * is still accepted beside it: a *synthesised* catalog cannot state a `canvas` until
- * `WasmCapabilityV1` carries one (compose-preview-contracts#87), and until that release lands and
- * the Wear catalog sets it, the id is the only thing naming this drawing.
+ * called something else — or is called nothing this build has heard of. The Wear catalog names it
+ * like any other, which is why there is no `wear-m3/` id here at all.
  */
 private const val ROUND_SCREEN_FRAME = "frame/round-screen"
 
