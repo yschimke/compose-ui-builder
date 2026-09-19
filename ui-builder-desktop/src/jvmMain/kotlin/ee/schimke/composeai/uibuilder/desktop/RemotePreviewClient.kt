@@ -21,6 +21,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import org.jetbrains.skia.Image
 
 /**
@@ -69,9 +70,11 @@ internal class RemotePreviewClient(server: String) {
     val approvalUrl = response.requiredString("approveUrl")
     val requestId = response.requiredString("requestId")
     val deviceSecret = response.requiredString("deviceSecret")
+    var retryAfterSeconds = response.requiredLong("pollIntervalSeconds")
     Desktop.getDesktop().browse(URI(approvalUrl))
     val deadline = System.nanoTime() + Duration.ofMinutes(10).toNanos()
     while (System.nanoTime() < deadline) {
+      Thread.sleep(retryAfterSeconds.coerceAtLeast(1) * 1000)
       val poll =
         postJson(
           URI(response.requiredString("pollUrl")),
@@ -91,6 +94,8 @@ internal class RemotePreviewClient(server: String) {
             "preview server declined authentication: ${answer["message"]?.jsonPrimitive?.contentOrNull}"
           )
       }
+      retryAfterSeconds =
+        answer["retryAfterSeconds"]?.jsonPrimitive?.longOrNull ?: retryAfterSeconds
     }
     error("preview server authentication timed out")
   }
@@ -189,6 +194,10 @@ internal class RemotePreviewClient(server: String) {
   private fun kotlinx.serialization.json.JsonObject.requiredString(name: String): String =
     get(name)?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
       ?: error("preview server authentication response has no $name")
+
+  private fun kotlinx.serialization.json.JsonObject.requiredLong(name: String): Long =
+    get(name)?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
+      ?: error("preview server authentication response has no positive $name")
 }
 
 @Serializable

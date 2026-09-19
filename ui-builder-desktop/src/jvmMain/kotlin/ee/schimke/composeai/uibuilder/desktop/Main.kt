@@ -113,6 +113,10 @@ private fun DesktopUiBuilderApp(remoteServer: String?) {
   }
 
   snapshot?.let { current ->
+    var previewDocument by
+      remember(current.snapshot.state.document.revision) {
+        mutableStateOf(current.snapshot.state.document.toUiBuilderDocument())
+      }
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
       catalog = catalog,
@@ -121,9 +125,8 @@ private fun DesktopUiBuilderApp(remoteServer: String?) {
       operationIdPrefix = CLIENT_ID,
       sessionLabel = "Desktop offline · saved locally",
       onRequestNativeRender =
-        remotePreview?.let { client ->
-          { shape -> client.render(current.snapshot.state.document.toUiBuilderDocument(), shape) }
-        },
+        remotePreview?.let { client -> { shape -> client.render(previewDocument, shape) } },
+      onStateChanged = { state -> previewDocument = state.collaboration.document },
       onSubmission = { submissions.trySend(it) },
     )
   }
