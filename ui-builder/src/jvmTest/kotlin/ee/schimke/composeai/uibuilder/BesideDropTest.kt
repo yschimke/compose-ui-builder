@@ -8,7 +8,9 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -35,7 +37,7 @@ class BesideDropTest {
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 
   @Test
-  fun `a palette drop on the empty ground adds beside the design`() =
+  fun `a palette drop builds an editable component beside the design`() =
     runDesktopComposeUiTest(width = 1600, height = 1050) {
       var frameBounds = Rect.Zero
       setContent {
@@ -44,6 +46,7 @@ class BesideDropTest {
             document,
             catalog,
             initialComponentsOpen = true,
+            initialInspectorOpen = true,
             initialCanvasZoom = 1f,
             onCanvasBoundsChanged = { frameBounds = it },
           )
@@ -78,6 +81,15 @@ class BesideDropTest {
       assertTrue(
         onAllNodesWithText("New text · m3/text").fetchSemanticsNodes().isNotEmpty(),
         "the selection followed the inserted node",
+      )
+
+      // Selection opens the inspector, so the newly dropped component can immediately become part
+      // of the authored screen rather than remaining its palette default.
+      onNodeWithContentDescription("Text property").performTextReplacement("Settings")
+      onNodeWithContentDescription("Apply text").performClick()
+      assertTrue(
+        onAllNodesWithText("Settings").fetchSemanticsNodes().isNotEmpty(),
+        "the inspector edit is rendered on the newly inserted component",
       )
     }
 
