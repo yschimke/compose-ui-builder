@@ -164,6 +164,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.wear.compose.material3.Text as WearText
 import androidx.window.core.layout.WindowSizeClass
 import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
 import ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry
@@ -974,14 +975,41 @@ private fun RenderNode(
     // table, its tint resolution and the structured-path export the SVG lane needs. Drawing it
     // twice would be two answers to one question.
     "wear-m3/icon" -> BuilderIcon(node, measured)
-    // The last three that were Material 3 borrows. Wear's own now — see `WearCanvasComponents`.
+    // Wear's own `Text`, out of the port the canvas links — there is nothing left to borrow. This
+    // was the last of the three Material 3 renames, and the borrow was not free: it read four
+    // properties (`text`, `color`, `style`, `maxLines`) where the catalog declares sixteen, so
+    // every `fontSizeSp`, `lineHeightSp`, `softWrap` and `overflow` a design set on a Wear text
+    // node
+    // was inert on the canvas while the mobile branch beside it honoured all of them. Wear's `Text`
+    // takes the same argument list, so this now reads what the mobile one reads.
+    //
+    // The style still comes from `wearTextStyle`, which resolves the role names against Wear's own
+    // typography — that was never the borrow's problem, and it is what makes the sizes right when a
+    // design sets none.
     "wear-m3/text" ->
-      Text(
+      WearText(
         node.string("text"),
         measured,
         color = node.color("color", Color.Unspecified),
         style = wearTextStyle(node.string("style")),
+        fontWeight = node.fontWeight(),
+        fontStyle = node.fontStyle(),
+        fontSize =
+          node.float("fontSizeSp").takeIf { it > 0f }?.sp
+            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        lineHeight =
+          node.float("lineHeightSp").takeIf { it > 0f }?.sp
+            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        letterSpacing =
+          node.float("letterSpacingSp").takeIf { "letterSpacingSp" in node.properties }?.sp
+            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        textDecoration = node.textDecoration(),
+        minLines = node.integer("minLines", 1),
         maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        softWrap = node.bool("softWrap", true),
+        overflow = node.textOverflow(),
+        textAlign = node.textAlign(),
+        onTextLayout = { onTextLayout(path, it) },
       )
     "wear-m3/card" ->
       WearCanvasCard(node.string("variant"), measured) {
