@@ -3,7 +3,7 @@
 Five Google app screens — Gmail, Photos, Calendar, Keep and Play — were authored as
 [UI builder designs](fixtures/ui-builder/designs/README.md) in `m3-catalog`, framed for a tablet,
 and looked at again on a foldable and a phone. The renders are in
-[`renders/google-app-designs/`](../../renders/google-app-designs/README.md).
+[`renders/google-app-designs/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/google-app-designs/README.md).
 
 This document is the answer to the question the exercise was set to ask: **does this approach work
 for building tablet UIs with the real composables and the AndroidX adaptive libraries?**
@@ -216,7 +216,7 @@ like a configuration error rather than "ask again".
 | | |
 | --- | --- |
 | designs | `docs/design/fixtures/ui-builder/designs/google-*.json` |
-| renders | [`renders/google-app-designs/`](../../renders/google-app-designs/README.md) |
+| renders | [`renders/google-app-designs/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/google-app-designs/README.md) |
 | tablet previews | `DesignFixturePreviews.kt` |
 | three-size previews | `GoogleAppSizePreviews.kt` |
 | live | `https://preview.coo.ee/ui-builder/google-gmail-tablet` and the four beside it |

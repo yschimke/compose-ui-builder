@@ -20,7 +20,7 @@ builder author a Material 3 screen" and nothing else. Two things were then asked
 These pull against each other because the honest answer to the first is *the canvas cannot draw an
 arbitrary catalog* — the browser is Compose Multiplatform for Wasm and cannot link an application's
 classes any more than it can link Wear Material 3
-([`UI_BUILDER_WEAR_SCREEN.md`](UI_BUILDER_WEAR_SCREEN.md#the-hard-constraint-the-canvas-has-no-wear-compose))
+([`UI_BUILDER_WEAR_SCREEN.md`](UI_BUILDER_WEAR_SCREEN.md#the-constraint-that-was-not-one-the-canvas-has-wear-compose))
 — while the second asks for exactly those components to be authorable. The resolution is the one
 `wear-m3` already reached for seventeen of its own components: **a component the canvas cannot
 draw is declared, validated, exported and rendered natively, and drawn on the canvas as a named
@@ -51,7 +51,7 @@ Three properties define it, and each is a decision:
   keeps `wear-m3` honest keeps packs honest.
 - **A pack is derived, not authored.** Its components come from the served catalog's discovered
   component record — the `components.json` every preview bundle's discovery emits — projected by
-  [`ComponentRecordPacks`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ComponentRecordPacks.kt).
+  [`ComponentRecordPacks`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/ComponentRecordPacks.kt).
   Nobody transcribes a capability table for Confetti; the record already says what its composables
   take, and the producer already said which of them it can prove a call site for.
 
@@ -77,7 +77,7 @@ explained rather than discovered.
 
 The id is spelled by one function, [`UiBuilderComponentPack.componentId`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderComponentPacks.kt),
 used on both sides: the runtime writes it onto the capability and the export writes it back onto
-the record as a catalog alias ([`ComponentRecordPacks.aliasedRecord`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ComponentRecordPacks.kt)),
+the record as a catalog alias ([`ComponentRecordPacks.aliasedRecord`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/ComponentRecordPacks.kt)),
 so the palette and the generator cannot disagree about what `confetti-mobile/session-card` is.
 
 ## Where the declaration lives
@@ -119,7 +119,7 @@ so the keys are literals on that side, exactly as `previewSurfaces` is.
 
 | The settings dialog | A pack node on the canvas |
 | --- | --- |
-| ![Component packs dialog: Confetti Mobile on, Jetnews off](../../renders/ui-builder-component-packs/packs-panel.after.png) | ![A Material 3 column holding two Confetti components drawn as captioned placeholders](../../renders/ui-builder-component-packs/pack-placeholder.after.png) |
+| ![Component packs dialog: Confetti Mobile on, Jetnews off](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-component-packs/packs-panel.after.png) | ![A Material 3 column holding two Confetti components drawn as captioned placeholders](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-component-packs/pack-placeholder.after.png) |
 
 Both are `@Preview`s in `:ui-builder` (`ComponentPackPreviews.kt`), so the next change to either
 is diffed without anyone remembering to render it.

@@ -62,7 +62,7 @@ empty" question all stay here.
 ## Why not a saga object
 
 Because the team already has one, and it is the issue.
-[`MULTIPLAYER_WORKFLOW.md` §4.2](MULTIPLAYER_WORKFLOW.md#42-do-we-need-product-sagas) argues this at
+[`MULTIPLAYER_WORKFLOW.md` §4.2](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/MULTIPLAYER_WORKFLOW.md#42-do-we-need-product-sagas) argues this at
 length: a second long-lived work object inside this server needs status, assignment and a reason to
 prefer it over the tracker, at which point it *is* a tracker. What the server lacked was not the
 saga but the back-links that let one be assembled from the outside. This is those, and nothing more.

@@ -41,6 +41,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
+      - name: Check Markdown links
+        run: ./scripts/check-markdown-links.py
       - run: ./gradlew check ktfmtCheckAll
       # The publishing lane, proven WITHOUT credentials. It stages the derived release set into a
       # throwaway local repository at a snapshot version (so nothing is signed and nothing reaches

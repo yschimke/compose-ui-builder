@@ -1,6 +1,6 @@
 # Repeated layouts in the existing WASM editor and MCP
 
-The [independent expansion proof](../ui-builder-repetition-proof/README.md) is now integrated into
+The [independent expansion proof](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-repetition-proof/README.md) is now integrated into
 the shared JSON exporter. The authoring tree still contains one loop, its row data, one component
 definition and a placement. The exporter emits ordinary Remote layouts for those instances; it
 does not replace the authored tree with the operation stream.

@@ -1,6 +1,6 @@
 # Production Remote StateLayout export proof
 
-The separate [loop/function feasibility proof](../../docs/design/evidence/ui-builder-repetition-source/README.md)
+The separate [loop/function feasibility proof](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-repetition-source/README.md)
 also runs here. Its Python prototype generates source from the committed semantic repetition design;
 it is explicitly separate from the production StateLayout emitter described below. Both ordinary
 Compose and creation-compose compile real loops, typed row classes, reusable composables and

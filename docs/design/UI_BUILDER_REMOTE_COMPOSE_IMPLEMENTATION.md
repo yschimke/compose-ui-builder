@@ -2,7 +2,7 @@
 
 The scope and operation census are in
 [the completeness review](UI_BUILDER_REMOTE_COMPOSE_COMPLETENESS_REVIEW.md).
-The runnable proof is in [experiments/remote-compose-poc](../../experiments/remote-compose-poc/README.md).
+The runnable proof is in [experiments/remote-compose-poc](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/experiments/remote-compose-poc/README.md).
 This document tracks production implementation; it does not redefine completion around the proof.
 
 ## Landing scope
@@ -10,7 +10,7 @@ This document tracks production implementation; it does not redefine completion 
 The current goal is to land the existing work behind a default-off compile-time flag, rather than
 continue extending operation coverage in this change. `-PuiBuilderRemoteCompose=true` enables the
 experimental authoring and export paths in the existing WASM app, server and MCP adapter. See the
-[build option and gated surfaces](../development/UI_BUILDER_FEATURE_FLAGS.md). The remaining production
+[build option and gated surfaces](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/development/UI_BUILDER_FEATURE_FLAGS.md). The remaining production
 work below is future scope and is not a claim that the full authoring system is complete.
 
 ## Authoring boundary
@@ -97,7 +97,7 @@ returning content. It uses the existing contracts and adds no dependency on the 
 The existing WASM Preview button compiles the current document before a live save completes and
 also works in local-storage mode. Temporary results are labelled “unsaved changes.” Local Remote
 designs get JSON/RC copy/download actions; shareable export links remain specific to saved designs.
-[Browser proof and artifacts](evidence/ui-builder-unsaved-remote-preview/README.md) cover local
+[Browser proof and artifacts](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-unsaved-remote-preview/README.md) cover local
 state editing, real playback, matching browser/MCP bytes and absence from the saved-design list.
 A second browser run holds a live save: the temporary preview and both downloads use the edited
 document while revision 0 remains stored, then saved revision 1 yields identical RC bytes and the
@@ -114,7 +114,7 @@ The editing canvas now measures natural content height and then lays out that sa
 within a finite extent. This fixes fill-only selected branches collapsing under unbounded measurement,
 while preserving long content and remeasuring on document or preview-state changes. The saved export
 sample now draws its 312 × 312 dp selected child inside 24 dp padding in the actual WASM app.
-[Before/after browser evidence](evidence/ui-builder-canvas-fill/README.md) includes measured bounds;
+[Before/after browser evidence](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-canvas-fill/README.md) includes measured bounds;
 four new rendering/interaction tests and the full 937-test UI-builder JVM suite pass.
 
 The browser's Screen panel can add, edit and remove state declarations. The Layer inspector can
@@ -130,8 +130,8 @@ The existing restrictions on nullable Remote values remain explicit.
 
 Evidence from actual Compose controls, before and after wiring a flag to a button:
 
-- [Before wiring](evidence/ui-builder-behavior-authoring/before-wiring.png)
-- [After wiring](evidence/ui-builder-behavior-authoring/after-wiring.png)
+- [Before wiring](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-behavior-authoring/before-wiring.png)
+- [After wiring](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-behavior-authoring/after-wiring.png)
 
 These are interaction-test captures of the production inspectors, not screenshots of a released
 site. `BehaviorInspectorTest` drives the controls through the editor reducer. The full builder JVM
@@ -149,7 +149,7 @@ available before a release; the released floor reports a located refusal for the
 The exact emitted Kotlin is compiled by `GeneratedLayoutClicksTest`, which clicks both selected
 branches and the fallback at densities 1 and 2 and checks the authored padding. The production
 gate and hosted MCP tests compare their output with that same source. See
-[compiled interaction evidence](evidence/ui-builder-layout-clicks/README.md). The combined run passes 945 editor tests,
+[compiled interaction evidence](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-layout-clicks/README.md). The combined run passes 945 editor tests,
 46 shared-export tests, 26 targeted server/MCP tests, runtime ABI checks and the WASM build.
 The actual existing browser Code pane and live MCP export are also verified; the released floor
 passes compilation and its explicit-refusal/compiled-fixture tests. Golden regeneration changes no
@@ -161,7 +161,7 @@ Remote Compose platform. The existing Code pane and hosted MCP export share that
 wrapper is added to the semantic tree. Layout clicks become Remote modifier actions, and catalog
 controls with an Action callback keep their authored callback even when the parameter has a default.
 
-[Ordinary-root source evidence](evidence/ui-builder-remote-root-source/README.md) records the real
+[Ordinary-root source evidence](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-root-source/README.md) records the real
 WASM Code pane, all three MCP artifacts, and Android capture/playback of the exact exported source.
 The Android proof clicks through both states and the fallback at densities 1 and 2, checking padding
 and active layout width. After rebasing onto main `7012a87a`, the combined build passes 951 editor
@@ -232,8 +232,8 @@ This is an implementation chunk, not completion of the Remote Compose scope.
 
 `StateSelectionInspectorTest` operates the actual inspector, changes the bound declaration, and
 asserts the canvas's selected content; it also verifies undo/redo and remapped subtree copies.
-[Before configuration](evidence/ui-builder-state-selection/before.png) and
-[configured selector](evidence/ui-builder-state-selection/configured.png) are captures of those
+[Before configuration](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-state-selection/before.png) and
+[configured selector](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-state-selection/configured.png) are captures of those
 production composables in the interaction harness. They are not a separate editor or a released
 website screenshot. `ServeUiBuilderMcpIntegrationTest` discovers the property through the catalog,
 authors it through MCP and proves that removing its selector declaration is rejected.
@@ -359,7 +359,7 @@ pending edits without waiting for persistence. Hosted `ui_builder_export_documen
 
 The real renderer proof covers densities 1 and 2, saved and supplied HTTP export, hosted MCP,
 unsupported lowering and a local browser edit. [Evidence and reproduction instructions](
-evidence/ui-builder-remote-png-export/README.md) describe the exact subset exercised.
+https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-png-export/README.md) describe the exact subset exercised.
 Imported documents, custom Remote content and Wear record-free roots keep their existing rendering
 lane; combined JSON lowering of those constructs remains separate work.
 
@@ -380,7 +380,7 @@ The real-player proof shows two state variables and a literal initially containi
 A click changes only the first variable; a host update changes only the second. Exact production
 exports additionally exercise repeated ordered actions with six literal cases. The existing WASM
 editor proof edits a local text variable and compares its JSON/RC downloads with hosted MCP.
-[Source, screenshots and reproduction](evidence/ui-builder-remote-string-state/README.md).
+[Source, screenshots and reproduction](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-string-state/README.md).
 
 This enables independent declarations and literal assignments. String equality/branch selection,
 nullable text, text expressions and catalog-specific typography recipes remain separate work.
@@ -397,7 +397,7 @@ Modifiers without dedicated controls remain visible as source rather than being 
 
 These controls dispatch the existing `SetModifiers` operation used by local persistence, undo/redo
 and the MCP mutation path. No additional wire shape or Remote-only editor is introduced.
-The [actual WASM browser proof](evidence/ui-builder-modifier-inspector/README.md) changes top padding
+The [actual WASM browser proof](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-modifier-inspector/README.md) changes top padding
 from 24 to 40 dp while preserving the state link and other edges. The downloaded PNG moves its
 content boundary by precisely 16 pixels at density 1 and matches hosted MCP byte for byte.
 
@@ -410,7 +410,7 @@ that AndroidX makes available to integer expressions. [The player correction](ht
 four switching scenarios and a direct comparison against AndroidX alpha19's numeric state.
 The owning runtime/Compose suites, ABI and WASM checks also pass.
 
-[Before/after captures and reproduction](evidence/ui-builder-float-selection-player/README.md)
+[Before/after captures and reproduction](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-float-selection-player/README.md)
 record the proof. Its original parser adapter stays confined to the experiment. The production integration below
 now uses the shared compiler publication and exporter instead.
 
@@ -427,7 +427,7 @@ Its unextended and integer-only profiles retain their behavior. The CMP player m
 numeric-ID correction in rc-players#94. Both committed publications are staged locally, without
 an upstream release or another editor application.
 
-[Actual browser and export evidence](evidence/ui-builder-decimal-selection/README.md) shows the
+[Actual browser and export evidence](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-decimal-selection/README.md) shows the
 existing WASM Preview switching 2.5 → fallback → 1.25 → 2.5 through real clicks. The Screen editor
 then changes the local initial value from 2.5 to 3.75. JSON, RC and PNG downloads before and after
 that edit match independently requested hosted MCP artifacts. No browser errors or saved server
@@ -438,7 +438,7 @@ the final main-based compiler passes 35 tests and its ABI check.
 
 ## Repetition and reusable instances in JSON export
 
-[The static expansion proof](evidence/ui-builder-repetition-proof/README.md) now establishes that
+[The static expansion proof](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-repetition-proof/README.md) now establishes that
 authored rows can place a parameterized reusable body and compile into ordinary Remote layouts.
 The existing editor canvas, temporary expanded tree and real compiled document match every pixel
 at densities 1 and 2. All six expanded cells remain independently clickable and update the shared
@@ -462,7 +462,7 @@ Remote Kotlin loop generation, record-driven Compose loops/calls and per-instanc
 remain integration work. Static expansion does not substitute for runtime lists, lazy keys, scoped
 state or callback/slot parameters.
 
-The [Kotlin feasibility proof](evidence/ui-builder-repetition-source/README.md) now generates actual
+The [Kotlin feasibility proof](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-repetition-source/README.md) now generates actual
 typed row lists, `forEach` loops and reusable composables from the same semantic fixture for both
 ordinary Compose and creation-compose. Numeric arguments, placement modifiers and explicit callbacks
 preserve layout and shared-state behavior. Four compile/interaction tests pass at densities 1 and 2;
@@ -505,7 +505,7 @@ reads and callbacks explicitly. Nested component calls forward those parameters;
 their own row scope while row initializers can read an enclosing row. Missing or conflicting bindings,
 cycles and invalid row data refuse instead of expanding or dropping authored content.
 
-[Production source and compiled interaction evidence](evidence/ui-builder-scoped-compose-export/README.md)
+[Production source and compiled interaction evidence](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-scoped-compose-export/README.md)
 replaces the ordinary Compose half of the earlier Python prototype. The committed editor fixture's
 exact generated source compiles and matches the independent Remote JSON reference pixel for pixel
 at densities 1 and 2. All twelve physical clicks select the expected state. Browser-gate and service
@@ -516,7 +516,7 @@ rows emit typed loops, definitions emit once as `@RemoteComposable` functions, a
 modifiers, values, state reads, images and actions explicitly. Nested lexical scopes are checked;
 missing or incompatible bindings and recursive definitions refuse the artifact. The exact production
 source compiles against AndroidX creation-compose and passes pixel equality plus twelve physical
-clicks at two densities. [Remote source and interaction evidence](evidence/ui-builder-scoped-remote-export/README.md)
+clicks at two densities. [Remote source and interaction evidence](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-scoped-remote-export/README.md)
 records the proof. The fresh live run also passes all six browser/MCP JSON/RC/PNG comparisons,
 six browser playback clicks, and saved MCP row authoring. The existing WASM Code pane matches the
 MCP Kotlin body after accounting for the service header/package and terminal whitespace. The run
@@ -524,7 +524,7 @@ has no browser errors; a viewport relayout accommodates an observed stale access
 when switching docks. All 82 shared-export tests, 954 editor tests (one separate opt-in proof
 skipped), and WASM/server builds pass. These primitives do not complete all consumer paths.
 
-The next callback source form now has an [opt-in compiled proof](evidence/ui-builder-bound-action-proof/README.md).
+The next callback source form now has an [opt-in compiled proof](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-bound-action-proof/README.md).
 Three integer row IDs pass through two reusable component layers whose argument names differ at
 each boundary. Ordinary Compose receives `(Int) -> Unit`; creation-compose receives `(Int) -> Action`
 factories that retain the caller's mutable state target. Both targets pass initial pixel equality
@@ -541,7 +541,7 @@ that forward through nested callers. Int, Float, Boolean and String variants com
 AndroidX; the unchanged row-ID fixture passes every initial pixel and sixteen select/reset clicks
 at two densities. Direct row reads, mixed action ordering and invalid scopes/types are covered by
 exporter tests. The existing Code pane and revision-pinned server export produce the same source.
-[Production callback evidence](evidence/ui-builder-bound-action-production/README.md) records the
+[Production callback evidence](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-bound-action-production/README.md) records the
 exact source, RC documents and frames. `-PboundActionProductionProof=true` selects that source for
 the Android proof without replacing the prototype. This is an export capability, not yet an enabled
 end-to-end authoring feature; the other integration work listed above remains.
@@ -566,12 +566,12 @@ end-to-end authoring feature; the other integration work listed above remains.
 
 ## Local dependency development
 
-[`stage-local-dependency.py`](../../scripts/stage-local-dependency.py) builds selected modules in
+[`stage-local-dependency.py`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/scripts/stage-local-dependency.py) builds selected modules in
 their owning checkouts and stages their normal JVM and Wasm publications. An explicit
 `-PlocalDependencies=…` manifest selects them for the existing builder and server. Shared generator
 publications are staged together, because both `screen-model` and `preview-discovery` carry its
 classes. Released builds continue using pinned coordinates by default. Usage is in
-[the local build guide](../development/LOCAL_DEPENDENCIES.md).
+[the local build guide](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/development/LOCAL_DEPENDENCIES.md).
 
 Verified by compiling local `ui-builder-protocol` JVM/Wasm publications and both shared generator
 publications, then running 915 builder JVM tests, 31 shared-export tests and 16 targeted server

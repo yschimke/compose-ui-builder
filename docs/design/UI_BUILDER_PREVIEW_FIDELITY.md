@@ -232,5 +232,5 @@ surface must say it is approximate rather than claiming rung 2 or 3 fidelity.
   and why a borrowed component may not be faked.
 - [`UI_BUILDER_REMOTE_COMPOSE.md`](UI_BUILDER_REMOTE_COMPOSE.md) — the native rung's lanes, including
   the played-document fallback where there is no compile lane.
-- [`renders/ui-builder-native-live`](../../renders/ui-builder-native-live) — rung 3 streaming, and
+- [`renders/ui-builder-native-live`](https://github.com/yschimke/compose-preview-server/tree/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-native-live) — rung 3 streaming, and
   what its fixtures do and do not claim.

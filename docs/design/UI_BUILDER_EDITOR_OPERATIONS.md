@@ -25,7 +25,7 @@ duplicate, delete, undo, and redo operations and shows the new toolbar controls.
 
 | Before | After |
 | --- | --- |
-| ![Editor before operation controls](../../preview-harness/snapshots/ui-builder-editor-history-before.png) | ![Editor with operation controls](../../preview-harness/snapshots/ui-builder-interactive-editor.png) |
+| ![Editor before operation controls](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-editor-history-before.png) | ![Editor with operation controls](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-interactive-editor.png) |
 
 The same harness separately crops the pinned design canvas and compares it with the clean 1280×800
 Jetcaster render using exact geometry assertions and the existing sub-0.2% one-channel raster
@@ -268,11 +268,11 @@ and a rejected insert leaves no partial nodes. The largest seed in the table is 
 
 `StarterContentInsertPreview` renders six palette inserts side by side, from a document the reducer
 builds rather than one anybody authored. Before and after, with what each frame shows, are in
-[`renders/ui-builder-starter-content/`](../../renders/ui-builder-starter-content/README.md).
+[`renders/ui-builder-starter-content/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-starter-content/README.md).
 
 | Before | After |
 | --- | --- |
-| ![Six inserts, generic or empty](../../renders/ui-builder-starter-content/insert.before.png) | ![The same six inserts, seeded](../../renders/ui-builder-starter-content/insert.after.png) |
+| ![Six inserts, generic or empty](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-starter-content/insert.before.png) | ![The same six inserts, seeded](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-starter-content/insert.after.png) |
 
 ## The component menu, and what a variant is
 
@@ -351,7 +351,7 @@ not spend the collapse — it comes back when the field is cleared.
 
 | Before: grouped by role | After: the catalog's families, each row drawing itself | Filtered to a variant name |
 | --- | --- | --- |
-| ![The insert panel under Scaffolds, Containers and Composables headings](../../renders/ui-builder-component-menu/menu.before.png) | ![The same panel under Scaffolds, Layout, Navigation and Actions headings, each row showing a rendered thumbnail of its component](../../renders/ui-builder-component-menu/menu.thumbnails.after.png) | ![The panel filtered to "filled", four components open showing their variant rows, each variant drawing a visibly different button](../../renders/ui-builder-component-menu/menu.variants.after.png) |
+| ![The insert panel under Scaffolds, Containers and Composables headings](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-component-menu/menu.before.png) | ![The same panel under Scaffolds, Layout, Navigation and Actions headings, each row showing a rendered thumbnail of its component](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-component-menu/menu.thumbnails.after.png) | ![The panel filtered to "filled", four components open showing their variant rows, each variant drawing a visibly different button](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-component-menu/menu.variants.after.png) |
 
 ## What the catalog advertises
 
@@ -378,9 +378,9 @@ and the generated screen gets the real thing.
 
 `CatalogUnadvertisedComponentsPreview` inserts four of the five into a column, with no editing after
 the drop. What each is, and why there is no before image, are in
-[`renders/ui-builder-advertised-components/`](../../renders/ui-builder-advertised-components/README.md).
+[`renders/ui-builder-advertised-components/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-advertised-components/README.md).
 
-![A top app bar, a tab row, a list item and a colour dot](../../renders/ui-builder-advertised-components/advertised.after.png)
+![A top app bar, a tab row, a list item and a colour dot](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-advertised-components/advertised.after.png)
 
 ## Slider and progress
 
@@ -409,9 +409,9 @@ writes.
 ### Visual evidence
 
 The slider and all three indicator forms in
-[`renders/ui-builder-slider-progress/`](../../renders/ui-builder-slider-progress/README.md).
+[`renders/ui-builder-slider-progress/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-slider-progress/README.md).
 
-![A slider, a linear indicator, a circular indicator and an indeterminate one](../../renders/ui-builder-slider-progress/slider-progress.after.png)
+![A slider, a linear indicator, a circular indicator and an indeterminate one](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-slider-progress/slider-progress.after.png)
 
 ## Text input
 
@@ -433,9 +433,9 @@ reason: a record names one callable.
 
 ### Visual evidence
 
-Both variants and both radio states in [`renders/ui-builder-text-input/`](../../renders/ui-builder-text-input/README.md).
+Both variants and both radio states in [`renders/ui-builder-text-input/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-text-input/README.md).
 
-![A filled text field, an outlined text field, a selected radio button and an unselected one](../../renders/ui-builder-text-input/text-input.after.png)
+![A filled text field, an outlined text field, a selected radio button and an unselected one](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-text-input/text-input.after.png)
 
 ## Selection controls
 
@@ -457,9 +457,9 @@ a record nothing generates against is a table nobody has checked.
 
 ### Visual evidence
 
-Both, on and off, in [`renders/ui-builder-selection-controls/`](../../renders/ui-builder-selection-controls/README.md).
+Both, on and off, in [`renders/ui-builder-selection-controls/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-selection-controls/README.md).
 
-![A checked checkbox, an unchecked checkbox, a switch on and a switch off](../../renders/ui-builder-selection-controls/selection-controls.after.png)
+![A checked checkbox, an unchecked checkbox, a switch on and a switch off](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-selection-controls/selection-controls.after.png)
 
 ## The dialog and the pickers
 
@@ -509,9 +509,9 @@ check with a picture attached.
 
 `CatalogDialogAndPickersPreview` renders all five from a document the reducer builds. What each cell
 is, and why there is no before image, are in
-[`renders/ui-builder-dialog-pickers/`](../../renders/ui-builder-dialog-pickers/README.md).
+[`renders/ui-builder-dialog-pickers/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-dialog-pickers/README.md).
 
-![A dialog, a calendar, a date input, a 24-hour dial and a 12-hour time input](../../renders/ui-builder-dialog-pickers/dialog-and-pickers.after.png)
+![A dialog, a calendar, a date input, a 24-hour dial and a 12-hour time input](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-dialog-pickers/dialog-and-pickers.after.png)
 
 ## Property and Google icon editing
 
@@ -525,11 +525,11 @@ The generated catalog exposes 11,385 style-qualified vectors while retaining 46 
 aliases outside search. Results are bounded to 80 rendered rows and vectors resolve only when a row
 is painted, so a query searches the complete catalog without eagerly constructing it.
 
-![Material icon search showing Chat results in five styles](../evidence/ui-builder-material-icons/picker-chat.png)
+![Material icon search showing Chat results in five styles](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/evidence/ui-builder-material-icons/picker-chat.png)
 
 | Before | Catalog | After |
 | --- | --- | --- |
-| ![Search icon before editing](../../preview-harness/snapshots/ui-builder-google-icon-before.png) | ![Searchable Google Material Icons catalog](../../preview-harness/snapshots/ui-builder-google-icon-picker.png) | ![Home icon after editing](../../preview-harness/snapshots/ui-builder-google-icon-selected.png) |
+| ![Search icon before editing](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-google-icon-before.png) | ![Searchable Google Material Icons catalog](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-google-icon-picker.png) | ![Home icon after editing](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-google-icon-selected.png) |
 
 ## The History dock
 
@@ -559,9 +559,9 @@ else made in between, and the panel is worth having before that is answered.
 `UiBuilderHistoryDockPreview` opens the editor on a seeded session — a layout change, a text change,
 a screen change and an undo — because a fresh session has no history and a panel about the session's
 own changes has one thing to say about that. What to look at is in
-[`renders/ui-builder-history/`](../../renders/ui-builder-history/README.md).
+[`renders/ui-builder-history/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-history/README.md).
 
-![The editor with the History dock open, three changes listed, the undo and redo targets marked](../../renders/ui-builder-history/history-dock.after.png)
+![The editor with the History dock open, three changes listed, the undo and redo targets marked](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-history/history-dock.after.png)
 
 ## Mobile workspace
 
@@ -577,4 +577,4 @@ scaled inside the available width.
 
 | Before | Design first | Components | Properties |
 | --- | --- | --- | --- |
-| ![Desktop workspace clipped at mobile width](../../preview-harness/snapshots/ui-builder-mobile-before.png) | ![Mobile design-first workspace](../../preview-harness/snapshots/ui-builder-mobile-design.png) | ![Mobile component dock](../../preview-harness/snapshots/ui-builder-mobile-components.png) | ![Mobile property dock](../../preview-harness/snapshots/ui-builder-mobile-properties.png) |
+| ![Desktop workspace clipped at mobile width](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-mobile-before.png) | ![Mobile design-first workspace](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-mobile-design.png) | ![Mobile component dock](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-mobile-components.png) | ![Mobile property dock](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/ui-builder-mobile-properties.png) |
