@@ -8,6 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.CurvedScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
@@ -97,14 +98,28 @@ import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
  * finding about the port, not about the design.
  */
 @Composable
-internal fun WearCanvasListHeader(text: String, modifier: Modifier = Modifier) {
-  ListHeader(modifier = modifier) { Text(text) }
+internal fun WearCanvasListHeader(
+  text: String,
+  modifier: Modifier = Modifier,
+  maxLines: Int = Int.MAX_VALUE,
+  overflow: TextOverflow = TextOverflow.Clip,
+) {
+  // `maxLines` and `overflow` are the label's rather than the header's: upstream's `ListHeader`
+  // takes a content lambda, so the string is this `Text` and the truncation is its argument. Both
+  // were declared on the component and read by nobody, which meant a header a design had clipped to
+  // one line drew as many as it wrapped to.
+  ListHeader(modifier = modifier) { Text(text, maxLines = maxLines, overflow = overflow) }
 }
 
 /** Wear's own sub-header, replacing a `Text` that was styled to look like one. */
 @Composable
-internal fun WearCanvasListSubHeader(text: String, modifier: Modifier = Modifier) {
-  ListSubHeader(modifier = modifier) { Text(text) }
+internal fun WearCanvasListSubHeader(
+  text: String,
+  modifier: Modifier = Modifier,
+  maxLines: Int = Int.MAX_VALUE,
+  overflow: TextOverflow = TextOverflow.Clip,
+) {
+  ListSubHeader(modifier = modifier) { Text(text, maxLines = maxLines, overflow = overflow) }
 }
 
 /**
@@ -183,6 +198,16 @@ internal fun WearCanvasTransformingLazyColumn(
   itemCount: Int,
   verticalSpacingDp: Float,
   modifier: Modifier = Modifier,
+  /**
+   * Whether each row carries `transformedHeight` and `SurfaceTransformation`.
+   *
+   * The design's `transformation` property, which the exporter has always honoured and the canvas
+   * never read — so a design that asked for no transformation still got one on the canvas, and the
+   * generated screen did not. `none` is a real choice rather than a corner: it is what a list drawn
+   * for a comparison against a stitched capture wants, since `ScrollMode.LONG` turns the
+   * transformation off in order to stitch.
+   */
+  transformation: Boolean = true,
   item: @Composable (Int, Modifier) -> Unit,
 ) {
   val state = rememberTransformingLazyColumnState()
@@ -193,16 +218,24 @@ internal fun WearCanvasTransformingLazyColumn(
     verticalArrangement = Arrangement.spacedBy(verticalSpacingDp.dp),
   ) {
     items(itemCount) { index ->
-      // **Both halves of the transformation.** `transformedHeight` is the layout half — the row
-      // gets shorter as it approaches the bezel — and `SurfaceTransformation` is the drawing half:
-      // the scale and the fade, which the component applies to itself. Passing only the first is
-      // what made the canvas's Wear list look like a plain column of full-size rows while the
-      // generated screen beside it scaled and faded. The library's own components take the second
-      // as a parameter, so it travels to them by a local rather than by rewriting every call.
-      CompositionLocalProvider(
-        LocalWearSurfaceTransformation provides SurfaceTransformation(spec)
-      ) {
-        item(index, Modifier.fillMaxWidth().transformedHeight(this, spec))
+      if (!transformation) {
+        // The design asked for none, which is a real choice: a stitched `ScrollMode.LONG` capture
+        // turns the transformation off in order to stitch, so a list drawn against one wants the
+        // same. Both halves are off — the layout half and the drawing half below.
+        item(index, Modifier.fillMaxWidth())
+      } else {
+        // **Both halves of the transformation.** `transformedHeight` is the layout half — the row
+        // gets shorter as it approaches the bezel — and `SurfaceTransformation` is the drawing
+        // half: the scale and the fade, which the component applies to itself. Passing only the
+        // first is what made the canvas's Wear list look like a plain column of full-size rows
+        // while the generated screen beside it scaled and faded. The library's own components take
+        // the second as a parameter, so it travels to them by a local rather than by rewriting
+        // every call.
+        CompositionLocalProvider(
+          LocalWearSurfaceTransformation provides SurfaceTransformation(spec)
+        ) {
+          item(index, Modifier.fillMaxWidth().transformedHeight(this, spec))
+        }
       }
     }
   }
@@ -536,16 +569,17 @@ internal expect fun WearCanvasDatePicker(initialDate: String, type: String, modi
 @Composable
 internal expect fun WearCanvasTimePicker(initialTime: String, type: String, modifier: Modifier)
 
-// ── The last three borrows
+// ── The type scale
 // ────────────────────────────────────────────────────────────────────────
 //
-// Wear's text, card and button were drawn as their Material 3 near-twins through a rename table.
-// That table is gone: these are the Wear components, and its last three entries went with it.
+// Wear's text, card and button are their own components here, drawn by Wear Compose through the
+// port. What the canvas still does for them is resolve a type ROLE, because a design names one
+// (`titleMedium`) and the library needs a `TextStyle`.
 //
-// Text is the one where the borrow was nearly right, and "nearly" is the problem. Material 3 and
-// Wear publish the same fifteen type-scale role names, so a `titleMedium` resolved against the
-// wrong theme drew *a* title and not *this* title — a silently wrong size, in the surface an author
-// reads sizes off. Below it resolves against Wear's own typography.
+// Material 3 and Wear publish the same fifteen role names and different scales behind them, so a
+// `titleMedium` resolved against the wrong theme draws *a* title and not *this* title — a silently
+// wrong size, in the surface an author reads sizes off. Below it resolves against Wear's own
+// typography.
 
 /** Wear's type scale, by the same fifteen role names Material 3 uses. */
 @Composable

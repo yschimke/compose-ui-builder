@@ -799,12 +799,12 @@ fun UiBuilderEditor(
             enabledPacks =
               initialEnabledPacks.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
             pinnedComponents = initialPinnedComponents,
-            // A catalog whose canvas is only a stand-in opens with the host's renderer beside it,
-            // where the host has one. Not a preference — on `wear-m3` the canvas draws Material 3
-            // lookalikes because a Wasm build cannot link `androidx.wear.compose:compose-material3`
-            // at all, so a Wasm-only workspace opens every Wear design on a picture of the wrong
-            // library. An explicit [initialPanes] from the host still wins: a host naming its panes
-            // is a host saying which surfaces it wants captured.
+            // A catalog whose canvas is approximate opens with the host's renderer beside it,
+            // where the host has one. Not a preference — `wear-m3`'s canvas draws the extent rather
+            // than a viewport and its frame is a stand-in, so a Wasm-only workspace would open
+            // every Wear design on a picture that is not what a watch shows. An explicit
+            // [initialPanes] from the host still wins: a host naming its panes is a host saying
+            // which surfaces it wants captured.
             panes =
               if (
                 initialPanes == setOf(EditorPane.Editor) &&

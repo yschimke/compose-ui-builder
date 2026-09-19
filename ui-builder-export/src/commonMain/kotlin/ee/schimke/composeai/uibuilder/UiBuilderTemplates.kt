@@ -707,9 +707,14 @@ fun wearScreenUiBuilderDocument(
       UiBuilderNode(
         id = "row-$index",
         componentId = "wear-m3/card",
-        // `shape = "large"` is what reaches the theme's corner radius — a card with no shape
-        // property draws `RoundedCornerShape(0.dp)`. Under the Wear screen scaffold that radius is
-        // 26dp, which is the reference card's.
+        // No `shape`, and the absence is the point. The row carried `shape = "large"` with a
+        // comment saying it "is what reaches the theme's corner radius", which was true while
+        // `wear-m3/card` was drawn as a borrowed mobile card through the canvas's corner-radius
+        // local. Wear's own `TitleCard` takes its shape from `CardDefaults.shape` — one shape,
+        // 26dp,
+        // the reference card's — and neither the canvas nor the exporter reads the property, so it
+        // was a control an author could move that moved nothing. Dropped from the catalog's
+        // declaration in the same change.
         properties =
           JsonObject(
             mapOf(
@@ -717,8 +722,7 @@ fun wearScreenUiBuilderDocument(
               // `filled` while the variant list was the borrowed mobile one, where Material's
               // three are filled / elevated / outlined; Wear's four are the four cards it
               // publishes, and a filled Wear card is not one of them.
-              "variant" to literal("enum", JsonPrimitive("title")),
-              "shape" to literal("enum", JsonPrimitive("large")),
+              "variant" to literal("enum", JsonPrimitive("title"))
             )
           ),
         modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),

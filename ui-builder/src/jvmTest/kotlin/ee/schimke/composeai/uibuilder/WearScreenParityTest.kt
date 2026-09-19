@@ -81,15 +81,21 @@ class WearScreenParityTest {
   }
 
   /**
-   * A card with no `shape` draws `RoundedCornerShape(0.dp)` — the theme's radius is unreachable.
+   * The rows carry no `shape`, because Wear publishes exactly one.
    *
-   * `"large"` is what routes it to the Wear scaffold's 26dp, which is the reference card's corner.
-   * This is the assertion that catches its removal, because a square card still renders fine.
+   * They used to ask for `"large"` to route the card through the canvas's corner-radius local,
+   * which was how a *borrowed* mobile card reached the reference's 26dp. Wear's own `TitleCard`
+   * takes `CardDefaults.shape` — one shape, and it is that 26dp — so the property decided nothing
+   * on either lane, and it is dropped from the catalog's declaration rather than left as a control
+   * an author can move that moves nothing. This assertion is what catches its return.
    */
   @Test
-  fun `the rows ask for the theme's corner radius`() {
+  fun `the rows carry no card shape of their own`() {
     (0..5).forEach { index ->
-      assertEquals("large", document.nodes.getValue("row-$index").property("shape"), "row-$index")
+      assertTrue(
+        "shape" !in document.nodes.getValue("row-$index").properties,
+        "row-$index still declares a shape: ${document.nodes.getValue("row-$index").properties}",
+      )
     }
   }
 

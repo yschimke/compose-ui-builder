@@ -307,9 +307,9 @@ private fun icon(iconKey: String, contentDescription: String): StarterNode =
 /**
  * `wear-m3/text`, seeded the way [text] seeds the mobile one — minus the style.
  *
- * No `style` argument: Wear's type scale is its own and the mobile `labelLarge` the borrow carries
- * is not one of its names, so seeding one would put a value in the document that the Wear generator
- * would then have to refuse. The component's default is Wear's own, which is the right answer.
+ * No `style` argument: Wear's type scale is its own, and a role seeded from the mobile catalog's
+ * names would put a value in the document that the Wear generator would then have to refuse. The
+ * component's default is Wear's own, which is the right answer.
  */
 private fun wearText(value: String): StarterNode =
   StarterNode(

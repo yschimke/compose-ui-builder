@@ -130,52 +130,52 @@ compiles the design against the catalog's own bundle and renders it with real Co
 `ServeUiBuilderNativePreview` exists for, and whose own KDoc names Android as the thing the Wasm
 canvas cannot answer.
 
-## What may be borrowed: foundation, and nothing Material
+## What `wear-m3` shares: foundation, and nothing Material
 
 **Material 3 and Wear Material 3 are not used together.** They are different libraries with
-different theme systems, sizes and colour roles, and no app mixes them — so a `wear-m3` design
-holding a component called `m3/card` claimed something no watch screen can mean.
+different theme systems, sizes and colour roles, and no app mixes them. A Wear `Card` and a Material
+3 `Card` share a name and nothing else: Wear publishes four cards with different content lambdas
+(`TitleCard`, `AppCard`, `OutlinedCard`, `Card`), one shape rather than three, no elevation argument
+and its own colour roles. A `wear-m3` design holding a component called `m3/card` therefore claimed
+something no watch screen can mean.
 
-It claimed it for a while. The catalog borrowed `m3/text`, `m3/icon`, `m3/button`, `m3/card` and
-`m3/surface` outright, and [`WearScreenCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearScreenCodeExporter.kt)
-quietly translated each one on the way out — `m3/card` became a `TitleCard`, `m3/text` became Wear's
-`Text`. The **export was right and the palette was lying**, which is the failure mode this whole
-document is about: a stand-in that does not say it is one.
+It claimed it for a while, and then it *derived* it for a while: the catalog built `wear-m3/card` by
+copying `m3/card` and renaming it, which is the same claim in a quieter form. The copy is gone. A
+Wear component is declared on its own terms, and where its surface happens to have the same *shape*
+as a Material 3 one — a `style` naming one of fifteen role names, a `color` written the same way, a
+`Modifier` extension — that is Compose's vocabulary rather than a shared component, and the
+declaration shares the vocabulary and not the component.
 
-The rule now:
+The rule:
 
-- **Foundation is borrowed.** `layout/box`, `layout/column`, `layout/row` and `asset/image` are
-  `androidx.compose.foundation` and `androidx.compose.ui` — one declaration shared by both platforms
-  — so borrowing one claims nothing about Material at all. Their capability notes say exactly that,
-  where the Material borrows' notes used to say "drawn as the Material 3 component of the same
-  name".
+- **Foundation is shared.** `layout/box`, `layout/column`, `layout/row` and `asset/image` are
+  `androidx.compose.foundation` and `androidx.compose.ui` — one declaration on both platforms — so
+  sharing one says nothing about Material at all. Their capability notes say exactly that, where the
+  Material components' notes used to say "drawn as the Material 3 component of the same name".
   Four, and only four: the Remote Compose seams that used to sit beside them were withdrawn in
   yschimke/compose-preview-server#917, because what a Remote Compose seam means inside a Wear
-  *screen* was never settled. Borrowing is a claim about the whole lane, so all four are drawn by
-  the canvas as themselves and written by the generator as themselves — including `asset/image`,
-  whose picture cannot travel in generated source (it is bytes in the design's asset store, and the
-  resource symbol that would name them is the receiving project's to declare). That one is written
-  as `Image(painter = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHigh))` with the asset
-  key named in a comment on the line to replace, which is what the mobile lane does and what the
+  *screen* was never settled. All four are drawn by the canvas as themselves and written by the
+  generator as themselves — including `asset/image`, whose picture cannot travel in generated source
+  (it is bytes in the design's asset store, and the resource symbol that would name them is the
+  receiving project's to declare). That one is written as
+  `Image(painter = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHigh))` with the asset key
+  named in a comment on the line to replace, which is what the mobile lane does and what the
   catalog's own `assetKey` notes have always promised.
-- **Anything Material is Wear's own id.** `wear-m3/text`, `wear-m3/card` and `wear-m3/button` join
-  `wear-m3/list-header` and the two containers. The id, the notes and the generated Kotlin all name
-  the Wear composable — and, since the port landed, so does the drawing: all three are Wear
-  Compose's own components on the canvas, so there is no borrow left in the palette at all. See
-  [the three ids](#what-this-leaves-the-three-ids-that-are-already-drawn-that-way). Renaming a
-  borrow the canvas already drew was not the same act as
-  [assembling a component it never had](#the-line-a-component-is-never-faked-so-it-can-run-in-wasm).
+- **Everything Material is Wear's own component.** `wear-m3/text`, `wear-m3/card` and
+  `wear-m3/button` are declared the way `wear-m3/list-header`, the two containers and the seventeen
+  controls are: their own id, their own slots, their own properties, their own notes — and, since
+  the port landed, their own drawing. Nothing in the palette is derived from a Material 3 component.
 - **`m3/surface` and `m3/icon` are gone rather than renamed.** Wear publishes no `Surface`, and an
   icon key resolves to a vector through a table the export module cannot reach, so `wear-m3/icon`
-  would be a palette entry that refuses on export — which is what the borrowed `m3/icon` already
-  was.
+  would be a palette entry that refuses on export.
 
-`WearM3ScreenCatalogTest` asserts the borrow list as a literal set, so adding one is a decision
+`WearM3ScreenCatalogTest` asserts the foundation list as a literal set, so widening it is a decision
 somebody writes down rather than something that drifts in behind a convenient `m3/` id.
 
-The rename changes no pixels: `WearScreenSamplePreview` renders byte-identically before and after
-([`renders/ui-builder-wear-borrow/`](../../renders/ui-builder-wear-borrow/README.md)). It changes
-what the design says it holds.
+The rename changed no pixels: `WearScreenSamplePreview` renders byte-identically before and after
+([`renders/ui-builder-wear-borrow/`](../../renders/ui-builder-wear-borrow/README.md)). It changed
+what the design says it holds — and so did the change from a renamed copy to a declaration, which is
+why the golden's diff for it is notes and two properties rather than a picture.
 
 ## The line: a component is never faked so it can run in Wasm
 
@@ -199,8 +199,8 @@ rule this section states:
 
 **Do not fabricate a component in the Wasm canvas to stand in for a library the canvas cannot link.**
 
-Renaming a borrow is cheap and honest. `m3/card` was already being drawn; the change was to stop
-calling it Material's. Building `CheckboxButton` is neither. Wear publishes no such shape to Wasm, so
+Giving a component its own id was cheap and honest: `m3/card` was already being drawn, and the
+change was to stop calling it Material's. Building `CheckboxButton` was neither. Wear publishes no such shape to Wasm, so
 the canvas has to *assemble* one — a Material 3 `Checkbox` inside a row, at a width, a corner radius,
 a fill and a label baseline read off a screenshot — and what comes out is an impression of a
 component with nothing in this build to check it against. Everything that impression gets wrong is
@@ -401,8 +401,9 @@ output and renders it for real ([the round trip](#the-round-trip-closes)).
 
 Nothing. All three are Wear Compose's own on the canvas now: `wear-m3/card` and `wear-m3/button`
 call the port's `TitleCard` and `Button`, and `wear-m3/text` calls the port's `Text`. The rename
-table that started this section (`wearScreenStandIn`) is deleted, so a fourth id cannot join by
-being borrowed.
+table that started this section (`wearScreenStandIn`) is deleted, and so is the copy-and-rename
+that replaced it: each of the three is declared on its own terms now, so a fourth id cannot join by
+being derived from a Material 3 one.
 
 Text was the last one, and it was worth more than the composable. The branch read four properties —
 `text`, `color`, `style`, `maxLines` — where the catalog declares sixteen, so every `fontSizeSp`,
@@ -501,12 +502,11 @@ system long-screenshot and by the renderer for a `ScrollMode.LONG` capture, and 
 `ScreenScaffold` reads it. That is app behaviour rather than a preview concession: a real long
 screenshot of a real app wants the same thing.
 
-**`wear-m3/list-header` is a component now, and it is the first one that is Wear's rather than
-borrowed.** Faking `ListHeader`'s 48dp with a padded `m3/text` makes the canvas match the reference
-while the generated screen comes out **31.5dp shorter**, because a padded Text is not a `ListHeader`
-and the generator is right not to pretend it is. Every other row already agreed
-to the dp; the header was the whole discrepancy, and there was no way to close it from the borrowed
-side.
+**`wear-m3/list-header` is a component now, and it is the first one that is Wear's own.** Faking
+`ListHeader`'s 48dp with a padded `m3/text` makes the canvas match the reference while the generated
+screen comes out **31.5dp shorter**, because a padded `Text` is not a `ListHeader` and the generator
+is right not to pretend it is. Every other row already agreed to the dp; the header was the whole
+discrepancy, and no Material 3 component could close it.
 
 ### Nothing is drawn over the design
 
@@ -602,9 +602,10 @@ The scaffold's `timeText` generates the `AppScaffold` that actually owns the sta
 would churn every render diff, and dropping it instead would under-report the top margin the content
 lays out around.
 
-A borrowed component with no Wear counterpart is refused **by node**, never approximated. The canvas
-will draw an `m3/filter-chip` quite happily and there is nothing in Wear Compose Material 3 to write
-it as, so the generator names the node and stops rather than emitting Kotlin that does not compile.
+A Material 3 component with no Wear counterpart is refused **by node**, never approximated. The
+canvas will draw an `m3/filter-chip` quite happily and there is nothing in Wear Compose Material 3
+to write it as, so the generator names the node and stops rather than emitting Kotlin that does not
+compile.
 
 The one kind of stranger it does write is a **component pack** node — another served catalog's
 composable admitted into `wear-m3` (`UI_BUILDER_COMPONENT_PACKS.md`). It is not authored here
