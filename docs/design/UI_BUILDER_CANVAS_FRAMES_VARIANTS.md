@@ -186,8 +186,9 @@ claims to work on. Before this, exactly one consumer read it —
 generated screen — and the editor never drew it. A design could therefore claim three devices and show
 its author one, and the two decisions were made in different places with neither showing the other.
 
-The preview pane is that list, drawn. **The set you look at is the set the export writes**, which is
-the whole reason to seed it from stored state rather than from a viewer-local list of devices.
+The preview pane is that list, drawn. **The set you look at is the set the export writes** — not the
+design's own frame repeated beside it — which is the whole reason to seed it from stored state rather
+than from a viewer-local list of devices.
 
 **A device is a set of properties, never a picture of a handset.** `UiBuilderDevicePreset` carries an
 id, a label, a group, a width, a height and a density, and a pane is the design composed at those —

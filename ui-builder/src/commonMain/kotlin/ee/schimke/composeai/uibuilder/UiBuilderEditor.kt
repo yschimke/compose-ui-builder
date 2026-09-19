@@ -9285,13 +9285,13 @@ private fun LiveNativeFrame(
  * mid-thought and switched off again — and why the pane that *does* cost a compile is a separate
  * choice somebody makes on purpose ([EditorPane]).
  *
- * ## Every frame the design claims, side by side
+ * ## Only the selected frames, side by side
  *
- * The design at its own size first, then one frame per device in `exportDevices` and one per
- * switched-on axis — the same [UiBuilderVariantPane] list the canvas draws beside itself, so the
- * two panes cannot disagree about which devices the design ships on. Laid out in a scrolling row
- * rather than scaled to fit: a device frame shrunk to a thumbnail answers nothing about text that
- * only just fits.
+ * One frame per selected device in `exportDevices`, plus the switched-on axes — exactly the
+ * [UiBuilderVariantPane] list. The editor already draws the design's own frame; repeating it here
+ * merely duplicates the first device in the common case and obscures the comparison this pane is
+ * for. Laid out in a scrolling row rather than scaled to fit: a device frame shrunk to a thumbnail
+ * answers nothing about text that only just fits.
  */
 @Composable
 private fun DesignPreviewPane(
@@ -9303,28 +9303,19 @@ private fun DesignPreviewPane(
   variants: List<UiBuilderVariantPane>,
   modifier: Modifier = Modifier,
 ) {
-  val widthDp =
-    document.environment["widthDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 1280f
-  val heightDp =
-    document.environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 800f
   val hostDensity = LocalDensity.current
-  // The design's own frame, as a pane like the others, so the row below has one shape in it. Its
-  // session id is distinct from the canvas's for the reason [UiBuilderVariantPane] gives: two
-  // panes of one design are separated by the session, never by the document id.
-  val panes =
-    document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes)
-      ?: (listOf(
-        UiBuilderVariantPane(
-          id = "preview-design",
-          label = designFrameLabel(document, widthDp, heightDp),
-          widthDp = widthDp,
-          heightDp = heightDp,
-          document = document,
-        )
-      ) + variants)
+  val panes = document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
       BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+        if (panes.isEmpty()) {
+          Text(
+            "Select devices or display variants to compare",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.Center),
+          )
+          return@BoxWithConstraints
+        }
         // One scale for the whole row, so two devices in it are drawn at the same ratio and are
         // actually comparable — picking a scale per frame would make a watch and a tablet look the
         // same size, which is the one thing this row exists to contradict.
@@ -9390,26 +9381,6 @@ private fun DesignPreviewPane(
       }
     }
   }
-}
-
-/**
- * What the design's own frame is called in the preview row.
- *
- * The same three properties a device pane states — size and density — because this pane is the
- * baseline the others are being compared against, and a row where one label says "Design" and the
- * rest say `412×915dp · 2.625×` hides the one number the comparison is about.
- *
- * Nothing here is a picture of a device: no bezel, no notch, no rounded corner. A frame is the
- * design composed at a width, a height and a density, and the label is those.
- */
-private fun designFrameLabel(
-  document: UiBuilderDocument,
-  widthDp: Float,
-  heightDp: Float,
-): String {
-  val density =
-    document.environment["density"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull() ?: 1.0
-  return "Design · ${widthDp.toInt()}×${heightDp.toInt()}dp · ${trimmedDensity(density)}×"
 }
 
 /**

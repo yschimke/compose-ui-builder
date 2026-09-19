@@ -276,11 +276,11 @@ class VariantPaneTest {
   /**
    * Small frames wrap into rows instead of scrolling off the pane.
    *
-   * A Wear screen claims two or three watches, and at their 2x density each frame is 384-480 host
-   * dp wide. In a wide pane three fit across; the row this replaced put all four side by side and
-   * hid whichever did not fit — the one place a person was meant to see every device the design
-   * ships on. So the assertion is a *row break*: the fourth pane starts below the first, and the
-   * third shares the first's top line.
+   * A Wear screen claims four watches, and at their 2x density each frame is 384-480 host dp wide.
+   * In a wide pane three fit across; the row this replaced put all four side by side and hid
+   * whichever did not fit — the one place a person was meant to see every device the design ships
+   * on. So the assertion is a *row break*: the fourth selected device starts below the first, and
+   * the third shares the first's top line.
    */
   @OptIn(ExperimentalTestApi::class)
   @Test
@@ -305,6 +305,14 @@ class VariantPaneTest {
             2.0,
           ),
           UiBuilderDevicePreset("id:wearos_xl_round", "Wear OS XL Round", "Watches", 240, 240, 2.0),
+          UiBuilderDevicePreset(
+            "id:wearos_xxl_round",
+            "Wear OS XXL Round",
+            "Watches",
+            260,
+            260,
+            2.0,
+          ),
         )
       val environment =
         JsonObject(
@@ -323,7 +331,12 @@ class VariantPaneTest {
               base.environment +
                 ("exportDevices" to
                   JsonArray(
-                    listOf("id:wearos_small_round", "id:wearos_large_round", "id:wearos_xl_round")
+                    listOf(
+                        "id:wearos_small_round",
+                        "id:wearos_large_round",
+                        "id:wearos_xl_round",
+                        "id:wearos_xxl_round",
+                      )
                       .map(::JsonPrimitive)
                   ))
             )
@@ -342,15 +355,20 @@ class VariantPaneTest {
       val small = onNodeWithText("Wear OS Small Round", substring = true).getBoundsInRoot()
       val large = onNodeWithText("Wear OS Large Round", substring = true).getBoundsInRoot()
       val xl = onNodeWithText("Wear OS XL Round", substring = true).getBoundsInRoot()
+      val xxl = onNodeWithText("Wear OS XXL Round", substring = true).getBoundsInRoot()
       // The first three share a row…
       assertTrue(
         kotlin.math.abs(small.top.value - large.top.value) < 2f,
         "expected Small and Large on one row: ${small.top} vs ${large.top}",
       )
-      // …and the fourth (the design's own frame is first, so XL is the last) wrapped below.
       assertTrue(
-        xl.top.value > small.bottom.value,
-        "expected XL on a second row, below Small: ${xl.top} vs ${small.bottom}",
+        kotlin.math.abs(small.top.value - xl.top.value) < 2f,
+        "expected Small and XL on one row: ${small.top} vs ${xl.top}",
+      )
+      // …and the fourth selected device wrapped below.
+      assertTrue(
+        xxl.top.value > small.bottom.value,
+        "expected XXL on a second row, below Small: ${xxl.top} vs ${small.bottom}",
       )
     }
 }
