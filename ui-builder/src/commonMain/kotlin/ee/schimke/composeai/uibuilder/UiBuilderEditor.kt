@@ -5717,7 +5717,7 @@ internal fun PinnedDesignCanvas(
                 )
                 SlotPlaceholderOverlay(
                   placeholders = slotPlaceholders,
-                  frameBounds = frameBounds,
+                  frameOrigin = frameOrigin,
                   drawScale = drawScale,
                 )
                 DropTargetOverlay(
@@ -5894,7 +5894,7 @@ internal fun PinnedDesignCanvas(
 @Composable
 private fun SlotPlaceholderOverlay(
   placeholders: List<UiBuilderSlotPlaceholder>,
-  frameBounds: Rect,
+  frameOrigin: Offset,
   drawScale: Float,
 ) {
   if (placeholders.isEmpty()) return
@@ -5907,8 +5907,8 @@ private fun SlotPlaceholderOverlay(
       val bounds = placeholder.bounds
       val local =
         UiBuilderPixelBounds(
-          x = (bounds.x - frameBounds.left) / drawScale,
-          y = (bounds.y - frameBounds.top) / drawScale,
+          x = (bounds.x - frameOrigin.x) / drawScale,
+          y = (bounds.y - frameOrigin.y) / drawScale,
           width = bounds.width / drawScale,
           height = bounds.height / drawScale,
         )
@@ -5936,8 +5936,8 @@ private fun SlotPlaceholderOverlay(
     val bounds = placeholder.bounds
     val local =
       UiBuilderPixelBounds(
-        x = (bounds.x - frameBounds.left) / drawScale,
-        y = (bounds.y - frameBounds.top) / drawScale,
+        x = (bounds.x - frameOrigin.x) / drawScale,
+        y = (bounds.y - frameOrigin.y) / drawScale,
         width = bounds.width / drawScale,
         height = bounds.height / drawScale,
       )
