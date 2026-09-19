@@ -75,6 +75,24 @@ class CanvasExtentTest {
     )
   }
 
+  /**
+   * A Wear screen's list is a `TransformingLazyColumn`, drawn by the real Wear Compose component
+   * the CMP port publishes. Measured against infinity a lazy layout reports an infinite height, and
+   * the surface that draws the extent then fails with `Size(w x 2147483647) is out of range` — a
+   * blank editor for every Wear screen, which is how this was found (wear-m3-catalog's `wear-list`
+   * template, whose editor opened to nothing). The extent draws the list as a Column for that
+   * reason; this is the measurement that says the Column wraps its content.
+   */
+  @Test
+  fun `an unrolled wear transforming list grows past the frame`() {
+    val height = measureUnbounded { UiBuilderSurface(wearScreenDocument(), unrolled = true) }
+
+    assertTrue(
+      height in ITEMS * ITEM_DP until 100_000,
+      "expected the Wear extent to hold all $ITEMS items at a finite height, measured $height",
+    )
+  }
+
   /** The frame pane is unchanged: the real composition still clips to the device it draws. */
   @Test
   fun `the same design at its frame stays the frame's height`() {
@@ -190,6 +208,80 @@ class CanvasExtentTest {
           JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(ITEM_DP))),
       )
     )
+
+  /**
+   * A Wear screen over a `TransformingLazyColumn` of [ITEMS] dots — the shape a new `wear-m3`
+   * design opens as, reduced to what the extent question needs.
+   */
+  private fun wearScreenDocument(): UiBuilderDocument {
+    val items = (0 until ITEMS).map { "item-$it" }
+    return UiBuilderDocument(
+      schema = "compose-ui-builder-document/v1-candidate",
+      id = "extent-wear",
+      title = "Extent wear",
+      revision = 0,
+      catalogPin = JsonObject(emptyMap()),
+      environment =
+        JsonObject(
+          mapOf(
+            "widthDp" to JsonPrimitive(FRAME_DP),
+            "heightDp" to JsonPrimitive(FRAME_DP),
+          )
+        ),
+      stateVariables = JsonObject(emptyMap()),
+      roots = listOf("wear-screen"),
+      nodes =
+        buildMap {
+          put(
+            "wear-screen",
+            UiBuilderNode(
+              id = "wear-screen",
+              componentId = "wear-m3/screen-scaffold",
+              properties =
+                JsonObject(
+                  mapOf(
+                    "timeText" to
+                      JsonObject(
+                        mapOf(
+                          "type" to JsonPrimitive("string"),
+                          "value" to JsonPrimitive("10:10"),
+                        )
+                      ),
+                    "scrollIndicator" to
+                      JsonObject(
+                        mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(true))
+                      ),
+                  )
+                ),
+              modifiers = JsonArray(emptyList()),
+              slots = mapOf("content" to listOf("wear-list"), "edgeButton" to emptyList()),
+            ),
+          )
+          put(
+            "wear-list",
+            UiBuilderNode(
+              id = "wear-list",
+              componentId = "wear-m3/transforming-lazy-column",
+              properties = JsonObject(emptyMap()),
+              modifiers = JsonArray(emptyList()),
+              slots = mapOf("items" to items),
+            ),
+          )
+          items.forEach {
+            put(
+              it,
+              UiBuilderNode(
+                id = it,
+                componentId = "shape/colour-dot",
+                properties = dot(),
+                modifiers = JsonArray(emptyList()),
+                slots = emptyMap(),
+              ),
+            )
+          }
+        },
+    )
+  }
 
   private companion object {
     /** Comfortably taller than the frame once stacked, so "did it grow?" has one answer. */
