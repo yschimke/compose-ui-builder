@@ -48,17 +48,11 @@ class CachingLocalCatalogSourceTest {
 
   private companion object {
     val catalog =
-      CatalogCapabilityV1(
-        schema = "compose-ui-builder-catalog/v1",
-        benchmark =
-          CatalogBenchmarkV1(
-            id = "test",
-            sourceRevision = "test",
-            catalogSystemId = "m3-catalog",
-            catalogRevision = "test",
-            nativeRuntimeId = "test",
-          ),
-        components = emptyList(),
-      )
+      CatalogCapabilityV1.Builder(
+          "compose-ui-builder-catalog/v1",
+          CatalogBenchmarkV1.Builder("test", "test", "m3-catalog", "test", "test").build(),
+          emptyList(),
+        )
+        .build()
   }
 }

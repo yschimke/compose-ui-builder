@@ -170,8 +170,9 @@ class CatalogUpgradePreviewTest {
   fun `a legacy variant selects a concrete successor component`() {
     val target =
       remoteM3()
-        .copy(
-          statusSemantics =
+        .newBuilder()
+        .also {
+          it.statusSemantics =
             JsonObject(
               mapOf(
                 "supersedes" to
@@ -199,13 +200,14 @@ class CatalogUpgradePreviewTest {
                     )
                   )
               )
-            ),
-          components =
+            )
+          it.components =
             listOf(
               component("m3/card", listOf("containerColor")),
               component("m3/elevated-card", listOf("containerColor")),
-            ),
-        )
+            )
+        }
+        .build()
     val document =
       document("d")
         .withNode(
@@ -350,40 +352,16 @@ class CatalogUpgradePreviewTest {
    * with a background for the surface Remote Compose Material 3 does not publish.
    */
   private fun remoteM3(containerColorBecomes: String = "background"): CatalogCapabilityV1 =
-    CatalogCapabilityV1(
-      schema = "compose-catalog-capabilities/v1",
-      benchmark =
-        CatalogBenchmarkV1("remote-m3", "source", "remote-m3", "published", "remote-runtime"),
-      statusSemantics =
-        JsonObject(
-          mapOf(
-            "supersedes" to
-              JsonObject(
-                mapOf(
-                  "m3/text" to
-                    JsonObject(
-                      mapOf(
-                        "componentId" to JsonPrimitive("remote-m3/remote-text"),
-                        "properties" to
-                          JsonObject(mapOf("fontSizeSp" to JsonPrimitive("fontSize"))),
-                      )
-                    ),
-                  "m3/surface" to
-                    JsonObject(
-                      mapOf(
-                        "componentId" to JsonPrimitive("layout/box"),
-                        "slots" to JsonObject(mapOf("content" to JsonPrimitive("children"))),
-                        "modifiers" to
-                          JsonObject(
-                            mapOf("containerColor" to JsonPrimitive(containerColorBecomes))
-                          ),
-                      )
-                    ),
-                )
-              )
+    CatalogCapabilityV1.Builder(
+        "compose-catalog-capabilities/v1",
+        CatalogBenchmarkV1.Builder(
+            "remote-m3",
+            "source",
+            "remote-m3",
+            "published",
+            "remote-runtime",
           )
-        ),
-      components =
+          .build(),
         listOf(
           component(
             "remote-m3/remote-text",
@@ -397,24 +375,63 @@ class CatalogUpgradePreviewTest {
           ),
           component("layout/box", listOf("contentAlignment")),
         ),
-      exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),
-    )
+      )
+      .also {
+        it.statusSemantics =
+          JsonObject(
+            mapOf(
+              "supersedes" to
+                JsonObject(
+                  mapOf(
+                    "m3/text" to
+                      JsonObject(
+                        mapOf(
+                          "componentId" to JsonPrimitive("remote-m3/remote-text"),
+                          "properties" to
+                            JsonObject(mapOf("fontSizeSp" to JsonPrimitive("fontSize"))),
+                        )
+                      ),
+                    "m3/surface" to
+                      JsonObject(
+                        mapOf(
+                          "componentId" to JsonPrimitive("layout/box"),
+                          "slots" to JsonObject(mapOf("content" to JsonPrimitive("children"))),
+                          "modifiers" to
+                            JsonObject(
+                              mapOf("containerColor" to JsonPrimitive(containerColorBecomes))
+                            ),
+                        )
+                      ),
+                  )
+                )
+            )
+          )
+        it.exportCapabilities =
+          ExportCapabilitiesV1.Builder()
+            .also {
+              it.composeCode = true
+              it.svg = true
+              it.png = true
+            }
+            .build()
+      }
+      .build()
 
   private fun component(id: String, properties: List<String>) =
-    ComponentCapabilityV1(
-      componentId = id,
-      displayName = id,
-      role = if (id == "layout/box") "Container" else "Leaf",
-      properties =
-        properties.map {
-          PropertyCapabilityV1(
-            name = it,
-            jsonType = JsonPrimitive(if (it in NUMERIC) "number" else "string"),
-            required = false,
-          )
-        },
-      wasm = WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
-    )
+    ComponentCapabilityV1.Builder(
+        id,
+        id,
+        if (id == "layout/box") "Container" else "Leaf",
+        WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
+      )
+      .also {
+        it.properties = properties.map {
+          PropertyCapabilityV1.Builder(it, JsonPrimitive(if (it in NUMERIC) "number" else "string"))
+            .also { it.required = false }
+            .build()
+        }
+      }
+      .build()
 
   /**
    * Serves the published catalog under [TARGET] and the borrowed vocabulary under [SOURCE].
@@ -427,18 +444,20 @@ class CatalogUpgradePreviewTest {
     UiBuilderCatalogExecutor {
     private val published = remoteM3()
     private val borrowed =
-      published.copy(
-        benchmark = published.benchmark.copy(catalogRevision = "candidate"),
-        components =
-          published.components +
-            listOfNotNull(
-              component("m3/text", listOf("text", "color", "fontSizeSp", "letterSpacingSp"))
-                .takeIf { borrowedStillDeclaresText }
-            ) +
-            // Declared here and nowhere in the published catalog: the shape of a design authored
-            // when the borrowed vocabulary was wider than what replaced it.
-            component("m3/assist-chip", listOf("text")),
-      )
+      published
+        .newBuilder()
+        .also {
+          it.benchmark =
+            published.benchmark.newBuilder().also { it.catalogRevision = "candidate" }.build()
+          it.components =
+            published.components +
+              listOfNotNull(
+                component("m3/text", listOf("text", "color", "fontSizeSp", "letterSpacingSp"))
+                  .takeIf { borrowedStillDeclaresText }
+              ) +
+              component("m3/assist-chip", listOf("text"))
+        }
+        .build()
 
     override fun listCatalogs(): List<CatalogCapabilityV1> = listOf(published, borrowed)
 

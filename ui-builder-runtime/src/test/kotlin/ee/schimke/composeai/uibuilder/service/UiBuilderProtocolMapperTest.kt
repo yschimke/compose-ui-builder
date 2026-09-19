@@ -285,12 +285,22 @@ class UiBuilderProtocolMapperTest {
     CatalogReferenceV1("m3", "catalog-revision", "capability-digest", "m3-runtime")
 
   private fun catalog(): CatalogCapabilityV1 =
-    CatalogCapabilityV1(
-      schema = "compose-catalog-capabilities/v1",
-      benchmark = CatalogBenchmarkV1("m3", "source", "m3", "catalog-revision", "m3-runtime"),
-      components = emptyList(),
-      exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),
-    )
+    CatalogCapabilityV1.Builder(
+        "compose-catalog-capabilities/v1",
+        CatalogBenchmarkV1.Builder("m3", "source", "m3", "catalog-revision", "m3-runtime").build(),
+        emptyList(),
+      )
+      .also {
+        it.exportCapabilities =
+          ExportCapabilitiesV1.Builder()
+            .also {
+              it.composeCode = true
+              it.svg = true
+              it.png = true
+            }
+            .build()
+      }
+      .build()
 
   private fun access(): DesignAccessControlV1 =
     DesignAccessControlV1(accessRevision = 3, ownerActorId = "owner")

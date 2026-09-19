@@ -389,12 +389,22 @@ class UiBuilderAssetLaneTest {
   private companion object {
     val CATALOG_REFERENCE = CatalogReferenceV1("m3", "catalog", "digest", "m3-runtime")
     val CATALOG =
-      CatalogCapabilityV1(
-        schema = "compose-catalog-capabilities/v1",
-        benchmark = CatalogBenchmarkV1("m3", "source", "m3", "catalog", "m3-runtime"),
-        components = emptyList(),
-        exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = false, png = false),
-      )
+      CatalogCapabilityV1.Builder(
+          "compose-catalog-capabilities/v1",
+          CatalogBenchmarkV1.Builder("m3", "source", "m3", "catalog", "m3-runtime").build(),
+          emptyList(),
+        )
+        .also {
+          it.exportCapabilities =
+            ExportCapabilitiesV1.Builder()
+              .also {
+                it.composeCode = true
+                it.svg = false
+                it.png = false
+              }
+              .build()
+        }
+        .build()
 
     /** A PNG signature and an IHDR chunk declaring 3×2; enough for the sniffer, not a picture. */
     val PNG_HEADER: ByteArray =

@@ -140,39 +140,42 @@ class LocalUiBuilderServiceTest {
   private companion object {
     /** The two components the fixture design uses, and nothing else. */
     val catalog =
-      CatalogCapabilityV1(
-        schema = "compose-ui-builder-catalog/v1",
-        benchmark =
-          CatalogBenchmarkV1(
-            id = "test",
-            sourceRevision = "test",
-            catalogSystemId = LocalDesignFixtures.CATALOG_SYSTEM_ID,
-            catalogRevision = "test",
-            nativeRuntimeId = "test",
-          ),
-        components =
+      CatalogCapabilityV1.Builder(
+          "compose-ui-builder-catalog/v1",
+          CatalogBenchmarkV1.Builder(
+              "test",
+              "test",
+              LocalDesignFixtures.CATALOG_SYSTEM_ID,
+              "test",
+              "test",
+            )
+            .build(),
           listOf(
-            ComponentCapabilityV1(
-              componentId = "m3/column",
-              displayName = "Column",
-              role = "container",
-              slots =
-                listOf(
-                  SlotCapabilityV1(
-                    name = "content",
-                    cardinality = SlotCardinalityV1(),
-                    ordered = true,
+            ComponentCapabilityV1.Builder(
+                "m3/column",
+                "Column",
+                "container",
+                WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
+                  .build(),
+              )
+              .also {
+                it.slots =
+                  listOf(
+                    SlotCapabilityV1.Builder("content", SlotCardinalityV1.Builder().build(), true)
+                      .build()
                   )
-                ),
-              wasm = WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
-            ),
-            ComponentCapabilityV1(
-              componentId = "m3/text",
-              displayName = "Text",
-              role = "leaf",
-              wasm = WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
-            ),
+              }
+              .build(),
+            ComponentCapabilityV1.Builder(
+                "m3/text",
+                "Text",
+                "leaf",
+                WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
+                  .build(),
+              )
+              .build(),
           ),
-      )
+        )
+        .build()
   }
 }

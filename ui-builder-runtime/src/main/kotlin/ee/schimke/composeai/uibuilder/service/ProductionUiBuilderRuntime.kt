@@ -79,7 +79,13 @@ public class CurrentM3UiBuilderCatalogExecutor(
   source: String = packagedM3CatalogSource(),
   catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID),
   exportCapabilities: ExportCapabilitiesV1 =
-    ExportCapabilitiesV1(composeCode = true, svg = false, png = false),
+    ExportCapabilitiesV1.Builder()
+      .also {
+        it.composeCode = true
+        it.svg = false
+        it.png = false
+      }
+      .build(),
   /**
    * Whether a given catalog can export Compose, asked per catalog rather than once.
    *
@@ -128,7 +134,9 @@ public class CurrentM3UiBuilderCatalogExecutor(
     json
       .decodeFromString<CatalogCapabilityV1>(source)
       .let(::validateCatalog)
-      .copy(exportCapabilities = exportCapabilities)
+      .newBuilder()
+      .also { it.exportCapabilities = exportCapabilities }
+      .build()
   private val synthesisedCatalogs =
     mapOf(
       DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
@@ -281,7 +289,13 @@ public class CurrentM3UiBuilderCatalogExecutor(
             ("componentMenu" to semantics.withMenuEntry(component.componentId, group, donorOrder))
         )
     }
-    return catalog.copy(components = catalog.components + missing, statusSemantics = semantics)
+    return catalog
+      .newBuilder()
+      .also {
+        it.components = catalog.components + missing
+        it.statusSemantics = semantics
+      }
+      .build()
   }
 
   // A published catalog wins over the synthesised one of the same id. The map is the union rather
@@ -310,31 +324,41 @@ public class CurrentM3UiBuilderCatalogExecutor(
             "UI-builder catalog $systemId is neither published nor synthesised by this build"
           }
         catalog
-          .copy(
-            components =
+          .newBuilder()
+          .also {
+            it.components =
               catalog.components.map { component ->
                 if (!UiBuilderBuildFeatures.remoteCompose)
-                  component.copy(
-                    properties = component.properties.filterNot { it.name == SHOW_BY_STATE }
-                  )
+                  component
+                    .newBuilder()
+                    .also {
+                      it.properties = component.properties.filterNot { it.name == SHOW_BY_STATE }
+                    }
+                    .build()
                 else if (
                   component.componentId != STATE_SELECTION_CONTAINER ||
                     component.properties.any { it.name == SHOW_BY_STATE }
                 )
                   component
                 else
-                  component.copy(
-                    properties =
-                      component.properties +
-                        baseCatalog.components
-                          .first { it.componentId == STATE_SELECTION_CONTAINER }
-                          .properties
-                          .first { it.name == SHOW_BY_STATE }
-                  )
-              },
-            exportCapabilities =
+                  component
+                    .newBuilder()
+                    .also {
+                      it.properties =
+                        component.properties +
+                          baseCatalog.components
+                            .first { it.componentId == STATE_SELECTION_CONTAINER }
+                            .properties
+                            .first { it.name == SHOW_BY_STATE }
+                    }
+                    .build()
+              }
+            it.exportCapabilities =
               RemoteDocumentExportSupport.capabilities(
-                catalog.exportCapabilities.copy(composeCode = composeExportFor(systemId)),
+                catalog.exportCapabilities
+                  .newBuilder()
+                  .also { it.composeCode = composeExportFor(systemId) }
+                  .build(),
                 json =
                   catalog.platform == "remote-compose" &&
                     RemoteDocumentExportSupport.jsonFormat?.let {
@@ -345,8 +369,9 @@ public class CurrentM3UiBuilderCatalogExecutor(
                     RemoteDocumentExportSupport.documentFormat?.let {
                       RemoteDocumentExportSupport.supports(exportCapabilities, it)
                     } == true,
-              ),
-          )
+              )
+          }
+          .build()
           .withPacks(packs.filter { it.platform == catalog.platform })
       }
   /**
@@ -1099,15 +1124,17 @@ private fun CatalogCapabilityV1.withPacks(
         }
       }
     )
-  return copy(
-    statusSemantics =
-      JsonObject(
-        statusSemantics +
-          ("componentMenu" to menu) +
-          (CurrentM3UiBuilderCatalogExecutor.COMPONENT_PACKS_KEY to declaredPacks)
-      ),
-    components = components + packs.flatMap { it.components },
-  )
+  return newBuilder()
+    .also {
+      it.statusSemantics =
+        JsonObject(
+          statusSemantics +
+            ("componentMenu" to menu) +
+            (CurrentM3UiBuilderCatalogExecutor.COMPONENT_PACKS_KEY to declaredPacks)
+        )
+      it.components = components + packs.flatMap { it.components }
+    }
+    .build()
 }
 
 /**
@@ -1214,30 +1241,26 @@ internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV
  */
 private fun widgetContainerProperties(): List<PropertyCapabilityV1> =
   listOf(
-    PropertyCapabilityV1(
-      name = "background",
-      jsonType = JsonPrimitive("string"),
-      notes =
-        "The widget's own background, painted by the host as the rounded rect. Defaults to " +
-          "#FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
-    ),
-    PropertyCapabilityV1(
-      name = "horizontalPaddingDp",
-      jsonType = JsonPrimitive("number"),
-      notes = "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
-    ),
-    PropertyCapabilityV1(
-      name = "verticalPaddingDp",
-      jsonType = JsonPrimitive("number"),
-      notes = "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
-    ),
-    PropertyCapabilityV1(
-      name = "cornerRadiusDp",
-      jsonType = JsonPrimitive("number"),
-      notes =
-        "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws " +
-          "this radius behind the content rather than clipping to it.",
-    ),
+    PropertyCapabilityV1.Builder("background", JsonPrimitive("string"))
+      .also {
+        it.notes =
+          "The widget's own background, painted by the host as the rounded rect. Defaults to " +
+            "#FF272430, the colour WearWidgetContainer applies to a widget that declares none."
+      }
+      .build(),
+    PropertyCapabilityV1.Builder("horizontalPaddingDp", JsonPrimitive("number"))
+      .also { it.notes = "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec." }
+      .build(),
+    PropertyCapabilityV1.Builder("verticalPaddingDp", JsonPrimitive("number"))
+      .also { it.notes = "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec." }
+      .build(),
+    PropertyCapabilityV1.Builder("cornerRadiusDp", JsonPrimitive("number"))
+      .also {
+        it.notes =
+          "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws " +
+            "this radius behind the content rather than clipping to it."
+      }
+      .build(),
   )
 
 /**
@@ -1368,10 +1391,21 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val contentSlot =
     box.slots
       .single()
-      .copy(
-        name = "content",
-        cardinality = box.slots.single().cardinality.copy(min = 0, max = 1),
-      )
+      .newBuilder()
+      .also {
+        it.name = "content"
+        it.cardinality =
+          box.slots
+            .single()
+            .cardinality
+            .newBuilder()
+            .also {
+              it.min = 0
+              it.max = 1
+            }
+            .build()
+      }
+      .build()
   // `WearWidgetBrush` is a CHAIN of drawing elements, and `WearWidgetContainer` folds over it,
   // drawing a round rect per element before the content. A slot is an ordered list of nodes, so the
   // chain models exactly as one — which is why gradients and images are a slot rather than more
@@ -1382,39 +1416,52 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   // Narrowed to the two traits that ARE brushes. `AnyContent` would let a Text be dropped in as a
   // "background", which upstream has no way to express.
   val backgroundSlot =
-    contentSlot.copy(
-      name = "background",
-      cardinality = contentSlot.cardinality.copy(min = 0, max = null),
-      acceptedRoles = listOf("Leaf"),
-      acceptedTraits = listOf("DrawLayer", "ImageContent"),
-    )
+    contentSlot
+      .newBuilder()
+      .also {
+        it.name = "background"
+        it.cardinality =
+          contentSlot.cardinality
+            .newBuilder()
+            .also {
+              it.min = 0
+              it.max = null
+            }
+            .build()
+        it.acceptedRoles = listOf("Leaf")
+        it.acceptedTraits = listOf("DrawLayer", "ImageContent")
+      }
+      .build()
   fun widget(componentId: String, displayName: String) =
-    box.copy(
-      componentId = componentId,
-      displayName = displayName,
-      role = "Scaffold",
-      traits = listOf("ScreenContent", "WearWidgetHost", "RemoteContentHost"),
-      slots = listOf(backgroundSlot, contentSlot),
-      // `WearWidgetContainer`'s own parameters, and only those. The container composable takes
-      // (horizontalPadding, verticalPadding, cornerRadius, background); the content size comes from
-      // `WearWidgetParams` and is what picks Small over Large, so it stays the component id rather
-      // than becoming a fifth property nobody could set to a legal value.
-      properties = widgetContainerProperties(),
-      modifierCapabilities = emptyList(),
-      wasm =
-        supportedWasm
-          .newBuilder()
-          .also {
-            it.notes =
-              "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains."
-          }
-          .build(),
-      code = null,
-      svg =
-        blockedSvg?.copy(
-          notes = "The copied Wear widget host geometry has not yet passed structured SVG parity."
-        ),
-    )
+    box
+      .newBuilder()
+      .also {
+        it.componentId = componentId
+        it.displayName = displayName
+        it.role = "Scaffold"
+        it.traits = listOf("ScreenContent", "WearWidgetHost", "RemoteContentHost")
+        it.slots = listOf(backgroundSlot, contentSlot)
+        it.properties = widgetContainerProperties()
+        it.modifierCapabilities = emptyList()
+        it.wasm =
+          supportedWasm
+            .newBuilder()
+            .also {
+              it.notes =
+                "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains."
+            }
+            .build()
+        it.code = null
+        it.svg =
+          blockedSvg
+            ?.newBuilder()
+            ?.also {
+              it.notes =
+                "The copied Wear widget host geometry has not yet passed structured SVG parity."
+            }
+            ?.build()
+      }
+      .build()
   // The reviewed `remote-m3` subset. The last two are brushes, and they are here because the
   // background slot above declares `DrawLayer` and `ImageContent` and nothing else in this list
   // carries either — a slot narrowed to traits no component in its own catalog has is a slot no
@@ -1451,48 +1498,43 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   // (yschimke/compose-preview-server#508). Narrowing here moves the refusal to the moment the
   // modifier is added, which is the only moment an author can act on it.
   fun ComponentCapabilityV1.narrowed(): ComponentCapabilityV1 =
-    copy(modifierCapabilities = modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS })
-  return base.copy(
-    // A Wear widget body is a Remote Compose document, played rather than composed. Said here so
-    // the New design chooser can group it apart from the phone screens, and so no mobile pack is
-    // ever merged into it: a `@RemoteComposable` body cannot call an application's composables.
-    statusSemantics =
-      JsonObject(
-        base.statusSemantics +
-          (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("remote-compose")) +
-          // `remote-m3` reads the base catalog's shelves, and the base catalog has never heard of
-          // this component: it is synthesized here. Shelved rather than left to fall back to its
-          // role heading ("Leaf") for the reason `ComponentMenu` gives — a menu is presentation,
-          // and an author looking for an animation looks under Content.
-          ("componentMenu" to base.statusSemantics.withMenuEntry("remote-m3/lottie", "Content")) +
-          // Which daemon draws this catalog natively, and it is not a preference: a widget's body
-          // is `androidx.compose.remote.creation.compose`, its container is `androidx.glance.wear`,
-          // and both are Android AARs. Left undeclared this defaulted to `desktop`, so the native
-          // lane sent a widget to Skiko — a compile that fails on every import and reads like the
-          // design is broken. The Wasm claim is left alone: unlike `wear-m3`'s Material 3
-          // lookalikes, the canvas draws this catalog's own borrowed components.
-          ("previewSurfaces" to
-            buildJsonObject {
-              putJsonObject("native") {
-                put("fidelity", JsonPrimitive("authoritative"))
-                put("backend", JsonPrimitive("android"))
-              }
-            })
-      ),
-    benchmark =
-      base.benchmark.copy(
-        id = "remote-m3-wear-widget-scaffolds",
-        sourceRevision = "wear-m3-catalog@d4e4e684e61d0657aad4ccb7752b8c0ab5d9dedf",
-        catalogSystemId = CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
-        catalogRevision = "wear-widget-scaffolds-v1",
-      ),
-    components =
-      listOf(
-        widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
-        widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
-        lottie(components.getValue("asset/image"), supportedWasm, blockedSvg),
-      ) + authoringIds.map { components.getValue(it).narrowed() },
-  )
+    newBuilder()
+      .also { it.modifierCapabilities = modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS } }
+      .build()
+  return base
+    .newBuilder()
+    .also {
+      it.statusSemantics =
+        JsonObject(
+          base.statusSemantics +
+            (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("remote-compose")) +
+            ("componentMenu" to base.statusSemantics.withMenuEntry("remote-m3/lottie", "Content")) +
+            ("previewSurfaces" to
+              buildJsonObject {
+                putJsonObject("native") {
+                  put("fidelity", JsonPrimitive("authoritative"))
+                  put("backend", JsonPrimitive("android"))
+                }
+              })
+        )
+      it.benchmark =
+        base.benchmark
+          .newBuilder()
+          .also {
+            it.id = "remote-m3-wear-widget-scaffolds"
+            it.sourceRevision = "wear-m3-catalog@d4e4e684e61d0657aad4ccb7752b8c0ab5d9dedf"
+            it.catalogSystemId = CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID
+            it.catalogRevision = "wear-widget-scaffolds-v1"
+          }
+          .build()
+      it.components =
+        listOf(
+          widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
+          widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
+          lottie(components.getValue("asset/image"), supportedWasm, blockedSvg),
+        ) + authoringIds.map { components.getValue(it).narrowed() }
+    }
+    .build()
 }
 
 /**
@@ -1526,38 +1568,35 @@ private fun lottie(
   supportedWasm: WasmCapabilityV1,
   blockedSvg: SvgCapabilityV1?,
 ): ComponentCapabilityV1 =
-  borrowed.copy(
-    componentId = "remote-m3/lottie",
-    displayName = "Lottie animation",
-    role = "Leaf",
-    // Not `ImageContent`, deliberately, even though the nearest borrowed shape is `asset/image`:
-    // the widget's `background` slot accepts that trait, and a background there is a
-    // `WearWidgetBrush` built outside composition — which a `@RemoteComposable` animation is not.
-    // `RemoteContent` is what `remote-compose/document` carries and says the same true thing.
-    traits = listOf("RemoteContent"),
-    slots = emptyList(),
-    properties = lottieProperties(),
-    // Exactly what `RemoteContentEmitter` can write, and no more. A component that advertises a
-    // modifier the generator refuses is a component whose export fails after the design is drawn,
-    // which is the worst moment to learn it.
-    modifierCapabilities = borrowed.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS },
-    wasm =
-      supportedWasm
-        .newBuilder()
-        .also {
-          it.notes =
-            "Drawn as a named placeholder carrying the animation's source and size. The canvas has no Lottie renderer, and compiling the animation the way the export does — into Remote Compose operations — is Horologist's Android-only creation API, which a Wasm build cannot link. A lookalike would be an impression of an animation nobody could check; the picture comes from the native lane, which builds this design's own generated document."
-        }
-        .build(),
-    // No component record: `WearWidgetCodeExporter` writes the whole widget, so the call site comes
-    // from `RemoteContentEmitter` like every other node in this catalog's body.
-    code = null,
-    svg =
-      blockedSvg?.copy(
-        notes =
-          "A placeholder on the canvas must not claim structured SVG parity with an animation."
-      ),
-  )
+  borrowed
+    .newBuilder()
+    .also {
+      it.componentId = "remote-m3/lottie"
+      it.displayName = "Lottie animation"
+      it.role = "Leaf"
+      it.traits = listOf("RemoteContent")
+      it.slots = emptyList()
+      it.properties = lottieProperties()
+      it.modifierCapabilities = borrowed.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+      it.wasm =
+        supportedWasm
+          .newBuilder()
+          .also {
+            it.notes =
+              "Drawn as a named placeholder carrying the animation's source and size. The canvas has no Lottie renderer, and compiling the animation the way the export does — into Remote Compose operations — is Horologist's Android-only creation API, which a Wasm build cannot link. A lookalike would be an impression of an animation nobody could check; the picture comes from the native lane, which builds this design's own generated document."
+          }
+          .build()
+      it.code = null
+      it.svg =
+        blockedSvg
+          ?.newBuilder()
+          ?.also {
+            it.notes =
+              "A placeholder on the canvas must not claim structured SVG parity with an animation."
+          }
+          ?.build()
+    }
+    .build()
 
 /**
  * `url`, `json` and `progress` — the animation, where it came from, and whether it runs.
@@ -1571,27 +1610,30 @@ private fun lottie(
  */
 private fun lottieProperties(): List<PropertyCapabilityV1> =
   listOf(
-    PropertyCapabilityV1(
-      name = "url",
-      jsonType = JsonPrimitive("string"),
-      notes =
-        "Where the animation was fetched from. Resolved into `json` once, in the builder; the " +
-          "generated widget never reaches the network.",
-    ),
-    PropertyCapabilityV1(
-      name = "json",
-      jsonType = JsonPrimitive("string"),
-      notes =
-        "The Lottie animation itself, as JSON text. This is what is compiled into the Remote " +
-          "Compose document, so it is what the export needs.",
-    ),
-    PropertyCapabilityV1(
-      name = "progress",
-      jsonType = JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object"))),
-      notes =
-        "Pins the animation to one frame, 0 (first) to 1 (last). Unset — the default — lets the " +
-          "document's animation clock run it in a loop.",
-    ),
+    PropertyCapabilityV1.Builder("url", JsonPrimitive("string"))
+      .also {
+        it.notes =
+          "Where the animation was fetched from. Resolved into `json` once, in the builder; the " +
+            "generated widget never reaches the network."
+      }
+      .build(),
+    PropertyCapabilityV1.Builder("json", JsonPrimitive("string"))
+      .also {
+        it.notes =
+          "The Lottie animation itself, as JSON text. This is what is compiled into the Remote " +
+            "Compose document, so it is what the export needs."
+      }
+      .build(),
+    PropertyCapabilityV1.Builder(
+        "progress",
+        JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object"))),
+      )
+      .also {
+        it.notes =
+          "Pins the animation to one frame, 0 (first) to 1 (last). Unset — the default — lets the " +
+            "document's animation clock run it in a loop."
+      }
+      .build(),
   )
 
 /**
@@ -1609,32 +1651,32 @@ private fun lottieProperties(): List<PropertyCapabilityV1> =
  */
 private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
   listOf(
-    PropertyCapabilityV1(
-      name = "timeText",
-      jsonType = JsonPrimitive("string"),
-      notes =
-        "The curved status strip's text. Frozen rather than live: a design whose render changed " +
-          "every minute could not be diffed. Empty draws no strip, which is `ScreenScaffold` " +
-          "without a `timeText` argument.",
-    ),
-    PropertyCapabilityV1(
-      name = "scrollIndicator",
-      jsonType = JsonPrimitive("boolean"),
-      notes =
-        "Whether the generated screen gives `ScreenScaffold` a scroll indicator. The canvas draws " +
-          "none either way: an indicator shows where a viewport sits in the content, and the " +
-          "long-screenshot extent has no viewport. The real capture agrees — a `ScrollMode.LONG` " +
-          "render sets `LocalScrollCaptureInProgress` and the emitted scaffold suppresses the " +
-          "indicator while it is set, which is what keeps a stitched capture free of the dashes " +
-          "an indicator drawn per frame leaves down the edge.",
-    ),
-    PropertyCapabilityV1(
-      name = "background",
-      jsonType = JsonPrimitive("string"),
-      notes =
-        "The screen's background. Wear is dark-first, so it defaults to the Wear Material 3 " +
-          "`background` — pure black — rather than to the editor theme's surface.",
-    ),
+    PropertyCapabilityV1.Builder("timeText", JsonPrimitive("string"))
+      .also {
+        it.notes =
+          "The curved status strip's text. Frozen rather than live: a design whose render changed " +
+            "every minute could not be diffed. Empty draws no strip, which is `ScreenScaffold` " +
+            "without a `timeText` argument."
+      }
+      .build(),
+    PropertyCapabilityV1.Builder("scrollIndicator", JsonPrimitive("boolean"))
+      .also {
+        it.notes =
+          "Whether the generated screen gives `ScreenScaffold` a scroll indicator. The canvas draws " +
+            "none either way: an indicator shows where a viewport sits in the content, and the " +
+            "long-screenshot extent has no viewport. The real capture agrees — a `ScrollMode.LONG` " +
+            "render sets `LocalScrollCaptureInProgress` and the emitted scaffold suppresses the " +
+            "indicator while it is set, which is what keeps a stitched capture free of the dashes " +
+            "an indicator drawn per frame leaves down the edge."
+      }
+      .build(),
+    PropertyCapabilityV1.Builder("background", JsonPrimitive("string"))
+      .also {
+        it.notes =
+          "The screen's background. Wear is dark-first, so it defaults to the Wear Material 3 " +
+            "`background` — pure black — rather than to the editor theme's surface."
+      }
+      .build(),
   )
 
 /**
@@ -1649,20 +1691,18 @@ private val WEAR_LIST_HEADER_PROPERTIES = setOf("text", "maxLines", "overflow")
 /** `TransformingLazyColumn`'s authored parameters, minus the ones its state object carries. */
 private fun wearTransformingLazyColumnProperties(): List<PropertyCapabilityV1> =
   listOf(
-    PropertyCapabilityV1(
-      name = "verticalSpacingDp",
-      jsonType = JsonPrimitive("number"),
-      notes = "`Arrangement.spacedBy` between items; 4dp is the Wear list default.",
-    ),
-    PropertyCapabilityV1(
-      name = "transformation",
-      jsonType = JsonPrimitive("string"),
-      allowedValues = listOf(JsonPrimitive("spec"), JsonPrimitive("none")),
-      notes =
-        "Whether each item carries `SurfaceTransformation(spec)` and `transformedHeight`. The " +
-          "canvas cannot draw either — see the wasm note — so this says what the generated " +
-          "Kotlin emits, not what you are looking at.",
-    ),
+    PropertyCapabilityV1.Builder("verticalSpacingDp", JsonPrimitive("number"))
+      .also { it.notes = "`Arrangement.spacedBy` between items; 4dp is the Wear list default." }
+      .build(),
+    PropertyCapabilityV1.Builder("transformation", JsonPrimitive("string"))
+      .also {
+        it.allowedValues = listOf(JsonPrimitive("spec"), JsonPrimitive("none"))
+        it.notes =
+          "Whether each item carries `SurfaceTransformation(spec)` and `transformedHeight`. The " +
+            "canvas cannot draw either — see the wasm note — so this says what the generated " +
+            "Kotlin emits, not what you are looking at."
+      }
+      .build(),
   )
 
 /**
@@ -1725,47 +1765,48 @@ private fun wearNativeOnlyComponents(
     slots: List<SlotCapabilityV1> = emptyList(),
     extra: String = "",
   ) =
-    ComponentCapabilityV1(
-      componentId = componentId,
-      displayName = displayName,
-      role = role,
-      traits = traits,
-      slots = slots,
-      properties = properties,
-      // No modifier vocabulary, and that is a statement rather than an omission. A Wear control is
-      // laid out by the list and the scaffold around it — a `CheckboxButton` is a full-width row
-      // whose height upstream fixes — and `WearScreenCodeExporter` writes the whole screen, so
-      // there is no per-node modifier chain for it to carry one into.
-      modifierCapabilities = emptyList(),
-      wasm = supportedWasm.newBuilder().also { it.notes = note(composable, extra) }.build(),
-      // The call site comes from `WearScreenCodeExporter`, which writes the whole screen, and never
-      // from a per-component record: `wear-m3` has none, deliberately.
-      code = null,
-      svg =
-        blockedSvg?.copy(
-          notes =
-            "A placeholder on the canvas must not claim structured SVG parity with $composable."
-        ),
-    )
+    ComponentCapabilityV1.Builder(
+        componentId,
+        displayName,
+        role,
+        supportedWasm.newBuilder().also { it.notes = note(composable, extra) }.build(),
+      )
+      .also {
+        it.traits = traits
+        it.slots = slots
+        it.properties = properties
+        it.modifierCapabilities = emptyList()
+        it.code = null
+        it.svg =
+          blockedSvg
+            ?.newBuilder()
+            ?.also {
+              it.notes =
+                "A placeholder on the canvas must not claim structured SVG parity with $composable."
+            }
+            ?.build()
+      }
+      .build()
 
   /** `label` and `secondaryLabel`, which is the shape every Wear selection control shares. */
   fun labelled(secondary: Boolean = true) = buildList {
     add(
-      PropertyCapabilityV1(
-        name = "label",
-        jsonType = JsonPrimitive("string"),
-        required = true,
-        notes =
-          "The row's primary label. Wear's selection controls are labelled rows, not bare boxes.",
-      )
+      PropertyCapabilityV1.Builder("label", JsonPrimitive("string"))
+        .also {
+          it.required = true
+          it.notes =
+            "The row's primary label. Wear's selection controls are labelled rows, not bare boxes."
+        }
+        .build()
     )
     if (secondary) {
       add(
-        PropertyCapabilityV1(
-          name = "secondaryLabel",
-          jsonType = JsonPrimitive("string"),
-          notes = "The second line, where there is one. Empty emits no `secondaryLabel` argument.",
-        )
+        PropertyCapabilityV1.Builder("secondaryLabel", JsonPrimitive("string"))
+          .also {
+            it.notes =
+              "The second line, where there is one. Empty emits no `secondaryLabel` argument."
+          }
+          .build()
       )
     }
   }
@@ -1774,57 +1815,72 @@ private fun wearNativeOnlyComponents(
    * A checked/selected flag, drivable from a state variable exactly as `m3/checkbox.checked` is.
    */
   fun flag(name: String, notes: String) =
-    PropertyCapabilityV1(
-      name = name,
-      // `object` beside `boolean` for the reason the five mobile flags carry it: a state binding
-      // arrives as a wrapper object, and a declaration of `boolean` alone judges the binding by
-      // whatever scalar happens to be inside it.
-      jsonType = JsonArray(listOf(JsonPrimitive("boolean"), JsonPrimitive("object"))),
-      notes = notes,
-    )
+    PropertyCapabilityV1.Builder(
+        name,
+        JsonArray(listOf(JsonPrimitive("boolean"), JsonPrimitive("object"))),
+      )
+      .also { it.notes = notes }
+      .build()
 
   fun enum(name: String, values: List<String>, notes: String, required: Boolean = false) =
-    PropertyCapabilityV1(
-      name = name,
-      jsonType = JsonPrimitive("string"),
-      required = required,
-      allowedValues = values.map(::JsonPrimitive),
-      notes = notes,
-    )
+    PropertyCapabilityV1.Builder(name, JsonPrimitive("string"))
+      .also {
+        it.required = required
+        it.allowedValues = values.map(::JsonPrimitive)
+        it.notes = notes
+      }
+      .build()
 
   fun number(name: String, notes: String) =
-    PropertyCapabilityV1(
-      name = name,
-      jsonType = JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object"))),
-      notes = notes,
-    )
+    PropertyCapabilityV1.Builder(
+        name,
+        JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object"))),
+      )
+      .also { it.notes = notes }
+      .build()
 
   fun text(name: String, notes: String, required: Boolean = false) =
-    PropertyCapabilityV1(
-      name = name,
-      jsonType = JsonPrimitive("string"),
-      required = required,
-      notes = notes,
-    )
+    PropertyCapabilityV1.Builder(name, JsonPrimitive("string"))
+      .also {
+        it.required = required
+        it.notes = notes
+      }
+      .build()
 
   /** One content slot holding a single child, for the components whose API takes one lambda. */
   fun singleSlot(name: String, traits: List<String>, min: Int = 0) =
-    SlotCapabilityV1(
-      name = name,
-      cardinality = SlotCardinalityV1(min = min, max = 1),
-      ordered = true,
-      acceptedRoles = emptyList(),
-      acceptedTraits = traits,
-    )
+    SlotCapabilityV1.Builder(
+        name,
+        SlotCardinalityV1.Builder()
+          .also {
+            it.min = min
+            it.max = 1
+          }
+          .build(),
+        true,
+      )
+      .also {
+        it.acceptedRoles = emptyList()
+        it.acceptedTraits = traits
+      }
+      .build()
 
   fun manySlot(name: String, traits: List<String>) =
-    SlotCapabilityV1(
-      name = name,
-      cardinality = SlotCardinalityV1(min = 0, max = null),
-      ordered = true,
-      acceptedRoles = emptyList(),
-      acceptedTraits = traits,
-    )
+    SlotCapabilityV1.Builder(
+        name,
+        SlotCardinalityV1.Builder()
+          .also {
+            it.min = 0
+            it.max = null
+          }
+          .build(),
+        true,
+      )
+      .also {
+        it.acceptedRoles = emptyList()
+        it.acceptedTraits = traits
+      }
+      .build()
 
   val listItem = listOf("ListItem", "WearListContent")
 
@@ -1837,20 +1893,16 @@ private fun wearNativeOnlyComponents(
       traits = listOf("Adornment"),
       properties =
         listOf(
-          PropertyCapabilityV1(
-            name = "iconKey",
-            jsonType = JsonPrimitive("string"),
-            required = true,
-            allowedValues = iconKeys,
-            // The same keys `m3/icon` offers, and deliberately the same table. An icon is
-            // `androidx.compose.material.icons`, which is not Material 3 and not Wear Material 3 —
-            // it is the shared vector library both draw with — so this is one of the few places a
-            // Wear component and a mobile one really do name the same symbol.
-            notes =
-              "A Material icon key, resolved to `Icons.…` by the same table `m3/icon` uses. The " +
-                "vectors are `androidx.compose.material.icons`, which both platforms share, so " +
-                "this key means the same thing on a watch as on a phone.",
-          ),
+          PropertyCapabilityV1.Builder("iconKey", JsonPrimitive("string"))
+            .also {
+              it.required = true
+              it.allowedValues = iconKeys
+              it.notes =
+                "A Material icon key, resolved to `Icons.…` by the same table `m3/icon` uses. The " +
+                  "vectors are `androidx.compose.material.icons`, which both platforms share, so " +
+                  "this key means the same thing on a watch as on a phone."
+            }
+            .build(),
           number("sizeDp", "The icon's box. Wear's own default is 24dp inside a button."),
         ),
     ),
@@ -2171,57 +2223,84 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val boxSlot = box.slots.single()
 
   val contentSlot =
-    boxSlot.copy(name = "content", cardinality = boxSlot.cardinality.copy(min = 0, max = 1))
+    boxSlot
+      .newBuilder()
+      .also {
+        it.name = "content"
+        it.cardinality =
+          boxSlot.cardinality
+            .newBuilder()
+            .also {
+              it.min = 0
+              it.max = 1
+            }
+            .build()
+      }
+      .build()
   // `ScreenScaffold(edgeButton = …)` takes one composable, and upstream's own samples put an
   // `EdgeButton` in it and nothing else. Narrowed to `Action` so a Text cannot be dropped into a
   // slot whose whole job is to hug the bottom curve with a button in it.
   val edgeButtonSlot =
-    contentSlot.copy(
-      name = "edgeButton",
-      acceptedRoles = emptyList(),
-      acceptedTraits = listOf("Action"),
-    )
+    contentSlot
+      .newBuilder()
+      .also {
+        it.name = "edgeButton"
+        it.acceptedRoles = emptyList()
+        it.acceptedTraits = listOf("Action")
+      }
+      .build()
   // Wear's dialogs are a screen *state*, not a place in the layout: each takes a `visible` flag and
   // draws over the whole display when it is set, and upstream's own samples put them beside the
   // scaffold in the same `AppScaffold`. A slot in `content` would have made them list rows, which
   // is a full-screen dialog inside a scrolling item. Unbounded, because a screen can have more than
   // one dialog it shows at different moments — only one is ever `visible`.
   val overlaySlot =
-    contentSlot.copy(
-      name = "overlays",
-      cardinality = contentSlot.cardinality.copy(min = 0, max = null),
-      acceptedRoles = emptyList(),
-      acceptedTraits = listOf("Overlay"),
-    )
+    contentSlot
+      .newBuilder()
+      .also {
+        it.name = "overlays"
+        it.cardinality =
+          contentSlot.cardinality
+            .newBuilder()
+            .also {
+              it.min = 0
+              it.max = null
+            }
+            .build()
+        it.acceptedRoles = emptyList()
+        it.acceptedTraits = listOf("Overlay")
+      }
+      .build()
 
   val scaffold =
-    box.copy(
-      componentId = "wear-m3/screen-scaffold",
-      displayName = "Wear screen · ScreenScaffold",
-      role = "Scaffold",
-      traits = listOf("ScreenContent", "WearScreenHost"),
-      slots = listOf(contentSlot, edgeButtonSlot, overlaySlot),
-      properties = wearScreenScaffoldProperties(),
-      modifierCapabilities = emptyList(),
-      wasm =
-        supportedWasm
-          .newBuilder()
-          .also {
-            it.notes =
-              "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp."
-          }
-          .build(),
-      // No Compose export from the catalog's own record: `ScreenScaffold` is a scaffold with a
-      // `contentPadding` lambda and a scroll-state argument that has to agree with the list inside
-      // it, which is a shape `ScreenGenerator`'s call-site emitter cannot write from a record.
-      // `WearScreenCodeExporter` writes the whole screen instead, the way
-      // `WearWidgetCodeExporter` writes the whole widget.
-      code = null,
-      svg =
-        blockedSvg?.copy(
-          notes = "The stadium screen frame has not been through structured SVG parity."
-        ),
-    )
+    box
+      .newBuilder()
+      .also {
+        it.componentId = "wear-m3/screen-scaffold"
+        it.displayName = "Wear screen · ScreenScaffold"
+        it.role = "Scaffold"
+        it.traits = listOf("ScreenContent", "WearScreenHost")
+        it.slots = listOf(contentSlot, edgeButtonSlot, overlaySlot)
+        it.properties = wearScreenScaffoldProperties()
+        it.modifierCapabilities = emptyList()
+        it.wasm =
+          supportedWasm
+            .newBuilder()
+            .also {
+              it.notes =
+                "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp."
+            }
+            .build()
+        it.code = null
+        it.svg =
+          blockedSvg
+            ?.newBuilder()
+            ?.also {
+              it.notes = "The stadium screen frame has not been through structured SVG parity."
+            }
+            ?.build()
+      }
+      .build()
 
   // The first content component that is Wear's rather than borrowed, and it exists because the
   // round trip found it. `ListHeader` is a 48dp item at every screen size — measured — and the
@@ -2232,47 +2311,62 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   // side.
   val listHeader =
     components.getValue("m3/text").let { text ->
-      text.copy(
-        componentId = "wear-m3/list-header",
-        displayName = "List header",
-        traits = text.traits + "ListItem",
-        properties = text.properties.filter { it.name in WEAR_LIST_HEADER_PROPERTIES },
-        modifierCapabilities = emptyList(),
-        wasm =
-          text.wasm
-            .newBuilder()
-            .also {
-              it.notes =
-                "Wear Material 3's `ListHeader`: a 48dp item whose label sits low in it, drawn on the screen's own background rather than on a surface. The height is upstream's and is what makes a generated screen's first row land where the canvas puts it."
-            }
-            .build(),
-        code = null,
-      )
+      text
+        .newBuilder()
+        .also {
+          it.componentId = "wear-m3/list-header"
+          it.displayName = "List header"
+          it.traits = text.traits + "ListItem"
+          it.properties = text.properties.filter { it.name in WEAR_LIST_HEADER_PROPERTIES }
+          it.modifierCapabilities = emptyList()
+          it.wasm =
+            text.wasm
+              .newBuilder()
+              .also {
+                it.notes =
+                  "Wear Material 3's `ListHeader`: a 48dp item whose label sits low in it, drawn on the screen's own background rather than on a surface. The height is upstream's and is what makes a generated screen's first row land where the canvas puts it."
+              }
+              .build()
+          it.code = null
+        }
+        .build()
     }
 
   val transformingLazyColumn =
-    lazyColumn.copy(
-      componentId = "wear-m3/transforming-lazy-column",
-      displayName = "Transforming lazy column",
-      traits = lazyColumn.traits + "WearListContent",
-      slots =
-        listOf(lazyColumn.slots.single().copy(cardinality = lazyColumn.slots.single().cardinality)),
-      properties = wearTransformingLazyColumnProperties(),
-      wasm =
-        supportedWasm
-          .newBuilder()
-          .also {
-            it.notes =
-              "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it."
-          }
-          .build(),
-      code = null,
-      svg =
-        blockedSvg?.copy(
-          notes =
-            "An untransformed stand-in must not claim structured SVG parity with the real list."
-        ),
-    )
+    lazyColumn
+      .newBuilder()
+      .also {
+        it.componentId = "wear-m3/transforming-lazy-column"
+        it.displayName = "Transforming lazy column"
+        it.traits = lazyColumn.traits + "WearListContent"
+        it.slots =
+          listOf(
+            lazyColumn.slots
+              .single()
+              .newBuilder()
+              .also { it.cardinality = lazyColumn.slots.single().cardinality }
+              .build()
+          )
+        it.properties = wearTransformingLazyColumnProperties()
+        it.wasm =
+          supportedWasm
+            .newBuilder()
+            .also {
+              it.notes =
+                "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it."
+            }
+            .build()
+        it.code = null
+        it.svg =
+          blockedSvg
+            ?.newBuilder()
+            ?.also {
+              it.notes =
+                "An untransformed stand-in must not claim structured SVG parity with the real list."
+            }
+            ?.build()
+      }
+      .build()
 
   /**
    * A Wear component of this catalog's own, drawn on the canvas by its Material 3 lookalike.
@@ -2302,34 +2396,27 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
     generatesAs: String,
   ) =
     components.getValue(borrowedFrom).let { source ->
-      source.copy(
-        componentId = componentId,
-        displayName = displayName,
-        wasm =
-          source.wasm
-            .newBuilder()
-            .also {
-              // Stated, not inherited. This used to take whatever `borrowedFrom`'s status happened
-              // to be, which is why `wear-m3/card` and `wear-m3/button` declared `planned` while
-              // the
-              // canvas drew them and most of the rest declared `supported` while it drew a dashed
-              // box — the field was wrong in both directions because it was never being decided per
-              // component at all (#907).
-              it.adapterStatus = WasmAdapterStatusV1.SUPPORTED
-              it.platformSupported = JsonPrimitive(true)
-              it.notes =
-                "Wear Material 3's $generatesAs, drawn on the canvas by Wear Compose itself. The " +
-                  "canvas links a Compose Multiplatform build of the library rather than " +
-                  "`androidx.wear.compose:compose-material3`, which publishes an Android AAR with " +
-                  "no browser variant; the generated screen and the native render use the real AAR."
-            }
-            .build(),
-        // The Compose call site comes from `WearScreenCodeExporter`, which writes the whole screen,
-        // rather than from a per-component record: a Wear component's arguments are not the
-        // Material
-        // 3 component's, and a record naming the mobile callable is the mistake this rename undoes.
-        code = null,
-      )
+      source
+        .newBuilder()
+        .also {
+          it.componentId = componentId
+          it.displayName = displayName
+          it.wasm =
+            source.wasm
+              .newBuilder()
+              .also {
+                it.adapterStatus = WasmAdapterStatusV1.SUPPORTED
+                it.platformSupported = JsonPrimitive(true)
+                it.notes =
+                  "Wear Material 3's $generatesAs, drawn on the canvas by Wear Compose itself. The " +
+                    "canvas links a Compose Multiplatform build of the library rather than " +
+                    "`androidx.wear.compose:compose-material3`, which publishes an Android AAR with " +
+                    "no browser variant; the generated screen and the native render use the real AAR."
+              }
+              .build()
+          it.code = null
+        }
+        .build()
     }
 
   val wearText = wearOwn("m3/text", "wear-m3/text", "Text", "a Material 3 Text", "`Text`")
@@ -2341,18 +2428,22 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // plain `Card`. Rolling them into one id with a variant rather than four ids is the
       // `m3/card` precedent, and it keeps the palette the size of the vocabulary rather than the
       // size of the API.
-      card.copy(
-        properties =
-          card.properties.filterNot { it.name == "variant" } +
-            PropertyCapabilityV1(
-              name = "variant",
-              jsonType = JsonPrimitive("string"),
-              allowedValues = listOf("title", "app", "outlined", "plain").map(::JsonPrimitive),
-              notes =
-                "Which card is written: `TitleCard`, `AppCard`, `OutlinedCard` or `Card`. " +
-                  "`title` is the default and is the one a Wear list is mostly made of.",
-            )
-      )
+      card
+        .newBuilder()
+        .also {
+          it.properties =
+            card.properties.filterNot { it.name == "variant" } +
+              PropertyCapabilityV1.Builder("variant", JsonPrimitive("string"))
+                .also {
+                  it.allowedValues =
+                    listOf("title", "app", "outlined", "plain").map(::JsonPrimitive)
+                  it.notes =
+                    "Which card is written: `TitleCard`, `AppCard`, `OutlinedCard` or `Card`. " +
+                      "`title` is the default and is the one a Wear list is mostly made of."
+                }
+                .build()
+        }
+        .build()
     }
   val wearButton =
     wearOwn("m3/button", "wear-m3/button", "Button", "a Material 3 Button", "`Button`").let { button
@@ -2363,20 +2454,23 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // `m3/button` used to carry a `leadingIcon` slot, which this borrowed and had to re-point at
       // `wear-m3/icon`'s trait. The slot is gone from both: Wear's `Button` takes one content
       // lambda and an icon goes inside it, exactly as Material's does.
-      button.copy(
-        properties =
-          button.properties.filterNot { it.name == "variant" || it.name == "style" } +
-            PropertyCapabilityV1(
-              name = "variant",
-              jsonType = JsonPrimitive("string"),
-              allowedValues =
-                listOf("filled", "filled-tonal", "outlined", "child").map(::JsonPrimitive),
-              notes =
-                "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or " +
-                  "`ChildButton`. There is no `fab` — a watch has no floating action button, " +
-                  "which is one of the things a borrowed `m3/button` was quietly offering.",
-            )
-      )
+      button
+        .newBuilder()
+        .also {
+          it.properties =
+            button.properties.filterNot { it.name == "variant" || it.name == "style" } +
+              PropertyCapabilityV1.Builder("variant", JsonPrimitive("string"))
+                .also {
+                  it.allowedValues =
+                    listOf("filled", "filled-tonal", "outlined", "child").map(::JsonPrimitive)
+                  it.notes =
+                    "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or " +
+                      "`ChildButton`. There is no `fab` — a watch has no floating action button, " +
+                      "which is one of the things a borrowed `m3/button` was quietly offering."
+                }
+                .build()
+        }
+        .build()
     }
   val nativeOnly =
     wearNativeOnlyComponents(
@@ -2418,79 +2512,93 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // foundation component is not a stand-in for anything, which is the whole reason these four
       // are the only ones left. The `REMOTE_COMPOSE_BORROWED_AS_THEMSELVES` branch that stood here
       // went with the seams.
-      component.copy(
-        wasm = component.wasm.newBuilder().also { it.notes = WEAR_FOUNDATION_NOTE }.build()
-      )
+      component
+        .newBuilder()
+        .also {
+          it.wasm = component.wasm.newBuilder().also { it.notes = WEAR_FOUNDATION_NOTE }.build()
+        }
+        .build()
     }
 
-  return base.copy(
-    // The one thing this catalog has to say about itself that is not a component.
-    //
-    // The Wasm canvas is where a `wear-m3` design is *authored* — you select a node on it, drag it,
-    // watch the layout — and it is not where the design is *looked at*. It cannot be: every Wear
-    // component on it is a Material 3 lookalike, because `androidx.wear.compose:compose-material3`
-    // is an Android AAR and a Wasm build links no AAR, ever. Saying that here rather than leaving
-    // each surface to work it out is what stops the editor offering a Preview mode whose claim is
-    // false and the server picking a daemon by guessing from a catalog id.
-    //
-    // `statusSemantics` rather than a field of its own because `CatalogCapabilityV1` is published
-    // from compose-preview-contracts and cannot grow one from here; this map is the catalog's own
-    // open vocabulary and already carries `adapterStatus` and `svgStatus`. Read back by
-    // `UiBuilderPreviewSurfaces.from`.
-    statusSemantics =
-      JsonObject(
-        base.statusSemantics +
-          // A round watch screen against Wear Compose: grouped apart from the phone screens in the
-          // chooser, and offered no mobile pack — Wear Material 3 and Material 3 are not used
-          // together, which is the rule this whole catalog is written around.
-          (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("wear")) +
-          ("previewSurfaces" to
-            buildJsonObject {
-              putJsonObject("wasm") {
-                put("fidelity", JsonPrimitive("approximate"))
-                put(
-                  "reason",
-                  JsonPrimitive(
-                    "The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an " +
-                      "Android AAR, so every Wear component here is drawn by its nearest Material " +
-                      "3 lookalike. Author on it; do not read a size, a colour or a shape off it. " +
-                      "The Android preview compiles this design's own generated Kotlin against " +
-                      "real Wear Compose."
-                  ),
-                )
-              }
-              putJsonObject("native") {
-                put("fidelity", JsonPrimitive("authoritative"))
-                put("backend", JsonPrimitive("android"))
-              }
-            }) +
-          // The other thing a catalog says about itself that is not a component: how the builder's
-          // insert panel shelves it. Until a catalog could declare this, the shelves were a table
-          // in `:ui-builder` keyed by m3-catalog's ids, so `wear-m3` fell back to
-          // Scaffolds/Containers/Composables — a statement about what each component may *hold*
-          // rather than about what any of them is for. Same mechanism, and the same reason, as
-          // `previewSurfaces` above; read back by `ComponentMenu.from`.
-          //
-          // It REPLACES the base catalog's declaration rather than merging with it: that one is
-          // keyed by `m3/…` ids this catalog does not have, so a merge would leave every Wear
-          // component unshelved while carrying entries for thirty-nine components that are gone.
-          // The key as a literal, like `previewSurfaces` above: `ComponentMenu` lives in
-          // `:ui-builder`, which this module must never depend on — `checkUiBuilderRuntimeBoundary`
-          // enforces the arrow, and the editor is above the runtime, not beside it.
-          ("componentMenu" to wearComponentMenu())
-      ),
-    benchmark =
-      base.benchmark.copy(
-        id = "wear-m3-screen-scaffold",
-        sourceRevision = "compose-ai-tools:samples/design-catalog-wear-m3",
-        catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        catalogRevision = "wear-screen-scaffold-v1",
-      ),
-    components =
-      listOf(scaffold, transformingLazyColumn, listHeader, wearText, wearCard, wearButton) +
-        nativeOnly +
-        borrowed,
-  )
+  return base
+    .newBuilder()
+    .also {
+      // The one thing this catalog has to say about itself that is not a component.
+      //
+      // The Wasm canvas is where a `wear-m3` design is *authored* — you select a node on it, drag
+      // it,
+      // watch the layout — and it is not where the design is *looked at*. It cannot be: every Wear
+      // component on it is a Material 3 lookalike, because
+      // `androidx.wear.compose:compose-material3`
+      // is an Android AAR and a Wasm build links no AAR, ever. Saying that here rather than leaving
+      // each surface to work it out is what stops the editor offering a Preview mode whose claim is
+      // false and the server picking a daemon by guessing from a catalog id.
+      //
+      // `statusSemantics` rather than a field of its own because `CatalogCapabilityV1` is published
+      // from compose-preview-contracts and cannot grow one from here; this map is the catalog's own
+      // open vocabulary and already carries `adapterStatus` and `svgStatus`. Read back by
+      // `UiBuilderPreviewSurfaces.from`.
+      it.statusSemantics =
+        JsonObject(
+          base.statusSemantics +
+            // A round watch screen against Wear Compose: grouped apart from the phone screens in
+            // the
+            // chooser, and offered no mobile pack — Wear Material 3 and Material 3 are not used
+            // together, which is the rule this whole catalog is written around.
+            (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("wear")) +
+            ("previewSurfaces" to
+              buildJsonObject {
+                putJsonObject("wasm") {
+                  put("fidelity", JsonPrimitive("approximate"))
+                  put(
+                    "reason",
+                    JsonPrimitive(
+                      "The canvas is Compose Multiplatform for Wasm and Wear Material 3 is an " +
+                        "Android AAR, so every Wear component here is drawn by its nearest Material " +
+                        "3 lookalike. Author on it; do not read a size, a colour or a shape off it. " +
+                        "The Android preview compiles this design's own generated Kotlin against " +
+                        "real Wear Compose."
+                    ),
+                  )
+                }
+                putJsonObject("native") {
+                  put("fidelity", JsonPrimitive("authoritative"))
+                  put("backend", JsonPrimitive("android"))
+                }
+              }) +
+            // The other thing a catalog says about itself that is not a component: how the
+            // builder's
+            // insert panel shelves it. Until a catalog could declare this, the shelves were a table
+            // in `:ui-builder` keyed by m3-catalog's ids, so `wear-m3` fell back to
+            // Scaffolds/Containers/Composables — a statement about what each component may *hold*
+            // rather than about what any of them is for. Same mechanism, and the same reason, as
+            // `previewSurfaces` above; read back by `ComponentMenu.from`.
+            //
+            // It REPLACES the base catalog's declaration rather than merging with it: that one is
+            // keyed by `m3/…` ids this catalog does not have, so a merge would leave every Wear
+            // component unshelved while carrying entries for thirty-nine components that are gone.
+            // The key as a literal, like `previewSurfaces` above: `ComponentMenu` lives in
+            // `:ui-builder`, which this module must never depend on —
+            // `checkUiBuilderRuntimeBoundary`
+            // enforces the arrow, and the editor is above the runtime, not beside it.
+            ("componentMenu" to wearComponentMenu())
+        )
+      it.benchmark =
+        base.benchmark
+          .newBuilder()
+          .also { benchmark ->
+            benchmark.id = "wear-m3-screen-scaffold"
+            benchmark.sourceRevision = "compose-ai-tools:samples/design-catalog-wear-m3"
+            benchmark.catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID
+            benchmark.catalogRevision = "wear-screen-scaffold-v1"
+          }
+          .build()
+      it.components =
+        listOf(scaffold, transformingLazyColumn, listHeader, wearText, wearCard, wearButton) +
+          nativeOnly +
+          borrowed
+    }
+    .build()
 }
 
 /** Immutable, renderer-neutral request for one exact saved document revision. */
@@ -2536,7 +2644,13 @@ public class ProductionUiBuilderExportExecutor(
   private val assets: UiBuilderAssetStore? = null,
 ) : UiBuilderExportExecutor, Closeable {
   public val capabilities: ExportCapabilitiesV1 =
-    ExportCapabilitiesV1(composeCode = true, svg = renderer.supportsSvg, png = true)
+    ExportCapabilitiesV1.Builder()
+      .also {
+        it.composeCode = true
+        it.svg = renderer.supportsSvg
+        it.png = true
+      }
+      .build()
 
   override fun export(request: RevisionPinnedUiBuilderExport): ExportArtifactV1 =
     when (request.format) {

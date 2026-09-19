@@ -313,23 +313,33 @@ class CatalogSourceRePinTest {
   ) : UiBuilderCatalogExecutor {
 
     private val catalog =
-      CatalogCapabilityV1(
-        schema = "compose-catalog-capabilities/v1",
-        benchmark = CatalogBenchmarkV1("m3", "source", "m3", served.catalogRevision, "m3-runtime"),
-        components =
+      CatalogCapabilityV1.Builder(
+          "compose-catalog-capabilities/v1",
+          CatalogBenchmarkV1.Builder("m3", "source", "m3", served.catalogRevision, "m3-runtime")
+            .build(),
           listOf(
-            ComponentCapabilityV1(
-              componentId = draws,
-              displayName = draws,
-              role = "text",
-              properties = emptyList(),
-              wasm =
+            ComponentCapabilityV1.Builder(
+                draws,
+                draws,
+                "text",
                 WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
                   .build(),
-            )
+              )
+              .also { it.properties = emptyList() }
+              .build()
           ),
-        exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),
-      )
+        )
+        .also {
+          it.exportCapabilities =
+            ExportCapabilitiesV1.Builder()
+              .also {
+                it.composeCode = true
+                it.svg = true
+                it.png = true
+              }
+              .build()
+        }
+        .build()
 
     override fun listCatalogs(): List<CatalogCapabilityV1> = listOf(catalog)
 

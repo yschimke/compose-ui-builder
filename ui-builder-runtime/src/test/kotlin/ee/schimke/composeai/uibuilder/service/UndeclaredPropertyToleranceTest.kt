@@ -205,29 +205,37 @@ class UndeclaredPropertyToleranceTest {
     catalogDeclaring(properties.toList(), TEXT)
 
   private fun catalogDeclaring(properties: List<String>, draws: String): CatalogCapabilityV1 =
-    CatalogCapabilityV1(
-      schema = "compose-catalog-capabilities/v1",
-      benchmark = CatalogBenchmarkV1("m3", "source", "m3", "candidate", "m3-runtime"),
-      components =
+    CatalogCapabilityV1.Builder(
+        "compose-catalog-capabilities/v1",
+        CatalogBenchmarkV1.Builder("m3", "source", "m3", "candidate", "m3-runtime").build(),
         listOf(
-          ComponentCapabilityV1(
-            componentId = draws,
-            displayName = draws,
-            role = "text",
-            properties =
-              properties.map {
-                PropertyCapabilityV1(
-                  name = it,
-                  jsonType = JsonPrimitive("string"),
-                  required = false,
-                )
-              },
-            wasm =
+          ComponentCapabilityV1.Builder(
+              draws,
+              draws,
+              "text",
               WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
-          )
+            )
+            .also {
+              it.properties = properties.map {
+                PropertyCapabilityV1.Builder(it, JsonPrimitive("string"))
+                  .also { it.required = false }
+                  .build()
+              }
+            }
+            .build()
         ),
-      exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),
-    )
+      )
+      .also {
+        it.exportCapabilities =
+          ExportCapabilitiesV1.Builder()
+            .also {
+              it.composeCode = true
+              it.svg = true
+              it.png = true
+            }
+            .build()
+      }
+      .build()
 
   /** Mirrors the production validator on the two rules this test is about. */
   private class NarrowingCatalogs(private val catalog: CatalogCapabilityV1) :
