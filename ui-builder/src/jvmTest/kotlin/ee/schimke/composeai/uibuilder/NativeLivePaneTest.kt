@@ -82,6 +82,27 @@ class NativeLivePaneTest {
     )
 
   @Test
+  fun `opening any design does not request the costly native render`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var requests = 0
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = blank("native-is-explicit"),
+            catalog = catalog(),
+            onRequestNativeRender = {
+              requests += 1
+              UiBuilderNativeRender()
+            },
+          )
+        }
+      }
+      waitForIdle()
+
+      assertEquals(0, requests)
+    }
+
+  @Test
   fun `a streamed frame replaces the still and says it is live`() =
     runDesktopComposeUiTest(
       width = 1400,

@@ -194,7 +194,7 @@ class WearWidgetHostShapeTest {
    * and no view at all is the worse answer.
    */
   @Test
-  fun `an unknown shape id falls back to the squircle`() {
+  fun `an unknown shape id falls back to the rectangular editing host`() {
     assertEquals(WearWidgetHostShape.Squircle, WearWidgetHostShape.fromId("squircle"))
     assertEquals(WearWidgetHostShape.Rectangular, WearWidgetHostShape.fromId("rectangular"))
     assertEquals(WearWidgetHostShape.Rectangular, WearWidgetHostShape.fromId(" Rectangular "))
@@ -202,7 +202,7 @@ class WearWidgetHostShapeTest {
     assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId(""))
     assertEquals(WearWidgetHostShape.Round, WearWidgetHostShape.fromId("round"))
     assertEquals(WearWidgetHostShape.Default, WearWidgetHostShape.fromId("stadium"))
-    assertEquals(WearWidgetHostShape.Squircle, WearWidgetHostShape.Default)
+    assertEquals(WearWidgetHostShape.Rectangular, WearWidgetHostShape.Default)
   }
 
   /**
