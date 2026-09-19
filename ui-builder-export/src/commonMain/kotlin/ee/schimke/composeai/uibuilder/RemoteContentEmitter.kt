@@ -386,14 +386,12 @@ internal class RemoteContentEmitter(
     val pad = INDENT.repeat(depth)
     return when (node.componentId) {
       "m3/text" -> (pad + text(node, pad)).split("\n")
-      // The same hand, but only where the host PUBLISHED the component. Without its record this is
-      // a component this host never served, and writing a call to one anyway would put a name in
-      // generated source that nothing on the box can resolve -- so it falls through to the refusal
-      // it had before, which names the component. `RecordFreeComposeExportTest` pins both halves,
-      // export and native preview, because only the pair is evidence.
-      REMOTE_TEXT_COMPONENT_ID ->
-        if (node.componentId in components) (pad + text(node, pad)).split("\n")
-        else recordCall(node, depth) ?: refuseUnknown(node)
+      // RemoteText is a fixed Remote Material 3 API, not a discovered component call. The editor
+      // has a capability catalog, whereas component records are optional and only supplied for
+      // pack components; requiring one here made a saved remote-m3 document refuse in the code
+      // pane even though its catalog had offered the component. Catalog validation remains the
+      // authority for whether the node may be authored.
+      REMOTE_TEXT_COMPONENT_ID -> (pad + text(node, pad)).split("\n")
       "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node, pad))
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node, pad))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node, pad))

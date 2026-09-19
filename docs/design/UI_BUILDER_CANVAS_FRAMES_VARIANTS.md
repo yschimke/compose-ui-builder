@@ -209,6 +209,12 @@ document: an edit made on the tablet pane is an edit to the same tree the phone 
 every pane editable would not give the author more power, it would give them a coordinate space per
 pane and one shared outcome.
 
+Wear widgets use the same split, with host shape in place of phone/device presets. The Visual editor
+uses one broad rectangular host, so no child disappears behind a launcher shape while it is being
+edited. The Preview mirrors the saved document in Pixel Watch (round), Samsung (squircle), and
+Rectangular hosts. Native renders one selected host at a time; it is a fidelity confirmation, not a
+second multi-variant editor.
+
 ### The real adaptive components
 
 The rung this sits on, and what each of the three is allowed to lie about, is
