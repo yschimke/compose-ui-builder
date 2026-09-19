@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -415,7 +416,30 @@ private data class LiveSessionConfig(
 @Composable
 private fun LiveSessionApp() {
   var config by remember { mutableStateOf<LiveSessionConfig?>(null) }
-  LaunchedEffect(Unit) { config = liveSessionConfig(resolveServerActorId()) }
+  var failure by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(Unit) {
+    try {
+      config = liveSessionConfig(resolveServerActorId())
+    } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+      throw cancelled
+    } catch (thrown: Throwable) {
+      // A failure here used to be a blank page: `config` stays null and nothing below draws. The
+      // one that found this was `crypto.randomUUID` missing on an insecure origin; the next one
+      // should be a sentence on the page rather than an empty tab.
+      failure = thrown.message ?: thrown.toString()
+    }
+  }
+  failure?.let { message ->
+    Column(
+      Modifier.fillMaxSize().padding(24.dp),
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.Start,
+    ) {
+      Text("The editor could not start", style = MaterialTheme.typography.titleMedium)
+      Text(message, style = MaterialTheme.typography.bodySmall)
+    }
+    return
+  }
   // The local mode is the one that can open a design without a navigation: it has just written the
   // design to this browser, so re-entering the editor with a new config is the whole of "open it".
   // A server design still goes through the New design form, whose `303` is the navigation.
@@ -2115,7 +2139,15 @@ private suspend fun resolveServerActorId(): String? =
       .takeIf { it.isNotBlank() }
   } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
     throw cancelled
-  } catch (_: Exception) {
+  } catch (failure: Throwable) {
+    // `Throwable`, not `Exception`, and the difference is the whole point of this branch: a
+    // browser-level failure — an insecure origin refusing something, a `fetch` rejected by the
+    // engine rather than the server — arrives as a Kotlin/Wasm `JsException`, which extends
+    // `Throwable` and not `Exception`. Catching `Exception` let it past this guard and out of the
+    // coroutine, where it took the composition with it: a blank editor on `http://<host>:8723/`
+    // that worked on `http://127.0.0.1:8723/`, with nothing in the console but the coroutine
+    // wrapper. The endpoint is best-effort by design, so a failure here is `null` like any other.
+    println("compose-ui-builder: could not resolve the server actor: $failure")
     null
   }
 
@@ -2740,7 +2772,32 @@ private external fun liveConfigPresent(name: String): Boolean
 )
 private external fun liveConfigFlag(name: String): Boolean
 
-@JsFun("() => globalThis.crypto.randomUUID()") private external fun livePageNonce(): String
+/**
+ * A per-page nonce for operation ids, generated **without requiring a secure context**.
+ *
+ * `crypto.randomUUID` exists only in secure contexts. On a plain-HTTP origin — a LAN host, which is
+ * exactly how somebody checks a preview from another laptop or a phone — it is `undefined`, and
+ * calling it threw a `JsException` straight out of `liveSessionConfig` and killed the editor: a
+ * blank page on `http://<host>.local:8723/` that worked on `http://127.0.0.1:8723/` (a trusted
+ * origin) and on any HTTPS deployment. `crypto.getRandomValues` is available in insecure contexts
+ * and is the fallback; `Math.random` is the last resort, because an operation id needs to be unique
+ * within one page, not unguessable.
+ */
+@JsFun(
+  """() => {
+  const crypto = globalThis.crypto;
+  if (crypto && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  if (crypto && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  return 'nonce-' + Date.now().toString(16) + '-' + Math.random().toString(16).slice(2);
+}"""
+)
+private external fun livePageNonce(): String
 
 private fun browserNowMillis(): Long = browserNow().toLong()
 
