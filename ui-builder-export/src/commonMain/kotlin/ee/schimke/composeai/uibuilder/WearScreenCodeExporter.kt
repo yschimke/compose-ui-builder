@@ -183,9 +183,19 @@ object WearScreenCodeExporter {
           // rather
           // than a preview concession baked into a screen.
           appendLine(",")
-          appendLine(
-            "${INDENT}${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
-          )
+          // The indicator is the design's choice, and the capture guard is not. `scrollIndicator`
+          // was declared on the scaffold and read by nobody: the generated screen always drew one,
+          // so a design that turned it off still came out with it. The guard stays on both arms —
+          // a long screenshot must not carry dashes at a different offset in every slice, which is
+          // the platform's own reason for `LocalScrollCaptureInProgress` rather than a preview
+          // concession.
+          if (root.flag("scrollIndicator") ?: true) {
+            appendLine(
+              "${INDENT}${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
+            )
+          } else {
+            appendLine("${INDENT}${INDENT}${INDENT}scrollIndicator = null,")
+          }
           if (edgeButton != null) {
             appendLine("${INDENT}${INDENT}${INDENT}edgeButton = {")
             edgeButton.forEach { appendLine(it) }
@@ -236,6 +246,10 @@ object WearScreenCodeExporter {
     (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull?.takeIf {
       it.isNotEmpty()
     }
+
+  /** A boolean property, read the same way [text] reads a string one. */
+  private fun UiBuilderNode.flag(name: String): Boolean? =
+    (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.booleanOrNull
 
   const val SCAFFOLD = "wear-m3/screen-scaffold"
 
@@ -420,6 +434,7 @@ internal class WearContentEmitter(
   private val packComponents: Map<String, ComponentRecord> = emptyMap(),
 ) {
   private var usesText = false
+  private var usesTextOverflow = false
   private var usesColumn = false
   private var usesRow = false
   private var usesBox = false
@@ -509,7 +524,20 @@ internal class WearContentEmitter(
     lines += "${indent(4)}modifier = ${modifierChain(nodeId, "fillMaxSize()")},"
     lines += "${indent(3)}) {"
     node.slots["items"].orEmpty().forEach { itemId ->
-      lines += "${indent(4)}item {"
+      // `stableKey` is the item's identity, and this is where identity is spelled: a lazy list's
+      // `key`. It is read here rather than by the canvas, which draws the extent as a Column and
+      // has
+      // no item identity to keep — the same division the mobile lane already makes, where the
+      // exporter turns the same property into the same argument.
+      val key =
+        document.nodes[itemId]
+          ?.stringOrNull("stableKey")
+          // Blank is absent, which is what the mobile exporter does with the same property: a key
+          // is an identity, and two items sharing `key = ""` are one item as far as a lazy layout
+          // is concerned — the generated screen fails when it runs, not when it compiles.
+          ?.takeIf { it.isNotBlank() }
+      lines +=
+        if (key == null) "${indent(4)}item {" else "${indent(4)}item(key = ${key.quoted()}) {"
       lines += emit(itemId, depth = 5, transformed = node.transformation())
       lines += "${indent(4)}}"
     }
@@ -554,13 +582,23 @@ internal class WearContentEmitter(
       WearScreenCodeExporter.LIST_HEADER -> {
         usesListHeader = true
         usesText = true
+        // `maxLines` and `overflow` are the label's, and the label is this `Text`: upstream's
+        // `ListHeader` takes a content lambda rather than a string, so they belong here rather than
+        // on the header. Both were declared and read by nobody — a design that truncated its header
+        // to one line got as many as the string wrapped to.
+        val label = node.labelArguments()
         listOf("${pad}ListHeader(") +
           surfaceArguments(pad + INDENT, nodeId, transformed, "ListHeader") +
-          listOf(
-            "${pad}) {",
-            "${pad}${INDENT}Text(text = ${node.string("text").quoted()})",
-            "${pad}}",
-          )
+          listOf("${pad}) {") +
+          (if (label.isEmpty()) {
+            listOf("${pad}${INDENT}Text(text = ${node.string("text").quoted()})")
+          } else {
+            listOf("${pad}${INDENT}Text(") +
+              listOf("${pad}${INDENT}${INDENT}text = ${node.string("text").quoted()},") +
+              label.map { "${pad}${INDENT}${INDENT}$it," } +
+              listOf("${pad}${INDENT})")
+          }) +
+          listOf("${pad}}")
       }
       WearScreenCodeExporter.CARD -> {
         val content = node.slots["content"].orEmpty()
@@ -603,8 +641,7 @@ internal class WearContentEmitter(
           listOf("${pad})")
       }
       WearScreenCodeExporter.BUTTON -> {
-        // Wear's four, and none of them is a FAB — the mobile `style` this borrowed offered `fab`
-        // and `elevated`, which no watch publishes.
+        // Wear's four, and none of them is a FAB — a watch publishes no floating action button.
         val symbol =
           when (node.string("variant")) {
             "filled-tonal" -> "FilledTonalButton"
@@ -614,7 +651,15 @@ internal class WearContentEmitter(
           }
         usesButtonSymbol += symbol
         val content = node.slots["content"].orEmpty()
+        // `enabled` is the design's, and the canvas has always honoured it: the generated button
+        // did not, so a design that disabled one published a picture of a disabled button and
+        // source for a working one. Written only when it is false, so a default call keeps the
+        // short form.
+        val enabled =
+          if (node.boolean("enabled") != false) emptyList()
+          else listOf("${pad}${INDENT}enabled = false,")
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+          enabled +
           surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
           listOf("${pad}) {") +
           content.flatMap { emit(it, depth + 1) } +
@@ -1058,8 +1103,8 @@ internal class WearContentEmitter(
    *
    * `ScreenScaffold(edgeButton = …)` reveals its slot from the scroll state and shapes it to the
    * bottom curve, which is `EdgeButton`'s whole reason to exist — a plain `Button` in there is a
-   * rectangle pinned to a curve. The canvas draws the borrowed `m3/button`, so this is where the
-   * two part company.
+   * rectangle pinned to a curve. The canvas draws whatever component the design put in the slot, so
+   * this is where the two part company.
    */
   fun emitEdgeButton(nodeId: String, depth: Int): List<String> {
     val node = document.nodes[nodeId] ?: return refused("the edge button node `$nodeId` is missing")
@@ -1083,6 +1128,9 @@ internal class WearContentEmitter(
     val arguments =
       listOfNotNull(
         "onClick = {}",
+        // `enabled` is the design's and the canvas has always honoured it: written only when it is
+        // false, so a default call keeps the short form.
+        if (node.boolean("enabled") == false) "enabled = false" else null,
         size?.let { "buttonSize = EdgeButtonSize.$it" },
         modifier?.let { "modifier = $it" },
       )
@@ -1427,6 +1475,7 @@ internal class WearContentEmitter(
     add("androidx.wear.compose.material3.ScrollIndicator")
     add("androidx.wear.compose.material3.SurfaceTransformation")
     if (usesText) add("androidx.wear.compose.material3.Text")
+    if (usesTextOverflow) add("androidx.compose.ui.text.style.TextOverflow")
     if (timeText) add("androidx.wear.compose.material3.TimeText")
     if (timeText) add("androidx.wear.compose.material3.timeTextCurvedText")
     if (usesListHeader) add("androidx.wear.compose.material3.ListHeader")
@@ -1464,6 +1513,33 @@ internal class WearContentEmitter(
 
   private fun UiBuilderNode.stringOrNull(name: String): String? =
     (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull
+
+  /**
+   * A label's own arguments — `maxLines` and `overflow`, which upstream's `ListHeader` and
+   * `ListSubHeader` cannot take because they take a content lambda instead of a string.
+   *
+   * Named here rather than inline so the two header emitters read the same properties, and so the
+   * set is one list to check against the catalog's declaration.
+   */
+  private fun UiBuilderNode.labelArguments(): List<String> = buildList {
+    // Clamped, because the catalog declares an unbounded integer and `Text` throws below one: the
+    // canvas clamps the same value the same way, so an out-of-range document draws and generates
+    // the same screen instead of failing in one lane only.
+    number("maxLines")?.let { add("maxLines = ${it.toInt().coerceAtLeast(1)}") }
+    stringOrNull("overflow")?.let {
+      usesTextOverflow = true
+      // The same three spellings `UiBuilderRenderer.textOverflow` reads, so a design's
+      // `overflow` means one thing on both lanes.
+      add(
+        "overflow = TextOverflow." +
+          when (it) {
+            "visible" -> "Visible"
+            "ellipsis" -> "Ellipsis"
+            else -> "Clip"
+          }
+      )
+    }
+  }
 
   private fun UiBuilderNode.number(name: String): Float? =
     (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.floatOrNull
