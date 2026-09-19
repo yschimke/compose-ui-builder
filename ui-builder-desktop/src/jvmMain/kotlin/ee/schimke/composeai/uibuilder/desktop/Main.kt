@@ -30,6 +30,7 @@ import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.toUiBuilderDocument
+import java.net.URI
 import java.nio.file.Path
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.json.Json
@@ -40,14 +41,15 @@ private const val ACTOR_ID = "desktop-user"
 private const val CLIENT_ID = "desktop-client"
 
 /** Launches the native, offline UI Builder desktop host. */
-fun main() = application {
+fun main(args: Array<String>) = application {
+  val options = DesktopLaunchOptions.parse(args)
   Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder") {
-    MaterialTheme { Surface(Modifier.fillMaxSize()) { DesktopUiBuilderApp() } }
+    MaterialTheme { Surface(Modifier.fillMaxSize()) { DesktopUiBuilderApp(options.remoteServer) } }
   }
 }
 
 @Composable
-private fun DesktopUiBuilderApp() {
+private fun DesktopUiBuilderApp(remoteServer: String?) {
   val catalogText = remember { resourceText("m3-catalog-capabilities-v1.json") }
   val catalog = remember(catalogText) { CapabilityCatalogParser.parse(catalogText) }
   val catalogCapability =
@@ -60,6 +62,7 @@ private fun DesktopUiBuilderApp() {
         clock = System::currentTimeMillis,
       )
     }
+  val remotePreview = remember(remoteServer) { remoteServer?.let(::RemotePreviewClient) }
   var snapshot by remember { mutableStateOf<SnapshotResponseV1?>(null) }
   var failure by remember { mutableStateOf<String?>(null) }
   val submissions = remember { Channel<EditorSubmission>(Channel.UNLIMITED) }
@@ -117,6 +120,10 @@ private fun DesktopUiBuilderApp() {
       clientId = CLIENT_ID,
       operationIdPrefix = CLIENT_ID,
       sessionLabel = "Desktop offline · saved locally",
+      onRequestNativeRender =
+        remotePreview?.let { client ->
+          { shape -> client.render(current.snapshot.state.document.toUiBuilderDocument(), shape) }
+        },
       onSubmission = { submissions.trySend(it) },
     )
   }
@@ -135,3 +142,17 @@ private fun resourceText(name: String): String =
 
 private fun designStorePath(): Path =
   Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")
+
+private data class DesktopLaunchOptions(val remoteServer: String?) {
+  companion object {
+    fun parse(args: Array<String>): DesktopLaunchOptions {
+      if (args.isEmpty()) return DesktopLaunchOptions(null)
+      require(args.size == 2 && args[0] == "--server") {
+        "usage: Compose UI Builder [--server https://preview.coo.ee]"
+      }
+      val server = args[1].trimEnd('/')
+      require(URI(server).scheme == "https") { "the remote preview server must use https" }
+      return DesktopLaunchOptions(server)
+    }
+  }
+}

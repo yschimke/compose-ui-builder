@@ -70,6 +70,18 @@ workspace is the Jetcaster fixture and edits are stored under
 `~/.compose-preview/ui-builder-desktop`. This first desktop host intentionally has no server-backed
 collaboration, comments, or native daemon preview; those remain capabilities of a connected host.
 
+Pass `--server https://preview.coo.ee` to make the native Preview pane compile through the public
+host instead:
+
+```bash
+./gradlew :ui-builder-desktop:run --args='--server https://preview.coo.ee'
+```
+
+The first native Preview request opens the server's short-lived device-grant approval page in the
+default browser. Approve the requested write and export capabilities there; the Desktop process
+keeps the returned token only in memory. The local workspace is uploaded as a temporary private
+design for the render, then removed after the frame returns.
+
 Linux releases also include a `compose-ui-builder-desktop_<version>_amd64.deb` installer. Install it
 with your distribution's package installer, then launch **Compose UI Builder** from the desktop
 environment.
