@@ -19,24 +19,22 @@
 > the record of what was known before, not as a claim about where the code is.
 
 
-**Status: normative.** The rule is enforced by
-[`.github/scripts/ui-builder-project-boundary.sh`](../../.github/scripts/ui-builder-project-boundary.sh),
-which CI runs on every pull request. Cited from [`AGENTS.md`](../../AGENTS.md); not restated there.
+**Status: normative.** The repository boundary now enforces rule 1 structurally. The four allowed
+consumer seams in rule 2 are documented and release-checked here, and are also named in
+[`AGENTS.md`](../../AGENTS.md).
 
 ## The decision
 
 [#346](https://github.com/yschimke/compose-preview-server/issues/346) asked whether the UI-builder
-frontend should become its own repository. The answer is **no — it stays here, and it is treated as
-a second project inside this one, sharing this repository's release line.**
+frontend should become its own repository. The original answer was no; the later extraction
+superseded that part of the decision. The remaining decision is the strict project boundary and the
+small, explicit consumer seam.
 
 That is a deliberate middle position, and both halves of it are load-bearing.
 
-*Not a repository.* The extraction is feasible — the seam is unusually clean — but nothing today is
-blocked by the modules sharing a repository, and a boundary would convert every change spanning the
-editor and the routes that serve it into two pull requests, a release and a pin bump. The
-server↔CLI pin already shows what that costs: `composeai-preview-serve` is a point pin in
-compose-ai-tools precisely so the server cannot move under the CLI without a pull request, and
-`check_preview_server_pin.py` exists because that coupling is sharp enough to break installs.
+*Now a repository.* The extraction was feasible because the seam was unusually clean. Its predicted
+cost is now real: a change spanning the editor and the routes that serve it needs two pull requests,
+a release and a pin bump. That cost makes keeping the seam narrow more important, not less.
 
 *Not just "some modules".* The reason to draw the line anyway is that an undrawn one rots. Every
 edge across it was correct when it was written and wrong later — `:ui-builder-runtime` copying the
@@ -96,7 +94,10 @@ server-side", would have put the boundary in the middle of the builder's own sta
    check. This is the guard that matters most in practice — the usual way a boundary rots is not a
    forbidden edge but a module nobody classified, which the check then silently stops covering.
 
-## What the boundary is *not*
+## What the boundary was *not* before extraction
+
+This section records the old in-repository mechanism. It is historical, not a description of the
+current repository layout or release process.
 
 - **Not a release boundary.** One version line, one `.release-please-manifest.json`, one tag. Both
   projects ship together, and a change spanning them is still one pull request.

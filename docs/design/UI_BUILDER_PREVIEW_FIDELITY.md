@@ -207,17 +207,22 @@ disagreement about pane count is therefore expected, and it is the first row of 
 
 **Does not hold yet: the rest of rung 2's components are rung 1's.** Both panes go through the same
 [`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt),
-so the preview inherits every remaining stand-in the editor uses:
+so the preview inherits every remaining unconditional stand-in the editor uses. The known Material
+3 cases are `layout/horizontal-carousel` (`LazyRow` instead of `HorizontalUncontainedCarousel`),
+`m3/horizontal-floating-toolbar` (`Surface` + `Row`), and the hand-built `m3/search-bar` /
+`m3/search-input-field`. The inline dialog surface is deliberate for editing, but it also remains in
+the bounded pane. `wear-m3` is the catalog-level exception described above.
 
-- `layout/horizontal-carousel` → `CompatibleHorizontalCarousel`; Material's uncontained carousel is
-  not on the dependency floor.
-- `CompatibleFloatingToolbar`, and the `wear-m3` Material 3 lookalikes — the last of which is the
-  bounded case above and stays a stand-in by construction.
+The compiled rung does not repair all of these today: the capability exporter emits `Builder*`
+helpers for the carousel, search components, floating toolbar and dialog, so compiling that source
+still compiles a substitute rather than the catalog's declared symbol. Tracked in
+[#61](https://github.com/yschimke/compose-ui-builder/issues/61).
 
-Closing these is the direction, not a defect list to clear before the ladder is true, and the
-scaffold is the worked example of what closing one looks like: link the real library where it is
-KMP-capable, emit the real component from the exporter, and let the properties the component derives
-for itself stop being authored.
+Closing these is the direction, and the scaffold is the worked example of what closing one looks
+like: keep a stand-in only in the unrolled editor where authoring needs it, link the real library in
+the bounded pane where it is KMP-capable, emit the real component from the exporter, and let the
+properties the component derives for itself stop being authored. Where that is impossible, the
+surface must say it is approximate rather than claiming rung 2 or 3 fidelity.
 
 ## See also
 

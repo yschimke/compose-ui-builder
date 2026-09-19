@@ -201,6 +201,9 @@ fun designUrlPath(
   require(isDesignUrlPathSafe(designId)) {
     "the path form cannot name this design; see isDesignUrlPathSafe"
   }
+  require(selectors.revision == null || selectors.revision >= 0) {
+    "a design link revision must not be negative"
+  }
   val path = "/ui-builder/${encodeUrlComponent(designId)}"
   val query = buildList {
     selectors.revision?.let { add("$DESIGN_URL_REVISION_KEY=$it") }

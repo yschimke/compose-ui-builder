@@ -300,13 +300,9 @@ private fun modifier(type: String): JsonObject = JsonObject(mapOf("type" to Json
 /**
  * One state variable a new design starts with.
  *
- * Declared at creation because that is the only moment a client can put state into a design: the
- * wire's mutation set reaches nodes, properties and the environment, and never `stateVariables`. A
- * design that starts without state can never gain any, so a screen that reacts to anything has to
- * say so up front.
- *
- * That is a real limitation rather than a design preference, and the fix is a protocol addition
- * (`setStateVariable`), not a workaround here.
+ * Declared at creation when the author already knows the screen's state. State may also be added or
+ * edited later through the Screen inspector; both paths produce the same state-variable
+ * declarations.
  */
 data class NewDesignState(
   val name: String,

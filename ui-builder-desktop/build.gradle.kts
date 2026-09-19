@@ -26,6 +26,7 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutines.core)
     }
+    jvmTest.dependencies { implementation(kotlin("test")) }
   }
 }
 

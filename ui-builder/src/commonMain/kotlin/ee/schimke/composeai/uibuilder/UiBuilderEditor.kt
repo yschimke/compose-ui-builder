@@ -1241,7 +1241,6 @@ fun UiBuilderEditor(
                     )
                   )
                 }
-                Unit
               }
             }
           }
@@ -1947,7 +1946,6 @@ fun UiBuilderEditor(
                 )
               )
             }
-            Unit
           }
         },
       onTextInputFocusChanged = { textInputFocused = it },
@@ -2437,7 +2435,10 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
           style = MaterialTheme.typography.labelMedium,
         )
       }
-      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
         platformCatalogs.forEach { catalog ->
           FilterChip(
             selected = catalog.systemId == form.selectedCatalogId,
@@ -2451,7 +2452,10 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
       }
     }
     Text("Starting point", style = MaterialTheme.typography.labelLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
       form.selectedCatalog.templates.forEach { template ->
         FilterChip(
           selected = template.id == form.selectedTemplate.id,
@@ -2515,6 +2519,7 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
           )
         }
       }
+      val initialValueValid = newDesignInitialValueValid(form.variableKind, form.variableInitial)
       Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2532,6 +2537,19 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
           onValueChange = { form.variableInitial = it },
           modifier = Modifier.weight(1f).semantics { contentDescription = "State initial value" },
           placeholder = { Text(form.variableKind.placeholder) },
+          supportingText =
+            if (!initialValueValid) {
+              {
+                Text(
+                  when (form.variableKind) {
+                    NewDesignStateType.Flag -> "Use true or false"
+                    NewDesignStateType.Number -> "Use a whole number"
+                    NewDesignStateType.Text -> ""
+                  }
+                )
+              }
+            } else null,
+          isError = !initialValueValid,
           singleLine = true,
         )
         TextButton(
@@ -2545,18 +2563,32 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
             form.variableName = ""
             form.variableInitial = ""
           },
-          enabled = form.variableNameValid,
+          enabled = form.variableNameValid && initialValueValid,
         ) {
           Text("Add")
         }
       }
       if (form.declared.isNotEmpty()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
           form.declared.forEach { variable ->
             FilterChip(
               selected = false,
               onClick = { form.declared = form.declared - variable },
               label = { Text("${variable.name} · ${variable.type.label}") },
+              trailingIcon = {
+                Icon(
+                  Icons.Filled.Close,
+                  contentDescription = null,
+                  modifier = Modifier.size(16.dp),
+                )
+              },
+              modifier =
+                Modifier.semantics {
+                  contentDescription = "Remove state variable ${variable.name}"
+                },
             )
           }
         }
@@ -2564,6 +2596,15 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
     }
   }
 }
+
+/** Rejects typos in the form instead of silently turning them into `false` or `0`. */
+internal fun newDesignInitialValueValid(type: NewDesignStateType, raw: String): Boolean =
+  raw.isBlank() ||
+    when (type) {
+      NewDesignStateType.Flag -> raw.trim().toBooleanStrictOrNull() != null
+      NewDesignStateType.Number -> raw.trim().toLongOrNull() != null
+      NewDesignStateType.Text -> true
+    }
 
 @Composable
 private fun NewDesignDialog(
@@ -5847,11 +5888,11 @@ internal fun PinnedDesignCanvas(
       // answer "can it land here" twice — once with the marker, once by taking the preview away —
       // and only one of those answers says anything.
       //
-      // Keyed on the drag itself, not on the document: consecutive drags of different things must
-      // not inherit each other's measurement, or the first frame of the second drag would anchor
-      // on the first drag's content.
+      // This state leaves the composition when the drag ends, so consecutive drags cannot inherit
+      // each other's measurement. Keying on the pointer position would instead reset it on every
+      // move and keep the ghost permanently empty.
       var ghostContentBounds by
-        remember(document.id, dragPosition == null) { mutableStateOf<UiBuilderPixelBounds?>(null) }
+        remember(document.id) { mutableStateOf<UiBuilderPixelBounds?>(null) }
       // Capped by the slot under the pointer, in the ghost's own pixels: a component that will
       // fill its landing slot is drawn filling it while still in the air. The conversion is the
       // design's density, which the ghost deliberately does not carry — see [dragGhostDocument].

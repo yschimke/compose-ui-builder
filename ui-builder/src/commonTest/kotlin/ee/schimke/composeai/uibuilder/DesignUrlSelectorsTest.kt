@@ -71,6 +71,13 @@ class DesignUrlSelectorsTest {
   }
 
   @Test
+  fun `the link builder refuses a negative revision that its parser would discard`() {
+    assertFailsWith<IllegalArgumentException> {
+      designUrlPath("jetcaster-discover", DesignUrlSelectors(revision = -1))
+    }
+  }
+
+  @Test
   fun `a thread is read from the fragment and never from the query`() {
     assertNull(parseDesignUrlSelectors("?thread=t-7", null).threadId)
     assertEquals("t-7", parseDesignUrlSelectors(null, "#thread=t-7").threadId)
