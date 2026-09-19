@@ -169,8 +169,8 @@ speculative:
 - `:ui-builder` has a `jvm()` target and compiles the whole editor for it today.
 - `jvmTest` drives the editor through `compose.uiTest` against `compose.desktop.currentOs` — real
   Skiko, real composition, asserting on real editor behaviour (#619).
-- `jvmMain` already holds `FileDesignStore`, the JVM image codecs, the Wear picker actuals, and a
-  Skia SVG recorder.
+- `jvmMain` already holds `FileLocalDesignStorage`, the JVM image codecs, the Wear picker actuals,
+  and a Skia SVG recorder.
 - `LocalUiBuilderService` + `LocalUiBuilderHttpTransport` are **common** code: the full v1 protocol,
   in-process, behind the same `UiBuilderHttpTransport` seam the browser uses over HTTP
   ([`UI_BUILDER_LOCAL_STORAGE.md`](UI_BUILDER_LOCAL_STORAGE.md)). A desktop app binds that transport
@@ -189,7 +189,7 @@ speculative:
 
    | Browser | Interface | Desktop implementation |
    | --- | --- | --- |
-   | `BrowserLocalDesignStorage` | `LocalDesignStorage` | `FileDesignStore` — exists |
+   | `BrowserLocalDesignStorage` | `LocalDesignStorage` | `FileLocalDesignStorage` — exists |
    | `BrowserUiBuilderHttpTransport` | `UiBuilderHttpTransport` | `LocalUiBuilderHttpTransport` (offline) or Ktor client (attached server) |
    | `BrowserUiBuilderWebSocketTransport` | protocol update client | Ktor client WebSocket; unused offline |
    | `BrowserMaterialSymbolsTransport` | `MaterialSymbolsTransport` | HTTP + on-disk cache |
@@ -302,7 +302,7 @@ deciding whether the extraction happens.
 **Stage 1 — Make the JVM editor real (this repository, no extraction).**
 Hoist `Main.kt`'s shell into `commonMain` behind a `UiBuilderHosts` interface; write the desktop
 actuals; add `:ui-builder-desktop` with `compose.desktop.application`; bind
-`LocalUiBuilderHttpTransport` + `FileDesignStore`. *Gate:* the existing `jvmTest` suite passes
+`LocalUiBuilderHttpTransport` + `FileLocalDesignStorage`. *Gate:* the existing `jvmTest` suite passes
 unchanged against the hoisted shell, and the app opens, edits, undoes and saves a design with no
 server running.
 

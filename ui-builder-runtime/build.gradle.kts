@@ -77,6 +77,9 @@ tasks.processResources {
 
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
+  providers.gradleProperty("uiBuilderCollaborationSoakMinutes").orNull?.let {
+    systemProperty("uiBuilderCollaborationSoakMinutes", it)
+  }
   // `SlotAcceptanceTest` rewrites its committed table when asked; see the class for the command.
   providers.gradleProperty("uiBuilderSlotAcceptanceUpdate").orNull?.let {
     systemProperty("uiBuilderSlotAcceptanceUpdate", it)

@@ -384,10 +384,7 @@ tasks
     )
   }
 
-val collaborationSoakMinutes = providers.gradleProperty("uiBuilderCollaborationSoakMinutes")
-
 tasks.named<Test>("jvmTest") {
-  collaborationSoakMinutes.orNull?.let { systemProperty("uiBuilderCollaborationSoakMinutes", it) }
   // `DesignFixturesTest` reads the committed designs from disk, not from a hand-kept list, so a
   // file cannot join the directory without being replayed, validated and exported.
   systemProperty(
