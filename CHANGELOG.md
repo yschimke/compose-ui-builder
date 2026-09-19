@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.29.0](https://github.com/yschimke/compose-ui-builder/compare/v3.28.0...v3.29.0) (2026-09-19)
+
+
+### Features
+
+* adopt the builder-backed catalog capability from contracts 3.2.0 ([#43](https://github.com/yschimke/compose-ui-builder/issues/43)) ([dcddb6d](https://github.com/yschimke/compose-ui-builder/commit/dcddb6d9f0e4aa695bc43300830a2e3c036f5553))
+* **release:** publish desktop app package ([#53](https://github.com/yschimke/compose-ui-builder/issues/53)) ([6ad5a71](https://github.com/yschimke/compose-ui-builder/commit/6ad5a71e6f30c1a87ced3613dad4d55acea62579))
+* **ui-builder:** add offline desktop host ([#51](https://github.com/yschimke/compose-ui-builder/issues/51)) ([53feab8](https://github.com/yschimke/compose-ui-builder/commit/53feab806772287542c1b1cebdc77950fc6dfe3e))
+* **ui-builder:** draw device panes in their own scene, and turn the wheel into the side button ([#52](https://github.com/yschimke/compose-ui-builder/issues/52)) ([06f43a0](https://github.com/yschimke/compose-ui-builder/commit/06f43a0851bd90361082f1fb8a1cec42848824bd))
+* **ui-builder:** one frame view per pane, and a grid for small ones ([#44](https://github.com/yschimke/compose-ui-builder/issues/44)) ([54e8d1b](https://github.com/yschimke/compose-ui-builder/commit/54e8d1b545eb6c8a267a6b39099568e6eac95f71))
+* **ui-builder:** say why the editor is blank when WebGL is unavailable ([#35](https://github.com/yschimke/compose-ui-builder/issues/35)) ([d89d433](https://github.com/yschimke/compose-ui-builder/commit/d89d433320155188c169188bce095bb593e5a554))
+
+
+### Bug Fixes
+
+* **release:** a publish_tag input, so a stalled release can be re-run for its tag ([#41](https://github.com/yschimke/compose-ui-builder/issues/41)) ([0dfb8f2](https://github.com/yschimke/compose-ui-builder/commit/0dfb8f28cefbf565192be0c290806e12a5e1613b))
+* **ui-builder:** derive the preview fan-out from tagNodes ([#46](https://github.com/yschimke/compose-ui-builder/issues/46)) ([7a0b465](https://github.com/yschimke/compose-ui-builder/commit/7a0b4651980a060a8d809e18ade68d857d38d038))
+* **ui-builder:** draw Wear text with Wear's own Text, and read what it declares ([#49](https://github.com/yschimke/compose-ui-builder/issues/49)) ([968f79f](https://github.com/yschimke/compose-ui-builder/commit/968f79f45f5ed759007db49e905d8e26737a9199))
+* **ui-builder:** generate the page nonce without a secure context ([#42](https://github.com/yschimke/compose-ui-builder/issues/42)) ([d56a0f5](https://github.com/yschimke/compose-ui-builder/commit/d56a0f5ce093bdfc8068ccd063604db54942fdaa))
+* **ui-builder:** hit-test against the box a node is drawn at, not the part the viewport shows ([#36](https://github.com/yschimke/compose-ui-builder/issues/36)) ([d2ab8fd](https://github.com/yschimke/compose-ui-builder/commit/d2ab8fd9c617476b6c6961697a22e381a051262a))
+* **ui-builder:** lay Wear components out against the document's watch ([#47](https://github.com/yschimke/compose-ui-builder/issues/47)) ([6855175](https://github.com/yschimke/compose-ui-builder/commit/6855175a86cfa19a4c4bc67fe66bed8e02260d90))
+* **ui-builder:** open properties on selection ([#54](https://github.com/yschimke/compose-ui-builder/issues/54)) ([33b7de2](https://github.com/yschimke/compose-ui-builder/commit/33b7de24b5eb8633f0e2bc8381255f17a57f205c))
+* **ui-builder:** retire the Wear lookalike's stale claims and dead numbers ([#48](https://github.com/yschimke/compose-ui-builder/issues/48)) ([f0c6468](https://github.com/yschimke/compose-ui-builder/commit/f0c646816fb66d037159c594d2dacb05b38fe679))
+
 ## [3.28.0](https://github.com/yschimke/compose-ui-builder/compare/v3.27.0...v3.28.0) (2026-09-19)
 
 
