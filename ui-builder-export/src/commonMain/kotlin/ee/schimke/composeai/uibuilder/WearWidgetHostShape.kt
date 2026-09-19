@@ -24,8 +24,8 @@ package ee.schimke.composeai.uibuilder
  *   sees the same word the editor's control used.
  */
 enum class WearWidgetHostShape(val id: String, val label: String) {
-  /** The host default, and the frame every shipped widget template is authored against. */
-  Squircle("squircle", "Squircle"),
+  /** The broadest rectangular host is the editing frame; previews show every shipped shape. */
+  Rectangular("rectangular", "Rectangular"),
 
   /**
    * Square corners and a wider, shorter content box.
@@ -34,7 +34,7 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
    * it is the render recommended as the image for the widget picker editor
    * (yschimke/compose-preview-server#587), which is why a designer needs to see their widget in it.
    */
-  Rectangular("rectangular", "Rectangular"),
+  Squircle("squircle", "Squircle"),
 
   /**
    * Fully round: a corner radius of 999dp, which every renderer clamps to a stadium.
@@ -67,8 +67,8 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
     }
 
   companion object {
-    /** The shape a design is drawn in when nothing has chosen one. */
-    val Default: WearWidgetHostShape = Squircle
+    /** The unconstrained rectangular host is the editing frame when nothing has chosen one. */
+    val Default: WearWidgetHostShape = Rectangular
 
     /** The shape [id] names, or [Default] for an unknown or absent one. */
     fun fromId(id: String?): WearWidgetHostShape =
