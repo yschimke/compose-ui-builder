@@ -198,6 +198,24 @@ internal class RemoteContentEmitter(
   /** `val <name> = rememberMutableRemote…(<initial>)` for each variable an action wrote to. */
   fun stateLocals(): List<String> = stateWrites.values.toList()
 
+  /**
+   * The body a widget container with an **empty** content slot gets: a box that fills the frame.
+   *
+   * A method on the emitter rather than a line the widget exporter writes itself, and that is the
+   * whole point of it existing. The imports are the emitter's, derived from what it wrote: a caller
+   * composing `RemoteBox(modifier = RemoteModifier.fillMaxSize())` by hand leaves `RemoteBox`,
+   * `RemoteModifier` and `fillMaxSize` out of [imports] and the generated file does not compile —
+   * which is exactly what the first compilation of the published templates' generated source
+   * caught, for the two empty host frames, after `remote-m3` had published them as templates whose
+   * generated Kotlin nobody compiled.
+   */
+  fun emptyBox(depth: Int): String {
+    usesBox = true
+    usesModifier = true
+    usedModifierImports += "fillMaxSize"
+    return "${INDENT.repeat(depth)}RemoteBox(modifier = RemoteModifier.fillMaxSize())"
+  }
+
   /** The `WearWidgetBrush` chain a container's background declares. */
   data class Background(
     val expression: String,
