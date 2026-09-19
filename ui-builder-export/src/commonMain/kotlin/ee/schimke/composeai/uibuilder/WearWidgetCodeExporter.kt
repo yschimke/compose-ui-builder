@@ -183,7 +183,7 @@ object WearWidgetCodeExporter {
     val background = emitter.background(root)
     val body =
       when (contentIds.size) {
-        0 -> listOf("${INDENT.repeat(depth)}RemoteBox(modifier = RemoteModifier.fillMaxSize())")
+        0 -> listOf(emitter.emptyBox(depth))
         1 -> emitter.emit(contentIds.single(), depth = depth)
         else -> {
           refusals += "the widget container holds one body; this design has ${contentIds.size}"

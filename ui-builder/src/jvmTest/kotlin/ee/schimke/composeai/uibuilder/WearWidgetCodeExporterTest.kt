@@ -59,6 +59,48 @@ class WearWidgetCodeExporterTest {
   }
 
   /**
+   * The empty host frame — a container whose content slot holds nothing — is a template this
+   * catalog publishes (`wear-widget-small` / `wear-widget-large`), and its body is the one call the
+   * exporter writes itself rather than through a node.
+   *
+   * That line was composed in `WearWidgetCodeExporter` and never registered its imports, so the
+   * published templates' generated Kotlin named `RemoteBox`, `RemoteModifier` and `fillMaxSize`
+   * without importing any of them. Nothing here compiled it — the samples are both non-empty — and
+   * wear-m3-catalog's template round trip found it, which is the first thing that ever compiled the
+   * templates' generated source.
+   */
+  @Test
+  fun `an empty host frame imports the box it fills the frame with`() {
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            wearWidgetUiBuilderDocument(
+              "empty",
+              pin,
+              environment,
+              WearWidgetScaffoldSize.Small,
+            )
+          )
+        )
+        .source
+
+    write("EmptyWidget.kt", source)
+    assertTrue("RemoteBox(modifier = RemoteModifier.fillMaxSize())" in source, source)
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.layout.RemoteBox" in source,
+      source,
+    )
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.modifier.RemoteModifier" in source,
+      source,
+    )
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.modifier.fillMaxSize" in source,
+      source,
+    )
+  }
+
+  /**
    * A gradient in the background slot becomes the `WearWidgetBrush` chain the container takes.
    *
    * `RemoteContentEmitter` has written this since the slot existed, but nothing could author it:
