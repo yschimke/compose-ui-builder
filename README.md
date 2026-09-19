@@ -59,11 +59,13 @@ A release goes out in two halves, because the four seams are not the same kind o
 the runtime, so its coordinate appears in the runtime's POM, and a POM naming an artifact nobody
 uploaded is what made `compose-preview-serve` unresolvable for six consecutive releases.
 
-**A GitHub release asset — one ZIP.** `compose-preview-ui-builder-web-<version>.zip`, the Wasm
-editor. A host unpacks it; nothing compiles against it, nothing resolves it transitively. It stays
-off Central because a 40 MB frontend distribution published there is permanent and serves no one.
-compose-preview-server reaches it through a group-fenced ivy repository over this repository's
-releases, so it remains an ordinary versioned dependency:
+**GitHub release assets — a Wasm ZIP and a Linux Desktop app.**
+`compose-preview-ui-builder-web-<version>.zip` is the Wasm editor, which a host unpacks; nothing
+compiles against it or resolves it transitively. The release also carries
+`compose-ui-builder-desktop_<version>_amd64.deb`, the native offline Compose Desktop application.
+The web bundle stays off Central because a 40 MB frontend distribution published there is permanent
+and serves no one. compose-preview-server reaches it through a group-fenced ivy repository over
+this repository's releases, so it remains an ordinary versioned dependency:
 
 ```kotlin
 ivy("https://github.com/yschimke/compose-ui-builder/releases/download") {

@@ -45,10 +45,11 @@ concurrency:
 #     naming an artifact nobody uploaded is what made compose-preview-serve unresolvable for six
 #     consecutive releases.
 #
-#   - ONE ZIP as a GitHub release asset — `compose-preview-ui-builder-web-<v>.zip`, the Wasm
-#     editor. A host unpacks it; nothing compiles against it. compose-preview-server resolves it
-#     through a group-fenced ivy repository over this release, which keeps it a normal versioned
-#     dependency without putting a 40 MB frontend distribution on Central forever.
+#   - TWO GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor, and a
+#     Linux `.deb` for the native Desktop host. A host unpacks the former; nothing compiles against
+#     either. compose-preview-server resolves the web archive through a group-fenced ivy repository
+#     over this release, which keeps it a normal versioned dependency without putting a 40 MB
+#     frontend distribution on Central forever.
 #
 # The Maven set is DERIVED, never listed: `publishReleaseArtifacts` publishes every module applying
 # `composeai.maven-publishing` and fails first if that set has lost a seam or the BOM.
@@ -188,6 +189,15 @@ jobs:
       - name: Build the editor archive
         run: ./gradlew :ui-builder-web:webArchive
 
+      # This is a native application package, not a Maven artifact: it embeds the JVM desktop host
+      # for a Linux workstation and belongs alongside the Wasm archive on the GitHub Release. Its
+      # version is package metadata, so use the tag-derived version rather than Gradle's otherwise
+      # unspecified project version.
+      - name: Build the Desktop app
+        env:
+          UI_BUILDER_DESKTOP_VERSION: ${{ env.PLUGIN_VERSION }}
+        run: ./gradlew :ui-builder-desktop:packageDistributionForCurrentOS
+
       # These five secret names are the ones compose-preview-server used while it published these
       # same coordinates, so one set of repository secrets serves both. `signingInMemoryKeyId` is
       # the one that looks droppable and is not: without it the signing plugin uses the keyring's
@@ -207,18 +217,23 @@ jobs:
       #
       # Deliberately does NOT un-draft: `finish-release` does that once the asset is attached, so
       # the release is never visible to the ivy repository without the zip it asks for.
-      - name: Attach the editor archive to the release
+      - name: Attach the editor assets to the release
         run: |
           tag="${{ needs.release-please.outputs.publish_tag }}"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
+          desktop_package=$(find ui-builder-desktop/build/compose/binaries -type f -name '*.deb' -print -quit)
+          if [ -z "$desktop_package" ]; then
+            echo "::error::the Desktop package task produced no .deb"
+            exit 1
+          fi
           # release-please has already created the (draft) Release, so `view` normally succeeds.
           # The create branch covers a tag that reached here without one - a manual re-run, or a
           # release whose draft was deleted - because `gh release upload` cannot create a Release
           # and would otherwise fail AFTER the Central publish had gone out.
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$archive" --clobber
+            gh release upload "$tag" "$archive" "$desktop_package" --clobber
           else
-            gh release create "$tag" "$archive" --title "$tag" --generate-notes --draft
+            gh release create "$tag" "$archive" "$desktop_package" --title "$tag" --generate-notes --draft
           fi
 
   finish-release:
