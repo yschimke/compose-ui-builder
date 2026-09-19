@@ -2605,9 +2605,10 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                         "is the component itself rather than an impression of it. What is still " +
                         "the canvas's own: the screen frame (the extent has no viewport for a " +
                         "real scaffold), the unrolled list (a long screenshot turns the row " +
-                        "transformation off), and the type scale, which is the mobile theme's. " +
-                        "Author on it; check a size on the Android preview, which compiles this " +
-                        "design's own generated Kotlin against the real AAR."
+                        "transformation off), and the font, which is the port's vendored Roboto " +
+                        "Flex rather than the platform's. Author on it; check a size on the " +
+                        "Android preview, which compiles this design's own generated Kotlin " +
+                        "against the real AAR."
                     ),
                   )
                 }
