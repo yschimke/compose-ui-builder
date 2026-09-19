@@ -90,7 +90,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -176,7 +177,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -243,7 +245,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Drawn as a named placeholder carrying the animation's source and size. The canvas has no Lottie renderer, and compiling the animation the way the export does — into Remote Compose operations — is Horologist's Android-only creation API, which a Wasm build cannot link. A lookalike would be an impression of an animation nobody could check; the picture comes from the native lane, which builds this design's own generated document.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -338,7 +341,8 @@
             "wasm": {
                 "adapterStatus": "planned",
                 "notes": null,
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -466,7 +470,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": null,
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -570,7 +575,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": null,
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -645,7 +651,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": null,
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -788,7 +795,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": null,
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -994,7 +1002,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Fidelity requires the pinned Jetcaster font assets and typography tokens.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -1078,7 +1087,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -1167,7 +1177,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Draws the ordinary Compose content in its own slot, which is what a registered renderer draws on a real player too. A preview only draws it if a custom component of this name is registered; an unregistered one is a player support issue rather than silently borrowed content. The code mapping names the registry rather than a composable, because the composable is whatever the host registers under this name.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -1239,7 +1250,8 @@
             "wasm": {
                 "adapterStatus": "planned",
                 "notes": "Must remain a semantic brush layer, not persisted pixel geometry.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -1324,7 +1336,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Draws the bytes the design's assets map pins under assetKey (content-addressed, hash-checked, stored by the host), the project-owned Jetcaster covers, or a visible placeholder carrying the key. External URLs are not accepted.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         }
     ],

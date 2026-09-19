@@ -413,7 +413,7 @@ class CatalogUpgradePreviewTest {
             required = false,
           )
         },
-      wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
+      wasm = WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
     )
 
   /**

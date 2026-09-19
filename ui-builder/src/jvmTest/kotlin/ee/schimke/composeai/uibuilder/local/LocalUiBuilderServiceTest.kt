@@ -164,13 +164,13 @@ class LocalUiBuilderServiceTest {
                     ordered = true,
                   )
                 ),
-              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
+              wasm = WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
             ),
             ComponentCapabilityV1(
               componentId = "m3/text",
               displayName = "Text",
               role = "leaf",
-              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
+              wasm = WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED).build(),
             ),
           ),
       )

@@ -490,7 +490,9 @@ class PersistentUiBuilderServiceFileStoreTest {
               displayName = "Text",
               role = "text",
               properties = emptyList(),
-              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
+              wasm =
+                WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
+                  .build(),
             )
           ),
         exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),

@@ -271,10 +271,11 @@ class WearM3ScreenCatalogTest {
             displayName = "Only",
             role = "Leaf",
             wasm =
-              WasmCapabilityV1(
-                platformSupported = JsonPrimitive(false),
-                adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
-              ),
+              WasmCapabilityV1.Builder(
+                  platformSupported = JsonPrimitive(false),
+                  adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+                )
+                .build(),
           )
         ),
       exportCapabilities = ExportCapabilitiesV1(composeCode = false, svg = false, png = false),

@@ -3792,7 +3792,9 @@ class PersistentUiBuilderServiceTest {
               role = "text",
               properties =
                 listOf(PropertyCapabilityV1("text", JsonPrimitive("string"), required = false)),
-              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
+              wasm =
+                WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
+                  .build(),
             ),
             ComponentCapabilityV1(
               componentId = "m3.Button",
@@ -3800,7 +3802,9 @@ class PersistentUiBuilderServiceTest {
               role = "action",
               properties =
                 listOf(PropertyCapabilityV1("label", JsonPrimitive("string"), required = true)),
-              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
+              wasm =
+                WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
+                  .build(),
             ),
           ),
         exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),

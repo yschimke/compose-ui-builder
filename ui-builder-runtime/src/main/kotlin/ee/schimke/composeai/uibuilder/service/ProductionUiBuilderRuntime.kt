@@ -1402,10 +1402,13 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       properties = widgetContainerProperties(),
       modifierCapabilities = emptyList(),
       wasm =
-        supportedWasm.copy(
-          notes =
-            "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains."
-        ),
+        supportedWasm
+          .newBuilder()
+          .also {
+            it.notes =
+              "Compose UI recreation of the Glance Wear squircle host preview; its content slot may host ordinary or nested Remote Compose content, and its background slot the gradient and image brushes WearWidgetBrush chains."
+          }
+          .build(),
       code = null,
       svg =
         blockedSvg?.copy(
@@ -1539,10 +1542,13 @@ private fun lottie(
     // which is the worst moment to learn it.
     modifierCapabilities = borrowed.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS },
     wasm =
-      supportedWasm.copy(
-        notes =
-          "Drawn as a named placeholder carrying the animation's source and size. The canvas has no Lottie renderer, and compiling the animation the way the export does — into Remote Compose operations — is Horologist's Android-only creation API, which a Wasm build cannot link. A lookalike would be an impression of an animation nobody could check; the picture comes from the native lane, which builds this design's own generated document."
-      ),
+      supportedWasm
+        .newBuilder()
+        .also {
+          it.notes =
+            "Drawn as a named placeholder carrying the animation's source and size. The canvas has no Lottie renderer, and compiling the animation the way the export does — into Remote Compose operations — is Horologist's Android-only creation API, which a Wasm build cannot link. A lookalike would be an impression of an animation nobody could check; the picture comes from the native lane, which builds this design's own generated document."
+        }
+        .build(),
     // No component record: `WearWidgetCodeExporter` writes the whole widget, so the call site comes
     // from `RemoteContentEmitter` like every other node in this catalog's body.
     code = null,
@@ -1731,7 +1737,7 @@ private fun wearNativeOnlyComponents(
       // whose height upstream fixes — and `WearScreenCodeExporter` writes the whole screen, so
       // there is no per-node modifier chain for it to carry one into.
       modifierCapabilities = emptyList(),
-      wasm = supportedWasm.copy(notes = note(composable, extra)),
+      wasm = supportedWasm.newBuilder().also { it.notes = note(composable, extra) }.build(),
       // The call site comes from `WearScreenCodeExporter`, which writes the whole screen, and never
       // from a per-component record: `wear-m3` has none, deliberately.
       code = null,
@@ -2198,10 +2204,13 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       properties = wearScreenScaffoldProperties(),
       modifierCapabilities = emptyList(),
       wasm =
-        supportedWasm.copy(
-          notes =
-            "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp."
-        ),
+        supportedWasm
+          .newBuilder()
+          .also {
+            it.notes =
+              "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp."
+          }
+          .build(),
       // No Compose export from the catalog's own record: `ScreenScaffold` is a scaffold with a
       // `contentPadding` lambda and a scroll-state argument that has to agree with the list inside
       // it, which is a shape `ScreenGenerator`'s call-site emitter cannot write from a record.
@@ -2230,10 +2239,13 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         properties = text.properties.filter { it.name in WEAR_LIST_HEADER_PROPERTIES },
         modifierCapabilities = emptyList(),
         wasm =
-          text.wasm.copy(
-            notes =
-              "Wear Material 3's `ListHeader`: a 48dp item whose label sits low in it, drawn on the screen's own background rather than on a surface. The height is upstream's and is what makes a generated screen's first row land where the canvas puts it."
-          ),
+          text.wasm
+            .newBuilder()
+            .also {
+              it.notes =
+                "Wear Material 3's `ListHeader`: a 48dp item whose label sits low in it, drawn on the screen's own background rather than on a surface. The height is upstream's and is what makes a generated screen's first row land where the canvas puts it."
+            }
+            .build(),
         code = null,
       )
     }
@@ -2247,10 +2259,13 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         listOf(lazyColumn.slots.single().copy(cardinality = lazyColumn.slots.single().cardinality)),
       properties = wearTransformingLazyColumnProperties(),
       wasm =
-        supportedWasm.copy(
-          notes =
-            "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it."
-        ),
+        supportedWasm
+          .newBuilder()
+          .also {
+            it.notes =
+              "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it."
+          }
+          .build(),
       code = null,
       svg =
         blockedSvg?.copy(
@@ -2291,20 +2306,24 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         componentId = componentId,
         displayName = displayName,
         wasm =
-          source.wasm.copy(
-            // Stated, not inherited. This used to take whatever `borrowedFrom`'s status happened
-            // to be, which is why `wear-m3/card` and `wear-m3/button` declared `planned` while the
-            // canvas drew them and most of the rest declared `supported` while it drew a dashed
-            // box — the field was wrong in both directions because it was never being decided per
-            // component at all (#907).
-            adapterStatus = WasmAdapterStatusV1.SUPPORTED,
-            platformSupported = JsonPrimitive(true),
-            notes =
-              "Wear Material 3's $generatesAs, drawn on the canvas by Wear Compose itself. The " +
-                "canvas links a Compose Multiplatform build of the library rather than " +
-                "`androidx.wear.compose:compose-material3`, which publishes an Android AAR with " +
-                "no browser variant; the generated screen and the native render use the real AAR.",
-          ),
+          source.wasm
+            .newBuilder()
+            .also {
+              // Stated, not inherited. This used to take whatever `borrowedFrom`'s status happened
+              // to be, which is why `wear-m3/card` and `wear-m3/button` declared `planned` while
+              // the
+              // canvas drew them and most of the rest declared `supported` while it drew a dashed
+              // box — the field was wrong in both directions because it was never being decided per
+              // component at all (#907).
+              it.adapterStatus = WasmAdapterStatusV1.SUPPORTED
+              it.platformSupported = JsonPrimitive(true)
+              it.notes =
+                "Wear Material 3's $generatesAs, drawn on the canvas by Wear Compose itself. The " +
+                  "canvas links a Compose Multiplatform build of the library rather than " +
+                  "`androidx.wear.compose:compose-material3`, which publishes an Android AAR with " +
+                  "no browser variant; the generated screen and the native render use the real AAR."
+            }
+            .build(),
         // The Compose call site comes from `WearScreenCodeExporter`, which writes the whole screen,
         // rather than from a per-component record: a Wear component's arguments are not the
         // Material
@@ -2399,7 +2418,9 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       // foundation component is not a stand-in for anything, which is the whole reason these four
       // are the only ones left. The `REMOTE_COMPOSE_BORROWED_AS_THEMSELVES` branch that stood here
       // went with the seams.
-      component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
+      component.copy(
+        wasm = component.wasm.newBuilder().also { it.notes = WEAR_FOUNDATION_NOTE }.build()
+      )
     }
 
   return base.copy(

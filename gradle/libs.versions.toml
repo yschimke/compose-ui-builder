@@ -156,7 +156,7 @@ composeai-preview-daemon = "3.8.1"
 # component placements and loop rows this repository's canvas and exporter already draw from its
 # own document model.
 # 3.1.0 is the first release publishing `compose-preview-contracts-bom`.
-composeai-contracts = "3.1.0"
+composeai-contracts = "3.2.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"

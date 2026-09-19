@@ -91,7 +91,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Drawn as a Wear long-screenshot stadium at the document frame's width, with the content padding the real `ScreenScaffold` computes for that screen size, the clock where `AppScaffold` puts it, and a bezel scroll indicator. It is not Wear Compose — `androidx.wear.compose:compose-material3` is an Android AAR the Wasm canvas cannot link — but it is measured against it: wear-m3-catalog's stitched `ScrollMode.LONG` capture of the same list matches this to within a dp.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -173,7 +174,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Drawn as a plain Column at the list's own spacing. That is what a stitched `ScrollMode.LONG` capture of the real one is: `LONG` turns the row transformation off in order to stitch, so every row on the reference is full content width at every position and the Column reproduces it exactly. What neither shows is a live frame, where `SurfaceTransformation` scales and fades a row by its distance from the bezel; the generated Kotlin emits that, and a single-frame render is what draws it.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -224,7 +226,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `ListHeader`: a 48dp item whose label sits low in it, drawn on the screen's own background rather than on a surface. The height is upstream's and is what makes a generated screen's first row land where the canvas puts it.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -427,7 +430,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `Text`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -544,7 +548,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `TitleCard`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -651,7 +656,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `Button`, drawn on the canvas by Wear Compose itself. The canvas links a Compose Multiplatform build of the library rather than `androidx.wear.compose:compose-material3`, which publishes an Android AAR with no browser variant; the generated screen and the native render use the real AAR.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12124,7 +12130,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `Icon`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12175,7 +12182,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `IconButton`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12226,7 +12234,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `TextButton`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12258,7 +12267,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `ListSubHeader`. The second level of list heading, under `wear-m3/list-header`: smaller, start-aligned, and the one used to divide a long list into named runs. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12308,7 +12318,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `CheckboxButton`. A full-width labelled row with the checkbox at its end — not the mobile 20dp square, which is the whole reason `m3/checkbox` could never have been borrowed for it. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12358,7 +12369,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `SwitchButton`. The same labelled row as `wear-m3/checkbox-button`, with a switch as its control. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12408,7 +12420,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `RadioButton`. The same labelled row again, with a radio control and single-choice semantics. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12483,7 +12496,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `Slider`. Wear's slider is a row with a decrement and an increment button around the track, not a bare thumb on a line. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12560,7 +12574,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `Stepper`. A full-screen control: increment and decrement buttons at the top and bottom of the round display with the current value between them. It is not a list row, which is why it carries `ScreenContent` rather than `ListItem`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12618,7 +12633,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `CircularProgressIndicator`. Wear publishes four, and which one you get is the `variant`. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12667,7 +12683,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `EdgeButton`. The button that hugs the bottom of a round screen. It belongs in the scaffold's `edgeButton` slot, where `ScreenScaffold` reveals it from the scroll state; it is a component of its own now rather than a `wear-m3/button` placed there, because `EdgeButton` is a different composable with a different shape and a size enum. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12704,7 +12721,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `ButtonGroup`. A row of buttons that share the width and grow the one being pressed. Its children are buttons; anything else has no `ButtonGroupScope` to be laid out in. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12789,7 +12807,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `AlertDialog`. Wear's own, which is a full-screen scrolling dialog with its buttons on the bottom curve — not a card floating over a scrim. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12841,7 +12860,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `ConfirmationDialog`. The brief full-screen acknowledgement Wear shows after an action and then dismisses. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12882,7 +12902,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `OpenOnPhoneDialog`. The one Wear surface with no mobile analogue at all: it tells the wearer the rest of this journey happens on their phone. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12924,7 +12945,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `DatePicker`. A full-screen three-column picker, driven by the rotary side button. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -12966,7 +12988,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Wear Material 3's `TimePicker`. The time counterpart of `wear-m3/date-picker`, and the same full-screen shape. The canvas draws a named placeholder where this node sits rather than the component: `androidx.wear.compose:compose-material3` is an Android AAR a Wasm build cannot link, and a hand-drawn lookalike would be an impression of upstream with nothing in this build to check it against. Switch the render surface to Android for the real one — that lane compiles this design's own generated Kotlin against real Wear Compose.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -13065,7 +13088,8 @@
             "wasm": {
                 "adapterStatus": "planned",
                 "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -13196,7 +13220,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -13303,7 +13328,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         },
         {
@@ -13391,7 +13417,8 @@
             "wasm": {
                 "adapterStatus": "supported",
                 "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
-                "platformSupported": true
+                "platformSupported": true,
+                "unrolled": null
             }
         }
     ],

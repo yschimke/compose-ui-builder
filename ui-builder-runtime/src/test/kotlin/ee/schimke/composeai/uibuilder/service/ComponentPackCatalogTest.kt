@@ -220,10 +220,11 @@ class ComponentPackCatalogTest {
       properties = properties,
       modifierCapabilities = listOf("padding", "fillMaxWidth"),
       wasm =
-        WasmCapabilityV1(
-          platformSupported = JsonPrimitive(false),
-          adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
-        ),
+        WasmCapabilityV1.Builder(
+            platformSupported = JsonPrimitive(false),
+            adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+          )
+          .build(),
     )
 
   private val CatalogCapabilityV1.platform: String

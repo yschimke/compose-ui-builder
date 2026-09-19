@@ -130,7 +130,9 @@ private val FOUNDATION_CURATIONS =
         // Every remaining borrow is foundation, so every one takes [WEAR_FOUNDATION_NOTE]. The
         // `REMOTE_COMPOSE_BORROWED_AS_THEMSELVES` branch that stood here went with the seams.
         curate = { component ->
-          component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
+          component.copy(
+            wasm = component.wasm.newBuilder().also { it.notes = WEAR_FOUNDATION_NOTE }.build()
+          )
         },
         menu = { wearComponentMenu() },
       ),
