@@ -162,10 +162,65 @@ fun main() {
     return
   }
   suppressBrowserContextMenu()
+  if (!webGlAvailable()) {
+    // Skiko draws through WebGL, and where a browser refuses a context `ComposeViewport` fails
+    // inside a coroutine: the page is blank, and the reason reaches only the console. Say it where
+    // a person is looking instead — a blank editor with no explanation is what sent somebody
+    // hunting through `chrome://gpu` to find out why their design had "disappeared".
+    showWebGlRequiredMessage()
+    return
+  }
   ComposeViewport(viewportContainerId = "composeApp") {
     if (liveSessionEnabled()) LiveSessionApp() else VisualFixtureApp(captureMode())
   }
 }
+
+/**
+ * Whether this browser will give Skiko a WebGL context, asked before Compose starts.
+ *
+ * `webgl2` first, then `webgl`: Skiko prefers WebGL2 and falls back to WebGL1 for the 2D canvas
+ * path, so either is enough for the editor to draw. The probe canvas is discarded — the context it
+ * creates is one a real page would have made anyway.
+ */
+@JsFun(
+  """() => {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch (e) {
+    return false;
+  }
+}"""
+)
+private external fun webGlAvailable(): Boolean
+
+/**
+ * The message a browser without WebGL gets, in the container Compose would have drawn into.
+ *
+ * Plain DOM rather than a Compose fallback, because Compose is the thing that cannot start. The
+ * design is not the problem and the text says so: the same URL works in a browser with WebGL, and
+ * `design render` draws the design without a browser at all.
+ */
+@JsFun(
+  """() => {
+  const host = document.getElementById('composeApp');
+  console.error('compose-ui-builder: no WebGL context; the editor cannot start.');
+  if (!host) return;
+  host.innerHTML =
+    '<div style="font: 14px system-ui, -apple-system, sans-serif; color: #E6E1E5; background: #1C1B1F; padding: 24px; min-height: 100%; box-sizing: border-box;">' +
+    '<h1 style="font-size: 18px; margin: 0 0 10px;">This browser cannot draw the editor</h1>' +
+    '<p style="margin: 0 0 12px; max-width: 44em;">The Compose UI builder renders through WebGL, and this browser did not provide a WebGL context — so the editor would be a blank page.</p>' +
+    '<p style="margin: 0 0 4px; max-width: 44em;">Usually one of these:</p>' +
+    '<ul style="margin: 0 0 12px; padding-left: 1.2em; max-width: 44em;">' +
+    '<li>hardware acceleration is off — check the browser&rsquo;s system settings, then restart it</li>' +
+    '<li>the GPU is blocklisted — the browser&rsquo;s GPU page says why</li>' +
+    '<li>the browser is in software rendering, as a remote or headless session often is</li>' +
+    '</ul>' +
+    '<p style="margin: 0; max-width: 44em;">The design is fine: this URL opens in a browser with WebGL, and <code>compose-preview-server design render</code> draws the same design without a browser.</p>' +
+    '</div>';
+}"""
+)
+private external fun showWebGlRequiredMessage()
 
 @JsFun(
   """() => {
