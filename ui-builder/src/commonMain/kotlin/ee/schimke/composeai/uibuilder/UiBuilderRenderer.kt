@@ -889,16 +889,17 @@ private fun RenderNode(
         // The label's truncation, which upstream's `ListHeader` cannot take — it takes a content
         // lambda — so it belongs on the `Text` inside. Both properties were declared and read by
         // nobody, so a header a design clipped to one line drew as many as it wrapped to.
-        maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        maxLines = node.lineCount("maxLines"),
         overflow = node.textOverflow(),
       )
-    // Previously undrawn entirely — there is no Material 3 component to rename a Wear sub-header
-    // to, so `google-home-wear`'s seven of these were dashed placeholders.
+    // Previously undrawn entirely: Wear publishes a sub-header of its own and the canvas had no
+    // Material 3 component that could stand in for it, so `google-home-wear`'s seven of these were
+    // dashed placeholders until the port arrived.
     "wear-m3/list-sub-header" ->
       WearCanvasListSubHeader(
         text = node.string("text"),
         modifier = measured,
-        maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        maxLines = node.lineCount("maxLines"),
         overflow = node.textOverflow(),
       )
     "wear-m3/switch-button" ->
@@ -984,22 +985,23 @@ private fun RenderNode(
       ) {
         slot("content").forEach { child(it, Modifier) }
       }
-    // Routed to the shared icon drawer rather than to Wear's `Icon`, and that is not the kind of
-    // borrow this file has been retiring. An icon is a tinted vector at a size on both platforms —
-    // Wear publishes no shape of its own here — and `BuilderIcon` is what owns this build's key
-    // table, its tint resolution and the structured-path export the SVG lane needs. Drawing it
-    // twice would be two answers to one question.
+    // Routed to the canvas's own icon drawer rather than to Wear's `Icon`. An icon is a tinted
+    // vector at a size on both platforms — Wear publishes no shape of its own here — and
+    // `BuilderIcon` is what owns this build's key table, its tint resolution and the
+    // structured-path export the SVG lane needs. Drawing it twice would be two answers to one
+    // question.
     "wear-m3/icon" -> BuilderIcon(node, measured)
-    // Wear's own `Text`, out of the port the canvas links — there is nothing left to borrow. This
-    // was the last of the three Material 3 renames, and the borrow was not free: it read four
-    // properties (`text`, `color`, `style`, `maxLines`) where the catalog declares sixteen, so
-    // every `fontSizeSp`, `lineHeightSp`, `softWrap` and `overflow` a design set on a Wear text
-    // node
-    // was inert on the canvas while the mobile branch beside it honoured all of them. Wear's `Text`
-    // takes the same argument list, so this now reads what the mobile one reads.
+    // Wear's own `Text`, out of the port the canvas links: Wear Compose publishes its own text
+    // component, and the canvas has no reason to call the mobile one.
     //
-    // The style still comes from `wearTextStyle`, which resolves the role names against Wear's own
-    // typography — that was never the borrow's problem, and it is what makes the sizes right when a
+    // The difference is not the name. This branch used to read four properties (`text`, `color`,
+    // `style`, `maxLines`) where the catalog declares sixteen, so every `fontSizeSp`,
+    // `lineHeightSp`, `softWrap` and `overflow` a design set on a Wear text node was inert on the
+    // canvas while the mobile branch beside it honoured all of them. Wear's `Text` takes the same
+    // argument list, so this now reads what the mobile one reads.
+    //
+    // The style comes from `wearTextStyle`, which resolves the role names against Wear's own
+    // typography — Wear's type scale, not Material 3's — and is what makes the sizes right when a
     // design sets none.
     "wear-m3/text" ->
       WearText(
@@ -2235,9 +2237,11 @@ private const val WEAR_CARD_CORNER_RADIUS_DP = 26f
 /**
  * The subset of a Material 3 scheme a Wear design actually draws through, in Wear's own values.
  *
- * Only the roles the borrowed components read are replaced. The rest stay Material 3's dark scheme,
- * because a colour this catalog has never drawn is a colour nobody has measured, and inventing one
- * would put a number in the picture that no watch produced.
+ * The canvas installs this one mobile `MaterialTheme` for its own chrome — the editor's menus, the
+ * labels, the placeholders — and the Wear components drawn inside it read their own library's
+ * tokens, which is why only the roles those components resolve through it are replaced. The rest
+ * stay Material 3's dark scheme, because a colour this catalog has never drawn is a colour nobody
+ * has measured, and inventing one would put a number in the picture that no watch produced.
  */
 private val WearDarkColorScheme =
   darkColorScheme(
@@ -3869,6 +3873,15 @@ private fun UiBuilderNode.dimension(name: String): Dp? = valueScalar(name)?.floa
 
 private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
   valueScalar(name)?.intOrNull ?: fallback
+
+/**
+ * A count of lines, which is a count: `Text` throws on a `maxLines` below one, and the catalog
+ * declares an unbounded integer, so a document written through the protocol can carry a zero or a
+ * negative. Clamped here rather than refused, because a header that draws one line is a design
+ * somebody can see and fix; a composition that throws is a blank canvas with no way back.
+ */
+private fun UiBuilderNode.lineCount(name: String): Int =
+  integer(name, Int.MAX_VALUE).coerceAtLeast(1)
 
 private fun UiBuilderNode.bool(name: String, fallback: Boolean = false): Boolean =
   valueScalar(name)?.booleanOrNull ?: fallback

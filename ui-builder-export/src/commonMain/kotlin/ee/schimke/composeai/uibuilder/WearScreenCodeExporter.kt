@@ -529,7 +529,13 @@ internal class WearContentEmitter(
       // has
       // no item identity to keep — the same division the mobile lane already makes, where the
       // exporter turns the same property into the same argument.
-      val key = document.nodes[itemId]?.stringOrNull("stableKey")
+      val key =
+        document.nodes[itemId]
+          ?.stringOrNull("stableKey")
+          // Blank is absent, which is what the mobile exporter does with the same property: a key
+          // is an identity, and two items sharing `key = ""` are one item as far as a lazy layout
+          // is concerned — the generated screen fails when it runs, not when it compiles.
+          ?.takeIf { it.isNotBlank() }
       lines +=
         if (key == null) "${indent(4)}item {" else "${indent(4)}item(key = ${key.quoted()}) {"
       lines += emit(itemId, depth = 5, transformed = node.transformation())
@@ -1506,7 +1512,10 @@ internal class WearContentEmitter(
    * set is one list to check against the catalog's declaration.
    */
   private fun UiBuilderNode.labelArguments(): List<String> = buildList {
-    number("maxLines")?.let { add("maxLines = ${it.toInt()}") }
+    // Clamped, because the catalog declares an unbounded integer and `Text` throws below one: the
+    // canvas clamps the same value the same way, so an out-of-range document draws and generates
+    // the same screen instead of failing in one lane only.
+    number("maxLines")?.let { add("maxLines = ${it.toInt().coerceAtLeast(1)}") }
     stringOrNull("overflow")?.let {
       usesTextOverflow = true
       // The same three spellings `UiBuilderRenderer.textOverflow` reads, so a design's

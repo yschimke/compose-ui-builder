@@ -569,16 +569,17 @@ internal expect fun WearCanvasDatePicker(initialDate: String, type: String, modi
 @Composable
 internal expect fun WearCanvasTimePicker(initialTime: String, type: String, modifier: Modifier)
 
-// ── The last three borrows
+// ── The type scale
 // ────────────────────────────────────────────────────────────────────────
 //
-// Wear's text, card and button were drawn as their Material 3 near-twins through a rename table.
-// That table is gone: these are the Wear components, and its last three entries went with it.
+// Wear's text, card and button are their own components here, drawn by Wear Compose through the
+// port. What the canvas still does for them is resolve a type ROLE, because a design names one
+// (`titleMedium`) and the library needs a `TextStyle`.
 //
-// Text is the one where the borrow was nearly right, and "nearly" is the problem. Material 3 and
-// Wear publish the same fifteen type-scale role names, so a `titleMedium` resolved against the
-// wrong theme drew *a* title and not *this* title — a silently wrong size, in the surface an author
-// reads sizes off. Below it resolves against Wear's own typography.
+// Material 3 and Wear publish the same fifteen role names and different scales behind them, so a
+// `titleMedium` resolved against the wrong theme draws *a* title and not *this* title — a silently
+// wrong size, in the surface an author reads sizes off. Below it resolves against Wear's own
+// typography.
 
 /** Wear's type scale, by the same fifteen role names Material 3 uses. */
 @Composable

@@ -136,7 +136,7 @@
                     ],
                     "jsonType": "string",
                     "name": "transformation",
-                    "notes": "Whether each item carries `SurfaceTransformation(spec)` and `transformedHeight`. The canvas cannot draw either — see the wasm note — so this says what the generated Kotlin emits, not what you are looking at.",
+                    "notes": "Whether each item carries `SurfaceTransformation(spec)` and `transformedHeight`. The canvas draws both in a bounded frame and neither at the extent — see the wasm note — and the generated Kotlin emits them either way.",
                     "required": false
                 }
             ],
@@ -188,14 +188,14 @@
                     "allowedValues": [],
                     "jsonType": "string",
                     "name": "text",
-                    "notes": null,
+                    "notes": "The label.",
                     "required": true
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "integer",
                     "name": "maxLines",
-                    "notes": null,
+                    "notes": "How many lines the label may occupy before it truncates.",
                     "required": false
                 },
                 {
@@ -206,7 +206,7 @@
                     ],
                     "jsonType": "string",
                     "name": "overflow",
-                    "notes": null,
+                    "notes": "What a truncated label does at its edge.",
                     "required": false
                 }
             ],
@@ -282,7 +282,7 @@
                     ],
                     "jsonType": "string",
                     "name": "style",
-                    "notes": null,
+                    "notes": "The role the text is set in, resolved against Wear's own type scale.",
                     "required": false
                 },
                 {
@@ -294,7 +294,7 @@
                     ],
                     "jsonType": "string",
                     "name": "fontWeight",
-                    "notes": null,
+                    "notes": "Overrides the role's weight.",
                     "required": false
                 },
                 {
@@ -304,56 +304,56 @@
                     ],
                     "jsonType": "string",
                     "name": "fontStyle",
-                    "notes": null,
+                    "notes": "Overrides the role's style.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "string",
                     "name": "color",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is rejected rather than guessed at.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "number",
                     "name": "fontSizeSp",
-                    "notes": null,
+                    "notes": "Overrides the role's size.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "number",
                     "name": "lineHeightSp",
-                    "notes": null,
+                    "notes": "Overrides the role's line height.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "number",
                     "name": "letterSpacingSp",
-                    "notes": null,
+                    "notes": "Overrides the role's tracking.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "integer",
                     "name": "minLines",
-                    "notes": null,
+                    "notes": "The smallest height the text occupies, in lines.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "integer",
                     "name": "maxLines",
-                    "notes": null,
+                    "notes": "How many lines the text may occupy before it truncates.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "boolean",
                     "name": "softWrap",
-                    "notes": null,
+                    "notes": "Whether the text breaks at soft line breaks.",
                     "required": false
                 },
                 {
@@ -364,7 +364,7 @@
                     ],
                     "jsonType": "string",
                     "name": "overflow",
-                    "notes": null,
+                    "notes": "What a truncated text does at its edge.",
                     "required": false
                 },
                 {
@@ -376,7 +376,7 @@
                     ],
                     "jsonType": "string",
                     "name": "textAlign",
-                    "notes": null,
+                    "notes": "How the lines are aligned within the text's own width.",
                     "required": false
                 },
                 {
@@ -387,7 +387,7 @@
                     ],
                     "jsonType": "string",
                     "name": "textDecoration",
-                    "notes": null,
+                    "notes": "A decoration painted under, or through, the glyphs.",
                     "required": false
                 },
                 {
@@ -404,14 +404,14 @@
                     ],
                     "jsonType": "string",
                     "name": "alignment",
-                    "notes": null,
+                    "notes": "Where the text sits in a parent that gives it more room than it needs.",
                     "required": false
                 },
                 {
                     "allowedValues": [],
                     "jsonType": "number",
                     "name": "weight",
-                    "notes": null,
+                    "notes": "The share of a parent's remaining space the text takes.",
                     "required": false
                 }
             ],
@@ -429,7 +429,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Text`. The canvas draws it with Wear Compose's own `Text`; the generated screen and the native render use `androidx.wear.compose` itself.",
+                "notes": "Wear Material 3's `Text`. The canvas draws it with Wear Compose's own `Text`, out of the Compose Multiplatform build of the library it links; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -465,10 +465,22 @@
             ],
             "properties": [
                 {
+                    "allowedValues": [
+                        "title",
+                        "app",
+                        "outlined",
+                        "plain"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "Which card is written: `TitleCard`, `AppCard`, `OutlinedCard` or `Card`. Wear publishes four composables with different content lambdas rather than four styles of one, so this selects the composable.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": "string",
                     "name": "stableKey",
-                    "notes": null,
+                    "notes": "The item's identity, written as the generated lazy list's `key`. An identity rather than a look: two rows sharing one are one row to a lazy layout.",
                     "required": false
                 },
                 {
@@ -479,18 +491,6 @@
                     ],
                     "name": "onClickAction",
                     "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [
-                        "title",
-                        "app",
-                        "outlined",
-                        "plain"
-                    ],
-                    "jsonType": "string",
-                    "name": "variant",
-                    "notes": "Which card is written: `TitleCard`, `AppCard`, `OutlinedCard` or `Card`. `title` is the default and is the one a Wear list is mostly made of.",
                     "required": false
                 }
             ],
@@ -526,7 +526,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `TitleCard`. The canvas draws it with Wear Compose's own `TitleCard`; the generated screen and the native render use `androidx.wear.compose` itself.",
+                "notes": "Wear Material 3's `TitleCard`. The canvas draws it with Wear Compose's own `TitleCard`, out of the Compose Multiplatform build of the library it links; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -557,28 +557,22 @@
             ],
             "properties": [
                 {
+                    "allowedValues": [
+                        "filled",
+                        "filled-tonal",
+                        "outlined",
+                        "child"
+                    ],
+                    "jsonType": "string",
+                    "name": "variant",
+                    "notes": "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or `ChildButton`. There is no `fab` and no `elevated` — a watch publishes neither.",
+                    "required": false
+                },
+                {
                     "allowedValues": [],
                     "jsonType": "boolean",
                     "name": "enabled",
-                    "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": [
-                        "boolean",
-                        "string",
-                        "object"
-                    ],
-                    "name": "selected",
-                    "notes": "A flag, or a `stateEquals` read of a declared state variable — which is an object, and why `object` is one of the accepted types.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "containerColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "notes": "Whether the button responds to a press.",
                     "required": false
                 },
                 {
@@ -589,18 +583,6 @@
                     ],
                     "name": "onClickAction",
                     "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [
-                        "filled",
-                        "filled-tonal",
-                        "outlined",
-                        "child"
-                    ],
-                    "jsonType": "string",
-                    "name": "variant",
-                    "notes": "Which button is written: `Button`, `FilledTonalButton`, `OutlinedButton` or `ChildButton`. There is no `fab` — a watch has no floating action button, which is one of the things a borrowed `m3/button` was quietly offering.",
                     "required": false
                 }
             ],
@@ -634,7 +616,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Button`. The canvas draws it with Wear Compose's own `Button`; the generated screen and the native render use `androidx.wear.compose` itself.",
+                "notes": "Wear Material 3's `Button`. The canvas draws it with Wear Compose's own `Button`, out of the Compose Multiplatform build of the library it links; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -12227,8 +12209,26 @@
                     "allowedValues": [],
                     "jsonType": "string",
                     "name": "text",
-                    "notes": "The sub-header's label.",
+                    "notes": "The label.",
                     "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "maxLines",
+                    "notes": "How many lines the label may occupy before it truncates.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "clip",
+                        "ellipsis",
+                        "visible"
+                    ],
+                    "jsonType": "string",
+                    "name": "overflow",
+                    "notes": "What a truncated label does at its edge.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -12296,7 +12296,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `CheckboxButton`. A full-width labelled row with the checkbox at its end — not the mobile 20dp square, which is the whole reason `m3/checkbox` could never have been borrowed for it. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
+                "notes": "Wear Material 3's `CheckboxButton`. A full-width labelled row with the checkbox at its end — not the mobile 20dp square, which is why Material 3's `Checkbox` could never stand in for it. The canvas draws it with Wear Compose itself, through the Compose Multiplatform build of the library the canvas links instead of the Android AAR; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -13066,7 +13066,7 @@
             ],
             "wasm": {
                 "adapterStatus": "planned",
-                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` shares it and shares no Material component at all.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -13198,7 +13198,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` shares it and shares no Material component at all.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -13306,7 +13306,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` shares it and shares no Material component at all.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -13395,7 +13395,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` borrows it and borrows no Material component at all.",
+                "notes": "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` and `androidx.compose.ui` publish one of these, not two. It is the real component rather than a stand-in, which is why `wear-m3` shares it and shares no Material component at all.",
                 "platformSupported": true,
                 "unrolled": null
             }
