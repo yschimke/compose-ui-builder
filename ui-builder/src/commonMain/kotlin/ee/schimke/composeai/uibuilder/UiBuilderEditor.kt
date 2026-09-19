@@ -168,6 +168,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -5508,6 +5509,13 @@ internal fun PinnedDesignCanvas(
     // The frame's own rectangle in the window, kept because the inspection answers in that space
     // and a press on the canvas arrives in the frame's.
     var frameBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+    // Where the frame's own top-left is in root space, *unclipped*. `frameBounds` above is the
+    // frame's visible box — `boundsInRoot` is clipped to the viewport — which is what "is the
+    // pointer over the design" means, but not what a frame-local point has to be added to: once
+    // the canvas is scrolled, the frame's origin is above the viewport and its visible top is the
+    // viewport's. `positionInRoot` is the placement without that clipping, and it is current after
+    // a scroll, which is what every conversion below needs.
+    var frameOrigin by remember(document.id) { mutableStateOf(Offset.Zero) }
     // The workspace's own rectangle, so a node's root-space box can be turned into an offset in
     // this box — which is where the hover editor is placed.
     var workspaceBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
@@ -5596,6 +5604,7 @@ internal fun PinnedDesignCanvas(
                 }
                 .onGloballyPositioned {
                   frameBounds = it.boundsInRoot()
+                  frameOrigin = it.positionInRoot()
                   onCanvasBounds(frameBounds)
                 }
                 .then(
@@ -5618,8 +5627,8 @@ internal fun PinnedDesignCanvas(
                     // drop hit-test use answers for this gesture too.
                     rootPoint = { position ->
                       Offset(
-                        frameBounds.left + position.x * drawScale,
-                        frameBounds.top + position.y * drawScale,
+                        frameOrigin.x + position.x * drawScale,
+                        frameOrigin.y + position.y * drawScale,
                       )
                     },
                     // The design already reports every node's box; the smallest containing one is
@@ -5646,12 +5655,13 @@ internal fun PinnedDesignCanvas(
                   .onSecondaryClick(document.id) { position ->
                     if (!showSelectionOverlay) return@onSecondaryClick
                     // The inspection reports each box in root pixels, which is the space this press
-                    // has to be asked in: the frame is offset in the workspace and its own pixels
-                    // reach the screen through [drawScale].
+                    // has to be asked in: the frame's own pixels reach the screen through
+                    // [drawScale], and its origin is the *unclipped* one — a scrolled frame's
+                    // visible top is the viewport's, not the frame's.
                     val point =
                       Offset(
-                        frameBounds.left + position.x * drawScale,
-                        frameBounds.top + position.y * drawScale,
+                        frameOrigin.x + position.x * drawScale,
+                        frameOrigin.y + position.y * drawScale,
                       )
                     // The design already reports every node's box, which is what the presence
                     // overlay and the catalog drop both hit-test against. Smallest box wins: the
@@ -5707,17 +5717,17 @@ internal fun PinnedDesignCanvas(
                 )
                 SlotPlaceholderOverlay(
                   placeholders = slotPlaceholders,
-                  frameBounds = frameBounds,
+                  frameOrigin = frameOrigin,
                   drawScale = drawScale,
                 )
                 DropTargetOverlay(
                   dropPlan = dropPlan,
-                  frameBounds = frameBounds,
+                  frameOrigin = frameOrigin,
                   drawScale = drawScale,
                 )
                 MoveOriginOverlay(
                   moveOrigin = moveOrigin,
-                  frameBounds = frameBounds,
+                  frameOrigin = frameOrigin,
                   drawScale = drawScale,
                 )
                 // Over the document and under the collaborators: the reference is being compared
@@ -5727,7 +5737,7 @@ internal fun PinnedDesignCanvas(
                 // fact
                 // about this session and must not be hidden by a mock.
                 ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
-                RemotePresenceOverlay(collaborators, inspection)
+                RemotePresenceOverlay(collaborators, inspection, frameOrigin, drawScale)
                 // Above everything, because a pin is the one thing on this canvas a person clicks
                 // that is
                 // not part of the design: it must not end up under a mock somebody just turned up
@@ -5884,7 +5894,7 @@ internal fun PinnedDesignCanvas(
 @Composable
 private fun SlotPlaceholderOverlay(
   placeholders: List<UiBuilderSlotPlaceholder>,
-  frameBounds: Rect,
+  frameOrigin: Offset,
   drawScale: Float,
 ) {
   if (placeholders.isEmpty()) return
@@ -5897,8 +5907,8 @@ private fun SlotPlaceholderOverlay(
       val bounds = placeholder.bounds
       val local =
         UiBuilderPixelBounds(
-          x = (bounds.x - frameBounds.left) / drawScale,
-          y = (bounds.y - frameBounds.top) / drawScale,
+          x = (bounds.x - frameOrigin.x) / drawScale,
+          y = (bounds.y - frameOrigin.y) / drawScale,
           width = bounds.width / drawScale,
           height = bounds.height / drawScale,
         )
@@ -5926,8 +5936,8 @@ private fun SlotPlaceholderOverlay(
     val bounds = placeholder.bounds
     val local =
       UiBuilderPixelBounds(
-        x = (bounds.x - frameBounds.left) / drawScale,
-        y = (bounds.y - frameBounds.top) / drawScale,
+        x = (bounds.x - frameOrigin.x) / drawScale,
+        y = (bounds.y - frameOrigin.y) / drawScale,
         width = bounds.width / drawScale,
         height = bounds.height / drawScale,
       )
@@ -5978,15 +5988,15 @@ private fun SlotPlaceholderOverlay(
 @Composable
 private fun DropTargetOverlay(
   dropPlan: UiBuilderDropPlan?,
-  frameBounds: Rect,
+  frameOrigin: Offset,
   drawScale: Float,
 ) {
   val plan = dropPlan ?: return
   val bounds = plan.bounds
   val local =
     UiBuilderPixelBounds(
-      x = (bounds.x - frameBounds.left) / drawScale,
-      y = (bounds.y - frameBounds.top) / drawScale,
+      x = (bounds.x - frameOrigin.x) / drawScale,
+      y = (bounds.y - frameOrigin.y) / drawScale,
       width = bounds.width / drawScale,
       height = bounds.height / drawScale,
     )
@@ -6030,7 +6040,7 @@ private fun DropTargetOverlay(
           after != null -> after.x
           else -> bounds.x
         }
-      val x = (seamX - frameBounds.left) / drawScale
+      val x = (seamX - frameOrigin.x) / drawScale
       drawLine(
         color = color.copy(alpha = 0.25f),
         start = Offset(x, local.y),
@@ -6053,7 +6063,7 @@ private fun DropTargetOverlay(
           after != null -> after.y
           else -> bounds.y
         }
-      val y = (seamY - frameBounds.top) / drawScale
+      val y = (seamY - frameOrigin.y) / drawScale
       drawLine(
         color = color.copy(alpha = 0.25f),
         start = Offset(local.x, y),
@@ -6083,7 +6093,7 @@ private fun DropTargetOverlay(
 @Composable
 private fun MoveOriginOverlay(
   moveOrigin: UiBuilderPixelBounds?,
-  frameBounds: Rect,
+  frameOrigin: Offset,
   drawScale: Float,
 ) {
   val bounds = moveOrigin ?: return
@@ -6092,7 +6102,7 @@ private fun MoveOriginOverlay(
     drawRect(
       color = color.copy(alpha = 0.6f),
       topLeft =
-        Offset((bounds.x - frameBounds.left) / drawScale, (bounds.y - frameBounds.top) / drawScale),
+        Offset((bounds.x - frameOrigin.x) / drawScale, (bounds.y - frameOrigin.y) / drawScale),
       size = Size(bounds.width / drawScale, bounds.height / drawScale),
       style =
         Stroke(
@@ -6386,6 +6396,9 @@ private fun CanvasZoomControls(
 private fun RemotePresenceOverlay(
   collaborators: List<UiBuilderCollaborator>,
   inspection: UiBuilderInspectionSnapshot?,
+  /** Where the frame's own top-left is in root space, unclipped — see [PinnedDesignCanvas]. */
+  frameOrigin: Offset,
+  drawScale: Float,
 ) {
   if (collaborators.isEmpty()) return
   val boundsByNode = inspection?.nodes?.associate { it.nodeId to it.bounds }.orEmpty()
@@ -6394,11 +6407,20 @@ private fun RemotePresenceOverlay(
       val color = collaborator.colorArgbHex.toPresenceColor()
       collaborator.selectedNodeIds.forEach { nodeId ->
         val bounds = boundsByNode[nodeId] ?: return@forEach
+        // The inspection answers in root space and this canvas draws inside the frame, so a
+        // collaborator's outline needs the same conversion the drop marker's does — without it
+        // their selection sits wherever the frame's origin happens to be.
         drawRect(
           color = color,
-          topLeft = Offset(bounds.x, bounds.y),
-          size = androidx.compose.ui.geometry.Size(bounds.width, bounds.height),
-          style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f),
+          topLeft =
+            Offset(
+              (bounds.x - frameOrigin.x) / drawScale,
+              (bounds.y - frameOrigin.y) / drawScale,
+            ),
+          size =
+            androidx.compose.ui.geometry.Size(bounds.width / drawScale, bounds.height / drawScale),
+          style =
+            androidx.compose.ui.graphics.drawscope.Stroke(width = screenStroke(3f, drawScale)),
         )
       }
     }

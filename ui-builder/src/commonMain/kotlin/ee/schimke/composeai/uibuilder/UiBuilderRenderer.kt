@@ -140,8 +140,8 @@ import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -670,7 +670,27 @@ fun UiBuilderSurface(
               inspection.updateState(state)
             },
             onBounds = { path, coordinates ->
-              val rootBounds = coordinates.boundsInRoot()
+              // The node's own box in root pixels, not the part of it the viewport happens to show.
+              // `boundsInRoot` is *clipped* to the visible area, so a node scrolled out of view
+              // reports 0x0 at the origin and a scrolled one reports where the viewport cut it —
+              // and
+              // a drop plan that ordered a slot's children by those boxes put every off-screen
+              // child
+              // at the top. The origin is the placement mapped to root space without that clipping,
+              // and the size is the node's own carried through the same transform: the canvas draws
+              // the design scaled (zoom, and the design's density against the host's), so a node's
+              // local pixels are not root pixels.
+              val unit =
+                coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
+              val rootBounds =
+                Rect(
+                  offset = coordinates.positionInRoot(),
+                  size =
+                    Size(
+                      coordinates.size.width * unit.x,
+                      coordinates.size.height * unit.y,
+                    ),
+                )
               bounds[path] = rootBounds
               surfaceCoordinates?.let { surface ->
                 overlayBounds[path] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
