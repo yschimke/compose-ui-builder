@@ -641,8 +641,7 @@ internal class WearContentEmitter(
           listOf("${pad})")
       }
       WearScreenCodeExporter.BUTTON -> {
-        // Wear's four, and none of them is a FAB — the mobile `style` this borrowed offered `fab`
-        // and `elevated`, which no watch publishes.
+        // Wear's four, and none of them is a FAB — a watch publishes no floating action button.
         val symbol =
           when (node.string("variant")) {
             "filled-tonal" -> "FilledTonalButton"
@@ -652,7 +651,15 @@ internal class WearContentEmitter(
           }
         usesButtonSymbol += symbol
         val content = node.slots["content"].orEmpty()
+        // `enabled` is the design's, and the canvas has always honoured it: the generated button
+        // did not, so a design that disabled one published a picture of a disabled button and
+        // source for a working one. Written only when it is false, so a default call keeps the
+        // short form.
+        val enabled =
+          if (node.boolean("enabled") != false) emptyList()
+          else listOf("${pad}${INDENT}enabled = false,")
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+          enabled +
           surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
           listOf("${pad}) {") +
           content.flatMap { emit(it, depth + 1) } +
@@ -1096,8 +1103,8 @@ internal class WearContentEmitter(
    *
    * `ScreenScaffold(edgeButton = …)` reveals its slot from the scroll state and shapes it to the
    * bottom curve, which is `EdgeButton`'s whole reason to exist — a plain `Button` in there is a
-   * rectangle pinned to a curve. The canvas draws the borrowed `m3/button`, so this is where the
-   * two part company.
+   * rectangle pinned to a curve. The canvas draws whatever component the design put in the slot, so
+   * this is where the two part company.
    */
   fun emitEdgeButton(nodeId: String, depth: Int): List<String> {
     val node = document.nodes[nodeId] ?: return refused("the edge button node `$nodeId` is missing")
@@ -1121,6 +1128,9 @@ internal class WearContentEmitter(
     val arguments =
       listOfNotNull(
         "onClick = {}",
+        // `enabled` is the design's and the canvas has always honoured it: written only when it is
+        // false, so a default call keeps the short form.
+        if (node.boolean("enabled") == false) "enabled = false" else null,
         size?.let { "buttonSize = EdgeButtonSize.$it" },
         modifier?.let { "modifier = $it" },
       )
