@@ -47,6 +47,10 @@ import kotlinx.serialization.json.jsonObject
  * host's, so the device it is drawn *for* has to be the document's too. A canvas that took the
  * host's answer would draw a 192dp watch with a 1440dp watch's insides.
  *
+ * The trigger is the platform the *catalog* declares, so the test says "this is a Wear catalog" the
+ * way the editor does — `LocalUiBuilderCatalogPlatform` — rather than relying on the component ids
+ * in the document happening to be ones this build recognises.
+ *
  * ## Why a ring, and why pixels
  *
  * The observable has to be something a *component* does with the screen size rather than something
@@ -96,11 +100,19 @@ class WearCanvasDeviceSizeTest {
     var snapshot: UiBuilderInspectionSnapshot? = null
     val image =
       renderComposeScene(SCENE_PX, SCENE_PX, Density(1f)) {
-        if (hostDevice == null) {
-          UiBuilderSurface(document = document(), onInspectionSnapshot = { snapshot = it })
-        } else {
-          CompositionLocalProvider(LocalWearDeviceConfiguration provides hostDevice) {
+        // The catalog the design is authored against, declared the way a served catalog declares
+        // itself: `platform: "wear"`. Without it the canvas is drawing for no declared platform, so
+        // it leaves the device question to the host — which is what the second half of this test
+        // needs to be able to see.
+        CompositionLocalProvider(
+          LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue
+        ) {
+          if (hostDevice == null) {
             UiBuilderSurface(document = document(), onInspectionSnapshot = { snapshot = it })
+          } else {
+            CompositionLocalProvider(LocalWearDeviceConfiguration provides hostDevice) {
+              UiBuilderSurface(document = document(), onInspectionSnapshot = { snapshot = it })
+            }
           }
         }
       }

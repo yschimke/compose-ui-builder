@@ -1975,6 +1975,9 @@ fun UiBuilderEditor(
     // And the frame, from the same place and for the same reason: which drawing frames a catalog's
     // screens, and how much room its content gets inside that drawing, is the catalog's statement.
     LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
+    // The platform word, so the renderer can answer "is this composition drawn with a watch
+    // library" from what the catalog says rather than from a namespace it recognises.
+    LocalUiBuilderCatalogPlatform provides catalog.platform.wireValue,
     LocalUiBuilderPageDestinations provides pageDestinations.filter { it.designId != document.id },
     LocalUiBuilderNavigator provides onNavigatePage,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
@@ -6333,6 +6336,7 @@ private fun ConstrainedFramePane(
             LocalUiBuilderCatalogComponentIds provides LocalUiBuilderCatalogComponentIds.current,
             LocalUiBuilderCanvasAdapters provides LocalUiBuilderCanvasAdapters.current,
             LocalUiBuilderFrameGeometry provides LocalUiBuilderFrameGeometry.current,
+            LocalUiBuilderCatalogPlatform provides LocalUiBuilderCatalogPlatform.current,
             LocalWearWidgetHostShape provides LocalWearWidgetHostShape.current,
             LocalRemoteComposeDocuments provides LocalRemoteComposeDocuments.current,
             LocalUiBuilderAssetBitmaps provides LocalUiBuilderAssetBitmaps.current,

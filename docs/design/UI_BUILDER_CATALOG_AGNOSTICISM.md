@@ -52,27 +52,42 @@ reading a differences file.
 transcription of it) into a composition local the renderer consumes, exactly as
 `LocalUiBuilderCanvasAdapters` is consumed, and delete the three exemptions.
 
-### 2. The frame *adapter* is a branch on a component id
+### 2. The device configuration was gated on a namespace the builder knows — taken
 
-`wear-m3/screen-scaffold` is special-cased by id in the renderer (`WEAR_SCREEN_SCAFFOLD`), and its
-stand-in — the stadium, the clock, the content insets — is Wear-specific code in the generic
-renderer. The contract puts both facts in the catalog: `frame.adapter: "frame/round-screen"` (a
-drawing this build ships) and `builtins["wear-m3/screen-scaffold"]` (the structural role). The
-policy file declares both; nothing reads either.
-
-**Correction:** dispatch the frame on the *adapter* the catalog declares, so a catalog whose screen
-root has another id gets the same frame, and one that declares a different adapter gets that.
-
-### 3. The device configuration is gated on a namespace the builder knows
-
-`UiBuilderRenderer.kt` provides the port's `LocalWearDeviceConfiguration` when a design contains a
-node whose id starts with `wear-m3/` — the fix for a real bug (the browser reported its viewport as
+`UiBuilderRenderer.kt` provided the port's `LocalWearDeviceConfiguration` when a design contained a
+node whose id started with `wear-m3/` — the fix for a real bug (the browser reported its viewport as
 the watch's size), written against the namespace rather than against the fact. A catalog published
-under other ids gets the viewport behaviour back, and nothing about the composition would say so.
+under other ids got the viewport behaviour back, and nothing about the composition said so.
 
-**Correction:** the trigger is "this composition will call into the port", which follows from the
-frame/adapter facts above — the adapter a catalog declares for its screen root, or the set of
-adapters this build draws with the port — not from a prefix in the renderer.
+**Taken:** the trigger is the platform the *catalog* declares — `LocalUiBuilderCatalogPlatform`,
+provided by the editor from `statusSemantics.platform` and compared against
+`UiBuilderCatalogPlatform.WEAR.wireValue`. That is the fact the question actually asks ("is this
+composition drawn with a watch library?"), it is declared data, and it holds for a board holding one
+Wear card as much as for a whole screen.
+
+### 3. The frame *adapter* is a branch on a component id — blocked on a contracts field
+
+`wear-m3/screen-scaffold` is still special-cased by id in the renderer, and its stand-in — the
+stadium, the clock, the content insets — is Wear-specific code in the generic renderer. The contract
+puts the fact in the catalog (`frame.adapter: "frame/round-screen"`, a drawing this build ships) and
+the policy file declares it; the renderer cannot yet dispatch on it, and the reason is worth
+recording precisely.
+
+**`WasmCapabilityV1` — the wire type a catalog's per-component declarations travel in — has no
+`canvas` field.** Its fields are `platformSupported`, `adapterStatus`, `notes` and `unrolled`
+(`javap` on `ui-builder-protocol-jvm-3.2.0`). The *editor's* model has the field
+(`CapabilityCatalog.WasmCapability.canvas`, whose KDoc says so: "the published Wear catalog carries
+the field and leaves it null on all 78. So this reads as a no-op until a catalog populates it, which
+is the point: the consumer half can land first"), and `LocalUiBuilderCanvasAdapters` already
+dispatches on it. What is missing is the producer half for a *synthesised* catalog: it cannot state
+an adapter at all, so the renderer has to keep recognising the id or the frame disappears.
+
+**Correction, in order:** the protocol grows `canvas` on `WasmCapabilityV1`; the renderer's branch
+becomes a case for the adapter id, and the id-based special cases around it (the screen theme, the
+root alignment) key on the adapter; the synthesised catalog declares
+`canvas = "frame/round-screen"` on its screen root. Until the first step a *published* catalog can
+already name an adapter — the reader is live — so this is a contracts change before it is a builder
+one.
 
 ### 4. The templates are Kotlin documents in the export module
 
@@ -119,9 +134,10 @@ answers.
 
 ## Order
 
-1. **The frame geometry** (§1) — measured, already declared by the catalog, already recorded as a
-   gap, and the smallest change that removes a duplicated fact. It also closes three exemptions in
-   the equivalence gate, which is how the removal gets verified.
-2. **The frame adapter** (§2) — the same change's other half, and what makes §3 fall out.
-3. **The templates** (§4) — a data freeze, not a redesign.
-4. **The emitters** (§5) — the contract's hard part, and worth doing last.
+1. ~~**The frame geometry** (§1)~~ — taken. It closed three exemptions in the equivalence gate,
+   which is how the removal was verified.
+2. ~~**The device configuration** (§2)~~ — taken, off the platform word the catalog declares.
+3. **The frame adapter** (§3) — blocked on `WasmCapabilityV1.canvas`, a contracts change. The
+   reader is already live, so a published catalog can name an adapter today.
+4. **The templates** (§4) — a data freeze, not a redesign.
+5. **The emitters** (§5) — the contract's hard part, and worth doing last.
