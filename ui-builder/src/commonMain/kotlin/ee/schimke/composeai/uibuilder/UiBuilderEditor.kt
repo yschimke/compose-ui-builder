@@ -187,6 +187,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
@@ -6284,11 +6285,38 @@ private fun ConstrainedFramePane(
       // And a design that overflows *without* a scrollable of its own is a design that overflows on
       // the device too: clipping it here is not a gap in the pane, it is the answer to the question
       // the pane is asking. The extent beside it is where the rest of that content is legible.
-      UiBuilderSurface(
-        document = document,
-        editorOverlay = false,
-        renderSessionId = renderSessionId,
-        unrolled = false,
+      //
+      // **In its own scene**, so the design can be *driven*: a wheel over the pane arrives as a
+      // rotating side button and a Wear list turns through its own snap behaviour — see
+      // [DeviceSceneHost] for why that needs a scene rather than a subtree. The locals are carried
+      // by value because a scene starts with none of them, and the list is the pane's own: a
+      // design's components, its assets and the host shape it is drawn in are the same ones the
+      // canvas beside it uses.
+      DeviceSceneHost(
+        key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
+        sizePx =
+          IntSize(
+            (widthDp * densityRatio).roundToInt(),
+            (heightDp * densityRatio).roundToInt(),
+          ),
+        density = LocalDensity.current,
+        content = {
+          CompositionLocalProvider(
+            LocalUiBuilderNativeOnly provides LocalUiBuilderNativeOnly.current,
+            LocalUiBuilderCatalogComponentIds provides LocalUiBuilderCatalogComponentIds.current,
+            LocalUiBuilderCanvasAdapters provides LocalUiBuilderCanvasAdapters.current,
+            LocalWearWidgetHostShape provides LocalWearWidgetHostShape.current,
+            LocalRemoteComposeDocuments provides LocalRemoteComposeDocuments.current,
+            LocalUiBuilderAssetBitmaps provides LocalUiBuilderAssetBitmaps.current,
+          ) {
+            UiBuilderSurface(
+              document = document,
+              editorOverlay = false,
+              renderSessionId = renderSessionId,
+              unrolled = false,
+            )
+          }
+        },
       )
     }
   }
