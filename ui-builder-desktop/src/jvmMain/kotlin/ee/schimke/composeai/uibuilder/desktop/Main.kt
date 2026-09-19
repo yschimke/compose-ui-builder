@@ -1,0 +1,137 @@
+package ee.schimke.composeai.uibuilder.desktop
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.application
+import ee.schimke.composeai.uibuilder.EditorSubmission
+import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
+import ee.schimke.composeai.uibuilder.local.FileLocalDesignStorage
+import ee.schimke.composeai.uibuilder.local.LocalDesignStore
+import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
+import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ErrorResponseV1
+import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
+import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
+import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
+import ee.schimke.composeai.uibuilder.toUiBuilderDocument
+import java.nio.file.Path
+import kotlinx.coroutines.channels.Channel
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+
+private const val DESKTOP_DESIGN_ID = "desktop-workspace"
+private const val ACTOR_ID = "desktop-user"
+private const val CLIENT_ID = "desktop-client"
+
+/** Launches the native, offline UI Builder desktop host. */
+fun main() = application {
+  Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder") {
+    MaterialTheme { Surface(Modifier.fillMaxSize()) { DesktopUiBuilderApp() } }
+  }
+}
+
+@Composable
+private fun DesktopUiBuilderApp() {
+  val catalogText = remember { resourceText("m3-catalog-capabilities-v1.json") }
+  val catalog = remember(catalogText) { CapabilityCatalogParser.parse(catalogText) }
+  val catalogCapability =
+    remember(catalogText) { Json.decodeFromString(CatalogCapabilityV1.serializer(), catalogText) }
+  val service =
+    remember(catalogCapability) {
+      LocalUiBuilderService(
+        store = LocalDesignStore(FileLocalDesignStorage(designStorePath())),
+        catalogs = { listOf(catalogCapability) },
+        clock = System::currentTimeMillis,
+      )
+    }
+  var snapshot by remember { mutableStateOf<SnapshotResponseV1?>(null) }
+  var failure by remember { mutableStateOf<String?>(null) }
+  val submissions = remember { Channel<EditorSubmission>(Channel.UNLIMITED) }
+  DisposableEffect(submissions) { onDispose { submissions.close() } }
+
+  suspend fun refresh() {
+    when (val result = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
+      is SnapshotResponseV1 -> snapshot = result
+      is ErrorResponseV1 -> failure = result.error.message
+      else -> failure = "unexpected response while opening the desktop design"
+    }
+  }
+
+  LaunchedEffect(service) {
+    when (val open = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
+      is SnapshotResponseV1 -> snapshot = open
+      is ErrorResponseV1 -> {
+        val seed = fixtureDocument().copy(id = DESKTOP_DESIGN_ID, title = "Desktop workspace")
+        when (val created = service.create(seed)) {
+          is SnapshotResponseV1 -> snapshot = created
+          is ErrorResponseV1 -> failure = created.error.message
+          else -> failure = "unexpected response while creating the desktop design"
+        }
+      }
+      else -> failure = "unexpected response while opening the desktop design"
+    }
+  }
+
+  // One protocol command at a time, just like the browser session. The next submission must use
+  // the revision that the previous one produced, otherwise a quick sequence of edits conflicts
+  // with its own locally persisted history.
+  LaunchedEffect(service, submissions) {
+    for (submission in submissions) {
+      val baseRevision = snapshot?.snapshot?.state?.document?.revision?.toInt() ?: continue
+      when (
+        val result =
+          service.execute(
+            ApplyOperationRequestV1(
+              submission.toProtocolSubmission(ACTOR_ID, CLIENT_ID, baseRevision)
+            )
+          )
+      ) {
+        is OperationOutcomeResponseV1 -> refresh()
+        is ErrorResponseV1 -> failure = result.error.message
+        else -> failure = "unexpected response while saving the desktop design"
+      }
+    }
+  }
+
+  snapshot?.let { current ->
+    UiBuilderEditor(
+      document = current.snapshot.state.document.toUiBuilderDocument(),
+      catalog = catalog,
+      actorId = ACTOR_ID,
+      clientId = CLIENT_ID,
+      operationIdPrefix = CLIENT_ID,
+      sessionLabel = "Desktop offline · saved locally",
+      onSubmission = { submissions.trySend(it) },
+    )
+  }
+  failure?.let { Text(it) }
+}
+
+private fun fixtureDocument(): UiBuilderDocument =
+  UiBuilderReducer.replay(
+      Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject
+    )
+    .document
+
+private fun resourceText(name: String): String =
+  checkNotNull(object {}.javaClass.getResource("/$name")) { "missing desktop resource $name" }
+    .readText()
+
+private fun designStorePath(): Path =
+  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")

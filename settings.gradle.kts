@@ -176,6 +176,10 @@ rootProject.name = "compose-ui-builder"
 
 include(":ui-builder")
 
+// Native Compose Desktop host for the editor. It is an in-project consumer of the editor's JVM
+// target, not a server seam: it can run the offline protocol without an HTTP host.
+include(":ui-builder-desktop")
+
 include(":ui-builder-export")
 
 include(":ui-builder-runtime")
