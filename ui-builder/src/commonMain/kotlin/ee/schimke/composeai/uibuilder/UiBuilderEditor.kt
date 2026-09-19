@@ -1148,6 +1148,24 @@ fun UiBuilderEditor(
       }
     }
   /**
+   * What the insert panel calls the place an Add would land.
+   *
+   * The panel used to answer with an id — "Adds into toolbar-discover-row.children" — which is the
+   * document's name for the place rather than the reader's. The layers panel and the breadcrumbs
+   * both call that node "Row"; this says the same thing and then the slot, so the three places that
+   * name a destination agree.
+   */
+  fun insertDestinationLabel(target: ParentSlot): String {
+    val name =
+      layerRows
+        .filterIsInstance<EditorLayerRow.Node>()
+        .firstOrNull { it.nodeId == target.nodeId }
+        ?.row
+        ?.label ?: state.document.nodes[target.nodeId]?.componentId ?: target.nodeId
+    return "$name › ${target.slot}"
+  }
+
+  /**
    * The selection's verbs, as menu rows, for whoever opens a menu under the pointer.
    *
    * Built here rather than at each call site because every question it asks — can this be pasted
@@ -1231,6 +1249,8 @@ fun UiBuilderEditor(
         layerRows = layerRows,
         collaborators = collaborators,
         dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
+        dropTargetLabel =
+          reducer.dropTarget(state, draggedComponentId ?: "m3/text")?.let(::insertDestinationLabel),
         onCatalogDrag = { componentId, variant, position ->
           if (position == null) {
             draggedComponentId = null
@@ -4765,6 +4785,8 @@ private fun EditorNavigator(
   layerRows: List<EditorLayerRow>,
   collaborators: List<UiBuilderCollaborator>,
   dropTarget: ParentSlot?,
+  /** What [dropTarget] is called out loud — a layer's name and its slot, not an id. */
+  dropTargetLabel: String? = null,
   onCatalogDrag: (String, EditorCatalogVariant?, Offset?) -> Unit,
   onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
@@ -4814,6 +4836,7 @@ private fun EditorNavigator(
             onManagePacks = onManagePacks,
             thumbnailOf = thumbnailOf,
             dropTarget = dropTarget,
+            dropTargetLabel = dropTargetLabel,
             onCatalogDrag = onCatalogDrag,
             onCatalogDrop = onCatalogDrop,
             canAddCatalogComponent = canAddCatalogComponent,
@@ -4871,6 +4894,8 @@ private fun InsertPanel(
   /** The document a row's picture draws, from the reducer that would perform the insert. */
   thumbnailOf: (String, EditorCatalogVariant?) -> UiBuilderDocument?,
   dropTarget: ParentSlot?,
+  /** What [dropTarget] is called out loud — a layer's name and its slot, not an id. */
+  dropTargetLabel: String? = null,
   onCatalogDrag: (String, EditorCatalogVariant?, Offset?) -> Unit,
   onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
@@ -4927,7 +4952,8 @@ private fun InsertPanel(
     Text(
       when {
         state.addBeside -> besideDestination ?: besideRefusal.orEmpty()
-        dropTarget != null -> "Adds into ${dropTarget.nodeId}.${dropTarget.slot}"
+        dropTarget != null ->
+          "Adds into ${dropTargetLabel ?: "${dropTarget.nodeId}.${dropTarget.slot}"}"
         else -> "Select a layer that can hold a component"
       },
       Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),

@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
@@ -35,6 +36,8 @@ class SlotPlaceholderUiTest {
 
       // The design's root is an empty box filling the frame: the whole canvas is its invitation.
       onNodeWithContentDescription("Drop into children").assertExists()
+      // And the panel's own statement of where an Add lands names the layer, not an id.
+      onNodeWithText("Adds into Box › children").assertExists()
 
       // Fill it the way a person would: find a component and press Add, which lands in the
       // selection's slot — the box is the selection on open.
