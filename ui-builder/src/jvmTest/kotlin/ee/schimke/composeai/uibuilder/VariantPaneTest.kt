@@ -6,6 +6,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -15,6 +16,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
@@ -224,5 +227,86 @@ class VariantPaneTest {
       runOnIdle { panes = setOf(EditorPane.Editor, EditorPane.Preview) }
       waitForIdle()
       onNodeWithText("Pixel Tablet", substring = true).assertExists()
+    }
+
+  /**
+   * Small frames wrap into rows instead of scrolling off the pane.
+   *
+   * A Wear screen claims two or three watches, and at their 2x density each frame is 384-480 host
+   * dp wide. In a wide pane three fit across; the row this replaced put all four side by side and
+   * hid whichever did not fit — the one place a person was meant to see every device the design
+   * ships on. So the assertion is a *row break*: the fourth pane starts below the first, and the
+   * third shares the first's top line.
+   */
+  @OptIn(ExperimentalTestApi::class)
+  @Test
+  fun `watch frames wrap into a grid rather than scrolling off the pane`() =
+    runDesktopComposeUiTest(width = 1800, height = 900) {
+      val watches =
+        listOf(
+          UiBuilderDevicePreset(
+            "id:wearos_small_round",
+            "Wear OS Small Round",
+            "Watches",
+            192,
+            192,
+            2.0,
+          ),
+          UiBuilderDevicePreset(
+            "id:wearos_large_round",
+            "Wear OS Large Round",
+            "Watches",
+            227,
+            227,
+            2.0,
+          ),
+          UiBuilderDevicePreset("id:wearos_xl_round", "Wear OS XL Round", "Watches", 240, 240, 2.0),
+        )
+      val environment =
+        JsonObject(
+          mapOf(
+            "widthDp" to JsonPrimitive(192),
+            "heightDp" to JsonPrimitive(192),
+            "density" to JsonPrimitive(2.0),
+            "theme" to JsonPrimitive("dark"),
+          )
+        )
+      val base = wearScreenUiBuilderDocument("grid", JsonObject(emptyMap()), environment)
+      val wear =
+        base.copy(
+          environment =
+            JsonObject(
+              base.environment +
+                ("exportDevices" to
+                  JsonArray(
+                    listOf("id:wearos_small_round", "id:wearos_large_round", "id:wearos_xl_round")
+                      .map(::JsonPrimitive)
+                  ))
+            )
+        )
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = wear,
+            catalog = catalog,
+            initialPanes = setOf(EditorPane.Preview),
+            devicePresets = watches,
+          )
+        }
+      }
+      waitForIdle()
+      val small = onNodeWithText("Wear OS Small Round", substring = true).getBoundsInRoot()
+      val large = onNodeWithText("Wear OS Large Round", substring = true).getBoundsInRoot()
+      val xl = onNodeWithText("Wear OS XL Round", substring = true).getBoundsInRoot()
+      // The first three share a row…
+      assertTrue(
+        kotlin.math.abs(small.top.value - large.top.value) < 2f,
+        "expected Small and Large on one row: ${small.top} vs ${large.top}",
+      )
+      // …and the fourth (the design's own frame is first, so XL is the last) wrapped below.
+      assertTrue(
+        xl.top.value > small.bottom.value,
+        "expected XL on a second row, below Small: ${xl.top} vs ${small.bottom}",
+      )
     }
 }
