@@ -178,7 +178,18 @@ sealed interface EditorCatalogRow {
   /** A catalog family — "Actions", "Selection" — and how many components are under it. */
   data class Group(val name: String, val count: Int, val expanded: Boolean) : EditorCatalogRow
 
-  data class Component(val item: EditorCatalogItem, val expanded: Boolean) : EditorCatalogRow
+  /**
+   * A component's row.
+   *
+   * [pinned] is the copy drawn under the "Pinned" shelf, and it is part of the row's identity
+   * rather than decoration: the pinned copy and the shelf copy are the same component twice, and a
+   * list keyed by component id alone would treat the second as a duplicate and drop it.
+   */
+  data class Component(
+    val item: EditorCatalogItem,
+    val expanded: Boolean,
+    val pinned: Boolean = false,
+  ) : EditorCatalogRow
 
   /**
    * One variant, under the component row it belongs to.
@@ -187,8 +198,12 @@ sealed interface EditorCatalogRow {
    * — while the *name* a screen reader or a script asks for has to stand on its own: a Button's
    * `text` variant and the Text component would otherwise both answer to "Drag Text".
    */
-  data class Variant(val variant: EditorCatalogVariant, val componentName: String) :
-    EditorCatalogRow
+  data class Variant(
+    val variant: EditorCatalogVariant,
+    val componentName: String,
+    /** Which copy of the component this variant hangs under — see [Component.pinned]. */
+    val pinned: Boolean = false,
+  ) : EditorCatalogRow
 }
 
 data class EditorTreeRow(
@@ -508,6 +523,19 @@ data class UiBuilderEditorState(
    * design that already holds one keeps validating and rendering it.
    */
   val enabledPacks: Set<String> = emptySet(),
+  /**
+   * The components the reader has pinned to the top of the insert panel, or null while they have
+   * never said — in which case the catalog's own [CapabilityCatalog.pinnedComponents] answer.
+   *
+   * Null rather than an empty set because the two mean different things: "I have not chosen" is how
+   * a catalog's defaults reach a new reader and keep reaching them when the catalog changes its
+   * mind, while "I chose none" is a choice. The first star materialises the defaults and flips one,
+   * which is what makes unstarring a catalog default possible at all.
+   *
+   * Editor state rather than document state, like [enabledPacks]: the same design opened by a
+   * collaborator shows their palette, not yours. The host remembers it per catalog.
+   */
+  val pinnedComponents: Set<String>? = null,
   /**
    * What a read of the project's component library last said about the components this design
    * imported, or empty when nobody has asked.
@@ -954,6 +982,14 @@ sealed interface UiBuilderEditorEvent {
 
   /** Flips [UiBuilderEditorState.addBeside]: does an Add fill a slot, or start an item? */
   data object ToggleAddBeside : UiBuilderEditorEvent
+
+  /**
+   * Pin a component to the top of the insert panel, or take it off.
+   *
+   * The first press materialises the catalog's defaults and then flips the one pressed — see
+   * [UiBuilderEditorState.pinnedComponents] for why "not chosen" and "chose none" are different.
+   */
+  data class TogglePinnedComponent(val componentId: String) : UiBuilderEditorEvent
 
   /** Switches one unstored variant axis of the strip on or off. */
   data class ToggleVariantAxis(val axis: EditorVariantAxis) : UiBuilderEditorEvent
@@ -1516,6 +1552,9 @@ class UiBuilderEditorReducer(
       collapsedCatalogGroups = state.collapsedCatalogGroups,
       expandedCatalogComponents = state.expandedCatalogComponents,
       enabledPacks = state.enabledPacks,
+      // A reader's pins are a fact about their palette, not about the design arriving, so they
+      // survive a rebuild for the same reason the pack switches do.
+      pinnedComponents = state.pinnedComponents,
       // Carried, minus the rows this document has already answered. Every edit rebuilds the state,
       // so dropping them all would lose the panel's drift rows on the next keystroke; keeping them
       // all would keep saying a design has drifted from a symbol the arriving edit just
@@ -1633,6 +1672,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.InsertComponentBeside ->
         insertBeside(state, event.componentId, variant = event.variant)
       UiBuilderEditorEvent.ToggleAddBeside -> state.copy(addBeside = !state.addBeside)
+      is UiBuilderEditorEvent.TogglePinnedComponent ->
+        state.copy(pinnedComponents = pinnedComponents(state).toggled(event.componentId))
       is UiBuilderEditorEvent.ToggleVariantAxis ->
         state.copy(
           variantAxes =
@@ -2303,6 +2344,16 @@ class UiBuilderEditorReducer(
    * Collapsing something and then typing does not lose the collapse — it is remembered and comes
    * back when the field is cleared.
    */
+  /**
+   * The components the insert panel keeps at the top: the reader's choice, or the catalog's.
+   *
+   * One place rather than a ternary at each use, because the panel, the star on a row and the
+   * persistence path all have to agree about what "pinned" is — and the disagreement that matters
+   * is a star drawn unpinned on a row the top of the panel is showing.
+   */
+  fun pinnedComponents(state: UiBuilderEditorState): Set<String> =
+    state.pinnedComponents ?: catalog.pinnedComponents
+
   fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
     val needle = state.catalogQuery.trim().lowercase()
     val filtering = needle.isNotEmpty()
@@ -2327,6 +2378,30 @@ class UiBuilderEditorReducer(
         .withIndex()
         .associate { (index, name) -> name to index }
     val rows = mutableListOf<EditorCatalogRow>()
+    // The pins first, and only while browsing: a search is a question about the whole catalog, and
+    // a component it matches already answers from its own shelf — a second copy under "Pinned"
+    // would be the same row twice in the results. A pin whose pack is off is not on the palette,
+    // so it is not at the top of it either.
+    val pinned = pinnedComponents(state)
+    if (!filtering && pinned.isNotEmpty()) {
+      val pinnedItems = items.filter { it.componentId in pinned }
+      if (pinnedItems.isNotEmpty()) {
+        val expanded = "Pinned" !in state.collapsedCatalogGroups
+        rows += EditorCatalogRow.Group("Pinned", pinnedItems.size, expanded)
+        if (expanded) {
+          pinnedItems.forEach { item ->
+            val open =
+              item.variants.isNotEmpty() && item.componentId in state.expandedCatalogComponents
+            rows += EditorCatalogRow.Component(item, open, pinned = true)
+            if (open) {
+              item.variants.forEach {
+                rows += EditorCatalogRow.Variant(it, item.displayName, pinned = true)
+              }
+            }
+          }
+        }
+      }
+    }
     items
       .groupBy(EditorCatalogItem::group)
       .entries
