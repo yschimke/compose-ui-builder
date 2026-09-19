@@ -32,7 +32,7 @@ class CanvasMoveDragTest {
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 
   @Test
-  fun `a press carried past the slop picks up the node under the press and reports where it went`() =
+  fun `a held press carried to a seam picks up the node and reports where it went`() =
     runDesktopComposeUiTest(width = 900, height = 700) {
       var startedNode: String? = null
       var endedAt: Offset? = null
@@ -56,8 +56,11 @@ class CanvasMoveDragTest {
       // Out of the box it started in, into the column's own seam below the last child.
       val dropAt = Offset(column.x + column.width / 2f, column.bottom - 5f)
 
+      // The hold arms the drag; the pointer then travels without the slop cancelling it, because
+      // once armed the gesture owns the pointer.
       onRoot().performTouchInput {
         down(pressAt)
+        advanceEventTime(1_000)
         moveTo(Offset(pressAt.x, pressAt.y + (dropAt.y - pressAt.y) / 2))
         moveTo(dropAt)
         up()
@@ -132,6 +135,42 @@ class CanvasMoveDragTest {
 
       assertEquals("plan-a", selected)
       assertTrue(!dragStarted, "a click is not a pick-up")
+    }
+
+  /**
+   * The friction the slot-first model asks for: a hurried press-and-move is a scroll or a swipe,
+   * not a rearrangement. Nothing is picked up and nothing lands.
+   */
+  @Test
+  fun `a quick press and move picks nothing up`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var dragStarted = false
+      var dragEnded = false
+      var snapshot: UiBuilderInspectionSnapshot? = null
+      setContent {
+        MaterialTheme {
+          CanvasHost(
+            document,
+            zoom = 1f,
+            onStarted = { _, _ -> dragStarted = true },
+            onEnded = { dragEnded = true },
+            onInspection = { snapshot = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      val target = assertNotNull(nodeBounds(snapshot, "plan-a"), "the renderer measured plan-a")
+      val pressAt = Offset(target.x + target.width / 2f, target.y + target.height / 2f)
+      onRoot().performTouchInput {
+        down(pressAt)
+        moveTo(Offset(pressAt.x, pressAt.y + 120f))
+        up()
+      }
+      waitForIdle()
+
+      assertTrue(!dragStarted, "a move without the hold is not a pick-up")
+      assertTrue(!dragEnded, "nothing was carried, so nothing landed")
     }
 
   /** The node's measured box, in the frame's own pixels — where the canvas says it drew it. */
