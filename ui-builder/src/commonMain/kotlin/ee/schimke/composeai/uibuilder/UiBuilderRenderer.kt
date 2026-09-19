@@ -637,7 +637,8 @@ fun UiBuilderSurface(
   val wearDevice =
     if (document.nodes.values.any { it.componentId.startsWith(WEAR_COMPONENT_PREFIX) }) {
       arrayOf<ProvidedValue<*>>(
-        LocalWearDeviceConfiguration provides document.wearDeviceConfiguration()
+        LocalWearDeviceConfiguration provides
+          document.wearDeviceConfiguration(LocalUiBuilderFrameGeometry.current)
       )
     } else {
       // Nothing in the design reads it, and a mobile design is not drawn on a watch: leaving the
@@ -872,7 +873,8 @@ private fun RenderNode(
       WearScreenScaffold(
         node = node,
         modifier = measured,
-        screenWidthDp = document.wearScreenWidthDp(),
+        frame = LocalUiBuilderFrameGeometry.current,
+        screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
         edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
         hasEdgeButton = slot("edgeButton").isNotEmpty(),
       ) { next ->
@@ -1974,10 +1976,8 @@ private fun UiBuilderNode.linearGradientBrush(): Brush {
  * phone frame is a design somebody has not picked a watch for yet, and drawing a 411dp-wide watch
  * is a worse answer than drawing the smallest real one.
  */
-private fun UiBuilderDocument.wearScreenWidthDp(): Int {
-  val width = environment["widthDp"]?.jsonPrimitive?.intOrNull ?: return WEAR_SMALL_ROUND_DP
-  return if (width in WEAR_SMALL_ROUND_DP..WEAR_XL_ROUND_DP) width else WEAR_SMALL_ROUND_DP
-}
+private fun UiBuilderDocument.wearScreenWidthDp(frame: UiBuilderFrameGeometry): Int =
+  frame.diameterFor(environment["widthDp"]?.jsonPrimitive?.intOrNull)
 
 /**
  * The watch the Wear components in this design are laid out against.
@@ -2016,14 +2016,26 @@ private fun UiBuilderDocument.wearScreenWidthDp(): Int {
  * defaults, which are the deterministic ones: a 24-hour clock whatever the browser's locale says,
  * and the left wrist. A canvas whose picture moved with the host's locale could not be diffed.
  */
-internal fun UiBuilderDocument.wearDeviceConfiguration(): WearDeviceConfiguration {
-  val diameter = wearScreenWidthDp()
+internal fun UiBuilderDocument.wearDeviceConfiguration(
+  frame: UiBuilderFrameGeometry = UiBuilderFrameGeometry.None
+): WearDeviceConfiguration {
+  val diameter = wearScreenWidthDp(frame)
   return WearDeviceConfiguration(
     isScreenRound = true,
     screenWidthDp = diameter,
     screenHeightDp = diameter,
   )
 }
+
+/**
+ * The frame the served catalog declares for its screens — see [UiBuilderFrameGeometry].
+ *
+ * A composition local rather than a renderer parameter, for the reason
+ * [LocalUiBuilderCanvasAdapters] gives: it is the catalog's statement, the editor provides it once
+ * for the canvas and every thumbnail, and a host that provides nothing gets the frame the document
+ * itself names.
+ */
+internal val LocalUiBuilderFrameGeometry = staticCompositionLocalOf { UiBuilderFrameGeometry.None }
 
 /** Every component id the Wear catalog publishes, and the test that a design draws Wear Compose. */
 private const val WEAR_COMPONENT_PREFIX = "wear-m3/"
@@ -2061,13 +2073,14 @@ private const val WEAR_COMPONENT_PREFIX = "wear-m3/"
 private fun WearScreenScaffold(
   node: UiBuilderNode,
   modifier: Modifier,
+  frame: UiBuilderFrameGeometry,
   screenWidthDp: Int,
   edgeButton: @Composable (Modifier) -> Unit,
   hasEdgeButton: Boolean,
   content: @Composable (Modifier) -> Unit,
 ) {
   val width = screenWidthDp.dp
-  val padding = wearScreenContentPadding(screenWidthDp)
+  val padding = wearScreenContentPadding(screenWidthDp, frame)
   // Wear Material 3 is dark-first and its `background` is pure black — measured off the reference
   // render, not read from the editor theme, which is the bug the widget container's default
   // background comments: reading the theme made the watch go white in a light editor.
@@ -2126,28 +2139,12 @@ private fun WearScreenScaffold(
  * this interpolates rather than extrapolating a fraction, because the three points are what is
  * known.
  */
-private fun wearScreenContentPadding(screenWidthDp: Int): PaddingValues {
-  val horizontal = WEAR_CONTENT_PADDING.interpolate(screenWidthDp) { it.second }
-  val vertical = WEAR_CONTENT_PADDING.interpolate(screenWidthDp) { it.third }
-  return PaddingValues(horizontal = horizontal.dp, vertical = vertical.dp)
-}
-
-/** Measured `(diameterDp, horizontalDp, verticalDp)`, ascending by diameter. */
-private val WEAR_CONTENT_PADDING =
-  listOf(Triple(192f, 10f, 20f), Triple(227f, 12f, 23f), Triple(240f, 13f, 24f))
-
-private fun List<Triple<Float, Float, Float>>.interpolate(
-  widthDp: Int,
-  select: (Triple<Float, Float, Float>) -> Float,
-): Float {
-  val width = widthDp.toFloat()
-  first().let { if (width <= it.first) return select(it) }
-  last().let { if (width >= it.first) return select(it) }
-  val upper = indexOfFirst { it.first >= width }
-  val low = this[upper - 1]
-  val high = this[upper]
-  val t = (width - low.first) / (high.first - low.first)
-  return select(low) + t * (select(high) - select(low))
+private fun wearScreenContentPadding(
+  screenWidthDp: Int,
+  frame: UiBuilderFrameGeometry,
+): PaddingValues {
+  val padding = frame.paddingFor(screenWidthDp)
+  return PaddingValues(horizontal = padding.horizontalDp.dp, vertical = padding.verticalDp.dp)
 }
 
 /**

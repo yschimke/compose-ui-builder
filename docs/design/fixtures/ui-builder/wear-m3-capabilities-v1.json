@@ -13546,6 +13546,29 @@
                 "Content"
             ]
         },
+        "frame": {
+            "adapter": "frame/round-screen",
+            "geometry": {
+                "contentPadding": [
+                    {
+                        "horizontalDp": 10,
+                        "screenDp": 192,
+                        "verticalDp": 20
+                    },
+                    {
+                        "horizontalDp": 12,
+                        "screenDp": 227,
+                        "verticalDp": 23
+                    },
+                    {
+                        "horizontalDp": 13,
+                        "screenDp": 240,
+                        "verticalDp": 24
+                    }
+                ]
+            },
+            "seedDevice": "id:wearos_small_round"
+        },
         "platform": "wear",
         "previewSurfaces": {
             "native": {

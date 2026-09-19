@@ -86,6 +86,16 @@ internal val CapabilityCatalog.canvasAdapterIds: Map<String, String>
 internal val CapabilityCatalog.nativeOnlyComponentIds: Set<String>
   get() = componentPacks.packs.flatMapTo(mutableSetOf()) { it.componentIds }
 
+/**
+ * The frame this catalog declares for its screens — see [UiBuilderFrameGeometry].
+ *
+ * Read from `statusSemantics` rather than declared as a field for the reason
+ * [CapabilityCatalog.previewSurfaces] gives: the wire type is published from another repository,
+ * and a catalog that says nothing gets the frame its documents name.
+ */
+internal val CapabilityCatalog.frameGeometry: UiBuilderFrameGeometry
+  get() = UiBuilderFrameGeometry.from(statusSemantics)
+
 private fun packComponentRecord(packId: String, component: ComponentCapability): ComponentRecord? {
   val callable = component.code?.symbol?.takeIf { '.' in it } ?: return null
   val name = callable.substringAfterLast('.')

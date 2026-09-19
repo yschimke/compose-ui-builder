@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,15 +27,17 @@ import kotlinx.serialization.json.jsonObject
 @Preview(widthDp = 170, heightDp = 410)
 @Composable
 fun WearScreenSamplePreview() {
-  UiBuilderSurface(
-    document =
-      wearScreenUiBuilderDocument(
-        designId = "wear-screen-preview",
-        catalogPin = wearScreenSampleCatalogPin,
-        environment = wearScreenSampleEnvironment(SMALL_ROUND_DP),
-      ),
-    editorOverlay = false,
-  )
+  WearScreenPreviewFrame {
+    UiBuilderSurface(
+      document =
+        wearScreenUiBuilderDocument(
+          designId = "wear-screen-preview",
+          catalogPin = wearScreenSampleCatalogPin,
+          environment = wearScreenSampleEnvironment(SMALL_ROUND_DP),
+        ),
+      editorOverlay = false,
+    )
+  }
 }
 
 /**
@@ -59,15 +62,17 @@ fun WearScreenBreakpointsPreview() {
     // modifier, so the row's weights have to be carried by a wrapper.
     listOf(SMALL_ROUND_DP, LARGE_ROUND_DP, XL_ROUND_DP).forEach { widthDp ->
       Box(Modifier.weight(1f).fillMaxHeight()) {
-        UiBuilderSurface(
-          document =
-            wearScreenUiBuilderDocument(
-              designId = "wear-screen-$widthDp",
-              catalogPin = wearScreenSampleCatalogPin,
-              environment = wearScreenSampleEnvironment(widthDp),
-            ),
-          editorOverlay = false,
-        )
+        WearScreenPreviewFrame {
+          UiBuilderSurface(
+            document =
+              wearScreenUiBuilderDocument(
+                designId = "wear-screen-$widthDp",
+                catalogPin = wearScreenSampleCatalogPin,
+                environment = wearScreenSampleEnvironment(widthDp),
+              ),
+            editorOverlay = false,
+          )
+        }
       }
     }
   }
@@ -98,17 +103,33 @@ fun WearScreenCodePanePreview() {
 }
 
 /**
- * The catalog the Wear screen previews author against.
+ * The catalog the Wear screen previews author against: the Wear one, from the golden this
+ * repository already keeps beside the renderer's fixtures.
  *
- * The packaged M3 capability catalog, which carries every borrowed content component these designs
- * use but neither of the two Wear containers — those are synthesised in `:ui-builder-runtime`,
- * which this module may not depend on. The editor draws a node whose component the catalog does not
- * know; only the inspector is poorer for it, and the panes under test are the canvas and the code.
+ * It used to be the packaged M3 catalog, on the reasoning that these designs only need content
+ * components and the Wear containers are synthesised in `:ui-builder-runtime`, which this module
+ * may not depend on. That was wrong twice over: the Wear golden carries every component these
+ * designs use, and it carries the *frame* — the geometry the scaffold stand-in draws with, which
+ * the renderer now reads from the catalog rather than holding itself.
  */
 private val wearScreenPreviewCatalog by lazy {
   ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-    checkNotNull(WearScreenCodeExporter::class.java.getResource("/m3-catalog-capabilities-v1.json"))
-      .readText()
+    previewResource("/wear-m3-capabilities-v1.json")
+  )
+}
+
+/**
+ * The frame the catalog declares, provided for a preview that composes the surface directly.
+ *
+ * The editor provides this for every surface it draws (see `UiBuilderEditor`); a preview that calls
+ * `UiBuilderSurface` itself is the host, and a host that provides nothing gets the frame its
+ * document names and no insets.
+ */
+@Composable
+private fun WearScreenPreviewFrame(content: @Composable () -> Unit) {
+  CompositionLocalProvider(
+    LocalUiBuilderFrameGeometry provides wearScreenPreviewCatalog.frameGeometry,
+    content = content,
   )
 }
 
