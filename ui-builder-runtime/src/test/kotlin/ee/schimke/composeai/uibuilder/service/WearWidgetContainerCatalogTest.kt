@@ -87,8 +87,32 @@ class WearWidgetContainerCatalogTest {
     containers.forEach { container ->
       val content = assertNotNull(container.slots.singleOrNull { it.name == "content" })
       assertEquals(1, content.cardinality.max, container.componentId)
-      assertTrue("AnyContent" in content.acceptedTraits, container.componentId)
+      assertEquals(listOf("RemoteAuthorable"), content.acceptedTraits, container.componentId)
     }
+  }
+
+  /** A palette item must not be insertable into a widget body if its source emitter refuses it. */
+  @Test
+  fun `widget content accepts exactly the reviewed Remote Compose vocabulary`() {
+    val content = containers.first().slots.single { it.name == "content" }
+    val accepted =
+      catalog.components.filter { slotAccepts(content, it) }.map { it.componentId }.toSet()
+
+    assertEquals(
+      setOf(
+        "asset/image",
+        "layout/box",
+        "layout/column",
+        "layout/for-each",
+        "layout/row",
+        "m3/text",
+        "remote-compose/custom",
+        "remote-m3/lottie",
+      ),
+      accepted,
+    )
+    assertTrue("m3/surface" !in accepted)
+    assertTrue("shape/linear-gradient" !in accepted)
   }
 
   private companion object {

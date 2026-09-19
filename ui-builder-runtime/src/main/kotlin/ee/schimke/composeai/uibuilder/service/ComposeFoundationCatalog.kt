@@ -160,6 +160,20 @@ private val FOUNDATION_CURATIONS =
             .also {
               it.modifierCapabilities =
                 component.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+              // This is the Remote Compose emitter's vocabulary, not a trait inherited from the
+              // mobile component. Keep the published-catalog foundation aligned with the former
+              // `remoteM3Catalog` donor.
+              it.traits =
+                (component.traits - "RemoteAuthorable").let { traits ->
+                  if (
+                    component.componentId !in
+                      setOf("remote-compose/document", "shape/linear-gradient")
+                  ) {
+                    traits + "RemoteAuthorable"
+                  } else {
+                    traits
+                  }
+                }
             }
             .build()
         },

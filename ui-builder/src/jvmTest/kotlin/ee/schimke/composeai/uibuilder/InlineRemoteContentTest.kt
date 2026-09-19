@@ -38,6 +38,7 @@ class InlineRemoteContentTest {
     )
     assertTrue("RemoteAuthorable" in catalog.componentsById.getValue("m3/text").traits)
     assertTrue("RemoteAuthorable" in catalog.componentsById.getValue("layout/column").traits)
+    assertTrue("RemoteAuthorable" !in catalog.componentsById.getValue("m3/surface").traits)
     assertTrue("RemoteAuthorable" in custom.traits, "a custom component goes inside remote content")
     // And its own slot takes anything, because what fills a custom component is host content.
     assertEquals(listOf("AnyContent"), custom.slotsByName.getValue("content").acceptedTraits)

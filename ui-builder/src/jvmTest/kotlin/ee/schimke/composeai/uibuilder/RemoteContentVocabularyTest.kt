@@ -183,21 +183,14 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * The two `remote-m3` components a widget body has no counterpart for, refused with the reason.
+   * A gradient is a widget-frame brush, not body content, and says where it belongs when a
+   * malformed stored document puts it in the body.
    *
-   * Both used to reach the catch-all `else`, which is what the issue calls out: an author who put a
-   * surface in a widget was told the component "has no Remote Compose counterpart this generator
-   * can write" — the same sentence a typo in a component id gets.
+   * It is not offered in the content palette, but the emitter keeps the diagnosis for an older or
+   * hand-written document rather than silently dropping it.
    */
   @Test
-  fun `a surface and a content-slot gradient are refused with what to reach for instead`() {
-    val surface =
-      assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(widgetWith(node("card", "m3/surface")))
-      )
-    assertTrue("`layout/box`" in surface.reasons.single(), surface.reasons.single())
-    assertTrue("background" in surface.reasons.single(), surface.reasons.single())
-
+  fun `a content-slot gradient is refused with what to reach for instead`() {
     val gradient =
       assertIs<WearWidgetCodeExporter.Result.Refused>(
         WearWidgetCodeExporter.export(widgetWith(node("sky", "shape/linear-gradient")))
@@ -329,13 +322,7 @@ class RemoteContentVocabularyTest {
     UiBuilderNode(
       id = id,
       componentId = componentId,
-      properties =
-        JsonObject(
-          buildMap {
-            if (text != null) put("text", literal("string", text))
-            if (componentId == "m3/surface") put("containerColor", literal("color", "#FF1DB954"))
-          }
-        ),
+      properties = JsonObject(buildMap { if (text != null) put("text", literal("string", text)) }),
       slots = if (children.isEmpty()) emptyMap() else mapOf("children" to children),
     )
 
