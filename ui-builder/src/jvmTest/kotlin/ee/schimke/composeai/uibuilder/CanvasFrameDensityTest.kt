@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -15,6 +16,12 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * The canvas gives the design the frame its environment names, whatever density the host is at.
+ *
+ * The widget is measured in the **squircle**, stated here rather than left to the editor's default:
+ * a host frame is a view and not a document property (`WearWidgetHostShape`), so which one is on is
+ * the host's choice — and a test about density must not change its numbers when somebody changes
+ * which frame a new design opens in, which is exactly what happened when the default moved to the
+ * unconstrained rectangular host (#55) and these three measured 232dp instead of 216.
  *
  * The workspace is measured at the host's density and the design at its own, and the editor's
  * canvas is the one place the two meet: it sizes the frame, and the renderer inside reads that size
@@ -75,30 +82,32 @@ class CanvasFrameDensityTest {
       )
     var snapshot: UiBuilderInspectionSnapshot? = null
     renderComposeScene(WORKSPACE_PX, WORKSPACE_PX, Density(hostDensity)) {
-      PinnedDesignCanvas(
-        document = document,
-        selectedNodeId = null,
-        onNodeSelected = {},
-        onCanvasMetrics = { _, _, _ -> },
-        onCanvasBounds = {},
-        dropHovered = false,
-        showSelectionOverlay = true,
-        reference = ReferenceOverlayState(),
-        onMarkDrawn = { _, _ -> },
-        onPieceMoved = { _, _, _ -> },
-        collaborators = emptyList(),
-        commentThreads = emptyList(),
-        selectedThreadId = null,
-        onCommentThreadSelected = {},
-        onInspectionSnapshot = { snapshot = it },
-        onInspectionInvalidated = null,
-        selectionMenu = {},
-        hoverEditor = null,
-        zoom = 1f,
-        onZoomChanged = {},
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize(),
-      )
+      CompositionLocalProvider(LocalWearWidgetHostShape provides WearWidgetHostShape.Squircle) {
+        PinnedDesignCanvas(
+          document = document,
+          selectedNodeId = null,
+          onNodeSelected = {},
+          onCanvasMetrics = { _, _, _ -> },
+          onCanvasBounds = {},
+          dropHovered = false,
+          showSelectionOverlay = true,
+          reference = ReferenceOverlayState(),
+          onMarkDrawn = { _, _ -> },
+          onPieceMoved = { _, _, _ -> },
+          collaborators = emptyList(),
+          commentThreads = emptyList(),
+          selectedThreadId = null,
+          onCommentThreadSelected = {},
+          onInspectionSnapshot = { snapshot = it },
+          onInspectionInvalidated = null,
+          selectionMenu = {},
+          hoverEditor = null,
+          zoom = 1f,
+          onZoomChanged = {},
+          contentAlignment = Alignment.Center,
+          modifier = Modifier.fillMaxSize(),
+        )
+      }
     }
     val bounds =
       checkNotNull(snapshot?.nodes?.firstOrNull { it.bounds != null }?.bounds) {
