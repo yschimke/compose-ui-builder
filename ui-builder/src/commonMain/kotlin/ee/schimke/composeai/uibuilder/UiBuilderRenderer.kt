@@ -105,6 +105,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -174,6 +175,8 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
 import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
 import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
+import ee.schimke.wearcmp.port.LocalWearDeviceConfiguration
+import ee.schimke.wearcmp.port.WearDeviceConfiguration
 import kotlin.io.encoding.Base64
 import kotlin.math.PI
 import kotlinx.serialization.json.JsonArray
@@ -623,6 +626,23 @@ fun UiBuilderSurface(
   val cornerRadius =
     themeHost?.float(THEME_CORNER_RADIUS, 16f)?.coerceIn(0f, 48f)
       ?: if (wearScreen) WEAR_CARD_CORNER_RADIUS_DP else 16f
+  // The watch the Wear components inside this design are laid out against — see
+  // [wearDeviceConfiguration] for what the browser answers when nobody says.
+  //
+  // A broader question than [wearScreen] above, and deliberately: that one asks what the ROOT is
+  // because it decides the screen's colours, while this one asks whether anything in the design is
+  // Wear Compose at all. A board holding one Wear card needs a watch as much as a whole screen
+  // does, and so does a shelf thumbnail of a single `wear-m3/date-picker`.
+  val wearDevice =
+    if (document.nodes.values.any { it.componentId.startsWith(WEAR_COMPONENT_PREFIX) }) {
+      arrayOf<ProvidedValue<*>>(
+        LocalWearDeviceConfiguration provides document.wearDeviceConfiguration()
+      )
+    } else {
+      // Nothing in the design reads it, and a mobile design is not drawn on a watch: leaving the
+      // platform's own answer in place is the honest one rather than claiming a 192dp round device.
+      emptyArray()
+    }
   CompositionLocalProvider(
     LocalDensity provides density,
     LocalLayoutDirection provides layoutDirection,
@@ -633,6 +653,7 @@ fun UiBuilderSurface(
     LocalUiBuilderCanvasAdapters provides canvasAdapterIds,
     LocalUiBuilderUnrolled provides unrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
+    *wearDevice,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
       Box(
@@ -1908,6 +1929,55 @@ private fun UiBuilderDocument.wearScreenWidthDp(): Int {
   val width = environment["widthDp"]?.jsonPrimitive?.intOrNull ?: return WEAR_SMALL_ROUND_DP
   return if (width in WEAR_SMALL_ROUND_DP..WEAR_XL_ROUND_DP) width else WEAR_SMALL_ROUND_DP
 }
+
+/**
+ * The watch the Wear components in this design are laid out against.
+ *
+ * ## Why the host has to say, and what happened when it did not
+ *
+ * `androidx.wear.compose` reads the device out of Android's `Configuration`, which does not exist
+ * off Android. The CMP port replaces that with one value, `LocalWearDeviceConfiguration`, and each
+ * platform answers it for itself: the JVM takes the 192dp reference watch, and **the browser
+ * reports its own viewport** — `window.innerWidth` / `window.innerHeight` — because a viewport is
+ * the closest thing a browser has to `Configuration.screenWidthDp`.
+ *
+ * So on the Wasm canvas a Wear component was laid out against the editor window. Measured on the
+ * real `ScreenScaffold`, whose content padding is 5.2% of the screen's width and 10% of its height:
+ * 10dp x 20dp at 192x192, and **75dp x 90dp at 1440x900**. The same design drawn on the desktop
+ * canvas — same code, JVM default — got the watch. Two lanes of one canvas disagreed about what a
+ * watch is, and the Wasm one was the size of a browser.
+ *
+ * What that reached is every component that branches on the screen: `DatePicker` and `TimePicker`
+ * (their `isLargeScreen` typography and 46dp options against the small screen's 36dp), `EdgeButton`
+ * (its arc is computed from the screen width), `SwipeToReveal`, `PagerScaffold`, the progress
+ * indicator's and scroll indicator's stroke widths. The Wear screen scaffold did not show it,
+ * because the canvas draws that one itself with a measured padding table — which is exactly why
+ * this went unnoticed: the one component big enough to be obvious was the one not asking.
+ *
+ * ## What it answers
+ *
+ * The frame the document names, by [wearScreenWidthDp]'s rule, so the stand-in scaffold and the
+ * components inside it cannot disagree about the screen they are on. Both axes are the diameter: a
+ * round watch's screen is as tall as it is wide, and the port reads `screenHeightDp` for its
+ * vertical content padding (10%) and its list's minimum vertical content padding (23%) — the two
+ * numbers [wearScreenContentPadding] interpolates from the same diameter.
+ *
+ * `isScreenRound` is true because a Wear design in this builder is drawn on a round watch — the
+ * scaffold stand-in is a stadium for that reason — and the remaining fields stay at the port's
+ * defaults, which are the deterministic ones: a 24-hour clock whatever the browser's locale says,
+ * and the left wrist. A canvas whose picture moved with the host's locale could not be diffed.
+ */
+internal fun UiBuilderDocument.wearDeviceConfiguration(): WearDeviceConfiguration {
+  val diameter = wearScreenWidthDp()
+  return WearDeviceConfiguration(
+    isScreenRound = true,
+    screenWidthDp = diameter,
+    screenHeightDp = diameter,
+  )
+}
+
+/** Every component id the Wear catalog publishes, and the test that a design draws Wear Compose. */
+private const val WEAR_COMPONENT_PREFIX = "wear-m3/"
 
 /**
  * The Wear screen as a long screenshot: the frame's width, the content's height, round caps.
