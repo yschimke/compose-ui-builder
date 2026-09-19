@@ -70,6 +70,10 @@ workspace is the Jetcaster fixture and edits are stored under
 `~/.compose-preview/ui-builder-desktop`. This first desktop host intentionally has no server-backed
 collaboration, comments, or native daemon preview; those remain capabilities of a connected host.
 
+Linux releases also include a `compose-ui-builder-desktop_<version>_amd64.deb` installer. Install it
+with your distribution's package installer, then launch **Compose UI Builder** from the desktop
+environment.
+
 ### The flags underneath, and one that is easy to confuse
 
 Both modes are `serve` with flags added, and every flag stays available:

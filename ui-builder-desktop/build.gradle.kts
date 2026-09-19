@@ -1,3 +1,5 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
 plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.multiplatform)
@@ -26,4 +28,13 @@ kotlin {
   }
 }
 
-compose.desktop { application { mainClass = "ee.schimke.composeai.uibuilder.desktop.MainKt" } }
+compose.desktop {
+  application {
+    mainClass = "ee.schimke.composeai.uibuilder.desktop.MainKt"
+    nativeDistributions {
+      targetFormats(TargetFormat.Deb)
+      packageName = "compose-ui-builder-desktop"
+      packageVersion = providers.environmentVariable("UI_BUILDER_DESKTOP_VERSION").orNull ?: "0.0.0"
+    }
+  }
+}
