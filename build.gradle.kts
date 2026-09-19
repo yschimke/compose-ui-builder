@@ -136,6 +136,17 @@ subprojects {
   tasks.withType<KotlinJsIrLink>().configureEach { usesService(wasmLinkLane) }
 }
 
+// The ktfmt tasks write per-file results under `build/tmp/<task>/<uuid>/` and delete the directory
+// when they finish, so they are shared state a task cleans up after itself. The lane keeps two of
+// them from running at once for the same reason `wasmLinkLane` exists above: the constraint is
+// real, and the service is Gradle's way to state it without serialising the rest of the build.
+abstract class KtfmtLane : BuildService<BuildServiceParameters.None>
+
+val ktfmtLane =
+  gradle.sharedServices.registerIfAbsent("ktfmtLane", KtfmtLane::class) {
+    maxParallelUsages.set(1)
+  }
+
 // The formatting aggregates — DERIVED, never listed, for the reason the Maven set below is.
 //
 // They were hand-kept lists and had drifted by four modules: `mcp`, `native-catalog-m3`,
@@ -155,6 +166,22 @@ subprojects {
   plugins.withId("com.ncorti.ktfmt.gradle") {
     ktfmtCheckAll.configure { dependsOn(tasks.named("ktfmtCheck")) }
     ktfmtFormatAll.configure { dependsOn(tasks.named("ktfmtFormat")) }
+
+    // Two things the ktfmt plugin does not do for itself, both about `build/`.
+    //
+    // Its *scripts* tasks walk the project directory — `project.fileTree(projectDir)` filtered to
+    // `**/*.kt` and `**/*.kts` — so the walk descends into `build/`, where every other ktfmt task
+    // writes per-file results under `build/tmp/<task>/<uuid>/` and deletes the directory when it
+    // finishes. A walk that meets a deletion fails the task with "Could not read path", which is
+    // how CI lost `ktfmtCheckScripts` on a file under `ktfmtCheckKmpCommonMain`'s temp directory.
+    // Nothing under `build/` is authored, so nothing under it is worth walking.
+    //
+    // And because those temp directories are state a task cleans up after itself, no two ktfmt
+    // tasks may run at once — see `ktfmtLane` above. Everything else in the build stays parallel.
+    tasks.withType<com.ncorti.ktfmt.gradle.tasks.KtfmtBaseTask>().configureEach {
+      exclude("build/**")
+      usesService(ktfmtLane)
+    }
   }
 }
 
