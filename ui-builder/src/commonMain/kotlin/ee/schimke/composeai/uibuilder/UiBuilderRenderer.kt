@@ -990,16 +990,32 @@ private fun RenderNode(
         modifier = measured,
       )
     "wear-m3/transforming-lazy-column" -> {
-      // The real lazy column, scaling and fading its rows through the library's own
-      // `transformedHeight`. The `Column` this replaces said in its own comment that the
-      // transformation "does not exist off Android"; it does now, via the CMP port.
       val items = slot("items")
-      WearCanvasTransformingLazyColumn(
-        itemCount = items.size,
-        verticalSpacingDp = node.float("verticalSpacingDp", 4f),
-        modifier = measured,
-      ) { index, itemModifier ->
-        child(items[index], itemModifier)
+      if (LocalUiBuilderUnrolled.current) {
+        // At the extent the list is a Column: no viewport, no row transformation, and the rows are
+        // the list's unscaled layout — which is exactly the `ScrollMode.LONG` reference, whose
+        // stitch turns the transformation off. The real lazy layout cannot be measured against an
+        // unbounded height: it reports infinity, and the canvas fails outright with
+        // `Size(w x 2147483647) is out of range` — the same wall `layout/scaffold` and
+        // `layout/lazy-column` each already draw around. Without this the whole editor is blank for
+        // a Wear screen, because the extent's height is the content's.
+        Column(
+          modifier = measured,
+          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp", 4f).dp),
+        ) {
+          items.forEach { child(it, Modifier) }
+        }
+      } else {
+        // The real lazy column, scaling and fading its rows through the library's own
+        // `transformedHeight`. The `Column` this replaces said in its own comment that the
+        // transformation "does not exist off Android"; it does now, via the CMP port.
+        WearCanvasTransformingLazyColumn(
+          itemCount = items.size,
+          verticalSpacingDp = node.float("verticalSpacingDp", 4f),
+          modifier = measured,
+        ) { index, itemModifier ->
+          child(items[index], itemModifier)
+        }
       }
     }
     "layout/supporting-pane-scaffold" ->
