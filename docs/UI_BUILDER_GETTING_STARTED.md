@@ -77,6 +77,10 @@ host instead:
 ./gradlew :ui-builder-desktop:run --args='--server https://preview.coo.ee'
 ```
 
+The same mode works against a local UI-builder/Wasm host, for example
+`--server http://localhost:8080`; plain HTTP is accepted only on loopback. Remote hosts must use
+HTTPS.
+
 The first native Preview request opens the server's short-lived device-grant approval page in the
 default browser. Approve the requested write and export capabilities there; the Desktop process
 keeps the returned token only in memory. The local workspace is uploaded as a temporary private

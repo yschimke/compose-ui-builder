@@ -151,7 +151,13 @@ private data class DesktopLaunchOptions(val remoteServer: String?) {
         "usage: Compose UI Builder [--server https://preview.coo.ee]"
       }
       val server = args[1].trimEnd('/')
-      require(URI(server).scheme == "https") { "the remote preview server must use https" }
+      val uri = URI(server)
+      require(
+        uri.scheme == "https" ||
+          (uri.scheme == "http" && uri.host in setOf("localhost", "127.0.0.1", "::1"))
+      ) {
+        "the remote preview server must use https (http is allowed only on loopback)"
+      }
       return DesktopLaunchOptions(server)
     }
   }
