@@ -19,7 +19,7 @@ credentials are not embedded in shared URLs.
 
 This capture proves the export menu and delivery path. It is **not** a claim of live binary-preview
 fidelity: the fill-only child collapsed in this capture, while the compiler/player proof exercises
-generated documents separately. The subsequent [canvas fix and browser comparison](../ui-builder-canvas-fill/README.md)
+generated documents separately. The subsequent [canvas fix and browser comparison](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-canvas-fill/README.md)
 repair that layout issue using this same saved document. The subsequent
 [live document preview proof](../ui-builder-live-document-preview/README.md) verifies actual exported
 bytes, click actions and automatic refresh following a live MCP edit.

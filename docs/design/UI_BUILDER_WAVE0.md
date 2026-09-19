@@ -434,12 +434,12 @@ rejected.
 
 This separates editor fixes from catalog pixel compatibility and gives SVG capture an explicit
 Wasm boundary. The executable
-[`ui-builder-renderer.spec.mjs`](../../preview-harness/ui-builder-renderer.spec.mjs) proves that the
+[`ui-builder-renderer.spec.mjs`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/ui-builder-renderer.spec.mjs) proves that the
 overlay maps measured bounds across the sandbox surface, remains pointer-inert, and does not change
 the rendered pixels. Runtime manifest validation is covered by
 [`CatalogRuntimeProtocolTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/CatalogRuntimeProtocolTest.kt),
 and exact immutable server hosting by
-[`ServeUiBuilderRuntimeAssetsTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt).
+[`ServeUiBuilderRuntimeAssetsTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt).
 Deployments still need an explicit support-window and retirement policy for retained bundles; a
 stored hash alone remains insufficient.
 
@@ -464,7 +464,7 @@ The execution bridge portion passes because it exports without an open editor an
 raster fallbacks; see
 [`StructuredSvgExportBridgeTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/StructuredSvgExportBridgeTest.kt)
 and
-[`ServeUiBuilderRenderPortTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRenderPortTest.kt).
+[`ServeUiBuilderRenderPortTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRenderPortTest.kt).
 The remaining Figma conformance portion passes only when the SVG imports at 1:1 bounds, retains
 supported text/groups, and rasterizes within the product threshold.
 
@@ -500,7 +500,7 @@ supported text/groups, and rasterizes within the product threshold.
       checks are
       [`CapabilityComposeCodeExporterTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporterTest.kt)
       and
-      [`ui-builder-jetcaster.spec.mjs`](../../preview-harness/ui-builder-jetcaster.spec.mjs).
+      [`ui-builder-jetcaster.spec.mjs`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/ui-builder-jetcaster.spec.mjs).
 - [ ] Close SVG/Figma conformance for the Jetcaster fixture. The saved-revision JVM bridge exports
       structured SVG with vector catalog icons and declared embedded-raster fallbacks. The last
       authorized Figma import preserved exact root bounds and editable layers but differed from the
@@ -510,10 +510,10 @@ supported text/groups, and rasterizes within the product threshold.
       iframe loading, correlated node activation, independent vertical semantic scrolling, and
       zero-pixel/zero-layout sibling-overlay invariance are
       covered by
-      [`ServeUiBuilderRuntimeAssetsTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt),
+      [`ServeUiBuilderRuntimeAssetsTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt),
       [`CatalogRuntimeProtocolTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/CatalogRuntimeProtocolTest.kt),
       and
-      [`ui-builder-renderer.spec.mjs`](../../preview-harness/ui-builder-renderer.spec.mjs).
+      [`ui-builder-renderer.spec.mjs`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/ui-builder-renderer.spec.mjs).
       Runtime routes have no floating alias, so retained exact bundles remain addressable by id.
 - [ ] Complete the Figma import test for the proven export execution bridge. The first real import
       is recorded in `jetcaster-discover-figma-import-v1.json`: structure passes, raster parity

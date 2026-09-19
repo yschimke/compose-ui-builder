@@ -5,9 +5,9 @@ claim of 80% implemented coverage.** Production implementation is deliberately d
 proof is reviewed. The product should remain an interface builder: layout, data, behavior and
 reusable components. Remote Compose is an execution/export target, alongside regular Compose.
 
-The accompanying [operation inventory](evidence/remote-compose-completeness/operations.csv) gives
+The accompanying [operation inventory](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/remote-compose-completeness/operations.csv) gives
 every operation a proposed authoring surface, regular Compose mapping, fidelity qualification and
-stage. The [local proof](../../experiments/remote-compose-poc/README.md) exercises the critical path.
+stage. The [local proof](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/experiments/remote-compose-poc/README.md) exercises the critical path.
 
 ## Evidence and scope
 

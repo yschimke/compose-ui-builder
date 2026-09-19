@@ -135,7 +135,7 @@ documents directly writes them and an index by hand; nothing requires the genera
 
 ## Reading
 
-[`ServeUiBuilderDesignLibrary`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderDesignLibrary.kt)
+[`ServeUiBuilderDesignLibrary`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderDesignLibrary.kt)
 holds the reading half. It is given a fetcher — the same one every other branch read goes through,
 so a library read is counted and throttled with the rest — and a supplier of the projects to look
 in, read at request time rather than captured, because the set changes when a catalog is registered

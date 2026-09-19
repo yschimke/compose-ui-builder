@@ -359,7 +359,7 @@ be generated:
 | --- | --- | --- |
 | the deployed server | `ServeCatalogStore` fetches the delivery branch | whatever the deployment is pinned to |
 | a `serve` on a laptop, against the same branch | the same fetch | usually older than the deployment |
-| `compose-preview-server ui`, against a local Gradle project | the module's own build output, the way [`LocalUiBuilder.publishRecord`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/LocalUiBuilder.kt) already copies `build/compose-previews/components.json` | whatever `brew` or the wrapper last installed |
+| `compose-preview-server ui`, against a local Gradle project | the module's own build output, the way [`LocalUiBuilder.publishRecord`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/LocalUiBuilder.kt) already copies `build/compose-previews/components.json` | whatever `brew` or the wrapper last installed |
 | the VS Code extension, an agent over MCP | through one of the above | not its own |
 
 A catalog repository publishes **once**; every one of those reads the same bytes, and none of them

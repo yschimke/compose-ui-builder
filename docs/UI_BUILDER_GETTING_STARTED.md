@@ -516,7 +516,7 @@ A gradient layer's `direction` picks the axis, matching `verticalGradient` again
 what `WearWidgetBrush.isEmpty()` asks: a widget declaring a gradient and no colour gets the
 gradient, not the gradient over `#272430`.
 
-![The four widget background brushes: default, colour, gradient and image](design/evidence/ui-builder-remote-compose/widget-background-brushes.png)
+![The four widget background brushes: default, colour, gradient and image](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/widget-background-brushes.png)
 
 The image tile shows the brush slot composing and clipping a bitmap to the frame. Whether arbitrary
 widget artwork resolves in the browser is the builder's asset-registry question, not this
@@ -527,11 +527,11 @@ project-owned artwork keys, and a placeholder carrying the key otherwise — see
 
 A blank widget declares none of this, so both empty templates open on the default frame:
 
-![The empty Small and Large host frames on the default background](design/evidence/ui-builder-remote-compose/empty-widget-containers.png)
+![The empty Small and Large host frames on the default background](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/empty-widget-containers.png)
 
 | Hello widget | Weather widget |
 | --- | --- |
-| ![The Hello widget design in the Small host frame](design/evidence/ui-builder-remote-compose/hello-widget.png) | ![The Weather widget design in the Large host frame](design/evidence/ui-builder-remote-compose/weather-widget.png) |
+| ![The Hello widget design in the Small host frame](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/hello-widget.png) | ![The Weather widget design in the Large host frame](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/weather-widget.png) |
 
 These are the builder's own renderer drawing the templates, not screenshots. They are not a compile
 of the sample: the builder draws with Compose Material 3 while the widget runs Remote Compose on a
@@ -643,7 +643,7 @@ like. The cost, stated: an overflow that only appears at the narrower footprint 
 in the generated preview, so a widget whose content is close to the width has to be checked there
 deliberately.
 
-![The Code pane showing a widget's generated Kotlin](design/evidence/ui-builder-remote-compose/widget-code-pane.png)
+![The Code pane showing a widget's generated Kotlin](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/widget-code-pane.png)
 
 ### A picture in the content slot
 
@@ -741,13 +741,13 @@ exists to hold one, its `contentPadding` means nothing until something reads it,
 refuses a scaffold whose content slot holds anything else. Add rows to the list and they stack in a
 straight column — more than a screenful is the normal case, and the canvas shows the whole extent:
 
-![The Wear list screen drawn as a long-screenshot stadium](design/evidence/ui-builder-wear-screen/wear-screen-stadium.png)
+![The Wear list screen drawn as a long-screenshot stadium](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-stadium.png)
 
 That is the frame's width, the content's height and round caps — the Wear long-screenshot form,
 because that is what you are building. Comparing where a list wraps at 192, 227 and 240dp is three
 columns rather than three scroll positions:
 
-![The same design at the three round screen sizes](design/evidence/ui-builder-wear-screen/wear-screen-breakpoints.png)
+![The same design at the three round screen sizes](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-breakpoints.png)
 
 The content components are `m3-catalog`'s, borrowed, except `wear-m3/list-header` which is Wear's
 own. A `wear-m3` design can also hold **any published `remote-m3` component**: the Remote Compose
@@ -762,7 +762,7 @@ screen scaffold is *emitted* rather than erased: the generated Kotlin calls `Scr
 it in the `AppScaffold` that owns `TimeText`, and carries `Modifier.transformedHeight(this, spec)`
 and `SurfaceTransformation(spec)` on every row.
 
-![The Code pane on a Wear screen design](design/evidence/ui-builder-wear-screen/wear-screen-code-pane.png)
+![The Code pane on a Wear screen design](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-code-pane.png)
 
 It emits **two** previews, and they answer different questions. `@WearPreviewDevices` is the screen
 as a watch shows it — one screenful, transformed, at every round size. The second is a
@@ -773,7 +773,7 @@ exactly what the stadium draws. Render it and you should get the canvas back.
 You do. Left to right: wear-m3-catalog's hand-written component, the builder's canvas, and the
 generated Kotlin compiled and captured on Android —
 
-![The reference, the canvas, and the generated screen rendered for real](design/evidence/ui-builder-wear-screen/wear-screen-round-trip.png)
+![The reference, the canvas, and the generated screen rendered for real](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-round-trip.png)
 
 192 × 496dp on all three, rows at 72 → 136dp, 64dp tall with 4dp gaps, spanning 10 → 182dp.
 [`design/UI_BUILDER_WEAR_SCREEN.md`](design/UI_BUILDER_WEAR_SCREEN.md) carries the measurements,

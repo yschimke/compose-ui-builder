@@ -16,8 +16,8 @@ design holds Remote Compose content, the other being the vocabulary switch descr
 section.
 
 The checked-in JVM Compose render evidence captures the same fixture immediately
-[before](evidence/ui-builder-remote-compose/before.png) and
-[after](evidence/ui-builder-remote-compose/after.png) registering its `hero.card` slot. The render
+[before](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/before.png) and
+[after](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/after.png) registering its `hero.card` slot. The render
 test regenerates both images while also asserting the nested slot's centre pixel.
 
 The preview deployment exposes this adapter as a second catalog-scoped builder at
@@ -31,7 +31,7 @@ dependency on Glance preview tooling.
 
 | Default catalog instance | Explicit Remote Compose catalog instance |
 | --- | --- |
-| ![M3 catalog UI-builder instance](evidence/ui-builder-remote-compose/m3-catalog-builder.png) | ![Remote M3 UI-builder instance](evidence/ui-builder-remote-compose/remote-m3-builder.png) |
+| ![M3 catalog UI-builder instance](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/m3-catalog-builder.png) | ![Remote M3 UI-builder instance](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/remote-m3-builder.png) |
 
 The catalog-scoped site also owns the complete first-use path. Opening the builder without a
 design selects an enabled catalog and template, validates the design ID, and navigates into the
@@ -42,7 +42,7 @@ children without reselecting or re-searching after every save.
 
 | New Remote M3 widget | Authored entirely in the website |
 | --- | --- |
-| ![New widget catalog, template, and design ID chooser](evidence/ui-builder-remote-compose/new-widget-dialog.png) | ![Large Wear widget with a Column and edited Text](evidence/ui-builder-remote-compose/new-widget-complete.png) |
+| ![New widget catalog, template, and design ID chooser](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/new-widget-dialog.png) | ![Large Wear widget with a Column and edited Text](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/new-widget-complete.png) |
 
 ## Where a document comes from
 
@@ -86,7 +86,7 @@ route gets the inspector's raw fields.
 
 | Before: the editor's catalog panel | After: the same panel with the palette |
 | --- | --- |
-| ![Editor chrome with only the component catalog](evidence/ui-builder-remote-compose/palette-before.png) | ![The same panel with a Remote Compose documents section grouped by component family](evidence/ui-builder-remote-compose/palette-after.png) |
+| ![Editor chrome with only the component catalog](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/palette-before.png) | ![The same panel with a Remote Compose documents section grouped by component family](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/palette-after.png) |
 
 Both are `@Preview`s in `:ui-builder` — `UiBuilderLayoutInspectorPreview` and the new
 `UiBuilderRemoteComposePalettePreview`, at the same size and the same selection — so the next change
@@ -114,11 +114,11 @@ collapses ids that differ only in their final capture-frame segment, keeps the c
 deterministic fetch source, and removes the frame suffix from the displayed state. Other state
 segments remain distinct and searchable.
 
-![Remote Compose picker with capture-size duplicates collapsed](../evidence/ui-builder-remote-compose/picker-deduplicated.png)
+![Remote Compose picker with capture-size duplicates collapsed](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/evidence/ui-builder-remote-compose/picker-deduplicated.png)
 
 | Before: ids used as labels, with no picture | After: state names and rendered thumbnails |
 | --- | --- |
-| ![Remote Compose rows showing repeated technical ids](evidence/ui-builder-remote-compose/picker-before.png) | ![Remote Compose rows showing concise state names and thumbnails](evidence/ui-builder-remote-compose/picker-after.png) |
+| ![Remote Compose rows showing repeated technical ids](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/picker-before.png) | ![Remote Compose rows showing concise state names and thumbnails](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/picker-after.png) |
 
 This is the transport-neutral resolver the decision above anticipated, in its smallest honest form:
 bytes are loaded and verified outside the renderer and the same decoded document is supplied. What
@@ -173,9 +173,9 @@ it:
   other way as `input` messages in the frame's own pixels. `remote-m3` declares
   `previewSurfaces.native.backend = android`, so that session is the Robolectric-backed Android
   daemon and the pane says so: `Native · live on Android`. Evidence, and what the fixtures do and
-  do not claim, in [`renders/ui-builder-native-live`](../../renders/ui-builder-native-live).
+  do not claim, in [`renders/ui-builder-native-live`](https://github.com/yschimke/compose-preview-server/tree/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-native-live).
 
-![Editor, static target preview, and interactive preview](../evidence/ui-builder-remote-compose/workspace-three-panes.png)
+![Editor, static target preview, and interactive preview](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/evidence/ui-builder-remote-compose/workspace-three-panes.png)
 
 ## Two ways in, and one way back out
 
@@ -366,7 +366,7 @@ the places a `remote-creation-compose` bump has to be read against.
 The canvas draws an inline subtree with Compose stand-ins in a marked frame, and that is a strictly
 weaker guarantee than the `remote-compose/document` beside it, which `RcComposePlayer` plays on real
 bytes. Two nodes in one design, one authoritative and one an approximation, is the gap
-[`ServeUiBuilderInlineCapture`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderInlineCapture.kt)
+[`ServeUiBuilderInlineCapture`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderInlineCapture.kt)
 closes — by getting bytes, rather than by drawing better.
 
 `POST /api/ui-builder/v1/designs/{designId}/remote-content/{nodeId}/capture` joins four things that
@@ -402,7 +402,7 @@ a component* rule is then satisfied by drawing rather than by a note.
 
 | Described: nothing captured | Played: the captured document |
 | --- | --- |
-| ![Inline content drawn with Compose stand-ins in a marked frame](evidence/ui-builder-remote-compose/inline-described.png) | ![The same node played by RcComposePlayer, its custom component filled by the design's own Compose](evidence/ui-builder-remote-compose/inline-played.png) |
+| ![Inline content drawn with Compose stand-ins in a marked frame](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/inline-described.png) | ![The same node played by RcComposePlayer, its custom component filled by the design's own Compose](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-remote-compose/inline-played.png) |
 
 Both are rendered by `InlineRemoteContentPlaybackTest` from the same preview document through the
 same renderer, so they cannot drift from the assertions beside them. On the right the design's

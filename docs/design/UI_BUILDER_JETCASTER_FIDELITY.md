@@ -10,7 +10,7 @@ compact builder baseline; the after image is rendered from the aligned operation
 
 | Before | After |
 | --- | --- |
-| ![Compact builder before authored alignment](../../preview-harness/snapshots/jetcaster-discover-compact-builder.png) | ![Compact builder after authored alignment](../../preview-harness/snapshots/jetcaster-compact-fidelity-after.png) |
+| ![Compact builder before authored alignment](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/jetcaster-discover-compact-builder.png) | ![Compact builder after authored alignment](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/snapshots/jetcaster-compact-fidelity-after.png) |
 
 The same-browser `pixelmatch` measurements at threshold `0.1` changed as follows:
 

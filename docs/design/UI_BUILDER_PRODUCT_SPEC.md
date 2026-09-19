@@ -39,7 +39,7 @@ These are implemented review branches, not a claim that every stack is merged or
 | Authenticated browser/MCP convergence, ACL isolation, reconnect, restart, and deterministic exports | [#116 Gate 2 harness](https://github.com/yschimke/compose-preview-server/pull/116) and [#128 production operation replay](https://github.com/yschimke/compose-preview-server/pull/128) | implemented; stacks still under review |
 | Generated Compose and existing Playground/BTA preview adapter | [`CapabilityComposeCodeExporterTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporterTest.kt) and [#126](https://github.com/yschimke/compose-preview-server/pull/126) | implemented |
 | Published runtime/editor artifacts and extraction seam | [#123](https://github.com/yschimke/compose-preview-server/pull/123) and [#129 external-consumer gate](https://github.com/yschimke/compose-preview-server/pull/129) | implemented for runtime/web artifacts; full released-version matrix open |
-| Exact runtime hosting and sandboxed renderer/measurement protocol | [`ServeUiBuilderRuntimeAssetsTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt) and [`ui-builder-renderer.spec.mjs`](../../preview-harness/ui-builder-renderer.spec.mjs) | implemented; v1 intentionally rejects input |
+| Exact runtime hosting and sandboxed renderer/measurement protocol | [`ServeUiBuilderRuntimeAssetsTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt) and [`ui-builder-renderer.spec.mjs`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/ui-builder-renderer.spec.mjs) | implemented; v1 intentionally rejects input |
 | Jetcaster builder/generated fidelity | [#124](https://github.com/yschimke/compose-preview-server/pull/124) | under 0.22% in expanded and compact modes; exact protected golden remains open |
 | Performance | [#118](https://github.com/yschimke/compose-preview-server/pull/118) | propagation/reopen pass; canvas p95 `39.5ms` misses `16.67ms` |
 | Contracts, Figma import, and release fidelity | [contracts #30–32](https://github.com/yschimke/compose-preview-contracts/pulls) and the Wave 0 remaining-output list | open; no unreleased-coordinate workaround and no unauthorized Figma upload |
@@ -418,7 +418,7 @@ render costs must be authorized independently. A grant may not approve another g
 Designs are private to their owner/collaborators by default. Sharing requires an explicit ACL or
 unguessable read-only link. Every mutation and export records the actor identity without recording
 bearer credentials. Route-level isolation is covered by
-[`ServeUiBuilderRoutesTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRoutesTest.kt),
+[`ServeUiBuilderRoutesTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRoutesTest.kt),
 and the installed-browser plus real-MCP flow by
 [#116](https://github.com/yschimke/compose-preview-server/pull/116).
 
@@ -689,7 +689,7 @@ Each behavior above has executable evidence, including
 [`PersistentUiBuilderServiceTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceTest.kt),
 [`CapabilityComposeCodeExporterTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporterTest.kt),
 and
-[`ui-builder-renderer.spec.mjs`](../../preview-harness/ui-builder-renderer.spec.mjs). Formal release
+[`ui-builder-renderer.spec.mjs`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/ui-builder-renderer.spec.mjs). Formal release
 closure remains downstream of Gate 0's contract and Figma items.
 
 ### Wave 2: collaborative vertical slice

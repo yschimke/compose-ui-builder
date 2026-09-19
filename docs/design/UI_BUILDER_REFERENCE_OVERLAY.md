@@ -122,7 +122,7 @@ The editor sends the cheap one whenever no picture changed.
 ## Accepting an SVG
 
 PNG, JPEG and WebP are sniffed and admitted. SVG is admitted too, where
-[`ServeImageFormats`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeImageFormats.kt)
+[`ServeImageFormats`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeImageFormats.kt)
 deliberately refuses it — and the difference is real rather than an inconsistency. That lane hands
 bytes back from this origin as a *document* anyone with the link can navigate to. A reference is
 returned base64-encoded inside a JSON body and drawn into a Skia canvas by the editor that asked for
@@ -165,5 +165,5 @@ Two questions, one parse, separate answers.
 - [`ReferenceLayoutBoxesTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceLayoutBoxesTest.kt) — geometry, transforms, and what is dropped.
 - [`ReferenceImportTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceImportTest.kt) — what may be attached.
 - [`ReferenceOverlayStateTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceOverlayStateTest.kt) — the reducer, and **every case asserts the document did not move**. That is the invariant this feature lives or dies by.
-- [`ServeUiBuilderReferenceStoreTest`](../../server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderReferenceStoreTest.kt) — storage, refusals, clamping, and that a design id never becomes a path.
+- [`ServeUiBuilderReferenceStoreTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderReferenceStoreTest.kt) — storage, refusals, clamping, and that a design id never becomes a path.
 - [`ReferencePiecePromotionTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferencePiecePromotionTest.kt) — the crossing back: a captured piece builds the node a catalog insertion would, a piece with no provenance is refused rather than guessed at, and the deepest accepting slot under the point wins.

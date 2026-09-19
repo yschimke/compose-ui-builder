@@ -208,7 +208,7 @@ Everything above is event-driven *inside* the product: a browser holds a socket,
 tool call, and one write wakes both. What none of it reaches is somebody who is not in the editor. A
 designer's "the gap above the card is wrong", left in Talk on a Friday afternoon, is invisible to
 the PM in the chat thread and to the engineer on the PR until one of them opens the design.
-[`MULTIPLAYER_WORKFLOW.md`](MULTIPLAYER_WORKFLOW.md) names that as the one missing direction of its
+[`MULTIPLAYER_WORKFLOW.md`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/MULTIPLAYER_WORKFLOW.md) names that as the one missing direction of its
 review loop, and `--ui-builder-comment-webhook <url>` (container
 `SERVE_UI_BUILDER_COMMENT_WEBHOOK`) is it: one URL, told when a board moves.
 
@@ -276,7 +276,7 @@ shows, and `authorId` is the authenticated actor a relay can check it against. O
 have let a chat window state as fact that somebody said a thing they did not.
 
 **One destination, and the design's own thread carried rather than posted to.** Build item 3 of
-[`MULTIPLAYER_WORKFLOW.md`](MULTIPLAYER_WORKFLOW.md) originally asked for a per-design override in
+[`MULTIPLAYER_WORKFLOW.md`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/MULTIPLAYER_WORKFLOW.md) originally asked for a per-design override in
 `links.thread`. The event carries that value instead — `design.thread` on every notification — so a
 relay that knows the chat platform can put the message in the right conversation, and the host keeps
 posting to the one URL its operator configured.

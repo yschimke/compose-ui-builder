@@ -22,7 +22,7 @@ scaffold on export is not a loss, it is the correct output.
 | Canvas fidelity | Exact | An approximation, stated as one |
 
 So `wear-m3/screen-scaffold` is faked only in the **drawing**. The generated Kotlin calls the real
-`ScreenScaffold`, and [`WearScreenCodeExporter`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearScreenCodeExporter.kt)
+`ScreenScaffold`, and [`WearScreenCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearScreenCodeExporter.kt)
 is a second generator rather than a flag on the widget one because "erase the stand-in" and "emit
 the stand-in" are different jobs that happen to share a shape.
 
@@ -108,8 +108,9 @@ conservative.
 > disagreeing is a finding about the port, not about the design — which is a far better position
 > than a lookalike nothing could check.
 >
-> What remains is tracked under [Known gaps](#known-gaps), and it is a much shorter list than it
-> was: the screen scaffold is still the hand-drawn host, and a handful of components are drawn in a
+> What remains is tracked under [what is still not the watch](#what-is-still-not-the-watch), and it
+> is a much shorter list than it was: the screen scaffold is still the hand-drawn host, and a
+> handful of components are drawn in a
 > shape the catalog does not yet carry enough properties to specify fully. Ordinary work, not a
 > constraint.
 >
@@ -173,7 +174,7 @@ The rule:
 somebody writes down rather than something that drifts in behind a convenient `m3/` id.
 
 The rename changed no pixels: `WearScreenSamplePreview` renders byte-identically before and after
-([`renders/ui-builder-wear-borrow/`](../../renders/ui-builder-wear-borrow/README.md)). It changed
+([`renders/ui-builder-wear-borrow/`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/renders/ui-builder-wear-borrow/README.md)). It changed
 what the design says it holds — and so did the change from a renamed copy to a declaration, which is
 why the golden's diff for it is notes and two properties rather than a picture.
 
@@ -377,7 +378,7 @@ is worth.
 ### Where a Wear design gets looked at instead
 
 The **streaming preview** — the native render lane,
-[`ServeUiBuilderNativePreview`](../../server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderNativePreview.kt)
+[`ServeUiBuilderNativePreview`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderNativePreview.kt)
 — compiles a design's generated Kotlin and streams the frames it renders back to the browser. That
 lane runs real Compose against a real classpath, which is precisely what the Wasm canvas cannot do,
 and the Wear source it would be handed is [already the honest half](#what-the-design-generates) of
@@ -449,7 +450,7 @@ Everything is within a dp, and the residue is antialiasing thresholds in the mea
 layout. The two are the same design: the builder's template carries wear-m3-catalog's rows character
 for character, so a difference between the columns means something.
 
-![The builder's canvas beside wear-m3-catalog's stitched LONG capture](evidence/ui-builder-wear-screen/wear-screen-parity.png)
+![The builder's canvas beside wear-m3-catalog's stitched LONG capture](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-parity.png)
 
 ### Where the numbers came from
 
@@ -482,7 +483,7 @@ the builder *generates* renders the same way, and that is now checked end to end
 The three, left to right — wear-m3-catalog's hand-written component, the builder's Wasm canvas, and
 the generated screen compiled and captured on Android:
 
-![The reference, the canvas, and the generated screen rendered for real](evidence/ui-builder-wear-screen/wear-screen-round-trip.png)
+![The reference, the canvas, and the generated screen rendered for real](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-round-trip.png)
 
 | At 192dp | Canvas | Generated, rendered |
 | --- | --- | --- |
@@ -550,7 +551,7 @@ Everything above compares extents, because that is what the canvas draws. The ge
 other preview is the one a watch actually shows — `@WearPreviewDevices`, one screenful, rows
 transformed against the bezel:
 
-![The generated Wear screen rendered as a single round frame](evidence/ui-builder-wear-screen/wear-screen-single-frame.png)
+![The generated Wear screen rendered as a single round frame](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-single-frame.png)
 
 The first row is at full width and the second is already scaled and faded into the curve; the scroll
 indicator is on the right bezel, because a single frame is exactly where it belongs. Reading it
@@ -594,7 +595,7 @@ The Code pane routes a `wear-m3/screen-scaffold` root to `WearScreenCodeExporter
 root routes to `WearWidgetCodeExporter` — one answer to one question, rather than the Compose gate's
 "no component record" refusal, which is true and useless.
 
-![The Code pane on the Wear screen design](evidence/ui-builder-wear-screen/wear-screen-code-pane.png)
+![The Code pane on the Wear screen design](https://raw.githubusercontent.com/yschimke/compose-preview-server/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/design/evidence/ui-builder-wear-screen/wear-screen-code-pane.png)
 
 The scaffold's `timeText` generates the `AppScaffold` that actually owns the status strip —
 `ScreenScaffold` has no `timeText` argument — and the frozen `10:10` is the same freeze
