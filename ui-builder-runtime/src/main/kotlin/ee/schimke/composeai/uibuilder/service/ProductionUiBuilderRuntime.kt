@@ -2615,19 +2615,32 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                   put(
                     "reason",
                     JsonPrimitive(
-                      "The canvas draws this catalog with a Compose Multiplatform build of Wear " +
-                        "Compose — the Android AAR has no browser variant — so the components are " +
-                        "the real ones. What is still the canvas's own: the screen frame (the " +
-                        "extent has no viewport for a real scaffold), the unrolled list (a long " +
-                        "screenshot turns the row transformation off), and the type scale, which " +
-                        "is the mobile theme's. Author on it; check a size on the Android preview, " +
-                        "which compiles this design's own generated Kotlin against the real AAR."
+                      "The canvas draws this catalog's components with a Compose Multiplatform " +
+                        "build of Wear Compose — the Android AAR has no browser variant — so each " +
+                        "is the component itself rather than an impression of it. What is still " +
+                        "the canvas's own: the screen frame (the extent has no viewport for a " +
+                        "real scaffold), the unrolled list (a long screenshot turns the row " +
+                        "transformation off), and the type scale, which is the mobile theme's. " +
+                        "Author on it; check a size on the Android preview, which compiles this " +
+                        "design's own generated Kotlin against the real AAR."
                     ),
                   )
                 }
                 putJsonObject("native") {
                   put("fidelity", JsonPrimitive("authoritative"))
                   put("backend", JsonPrimitive("android"))
+                  // The catalog's own sentence, and stated here rather than left to the reader to
+                  // infer from `backend`: this is the lane that renders the design's own generated
+                  // Kotlin against the real `androidx.wear.compose` AAR under Robolectric, which is
+                  // the same lane that produces wear-m3-catalog's published stickers.
+                  put(
+                    "reason",
+                    JsonPrimitive(
+                      "The generated Kotlin compiled against this module's own classpath and " +
+                        "rendered under Robolectric: the same lane that produces this catalog's " +
+                        "stickers."
+                    ),
+                  )
                 }
               }) +
             // The other thing a catalog says about itself that is not a component: how the
