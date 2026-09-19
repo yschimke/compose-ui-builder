@@ -6322,6 +6322,21 @@ private fun ConstrainedFramePane(
   renderSessionId: String = FRAME_COMPANION_SESSION,
   wearWidgetHostShape: WearWidgetHostShape? = null,
 ) {
+  // **Read in the editor's composition, never inside the scene.** A scene starts with no
+  // `CompositionLocal`s, so `provides LocalX.current` written in the content lambda below resolves
+  // against the scene's empty context and yields each local's default. That is what silently cost
+  // this pane the catalog's frame geometry — and with it the scaffold's content padding, so its
+  // rows ran to the bezel and were clipped — along with the catalog's component ids, its canvas
+  // adapters, its platform word, the widget host shape and the asset registry. Reading them here
+  // captures the values the editor is actually running with.
+  val nativeOnlyIds = LocalUiBuilderNativeOnly.current
+  val catalogComponentIds = LocalUiBuilderCatalogComponentIds.current
+  val canvasAdapters = LocalUiBuilderCanvasAdapters.current
+  val frameGeometry = LocalUiBuilderFrameGeometry.current
+  val catalogPlatform = LocalUiBuilderCatalogPlatform.current
+  val ambientWidgetHostShape = LocalWearWidgetHostShape.current
+  val remoteDocuments = LocalRemoteComposeDocuments.current
+  val assetBitmaps = LocalUiBuilderAssetBitmaps.current
   Box(Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)) {
     Surface(
       Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
@@ -6366,15 +6381,14 @@ private fun ConstrainedFramePane(
         density = LocalDensity.current,
         content = {
           CompositionLocalProvider(
-            LocalUiBuilderNativeOnly provides LocalUiBuilderNativeOnly.current,
-            LocalUiBuilderCatalogComponentIds provides LocalUiBuilderCatalogComponentIds.current,
-            LocalUiBuilderCanvasAdapters provides LocalUiBuilderCanvasAdapters.current,
-            LocalUiBuilderFrameGeometry provides LocalUiBuilderFrameGeometry.current,
-            LocalUiBuilderCatalogPlatform provides LocalUiBuilderCatalogPlatform.current,
-            LocalWearWidgetHostShape provides
-              (wearWidgetHostShape ?: LocalWearWidgetHostShape.current),
-            LocalRemoteComposeDocuments provides LocalRemoteComposeDocuments.current,
-            LocalUiBuilderAssetBitmaps provides LocalUiBuilderAssetBitmaps.current,
+            LocalUiBuilderNativeOnly provides nativeOnlyIds,
+            LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
+            LocalUiBuilderCanvasAdapters provides canvasAdapters,
+            LocalUiBuilderFrameGeometry provides frameGeometry,
+            LocalUiBuilderCatalogPlatform provides catalogPlatform,
+            LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
+            LocalRemoteComposeDocuments provides remoteDocuments,
+            LocalUiBuilderAssetBitmaps provides assetBitmaps,
           ) {
             UiBuilderSurface(
               document = document,
