@@ -142,7 +142,7 @@ object RecordFreeExport {
     document: UiBuilderDocument,
     packageName: String? = null,
     tagNodes: Boolean = false,
-    previews: Boolean = true,
+    previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? =
@@ -193,7 +193,7 @@ object RecordFreeExport {
     document: DesignDocumentV1,
     packageName: String? = null,
     tagNodes: Boolean = false,
-    previews: Boolean = true,
+    previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? {

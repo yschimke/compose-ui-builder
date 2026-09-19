@@ -77,20 +77,26 @@ object WearScreenCodeExporter {
    *   its slots. Empty by default, which refuses every pack node by name exactly as before packs
    *   existed. See [WearContentEmitter.emitPack].
    * @param previews whether the file carries the `@WearPreviewDevices` / `@ScrollingPreview`
-   *   fan-out an **export artifact** wants. The native preview lane passes `false`, and the reason
-   *   is not tidiness: those functions import `androidx.wear.compose:compose-ui-tooling` and
-   *   compose-ai-tools' `preview-annotations`, neither of which is on a catalog's runtime bundle —
-   *   the classpath this lane compiles against. Emitting them made every Wear design fail to
-   *   compile on the lane, with `Unresolved reference 'WearPreviewDevices'` as the whole
-   *   explanation, which reads like a broken design rather than a source file asking for artifacts
-   *   the host deliberately does not have. The lane writes its own `@Preview` around the composable
-   *   (`UiBuilderGeneratedPreviewAdapter`), so nothing here is lost by its absence.
+   *   fan-out an **export artifact** wants. It defaults to `!tagNodes`, because the two questions
+   *   have the same answer: tagging is what the native preview lane asks for and nothing else does,
+   *   and that lane is also the one that cannot carry these previews. They import
+   *   `androidx.wear.compose:compose-ui-tooling` and compose-ai-tools' `preview-annotations`,
+   *   neither of which is on a catalog's runtime bundle — the classpath the lane compiles against —
+   *   so emitting them made every Wear design fail there with `Unresolved reference
+   *   'WearPreviewDevices'`, which reads like a broken design rather than a source file asking for
+   *   artifacts the host deliberately does not have. The lane writes its own `@Preview` around the
+   *   composable (`UiBuilderGeneratedPreviewAdapter`), so nothing is lost by their absence.
+   *
+   *   Deriving the default rather than requiring the caller to pass both is what keeps this a
+   *   change to one repository. A caller that has to say `tagNodes = true, previews = false` is a
+   *   caller that cannot compile until this module publishes, which is a two-repository release for
+   *   one flag.
    */
   fun export(
     document: UiBuilderDocument,
     packageName: String? = null,
     tagNodes: Boolean = false,
-    previews: Boolean = true,
+    previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
   ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a screen design has one root")

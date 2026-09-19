@@ -87,13 +87,16 @@ class WearScreenCodeExporterTest {
   @Test
   fun `the native lane's source carries no preview fan-out, and the artifact's does`() {
     val document = wearScreenUiBuilderDocument("activity", pin, environment)
+    // `tagNodes = true` alone, with no `previews` argument: the lane asks for tags, and that is
+    // the whole of what it has to say. Requiring it to also spell out `previews = false` would be
+    // an API change the server could not compile against until this module published — a
+    // two-repository release for one flag.
     val native =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
           WearScreenCodeExporter.export(
             document,
             packageName = "generated.uibuilder",
             tagNodes = true,
-            previews = false,
           )
         )
         .source
