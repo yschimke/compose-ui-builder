@@ -48,6 +48,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -174,13 +176,16 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -2414,11 +2419,20 @@ private class NewDesignFormState(
 
   val variableNameValid: Boolean
     get() = NEW_DESIGN_STATE_NAME.matches(variableName) && declared.none { it.name == variableName }
+
+  fun addVariable(): Boolean {
+    if (!variableNameValid || !newDesignInitialValueValid(variableKind, variableInitial))
+      return false
+    declared += NewDesignState(variableName, variableKind, variableKind.parse(variableInitial))
+    variableName = ""
+    variableInitial = ""
+    return true
+  }
 }
 
 /** The New design form itself: catalog, starting point, id, and the optional state variables. */
 @Composable
-private fun NewDesignFormFields(form: NewDesignFormState) {
+private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) {
 
   Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
     Text("Catalog", style = MaterialTheme.typography.labelLarge)
@@ -2494,6 +2508,8 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
       },
       isError = form.designId.isNotEmpty() && !form.designIdValid,
       singleLine = true,
+      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+      keyboardActions = KeyboardActions(onDone = { if (form.designIdValid) onSubmit() }),
     )
     // Optional starting state. The Screen inspector can add and edit declarations later.
     if (!form.stateExpanded && form.declared.isEmpty()) {
@@ -2531,6 +2547,8 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
           placeholder = { Text("expanded") },
           isError = form.variableName.isNotEmpty() && !form.variableNameValid,
           singleLine = true,
+          keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+          keyboardActions = KeyboardActions(onDone = { form.addVariable() }),
         )
         OutlinedTextField(
           value = form.variableInitial,
@@ -2551,18 +2569,11 @@ private fun NewDesignFormFields(form: NewDesignFormState) {
             } else null,
           isError = !initialValueValid,
           singleLine = true,
+          keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+          keyboardActions = KeyboardActions(onDone = { form.addVariable() }),
         )
         TextButton(
-          onClick = {
-            form.declared +=
-              NewDesignState(
-                form.variableName,
-                form.variableKind,
-                form.variableKind.parse(form.variableInitial),
-              )
-            form.variableName = ""
-            form.variableInitial = ""
-          },
+          onClick = { form.addVariable() },
           enabled = form.variableNameValid && initialValueValid,
         ) {
           Text("Add")
@@ -2620,25 +2631,19 @@ private fun NewDesignDialog(
     ) -> Unit,
 ) {
   val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId)
+  val submit = {
+    onCreate(
+      form.selectedCatalog.systemId,
+      form.designId,
+      form.selectedTemplate.id,
+      form.declared,
+    )
+  }
   AlertDialog(
     onDismissRequest = { onDismiss?.invoke() },
     title = { Text("Create a new design") },
-    text = { NewDesignFormFields(form) },
-    confirmButton = {
-      Button(
-        onClick = {
-          onCreate(
-            form.selectedCatalog.systemId,
-            form.designId,
-            form.selectedTemplate.id,
-            form.declared,
-          )
-        },
-        enabled = form.designIdValid,
-      ) {
-        Text("Create")
-      }
-    },
+    text = { NewDesignFormFields(form, submit) },
+    confirmButton = { Button(onClick = submit, enabled = form.designIdValid) { Text("Create") } },
     dismissButton = { if (onDismiss != null) TextButton(onClick = onDismiss) { Text("Cancel") } },
   )
 }
@@ -2859,6 +2864,14 @@ private fun NewDesignHomePanel(
       state: List<NewDesignState>,
     ) -> Unit,
 ) {
+  val submit = {
+    onCreate(
+      form.selectedCatalog.systemId,
+      form.designId,
+      form.selectedTemplate.id,
+      form.declared,
+    )
+  }
   Surface(
     modifier = modifier,
     shape = RoundedCornerShape(16.dp),
@@ -2870,16 +2883,9 @@ private fun NewDesignHomePanel(
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
       Text("Start something new", style = MaterialTheme.typography.titleMedium)
-      NewDesignFormFields(form)
+      NewDesignFormFields(form, submit)
       Button(
-        onClick = {
-          onCreate(
-            form.selectedCatalog.systemId,
-            form.designId,
-            form.selectedTemplate.id,
-            form.declared,
-          )
-        },
+        onClick = submit,
         enabled = form.designIdValid,
         modifier = Modifier.semantics { contentDescription = "Create design" },
       ) {
@@ -7902,6 +7908,21 @@ private fun HoverEnumControl(
 
 private val ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)
 
+private data class InspectorPropertyDraftKey(val nodeId: String, val property: String)
+
+private enum class InspectorPropertyDraftStatus {
+  DIRTY,
+  PENDING,
+  REJECTED,
+}
+
+private data class InspectorPropertyDraft(
+  val value: String,
+  /** The authored value when this draft began; a change from it acknowledges a commit. */
+  val sourceValue: String,
+  val status: InspectorPropertyDraftStatus = InspectorPropertyDraftStatus.DIRTY,
+)
+
 @Composable
 private fun PropertyInspector(
   state: UiBuilderEditorState,
@@ -7941,6 +7962,10 @@ private fun PropertyInspector(
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
+  val propertyDrafts =
+    remember(state.document.id) {
+      mutableStateMapOf<InspectorPropertyDraftKey, InspectorPropertyDraft>()
+    }
   Surface(modifier, color = MaterialTheme.colorScheme.surface) {
     Column {
       // The four inspectors used to share a row of tabs inside this panel, which is why it had to
@@ -7960,7 +7985,10 @@ private fun PropertyInspector(
           },
         supporting =
           when (state.inspectorMode) {
-            EditorInspectorMode.Properties -> node?.id ?: "Nothing selected"
+            EditorInspectorMode.Properties ->
+              if (propertyDrafts.isEmpty()) node?.id ?: "Nothing selected"
+              else
+                "${propertyDrafts.size} uncommitted edit${if (propertyDrafts.size == 1) "" else "s"} retained"
             EditorInspectorMode.Theme -> "Applies to the whole design"
             EditorInspectorMode.Screen -> "Frame, density and reference"
             EditorInspectorMode.Issues -> "What the export would refuse"
@@ -8000,6 +8028,7 @@ private fun PropertyInspector(
         onResolveCommentThread = onResolveCommentThread,
         onCopyThreadLink = onCopyThreadLink,
         onTextInputFocusChanged = onTextInputFocusChanged,
+        propertyDrafts = propertyDrafts,
         dispatch = dispatch,
       )
     }
@@ -8042,6 +8071,7 @@ private fun InspectorBody(
   onResolveCommentThread: ((String, Boolean) -> Unit)?,
   onCopyThreadLink: ((DesignCommentThread) -> Unit)?,
   onTextInputFocusChanged: (Boolean) -> Unit,
+  propertyDrafts: MutableMap<InspectorPropertyDraftKey, InspectorPropertyDraft>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -8222,6 +8252,11 @@ private fun InspectorBody(
             field.name in comparisonBindingProperties && (!booleanState || nullableState)
           },
           onTextInputFocusChanged = onTextInputFocusChanged,
+          draft = propertyDrafts[InspectorPropertyDraftKey(field.nodeId, field.name)],
+          onDraftChange = { draft ->
+            val key = InspectorPropertyDraftKey(field.nodeId, field.name)
+            if (draft == null) propertyDrafts.remove(key) else propertyDrafts[key] = draft
+          },
           onBind = { variable, equalsValue ->
             dispatch(
               UiBuilderEditorEvent.BindPropertyToState(
@@ -8429,6 +8464,8 @@ private fun PropertyControl(
   stateVariables: List<String>,
   needsComparison: (String) -> Boolean,
   onTextInputFocusChanged: (Boolean) -> Unit,
+  draft: InspectorPropertyDraft?,
+  onDraftChange: (InspectorPropertyDraft?) -> Unit,
   onBind: (String, String?) -> Unit,
   onUnbind: () -> Unit,
   commit: (String) -> Unit,
@@ -8476,10 +8513,24 @@ private fun PropertyControl(
           GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
         else EnumPropertyControl(field, commit)
       EditorPropertyControl.Number ->
-        DraftPropertyControl(field, onTextInputFocusChanged, commit, showSteppers = true)
+        DraftPropertyControl(
+          field,
+          onTextInputFocusChanged,
+          draft,
+          onDraftChange,
+          commit,
+          showSteppers = true,
+        )
       EditorPropertyControl.Text,
       EditorPropertyControl.Color ->
-        DraftPropertyControl(field, onTextInputFocusChanged, commit, showSteppers = false)
+        DraftPropertyControl(
+          field,
+          onTextInputFocusChanged,
+          draft,
+          onDraftChange,
+          commit,
+          showSteppers = false,
+        )
       EditorPropertyControl.Unsupported ->
         Text(
           field.value.ifEmpty { "Not set" },
@@ -8611,33 +8662,74 @@ private fun StateBindMenu(
 private fun DraftPropertyControl(
   field: EditorPropertyField,
   onTextInputFocusChanged: (Boolean) -> Unit,
+  draft: InspectorPropertyDraft?,
+  onDraftChange: (InspectorPropertyDraft?) -> Unit,
   commit: (String) -> Unit,
   showSteppers: Boolean,
 ) {
-  var draft by remember(field.nodeId, field.name, field.value) { mutableStateOf(field.value) }
-  val dirty = draft != field.value
+  val value = draft?.value ?: field.value
+  val dirty = value != field.value
+  val multiline = field.name == "text"
+  val valid = !showSteppers || value.toDoubleOrNull() != null
+  fun update(next: String) {
+    onDraftChange(
+      if (next == field.value) null
+      else
+        InspectorPropertyDraft(
+          next,
+          draft?.sourceValue ?: field.value,
+          InspectorPropertyDraftStatus.DIRTY,
+        )
+    )
+  }
+  fun submit(next: String = value) {
+    if (next == field.value || (!showSteppers || next.toDoubleOrNull() != null)) {
+      onDraftChange(InspectorPropertyDraft(next, field.value, InspectorPropertyDraftStatus.PENDING))
+      commit(next)
+    }
+  }
+  LaunchedEffect(field.value, draft?.status) {
+    if (draft?.status == InspectorPropertyDraftStatus.PENDING) {
+      if (field.value != draft.sourceValue) onDraftChange(null)
+      else onDraftChange(draft.copy(status = InspectorPropertyDraftStatus.REJECTED))
+    }
+  }
   // The field and its Apply on one line, and the Apply only once the value has actually been
   // edited. A full-width filled button under every property is what made this panel need 360 dp
   // and five scrolls to reach a font size: on a text leaf it drew six of them, all identical, none
   // of them doing anything until something above it changed.
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     BasicTextField(
-      value = draft,
-      onValueChange = { draft = it },
+      value = value,
+      onValueChange = ::update,
       modifier =
         Modifier.weight(1f)
           .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
+          .onPreviewKeyEvent { event ->
+            val submitChord =
+              event.type == KeyEventType.KeyDown &&
+                event.key in ENTER_KEYS &&
+                (!multiline || event.isCtrlPressed || event.isMetaPressed)
+            if (submitChord && dirty && valid) {
+              submit()
+              true
+            } else false
+          }
           .semantics { contentDescription = "${field.label} property" }
           .padding(top = 7.dp)
           .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
           .padding(10.dp),
       textStyle =
         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-      singleLine = field.name != "text",
+      singleLine = !multiline,
+      keyboardOptions =
+        KeyboardOptions(imeAction = if (multiline) ImeAction.Default else ImeAction.Done),
+      keyboardActions = KeyboardActions(onDone = { if (dirty && valid) submit() }),
     )
     if (dirty) {
       TextButton(
-        onClick = { commit(draft) },
+        onClick = { submit() },
+        enabled = valid && draft?.status != InspectorPropertyDraftStatus.PENDING,
         modifier =
           Modifier.padding(start = 4.dp, top = 7.dp).semantics {
             // The name the accessibility tree and every script driving this editor already look
@@ -8651,17 +8743,40 @@ private fun DraftPropertyControl(
       }
     }
   }
+  if (dirty) {
+    val status =
+      when {
+        !valid -> "Invalid number · edit retained"
+        draft?.status == InspectorPropertyDraftStatus.PENDING -> "Applying edit…"
+        draft?.status == InspectorPropertyDraftStatus.REJECTED ->
+          "Edit was not applied · value retained"
+        multiline -> "Uncommitted edit retained · Ctrl/⌘+Enter applies"
+        else -> "Uncommitted edit retained · Enter applies"
+      }
+    Text(
+      status,
+      Modifier.semantics {
+        contentDescription = "${field.label}: $status"
+        liveRegion = LiveRegionMode.Polite
+      },
+      color =
+        if (!valid || draft?.status == InspectorPropertyDraftStatus.REJECTED)
+          MaterialTheme.colorScheme.error
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+  }
   if (showSteppers) {
     val bounds = field.numberBounds
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
       TextButton(
         onClick = {
-          val current = draft.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
-          draft =
+          val current = value.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
+          val next =
             (current - (bounds?.step ?: 1.0))
               .coerceIn(bounds!!.minimum, bounds.maximum)
               .editorNumber(bounds.integer)
-          commit(draft)
+          submit(next)
         },
         contentPadding = PaddingValues(horizontal = 12.dp),
       ) {
@@ -8678,12 +8793,12 @@ private fun DraftPropertyControl(
       )
       TextButton(
         onClick = {
-          val current = draft.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
-          draft =
+          val current = value.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
+          val next =
             (current + (bounds?.step ?: 1.0))
               .coerceIn(bounds!!.minimum, bounds.maximum)
               .editorNumber(bounds.integer)
-          commit(draft)
+          submit(next)
         },
         contentPadding = PaddingValues(horizontal = 12.dp),
       ) {
@@ -8693,7 +8808,7 @@ private fun DraftPropertyControl(
   }
   if (field.name == "text") {
     TextButton(
-      onClick = { commit("Edited in Compose") },
+      onClick = { submit("Edited in Compose") },
       contentPadding = PaddingValues(horizontal = 10.dp),
     ) {
       Text("Use sample text")
