@@ -133,6 +133,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -1007,6 +1008,18 @@ fun UiBuilderEditor(
   }
   val draggedPlan = draggedCatalogPlan ?: draggedMovePlan
   val canvasDropHovered = draggedPlan != null
+  // The empty recommended slots, from the same inspection the drop plan reads — one region per
+  // slot, computed by the reducer, so the hint drawn and the target hit cannot disagree.
+  val slotPlaceholders =
+    remember(state.document, canvasInspection) {
+      canvasInspection?.let { snapshot ->
+        reducer.slotPlaceholders(
+          state,
+          snapshot.slots,
+          snapshot.nodes.mapNotNull { node -> node.bounds?.let { node.nodeId to it } }.toMap(),
+        )
+      } ?: emptyList()
+    }
   // Over the workspace but not over the design: the beside ground. The status bar names what a
   // release there would do — the panel's own add-beside, or the reason it would refuse — because
   // a gesture that acts on release must say so while the pointer is still down.
@@ -1135,6 +1148,24 @@ fun UiBuilderEditor(
       }
     }
   /**
+   * What the insert panel calls the place an Add would land.
+   *
+   * The panel used to answer with an id — "Adds into toolbar-discover-row.children" — which is the
+   * document's name for the place rather than the reader's. The layers panel and the breadcrumbs
+   * both call that node "Row"; this says the same thing and then the slot, so the three places that
+   * name a destination agree.
+   */
+  fun insertDestinationLabel(target: ParentSlot): String {
+    val name =
+      layerRows
+        .filterIsInstance<EditorLayerRow.Node>()
+        .firstOrNull { it.nodeId == target.nodeId }
+        ?.row
+        ?.label ?: state.document.nodes[target.nodeId]?.componentId ?: target.nodeId
+    return "$name › ${target.slot}"
+  }
+
+  /**
    * The selection's verbs, as menu rows, for whoever opens a menu under the pointer.
    *
    * Built here rather than at each call site because every question it asks — can this be pasted
@@ -1218,6 +1249,8 @@ fun UiBuilderEditor(
         layerRows = layerRows,
         collaborators = collaborators,
         dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
+        dropTargetLabel =
+          reducer.dropTarget(state, draggedComponentId ?: "m3/text")?.let(::insertDestinationLabel),
         onCatalogDrag = { componentId, variant, position ->
           if (position == null) {
             draggedComponentId = null
@@ -1419,6 +1452,7 @@ fun UiBuilderEditor(
       },
       dropHovered = canvasDropHovered,
       dropPlan = draggedPlan,
+      slotPlaceholders = slotPlaceholders,
       // A catalogue drag carries the component as the ghost, drawn at landing size; a canvas move
       // carries the subtree it picked up, built from the same document the canvas is drawing.
       dragPreview = dragGhostPreview,
@@ -4751,6 +4785,8 @@ private fun EditorNavigator(
   layerRows: List<EditorLayerRow>,
   collaborators: List<UiBuilderCollaborator>,
   dropTarget: ParentSlot?,
+  /** What [dropTarget] is called out loud — a layer's name and its slot, not an id. */
+  dropTargetLabel: String? = null,
   onCatalogDrag: (String, EditorCatalogVariant?, Offset?) -> Unit,
   onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
@@ -4800,6 +4836,7 @@ private fun EditorNavigator(
             onManagePacks = onManagePacks,
             thumbnailOf = thumbnailOf,
             dropTarget = dropTarget,
+            dropTargetLabel = dropTargetLabel,
             onCatalogDrag = onCatalogDrag,
             onCatalogDrop = onCatalogDrop,
             canAddCatalogComponent = canAddCatalogComponent,
@@ -4857,6 +4894,8 @@ private fun InsertPanel(
   /** The document a row's picture draws, from the reducer that would perform the insert. */
   thumbnailOf: (String, EditorCatalogVariant?) -> UiBuilderDocument?,
   dropTarget: ParentSlot?,
+  /** What [dropTarget] is called out loud — a layer's name and its slot, not an id. */
+  dropTargetLabel: String? = null,
   onCatalogDrag: (String, EditorCatalogVariant?, Offset?) -> Unit,
   onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
@@ -4913,7 +4952,8 @@ private fun InsertPanel(
     Text(
       when {
         state.addBeside -> besideDestination ?: besideRefusal.orEmpty()
-        dropTarget != null -> "Adds into ${dropTarget.nodeId}.${dropTarget.slot}"
+        dropTarget != null ->
+          "Adds into ${dropTargetLabel ?: "${dropTarget.nodeId}.${dropTarget.slot}"}"
         else -> "Select a layer that can hold a component"
       },
       Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
@@ -5338,6 +5378,11 @@ internal fun PinnedDesignCanvas(
    */
   dropPlan: UiBuilderDropPlan? = null,
   /**
+   * The empty recommended slots, drawn as dashed "a component goes here" regions until they are
+   * populated — see [UiBuilderEditorReducer.slotPlaceholders].
+   */
+  slotPlaceholders: List<UiBuilderSlotPlaceholder> = emptyList(),
+  /**
    * The dragged component carried beside the pointer, at the size it would land — a ghost of the
    * component itself, not of the thumbnail frame it was pictured in.
    */
@@ -5660,6 +5705,11 @@ internal fun PinnedDesignCanvas(
                   },
                   onInspectionInvalidated = onInspectionInvalidated,
                 )
+                SlotPlaceholderOverlay(
+                  placeholders = slotPlaceholders,
+                  frameBounds = frameBounds,
+                  drawScale = drawScale,
+                )
                 DropTargetOverlay(
                   dropPlan = dropPlan,
                   frameBounds = frameBounds,
@@ -5814,6 +5864,106 @@ internal fun PinnedDesignCanvas(
       onZoomChanged = onZoomChanged,
       modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
     )
+  }
+}
+
+/**
+ * The empty recommended slots, drawn as dashed regions that say "a component goes here".
+ *
+ * The alternative to a placeholder is the panel's destination line — "Adds into
+ * root-surface.content" — which answers the same question in a sentence about ids. This answers it
+ * where the answer belongs, and it is the region a drop hits: the reducer computes one region per
+ * empty slot and both the drawing and the hit test read it, so what a reader sees is what a drop
+ * lands in. It is drawn under the drag marker and gone the moment the slot is populated, because
+ * the reducer only reports empty slots.
+ *
+ * Strokes and type are screen-sized, not design-sized: a hint that thins with the zoom is a hint
+ * lost exactly when the design is too small to read. The label is scaled back up through the same
+ * factor the frame is scaled down by.
+ */
+@Composable
+private fun SlotPlaceholderOverlay(
+  placeholders: List<UiBuilderSlotPlaceholder>,
+  frameBounds: Rect,
+  drawScale: Float,
+) {
+  if (placeholders.isEmpty()) return
+  val color = MaterialTheme.colorScheme.primary
+  val stroke = screenStroke(2f, drawScale)
+  val dashOn = screenStroke(8f, drawScale)
+  val dashOff = screenStroke(6f, drawScale)
+  Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
+    placeholders.forEach { placeholder ->
+      val bounds = placeholder.bounds
+      val local =
+        UiBuilderPixelBounds(
+          x = (bounds.x - frameBounds.left) / drawScale,
+          y = (bounds.y - frameBounds.top) / drawScale,
+          width = bounds.width / drawScale,
+          height = bounds.height / drawScale,
+        )
+      drawRoundRect(
+        color = color.copy(alpha = 0.06f),
+        topLeft = Offset(local.x, local.y),
+        size = Size(local.width, local.height),
+        cornerRadius = CornerRadius(stroke * 4f),
+      )
+      drawRoundRect(
+        color = color.copy(alpha = 0.5f),
+        topLeft = Offset(local.x, local.y),
+        size = Size(local.width, local.height),
+        cornerRadius = CornerRadius(stroke * 4f),
+        style =
+          Stroke(
+            width = stroke,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashOn, dashOff), 0f),
+          ),
+      )
+    }
+  }
+  val density = LocalDensity.current
+  placeholders.forEach { placeholder ->
+    val bounds = placeholder.bounds
+    val local =
+      UiBuilderPixelBounds(
+        x = (bounds.x - frameBounds.left) / drawScale,
+        y = (bounds.y - frameBounds.top) / drawScale,
+        width = bounds.width / drawScale,
+        height = bounds.height / drawScale,
+      )
+    // Centred, not cornered: the top-left of a selected container is exactly where the tight
+    // editor floats, and an invitation hidden under a panel is not an invitation.
+    Box(
+      Modifier.offset(
+          x = with(density) { local.x.toDp() },
+          y = with(density) { local.y.toDp() },
+        )
+        .size(
+          width = with(density) { local.width.coerceAtLeast(0f).toDp() },
+          height = with(density) { local.height.coerceAtLeast(0f).toDp() },
+        ),
+      contentAlignment = Alignment.Center,
+    ) {
+      Box(
+        // Back up through the frame's own scale, so the label reads at the size it was written
+        // however far the design is zoomed out.
+        Modifier.graphicsLayer {
+            scaleX = 1f / drawScale
+            scaleY = 1f / drawScale
+          }
+          .clip(RoundedCornerShape(6.dp))
+          .background(color.copy(alpha = 0.16f))
+          .padding(horizontal = 6.dp, vertical = 2.dp)
+          .semantics { contentDescription = "Drop into ${placeholder.target.slot}" }
+      ) {
+        Text(
+          placeholder.target.slot,
+          style = MaterialTheme.typography.labelSmall,
+          color = color,
+          maxLines = 1,
+        )
+      }
+    }
   }
 }
 

@@ -312,6 +312,18 @@ data class UiBuilderTidyPlan(
 )
 
 /**
+ * An empty recommended slot, as the canvas draws it: a dashed region that says "a component goes
+ * here" and is a drop target until something is.
+ *
+ * Editor-only — never in the document, never exported, gone the moment the slot is populated — so
+ * the placeholder is a fact about the *editor's* reading of a design rather than about the design.
+ */
+data class UiBuilderSlotPlaceholder(
+  val target: ParentSlot,
+  val bounds: UiBuilderPixelBounds,
+)
+
+/**
  * One rung of the selection's path from a root to the selected node. [label] follows the layer
  * row's own rule — what the node says when it says anything, its component otherwise — because a
  * breadcrumb that renames a layer the panel has been calling something else all session is a second
@@ -4119,18 +4131,9 @@ class UiBuilderEditorReducer(
     return state.document.nodes.values
       .flatMap { parent ->
         val capability = catalog.componentsById[parent.componentId] ?: return@flatMap emptyList()
-        val container = nodeBounds[parent.id]
-        capability.slots.mapNotNull { declared ->
-          val target = ParentSlot(parent.id, declared.name)
-          val children = parent.slots[declared.name].orEmpty()
-          val union = inspectedSlots[parent.id to declared.name]?.bounds
-          val bounds =
-            when {
-              capability.slots.size == 1 -> container ?: union ?: return@mapNotNull null
-              union != null -> union
-              children.isEmpty() -> container ?: return@mapNotNull null
-              else -> return@mapNotNull null
-            }
+        slotRegions(parent, capability, inspectedSlots, nodeBounds[parent.id]).mapNotNull {
+          (slotName, bounds) ->
+          val target = ParentSlot(parent.id, slotName)
           if (
             pointX < bounds.x ||
               pointX > bounds.right ||
@@ -4149,8 +4152,129 @@ class UiBuilderEditorReducer(
           // Equal regions are one region nested in the other: the deeper slot is the more
           // specific answer, and which candidate arrives first must not decide.
           { (target, _) -> state.document.slotDepth(target.nodeId) },
+          // And equal regions at the same depth are the slots of one parent, where the catalog's
+          // own recommendation decides: an empty Scaffold's three slots all claim the scaffold,
+          // and a drop into one should land in its content rather than in whichever slot the
+          // document enumerated first.
+          { (target, _) -> if (isRecommended(state, target)) 0 else 1 },
         )
       )
+  }
+
+  /**
+   * The region each of [parent]'s declared slots occupies for a hit test, or none where a slot has
+   * neither a measured child union nor a container to infer from.
+   *
+   * A populated slot is its children's union — what the renderer measured. An **empty** slot has no
+   * children to measure, so its region is inferred: the container minus the strips its *populated*
+   * sibling slots occupy. That is what gives an empty Scaffold's content the body below a populated
+   * top bar rather than the whole screen, and it is the same region the placeholder is drawn at, so
+   * what a reader sees is what a drop hits.
+   */
+  private fun slotRegions(
+    parent: UiBuilderNode,
+    capability: ComponentCapability,
+    inspectedSlots: Map<Pair<String, String>, UiBuilderSlotInspection>,
+    container: UiBuilderPixelBounds?,
+  ): Map<String, UiBuilderPixelBounds> {
+    val populated =
+      capability.slots.mapNotNull { declared ->
+        val children = parent.slots[declared.name].orEmpty()
+        if (children.isEmpty()) return@mapNotNull null
+        inspectedSlots[parent.id to declared.name]?.bounds
+      }
+    return capability.slots
+      .mapNotNull { declared ->
+        val children = parent.slots[declared.name].orEmpty()
+        val union = inspectedSlots[parent.id to declared.name]?.bounds
+        val bounds =
+          when {
+            children.isNotEmpty() -> union
+            capability.slots.size == 1 -> container ?: union
+            container != null -> emptySlotRegion(container, populated)
+            else -> union
+          } ?: return@mapNotNull null
+        declared.name to bounds
+      }
+      .toMap()
+  }
+
+  /**
+   * The part of [container] an empty slot is left with once the populated sibling strips are taken
+   * out.
+   *
+   * A strip is a sibling union that spans most of the container across one axis and hugs an edge —
+   * a top bar, a navigation bar, a rail — which is the shape a slot's content actually takes in
+   * this catalog. Anything else (a box floating in the middle) is left alone: subtracting it
+   * wholesale would shrink the region to nothing and make the empty slot undroppable.
+   */
+  private fun emptySlotRegion(
+    container: UiBuilderPixelBounds,
+    populated: List<UiBuilderPixelBounds>,
+  ): UiBuilderPixelBounds {
+    var left = container.x
+    var top = container.y
+    var right = container.right
+    var bottom = container.bottom
+    populated.forEach { strip ->
+      val spansWidth = strip.width >= (right - left) * 0.9f
+      val spansHeight = strip.height >= (bottom - top) * 0.9f
+      // The edge it hugs is the nearer one, not the one its centre is on: a populated content
+      // that starts just below a top bar and runs to the bottom has its centre below the middle
+      // and still belongs to the top edge, and subtracting it from the bottom would leave the
+      // empty top bar the whole container and the content nothing.
+      val topGap = strip.y - top
+      val bottomGap = bottom - strip.bottom
+      val leftGap = strip.x - left
+      val rightGap = right - strip.right
+      when {
+        spansWidth && topGap <= bottomGap -> top = maxOf(top, strip.bottom)
+        spansWidth -> bottom = minOf(bottom, strip.y)
+        spansHeight && leftGap <= rightGap -> left = maxOf(left, strip.right)
+        spansHeight -> right = minOf(right, strip.x)
+      }
+    }
+    return UiBuilderPixelBounds(
+      x = left,
+      y = top,
+      width = (right - left).coerceAtLeast(0f),
+      height = (bottom - top).coerceAtLeast(0f),
+    )
+  }
+
+  /**
+   * The empty recommended slots, as regions the canvas draws a placeholder at.
+   *
+   * Editor-only: a placeholder is not in the document, takes no revision and reaches no exporter —
+   * it is the panel's "where would this go" question answered on the canvas instead of in a line of
+   * text. Only the recommended slot of each component gets one, because a Scaffold's three empty
+   * slots would otherwise draw three boxes over the same screen; the rest are still droppable
+   * through [slotRegions].
+   */
+  fun slotPlaceholders(
+    state: UiBuilderEditorState,
+    slots: List<UiBuilderSlotInspection>,
+    nodeBounds: Map<String, UiBuilderPixelBounds>,
+  ): List<UiBuilderSlotPlaceholder> {
+    val inspectedSlots = slots.associateBy { it.parentNodeId to it.slotName }
+    return state.document.nodes.values.flatMap { parent ->
+      val capability = catalog.componentsById[parent.componentId] ?: return@flatMap emptyList()
+      val recommended = catalog.recommendedSlot(parent.componentId) ?: return@flatMap emptyList()
+      if (parent.slots[recommended].orEmpty().isNotEmpty()) return@flatMap emptyList()
+      slotRegions(parent, capability, inspectedSlots, nodeBounds[parent.id])
+        .filterKeys { it == recommended }
+        .map { (slotName, bounds) ->
+          UiBuilderSlotPlaceholder(ParentSlot(parent.id, slotName), bounds)
+        }
+    }
+  }
+
+  /** Whether [target] names the slot its catalog recommends for the component that owns it. */
+  private fun isRecommended(state: UiBuilderEditorState, target: ParentSlot): Boolean {
+    val parent =
+      catalog.componentsById[state.document.nodes[target.nodeId]?.componentId ?: return false]
+        ?: return false
+    return catalog.recommendedSlot(parent.componentId) == target.slot
   }
 
   /** How many ancestors [nodeId] has — the depth the equal-region tie-break prefers. */
