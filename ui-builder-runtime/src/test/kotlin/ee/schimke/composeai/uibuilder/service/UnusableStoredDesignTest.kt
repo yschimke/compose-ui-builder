@@ -462,18 +462,12 @@ class UnusableStoredDesignTest {
       )
 
     val CATALOG =
-      CatalogCapabilityV1(
-        schema = "compose-ui-builder-capabilities/v1",
-        benchmark =
-          CatalogBenchmarkV1(
-            id = "test",
-            sourceRevision = "test",
-            catalogSystemId = "test-catalog",
-            catalogRevision = "v1",
-            nativeRuntimeId = "runtime",
-          ),
-        components = emptyList(),
-      )
+      CatalogCapabilityV1.Builder(
+          "compose-ui-builder-capabilities/v1",
+          CatalogBenchmarkV1.Builder("test", "test", "test-catalog", "v1", "runtime").build(),
+          emptyList(),
+        )
+        .build()
 
     fun execute(
       service: PersistentUiBuilderService,

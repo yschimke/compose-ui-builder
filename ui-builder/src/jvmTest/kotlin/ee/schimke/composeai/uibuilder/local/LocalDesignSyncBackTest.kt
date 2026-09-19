@@ -310,18 +310,19 @@ class LocalDesignSyncBackTest {
 }
 
 private val CATALOG =
-  CatalogCapabilityV1(
-    schema = "compose-ui-builder-catalog/v1",
-    benchmark =
-      CatalogBenchmarkV1(
-        id = "test",
-        sourceRevision = "test",
-        catalogSystemId = LocalDesignFixtures.CATALOG_SYSTEM_ID,
-        catalogRevision = "test",
-        nativeRuntimeId = "test",
-      ),
-    components = emptyList(),
-  )
+  CatalogCapabilityV1.Builder(
+      "compose-ui-builder-catalog/v1",
+      CatalogBenchmarkV1.Builder(
+          "test",
+          "test",
+          LocalDesignFixtures.CATALOG_SYSTEM_ID,
+          "test",
+          "test",
+        )
+        .build(),
+      emptyList(),
+    )
+    .build()
 
 /** The stored record these tests sync, with a fork point that matches the seed by default. */
 internal fun LocalDesignFixtures.storedRecord(

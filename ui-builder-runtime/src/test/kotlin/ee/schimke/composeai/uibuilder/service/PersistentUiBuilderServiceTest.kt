@@ -3781,30 +3781,55 @@ class PersistentUiBuilderServiceTest {
   companion object {
     private val CATALOG_REFERENCE = CatalogReferenceV1("m3", "catalog", "digest", "m3-runtime")
     private val CATALOG =
-      CatalogCapabilityV1(
-        schema = "compose-catalog-capabilities/v1",
-        benchmark = CatalogBenchmarkV1("m3", "source", "m3", "catalog", "m3-runtime"),
-        components =
+      CatalogCapabilityV1.Builder(
+          "compose-catalog-capabilities/v1",
+          CatalogBenchmarkV1.Builder("m3", "source", "m3", "catalog", "m3-runtime").build(),
           listOf(
-            ComponentCapabilityV1(
-              componentId = "m3.Text",
-              displayName = "Text",
-              role = "text",
-              properties =
-                listOf(PropertyCapabilityV1("text", JsonPrimitive("string"), required = false)),
-              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
-            ),
-            ComponentCapabilityV1(
-              componentId = "m3.Button",
-              displayName = "Button",
-              role = "action",
-              properties =
-                listOf(PropertyCapabilityV1("label", JsonPrimitive("string"), required = true)),
-              wasm = WasmCapabilityV1(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED),
-            ),
+            ComponentCapabilityV1.Builder(
+                "m3.Text",
+                "Text",
+                "text",
+                WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
+                  .build(),
+              )
+              .also {
+                it.properties =
+                  listOf(
+                    PropertyCapabilityV1.Builder("text", JsonPrimitive("string"))
+                      .also { it.required = false }
+                      .build()
+                  )
+              }
+              .build(),
+            ComponentCapabilityV1.Builder(
+                "m3.Button",
+                "Button",
+                "action",
+                WasmCapabilityV1.Builder(JsonPrimitive(true), WasmAdapterStatusV1.SUPPORTED)
+                  .build(),
+              )
+              .also {
+                it.properties =
+                  listOf(
+                    PropertyCapabilityV1.Builder("label", JsonPrimitive("string"))
+                      .also { it.required = true }
+                      .build()
+                  )
+              }
+              .build(),
           ),
-        exportCapabilities = ExportCapabilitiesV1(composeCode = true, svg = true, png = true),
-      )
+        )
+        .also {
+          it.exportCapabilities =
+            ExportCapabilitiesV1.Builder()
+              .also {
+                it.composeCode = true
+                it.svg = true
+                it.png = true
+              }
+              .build()
+        }
+        .build()
   }
 }
 

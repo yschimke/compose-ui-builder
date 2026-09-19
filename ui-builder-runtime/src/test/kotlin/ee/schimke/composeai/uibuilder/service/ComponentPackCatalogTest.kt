@@ -185,22 +185,17 @@ class ComponentPackCatalogTest {
             "confetti-mobile/session-card",
             properties =
               listOf(
-                PropertyCapabilityV1(
-                  name = "title",
-                  jsonType = JsonPrimitive("string"),
-                  required = true,
-                )
+                PropertyCapabilityV1.Builder("title", JsonPrimitive("string"))
+                  .also { it.required = true }
+                  .build()
               ),
           ),
           component(
             "confetti-mobile/speaker-row",
             slots =
               listOf(
-                SlotCapabilityV1(
-                  name = "content",
-                  cardinality = SlotCardinalityV1(),
-                  ordered = true,
-                )
+                SlotCapabilityV1.Builder("content", SlotCardinalityV1.Builder().build(), true)
+                  .build()
               ),
           ),
         ),
@@ -212,19 +207,22 @@ class ComponentPackCatalogTest {
     properties: List<PropertyCapabilityV1> = emptyList(),
     slots: List<SlotCapabilityV1> = emptyList(),
   ): ComponentCapabilityV1 =
-    ComponentCapabilityV1(
-      componentId = id,
-      displayName = id.substringAfter('/'),
-      role = if (slots.isEmpty()) "Leaf" else "Container",
-      slots = slots,
-      properties = properties,
-      modifierCapabilities = listOf("padding", "fillMaxWidth"),
-      wasm =
-        WasmCapabilityV1(
-          platformSupported = JsonPrimitive(false),
-          adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
-        ),
-    )
+    ComponentCapabilityV1.Builder(
+        id,
+        id.substringAfter('/'),
+        if (slots.isEmpty()) "Leaf" else "Container",
+        WasmCapabilityV1.Builder(
+            platformSupported = JsonPrimitive(false),
+            adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+          )
+          .build(),
+      )
+      .also {
+        it.slots = slots
+        it.properties = properties
+        it.modifierCapabilities = listOf("padding", "fillMaxWidth")
+      }
+      .build()
 
   private val CatalogCapabilityV1.platform: String
     get() = statusSemantics.getValue("platform").jsonPrimitive.content

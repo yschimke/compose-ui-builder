@@ -346,7 +346,11 @@ class ProductionUiBuilderRuntimeTest {
       )
     }
     // A catalog that declares no registry says nothing about keys.
-    val silent = catalog.copy(statusSemantics = kotlinx.serialization.json.JsonObject(emptyMap()))
+    val silent =
+      catalog
+        .newBuilder()
+        .also { it.statusSemantics = kotlinx.serialization.json.JsonObject(emptyMap()) }
+        .build()
     assertNull(catalogs.validateWrite(silent, image(StringValueV1("avatar-lain")), "assetKey"))
   }
 

@@ -23,8 +23,11 @@ object RemoteDocumentExportSupport {
     json: Boolean,
     document: Boolean,
   ): ExportCapabilitiesV1 =
-    base.copy(
-      remoteJson = UiBuilderBuildFeatures.remoteCompose && json,
-      remoteDocument = UiBuilderBuildFeatures.remoteCompose && document,
-    )
+    base
+      .newBuilder()
+      .also {
+        it.remoteJson = UiBuilderBuildFeatures.remoteCompose && json
+        it.remoteDocument = UiBuilderBuildFeatures.remoteCompose && document
+      }
+      .build()
 }

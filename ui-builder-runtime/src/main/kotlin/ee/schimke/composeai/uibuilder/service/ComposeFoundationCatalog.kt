@@ -46,31 +46,26 @@ internal fun composeFoundationCatalog(
   val curation = FOUNDATION_CURATIONS[platform] ?: FOUNDATION_CURATIONS.getValue(MOBILE_PLATFORM)
   val declared = base.components.associateBy { it.componentId }
   val registryKey = CurrentM3UiBuilderCatalogExecutor.ASSET_REGISTRY_KEY
-  return base.copy(
-    components =
-      curation.componentIds(base).mapNotNull { id ->
-        // A `remote-compose/` id says WHICH seam this platform takes and WHERE it sits on the
-        // shelf. The component itself comes from [seams] -- Remote Compose's, not the foundation's.
-        // Absent from the seam source means absent from the palette, which is the behaviour a
-        // deployment serving no Remote Compose catalog should get once one publishes them.
-        val component =
-          if (id.startsWith(REMOTE_COMPOSE_NAMESPACE)) seams[id] ?: return@mapNotNull null
-          else declared.getValue(id)
-        curation.curate(component)
-      },
-    // Only what a donor is actually read for: `withBuilderVocabulary` takes the asset registry that
-    // travels with `asset/image`, and the shelves and shelf ORDER an injected component is filed
-    // under. Trimmed to those rather than carrying the whole Material 3 block, so this catalog
-    // states what it is for and a future reader does not have to work out which keys matter.
-    statusSemantics =
-      JsonObject(
-        buildMap<String, JsonElement> {
-          put(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY, JsonPrimitive(platform))
-          base.statusSemantics[registryKey]?.let { put(registryKey, it) }
-          put("componentMenu", curation.menu(base))
+  return base
+    .newBuilder()
+    .also {
+      it.components =
+        curation.componentIds(base).mapNotNull { id ->
+          val component =
+            if (id.startsWith(REMOTE_COMPOSE_NAMESPACE)) seams[id] ?: return@mapNotNull null
+            else declared.getValue(id)
+          curation.curate(component)
         }
-      ),
-  )
+      it.statusSemantics =
+        JsonObject(
+          buildMap<String, JsonElement> {
+            put(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY, JsonPrimitive(platform))
+            base.statusSemantics[registryKey]?.let { put(registryKey, it) }
+            put("componentMenu", curation.menu(base))
+          }
+        )
+    }
+    .build()
 }
 
 private const val MOBILE_PLATFORM = CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM
@@ -130,7 +125,12 @@ private val FOUNDATION_CURATIONS =
         // Every remaining borrow is foundation, so every one takes [WEAR_FOUNDATION_NOTE]. The
         // `REMOTE_COMPOSE_BORROWED_AS_THEMSELVES` branch that stood here went with the seams.
         curate = { component ->
-          component.copy(wasm = component.wasm.copy(notes = WEAR_FOUNDATION_NOTE))
+          component
+            .newBuilder()
+            .also {
+              it.wasm = component.wasm.newBuilder().also { it.notes = WEAR_FOUNDATION_NOTE }.build()
+            }
+            .build()
         },
         menu = { wearComponentMenu() },
       ),
@@ -155,10 +155,13 @@ private val FOUNDATION_CURATIONS =
         // moment the modifier is added rather than at export — the only moment an author can act on
         // it (yschimke/compose-preview-server#508).
         curate = { component ->
-          component.copy(
-            modifierCapabilities =
-              component.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
-          )
+          component
+            .newBuilder()
+            .also {
+              it.modifierCapabilities =
+                component.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+            }
+            .build()
         },
         menu = { base -> base.statusSemantics.componentMenuObject() },
       ),

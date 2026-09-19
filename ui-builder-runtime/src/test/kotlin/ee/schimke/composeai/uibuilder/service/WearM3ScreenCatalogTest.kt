@@ -254,31 +254,34 @@ class WearM3ScreenCatalogTest {
 
   /** The smallest thing that is a catalog: one component and an id. */
   private fun testCatalog(id: String = "test-catalog") =
-    CatalogCapabilityV1(
-      schema = "compose-catalog-capabilities/v1",
-      benchmark =
-        CatalogBenchmarkV1(
-          catalogRevision = "sha256:test",
-          sourceRevision = "ui-builder.json",
-          catalogSystemId = id,
-          nativeRuntimeId = "candidate",
-          id = id,
-        ),
-      components =
+    CatalogCapabilityV1.Builder(
+        "compose-catalog-capabilities/v1",
+        CatalogBenchmarkV1.Builder(id, "ui-builder.json", id, "sha256:test", "candidate").build(),
         listOf(
-          ComponentCapabilityV1(
-            componentId = "test-catalog/only",
-            displayName = "Only",
-            role = "Leaf",
-            wasm =
-              WasmCapabilityV1(
-                platformSupported = JsonPrimitive(false),
-                adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
-              ),
-          )
+          ComponentCapabilityV1.Builder(
+              "test-catalog/only",
+              "Only",
+              "Leaf",
+              WasmCapabilityV1.Builder(
+                  platformSupported = JsonPrimitive(false),
+                  adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+                )
+                .build(),
+            )
+            .build()
         ),
-      exportCapabilities = ExportCapabilitiesV1(composeCode = false, svg = false, png = false),
-    )
+      )
+      .also {
+        it.exportCapabilities =
+          ExportCapabilitiesV1.Builder()
+            .also {
+              it.composeCode = false
+              it.svg = false
+              it.png = false
+            }
+            .build()
+      }
+      .build()
 
   /**
    * Every Wear component the generator writes is a component the palette offers.

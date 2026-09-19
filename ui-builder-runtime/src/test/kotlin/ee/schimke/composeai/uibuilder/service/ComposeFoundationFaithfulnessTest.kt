@@ -283,7 +283,11 @@ class ComposeFoundationFaithfulnessTest {
   fun `a seam remote-m3 declares itself wins over the packaged one`() {
     val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
     val packaged = packagedSeams(base).getValue("remote-compose/document")
-    val remoteM3Owned = packaged.copy(displayName = "Remote Compose document, as remote-m3 says it")
+    val remoteM3Owned =
+      packaged
+        .newBuilder()
+        .also { it.displayName = "Remote Compose document, as remote-m3 says it" }
+        .build()
 
     // The Remote Compose platform rather than Wear. Wear used to take all three seams and no
     // longer takes any — they were offered there without being exportable — so this reads through
@@ -344,35 +348,45 @@ class ComposeFoundationFaithfulnessTest {
 
   /** The smallest thing that is a catalog, under the Wear id, optionally declaring a platform. */
   private fun stub(platform: String? = null) =
-    CatalogCapabilityV1(
-      schema = "compose-catalog-capabilities/v1",
-      benchmark =
-        CatalogBenchmarkV1(
-          catalogRevision = "sha256:stub",
-          sourceRevision = "ui-builder.json",
-          catalogSystemId = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-          nativeRuntimeId = "candidate",
-          id = CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        ),
-      components =
-        listOf(
-          ComponentCapabilityV1(
-            componentId = "stub/only",
-            displayName = "Only",
-            role = "Leaf",
-            wasm =
-              WasmCapabilityV1(
-                platformSupported = JsonPrimitive(false),
-                adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
-              ),
+    CatalogCapabilityV1.Builder(
+        "compose-catalog-capabilities/v1",
+        CatalogBenchmarkV1.Builder(
+            CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+            "ui-builder.json",
+            CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+            "sha256:stub",
+            "candidate",
           )
+          .build(),
+        listOf(
+          ComponentCapabilityV1.Builder(
+              "stub/only",
+              "Only",
+              "Leaf",
+              WasmCapabilityV1.Builder(
+                  platformSupported = JsonPrimitive(false),
+                  adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+                )
+                .build(),
+            )
+            .build()
         ),
-      statusSemantics =
-        platform?.let {
-          JsonObject(mapOf(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive(it)))
-        } ?: JsonObject(emptyMap()),
-      exportCapabilities = ExportCapabilitiesV1(composeCode = false, svg = false, png = false),
-    )
+      )
+      .also {
+        it.statusSemantics =
+          platform?.let {
+            JsonObject(mapOf(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive(it)))
+          } ?: JsonObject(emptyMap())
+        it.exportCapabilities =
+          ExportCapabilitiesV1.Builder()
+            .also {
+              it.composeCode = false
+              it.svg = false
+              it.png = false
+            }
+            .build()
+      }
+      .build()
 
   /**
    * The two things `withBuilderVocabulary` reads out of a donor's `componentMenu`, spelled here.

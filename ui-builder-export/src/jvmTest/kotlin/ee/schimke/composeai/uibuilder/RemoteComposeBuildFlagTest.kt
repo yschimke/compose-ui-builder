@@ -20,7 +20,13 @@ class RemoteComposeBuildFlagTest {
 
   @Test
   fun `a catalog cannot enable Remote formats in a disabled build`() {
-    val requested = ExportCapabilitiesV1(remoteJson = true, remoteDocument = true)
+    val requested =
+      ExportCapabilitiesV1.Builder()
+        .also {
+          it.remoteJson = true
+          it.remoteDocument = true
+        }
+        .build()
     assertEquals(
       UiBuilderBuildFeatures.remoteCompose,
       RemoteDocumentExportSupport.supports(requested, ExportFormatV1.JSON),
