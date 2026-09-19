@@ -3,13 +3,17 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlin.test.Test
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -45,6 +49,31 @@ class EditorDesktopPointerInteractionTest {
 
       onNodeWithText("Duplicate").assertExists()
       onNodeWithText("Delete").assertExists()
+    }
+
+  @Test
+  fun `an M3 text property applies through the desktop inspector`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Text property").performTextReplacement("Edited episode")
+      onNodeWithContentDescription("Apply text").performClick()
+
+      assertTrue(
+        onAllNodesWithText("Edited episode").fetchSemanticsNodes().isNotEmpty(),
+        "the updated text is rendered on the canvas",
+      )
     }
 
   private fun androidx.compose.ui.test.ComposeUiTest.editor() {
