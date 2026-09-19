@@ -94,18 +94,33 @@ class WearScreenParityTest {
   }
 
   /**
-   * 64dp rows, made up by the design's own padding, because a borrowed card has none of Wear's.
+   * The rows carry NO padding of their own, and the absence is what keeps them 64dp.
    *
-   * The header is not here any more, and that is the fix rather than an omission: it used to be a
+   * They used to carry a measured 12.2 / 9.7 / 14.7dp, authored when the canvas drew `wear-m3/card`
+   * as a borrowed mobile Material 3 card — a card with none of Wear's padding. The canvas draws the
+   * real Wear `TitleCard` now, which carries `CardDefaults.ContentPadding` (12dp on every edge) and
+   * is the reference's 64dp on its own, so the same numbers landed on top of it and the canvas drew
+   * an 82dp row whose text sat 24.2dp in. The generated Kotlin never carried them — the exporter
+   * collapses the two-text column into `TitleCard(title = …, subtitle = …)` — so the canvas was the
+   * half that disagreed, by 18dp a row.
+   *
+   * A design padding cannot be asserted away by rendering alone, because a padded card still
+   * renders; this is the assertion that catches its return. The measured proof is the render in
+   * `docs/design/UI_BUILDER_WEAR_SCREEN.md`, where the row is 64dp and the title 12dp in.
+   *
+   * The header is not here either, and that is the same fix one component over: it used to be a
    * padded text faking `ListHeader`'s 48dp, which made the canvas right and the generated screen
    * 31.5dp short. It is `wear-m3/list-header` now, which carries the height on both sides.
    */
   @Test
-  fun `the row padding is the measured one, and the header needs none`() {
-    assertEquals(
-      listOf("12.2", "9.7", "12.2", "14.7"),
-      document.nodes.getValue("row-0-lines").paddingEdges(),
-    )
+  fun `the rows carry no padding of their own, and the header needs none`() {
+    (0..5).forEach { index ->
+      assertEquals(
+        emptyList(),
+        document.nodes.getValue("row-$index-lines").paddingEdges(),
+        "row-$index-lines",
+      )
+    }
     val header = document.nodes.getValue("list-header")
     assertEquals("wear-m3/list-header", header.componentId)
     assertTrue(header.modifiers.isEmpty(), header.modifiers.toString())
@@ -117,8 +132,8 @@ class WearScreenParityTest {
   private fun UiBuilderNode.paddingEdges(): List<String> =
     modifiers
       .map { it.jsonObject }
-      .single { it["type"]?.jsonPrimitive?.content == "padding" }
-      .let { padding ->
+      .filter { it["type"]?.jsonPrimitive?.content == "padding" }
+      .flatMap { padding ->
         listOf("startDp", "topDp", "endDp", "bottomDp").map {
           padding.getValue(it).jsonPrimitive.content.trimZero()
         }
