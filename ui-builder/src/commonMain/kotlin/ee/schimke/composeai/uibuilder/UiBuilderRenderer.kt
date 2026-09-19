@@ -164,7 +164,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.wear.compose.foundation.ScrollInfoProvider
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.ScreenStage
+import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text as WearText
+import androidx.wear.compose.material3.scrollAway
 import androidx.window.core.layout.WindowSizeClass
 import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
 import ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry
@@ -2094,6 +2099,16 @@ private fun WearScreenScaffold(
   // background comments: reading the theme made the watch go white in a light editor.
   val background = node.color("background", WEAR_SCREEN_BACKGROUND)
   val timeText = node.string("timeText")
+  val scrollIndicator = node.bool("scrollIndicator", true)
+  // **The list's state, owned here and shared.** `ScreenScaffold` exists to hold one list: it hands
+  // the list its `contentPadding`, its scroll indicator reads where that list is, and
+  // `AppScaffold`'s
+  // clock scrolls away as it moves. None of that can happen if the scaffold and the list each
+  // remember their own state, which is what the canvas did — the clock sat still and the indicator
+  // was absent, because neither could see the list. The real scaffold wires this by construction;
+  // this is the stand-in doing the same thing by hand.
+  val listState = rememberTransformingLazyColumnState()
+  val scrollInfo = remember(listState) { ScrollInfoProvider(listState) }
   Box(
     modifier =
       modifier
@@ -2115,13 +2130,38 @@ private fun WearScreenScaffold(
     // screenshot agrees: `ScrollMode.LONG` sets `LocalScrollCaptureInProgress`, the emitted
     // scaffold reads it and draws none, and the stitched capture comes back clean.
   ) {
-    Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+    CompositionLocalProvider(LocalWearScreenListState provides listState) {
+      Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+    }
     // Overlaid, not a band above the content. `TimeText` belongs to `AppScaffold` and is drawn
     // over the screen; what makes room for it is the list's own top content padding, which is
     // already applied above. Drawing it as a row that displaced the content — which this did —
     // pushed every row down by the height of a clock the real screen draws on top of nothing.
+    //
+    // And it **scrolls away**, through the library's own modifier rather than a hand-rolled fade:
+    // `scrollAway` is what `AppScaffold` applies to its time text, driven by the
+    // `ScrollInfoProvider`
+    // the real `ScreenScaffold` publishes. The provider here is the library's own adapter for this
+    // exact state, and the stage is what the scaffold passes: `Scrolling` while the finger or the
+    // side button is moving the list, `Idle` once it settles.
     if (timeText.isNotEmpty()) {
-      WearCurvedTimeText(timeText, Modifier.matchParentSize())
+      Box(
+        Modifier.matchParentSize().scrollAway(scrollInfo) {
+          if (listState.isScrollInProgress) ScreenStage.Scrolling else ScreenStage.Idle
+        }
+      ) {
+        WearCurvedTimeText(timeText, Modifier.fillMaxSize())
+      }
+    }
+    // The scroll indicator, drawn where it belongs and only where it means something. On the
+    // *extent* there is no viewport for it to show a position within — that is the argument the
+    // comment above records, and the long screenshot agrees — so it is drawn only when this pane
+    // has a viewport, which is the frame pane and every device pane beside it.
+    if (scrollIndicator && !LocalUiBuilderUnrolled.current) {
+      ScrollIndicator(
+        state = listState,
+        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(end = 2.dp),
+      )
     }
     if (hasEdgeButton) {
       // The edge button hugs the bottom curve, which on the extent is the bottom cap. Placed

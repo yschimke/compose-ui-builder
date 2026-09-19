@@ -210,7 +210,10 @@ internal fun WearCanvasTransformingLazyColumn(
   transformation: Boolean = true,
   item: @Composable (Int, Modifier) -> Unit,
 ) {
-  val state = rememberTransformingLazyColumnState()
+  val provided = LocalWearScreenListState.current
+  val remembered = rememberTransformingLazyColumnState()
+  // The scaffold's state when this list is inside one, so the clock and the indicator can see it.
+  val state = provided ?: remembered
   val spec = rememberTransformationSpec()
   TransformingLazyColumn(
     state = state,
@@ -240,6 +243,19 @@ internal fun WearCanvasTransformingLazyColumn(
     }
   }
 }
+
+/**
+ * The list state the enclosing Wear screen scaffold owns, or null outside one.
+ *
+ * `ScreenScaffold` exists to hold one list, and the parts of a Wear screen that are *about* that
+ * list — the clock scrolling away, the scroll indicator — read its state. The canvas draws the
+ * scaffold as a stand-in, so the stand-in owns the state and shares it here rather than letting the
+ * list remember one of its own that nothing else can see.
+ */
+internal val LocalWearScreenListState =
+  staticCompositionLocalOf<androidx.wear.compose.foundation.lazy.TransformingLazyColumnState?> {
+    null
+  }
 
 /**
  * The row transformation the enclosing Wear list is applying, or null outside one.
