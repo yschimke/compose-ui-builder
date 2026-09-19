@@ -5655,12 +5655,13 @@ internal fun PinnedDesignCanvas(
                   .onSecondaryClick(document.id) { position ->
                     if (!showSelectionOverlay) return@onSecondaryClick
                     // The inspection reports each box in root pixels, which is the space this press
-                    // has to be asked in: the frame is offset in the workspace and its own pixels
-                    // reach the screen through [drawScale].
+                    // has to be asked in: the frame's own pixels reach the screen through
+                    // [drawScale], and its origin is the *unclipped* one — a scrolled frame's
+                    // visible top is the viewport's, not the frame's.
                     val point =
                       Offset(
-                        frameBounds.left + position.x * drawScale,
-                        frameBounds.top + position.y * drawScale,
+                        frameOrigin.x + position.x * drawScale,
+                        frameOrigin.y + position.y * drawScale,
                       )
                     // The design already reports every node's box, which is what the presence
                     // overlay and the catalog drop both hit-test against. Smallest box wins: the
