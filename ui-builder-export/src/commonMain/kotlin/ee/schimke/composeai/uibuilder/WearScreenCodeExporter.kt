@@ -76,11 +76,21 @@ object WearScreenCodeExporter {
    *   site's imports and placeholders, the design's literals for its parameters, its children in
    *   its slots. Empty by default, which refuses every pack node by name exactly as before packs
    *   existed. See [WearContentEmitter.emitPack].
+   * @param previews whether the file carries the `@WearPreviewDevices` / `@ScrollingPreview`
+   *   fan-out an **export artifact** wants. The native preview lane passes `false`, and the reason
+   *   is not tidiness: those functions import `androidx.wear.compose:compose-ui-tooling` and
+   *   compose-ai-tools' `preview-annotations`, neither of which is on a catalog's runtime bundle —
+   *   the classpath this lane compiles against. Emitting them made every Wear design fail to
+   *   compile on the lane, with `Unresolved reference 'WearPreviewDevices'` as the whole
+   *   explanation, which reads like a broken design rather than a source file asking for artifacts
+   *   the host deliberately does not have. The lane writes its own `@Preview` around the composable
+   *   (`UiBuilderGeneratedPreviewAdapter`), so nothing here is lost by its absence.
    */
   fun export(
     document: UiBuilderDocument,
     packageName: String? = null,
     tagNodes: Boolean = false,
+    previews: Boolean = true,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
   ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a screen design has one root")
@@ -132,7 +142,7 @@ object WearScreenCodeExporter {
             appendLine("package $packageName")
             appendLine()
           }
-          emitter.imports(timeText != null).forEach { appendLine("import $it") }
+          emitter.imports(timeText != null, previews).forEach { appendLine("import $it") }
           appendLine()
           appendLine("@Composable")
           appendLine("fun $name() {")
@@ -181,31 +191,34 @@ object WearScreenCodeExporter {
           overlays.forEach { appendLine(it) }
           appendLine("${INDENT}}")
           appendLine("}")
-          appendLine()
-          // Every round size, because a Wear screen that only ever rendered at one is a screen
-          // whose
-          // list has not been seen wrap. `WearPreviewDevices` is the shipped provider for exactly
-          // this and is what `samples/design-catalog-wear-m3` fans its full-screen stickers out
-          // with.
-          appendLine("@WearPreviewDevices")
-          appendLine("@Composable")
-          appendLine("fun ${name}Preview() = $name()")
-          appendLine()
-          // The second preview is the one that answers "is the canvas telling the truth?".
-          //
-          // `ScrollMode.LONG` stitches the whole scroll into one tall PNG **with the row
-          // transformation off**, which is exactly what the builder's stadium draws — so this
-          // render
-          // and the design as it appeared on the canvas are the same picture, and a difference
-          // between them is a bug in one of the two. The multipreview above cannot carry it: `LONG`
-          // on five devices is five stitched captures to answer a question one answers, and the
-          // parity claim is about the small round screen a design is authored on.
-          appendLine(
-            "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)"
-          )
-          appendLine("@ScrollingPreview(modes = [ScrollMode.LONG])")
-          appendLine("@Composable")
-          appendLine("fun ${name}LongPreview() = $name()")
+          if (previews) {
+            appendLine()
+            // Every round size, because a Wear screen that only ever rendered at one is a screen
+            // whose
+            // list has not been seen wrap. `WearPreviewDevices` is the shipped provider for exactly
+            // this and is what `samples/design-catalog-wear-m3` fans its full-screen stickers out
+            // with.
+            appendLine("@WearPreviewDevices")
+            appendLine("@Composable")
+            appendLine("fun ${name}Preview() = $name()")
+            appendLine()
+            // The second preview is the one that answers "is the canvas telling the truth?".
+            //
+            // `ScrollMode.LONG` stitches the whole scroll into one tall PNG **with the row
+            // transformation off**, which is exactly what the builder's stadium draws — so this
+            // render
+            // and the design as it appeared on the canvas are the same picture, and a difference
+            // between them is a bug in one of the two. The multipreview above cannot carry it:
+            // `LONG`
+            // on five devices is five stitched captures to answer a question one answers, and the
+            // parity claim is about the small round screen a design is authored on.
+            appendLine(
+              "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)"
+            )
+            appendLine("@ScrollingPreview(modes = [ScrollMode.LONG])")
+            appendLine("@Composable")
+            appendLine("fun ${name}LongPreview() = $name()")
+          }
         },
     )
   }
@@ -1347,7 +1360,7 @@ internal class WearContentEmitter(
   }
 
   /** The imports the emitted source needs, in the order ktfmt sorts them. */
-  fun imports(timeText: Boolean): List<String> = buildList {
+  fun imports(timeText: Boolean, previews: Boolean = true): List<String> = buildList {
     add("androidx.compose.foundation.layout.fillMaxSize")
     if (usesArrangement) add("androidx.compose.foundation.layout.Arrangement")
     if (usesBox) add("androidx.compose.foundation.layout.Box")
@@ -1417,14 +1430,19 @@ internal class WearContentEmitter(
     add("androidx.wear.compose.material3.lazy.transformedHeight")
     // `androidx.wear.compose:compose-ui-tooling`, not `androidx.wear:wear-tooling-preview`. The
     // latter is the device-id constants (`WearDevices`); the multipreview lives with Wear Compose,
-    // and a project that renders Wear previews already has it.
-    add("androidx.wear.compose.ui.tooling.preview.WearPreviewDevices")
-    // The parity capture's own three. `Preview` is the platform annotation the device spec rides
-    // on, and the scrolling pair is compose-ai-tools' `preview-annotations`, already on the
-    // classpath of anything the compose-preview plugin renders.
-    add("androidx.compose.ui.tooling.preview.Preview")
-    add("ee.schimke.composeai.preview.ScrollMode")
-    add("ee.schimke.composeai.preview.ScrollingPreview")
+    // and a project that renders Wear previews already has it. Only when the previews are written:
+    // neither this artifact nor compose-ai-tools' `preview-annotations` below is on a catalog's
+    // runtime bundle, so importing them for a file that does not use them is a compile error on the
+    // one lane that has to compile this source.
+    if (previews) {
+      add("androidx.wear.compose.ui.tooling.preview.WearPreviewDevices")
+      // The parity capture's own three. `Preview` is the platform annotation the device spec rides
+      // on, and the scrolling pair is compose-ai-tools' `preview-annotations`, already on the
+      // classpath of anything the compose-preview plugin renders.
+      add("androidx.compose.ui.tooling.preview.Preview")
+      add("ee.schimke.composeai.preview.ScrollMode")
+      add("ee.schimke.composeai.preview.ScrollingPreview")
+    }
     if (usesEdgeButton) add("androidx.wear.compose.material3.EdgeButton")
     if (usesEdgeButtonSize) add("androidx.wear.compose.material3.EdgeButtonSize")
     addAll(packImports)

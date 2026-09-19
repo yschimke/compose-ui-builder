@@ -76,6 +76,43 @@ class WearScreenCodeExporterTest {
     assertTrue("fun ActivityScreenPreview() = ActivityScreen()" in source, source)
   }
 
+  /**
+   * The native preview lane compiles this source against a **catalog's runtime bundle**, and
+   * neither `compose-ui-tooling` nor compose-ai-tools' `preview-annotations` is on one. Emitting
+   * the fan-out anyway made every Wear design fail to compile there with `Unresolved reference
+   * 'WearPreviewDevices'` — a message about artifacts the host deliberately does not have, read as
+   * a broken design. The lane wraps the composable in its own `@Preview`, so the artifact's
+   * previews are pure cost for it.
+   */
+  @Test
+  fun `the native lane's source carries no preview fan-out, and the artifact's does`() {
+    val document = wearScreenUiBuilderDocument("activity", pin, environment)
+    val native =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(
+          WearScreenCodeExporter.export(
+            document,
+            packageName = "generated.uibuilder",
+            tagNodes = true,
+            previews = false,
+          )
+        )
+        .source
+    val artifact =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(
+          WearScreenCodeExporter.export(document, packageName = "generated.uibuilder")
+        )
+        .source
+
+    assertFalse("@WearPreviewDevices" in native, native)
+    assertFalse("@ScrollingPreview" in native, native)
+    assertFalse("androidx.wear.compose.ui.tooling.preview.WearPreviewDevices" in native, native)
+    assertFalse("ee.schimke.composeai.preview.ScrollingPreview" in native, native)
+    // The export artifact keeps them, and keeps compiling with them: a designer's file renders in
+    // an IDE where those two artifacts are on the classpath by definition.
+    assertTrue("@WearPreviewDevices" in artifact, artifact)
+    assertTrue("@ScrollingPreview" in artifact, artifact)
+  }
+
   /** A widget is the other generator's job, and saying so beats emitting something plausible. */
   @Test
   fun `a design that is not a wear screen is refused by name`() {

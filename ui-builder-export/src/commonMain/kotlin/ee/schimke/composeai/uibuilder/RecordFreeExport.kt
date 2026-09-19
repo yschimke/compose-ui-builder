@@ -130,6 +130,10 @@ object RecordFreeExport {
    *
    * @param packageName the package the emitted file declares, or null for a snippet without one —
    *   which is what the editor's Code pane wants and what an exported *file* must not be.
+   * @param previews whether a Wear **screen**'s file carries the preview fan-out an export artifact
+   *   wants. The native preview lane passes `false` because it compiles this source against a
+   *   catalog's runtime bundle, which carries neither `compose-ui-tooling` nor
+   *   `preview-annotations`; see [WearScreenCodeExporter.export].
    * @param packComponents the component pack components a Wear **screen** may hold, by component
    *   id, each as its record — see [WearScreenCodeExporter.export]. A widget takes none: its source
    *   is Remote Compose, which no pack's Jetpack Compose composable can be played as.
@@ -138,6 +142,7 @@ object RecordFreeExport {
     document: UiBuilderDocument,
     packageName: String? = null,
     tagNodes: Boolean = false,
+    previews: Boolean = true,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? =
@@ -155,7 +160,8 @@ object RecordFreeExport {
         // publishes.
         WearWidgetCodeExporter.export(document, packageName, assets, packComponents).generated()
       document.isWearScreen() ->
-        WearScreenCodeExporter.export(document, packageName, tagNodes, packComponents).generated()
+        WearScreenCodeExporter.export(document, packageName, tagNodes, previews, packComponents)
+          .generated()
       else -> null
     }
 
@@ -187,12 +193,20 @@ object RecordFreeExport {
     document: DesignDocumentV1,
     packageName: String? = null,
     tagNodes: Boolean = false,
+    previews: Boolean = true,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? {
     if (!document.isRecordFree()) return null
     return runCatching {
-      generate(document.toUiBuilderDocument(), packageName, tagNodes, packComponents, assets)
+      generate(
+        document.toUiBuilderDocument(),
+        packageName,
+        tagNodes,
+        previews,
+        packComponents,
+        assets,
+      )
     }
       .getOrElse { failure ->
         Generated.Refused(

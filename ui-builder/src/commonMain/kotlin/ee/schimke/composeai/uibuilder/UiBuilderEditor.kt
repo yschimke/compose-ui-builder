@@ -1,4 +1,7 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(
+  androidx.compose.material3.ExperimentalMaterial3Api::class,
+  androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
 
 package ee.schimke.composeai.uibuilder
 
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -1551,6 +1555,12 @@ fun UiBuilderEditor(
         focusEditor()
         canvasZoom = it
       },
+      // Only while no other pane is showing the frame. The preview pane draws the design at its
+      // own frame and at every device it claims; the native pane draws it compiled. Either one is a
+      // better answer to "what does someone see on the device?" than a third copy inside the
+      // editing surface — which is what this companion is, and why a Wear screen was showing the
+      // same round frame three times across two panes.
+      frameCompanion = state.panes.none { it == EditorPane.Preview || it == EditorPane.Native },
       contentAlignment = alignment,
       modifier = modifier,
     )
@@ -5440,6 +5450,15 @@ internal fun PinnedDesignCanvas(
   /** The scale the design is drawn at, or null to frame it in whatever room the workspace has. */
   zoom: Float?,
   onZoomChanged: (Float?) -> Unit,
+  /**
+   * Whether the frame companion is drawn beside the extent when the content outgrows the frame.
+   *
+   * False while the preview or native pane is open, because both of those draw the design at its
+   * frame — see the call site. The companion exists to answer "what does someone see on the
+   * device?" for a design being edited at its whole extent, and it is the wrong place to answer it
+   * twice.
+   */
+  frameCompanion: Boolean = true,
   contentAlignment: Alignment = Alignment.TopStart,
   modifier: Modifier = Modifier,
 ) {
@@ -5752,7 +5771,12 @@ internal fun PinnedDesignCanvas(
               }
             }
           }
-          if (overflowsFrame) {
+          // The companion is the *frame* view of a design that outgrows it — what someone sees on
+          // the device, beside the extent they edit. It is not drawn when another pane is already
+          // showing the frame: the preview and native panes both do, at the design's own size and
+          // at every device it claims, so a third copy inside the editor costs the editing surface
+          // a third of its width to say what the pane next door says better.
+          if (overflowsFrame && frameCompanion) {
             ConstrainedFramePane(
               document = document,
               widthDp = sourceWidth,
@@ -9276,16 +9300,44 @@ private fun DesignPreviewPane(
         val scale =
           minOf(maxHeight.value / (tallest + VARIANT_LABEL_ROOM_DP), maxWidth.value / widest)
             .coerceIn(MIN_CANVAS_ZOOM, maxOf(oneToOne, MIN_CANVAS_ZOOM))
+        // How many frames fit across the pane at that scale, and the whole of "should this be a
+        // grid?". A watch frame is 192dp and a pane is often 700dp wide, so the row that answered
+        // a phone question — one frame per screen, the rest scrolled off the right — put three
+        // watches where two would fit and hid the third. Where two or more fit, the frames wrap
+        // instead: the same scale, the same comparison, all of them visible.
+        //
+        // One frame per row keeps the old behaviour exactly, scrolling horizontally, because a
+        // single phone-width frame that does not fit has nothing to wrap to.
+        val gap = 16.dp
+        val perRow = ((maxWidth + gap) / ((widest * scale).dp + gap)).toInt().coerceAtLeast(1)
         // Centred, so a row that fits sits in the middle of the pane rather than in its top-left
         // corner. Scrolling still works when it does not fit: `Arrangement.Center` only decides
         // where the slack goes, and a row wider than the pane has none.
-        Row(
-          Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          panes.forEach { pane ->
-            key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
+        if (perRow >= 2) {
+          Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+          ) {
+            FlowRow(
+              Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
+              verticalArrangement = Arrangement.spacedBy(gap),
+              maxItemsInEachRow = perRow,
+            ) {
+              panes.forEach { pane ->
+                key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
+              }
+            }
+          }
+        } else {
+          Row(
+            Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            panes.forEach { pane ->
+              key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
+            }
           }
         }
       }
