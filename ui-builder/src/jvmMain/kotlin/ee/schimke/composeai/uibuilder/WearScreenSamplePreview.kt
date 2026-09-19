@@ -129,6 +129,7 @@ private val wearScreenPreviewCatalog by lazy {
 private fun WearScreenPreviewFrame(content: @Composable () -> Unit) {
   CompositionLocalProvider(
     LocalUiBuilderFrameGeometry provides wearScreenPreviewCatalog.frameGeometry,
+    LocalUiBuilderCatalogPlatform provides wearScreenPreviewCatalog.platform.wireValue,
     content = content,
   )
 }

@@ -627,15 +627,15 @@ fun UiBuilderSurface(
   val cornerRadius =
     themeHost?.float(THEME_CORNER_RADIUS, 16f)?.coerceIn(0f, 48f)
       ?: if (wearScreen) WEAR_CARD_CORNER_RADIUS_DP else 16f
-  // The watch the Wear components inside this design are laid out against — see
+  // The watch the components inside this design are laid out against — see
   // [wearDeviceConfiguration] for what the browser answers when nobody says.
   //
-  // A broader question than [wearScreen] above, and deliberately: that one asks what the ROOT is
-  // because it decides the screen's colours, while this one asks whether anything in the design is
-  // Wear Compose at all. A board holding one Wear card needs a watch as much as a whole screen
-  // does, and so does a shelf thumbnail of a single `wear-m3/date-picker`.
+  // The trigger is the PLATFORM the catalog declares, not a component id this file recognises: a
+  // Wear catalog is one whose components are drawn with the Wear port, and that is the catalog's
+  // statement rather than something to be inferred from a namespace. A board holding one Wear card
+  // needs a watch as much as a whole screen does, and so does a shelf thumbnail of one picker.
   val wearDevice =
-    if (document.nodes.values.any { it.componentId.startsWith(WEAR_COMPONENT_PREFIX) }) {
+    if (LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue) {
       arrayOf<ProvidedValue<*>>(
         LocalWearDeviceConfiguration provides
           document.wearDeviceConfiguration(LocalUiBuilderFrameGeometry.current)
@@ -2028,6 +2028,17 @@ internal fun UiBuilderDocument.wearDeviceConfiguration(
 }
 
 /**
+ * The platform the served catalog declares — see [UiBuilderCatalogPlatform].
+ *
+ * A composition local for the reason the other catalog-derived ones are: it is a statement about
+ * the catalog rather than about a component, and the renderer needs it to answer a question only
+ * the catalog can answer — *is this composition drawn with a watch library at all?* The default is
+ * the empty word, which is "the host did not say", rather than [UiBuilderCatalogPlatform.DEFAULT],
+ * because a host that says nothing is not the same as one that said "mobile".
+ */
+internal val LocalUiBuilderCatalogPlatform = staticCompositionLocalOf { "" }
+
+/**
  * The frame the served catalog declares for its screens — see [UiBuilderFrameGeometry].
  *
  * A composition local rather than a renderer parameter, for the reason
@@ -2036,9 +2047,6 @@ internal fun UiBuilderDocument.wearDeviceConfiguration(
  * itself names.
  */
 internal val LocalUiBuilderFrameGeometry = staticCompositionLocalOf { UiBuilderFrameGeometry.None }
-
-/** Every component id the Wear catalog publishes, and the test that a design draws Wear Compose. */
-private const val WEAR_COMPONENT_PREFIX = "wear-m3/"
 
 /**
  * The Wear screen as a long screenshot: the frame's width, the content's height, round caps.
