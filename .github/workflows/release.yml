@@ -5,10 +5,26 @@ name: Release
 # merges. A `push: tags` trigger CANNOT coexist with it: release-please creates the tag itself, so
 # the tag push would fire a second, duplicate publish, and Maven Central rejects a version it
 # already has. One trigger, one publish.
+#
+# A `workflow_dispatch` with `publish_tag` is the RECOVERY path: run the lanes for an existing tag
+# instead of cutting a new release. It exists because `release_created` answers "did I just cut a
+# release?", while the question every lane below actually has is "is there a release to attach
+# assets to?" — and those come apart the first time an upload stalls. The release exists, the
+# re-run finds it already created, `release_created` is false, and every lane SKIPs, so a re-run
+# could never finish a release and the only recovery was to delete the draft and its tag. That is
+# how v3.26.0 was stranded (#40). Leave the input empty for the normal run.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_tag:
+        description: >-
+          Run the release lanes for an EXISTING tag (e.g. v3.27.0) instead of cutting a new
+          release. This is the recovery path for a release whose upload died: leave it empty for
+          the normal run.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -50,9 +66,17 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      # What this run publishes, and for which tag. Every lane below gates on these rather than on
+      # `release_created`, because `release_created` answers "did I just cut a release?" and the
+      # question the lanes actually have is "is there a release to attach assets to?".
+      publish: ${{ steps.plan.outputs.publish }}
+      publish_tag: ${{ steps.plan.outputs.tag }}
     steps:
+      # Skipped when republishing: a recovery run must not be able to cut an unrelated release as a
+      # side effect of retrying an upload.
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
+        if: ${{ !inputs.publish_tag }}
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
@@ -80,19 +104,62 @@ jobs:
             -f "ref=refs/tags/${TAG}" -f "sha=${SHA}" >/dev/null
           echo "created tag ${TAG} at ${SHA}"
 
+      # One place decides what the rest of the run does, and it fails fast on a typo rather than
+      # after seven minutes of Gradle: a `publish_tag` naming no tag, or no release, stops here.
+      - name: Plan what this run publishes
+        id: plan
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PUBLISH_TAG: ${{ inputs.publish_tag }}
+          RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PUBLISH_TAG}" ]; then
+            if ! gh api "repos/{owner}/{repo}/git/ref/tags/${PUBLISH_TAG}" >/dev/null 2>&1; then
+              echo "::error::no tag ${PUBLISH_TAG} in this repository"
+              exit 1
+            fi
+            # `gh release view` finds a draft, which is the whole point: the release this recovers
+            # is the one that never got its assets.
+            if ! draft=$(gh release view "${PUBLISH_TAG}" --json isDraft --jq .isDraft 2>/dev/null); then
+              echo "::error::no release for tag ${PUBLISH_TAG} — nothing to attach assets to"
+              exit 1
+            fi
+            if [ "${draft}" != "true" ]; then
+              # Allowed, not refused: replacing a bad asset on a published release is a real need,
+              # and the uploads below carry `--clobber`. Said out loud because `finish-release`
+              # will also re-point `--latest` at it.
+              echo "::warning::${PUBLISH_TAG} is already published; its assets will be replaced"
+            fi
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "tag=${PUBLISH_TAG}" >> "$GITHUB_OUTPUT"
+            echo "republishing ${PUBLISH_TAG}"
+          elif [ "${RELEASE_CREATED}" = "true" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+            echo "releasing ${RELEASE_TAG}"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "nothing to publish in this run"
+          fi
+
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: ${{ needs.release-please.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
-      PLUGIN_VERSION: ${{ needs.release-please.outputs.tag_name }}
+      PLUGIN_VERSION: ${{ needs.release-please.outputs.publish_tag }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ needs.release-please.outputs.publish_tag }}
           persist-credentials: false
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -142,7 +209,7 @@ jobs:
       # the release is never visible to the ivy repository without the zip it asks for.
       - name: Attach the editor archive to the release
         run: |
-          tag="${{ needs.release-please.outputs.tag_name }}"
+          tag="${{ needs.release-please.outputs.publish_tag }}"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
           # release-please has already created the (draft) Release, so `view` normally succeeds.
           # The create branch covers a tag that reached here without one - a manual re-run, or a
@@ -166,14 +233,18 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Publish the draft GitHub release
-        run: gh release edit "${{ needs.release-please.outputs.tag_name }}" --draft=false --latest
+        run: gh release edit "${{ needs.release-please.outputs.publish_tag }}" --draft=false --latest
 
   # The PR half, split from the release half above and run after it, for the phantom-PR reason
   # documented on `release-please`. On an ordinary push this is the only job that does anything.
+  #
+  # Skipped on a recovery run: republishing an existing tag must not be able to open or rewrite a
+  # release PR as a side effect.
   update-release-pr:
     needs: [release-please, finish-release]
     if: >-
       ${{ !cancelled()
+      && !inputs.publish_tag
       && (needs.release-please.outputs.release_created != 'true'
       || needs.finish-release.result == 'success') }}
     runs-on: ubuntu-latest
