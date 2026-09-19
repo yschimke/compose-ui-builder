@@ -4026,6 +4026,11 @@ private fun SelectionActionBar(
  * rung above — the same distinction the layers panel draws slot lines for. The leaf is the
  * selection and is drawn selected rather than pressable-elsewhere; pressing an ancestor re-roots
  * the selection there, which is the only verb a path can honestly offer.
+ *
+ * A path longer than the bar is *elided from the root*, never from the leaf: the thing the reader
+ * needs to see is where they are, and a bar that shows `Surface › Supporting pane scaffold › …` and
+ * cuts the selection off is answering the question nobody asked. The rungs that remain scroll when
+ * even they do not fit, and the scroll follows the selection so the leaf is the end it rests at.
  */
 @Composable
 private fun SelectionBreadcrumbs(
@@ -4033,12 +4038,36 @@ private fun SelectionBreadcrumbs(
   onSelect: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  // Four rungs and a leading ellipsis is the shape a path takes in every tool that has one: the
+  // leaf, the two or three things it is inside, and a way to know there is more behind.
+  val shown =
+    if (entries.size > MAX_BREADCRUMB_RUNGS + 1) entries.takeLast(MAX_BREADCRUMB_RUNGS) else entries
+  val hidden = entries.size - shown.size
+  val scrollState = rememberScrollState()
+  // The leaf is the end that must be on screen: a path that scrolls back to its root the moment
+  // the selection moves is a path that hides the selection again.
+  LaunchedEffect(entries) { scrollState.scrollTo(scrollState.maxValue) }
   Row(
-    modifier.horizontalScroll(rememberScrollState()),
+    modifier.horizontalScroll(scrollState),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(2.dp),
   ) {
-    entries.forEachIndexed { index, entry ->
+    if (hidden > 0) {
+      Text(
+        "…",
+        Modifier.padding(horizontal = 2.dp).semantics {
+          contentDescription = "$hidden hidden ancestors"
+        },
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.outline,
+      )
+      Text(
+        "›",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.outline,
+      )
+    }
+    shown.forEachIndexed { index, entry ->
       if (index > 0) {
         // A glyph rather than an icon: the separator is punctuation, not a control, and the code
         // the toolbar's own labels already spell this way.
@@ -4061,7 +4090,7 @@ private fun SelectionBreadcrumbs(
           )
         }
       }
-      val selected = index == entries.lastIndex
+      val selected = index == shown.lastIndex
       Text(
         entry.label,
         Modifier
@@ -4082,12 +4111,26 @@ private fun SelectionBreadcrumbs(
   }
 }
 
+/** How many rungs a breadcrumb shows before it elides the ones above them. */
+private const val MAX_BREADCRUMB_RUNGS = 4
+
 /** What the status bar and the host hear about a drag: the slot, and the seam inside it. */
 private fun dropPlanLabel(plan: UiBuilderDropPlan?): String =
   when (plan) {
     null -> "No compatible slot"
     else -> "${plan.target.nodeId}.${plan.target.slot} · position ${plan.index + 1}"
   }
+
+/**
+ * A stroke width that lands as [screenPx] on screen whatever the canvas is zoomed to.
+ *
+ * Overlays inside the scaled frame are measured in the design's pixels, so a width written in them
+ * thins with the zoom — and the marker that says where a drop will land is exactly the affordance a
+ * reader needs most when the design is too small to read. Clamped, because a very small scale would
+ * otherwise turn a hairline into a band across the design.
+ */
+private fun screenStroke(screenPx: Float, drawScale: Float): Float =
+  if (drawScale <= 0f) screenPx else (screenPx / drawScale).coerceIn(screenPx, screenPx * 8f)
 
 /**
  * The step this frame's auto-scroll should take for a pointer at [offsetInView], or zero.
@@ -5647,7 +5690,12 @@ internal fun PinnedDesignCanvas(
     val selectedBounds = selectedNodeId?.let { id ->
       inspection?.nodes?.firstOrNull { it.nodeId == id }?.bounds
     }
-    if (hoverEditor != null && showSelectionOverlay && selectedBounds != null) {
+    // Not while a drag is in the air: the tight editor follows the *selection*, and a drag is a
+    // question about the target — a panel of the selected node's fields floating over the canvas
+    // is answering the previous question while the pointer asks the next one.
+    if (
+      hoverEditor != null && showSelectionOverlay && selectedBounds != null && dragPosition == null
+    ) {
       val left = (selectedBounds.x - workspaceBounds.left).coerceAtLeast(0f)
       val below = selectedBounds.y + selectedBounds.height - workspaceBounds.top + 8f
       val above = selectedBounds.y - workspaceBounds.top - 8f
@@ -5691,18 +5739,28 @@ internal fun PinnedDesignCanvas(
       // Anchored on the ghost's content, not its cell: the component itself rides under the
       // pointer, the way the part rides under the cursor in every canvas tool. Until the ghost has
       // been measured once it is drawn empty rather than one frame in the wrong place.
+      //
+      // The anchor is the content's *size*, never its reported position: the position comes back
+      // from the ghost's own inspection in root space — which includes the very offset this is
+      // computing — and reading it would make the offset chase itself, a loop that oscillates every
+      // layout and leaves the scene never idle. The content sits at the cell's top-start, so the
+      // size is all the anchor needs.
       val ghostModifier =
         Modifier.align(Alignment.TopStart)
           .offset(
             x =
               with(density) {
-                val anchorX = ghostContentBounds?.let { it.x + it.width / 2f } ?: 0f
-                (dragPosition.x - workspaceBounds.left - anchorX * scale).toDp()
+                (dragPosition.x -
+                    workspaceBounds.left -
+                    (ghostContentBounds?.width ?: 0f) / 2f * scale)
+                  .toDp()
               },
             y =
               with(density) {
-                val anchorY = ghostContentBounds?.let { it.y + it.height / 2f } ?: 0f
-                (dragPosition.y - workspaceBounds.top - anchorY * scale).toDp()
+                (dragPosition.y -
+                    workspaceBounds.top -
+                    (ghostContentBounds?.height ?: 0f) / 2f * scale)
+                  .toDp()
               },
           )
       when {
@@ -5764,6 +5822,12 @@ private fun DropTargetOverlay(
       height = bounds.height / drawScale,
     )
   val color = MaterialTheme.colorScheme.primary
+  // Stroke widths are screen widths, not design widths: the marker is an affordance, and an
+  // affordance that thins with the zoom is one the reader loses exactly when the design is too
+  // small to read — which is when "where will it land" matters most. The canvas is inside the
+  // scaled layer, so the conversion back is dividing by the scale it was drawn at.
+  val hairline = screenStroke(3.5f, drawScale)
+  val glow = screenStroke(10f, drawScale)
   Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
     // The seam is the message; the tint is the container it sits in. Dimmer than it used to be,
     // so the two read as background and figure rather than as two boxes.
@@ -5777,7 +5841,7 @@ private fun DropTargetOverlay(
         color = color,
         topLeft = Offset(local.x, local.y),
         size = Size(local.width, local.height),
-        style = Stroke(width = 4f),
+        style = Stroke(width = screenStroke(4f, drawScale)),
       )
       return@Canvas
     }
@@ -5785,7 +5849,7 @@ private fun DropTargetOverlay(
       color = color.copy(alpha = 0.55f),
       topLeft = Offset(local.x, local.y),
       size = Size(local.width, local.height),
-      style = Stroke(width = 2f),
+      style = Stroke(width = screenStroke(2f, drawScale)),
     )
     val before = plan.children.getOrNull(plan.index - 1)?.second
     val after = plan.children.getOrNull(plan.index)?.second
@@ -5802,14 +5866,14 @@ private fun DropTargetOverlay(
         color = color.copy(alpha = 0.25f),
         start = Offset(x, local.y),
         end = Offset(x, local.y + local.height),
-        strokeWidth = 10f,
+        strokeWidth = glow,
         cap = StrokeCap.Round,
       )
       drawLine(
         color = color,
         start = Offset(x, local.y),
         end = Offset(x, local.y + local.height),
-        strokeWidth = 3.5f,
+        strokeWidth = hairline,
         cap = StrokeCap.Round,
       )
     } else {
@@ -5825,14 +5889,14 @@ private fun DropTargetOverlay(
         color = color.copy(alpha = 0.25f),
         start = Offset(local.x, y),
         end = Offset(local.x + local.width, y),
-        strokeWidth = 10f,
+        strokeWidth = glow,
         cap = StrokeCap.Round,
       )
       drawLine(
         color = color,
         start = Offset(local.x, y),
         end = Offset(local.x + local.width, y),
-        strokeWidth = 3.5f,
+        strokeWidth = hairline,
         cap = StrokeCap.Round,
       )
     }
@@ -5863,8 +5927,14 @@ private fun MoveOriginOverlay(
       size = Size(bounds.width / drawScale, bounds.height / drawScale),
       style =
         Stroke(
-          width = 2.5f,
-          pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f),
+          width = screenStroke(2.5f, drawScale),
+          // The dash lengths are screen lengths for the same reason the width is: a dash pattern
+          // that scales with the zoom becomes a solid line when the design is small.
+          pathEffect =
+            PathEffect.dashPathEffect(
+              floatArrayOf(screenStroke(10f, drawScale), screenStroke(7f, drawScale)),
+              0f,
+            ),
         ),
     )
   }
