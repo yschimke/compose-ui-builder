@@ -85,6 +85,7 @@ tasks.named("check") {
   group = "verification"
   dependsOn(
     ":ui-builder:check",
+    ":ui-builder-desktop:check",
     ":ui-builder-artwork:check",
     ":ui-builder-export:check",
     ":ui-builder-generated-jetcaster:check",

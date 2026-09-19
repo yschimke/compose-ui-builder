@@ -56,6 +56,20 @@ only the packaged design system's. That needs the `compose-preview` build host, 
 and building a Gradle project is work the server asks for over a pipe rather than doing itself —
 without one it says so rather than serving a builder that looks like it worked.
 
+### As a native Desktop app
+
+For an offline JVM/Compose Desktop editor (useful for local testing or as an embedding reference),
+run:
+
+```bash
+./gradlew :ui-builder-desktop:run
+```
+
+It opens the same editor directly on Skiko, with no server process or browser required. The initial
+workspace is the Jetcaster fixture and edits are stored under
+`~/.compose-preview/ui-builder-desktop`. This first desktop host intentionally has no server-backed
+collaboration, comments, or native daemon preview; those remain capabilities of a connected host.
+
 ### The flags underneath, and one that is easy to confuse
 
 Both modes are `serve` with flags added, and every flag stays available:
