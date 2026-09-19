@@ -4,11 +4,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.MouseButton
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
@@ -64,11 +66,12 @@ class BesideDropTest {
       val row = onDragRow("Drag Text")
       val rowOrigin = row.fetchSemanticsNode().boundsInRoot.topLeft
       val dropAt = Offset(frameBounds.left, frameBounds.bottom + 80f)
-      row.performTouchInput {
-        down(center)
+      row.performMouseInput {
+        moveTo(center)
+        press(MouseButton.Primary)
         moveTo(center + Offset(24f, 24f))
         moveTo(Offset(dropAt.x - rowOrigin.x, dropAt.y - rowOrigin.y))
-        up()
+        release(MouseButton.Primary)
       }
       waitForIdle()
 

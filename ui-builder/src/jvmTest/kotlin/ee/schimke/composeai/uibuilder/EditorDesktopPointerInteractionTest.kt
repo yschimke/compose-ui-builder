@@ -1,11 +1,14 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextReplacement
@@ -46,6 +49,32 @@ class EditorDesktopPointerInteractionTest {
       editor()
 
       onNodeWithContentDescription("Select root-surface").performMouseInput { rightClick() }
+
+      onNodeWithText("Duplicate").assertExists()
+      onNodeWithText("Delete").assertExists()
+    }
+
+  @Test
+  fun `a secondary canvas click opens actions for the component under the pointer`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      val cover =
+        onAllNodesWithContentDescription("Android Developers Backstage cover")
+          .fetchSemanticsNodes()
+          .maxBy { it.boundsInRoot.left }
+          .boundsInRoot
+      onRoot().performMouseInput { rightClick(Offset(cover.center.x, cover.center.y)) }
 
       onNodeWithText("Duplicate").assertExists()
       onNodeWithText("Delete").assertExists()
