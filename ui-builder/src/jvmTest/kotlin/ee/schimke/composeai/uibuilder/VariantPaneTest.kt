@@ -19,7 +19,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 
 /**
  * The strip beside the design: one document, one stored environment, several panes.
@@ -56,6 +58,48 @@ class VariantPaneTest {
   @Test
   fun `a design that claims no devices and asks no questions has no strip`() {
     assertEquals(emptyList(), document.variantPanes(presets, emptySet()))
+  }
+
+  @Test
+  fun `a widget preview always shows the three launcher hosts`() {
+    val widget =
+      blankUiBuilderDocument(
+          "widget-preview",
+          buildJsonObject {
+            put("widthDp", "216")
+            put("heightDp", "124")
+            put("density", "2")
+          },
+          JsonObject(emptyMap()),
+        )
+        .copy(
+          roots = listOf("widget"),
+          nodes =
+            mapOf(
+              "widget" to
+                UiBuilderNode(
+                  "widget",
+                  WearWidgetScaffoldSize.Large.componentId,
+                  slots = emptyMap(),
+                )
+            ),
+        )
+
+    val panes = widget.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Large)
+
+    assertEquals(listOf("Rectangular", "Samsung", "Pixel Watch"), panes.map { it.label })
+    assertEquals(
+      listOf(232f to 144f, 216f to 124f, 230f to 168f),
+      panes.map { it.widthDp to it.heightDp },
+    )
+    assertEquals(
+      listOf(
+        WearWidgetHostShape.Rectangular,
+        WearWidgetHostShape.Squircle,
+        WearWidgetHostShape.Round,
+      ),
+      panes.map { it.wearWidgetHostShape },
+    )
   }
 
   /**

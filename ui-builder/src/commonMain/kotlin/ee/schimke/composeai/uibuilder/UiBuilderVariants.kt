@@ -44,7 +44,30 @@ data class UiBuilderVariantPane(
   val widthDp: Float,
   val heightDp: Float,
   val document: UiBuilderDocument,
+  /** A widget host frame this pane supplies around [document], or the ambient host frame. */
+  val wearWidgetHostShape: WearWidgetHostShape? = null,
 )
+
+/** The three launcher hosts a Wear widget export generates previews for. */
+internal fun UiBuilderDocument.wearWidgetPreviewPanes(
+  size: WearWidgetScaffoldSize
+): List<UiBuilderVariantPane> =
+  WearWidgetHostShape.entries.map { shape ->
+    val spec = size.hostSpec(shape)
+    UiBuilderVariantPane(
+      id = "preview-widget-${shape.id}",
+      label =
+        when (shape) {
+          WearWidgetHostShape.Round -> "Pixel Watch"
+          WearWidgetHostShape.Squircle -> "Samsung"
+          WearWidgetHostShape.Rectangular -> "Rectangular"
+        },
+      widthDp = spec.frameWidthDp.toFloat(),
+      heightDp = spec.frameHeightDp.toFloat(),
+      document = this,
+      wearWidgetHostShape = shape,
+    )
+  }
 
 /**
  * The panes to draw beside the editing pane, in the order they are shown, or empty for none.
