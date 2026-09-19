@@ -160,11 +160,10 @@ The rule now:
   catalog's own `assetKey` notes have always promised.
 - **Anything Material is Wear's own id.** `wear-m3/text`, `wear-m3/card` and `wear-m3/button` join
   `wear-m3/list-header` and the two containers. The id, the notes and the generated Kotlin all name
-  the Wear composable — and, since the port landed, so does the drawing: `wear-m3/card` and
-  `wear-m3/button` are Wear Compose's own `TitleCard` and `Button` on the canvas, and only
-  `wear-m3/text` is still a Material 3 `Text`, for the type-scale reason
-  [the three ids](#what-this-leaves-the-three-ids-that-are-already-drawn-that-way) sets out. Renaming
-  a borrow the canvas already drew is not the same act as
+  the Wear composable — and, since the port landed, so does the drawing: all three are Wear
+  Compose's own components on the canvas, so there is no borrow left in the palette at all. See
+  [the three ids](#what-this-leaves-the-three-ids-that-are-already-drawn-that-way). Renaming a
+  borrow the canvas already drew was not the same act as
   [assembling a component it never had](#the-line-a-component-is-never-faked-so-it-can-run-in-wasm).
 - **`m3/surface` and `m3/icon` are gone rather than renamed.** Wear publishes no `Surface`, and an
   icon key resolves to a vector through a table the export module cannot reach, so `wear-m3/icon`
@@ -192,9 +191,8 @@ what the design says it holds.
 > [What the catalog offers now](#what-the-catalog-offers-now).
 
 The three ids above were the last of their kind *drawn as lookalikes*, and that is history rather
-than a current claim: `wear-m3/card` and `wear-m3/button` are Wear Compose's own on the canvas now,
-and `wear-m3/text` is the one borrow left, for a reason that is about the theme rather than about
-the library. `wear-m3/checkbox-button`, `wear-m3/switch-button` and `wear-m3/radio-button` were
+than a current claim: all three are Wear Compose's own on the canvas now, drawn through the port.
+`wear-m3/checkbox-button`, `wear-m3/switch-button` and `wear-m3/radio-button` were
 built, reviewed and
 [closed unmerged](https://github.com/yschimke/compose-preview-server/pull/395), and the reason is the
 rule this section states:
@@ -401,24 +399,24 @@ output and renders it for real ([the round trip](#the-round-trip-closes)).
 
 ### What this leaves the three ids that are already drawn that way
 
-`wear-m3/card` and `wear-m3/button` are no longer drawn that way: the canvas calls Wear Compose's
-own `TitleCard` and `Button` through the port, so the borrow this section was written about is
-retired for both. What is left is `wear-m3/text`.
+Nothing. All three are Wear Compose's own on the canvas now: `wear-m3/card` and `wear-m3/button`
+call the port's `TitleCard` and `Button`, and `wear-m3/text` calls the port's `Text`. The rename
+table that started this section (`wearScreenStandIn`) is deleted, so a fourth id cannot join by
+being borrowed.
 
-**Text is the one borrow still standing, and the reason is the theme rather than the library.** The
-renderer draws `androidx.compose.material3.Text` with `wearTextStyle` resolving Wear's role names
-against the canvas's `MaterialTheme` — and that theme is the mobile one, so Wear's roles arrive as
-*sizes* (`wearTextStyle` maps fifteen role names onto the mobile scale) rather than as Wear's own
-typography. Swapping the composable for Wear's `Text` would change nothing on its own, because both
-read the same theme; what would change the picture is providing Wear's type scale on the canvas,
-which is a fidelity change with a visual diff rather than a rename. Until then the screen template
-pins a `fontSizeSp` on every label so the two agree, and the catalog's `wear-m3/text` note says
-exactly this rather than claiming Wear's `Text`.
+Text was the last one, and it was worth more than the composable. The branch read four properties —
+`text`, `color`, `style`, `maxLines` — where the catalog declares sixteen, so every `fontSizeSp`,
+`lineHeightSp`, `softWrap` and `overflow` a design set on a Wear text node was inert on the canvas
+while the mobile `m3/text` branch beside it honoured all of them. Wear's `Text` takes the same
+argument list, so the branch now reads what the mobile one reads.
 
-The mapping is three lines of one function (`wearTextStyle` in
-[`WearCanvasComponents.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearCanvasComponents.kt))
-and it is pinned by `WearTextComponentTest` — the rename table that used to be the other half
-(`wearScreenStandIn`) is deleted, so a fourth id cannot join it by being borrowed.
+That is what makes the screen template's `fontSizeSp` pins live, and they are worth keeping: the
+style comes from `wearTextStyle`, which resolves the role names against **Wear's** own typography
+(16sp for `titleMedium`), but the canvas draws it with the port's vendored Roboto Flex, which is
+wider than the Roboto the Robolectric lane rasterises. Rendered, the title measured 73.0dp wide
+against the reference's 67.0dp with the pins ignored and 64.5dp with them live; the subtitle 32.5
+and 35.5 against 36.5. The generated Kotlin carries neither, because the platform lane has the real
+font and the real role size and needs no correction.
 
 ## The stadium is the scroll extent, and it is the real one
 
@@ -622,15 +620,13 @@ parameter when it declares one.
   `ScreenScaffold` takes a scroll state that has to agree with the list inside its content lambda,
   which `ScreenGenerator`'s call-site emitter cannot write from a record, so the whole-screen
   generator writes it instead.
-- **~~The content ids are Wear's, and the drawing is still borrowed.~~** Closed for card and
-  button, which are Wear Compose's own on the canvas; still true of **text**, and the entry is split
-  rather than marked closed wholesale because the two halves have different answers. Wear's `Text`
-  and a Material 3 `Text` resolve the same fifteen role names against whichever theme is installed,
-  and the canvas installs the mobile one — so a `titleMedium` here is the mobile face at Wear's
-  measured size, which is what the template's `fontSizeSp` pins compensate for. Swapping the
-  composable would change nothing; providing Wear's type scale on the canvas is the change, and it
-  is a fidelity change with a visual diff rather than a rename. The catalog's `wear-m3/text` note
-  says this rather than claiming Wear's `Text`.
+- **~~The content ids are Wear's, and the drawing is still borrowed.~~** Closed. Wear's `Text`,
+  `TitleCard` and `Button` are all drawn by Wear Compose on the canvas now, out of the Compose
+  Multiplatform build of the library it links, and the rename table that mapped them onto Material 3
+  is deleted. Text was the last and the least visible: it resolved the right *style* all along —
+  `wearTextStyle` reads Wear's own typography — while ignoring twelve of the sixteen properties the
+  catalog declares, which is why the template's measured `fontSizeSp` pins were inert and the
+  canvas drew a title 6dp wider than the reference.
 - **~~No Wear controls, and none are coming on the canvas.~~** Closed. This entry used to read "they
   arrive with the streaming preview or they do not arrive", on the premise the correction at the top
   of this document retires. Every control the catalog declares — `CheckboxButton`, `SwitchButton`,

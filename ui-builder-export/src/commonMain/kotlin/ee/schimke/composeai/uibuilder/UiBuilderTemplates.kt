@@ -835,9 +835,20 @@ fun wearScreenUiBuilderDocument(
 /**
  * Type sizes measured off the reference render's glyph boxes, not read off a token table.
  *
- * Wear Material 3's type scale is not Material 3's: the same `titleMedium` name is a smaller face
- * on a watch, and the borrowed `m3/text` reads the mobile scale. Setting the size explicitly is
- * what makes "Session 1" the same 66dp wide in both renderers.
+ * These are not the role sizes — Wear's `titleMedium` is 16sp and its `bodySmall` 12sp — and they
+ * are not meant to be: the canvas resolves the role through `wearTextStyle`, which reads Wear's own
+ * typography, and then draws it with the font the canvas has. That font is the port's vendored
+ * Roboto Flex, which is wider than the Roboto the Robolectric lane rasterises, so a title set at
+ * Wear's own 16sp came out 73dp against the reference's 67dp. Pinning the size to the measured 14
+ * is what closes that: rendered, the title is 64.5dp wide against the reference's 67.0dp, and the
+ * subtitle 35.5 against 36.5.
+ *
+ * The generated Kotlin deliberately carries neither pin — `WearScreenCodeExporter` writes
+ * `Text(text = …)` with no size — because the platform lane has the real font and the real role
+ * size and needs no correction. So these numbers are a canvas-side measurement, and they are only
+ * live because `wear-m3/text` reads `fontSizeSp`: the branch used to ignore every property but
+ * `text`, `color`, `style` and `maxLines`, which made both pins inert and the canvas 6dp wide of
+ * the reference.
  */
 private const val WEAR_CARD_TITLE_SP = 14f
 

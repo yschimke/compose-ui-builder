@@ -429,7 +429,7 @@
             ],
             "wasm": {
                 "adapterStatus": "supported",
-                "notes": "Wear Material 3's `Text`. The canvas draws it with a Material 3 `Text` at Wear's role sizes, because the canvas's theme still carries the mobile type scale; the generated screen and the native render use `androidx.wear.compose` itself.",
+                "notes": "Wear Material 3's `Text`. The canvas draws it with Wear Compose's own `Text`; the generated screen and the native render use `androidx.wear.compose` itself.",
                 "platformSupported": true,
                 "unrolled": null
             }
@@ -13576,7 +13576,7 @@
             },
             "wasm": {
                 "fidelity": "approximate",
-                "reason": "The canvas draws this catalog's components with a Compose Multiplatform build of Wear Compose — the Android AAR has no browser variant — so each is the component itself rather than an impression of it. What is still the canvas's own: the screen frame (the extent has no viewport for a real scaffold), the unrolled list (a long screenshot turns the row transformation off), and the type scale, which is the mobile theme's. Author on it; check a size on the Android preview, which compiles this design's own generated Kotlin against the real AAR."
+                "reason": "The canvas draws this catalog's components with a Compose Multiplatform build of Wear Compose — the Android AAR has no browser variant — so each is the component itself rather than an impression of it. What is still the canvas's own: the screen frame (the extent has no viewport for a real scaffold), the unrolled list (a long screenshot turns the row transformation off), and the font, which is the port's vendored Roboto Flex rather than the platform's. Author on it; check a size on the Android preview, which compiles this design's own generated Kotlin against the real AAR."
             }
         },
         "svgStatus": {
