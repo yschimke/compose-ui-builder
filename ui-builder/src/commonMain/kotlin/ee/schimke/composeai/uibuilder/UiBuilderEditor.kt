@@ -1067,6 +1067,25 @@ fun UiBuilderEditor(
     textInputFocused = false
     editorFocusRequester.requestFocus()
   }
+  fun openProperties() {
+    if (state.codePaneVisible) dispatch(UiBuilderEditorEvent.ToggleCodePane)
+    dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Properties))
+    inspectorOpen = true
+    mobilePanel = MobileEditorPanel.Properties
+  }
+  /**
+   * Selection is the beginning of editing, not a separate mode an author has to discover.
+   *
+   * The canvas deliberately starts uncluttered, but leaving its Properties dock closed after an
+   * author chooses a component turns the most common edit into a second hunt through the rail. The
+   * same action is used for a layer-tree selection, so the two ways of choosing a component stay in
+   * agreement.
+   */
+  fun selectNodeForEditing(nodeId: String) {
+    focusEditor()
+    dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
+    openProperties()
+  }
   // The host's answer, into the state the Issues panel reads. An effect rather than a value folded
   // in at composition because the fetch lands after mount, and the reducer's copy has to survive
   // the document rebuilds that happen between then and the next fetch.
@@ -1254,6 +1273,7 @@ fun UiBuilderEditor(
         thumbnailOf = reducer::previewDocument,
         layerRows = layerRows,
         collaborators = collaborators,
+        onOpenProperties = ::openProperties,
         dropTarget = reducer.dropTarget(state, draggedComponentId ?: "m3/text"),
         dropTargetLabel =
           reducer.dropTarget(state, draggedComponentId ?: "m3/text")?.let(::insertDestinationLabel),
@@ -1447,10 +1467,7 @@ fun UiBuilderEditor(
     PinnedDesignCanvas(
       document = state.document,
       selectedNodeId = state.selectedNodeId,
-      onNodeSelected = {
-        focusEditor()
-        dispatch(UiBuilderEditorEvent.SelectNode(it))
-      },
+      onNodeSelected = { selectNodeForEditing(it) },
       onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
       onCanvasBounds = {
         canvasBounds = it
@@ -1700,10 +1717,7 @@ fun UiBuilderEditor(
         stream = nativeStream,
         backend = catalog.previewSurfaces.native.backend,
         selectedNodeId = state.selectedNodeId,
-        onNodeSelected = {
-          focusEditor()
-          dispatch(UiBuilderEditorEvent.SelectNode(it))
-        },
+        onNodeSelected = { selectNodeForEditing(it) },
         modifier = paneModifier,
       )
     }
@@ -4796,6 +4810,7 @@ private fun EditorNavigator(
   thumbnailOf: (String, EditorCatalogVariant?) -> UiBuilderDocument?,
   layerRows: List<EditorLayerRow>,
   collaborators: List<UiBuilderCollaborator>,
+  onOpenProperties: () -> Unit,
   dropTarget: ParentSlot?,
   /** What [dropTarget] is called out loud — a layer's name and its slot, not an id. */
   dropTargetLabel: String? = null,
@@ -4874,6 +4889,7 @@ private fun EditorNavigator(
             dropTarget = dropTarget,
             moveRefusal = moveRefusal,
             onEditorInteraction = onEditorInteraction,
+            onOpenProperties = onOpenProperties,
             onTextInputFocusChanged = onTextInputFocusChanged,
             dispatch = dispatch,
           )
@@ -5069,6 +5085,7 @@ private fun LayersPanel(
   dropTarget: ParentSlot?,
   moveRefusal: (String, ParentSlot) -> EditorMoveRefusal?,
   onEditorInteraction: () -> Unit,
+  onOpenProperties: () -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
@@ -5153,7 +5170,7 @@ private fun LayersPanel(
                     it.marker == LayerLandingMarker.Below(index)
                 },
               collaborators = collaborators.filter { row.nodeId in it.selectedNodeIds },
-              onSelect = { gesture ->
+              onSelect = { gesture, showProperties ->
                 onEditorInteraction()
                 dispatch(
                   when (gesture) {
@@ -5163,6 +5180,7 @@ private fun LayersPanel(
                       UiBuilderEditorEvent.ExtendSelectionTo(row.nodeId)
                   }
                 )
+                if (showProperties) onOpenProperties()
               },
               onDragTo = { y ->
                 draggedLayer = row.nodeId
@@ -5699,8 +5717,14 @@ internal fun PinnedDesignCanvas(
                         }
                         .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
                         ?.first
-                    if (hit != null) {
-                      if (hit != selectedNodeId) onNodeSelected(hit)
+                    // The inspection callback follows the first rendered frame. A right-click can
+                    // arrive before it, especially immediately after opening a design; in that
+                    // interval retain the current selection as the menu subject rather than making
+                    // the secondary button appear dead. Once bounds are available, the node under
+                    // the pointer remains authoritative.
+                    val menuNode = hit ?: selectedNodeId
+                    if (menuNode != null) {
+                      if (menuNode != selectedNodeId) onNodeSelected(menuNode)
                       menuAt = position
                     }
                   }
@@ -7418,7 +7442,8 @@ private fun LayerRow(
   landing: LayerLanding?,
   collaborators: List<UiBuilderCollaborator>,
   selectionMenu: @Composable (() -> Unit) -> Unit,
-  onSelect: (LayerSelectionGesture) -> Unit,
+  /** `false` for a context click, whose menu is the next interaction instead. */
+  onSelect: (LayerSelectionGesture, Boolean) -> Unit,
   onDragTo: (Float) -> Unit,
   onDrop: () -> Unit,
   onDragCancel: () -> Unit,
@@ -7458,7 +7483,7 @@ private fun LayerRow(
       .onSecondaryClick(row.nodeId) { position ->
         // Selecting first, and only when it is not already part of the selection: a right-click on
         // one of six selected layers must not collapse the selection it is about to act on.
-        if (!selected) onSelect(LayerSelectionGesture.Replace)
+        if (!selected) onSelect(LayerSelectionGesture.Replace, false)
         menuAt = position
       }
       .padding(start = (8 + indent * 12).dp, end = 10.dp),
@@ -7519,7 +7544,8 @@ private fun LayerRow(
                 modifiers.isShiftPressed -> LayerSelectionGesture.Range
                 modifiers.isCtrlPressed || modifiers.isMetaPressed -> LayerSelectionGesture.Toggle
                 else -> LayerSelectionGesture.Replace
-              }
+              },
+              true,
             )
           }
         }
@@ -7538,7 +7564,8 @@ private fun LayerRow(
                 event.isShiftPressed -> LayerSelectionGesture.Range
                 event.isCtrlPressed || event.isMetaPressed -> LayerSelectionGesture.Toggle
                 else -> LayerSelectionGesture.Replace
-              }
+              },
+              true,
             )
             true
           } else false
@@ -7548,7 +7575,7 @@ private fun LayerRow(
           contentDescription = "Select ${row.nodeId}"
           this.selected = selected
           onClick(label = "Select") {
-            onSelect(LayerSelectionGesture.Replace)
+            onSelect(LayerSelectionGesture.Replace, true)
             true
           }
         },
