@@ -2985,6 +2985,15 @@ class UiBuilderEditorReducer(
    */
   fun problems(document: UiBuilderDocument): List<EditorProblem> =
     (CapabilityComposeCodeExporter.diagnose(document, catalog)
+        // A Wear widget is a WearWidgetDocument of Remote Compose, not a Compose call tree. Its
+        // root is the launcher-owned frame that WearWidgetCodeExporter deliberately removes, and
+        // RemoteContentEmitter owns its children. Keep the structural capability diagnostics, but
+        // do not report the ordinary Compose emitter's missing-symbol answer for a language it does
+        // not write. The dedicated generator below reports every actual Remote Compose refusal.
+        .filterNot {
+          document.isWearWidget() &&
+            it.code in setOf("MISSING_CODE_CAPABILITY", "UNSUPPORTED_CODE_COMPONENT")
+        }
         .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
         .map { diagnostic ->
           EditorProblem(

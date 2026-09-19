@@ -243,8 +243,8 @@ class VariantPaneTest {
    * You build the UI once and watch it adapt beside you.
    *
    * The devices and axes used to be drawn on the authoring canvas, which made the one surface you
-   * edit on grow a row of surfaces you cannot. They are the preview pane's now and nowhere else:
-   * with that pane shut, the workspace holds one frame however many devices the design claims.
+   * edit on grow a row of surfaces you cannot. The free preview opens alongside the editor, while
+   * the editor's own canvas remains a single editable frame however many devices it claims.
    */
   @OptIn(ExperimentalTestApi::class)
   @Test
@@ -266,7 +266,7 @@ class VariantPaneTest {
           }
         }
       }
-      onNodeWithText("Pixel Tablet", substring = true).assertDoesNotExist()
+      onNodeWithText("Pixel Tablet", substring = true).assertExists()
 
       runOnIdle { panes = setOf(EditorPane.Editor, EditorPane.Preview) }
       waitForIdle()

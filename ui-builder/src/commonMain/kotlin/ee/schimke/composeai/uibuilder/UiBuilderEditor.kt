@@ -799,25 +799,15 @@ fun UiBuilderEditor(
             enabledPacks =
               initialEnabledPacks.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
             pinnedComponents = initialPinnedComponents,
-            // A widget opens on its editable rectangular host plus the free comparison strip. The
-            // native lane compiles a whole design and is deliberately opt-in: opening a document
-            // must not spend a host render merely to show the three launcher shapes the canvas can
-            // already draw. An explicit [initialPanes] from the host still wins.
+            // Opening a design always gives its editable canvas a free browser preview beside it.
+            // Native compiles a whole design through the host and is therefore explicit-only — a
+            // document opening must not spend a render merely because its catalog's browser canvas
+            // is a stand-in. Widgets use the same policy; their preview additionally fans out over
+            // the launcher host shapes. An explicit [initialPanes] from the host still wins.
             panes =
-              if (
-                initialPanes == setOf(EditorPane.Editor) &&
-                  document.wearWidgetScaffoldSize() != null
-              ) {
+              if (initialPanes == setOf(EditorPane.Editor)) {
                 setOf(EditorPane.Editor, EditorPane.Preview)
-              } else if (
-                initialPanes == setOf(EditorPane.Editor) &&
-                  !catalog.previewSurfaces.wasm.fidelity.isAuthoritative &&
-                  onRequestNativeRender != null
-              ) {
-                setOf(EditorPane.Editor, EditorPane.Native)
-              } else {
-                initialPanes
-              },
+              } else initialPanes,
           )
       )
     }

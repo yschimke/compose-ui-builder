@@ -135,15 +135,14 @@ class RemoteTextComponentExportTest {
   }
 
   /**
-   * A host that published no catalog must not get a call to a component it never served.
+   * RemoteText needs no component record: its Kotlin spelling is the fixed Remote Material 3 API.
    *
-   * The hand-written case is keyed on the id, and the id alone says nothing about whether this box
-   * serves the component — so it is taken only where the record is. Without it the node falls to
-   * the same refusal it had before this writer existed, which `RecordFreeComposeExportTest` pins
-   * from the production side for both the export and the native preview.
+   * Records cover discovered and pack components; catalog-owned Remote components do not flow
+   * through that map to the editor's code pane. Requiring one here therefore made valid saved
+   * remote-m3 documents refuse despite the catalog having offered the component.
    */
   @Test
-  fun `an unpublished component refuses rather than being written by hand`() {
+  fun `the published component writes without an optional component record`() {
     val refusals = mutableListOf<String>()
 
     val source =
@@ -154,11 +153,8 @@ class RemoteTextComponentExportTest {
         .emit("label", 1)
         .joinToString("\n")
 
-    assertFalse("RemoteText(" in source, source)
-    assertTrue(
-      refusals.any { REMOTE_TEXT_COMPONENT_ID in it },
-      "the refusal has to name the component: $refusals",
-    )
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(source, "RemoteText(")
   }
 
   /** Present is all this needs to be: the writer reads the design, not the record. */
