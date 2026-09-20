@@ -17,21 +17,24 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
  * itself would keep passing after the catalog changed its mind, which is the failure the field
  * exists to remove.
  */
-internal val wearCatalogAdapters: Map<String, String> by lazy {
+private val wearCatalog by lazy {
   CapabilityCatalogParser.parse(
-      checkNotNull(UiBuilderDocument::class.java.getResource("/wear-m3-capabilities-v1.json")) {
-          "missing the wear capability golden on the test resources path"
-        }
-        .readText()
-    )
-    .canvasAdapterIds
+    checkNotNull(UiBuilderDocument::class.java.getResource("/wear-m3-capabilities-v1.json")) {
+        "missing the wear capability golden on the test resources path"
+      }
+      .readText()
+  )
 }
+
+internal val wearCatalogAdapters: Map<String, String> by lazy { wearCatalog.canvasAdapterIds }
 
 /** [content] with the Wear catalog's adapters declared, the way the editor declares them. */
 @Composable
 internal fun WearCatalogAdapters(content: @Composable () -> Unit) {
   CompositionLocalProvider(
     LocalUiBuilderCanvasAdapters provides wearCatalogAdapters,
+    LocalUiBuilderFrameGeometry provides wearCatalog.frameGeometry,
+    LocalUiBuilderCatalogPlatform provides wearCatalog.platform.wireValue,
     content = content,
   )
 }

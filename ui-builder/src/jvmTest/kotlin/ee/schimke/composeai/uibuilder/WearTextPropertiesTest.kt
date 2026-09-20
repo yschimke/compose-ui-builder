@@ -53,13 +53,8 @@ class WearTextPropertiesTest {
     val small = text(fontSizeSp = 12f)
     val large = text(fontSizeSp = 24f)
 
-    assertTrue(
-      large.bounds.height > small.bounds.height,
-      "a 24sp Wear text should be taller than a 12sp one, but both measured " +
-        "${small.bounds.height}px — the renderer is ignoring `fontSizeSp`",
-    )
-    // The style's own line height is what a node with no `fontSizeSp` gets, so the two ends are the
-    // pinned sizes and not a pair of defaults.
+    // The screen's frame pane gives content the viewport's height, so its node bounds stay 192dp
+    // however its text measures. A baseline is the text metric, rather than the slot it occupies.
     assertTrue(
       large.text.firstBaselineY > small.text.firstBaselineY,
       "the first baseline should move with the size: ${small.text.firstBaselineY} then " +
