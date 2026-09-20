@@ -95,17 +95,14 @@ class DialogAndPickerTest {
   }
 
   @Test
-  fun `a dialog exports as the surface the canvas draws, with both buttons in Material order`() {
+  fun `a dialog exports as the real Material modal with distinct action slots`() {
     val source = exportOf("m3/dialog")
 
-    assertTrue("BuilderDialogSurface(" in source, source)
-    assertTrue("hasTitle = true" in source, source)
-    // Dismiss before confirm, which is the order both the canvas and the Material spec put them in.
-    assertTrue(source.indexOf("\"Cancel\"") < source.indexOf("\"OK\""), source)
-    // The helper block is a declared export diagnostic rather than a claim of API parity, and the
-    // reason it exists at all is that `AlertDialog` needs an `onDismissRequest` a design has no way
-    // to write. Emitting the real dialog would put an undismissable modal over the exported screen.
-    assertTrue("AlertDialog(" !in source, source)
+    assertTrue("AlertDialog(" in source, source)
+    assertTrue("onDismissRequest = {}" in source, source)
+    assertTrue("dismissButton = {" in source, source)
+    assertTrue("confirmButton = {" in source, source)
+    assertTrue("BuilderDialogSurface(" !in source, source)
   }
 
   @Test

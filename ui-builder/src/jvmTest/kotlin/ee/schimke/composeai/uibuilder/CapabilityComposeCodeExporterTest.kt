@@ -59,8 +59,10 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(source.contains("fun JetcasterDiscoverExpandedSupportingPane()"))
     assertTrue(source.contains("BuilderSupportingPaneScaffold("))
     assertTrue(source.contains("LazyVerticalGrid("))
-    assertTrue(source.contains("BuilderHorizontalCarousel("))
-    assertTrue(source.contains("BuilderSearchInputField("))
+    assertTrue(source.contains("HorizontalUncontainedCarousel("))
+    assertTrue(source.contains("SearchBarDefaults.InputField("))
+    assertFalse(source.contains("BuilderHorizontalCarousel("))
+    assertFalse(source.contains("BuilderSearchInputField("))
     assertTrue(source.contains("jetcaster.cover.android-developers-backstage"))
     assertTrue(source.contains("Android Developers Backstage"))
     assertTrue(source.contains("// node:detail-follow-icon component:m3/icon"))
@@ -86,7 +88,10 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(source.contains("WindowSizeClass.compute(maxWidth.value, maxHeight.value)"))
     assertFalse(first.diagnostics.any { it.code == "ASSET_BINDING_REQUIRED" })
     assertEquals(artworkAdapter.id, first.provenance.assetAdapterId)
-    assertTrue(first.provenance.declaredFallbacks.isEmpty())
+    assertEquals(
+      listOf("component-adapter:floating-toolbar:m3/horizontal-floating-toolbar"),
+      first.provenance.declaredFallbacks,
+    )
     assertTrue(source.contains("private fun BuilderAssetImage"))
     assertTrue(
       source.contains("modifier.semantics { this.contentDescription = contentDescription }")
@@ -348,6 +353,7 @@ class CapabilityComposeCodeExporterTest {
       listOf(
         "asset-placeholder:jetcaster.cover.android-developers-backstage",
         "asset-placeholder:jetcaster.cover.google-developers-podcast",
+        "component-adapter:floating-toolbar:m3/horizontal-floating-toolbar",
       ),
       result.provenance.declaredFallbacks,
     )

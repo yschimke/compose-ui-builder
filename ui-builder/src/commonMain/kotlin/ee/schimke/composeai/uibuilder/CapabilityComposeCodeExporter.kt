@@ -94,10 +94,16 @@ object CapabilityComposeCodeExporter {
     assetAdapter: ComposeAssetAdapter? = null,
   ): ComposeExportResult {
     val diagnostics = diagnose(document, catalog, assetAdapter).toMutableList()
+    val compatibilityFallbacks =
+      document.nodes.values
+        .filter { it.componentId == "m3/horizontal-floating-toolbar" }
+        .map { "component-adapter:${it.id}:${it.componentId}" }
     val provenance =
       document.exportProvenance(
         EXPORTER_VERSION,
-        declaredFallbacks = document.unboundAssetKeys(assetAdapter).map { "asset-placeholder:$it" },
+        declaredFallbacks =
+          document.unboundAssetKeys(assetAdapter).map { "asset-placeholder:$it" } +
+            compatibilityFallbacks,
         assetAdapterId = assetAdapter?.id,
       )
     if (diagnostics.any { it.severity == ComposeExportSeverity.ERROR }) {
@@ -288,11 +294,12 @@ object CapabilityComposeCodeExporter {
         // prove adaptive posture or motion parity". It no longer emits a helper that could fail to:
         // the generated screen calls the real `SupportingPaneScaffold` through the directive the
         // window computes, which is the thing the warning was asking for.
-        "layout/horizontal-carousel" ->
+        "m3/horizontal-floating-toolbar" ->
           diagnostics +=
             node.warning(
-              "CAROUSEL_COMPATIBILITY_HELPER",
-              "row helper preserves order and sizing but not Material carousel masking",
+              "FLOATING_TOOLBAR_COMPATIBILITY_HELPER",
+              "the pinned Material 3 dependency does not provide HorizontalFloatingToolbar; " +
+                "generated code uses the adapter declared in export provenance",
             )
         "asset/image" ->
           if (node.string("assetKey") in unboundAssetKeys) {
@@ -1074,36 +1081,45 @@ private class ComposeEmitter(
   }
 
   private fun emitCarousel(node: UiBuilderNode, level: Int) {
+    val items = node.slot("items")
+    line(level, "val carouselState = rememberCarouselState { ${items.size} }")
     line(
       level,
-      "BuilderHorizontalCarousel(kind = \"${node.string("kind").escape()}\", itemWidth = ${node.number("itemWidthDp", 128f).dpLiteral()}, spacing = ${node.number("itemSpacingDp").dpLiteral()}, contentPaddingStart = ${node.number("contentPaddingStartDp").dpLiteral()}) { itemWidth ->",
+      "HorizontalUncontainedCarousel(state = carouselState, itemWidth = ${node.number("itemWidthDp", 128f).dpLiteral()}, itemSpacing = ${node.number("itemSpacingDp").dpLiteral()}, contentPadding = PaddingValues(start = ${node.number("contentPaddingStartDp").dpLiteral()}), ${node.modifierArgument()}) { index ->",
     )
-    // Through the fold like any other non-lazy container, per-item wrapper and all: the carousel
-    // helper is a `Row`, its items carry no key, and the `Box` this puts around each one is the
-    // same expression every time — so a run of identical items is as interchangeable here as
-    // anywhere else.
-    emitChildren(node.slot("items"), level + 1) { id, itemLevel ->
-      line(itemLevel, "Box(Modifier.width(itemWidth)) {")
-      emitNode(id, itemLevel + 1)
-      line(itemLevel, "}")
+    line(level + 1, "when (index) {")
+    items.forEachIndexed { index, id ->
+      line(level + 2, "$index -> {")
+      emitNode(id, level + 3)
+      line(level + 2, "}")
     }
+    line(level + 2, "else -> Unit")
+    line(level + 1, "}")
     line(level, "}")
   }
 
   private fun emitSearchBar(node: UiBuilderNode, level: Int) {
-    line(
-      level,
-      "BuilderSearchBar(expanded = ${node.boolValue("expanded")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}, ${node.modifierArgument()}) {",
-    )
-    emitChildren(node.slot("inputField"), level + 1)
+    line(level, "SearchBar(")
+    line(level + 1, "inputField = {")
+    emitChildren(node.slot("inputField"), level + 2)
+    line(level + 1, "},")
+    line(level + 1, "expanded = ${node.boolValue("expanded")},")
+    line(level + 1, "onExpandedChange = {},")
+    line(level + 1, "tonalElevation = ${node.number("tonalElevationDp").dpLiteral()},")
+    line(level + 1, "${node.modifierArgument()},")
+    line(level, ") {")
+    emitChildren(node.slot("expandedContent"), level + 1)
     line(level, "}")
   }
 
   private fun emitSearchInput(node: UiBuilderNode, level: Int) {
     val variable = node.obj("value").optionalString("variable")?.identifier() ?: "searchQuery"
-    line(level, "BuilderSearchInputField(")
-    line(level + 1, "value = $variable,")
-    line(level + 1, "onValueChange = { $variable = it },")
+    line(level, "SearchBarDefaults.InputField(")
+    line(level + 1, "query = $variable,")
+    line(level + 1, "onQueryChange = { $variable = it },")
+    line(level + 1, "onSearch = {},")
+    line(level + 1, "expanded = false,")
+    line(level + 1, "onExpandedChange = {},")
     line(level + 1, "enabled = ${node.boolValue("enabled", true)},")
     listOf("leadingIcon", "placeholder", "trailingIcon").forEach { slot ->
       line(level + 1, "$slot = {")
@@ -1445,18 +1461,10 @@ private class ComposeEmitter(
     )
   }
 
-  /**
-   * A dialog, as the inline surface the canvas draws rather than as a real `AlertDialog`.
-   *
-   * The reasoning is `BuilderDialogSurface`'s in the renderer and is not repeated here, but the
-   * short version is the part that binds this emitter: `AlertDialog` takes `onDismissRequest`, and
-   * a design has no way to say "close this dialog" — its actions write declared state variables and
-   * nothing else. Emitting the real API would produce a modal that covers the exported screen and
-   * cannot be dismissed. So this emits the helper, which is what the canvas shows, and the helper
-   * is labelled an export diagnostic like every other one.
-   */
+  /** A real modal dialog. Authored buttons carry the design's state actions. */
   private fun emitDialog(node: UiBuilderNode, level: Int) {
-    line(level, "BuilderDialogSurface(")
+    line(level, "AlertDialog(")
+    line(level + 1, "onDismissRequest = {},")
     line(level + 1, "containerColor = ${node.colorExpression("containerColor")},")
     line(
       level + 1,
@@ -1464,11 +1472,8 @@ private class ComposeEmitter(
     )
     line(
       level + 1,
-      "cornerRadius = ${node.number("shapeDp", DIALOG_CORNER_DP).dpLiteral()},",
+      "shape = RoundedCornerShape(${node.number("shapeDp", DIALOG_CORNER_DP).dpLiteral()}),",
     )
-    line(level + 1, "hasIcon = ${node.slot("icon").isNotEmpty()},")
-    line(level + 1, "hasTitle = ${node.slot("title").isNotEmpty()},")
-    line(level + 1, "hasText = ${node.slot("text").isNotEmpty()},")
     line(level + 1, "${node.modifierArgument()},")
     line(level + 1, "icon = {")
     emitChildren(node.slot("icon"), level + 2)
@@ -1479,13 +1484,13 @@ private class ComposeEmitter(
     line(level + 1, "text = {")
     emitChildren(node.slot("text"), level + 2)
     line(level + 1, "},")
-    line(level + 1, ") {")
-    // The dismissing action first, then the confirming one: Material's order, and the order the
-    // canvas draws, so a screenshot and its generated source cannot disagree about which button is
-    // on the end.
+    line(level + 1, "dismissButton = {")
     emitChildren(node.slot("dismissButton"), level + 2)
+    line(level + 1, "},")
+    line(level + 1, "confirmButton = {")
     emitChildren(node.slot("confirmButton"), level + 2)
-    line(level, "}")
+    line(level + 1, "},")
+    line(level, ")")
   }
 
   /**
@@ -1574,22 +1579,7 @@ private class ComposeEmitter(
     )
     emitAdaptiveHelper()
     appendLine(
-      "@Composable private fun BuilderHorizontalCarousel(kind: String, itemWidth: Dp, spacing: Dp, contentPaddingStart: Dp, content: @Composable RowScope.(Dp) -> Unit) { check(kind == \"uncontained\") { \"Unsupported carousel kind: ${'$'}kind\" }; Row(Modifier.padding(start = contentPaddingStart), horizontalArrangement = Arrangement.spacedBy(spacing)) { content(itemWidth) } }"
-    )
-    appendLine(
-      "@Composable private fun BuilderSearchBar(expanded: Boolean, tonalElevation: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) { Surface(modifier.height(56.dp).semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = tonalElevation) { Box(Modifier.fillMaxSize()) { content() } } }"
-    )
-    appendLine(
-      "@Composable private fun BuilderSearchInputField(value: String, onValueChange: (String) -> Unit, enabled: Boolean, leadingIcon: @Composable () -> Unit, placeholder: @Composable () -> Unit, trailingIcon: @Composable () -> Unit) { Row(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) { leadingIcon(); BasicTextField(value, onValueChange, Modifier.weight(1f), enabled = enabled, decorationBox = { inner -> if (value.isEmpty()) placeholder(); inner() }); trailingIcon() } }"
-    )
-    appendLine(
       "@Composable private fun BuilderSnackbarHost(visible: Boolean) { if (visible) Snackbar { Text(\"Snackbar\") } }"
-    )
-    appendLine(
-      "@Composable private fun BuilderDialogSurface(containerColor: Color, tonalElevation: Dp, cornerRadius: Dp, hasIcon: Boolean, hasTitle: Boolean, hasText: Boolean, modifier: Modifier = Modifier, icon: @Composable () -> Unit, title: @Composable () -> Unit, text: @Composable () -> Unit, buttons: @Composable RowScope.() -> Unit) { Surface(modifier.widthIn(min = 280.dp, max = 560.dp), shape = RoundedCornerShape(cornerRadius), color = if (containerColor == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh else containerColor, contentColor = MaterialTheme.colorScheme.onSurface, tonalElevation = tonalElevation) {"
-    )
-    appendLine(
-      "  Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = if (hasIcon) Alignment.CenterHorizontally else Alignment.Start) { if (hasIcon) icon(); if (hasTitle) title(); if (hasText) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) { text() }; Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically, content = buttons) } } }"
     )
     appendLine(
       "@Composable private fun BuilderHorizontalFloatingToolbar(expanded: Boolean, containerColor: Color, contentPadding: PaddingValues, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) { Surface(modifier.semantics { stateDescription = if (expanded) \"expanded\" else \"collapsed\" }, shape = CircleShape, color = containerColor, tonalElevation = 6.dp, shadowElevation = 8.dp) { Row(Modifier.padding(contentPadding), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, content = content) } }"
@@ -3453,7 +3443,10 @@ private val HANDLED_FIELDS =
     "m3/progress-indicator" to HandledFields(setOf("variant", "progress", "indeterminate")),
     "m3/radio-button" to HandledFields(setOf("selected", "enabled"), events = setOf("click")),
     "m3/search-bar" to
-      HandledFields(setOf("expanded", "tonalElevationDp"), slots = setOf("inputField")),
+      HandledFields(
+        setOf("expanded", "tonalElevationDp"),
+        slots = setOf("inputField", "expandedContent"),
+      ),
     "m3/search-input-field" to
       HandledFields(
         setOf("enabled", "value"),
@@ -3533,6 +3526,8 @@ private val GENERATED_IMPORTS =
       "androidx.compose.material.icons.sharp.*",
       "androidx.compose.material.icons.twotone.*",
       "androidx.compose.material3.*",
+      "androidx.compose.material3.carousel.HorizontalUncontainedCarousel",
+      "androidx.compose.material3.carousel.rememberCarouselState",
       "androidx.compose.runtime.*",
       "androidx.compose.ui.Alignment",
       "androidx.compose.ui.Modifier",

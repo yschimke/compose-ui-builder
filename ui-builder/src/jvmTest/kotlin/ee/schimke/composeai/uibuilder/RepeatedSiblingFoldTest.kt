@@ -177,21 +177,14 @@ class RepeatedSiblingFoldTest {
     assertEquals(12, emittedCellBodies(source))
   }
 
-  /**
-   * The carousel folds too, wrapper and all.
-   *
-   * `BuilderHorizontalCarousel` is a `Row` and its items carry no key, so it is a non-lazy
-   * container like any other — but it puts a `Box(Modifier.width(itemWidth))` around each child,
-   * and that expression is the same for every one of them. So the run stands for the wrapper as
-   * well as the item.
-   */
+  /** A real lazy carousel emits one indexed branch per authored item rather than a row helper. */
   @Test
-  fun `a run of identical carousel items folds, and the item wrapper folds with it`() {
+  fun `a run of identical carousel items keeps one branch per index`() {
     val source = exportSource(carousel(items = 5))
 
-    assertEquals(1, Regex("kotlin\\.repeat\\(5\\) \\{ _ ->").findAll(source).count())
-    assertEquals(1, Regex("Box\\(Modifier\\.width\\(itemWidth\\)\\)").findAll(source).count())
-    assertEquals(1, emittedCellBodies(source))
+    assertFalse(source.contains("BuilderHorizontalCarousel("), source)
+    assertTrue(source.contains("HorizontalUncontainedCarousel("), source)
+    assertEquals(5, emittedCellBodies(source))
   }
 
   /**
