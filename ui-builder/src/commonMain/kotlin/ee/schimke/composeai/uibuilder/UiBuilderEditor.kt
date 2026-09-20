@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,6 +42,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -5074,19 +5079,34 @@ private fun InsertPanel(
     if (!packs.isEmpty && onManagePacks != null) {
       PacksSummaryRow(packs, state.enabledPacks, onManagePacks)
     }
-    LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-      item {
+    // The palette is a visual chooser. A grid gives each component's rendered stem enough room to
+    // be recognised, while full-width shelf headings keep the catalog's component families clear.
+    LazyVerticalGrid(
+      columns = GridCells.Adaptive(minSize = 118.dp),
+      modifier = Modifier.fillMaxWidth().weight(1f),
+      state = rememberLazyGridState(),
+      contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      item(span = { GridItemSpan(maxLineSpan) }) {
         CatalogAllRow(totalCatalogComponents) {
           if (state.catalogQuery.isNotBlank()) dispatch(UiBuilderEditorEvent.SearchCatalog(""))
           dispatch(UiBuilderEditorEvent.ExpandAllCatalogGroups)
         }
       }
-      items(catalogRows, key = EditorCatalogRow::catalogRowKey) { row ->
+      gridItems(
+        catalogRows,
+        key = EditorCatalogRow::catalogRowKey,
+        span = { row ->
+          if (row is EditorCatalogRow.Group) GridItemSpan(maxLineSpan) else GridItemSpan(1)
+        },
+      ) { row ->
         when (row) {
           is EditorCatalogRow.Group ->
             CatalogGroupRow(row) { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.name)) }
           is EditorCatalogRow.Component ->
-            CatalogRow(
+            CatalogComponentTile(
               item = row.item,
               thumbnail = thumbnailOf(row.item.componentId, null),
               expanded = row.expanded,
@@ -5104,7 +5124,7 @@ private fun InsertPanel(
               },
             )
           is EditorCatalogRow.Variant ->
-            CatalogVariantRow(
+            CatalogVariantTile(
               variant = row.variant,
               thumbnail = thumbnailOf(row.variant.componentId, row.variant),
               componentName = row.componentName,
@@ -5117,10 +5137,12 @@ private fun InsertPanel(
         }
       }
       if (catalogRows.isEmpty()) {
-        item { EmptyPanelNote("No component matches “${state.catalogQuery}”.") }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+          EmptyPanelNote("No component matches “${state.catalogQuery}”.")
+        }
       }
       if (remoteComposeSources.isNotEmpty()) {
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
           HorizontalDivider(color = MaterialTheme.colorScheme.outline)
           PanelHeading(
             "Remote Compose documents",
@@ -5129,7 +5151,7 @@ private fun InsertPanel(
               ?: "${visibleSources.size} of ${remoteComposeSources.size} published",
           )
         }
-        itemsIndexed(visibleSources, key = { _, source -> source.id }) { index, source ->
+        gridItemsIndexed(visibleSources, key = { _, source -> source.id }) { index, source ->
           if (index == 0 || visibleSources[index - 1].group != source.group) {
             GroupHeading(source.group)
           }
@@ -6943,111 +6965,10 @@ private fun IndentGuide(depth: Int) {
   }
 }
 
-@Composable
-private fun CatalogRow(
-  item: EditorCatalogItem,
-  /** The component drawn small — see [CatalogThumbnail]. Null keeps the plain drag handle. */
-  thumbnail: UiBuilderDocument?,
-  expanded: Boolean,
-  onDrag: (Offset?) -> Unit,
-  onDrop: (Offset) -> Unit,
-  canAdd: Boolean,
-  /** Why Add is refused for this component, shown in place of the id — see [CatalogRow]'s KDoc. */
-  refusal: String?,
-  onAdd: () -> Unit,
-  onToggleVariants: () -> Unit,
-  /** Whether this component is at the top of the panel — see [PinnedStar]. */
-  pinned: Boolean = false,
-  onTogglePinned: () -> Unit = {},
-) {
-  Row(
-    // Exactly 44 dp unless this row is refused. `heightIn` alone was applied to every row, and in a
-    // LazyColumn — which measures with an unbounded maximum — that let every row size to its text
-    // instead, moving the whole catalog and leaving `IndentGuide`'s `fillMaxHeight` with no bound
-    // to fill. A refused row still has to grow, so it takes its height from its content with
-    // `IntrinsicSize.Min`, which is bounded and so keeps the guide drawn.
-    Modifier.fillMaxWidth()
-      .then(
-        if (refusal == null) Modifier.height(44.dp)
-        else Modifier.heightIn(min = 44.dp).height(IntrinsicSize.Min)
-      )
-      .padding(end = 4.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    IndentGuide(depth = 1)
-    // Only a component that HAS variants gets a twisty, and a spacer keeps the ones that do not
-    // aligned with the ones that do — a ragged left edge on half the rows reads as a rendering
-    // fault rather than as a component with nothing behind it.
-    if (item.variants.isEmpty()) DisclosureSpacer()
-    else {
-      Box(
-        Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onToggleVariants).semantics {
-          contentDescription = "${if (expanded) "Hide" else "Show"} ${item.displayName} variants"
-        }
-      ) {
-        DisclosureTriangle(expanded, MaterialTheme.colorScheme.onSurfaceVariant)
-      }
-    }
-    val unexportable = item.exportsToCompose == false
-    Box(Modifier.unexportable(unexportable)) {
-      CatalogThumbnail(
-        document = thumbnail,
-        dragKey = item.componentId,
-        label = item.displayName,
-        size = COMPONENT_THUMBNAIL_SIZE,
-        onDrag = onDrag,
-        onDrop = onDrop,
-      )
-    }
-    Column(Modifier.padding(start = 6.dp).weight(1f).unexportable(unexportable)) {
-      Text(item.displayName, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-      // The id is what a row says when there is nothing more pressing to say. A refusal is more
-      // pressing: the reader is looking at a disabled Add and asking why, and the id does not
-      // answer that. One line for one row, so the answer is never somewhere else.
-      Text(
-        refusal ?: item.componentId,
-        color =
-          if (refusal != null) MaterialTheme.colorScheme.error
-          else MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        // A refusal wraps to whatever it needs: there are two of them, both a sentence long, and
-        // clipping one costs exactly the clause that says what to do instead. An id still gets one
-        // line, because an id that does not fit is no less identifiable for being cut.
-        maxLines = if (refusal != null) Int.MAX_VALUE else 1,
-        // Ellipsis only where something is elided. An id has always been clipped here, and
-        // switching it to "…" changed every row that carries a long one — a restyle nobody asked
-        // for, riding in on a change about refusals.
-        overflow = if (refusal != null) TextOverflow.Ellipsis else TextOverflow.Clip,
-      )
-    }
-    if (unexportable) UnexportableBadge(item.displayName)
-    if (item.variants.isNotEmpty()) {
-      Text(
-        item.variants.size.toString(),
-        Modifier.padding(end = 4.dp),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-      )
-    }
-    PinnedStar(item.displayName, pinned, onTogglePinned)
-    CatalogAddButton(canAdd, onAdd, item.displayName, refusal)
-  }
-}
-
-/**
- * The star that keeps a component at the top of the panel.
- *
- * A press here is a fact about the palette rather than about the design: it takes no revision,
- * reaches no collaborator and is remembered in this browser, the same bargain the pack switches and
- * the collapsed groups make. Drawn always rather than on hover, because a control that appears only
- * under a mouse is one touch never finds.
- */
+/** The star that keeps a component at the top of the palette. */
 @Composable
 private fun PinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
   Box(
-    // A merging node of its own, so the star stays a control a screen reader — and a test — can
-    // reach: without this the row's merged semantics swallow it, and a press aimed at the star
-    // lands on whatever the row answers with instead.
     Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).clickable(onClick = onToggle).semantics(
       mergeDescendants = true
     ) {
@@ -7064,120 +6985,130 @@ private fun PinnedStar(componentName: String, pinned: Boolean, onToggle: () -> U
   }
 }
 
-/**
- * The insert panel's mode switch: does an Add fill a slot, or start an item beside the design?
- *
- * A row under the destination line because that is the line it changes — the switch and the
- * sentence saying where the next Add lands read as one statement, and a control that changes what a
- * button does belongs beside the description of what the button does rather than in a menu.
- *
- * Off is the behaviour every design has had. On, an Add appends a top-level item, wrapping the
- * design in a board first if it is not already on one
- * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)).
- */
+/** One draggable stem component in the visual palette. Variants stay behind its disclosure. */
 @Composable
-private fun AddBesideSwitch(checked: Boolean, onToggle: () -> Unit) {
-  Row(
-    Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, bottom = 4.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Column(Modifier.weight(1f)) {
-      Text("Add beside", style = MaterialTheme.typography.labelMedium)
-      Text(
-        "Place items side by side instead of inside the selection",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-      )
-    }
-    Switch(
-      checked = checked,
-      onCheckedChange = { onToggle() },
-      modifier =
-        Modifier.semantics {
-          contentDescription =
-            if (checked) "Add into the selected layer instead" else "Add beside the design instead"
-        },
-    )
-  }
-}
-
-/**
- * One variant under its component: the same row, one level further in, adding the same component
- * with one property already chosen.
- *
- * It carries a drag handle for the same reason the component row does — a variant you can only Add
- * into the selected slot is a variant that cannot be dropped where you are looking, and "drop it
- * where you want it" is the palette's own promise.
- */
-@Composable
-private fun CatalogVariantRow(
-  variant: EditorCatalogVariant,
-  /** The variant drawn small — see [CatalogThumbnail]. Null keeps the plain drag handle. */
+private fun CatalogComponentTile(
+  item: EditorCatalogItem,
   thumbnail: UiBuilderDocument?,
-  /** The component this variant is of, for the names a screen reader and a script use. */
-  componentName: String,
+  expanded: Boolean,
   onDrag: (Offset?) -> Unit,
   onDrop: (Offset) -> Unit,
   canAdd: Boolean,
-  /**
-   * Why Add is refused for this variant, or null.
-   *
-   * Carried to the button's label and not drawn: a variant's refusal is its component's, and the
-   * component's own row is directly above with the sentence already on it. Repeating it once per
-   * variant would say the same thing four times under one heading.
-   */
   refusal: String?,
   onAdd: () -> Unit,
+  onToggleVariants: () -> Unit,
+  pinned: Boolean,
+  onTogglePinned: () -> Unit,
 ) {
-  val label = variant.label
-  // "Filled tonal" is what the row shows, because the component it sits under is directly above it.
-  // What a script or a screen reader asks for has no such context and has to be unambiguous: a
-  // Button's `text` variant and the Text component would otherwise both answer to "Drag Text".
-  val qualified = "$label $componentName"
-  Row(
-    Modifier.fillMaxWidth().height(36.dp).padding(end = 4.dp),
-    verticalAlignment = Alignment.CenterVertically,
+  val unexportable = item.exportsToCompose == false
+  Column(
+    Modifier.fillMaxWidth()
+      .clip(RoundedCornerShape(10.dp))
+      .background(MaterialTheme.colorScheme.surfaceVariant)
+      .padding(6.dp)
   ) {
-    IndentGuide(depth = 2)
-    // Dimmed with its component and no badge of its own: the row above already carries the word,
-    // and a variant is a detail of that row rather than a second component.
-    val unexportable = variant.exportsToCompose == false
-    Box(Modifier.unexportable(unexportable)) {
+    Box(Modifier.fillMaxWidth().unexportable(unexportable), contentAlignment = Alignment.Center) {
       CatalogThumbnail(
         document = thumbnail,
-        dragKey = "${variant.componentId}#${variant.value}",
-        label = qualified,
-        // Smaller than a component's, because a variant is a detail of the row above it and a
-        // column of equal-sized pictures loses the hierarchy the indent just established.
-        size = VARIANT_THUMBNAIL_SIZE,
+        dragKey = item.componentId,
+        label = item.displayName,
+        size = DpSize(104.dp, 72.dp),
         onDrag = onDrag,
         onDrop = onDrop,
       )
     }
-    Row(
-      Modifier.padding(start = 6.dp).weight(1f).unexportable(unexportable),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
       Text(
-        label,
-        style = MaterialTheme.typography.bodySmall,
+        item.displayName,
+        Modifier.weight(1f).unexportable(unexportable),
+        style = MaterialTheme.typography.labelLarge,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
-      // Which one a plain Add on the row above would have given you, said on the row rather than
-      // left to be discovered by adding one and reading the inspector.
+      if (unexportable) UnexportableBadge(item.displayName)
+      PinnedStar(item.displayName, pinned, onTogglePinned)
+    }
+    Text(
+      refusal ?: item.componentId,
+      color =
+        if (refusal != null) MaterialTheme.colorScheme.error
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = if (refusal == null) 1 else 2,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+      if (item.variants.isNotEmpty()) {
+        TextButton(
+          onClick = onToggleVariants,
+          modifier =
+            Modifier.weight(1f).semantics {
+              contentDescription =
+                "${if (expanded) "Hide" else "Show"} ${item.displayName} variants"
+            },
+          contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+        ) {
+          Text(if (expanded) "Hide variants" else "${item.variants.size} variants")
+        }
+      } else {
+        Spacer(Modifier.weight(1f))
+      }
+      CatalogAddButton(canAdd, onAdd, item.displayName, refusal)
+    }
+  }
+}
+
+/** A concrete variant, revealed only after its [CatalogComponentTile] stem is expanded. */
+@Composable
+private fun CatalogVariantTile(
+  variant: EditorCatalogVariant,
+  thumbnail: UiBuilderDocument?,
+  componentName: String,
+  onDrag: (Offset?) -> Unit,
+  onDrop: (Offset) -> Unit,
+  canAdd: Boolean,
+  refusal: String?,
+  onAdd: () -> Unit,
+) {
+  val label = variant.label
+  val qualified = "$label $componentName"
+  val unexportable = variant.exportsToCompose == false
+  Column(
+    Modifier.fillMaxWidth()
+      .clip(RoundedCornerShape(8.dp))
+      .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+      .padding(6.dp)
+  ) {
+    Box(Modifier.fillMaxWidth().unexportable(unexportable), contentAlignment = Alignment.Center) {
+      CatalogThumbnail(
+        document = thumbnail,
+        dragKey = "${variant.componentId}#${variant.value}",
+        label = qualified,
+        size = DpSize(96.dp, 64.dp),
+        onDrag = onDrag,
+        onDrop = onDrop,
+      )
+    }
+    Text(
+      label,
+      Modifier.unexportable(unexportable),
+      style = MaterialTheme.typography.labelMedium,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
       if (variant.default) {
         Text(
           "default",
-          Modifier.padding(start = 6.dp),
+          Modifier.weight(1f),
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           style = MaterialTheme.typography.labelSmall,
         )
+      } else {
+        Spacer(Modifier.weight(1f))
       }
+      CatalogAddButton(canAdd, onAdd, qualified, refusal)
     }
-    CatalogAddButton(canAdd, onAdd, qualified, refusal)
   }
 }
 
@@ -7238,6 +7169,35 @@ private fun CatalogAddButton(
       Modifier.semantics {
         contentDescription = if (refusal == null) "Add $label" else "Add $label — $refusal"
       },
+    )
+  }
+}
+
+/** Whether Add fills the selection or starts a sibling item on the design board. */
+@Composable
+private fun AddBesideSwitch(checked: Boolean, onToggle: () -> Unit) {
+  Row(
+    Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, bottom = 4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Column(Modifier.weight(1f)) {
+      Text("Add beside", style = MaterialTheme.typography.labelMedium)
+      Text(
+        "Place items side by side instead of inside the selection",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    Switch(
+      checked = checked,
+      onCheckedChange = { onToggle() },
+      modifier =
+        Modifier.semantics {
+          contentDescription =
+            if (checked) "Add into the selected layer instead" else "Add beside the design instead"
+        },
     )
   }
 }
