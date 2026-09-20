@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -27,8 +30,61 @@ class CatalogRuntimeProtocolTest {
         )
       )
     assertEquals("root", command.action.nodeId)
+    assertEquals("editor", render.surface?.surfaceId)
     val response = endpoint.actionDispatched(command.requestId, snapshot)
     assertEquals("actionDispatched", host.accept("null", true, endpoint.encode(response))?.type)
+  }
+
+  @Test
+  fun `v2 rejects a missing or invalid render surface`() {
+    val endpoint = initializedEndpoint()
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val missing =
+      assertIs<CatalogRuntimeCommand.Reply>(
+        endpoint.receive(
+          ORIGIN,
+          true,
+          host.request(
+            "missing-surface",
+            "renderDocument",
+            buildJsonObject { put("document", documentElement(document())) },
+          ),
+        )
+      )
+    assertEquals("INVALID_SURFACE", missing.message.code())
+
+    val invalidPayload = renderPayload(document(), surface().copy(density = 0f))
+    val invalid =
+      assertIs<CatalogRuntimeCommand.Reply>(
+        endpoint.receive(
+          ORIGIN,
+          true,
+          host.request("invalid-surface", "renderDocument", invalidPayload),
+        )
+      )
+    assertEquals("INVALID_SURFACE", invalid.message.code())
+  }
+
+  @Test
+  fun `v1 render remains accepted without a surface`() {
+    val endpoint = CatalogRuntimeProtocolEndpoint(RUNTIME, UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1)
+    val host = CatalogRuntimeHostSession(RUNTIME, UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1)
+    endpoint.receive(ORIGIN, true, host.request("initialize-v1", "initialize"))
+
+    val render =
+      assertIs<CatalogRuntimeCommand.Render>(
+        endpoint.receive(
+          ORIGIN,
+          true,
+          host.request(
+            "render-v1",
+            "renderDocument",
+            buildJsonObject { put("document", documentElement(document())) },
+          ),
+        )
+      )
+
+    assertNull(render.surface)
   }
 
   @Test
@@ -158,7 +214,7 @@ class CatalogRuntimeProtocolTest {
     host.request("action-1", "dispatchAction", action("design", 1, "root", "activate"))
     val empty =
       CatalogRuntimeMessage(
-        protocolVersion = 1,
+        protocolVersion = CATALOG_RUNTIME_PROTOCOL_VERSION,
         runtimeId = RUNTIME,
         requestId = "action-1",
         type = "actionDispatched",
@@ -176,7 +232,7 @@ class CatalogRuntimeProtocolTest {
     assertNull(host.accept("null", false, encode(valid)))
     assertNull(host.accept("https://attacker.example", true, encode(valid)))
     assertNull(host.accept("null", true, encode(valid.copy(runtimeId = "wrong"))))
-    assertNull(host.accept("null", true, encode(valid.copy(protocolVersion = 2))))
+    assertNull(host.accept("null", true, encode(valid.copy(protocolVersion = 1))))
     assertNull(host.accept("null", true, encode(valid.copy(requestId = "not-pending"))))
     assertEquals("actionDispatched", host.accept("null", true, encode(valid))?.type)
   }
@@ -203,7 +259,7 @@ class CatalogRuntimeProtocolTest {
         host.request(
           requestId,
           "renderDocument",
-          buildJsonObject { put("document", documentElement(document)) },
+          renderPayload(document),
         ),
       )
     )
@@ -244,13 +300,34 @@ class CatalogRuntimeProtocolTest {
   private fun documentElement(document: UiBuilderDocument) =
     RUNTIME_PROTOCOL_JSON.encodeToJsonElement(UiBuilderDocument.serializer(), document)
 
+  private fun renderPayload(
+    document: UiBuilderDocument,
+    surface: UiBuilderRendererSurfaceV2 = surface(),
+  ) = buildJsonObject {
+    put("document", documentElement(document))
+    put(
+      "surface",
+      RUNTIME_PROTOCOL_JSON.encodeToJsonElement(UiBuilderRendererSurfaceV2.serializer(), surface),
+    )
+  }
+
+  private fun surface() =
+    UiBuilderRendererSurfaceV2(
+      mode = UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
+      widthDp = 192f,
+      heightDp = 354f,
+      density = 2f,
+      surfaceId = "editor",
+    )
+
   private fun response(
     requestId: String,
     snapshot: UiBuilderInspectionSnapshot,
     type: String = "rendered",
   ) =
     CatalogRuntimeMessage(
-      protocolVersion = 1,
+      schema = CATALOG_RUNTIME_PROTOCOL_SCHEMA,
+      protocolVersion = CATALOG_RUNTIME_PROTOCOL_VERSION,
       runtimeId = RUNTIME,
       requestId = requestId,
       type = type,
@@ -272,7 +349,8 @@ class CatalogRuntimeProtocolTest {
   private fun encodedRequest(requestId: String, type: String, payload: JsonObject) =
     encode(
       CatalogRuntimeMessage(
-        protocolVersion = 1,
+        schema = CATALOG_RUNTIME_PROTOCOL_SCHEMA,
+        protocolVersion = CATALOG_RUNTIME_PROTOCOL_VERSION,
         runtimeId = RUNTIME,
         requestId = requestId,
         type = type,

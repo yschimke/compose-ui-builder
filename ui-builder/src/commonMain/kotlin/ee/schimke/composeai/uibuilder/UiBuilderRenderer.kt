@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -187,6 +188,8 @@ import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
 import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import ee.schimke.wearcmp.port.LocalWearDeviceConfiguration
 import ee.schimke.wearcmp.port.WearDeviceConfiguration
 import kotlin.io.encoding.Base64
@@ -441,6 +444,8 @@ fun UiBuilderSurface(
     LocalUiBuilderCanvasAdapterMappings.current,
   /** Executable adapter implementations supplied by the selected catalog runtime. */
   canvasAdapterRegistry: CanvasAdapterRegistry = LocalCanvasAdapterRegistry.current,
+  /** Explicit protocol-v2 frame; absent for in-process previews and historical v1 runtimes. */
+  renderSurface: UiBuilderRendererSurfaceV2? = null,
   /**
    * Draw the design at its whole extent rather than at its frame — see [LocalUiBuilderUnrolled] for
    * what that swaps and what it costs.
@@ -509,7 +514,13 @@ fun UiBuilderSurface(
   val theme = document.environment["theme"]?.jsonPrimitive?.contentOrNull
   val dark = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
   val platformDensity = LocalDensity.current
-  val density = document.renderDensity(platformDensity)
+  val documentDensity = document.renderDensity(platformDensity)
+  val density =
+    renderSurface?.let { Density(density = it.density, fontScale = documentDensity.fontScale) }
+      ?: documentDensity
+  val effectiveUnrolled =
+    renderSurface?.mode == UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED ||
+      (renderSurface == null && unrolled)
   val layoutDirection =
     if (document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl")
       LayoutDirection.Rtl
@@ -605,24 +616,26 @@ fun UiBuilderSurface(
     LocalUiBuilderCanvasAdapters provides canvasAdapterIds,
     LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
     LocalCanvasAdapterRegistry provides canvasAdapterRegistry,
-    LocalUiBuilderUnrolled provides unrolled,
+    LocalUiBuilderUnrolled provides effectiveUnrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
     *wearDevice,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
       Box(
-        Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
-          surfaceCoordinates = coordinates
-          runtimeActionController?.install(
-            semanticActions.toMap(),
-            UiBuilderPixelBounds(
-              0f,
-              0f,
-              coordinates.size.width.toFloat(),
-              coordinates.size.height.toFloat(),
-            ),
-          )
-        }
+        (renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
+            ?: Modifier.fillMaxSize())
+          .onGloballyPositioned { coordinates ->
+            surfaceCoordinates = coordinates
+            runtimeActionController?.install(
+              semanticActions.toMap(),
+              UiBuilderPixelBounds(
+                0f,
+                0f,
+                coordinates.size.width.toFloat(),
+                coordinates.size.height.toFloat(),
+              ),
+            )
+          }
       ) {
         document.roots.forEach { root ->
           val rootModifier =
