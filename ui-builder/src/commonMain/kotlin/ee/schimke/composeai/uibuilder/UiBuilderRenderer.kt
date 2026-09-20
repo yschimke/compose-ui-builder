@@ -596,7 +596,7 @@ fun UiBuilderSurface(
     MaterialTheme.typography.let { base -> fontFamily?.let(base::withFontFamily) ?: base }
   val wearScreen =
     document.roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
-      val adapter = LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
+      val adapter = canvasAdapterIds[node.componentId] ?: node.componentId
       adapter == ROUND_SCREEN_FRAME
     } == true
   val baseColorScheme =

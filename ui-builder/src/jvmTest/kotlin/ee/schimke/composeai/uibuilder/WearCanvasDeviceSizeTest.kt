@@ -134,10 +134,13 @@ class WearCanvasDeviceSizeTest {
     var snapshot: UiBuilderInspectionSnapshot? = null
     renderComposeScene(SCENE_PX, SCENE_PX, Density(1f)) {
       CompositionLocalProvider(
-        LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue,
-        LocalUiBuilderCanvasAdapters provides adapters,
+        LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue
       ) {
-        UiBuilderSurface(document = screen(rootId), onInspectionSnapshot = { snapshot = it })
+        UiBuilderSurface(
+          document = screen(rootId),
+          canvasAdapterIds = adapters,
+          onInspectionSnapshot = { snapshot = it },
+        )
       }
     }
     return checkNotNull(checkNotNull(snapshot).nodes.firstOrNull { it.nodeId == rootId }?.bounds) {
