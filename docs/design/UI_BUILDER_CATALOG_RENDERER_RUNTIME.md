@@ -137,10 +137,9 @@ Runtime registration is dynamic catalog state, not only the startup-only
 1. Fetch the new `catalog.json`, `ui-builder.json` and declared runtime ZIP into staging.
 2. Verify catalog identity, protocol compatibility, archive paths and limits, manifest fields and
    the complete tree digest.
-3. Install the runtime under its content digest in the durable state directory.
-4. Add its exact runtime descriptor alongside every retained descriptor.
-5. Atomically activate the catalog generation only after all of the above succeeds.
-6. Notify connected editor shells that a newer catalog generation exists.
+3. Stage the verified runtime without changing the catalog's active runtime pointer.
+4. Atomically activate the catalog generation and its runtime descriptor together.
+5. Notify connected editor shells that a newer catalog generation exists.
 
 If the runtime is absent, malformed or speaks an unsupported protocol, the previous catalog
 generation remains active. New capability metadata must never be paired with an old executable.
@@ -158,7 +157,7 @@ the complete pin of each design. At the same instant one deployed server and one
 tab A -> m3-catalog-p2-a13f09c2
 tab B -> remote-m3-p2-912dc872
 tab C -> wear-m3-p2-5e77ab31
-tab D -> an older retained wear-m3 runtime
+tab D -> an older wear-m3 runtime leased for an upgrade comparison
 ```
 
 Each tab mounts the selected runtime in its own opaque-origin iframe. Multiple Preview device panes
@@ -206,7 +205,8 @@ records.
 Pins preserve history per revision; they do not make the editable head stale forever. Opening a
 design whose pin is not the current catalog generation enters an update gate before the editor:
 
-1. Render the saved revision with its exact retained runtime.
+1. Resolve the saved revision's exact runtime from its immutable catalog revision and lease it for
+   the comparison.
 2. Resolve a catalog-published, declarative migration chain to the current generation.
 3. Validate the migrated document and show old/new renders and located decisions.
 4. Require the user to resolve every ambiguous change.
@@ -222,23 +222,36 @@ modifier rewrites; node wrapping/unwrapping; and environment changes. They are n
 loaded into the server. With no complete path, the historical revision remains viewable but editing
 is blocked with located diagnostics.
 
-## Retention
+## Resolution and lifetime — do not accumulate runtimes
 
-The server stores verified runtime trees under its durable UI-builder state directory and retains a
-runtime while any persisted design revision, active editor session or configured support window
-references it. Catalog publication also provides an immutable source address (a commit-pinned
-delivery URL or catalog release asset) so a fresh deployment can hydrate a historical pin; a moving
-delivery-branch URL is not sufficient by itself.
+Runtime history is not server state. The durable source of an old runtime is the catalog's immutable
+delivery commit (or an immutable release asset), and the complete catalog pin already names the
+catalog revision needed to resolve it. A moving delivery-branch URL is never sufficient.
 
-Garbage collection is reference-based and never removes bytes merely because a newer runtime was
-activated.
+The server keeps only:
+
+- the active runtime for each loaded catalog generation; and
+- exact old runtimes leased by an open historical view or an in-progress upgrade comparison.
+
+When activation replaces a catalog runtime, the outgoing bytes are evicted as soon as their active
+leases reach zero. Closing or completing an upgrade releases its old-runtime lease. A historical
+revision opened later re-fetches and verifies its runtime from the immutable catalog revision; a
+bounded ordinary HTTP/content cache may make that cheap, but cache retention is an optimization and
+never the correctness mechanism. There is no support-window archive and no runtime directory that
+grows once per catalog publish.
+
+This lifetime is also what makes upgrades reliable rather than avoidable. A stale editable head
+cannot silently keep its old runtime alive forever: opening it creates a short-lived old/new
+comparison, surfaces the pixel and migration differences, and ends by either committing the upgrade
+or closing without editing.
 
 ## Migration sequence for the implementation
 
 1. Extract renderer traversal/inspection and the adapter registry into a small renderer SDK.
 2. Add protocol v2's explicit surface mode while retaining protocol v1 during migration.
 3. Add a renderer-distribution declaration to the generated catalog contract.
-4. Teach the catalog refresher to stage and atomically register declared runtimes.
+4. Teach the catalog refresher to stage and atomically activate declared runtimes, with lease-based
+   lifetime and immutable on-demand resolution for old pins.
 5. Make the editor resolve and mount a runtime from each design's pin by default.
 6. Build and publish `wear-m3-catalog`'s renderer and move all Wear canvas code into it.
 7. Remove Wear CMP dependencies and Wear adapter branches from this repository.
@@ -247,5 +260,6 @@ activated.
 9. Add the mandatory open-time migration gate and catalog-owned migration documents.
 
 The acceptance test is operational, not a unit-test fiction: a running server discovers a new Wear
-runtime without restarting while existing M3, Remote M3, current Wear and retained old-Wear designs
-remain open in separate tabs, each drawing through its own exact runtime.
+runtime without restarting while existing M3, Remote M3, current Wear and an old-Wear upgrade
+comparison remain open in separate tabs, each drawing through its own exact leased runtime. Closing
+the old-Wear tab must evict that runtime rather than add it to permanent server state.
