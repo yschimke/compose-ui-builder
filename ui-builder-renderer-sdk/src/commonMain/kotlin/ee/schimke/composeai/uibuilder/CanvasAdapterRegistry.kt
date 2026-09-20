@@ -64,6 +64,44 @@ fun canvasAdapterRegistry(block: CanvasAdapterRegistry.Builder.() -> Unit): Canv
 /** Registry selected for the current catalog renderer. */
 val LocalCanvasAdapterRegistry = staticCompositionLocalOf { CanvasAdapterRegistry.Empty }
 
+/**
+ * Dispatch this resolved tree entry to its catalog adapter.
+ *
+ * Slot and item recursion stay here in the SDK. [renderChild] only supplies the host operation that
+ * draws an already-resolved descendant, which lets the transitional renderer retain its fallback
+ * table without teaching a catalog adapter how to walk the document.
+ *
+ * @return whether the registry contained [CanvasRenderNode.adapterId].
+ */
+@Composable
+fun CanvasRenderNode.renderAdapter(
+  registry: CanvasAdapterRegistry,
+  modifier: Modifier,
+  mode: CanvasMode,
+  renderChild: @Composable (CanvasRenderNode, Modifier) -> Unit,
+  dispatchEvent: (String) -> Unit,
+  recordText: (TextLayoutResult) -> Unit,
+): Boolean {
+  val adapter = registry[adapterId] ?: return false
+  val scope =
+    CanvasNodeScope(
+      node = node,
+      modifier = modifier,
+      mode = mode,
+      renderSlot = { name, next -> slot(name).forEach { renderChild(it, next) } },
+      renderItems = { name, content ->
+        slot(name).forEach { item ->
+          val itemScope = CanvasItemScope { next -> renderChild(item, next) }
+          content(itemScope, item.node)
+        }
+      },
+      dispatchEvent = dispatchEvent,
+      recordText = recordText,
+    )
+  adapter(scope)
+  return true
+}
+
 /** A child emitted from an items slot, retaining the receiver scope supplied by the real API. */
 class CanvasItemScope(private val render: @Composable (Modifier) -> Unit) {
   @Composable fun Content(modifier: Modifier = Modifier) = render(modifier)
