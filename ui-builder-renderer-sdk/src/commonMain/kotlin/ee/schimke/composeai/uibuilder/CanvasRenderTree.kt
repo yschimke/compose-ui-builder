@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * SDK-owned traversal and resolution for one document render.
@@ -78,6 +80,13 @@ class CanvasRenderTree(
     nodeId: String,
     arguments: JsonObject,
   ): CanvasRenderNode? = child(parent, nodeId, parent.path.placement().child(nodeId), arguments)
+
+  internal fun componentRoot(node: UiBuilderNode): String? {
+    val key = node.componentKey().takeIf(String::isNotEmpty) ?: return null
+    val definition = document.components[key] as? JsonObject ?: return null
+    val root = (definition["root"] as? JsonPrimitive)?.contentOrNull ?: return null
+    return root.takeIf(document.nodes::containsKey)
+  }
 }
 
 /** One resolved entry in a [CanvasRenderTree]. */
@@ -106,4 +115,9 @@ internal constructor(
   /** Enter the body of a placed design component with its resolved argument dictionary. */
   fun placementChild(nodeId: String, arguments: JsonObject): CanvasRenderNode? =
     tree.placementChild(this, nodeId, arguments)
+
+  internal fun componentRoot(): String? = tree.componentRoot(node)
 }
+
+private fun UiBuilderNode.componentKey(): String =
+  (component?.get("componentKey") as? JsonPrimitive)?.contentOrNull.orEmpty()

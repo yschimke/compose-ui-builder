@@ -22,9 +22,10 @@ interpreter. `CanvasRenderTree` now owns node entry, cycle rejection, bindings, 
 adapter selection and descendant paths, including repeated templates and component placements; its
 registry dispatch owns slot and item recursion. Node preparation also owns modifier ordering, bounds
 correlation, event execution and semantic activation while the catalog runtime supplies theme-aware
-modifier application. The compatibility table remains until generic component-instance/`for-each`
-rendering and its remaining adapters move behind that SDK entry point; an empty registry is
-intentionally the old renderer byte-for-byte at the Compose layer.
+modifier application. Structural dispatch now expands component instances and `for-each` templates
+inside the SDK as well. The compatibility table remains until the reusable document-surface host and
+its remaining adapters move behind that SDK entry point; an empty registry is intentionally the old
+renderer byte-for-byte at the Compose layer.
 
 This supersedes the earlier decision in
 [`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md) that Material canvas adapters stay
