@@ -2,7 +2,9 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -10,8 +12,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -103,6 +107,68 @@ class EditorDesktopPointerInteractionTest {
         onAllNodesWithText("Edited episode").fetchSemanticsNodes().isNotEmpty(),
         "the updated text is rendered on the canvas",
       )
+    }
+
+  @Test
+  fun `keyboard commits single and multiline properties`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Text property").performTextReplacement("Keyboard episode")
+      onNodeWithContentDescription("Text property").performKeyInput {
+        keyDown(Key.CtrlLeft)
+        pressKey(Key.Enter)
+        keyUp(Key.CtrlLeft)
+      }
+      onNodeWithContentDescription("Property search").performTextReplacement("color")
+      onNodeWithContentDescription("Add Color property").performClick()
+      onNodeWithContentDescription("Color property").performTextReplacement("#ff336699")
+      onNodeWithContentDescription("Color property").performKeyInput { pressKey(Key.Enter) }
+
+      assertTrue(onAllNodesWithText("Keyboard episode").fetchSemanticsNodes().isNotEmpty())
+      onNodeWithContentDescription("Color property").assertTextEquals("#ff336699")
+
+      onNodeWithContentDescription("Color property").performTextReplacement("not-a-color")
+      onNodeWithContentDescription("Color property").performKeyInput { pressKey(Key.Enter) }
+      onNodeWithText("Edit was not applied · value retained").assertExists()
+      onNodeWithContentDescription("Color property").assertTextEquals("not-a-color")
+    }
+
+  @Test
+  fun `selection changes retain an uncommitted property draft`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialLayersOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Text property").performTextReplacement("Retained draft")
+      onNodeWithContentDescription("Select root-surface").performClick()
+      onNodeWithText("1 uncommitted edit retained").assertExists()
+      onAllNodesWithText("Episode 140: Lorem ipsum dolor")[0].performClick()
+
+      onNodeWithContentDescription("Text property").assertTextEquals("Retained draft")
+      onNodeWithText("Uncommitted edit retained · Ctrl/⌘+Enter applies").assertExists()
     }
 
   private fun androidx.compose.ui.test.ComposeUiTest.editor() {
