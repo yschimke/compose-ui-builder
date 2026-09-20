@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.32.0](https://github.com/yschimke/compose-ui-builder/compare/v3.31.0...v3.32.0) (2026-09-20)
+
+
+### Features
+
+* **renderer-sdk:** add catalog adapter registry ([#102](https://github.com/yschimke/compose-ui-builder/issues/102)) ([e0da0f0](https://github.com/yschimke/compose-ui-builder/commit/e0da0f0014e208c0e44a4eb93f8ec55722d31876))
+* **renderer:** consume explicit protocol v2 surfaces ([#104](https://github.com/yschimke/compose-ui-builder/issues/104)) ([71ab472](https://github.com/yschimke/compose-ui-builder/commit/71ab4726c936497f7c42015ec80ea23a969dec59))
+
+
+### Bug Fixes
+
+* **build:** consume renderer protocol v2 contracts ([#105](https://github.com/yschimke/compose-ui-builder/issues/105)) ([21b22ef](https://github.com/yschimke/compose-ui-builder/commit/21b22ef66cb50bf906e43257de8801f917adf451))
+* **ui-builder:** rank exact catalog search results ([#107](https://github.com/yschimke/compose-ui-builder/issues/107)) ([cad193d](https://github.com/yschimke/compose-ui-builder/commit/cad193d3ebb597d9182aa7a534d47ea266f1ed6f))
+
 ## [3.31.0](https://github.com/yschimke/compose-ui-builder/compare/v3.30.0...v3.31.0) (2026-09-20)
 
 
