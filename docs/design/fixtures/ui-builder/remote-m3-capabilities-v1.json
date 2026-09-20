@@ -66,7 +66,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": 1,
@@ -154,7 +154,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": 1,
@@ -242,7 +242,8 @@
                 "status": "unsupported"
             },
             "traits": [
-                "RemoteContent"
+                "RemoteContent",
+                "RemoteAuthorable"
             ],
             "wasm": {
                 "adapterStatus": "supported",
@@ -652,151 +653,7 @@
             },
             "traits": [
                 "OrderedContent",
-                "RepeatedContent"
-            ],
-            "wasm": {
-                "adapterStatus": "supported",
-                "canvas": null,
-                "notes": null,
-                "platformSupported": true,
-                "unrolled": null
-            }
-        },
-        {
-            "code": {
-                "imports": [
-                    "androidx.compose.material3.Surface"
-                ],
-                "symbol": "Surface"
-            },
-            "componentId": "m3/surface",
-            "displayName": "Surface",
-            "modifierCapabilities": [
-                "size",
-                "fillMaxSize",
-                "fillMaxWidth",
-                "padding",
-                "clip",
-                "alpha",
-                "offset",
-                "rotate",
-                "scale",
-                "zIndex",
-                "width",
-                "height",
-                "widthIn",
-                "heightIn",
-                "fillMaxHeight",
-                "background",
-                "border",
-                "wrapContentSize",
-                "align",
-                "alignHorizontal",
-                "alignVertical",
-                "weight"
-            ],
-            "properties": [
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "containerColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit. Painted across the area the surface is measured to, and no further. A root surface with no size modifier wraps its content, so its containerColor is the frame's ground only when the root fills the frame (fillMaxSize); the ground outside it comes from environment.theme. The export reports ROOT_SURFACE_DOES_NOT_FILL_FRAME when a coloured root does not.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "contentColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "shapeDp",
-                    "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "tonalElevationDp",
-                    "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "themePrimaryColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "themeBackgroundColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "themeSurfaceColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "themeContentColor",
-                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "themeTypeScale",
-                    "notes": null,
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "themeCornerRadiusDp",
-                    "notes": null,
-                    "required": false
-                }
-            ],
-            "role": "Container",
-            "slots": [
-                {
-                    "acceptedRoles": [
-                        "Scaffold",
-                        "Container",
-                        "Leaf"
-                    ],
-                    "acceptedTraits": [
-                        "AnyContent"
-                    ],
-                    "cardinality": {
-                        "max": null,
-                        "min": 0
-                    },
-                    "name": "content",
-                    "ordered": true
-                }
-            ],
-            "svg": {
-                "blocksExport": false,
-                "fallback": "none",
-                "notes": null,
-                "status": "verified"
-            },
-            "traits": [
-                "ScreenContent",
-                "PaneContent",
-                "GridItem",
-                "ListItem",
+                "RepeatedContent",
                 "RemoteAuthorable"
             ],
             "wasm": {
@@ -1181,8 +1038,8 @@
             },
             "traits": [
                 "RemoteContent",
-                "RemoteAuthorable",
-                "OrderedContent"
+                "OrderedContent",
+                "RemoteAuthorable"
             ],
             "wasm": {
                 "adapterStatus": "supported",
@@ -1343,7 +1200,8 @@
                 "status": "raster-fallback-required"
             },
             "traits": [
-                "ImageContent"
+                "ImageContent",
+                "RemoteAuthorable"
             ],
             "wasm": {
                 "adapterStatus": "supported",

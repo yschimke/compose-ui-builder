@@ -76,7 +76,6 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     "layout/column",
     "layout/row",
     "layout/for-each",
-    "m3/surface",
     "m3/text",
     "remote-m3/lottie",
     REMOTE_TEXT_COMPONENT_ID,
@@ -398,17 +397,8 @@ internal class RemoteContentEmitter(
       "layout/for-each" -> repetition(node, depth)
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       "asset/image" -> image(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
-      // Authored refusals, not the catch-all below. `m3/surface` and `shape/linear-gradient` are
-      // both in the `remote-m3` palette and neither has a body counterpart, so each says what to
-      // reach for instead — which is the whole difference between "the generator has not been
-      // taught this" and "this vocabulary does not have it".
-      "m3/surface" ->
-        emptyList<String>().also {
-          refusals +=
-            "the surface `${node.id}` is a Material container — tonal elevation and a content " +
-              "colour its children inherit — and a widget body has neither; a coloured, rounded " +
-              "container here is a `layout/box` with `background` and `clip` modifiers"
-        }
+      // A gradient is a widget-frame brush rather than Remote Compose content. It stays in the
+      // catalog for the container's `background` slot but cannot enter a widget body.
       "shape/linear-gradient" ->
         emptyList<String>().also {
           refusals +=

@@ -695,7 +695,7 @@
       "componentId": "m3/surface",
       "displayName": "Surface",
       "role": "Container",
-      "traits": ["ScreenContent", "PaneContent", "GridItem", "ListItem", "RemoteAuthorable"],
+      "traits": ["ScreenContent", "PaneContent", "GridItem", "ListItem"],
       "slots": [
         { "name": "content", "cardinality": { "min": 0, "max": null }, "ordered": true, "acceptedRoles": ["Scaffold", "Container", "Leaf"], "acceptedTraits": ["AnyContent"] }
       ],

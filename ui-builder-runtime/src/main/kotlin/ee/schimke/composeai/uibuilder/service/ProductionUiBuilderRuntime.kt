@@ -1388,6 +1388,10 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val box = components.getValue("layout/box")
   val supportedWasm = components.getValue("m3/text").wasm
   val blockedSvg = components.getValue("remote-compose/document").svg
+  // A widget body is Remote Compose, not arbitrary Compose UI. Keeping this narrower than
+  // `AnyContent` makes the palette refuse a component at insertion time when the Remote Compose
+  // emitter has no lowering for it. This is the same catalogue discipline Wear M3 uses: foundation
+  // is shared, but a component from a different Material library is not a stand-in for one here.
   val contentSlot =
     box.slots
       .single()
@@ -1404,6 +1408,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
               it.max = 1
             }
             .build()
+        it.acceptedTraits = listOf("RemoteAuthorable")
       }
       .build()
   // `WearWidgetBrush` is a CHAIN of drawing elements, and `WearWidgetContainer` folds over it,
@@ -1479,7 +1484,6 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "layout/column",
       "layout/row",
       "layout/for-each",
-      "m3/surface",
       "m3/text",
       "remote-compose/document",
       // The way host content gets inside a widget body. A `@RemoteComposable` body cannot call an
@@ -1499,7 +1503,20 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   // modifier is added, which is the only moment an author can act on it.
   fun ComponentCapabilityV1.narrowed(): ComponentCapabilityV1 =
     newBuilder()
-      .also { it.modifierCapabilities = modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS } }
+      .also {
+        it.modifierCapabilities = modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+        // `RemoteAuthorable` is a capability of this catalog's Remote Compose emitter, not a
+        // property inherited from a mobile component. The reviewed vocabulary does have an emitter
+        // branch (or component-record fallback) and may enter a widget body.
+        it.traits =
+          (traits - "RemoteAuthorable").let { traits ->
+            if (componentId !in setOf("remote-compose/document", "shape/linear-gradient")) {
+              traits + "RemoteAuthorable"
+            } else {
+              traits
+            }
+          }
+      }
       .build()
   return base
     .newBuilder()
@@ -1574,7 +1591,7 @@ private fun lottie(
       it.componentId = "remote-m3/lottie"
       it.displayName = "Lottie animation"
       it.role = "Leaf"
-      it.traits = listOf("RemoteContent")
+      it.traits = listOf("RemoteContent", "RemoteAuthorable")
       it.slots = emptyList()
       it.properties = lottieProperties()
       it.modifierCapabilities = borrowed.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
