@@ -2130,8 +2130,21 @@ private fun WearScreenScaffold(
     // screenshot agrees: `ScrollMode.LONG` sets `LocalScrollCaptureInProgress`, the emitted
     // scaffold reads it and draws none, and the stitched capture comes back clean.
   ) {
-    CompositionLocalProvider(LocalWearScreenListState provides listState) {
-      Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+    CompositionLocalProvider(
+      LocalWearScreenListState provides listState,
+      LocalWearScreenContentPadding provides padding,
+    ) {
+      // This is intentionally not `Column.padding(padding)`: native `ScreenScaffold` hands the
+      // padding to its `TransformingLazyColumn`, where it belongs to the list's scroll range. An
+      // outer padded viewport leaves the final row clipped at the round frame when it reaches end.
+      if (LocalUiBuilderUnrolled.current) {
+        // The extent is deliberately not a viewport. Keep its ordinary inset so every item is
+        // legible, including the first and last ones, while the frame pane below uses the real
+        // lazy-list content-padding path.
+        Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+      } else {
+        content(Modifier.fillMaxSize())
+      }
     }
     // Overlaid, not a band above the content. `TimeText` belongs to `AppScaffold` and is drawn
     // over the screen; what makes room for it is the list's own top content padding, which is
