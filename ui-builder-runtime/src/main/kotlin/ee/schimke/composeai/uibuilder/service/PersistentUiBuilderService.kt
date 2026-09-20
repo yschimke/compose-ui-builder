@@ -758,6 +758,7 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.GetDesignActions -> designId
       is UiBuilderServiceRequest.UpdateDesignAccess -> designId
       is UiBuilderServiceRequest.PreviewCatalogUpgrade -> designId
+      is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade -> designId
       is UiBuilderServiceRequest.ApplyOperation -> submission.designId
       is UiBuilderServiceRequest.GetSnapshot -> designId
       is UiBuilderServiceRequest.GetDelta -> designId
@@ -793,11 +794,17 @@ public class PersistentUiBuilderService(
         // reason one step smaller: naming a design is not serving it. One the STORE could not read
         // has no document in memory to rename, and stays refused.
         val previewing =
-          call.request is UiBuilderServiceRequest.PreviewCatalogUpgrade && unusable.catalogFault
+          (call.request is UiBuilderServiceRequest.PreviewCatalogUpgrade ||
+            call.request is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade) &&
+            unusable.catalogFault
+        val recovering =
+          call.request is UiBuilderServiceRequest.ApplyOperation &&
+            call.request.submission.isCatalogUpgradeOnly() &&
+            unusable.catalogFault
         val deleting = call.request is UiBuilderServiceRequest.DeleteDesign
         val renaming =
           call.request is UiBuilderServiceRequest.RenameDesign && !unusable.storeQuarantine
-        if (!previewing && !deleting && !renaming) {
+        if (!previewing && !recovering && !deleting && !renaming) {
           return UiBuilderServiceResponse.Error(
             UiBuilderServiceError(unusable.code, unusable.reason)
           )
@@ -1075,6 +1082,8 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.GetDesignActions -> actions(call.actor, request.designId)
       is UiBuilderServiceRequest.UpdateDesignAccess -> updateAccess(call.actor, request)
       is UiBuilderServiceRequest.PreviewCatalogUpgrade -> previewUpgrade(call.actor, request)
+      is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade ->
+        previewCurrentUpgrade(call.actor, request.designId)
       is UiBuilderServiceRequest.ApplyOperation -> apply(call.actor, request.submission)
       is UiBuilderServiceRequest.GetSnapshot -> open(call.actor, request.designId, request.revision)
       is UiBuilderServiceRequest.GetDelta -> delta(call.actor, request)
@@ -1419,13 +1428,63 @@ public class PersistentUiBuilderService(
         "design ${request.designId} is not pinned to the stated source catalog",
       )
     }
+    if (request.sourceCatalogPin.systemId != request.targetCatalogPin.systemId) {
+      return serviceError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "a catalog upgrade cannot change the catalog system id",
+      )
+    }
     val target =
       catalogs.resolve(request.targetCatalogPin)
         ?: return serviceError(
           ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
           "target catalog is not served by this runtime",
         )
-    val outcome = planCatalogUpgrade(design.document, target, request.targetCatalogPin)
+    return LockedExecution(
+      UiBuilderServiceResponse.CatalogUpgradePreview(
+        catalogUpgradePreview(design.document, target, request.targetCatalogPin)
+      )
+    )
+  }
+
+  /**
+   * The browser recovery question, answered without asking the browser to manufacture either pin.
+   */
+  private fun previewCurrentUpgrade(
+    actor: AuthenticatedUiBuilderActor,
+    designId: String,
+  ): LockedExecution {
+    val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
+    if (!design.allows(actor, DesignAccessActionV1.READ)) return serviceError(notFound(designId))
+    val systemId = design.document.catalogPin.systemId
+    val target =
+      catalogs.listCatalogs().singleOrNull { it.benchmark.catalogSystemId == systemId }
+        ?: return serviceError(
+          ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
+          "catalog $systemId is not served by this runtime",
+        )
+    val targetPin =
+      catalogs.reference(target)
+        ?: return serviceError(
+          ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
+          "catalog $systemId has no exact served reference",
+        )
+    if (targetPin == design.document.catalogPin) {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design $designId already uses this pin")
+    }
+    return LockedExecution(
+      UiBuilderServiceResponse.CatalogUpgradePreview(
+        catalogUpgradePreview(design.document, target, targetPin)
+      )
+    )
+  }
+
+  private fun catalogUpgradePreview(
+    source: DesignDocumentV1,
+    target: CatalogCapabilityV1,
+    targetPin: CatalogReferenceV1,
+  ): CatalogUpgradePreviewV1 {
+    val outcome = planCatalogUpgrade(source, target, targetPin)
     // Validated by the same validator every write goes through rather than a second opinion here:
     // a candidate this runtime would refuse to store is not a move worth offering.
     val refusal =
@@ -1440,40 +1499,35 @@ public class PersistentUiBuilderService(
     val issues = outcome.issues + listOfNotNull(refusal)
     val blocked = issues.any { it.severity == CatalogUpgradeIssueSeverityV1.ERROR }
     val candidateHash = documentHash(outcome.candidate)
-    return LockedExecution(
-      UiBuilderServiceResponse.CatalogUpgradePreview(
-        CatalogUpgradePreviewV1(
-          designId = request.designId,
-          baseRevision = request.baseRevision,
-          sourceCatalogPin = request.sourceCatalogPin,
-          targetCatalogPin = request.targetCatalogPin,
-          sourceDocumentHash = documentHash(design.document),
-          status =
-            if (blocked) CatalogUpgradePreviewStatusV1.BLOCKED
-            else CatalogUpgradePreviewStatusV1.READY,
-          // Names this preview, not its document: an apply quotes it back, and a plan that changed
-          // between the two -- a catalog republished under the same pin, a rule edited here -- must
-          // not be accepted as the one somebody looked at. Hashing the candidate alone would miss
-          // exactly that, since two plans can land on the same document by different routes.
-          previewDigest =
-            sha256(
-              listOf(
-                  candidateHash,
-                  documentHash(design.document),
-                  request.targetCatalogPin.systemId,
-                  request.targetCatalogPin.catalogRevision,
-                  request.targetCatalogPin.capabilityDigest,
-                  issues.joinToString(",") { "${it.severity}:${it.code}@${it.path}" },
-                )
-                .joinToString("\n")
-                .encodeToByteArray()
-            ),
-          candidateDocument = outcome.candidate,
-          candidateDocumentHash = candidateHash,
-          changes = outcome.changes,
-          issues = issues,
-        )
-      )
+    return CatalogUpgradePreviewV1(
+      designId = source.id,
+      baseRevision = source.revision,
+      sourceCatalogPin = source.catalogPin,
+      targetCatalogPin = targetPin,
+      sourceDocumentHash = documentHash(source),
+      status =
+        if (blocked) CatalogUpgradePreviewStatusV1.BLOCKED else CatalogUpgradePreviewStatusV1.READY,
+      // Names this preview, not its document: an apply quotes it back, and a plan that changed
+      // between the two -- a catalog republished under the same pin, a rule edited here -- must
+      // not be accepted as the one somebody looked at. Hashing the candidate alone would miss
+      // exactly that, since two plans can land on the same document by different routes.
+      previewDigest =
+        sha256(
+          listOf(
+              candidateHash,
+              documentHash(source),
+              targetPin.systemId,
+              targetPin.catalogRevision,
+              targetPin.capabilityDigest,
+              issues.joinToString(",") { "${it.severity}:${it.code}@${it.path}" },
+            )
+            .joinToString("\n")
+            .encodeToByteArray()
+        ),
+      candidateDocument = outcome.candidate,
+      candidateDocumentHash = candidateHash,
+      changes = outcome.changes,
+      issues = issues,
     )
   }
 
@@ -1723,6 +1777,12 @@ public class PersistentUiBuilderService(
     commitDesign(submission.designId, recorded)
     if (reduction.outcome !is AcceptedOutcomeV1) {
       return LockedExecution(UiBuilderServiceResponse.OperationOutcome(reduction.outcome))
+    }
+    if (submission.isCatalogUpgradeOnly()) {
+      // The write above was validated against the target catalog, so the condition that held this
+      // design out of every ordinary request has been repaired in this process as well as on disk.
+      // Leaving the boot-time entry behind would make a successful recovery require a restart.
+      unusableDesigns.remove(submission.designId)
     }
 
     val delta =
@@ -2113,6 +2173,18 @@ public class PersistentUiBuilderService(
         "an atomic batch requires at least one mutation",
       )
     }
+    val catalogUpgrades = command.operations.filterIsInstance<CatalogUpgradeMutationV1>()
+    if (catalogUpgrades.isNotEmpty()) {
+      if (command.operations.size != 1) {
+        return rejectedReduction(
+          design,
+          command.operationId,
+          RejectionCodeV1.INVALID_COMMAND,
+          "a catalog upgrade must be the only mutation in its batch",
+        )
+      }
+      return reduceCatalogUpgrade(design, actor, command, catalogUpgrades.single())
+    }
     val environmentChanges =
       command.operations.flatMapIndexed { operationIndex, mutation ->
         if (mutation is UpdateEnvironmentMutationV1)
@@ -2228,6 +2300,97 @@ public class PersistentUiBuilderService(
     )
   }
 
+  private fun reduceCatalogUpgrade(
+    design: PersistedDesignV1,
+    actor: AuthenticatedUiBuilderActor,
+    command: DesignCommandV1,
+    mutation: CatalogUpgradeMutationV1,
+  ): ReductionResult {
+    val source = design.document
+    fun reject(message: String) =
+      rejectedReduction(
+        design,
+        command.operationId,
+        RejectionCodeV1.INVALID_COMMAND,
+        message,
+      )
+    if (command.baseRevision != source.revision) {
+      return rejectedReduction(
+        design,
+        command.operationId,
+        RejectionCodeV1.REVISION_MISMATCH,
+        "a catalog upgrade requires the current revision",
+      )
+    }
+    if (mutation.sourceCatalogPin != source.catalogPin) {
+      return reject("catalog upgrade source pin does not match the stored design")
+    }
+    if (mutation.sourceCatalogPin.systemId != mutation.targetCatalogPin.systemId) {
+      return reject("a catalog upgrade cannot change the catalog system id")
+    }
+    if (mutation.sourceDocumentHash != documentHash(source)) {
+      return reject("catalog upgrade source document hash does not match the stored design")
+    }
+    val target =
+      catalogs.resolve(mutation.targetCatalogPin)
+        ?: return rejectedReduction(
+          design,
+          command.operationId,
+          RejectionCodeV1.INVALID_DOCUMENT,
+          "target catalog is not served by this runtime",
+        )
+    val preview = catalogUpgradePreview(source, target, mutation.targetCatalogPin)
+    if (preview.status != CatalogUpgradePreviewStatusV1.READY) {
+      return reject("catalog upgrade preview is blocked")
+    }
+    if (
+      preview.sourceDocumentHash != mutation.sourceDocumentHash ||
+        preview.candidateDocumentHash != mutation.targetDocumentHash ||
+        preview.previewDigest != mutation.previewDigest
+    ) {
+      return reject("catalog upgrade no longer matches its preview")
+    }
+    val candidate =
+      preview.candidateDocument ?: return reject("catalog upgrade produced no document")
+    val compensationTarget = mutation.compensatesCatalogUpgradeOperationId
+    if (compensationTarget != null) {
+      val original =
+        design.acceptedOperations[compensationTarget]
+          ?: return reject("catalog upgrade rollback names an unknown operation")
+      val originalChange =
+        original.changes.singleOrNull() as? CatalogUpgradeChangeRecordV1
+          ?: return reject("catalog upgrade rollback target is not a catalog upgrade")
+      if (original.compensatedBy != null) {
+        return reject("catalog upgrade rollback target is already compensated")
+      }
+      if (
+        originalChange.sourceCatalogPin != mutation.targetCatalogPin ||
+          originalChange.targetCatalogPin != mutation.sourceCatalogPin ||
+          originalChange.sourceDocumentHash != mutation.targetDocumentHash ||
+          originalChange.targetDocumentHash != mutation.sourceDocumentHash
+      ) {
+        return reject("catalog upgrade rollback does not reverse its target operation")
+      }
+    }
+    return accept(
+      design,
+      actor,
+      command,
+      WorkingDesign(candidate, design.tombstones, design.positions),
+      listOf(
+        CatalogUpgradeChangeRecordV1(
+          sourceCatalogPin = mutation.sourceCatalogPin,
+          targetCatalogPin = mutation.targetCatalogPin,
+          sourceDocumentHash = mutation.sourceDocumentHash,
+          targetDocumentHash = mutation.targetDocumentHash,
+        )
+      ),
+      emptyList(),
+      targetOperationId = compensationTarget,
+      targetUndoOperationId = null,
+    )
+  }
+
   private fun reduceUndo(
     design: PersistedDesignV1,
     actor: AuthenticatedUiBuilderActor,
@@ -2247,6 +2410,14 @@ public class PersistentUiBuilderService(
         command.operationId,
         RejectionCodeV1.ACTOR_MISMATCH,
         "an actor may undo only its own operation",
+      )
+    }
+    if (target.changes.any { it is CatalogUpgradeChangeRecordV1 }) {
+      return rejectedReduction(
+        design,
+        command.operationId,
+        RejectionCodeV1.INVALID_COMMAND,
+        "catalog upgrades are reversed by a previewed catalog rollback",
       )
     }
     if (target.compensatedBy != null) {
@@ -2395,6 +2566,12 @@ public class PersistentUiBuilderService(
                 compensatedBy = null,
                 activeRevision = revision,
               ))
+    }
+    if (submission is DesignCommandV1 && targetOperationId != null) {
+      accepted =
+        accepted +
+          (targetOperationId to
+            accepted.getValue(targetOperationId).copy(compensatedBy = record.operationId))
     }
     val committed = CommittedOperationV1(submission, outcome)
     val history = (design.history + committed).takeLast(limits.retainedCommittedOperations)
@@ -3219,6 +3396,11 @@ public class PersistentUiBuilderService(
                   working.document.copy(environment = current.copyFieldsFrom(target, change.fields))
               )
           }
+          is CatalogUpgradeChangeRecordV1 ->
+            fail(
+              RejectionCodeV1.UNSAFE_COMPENSATION,
+              "catalog upgrades require a previewed catalog rollback",
+            )
         }
       }
       validateTopology(working.document)?.let { throw ReductionFailure(it) }
@@ -3612,6 +3794,9 @@ public class PersistentUiBuilderService(
   }
 }
 
+private fun UiBuilderSubmission.isCatalogUpgradeOnly(): Boolean =
+  this is UiBuilderSubmission.Batch && operations.singleOrNull() is CatalogUpgradeMutationV1
+
 private fun updatePeak(peak: AtomicLong, candidate: Long) {
   var observed = peak.get()
   while (candidate > observed && !peak.compareAndSet(observed, candidate)) observed = peak.get()
@@ -3786,6 +3971,22 @@ internal data class ConflictTouchRecordV1(
 )
 
 @Serializable internal sealed interface ChangeRecordV1
+
+/**
+ * The bounded evidence needed to validate an explicit catalog rollback.
+ *
+ * The candidate itself already lives in retained snapshots. Keeping whole before/after documents
+ * here would duplicate every byte inside the undo budget even though generic undo deliberately
+ * refuses this record.
+ */
+@Serializable
+@SerialName("catalogUpgrade")
+internal data class CatalogUpgradeChangeRecordV1(
+  val sourceCatalogPin: CatalogReferenceV1,
+  val targetCatalogPin: CatalogReferenceV1,
+  val sourceDocumentHash: String,
+  val targetDocumentHash: String,
+) : ChangeRecordV1
 
 @Serializable
 @SerialName("property")
@@ -4956,6 +5157,7 @@ private fun String.utf8Size(): Int = toByteArray(Charsets.UTF_8).size
 /** The touches [this] records — see [ConflictTouchRecordV1]. */
 private fun ChangeRecordV1.touchKeys(): List<String> =
   when (this) {
+    is CatalogUpgradeChangeRecordV1 -> listOf(touchKey("catalog"))
     // Node-and-property granular, matching what a `setProperty` conflict is about: two actors
     // writing different properties of the same node do not conflict.
     is PropertyChangeV1 -> listOf(touchKey("p", nodeId, property))

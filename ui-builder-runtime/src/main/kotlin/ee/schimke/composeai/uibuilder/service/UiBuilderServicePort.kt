@@ -101,6 +101,17 @@ public sealed interface UiBuilderServiceRequest {
     val targetCatalogPin: CatalogReferenceV1,
   ) : UiBuilderServiceRequest
 
+  /**
+   * Preview moving an unusable design to the exact revision of its catalog served now.
+   *
+   * Unlike [PreviewCatalogUpgrade], the caller does not supply either pin. That is the recovery
+   * path for a pin this runtime can no longer resolve: the stored document remains the authority
+   * for the source pin, while [UiBuilderCatalogExecutor.reference] supplies the target without a
+   * browser guessing a digest. The result is still only a preview; committing it requires the
+   * hash-bound [ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeMutationV1].
+   */
+  public data class PreviewCurrentCatalogUpgrade(val designId: String) : UiBuilderServiceRequest
+
   public data class ApplyOperation(val submission: UiBuilderSubmission) : UiBuilderServiceRequest
 
   public data class GetSnapshot(val designId: String, val revision: Long?) : UiBuilderServiceRequest

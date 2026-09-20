@@ -87,8 +87,11 @@ import ee.schimke.composeai.uibuilder.local.LocalSyncResult
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderHttpTransport
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
 import ee.schimke.composeai.uibuilder.local.localCheckoutRecord
+import ee.schimke.composeai.uibuilder.protocol.AcceptedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewStatusV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignsResponseV1
@@ -115,6 +118,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.yield
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -567,6 +571,12 @@ private fun LiveSessionApp(
   // draw. Null is "not settled yet" and must stay that way: it is what keeps the first moments of
   // a normal load from rendering as a failure.
   var openFailure by remember { mutableStateOf<ServiceErrorV1?>(null) }
+  var catalogRecovery by
+    remember(config.designId) { mutableStateOf<CatalogUpgradePreviewV1?>(null) }
+  var catalogRecoveryLoading by remember(config.designId) { mutableStateOf(false) }
+  var catalogRecoveryAttempted by remember(config.designId) { mutableStateOf(false) }
+  var catalogRecoveryApplying by remember(config.designId) { mutableStateOf(false) }
+  var catalogRecoveryError by remember(config.designId) { mutableStateOf<String?>(null) }
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
   var authoritativeGeneration by remember { mutableStateOf(0) }
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
@@ -1154,6 +1164,24 @@ private fun LiveSessionApp(
   val activeUpdates = updates
   DisposableEffect(activeUpdates) { onDispose { activeUpdates?.close() } }
 
+  LaunchedEffect(openFailure, config.designId) {
+    if (
+      config.localStorage ||
+        openFailure?.code != ServiceErrorCodeV1.CATALOG_UNAVAILABLE ||
+        catalogRecovery != null ||
+        catalogRecoveryLoading
+    ) {
+      return@LaunchedEffect
+    }
+    catalogRecoveryLoading = true
+    catalogRecoveryError = null
+    runCatching { fetchCatalogRecovery(config.designId) }
+      .onSuccess { catalogRecovery = it }
+      .onFailure { catalogRecoveryError = it.message ?: "Catalog recovery could not be previewed" }
+    catalogRecoveryLoading = false
+    catalogRecoveryAttempted = true
+  }
+
   LaunchedEffect(socketState) {
     publishSocketState(socketState.name.lowercase())
     if (socketState == BrowserUiBuilderSocketState.DISCONNECTED) {
@@ -1623,16 +1651,87 @@ private fun LiveSessionApp(
         catalogSystemId = activeCatalogSystemId,
         reason = failure.message,
         code = failure.code,
+        recovery =
+          catalogRecovery?.let { preview ->
+            UiBuilderCatalogRecoveryUi(
+              sourceRevision = preview.sourceCatalogPin.catalogRevision,
+              targetRevision = preview.targetCatalogPin.catalogRevision,
+              changeCount = preview.changes.size,
+              issues = preview.issues.map { "${it.severity.name.lowercase()}: ${it.message}" },
+              canApply = preview.status == CatalogUpgradePreviewStatusV1.READY,
+              loading = catalogRecoveryApplying,
+              error = catalogRecoveryError,
+              onApply = {
+                if (!catalogRecoveryApplying) {
+                  catalogRecoveryApplying = true
+                  catalogRecoveryError = null
+                  scope.launch {
+                    val command =
+                      preview.catalogRecoveryCommand(
+                        actorId = config.actorId,
+                        clientId = config.clientId,
+                      )
+                    if (command == null) {
+                      catalogRecoveryError = "The recovery preview produced no candidate document"
+                      catalogRecoveryApplying = false
+                      return@launch
+                    }
+                    val result = http.execute(ApplyOperationRequestV1(command))
+                    val accepted =
+                      ((result as? UiBuilderHttpResult.Response)?.response
+                          as? OperationOutcomeResponseV1)
+                        ?.outcome as? AcceptedOutcomeV1
+                    if (accepted != null) {
+                      reloadBrowserPage()
+                    } else {
+                      catalogRecoveryError =
+                        when (result) {
+                          is UiBuilderHttpResult.ServiceError -> result.error.message
+                          is UiBuilderHttpResult.SnapshotRequired -> result.error.message
+                          is UiBuilderHttpResult.Response -> "The catalog recovery was refused"
+                        }
+                      catalogRecoveryApplying = false
+                    }
+                  }
+                }
+              },
+            )
+          },
+        recoveryLoading =
+          catalogRecoveryLoading ||
+            (failure.code == ServiceErrorCodeV1.CATALOG_UNAVAILABLE && !catalogRecoveryAttempted),
+        recoveryError = catalogRecoveryError,
       )
       // Ready means settled, not successful. The harness waits on this attribute for 60 seconds
       // before failing, so leaving it unset on a design that will never open turns a precise
       // "catalog unavailable" into a timeout that says nothing. Only on a settled failure: while
       // `openFailure` is null the open may still succeed, and marking ready then would let the
       // harness assert against a page that had not finished loading.
-      LaunchedEffect(failure) { markReady() }
+      LaunchedEffect(failure, catalogRecoveryAttempted) {
+        if (
+          failure.code != ServiceErrorCodeV1.CATALOG_UNAVAILABLE ||
+            config.localStorage ||
+            catalogRecoveryAttempted
+        ) {
+          markReady()
+        }
+      }
     }
   }
 }
+
+@Serializable private data class BrowserCatalogRecoveryPayload(val preview: CatalogUpgradePreviewV1)
+
+private suspend fun fetchCatalogRecovery(designId: String): CatalogUpgradePreviewV1 =
+  catalogRecoveryJson
+    .decodeFromString<BrowserCatalogRecoveryPayload>(
+      fetchText("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/catalog-recovery")
+    )
+    .preview
+
+private val catalogRecoveryJson = Json { ignoreUnknownKeys = true }
+
+@JsFun("() => window.location.reload()") private external fun reloadBrowserPage()
 
 @JsFun(
   """(revision, revisionPinned, nodeId, threadId, inspectorMode) => {
