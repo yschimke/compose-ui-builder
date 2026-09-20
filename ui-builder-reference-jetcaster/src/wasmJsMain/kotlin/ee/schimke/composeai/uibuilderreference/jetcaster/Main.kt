@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,6 +51,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -62,6 +63,8 @@ import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -290,38 +293,50 @@ private fun MainDiscoverPane(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SearchHeader() {
+  // Keep the independent oracle on Jetcaster's real Material API. A hand-built Surface here let
+  // Preview/export move to SearchBar while the integration gate continued measuring a lookalike.
+  var query by remember { mutableStateOf("") }
   Row(
     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     horizontalArrangement = Arrangement.End,
   ) {
-    Surface(
-      shape = RoundedCornerShape(32.dp),
-      color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    SearchBar(
+      inputField = {
+        SearchBarDefaults.InputField(
+          query = query,
+          onQueryChange = { query = it },
+          onSearch = {},
+          expanded = false,
+          onExpandedChange = {},
+          enabled = true,
+          leadingIcon = {
+            Icon(
+              Icons.Default.Search,
+              contentDescription = "Search",
+              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          },
+          placeholder = {
+            Text(
+              "Search for a podcast",
+              style = MaterialTheme.typography.bodyLarge,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          },
+          trailingIcon = {
+            Icon(
+              Icons.Default.AccountCircle,
+              contentDescription = "Account",
+              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          },
+        )
+      },
+      expanded = false,
+      onExpandedChange = {},
       tonalElevation = 2.dp,
-      modifier = Modifier.fillMaxWidth().height(56.dp),
-    ) {
-      Row(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Icon(
-          Icons.Default.Search,
-          contentDescription = "Search",
-          tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-          "Search for a podcast",
-          Modifier.padding(horizontal = 16.dp).weight(1f),
-          style = MaterialTheme.typography.bodyLarge,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Icon(
-          Icons.Default.AccountCircle,
-          contentDescription = "Account",
-          tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-    }
+      modifier = Modifier.fillMaxWidth(),
+    ) {}
   }
 }
 
@@ -351,12 +366,19 @@ private fun CategoryRow(selectedCategory: String, onSelected: (String) -> Unit) 
 
 @Composable
 private fun PodcastCarousel() {
-  LazyRow(
+  // This is the component the fixture declares and Preview/export invoke; LazyRow is reserved for
+  // the unrolled authoring adapter, where a lazy carousel cannot expose every editable child.
+  val state = rememberCarouselState { 2 }
+  HorizontalUncontainedCarousel(
+    state = state,
+    itemWidth = 128.dp,
     contentPadding = PaddingValues(start = 8.dp),
-    horizontalArrangement = Arrangement.spacedBy(4.dp),
-  ) {
-    item(key = AndroidPodcast.key) { PodcastArtworkCard(AndroidPodcast) }
-    item(key = GooglePodcast.key) { PodcastArtworkCard(GooglePodcast) }
+    itemSpacing = 4.dp,
+  ) { index ->
+    when (index) {
+      0 -> PodcastArtworkCard(AndroidPodcast)
+      else -> PodcastArtworkCard(GooglePodcast)
+    }
   }
 }
 
