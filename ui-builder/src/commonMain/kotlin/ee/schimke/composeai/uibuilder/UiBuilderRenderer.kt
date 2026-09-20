@@ -115,9 +115,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -145,9 +143,6 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -155,7 +150,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -195,7 +189,6 @@ import kotlin.io.encoding.Base64
 import kotlin.math.PI
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -456,60 +449,10 @@ fun UiBuilderSurface(
    */
   wearWidgetHostShape: WearWidgetHostShape = LocalWearWidgetHostShape.current,
 ) {
-  // Keyed by the box that drew, not by the node that describes it — see [UiBuilderInstancePath].
-  // With nothing in the format able to draw a node twice, every key here is still exactly the node
-  // id it was, and the two are only free to diverge once a loop or a component instance lands.
-  val bounds =
-    remember(document.id, document.revision, renderSessionId) {
-      mutableStateMapOf<UiBuilderInstancePath, Rect>()
-    }
   val overlayBounds =
     remember(document.id, document.revision, renderSessionId) {
       mutableStateMapOf<UiBuilderInstancePath, Rect>()
     }
-  val semanticActions = mutableMapOf<String, UiBuilderSemanticActionEntry>()
-  var surfaceCoordinates by
-    remember(document.id, document.revision, renderSessionId) {
-      mutableStateOf<LayoutCoordinates?>(null)
-    }
-  val currentInspectionCallback = rememberUpdatedState(onInspectionSnapshot)
-  val currentInspectionInvalidated = rememberUpdatedState(onInspectionInvalidated)
-  val inspection =
-    remember(document.id, document.revision, renderSessionId, canvasAdapterIds) {
-      UiBuilderInspectionCollector(
-        document = document,
-        onSnapshot = { snapshot -> currentInspectionCallback.value?.invoke(snapshot) },
-        onInvalidated =
-          onInspectionInvalidated?.let {
-            { collector -> currentInspectionInvalidated.value?.invoke(collector) }
-          },
-        canvasAdapterIds = canvasAdapterIds,
-      )
-    }
-  val state =
-    remember(document.id) {
-      mutableStateMapOf<String, String?>().also { target ->
-        document.stateVariables.forEach { (name, declaration) ->
-          target[name] =
-            declaration
-              .objectOrEmpty()["initialValue"]
-              ?.takeUnless { it is JsonNull }
-              ?.jsonPrimitive
-              ?.contentOrNull
-        }
-      }
-    }
-  var appliedDeclarations by remember(document.id) { mutableStateOf(document.stateVariables) }
-  LocalCanvasExtentInputs.current?.let { updateInputs ->
-    val inputs = CanvasExtentInputs(document, state.toMap())
-    SideEffect { updateInputs(inputs) }
-  }
-  SideEffect {
-    if (appliedDeclarations != document.stateVariables) {
-      reconcileCanvasState(state, appliedDeclarations, document.stateVariables)
-      appliedDeclarations = document.stateVariables
-    }
-  }
   val theme = document.environment["theme"]?.jsonPrimitive?.contentOrNull
   val dark = theme == "dark" || (theme == "system" && isSystemInDarkTheme())
   val platformDensity = LocalDensity.current
@@ -524,14 +467,6 @@ fun UiBuilderSurface(
     if (document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl")
       LayoutDirection.Rtl
     else LayoutDirection.Ltr
-  SideEffect { inspection.updateState(state) }
-  SideEffect {
-    val size = surfaceCoordinates?.size
-    runtimeActionController?.install(
-      semanticActions.toMap(),
-      size?.let { UiBuilderPixelBounds(0f, 0f, it.width.toFloat(), it.height.toFloat()) },
-    )
-  }
   // A Wear design gets Wear's colours, whatever the editor theme says. The screen is black, the
   // card is `#332E3C` and a subtitle is the warm `#FFDCC2` that nobody guesses — all three sampled
   // from wear-m3-catalog's own render. Deciding this by root component rather than by a theme host
@@ -620,109 +555,38 @@ fun UiBuilderSurface(
     *wearDevice,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
+      val updateExtentInputs = LocalCanvasExtentInputs.current
       Box(
-        (renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
-            ?: Modifier.fillMaxSize())
-          .onGloballyPositioned { coordinates ->
-            surfaceCoordinates = coordinates
-            runtimeActionController?.install(
-              semanticActions.toMap(),
-              UiBuilderPixelBounds(
-                0f,
-                0f,
-                coordinates.size.width.toFloat(),
-                coordinates.size.height.toFloat(),
-              ),
-            )
-          }
+        renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
+          ?: Modifier.fillMaxSize()
       ) {
-        val renderTree =
-          CanvasRenderTree(
-            document = document,
-            state = state,
-            adapterIds = LocalUiBuilderCanvasAdapters.current,
-            adapterMappings = LocalUiBuilderCanvasAdapterMappings.current,
-          )
-        document.roots.forEach { root ->
-          val rootModifier =
+        CanvasDocumentHost(
+          document = document,
+          adapterIds = canvasAdapterIds,
+          adapterMappings = canvasAdapterMappings,
+          mode = if (effectiveUnrolled) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
+          density = density,
+          modifier = Modifier.fillMaxSize(),
+          renderSessionId = renderSessionId,
+          runtimeActionController = runtimeActionController,
+          onInspectionSnapshot = onInspectionSnapshot,
+          onInspectionInvalidated = onInspectionInvalidated,
+          onStateSnapshot = { state ->
+            updateExtentInputs?.invoke(CanvasExtentInputs(document, state))
+          },
+          onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
+          rootModifier = { entry ->
             when {
-              document.nodes[root]?.componentId?.startsWith("remote-m3/widget-container-") ==
-                true -> Modifier.align(Alignment.Center)
+              entry.node.componentId.startsWith("remote-m3/widget-container-") ->
+                Modifier.align(Alignment.Center)
               // A screen is taller than its frame by design — the stadium IS the scroll extent —
               // so it is pinned to the top and centred across, the way a long screenshot reads.
-              document.nodes[root]?.let { node ->
-                val adapter =
-                  LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
-                adapter == ROUND_SCREEN_FRAME
-              } == true -> Modifier.align(Alignment.TopCenter)
+              entry.adapterId == ROUND_SCREEN_FRAME -> Modifier.align(Alignment.TopCenter)
               else -> Modifier
             }
-          renderTree.root(root)?.let { entry ->
-            RenderNode(
-              document = document,
-              entry = entry,
-              state = state,
-              onState = { key, value ->
-                state[key] = value
-                inspection.updateState(state)
-              },
-              onBounds = { path, coordinates ->
-                // The node's own box in root pixels, not the part of it the viewport happens to
-                // show.
-                // `boundsInRoot` is *clipped* to the visible area, so a node scrolled out of view
-                // reports 0x0 at the origin and a scrolled one reports where the viewport cut it —
-                // and
-                // a drop plan that ordered a slot's children by those boxes put every off-screen
-                // child
-                // at the top. The origin is the placement mapped to root space without that
-                // clipping,
-                // and the size is the node's own carried through the same transform: the canvas
-                // draws
-                // the design scaled (zoom, and the design's density against the host's), so a
-                // node's
-                // local pixels are not root pixels.
-                val unit =
-                  coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
-                val rootBounds =
-                  Rect(
-                    offset = coordinates.positionInRoot(),
-                    size =
-                      Size(
-                        coordinates.size.width * unit.x,
-                        coordinates.size.height * unit.y,
-                      ),
-                  )
-                bounds[path] = rootBounds
-                surfaceCoordinates?.let { surface ->
-                  overlayBounds[path] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
-                }
-                // The inspection snapshot is a published wire shape keyed by authored node id
-                // (`compose-ui-builder-inspection/v1`), so it is told which node drew rather than
-                // which box. Carrying copies there is a schema change, and belongs with whatever
-                // first draws one.
-                inspection.recordNodeBounds(
-                  path.nodeId,
-                  rootBounds.left,
-                  rootBounds.top,
-                  rootBounds.right,
-                  rootBounds.bottom,
-                )
-              },
-              onTextLayout = { path, result ->
-                inspection.recordTextLayout(
-                  path.nodeId,
-                  result.lineCount,
-                  result.firstBaseline,
-                  result.lastBaseline,
-                  with(density) {
-                    document.nodes.getValue(path.nodeId).textContentTopPaddingDp().dp.toPx()
-                  },
-                )
-              },
-              semanticActions = semanticActions,
-              modifier = rootModifier,
-            )
-          }
+          },
+        ) { entry, rootModifier ->
+          RenderNode(document = document, entry = entry, host = this, modifier = rootModifier)
         }
         if (editorOverlay) {
           // Every box the selected node drew, not one: a node id is what the editor selects, and
@@ -761,15 +625,12 @@ fun UiBuilderSurface(
 private fun RenderNode(
   document: UiBuilderDocument,
   entry: CanvasRenderNode,
-  state: Map<String, String?>,
-  onState: (String, String?) -> Unit,
-  onBounds: (UiBuilderInstancePath, LayoutCoordinates) -> Unit,
-  onTextLayout: (UiBuilderInstancePath, TextLayoutResult) -> Unit,
-  semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
+  host: CanvasDocumentScope,
   modifier: Modifier = Modifier,
 ) {
   val node = entry.node
   val path = entry.path
+  val state = host.state
   val navigate = LocalUiBuilderNavigator.current
   val themeCornerRadius = LocalUiBuilderCornerRadius.current
   val nativeOnly = LocalUiBuilderNativeOnly.current
@@ -777,12 +638,12 @@ private fun RenderNode(
     entry.prepare(
       modifier = modifier,
       state = state,
-      onState = onState,
+      onState = host::setState,
       onNavigate = navigate,
       handlesClick = node.componentId in INTERACTIVE_COMPONENTS,
       applyModifier = { current, value -> current.applyModifier(value, themeCornerRadius) },
-      onBounds = onBounds,
-      onSemanticAction = { id, action -> semanticActions[id] = action },
+      onBounds = host::recordNodeBounds,
+      onSemanticAction = host::registerSemanticAction,
     )
   val enabled = prepared.enabled
   val activate = { prepared.dispatch("click") }
@@ -792,11 +653,7 @@ private fun RenderNode(
     RenderNode(
       document,
       childEntry,
-      state,
-      onState,
-      onBounds,
-      onTextLayout,
-      semanticActions,
+      host,
       next,
     )
   }
@@ -816,11 +673,10 @@ private fun RenderNode(
     entry.renderAdapter(
       registry = LocalCanvasAdapterRegistry.current,
       modifier = measured,
-      mode =
-        if (LocalUiBuilderUnrolled.current) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
+      mode = host.mode,
       renderChild = renderChild,
       dispatchEvent = prepared::dispatch,
-      recordText = { result -> onTextLayout(path, result) },
+      recordText = { result -> host.recordTextLayout(path, result) },
     )
   )
     return
@@ -1053,7 +909,7 @@ private fun RenderNode(
         softWrap = node.bool("softWrap", true),
         overflow = node.textOverflow(),
         textAlign = node.textAlign(),
-        onTextLayout = { onTextLayout(path, it) },
+        onTextLayout = { host.recordTextLayout(path, it) },
       )
     "wear-m3/card" ->
       WearCanvasCard(node.string("variant"), measured) {
@@ -1344,8 +1200,7 @@ private fun RenderNode(
         }
       } else {
         val lazyState = rememberLazyListState()
-        semanticActions[node.id] =
-          semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
+        host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
         LazyColumn(
           modifier = measured,
           state = lazyState,
@@ -1371,8 +1226,7 @@ private fun RenderNode(
         }
       } else {
         val lazyState = rememberLazyGridState()
-        semanticActions[node.id] =
-          semanticActions[node.id].orEmpty().copy(scrollBy = lazyState::dispatchRawDelta)
+        host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
         LazyVerticalGrid(
           columns = GridCells.Adaptive(minimum.dp),
           modifier = measured,
@@ -1408,8 +1262,7 @@ private fun RenderNode(
         }
       } else {
         val carouselState = rememberCarouselState { items.size }
-        semanticActions[node.id] =
-          semanticActions[node.id].orEmpty().copy(scrollBy = carouselState::dispatchRawDelta)
+        host.updateSemanticAction(node.id) { it.copy(scrollBy = carouselState::dispatchRawDelta) }
         HorizontalUncontainedCarousel(
           state = carouselState,
           itemWidth = node.float("itemWidthDp", 128f).dp,
@@ -1462,7 +1315,7 @@ private fun RenderNode(
     "m3/search-input-field" -> {
       val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
       val value = variable?.let(state::get).orEmpty()
-      val onValueChange: (String) -> Unit = { if (variable != null) onState(variable, it) }
+      val onValueChange: (String) -> Unit = { if (variable != null) host.setState(variable, it) }
       if (
         uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
           UiBuilderRenderStrategy.AUTHORING_ADAPTER
@@ -1598,7 +1451,7 @@ private fun RenderNode(
       val bound = variable?.let { state[it]?.toFloatOrNull() }
       Slider(
         value = (bound ?: node.float("value")).coerceIn(from, to),
-        onValueChange = { next -> if (variable != null) onState(variable, next.toString()) },
+        onValueChange = { next -> if (variable != null) host.setState(variable, next.toString()) },
         modifier = measured,
         enabled = enabled,
         valueRange = from..to,
@@ -1655,7 +1508,7 @@ private fun RenderNode(
           { ids.forEach { child(it, Modifier) } }
         }
       val onValueChange: (String) -> Unit = { next ->
-        if (variable != null) onState(variable, next)
+        if (variable != null) host.setState(variable, next)
       }
       if (node.string("variant") == "outlined") {
         OutlinedTextField(
@@ -1781,7 +1634,7 @@ private fun RenderNode(
         softWrap = node.bool("softWrap", true),
         overflow = node.textOverflow(),
         textAlign = node.textAlign(),
-        onTextLayout = { onTextLayout(path, it) },
+        onTextLayout = { host.recordTextLayout(path, it) },
       )
     "asset/image" -> AssetImage(document, node, measured)
     "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
@@ -3589,8 +3442,6 @@ private fun isResolvableShape(value: String?): Boolean =
 
 private val NAMED_SHAPES = setOf("large", "medium", "small")
 
-private fun UiBuilderSemanticActionEntry?.orEmpty() = this ?: UiBuilderSemanticActionEntry()
-
 /** The nine alignments a document may name, for `wrapContentSize` and the child alignment below. */
 private fun alignmentFor(value: String?): Alignment =
   when (value) {
@@ -3750,14 +3601,6 @@ private fun UiBuilderNode.obj(name: String): JsonObject =
 private fun UiBuilderNode.hasModifier(type: String): Boolean = modifiers.any {
   it.objectOrEmpty().optionalString("type") == type
 }
-
-private fun UiBuilderNode.textContentTopPaddingDp(): Float =
-  modifiers
-    .sumOf { modifier ->
-      val value = modifier.objectOrEmpty()
-      if (value.optionalString("type") == "padding") value.number("topDp").toDouble() else 0.0
-    }
-    .toFloat()
 
 /**
  * The scalar a property's value wrapper holds, or null when it holds an object, an array or a null.
