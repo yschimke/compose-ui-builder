@@ -15,6 +15,16 @@
         "github-actions"
       ],
       "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": [
+        "gradle"
+      ],
+      "matchPackageNames": [
+        "ee.schimke.composeai:compose-ai-tools-bom",
+        "ee.schimke.composeai:compose-preview-daemon-bom"
+      ],
+      "groupName": "Compose AI Tools and preview daemon"
     }
   ]
 }
