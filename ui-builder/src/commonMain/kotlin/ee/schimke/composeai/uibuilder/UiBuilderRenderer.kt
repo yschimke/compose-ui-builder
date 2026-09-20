@@ -788,19 +788,20 @@ private fun RenderNode(
   val activate = { prepared.dispatch("click") }
   val measured = prepared.modifier
   fun slot(name: String) = node.slots[name].orEmpty()
+  val renderChild: @Composable (CanvasRenderNode, Modifier) -> Unit = { childEntry, next ->
+    RenderNode(
+      document,
+      childEntry,
+      state,
+      onState,
+      onBounds,
+      onTextLayout,
+      semanticActions,
+      next,
+    )
+  }
   val child: @Composable (String, Modifier) -> Unit = { id, next ->
-    entry.child(id)?.let { childEntry ->
-      RenderNode(
-        document,
-        childEntry,
-        state,
-        onState,
-        onBounds,
-        onTextLayout,
-        semanticActions,
-        next,
-      )
-    }
+    entry.child(id)?.let { renderChild(it, next) }
   }
 
   // The adapter the catalog names, or the component's own id when it names none — which is every
@@ -817,20 +818,18 @@ private fun RenderNode(
       modifier = measured,
       mode =
         if (LocalUiBuilderUnrolled.current) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
-      renderChild = { childEntry, next ->
-        RenderNode(
-          document = document,
-          entry = childEntry,
-          state = state,
-          onState = onState,
-          onBounds = onBounds,
-          onTextLayout = onTextLayout,
-          semanticActions = semanticActions,
-          modifier = next,
-        )
-      },
+      renderChild = renderChild,
       dispatchEvent = prepared::dispatch,
       recordText = { result -> onTextLayout(path, result) },
+    )
+  )
+    return
+
+  if (
+    entry.renderStructure(
+      modifier = measured,
+      renderChild = renderChild,
+      missingComponent = { label, next -> UnsupportedComponentDiagnostic(label, next) },
     )
   )
     return
@@ -1830,62 +1829,6 @@ private fun RenderNode(
       NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
         node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
       }
-    // One template, drawn once per row. The rows live in the design — `data` is a `list` of
-    // `object` values — and each row is the dictionary the template reads by key, which is the same
-    // reader and the same substitution a component placement uses for its arguments. What differs
-    // is only where the dictionary comes from, which is why this needed no new machinery.
-    "layout/for-each" -> {
-      val rows = node.forEachRows()
-      Column(
-        modifier = measured,
-        verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
-      ) {
-        val template = slot("template").firstOrNull()
-        if (template != null) {
-          rows.forEachIndexed { index, row ->
-            entry.occurrenceChild(template, index, row)?.let { templateEntry ->
-              RenderNode(
-                document = document,
-                entry = templateEntry,
-                state = state,
-                onState = onState,
-                onBounds = onBounds,
-                onTextLayout = onTextLayout,
-                semanticActions = semanticActions,
-              )
-            }
-          }
-        }
-      }
-    }
-    // One body, placed. The body's nodes live in the ordinary `nodes` map, so every reducer,
-    // validator and renderer path below this point is the one a design's own nodes take — what the
-    // placement adds is a scope: the instance's arguments, which the body reads by key, and a path
-    // segment, because the same body under two instances is two boxes rather than one.
-    DESIGN_COMPONENT_INSTANCE -> {
-      val root = document.componentRoot(node)
-      if (root == null) {
-        UnsupportedComponentDiagnostic(
-          "${node.componentId} → ${node.componentKey().ifEmpty { "(none)" }}",
-          measured,
-        )
-      } else {
-        Box(measured) {
-          entry.placementChild(root, node.componentArguments(entry.bindingArguments))?.let {
-            componentEntry ->
-            RenderNode(
-              document = document,
-              entry = componentEntry,
-              state = state,
-              onState = onState,
-              onBounds = onBounds,
-              onTextLayout = onTextLayout,
-              semanticActions = semanticActions,
-            )
-          }
-        }
-      }
-    }
     // On the palette, exportable, rendered by its own catalog — and this canvas has no case for
     // it. The shelf already promises exactly this picture; see [LocalUiBuilderCatalogComponentIds]
     // for why membership answers the question and `adapterStatus` does not.
@@ -1913,80 +1856,6 @@ private fun RenderNode(
         UnsupportedComponentDiagnostic(node.componentId, measured)
       }
   }
-}
-
-/** The wire's own id for a node that places a component. */
-private const val DESIGN_COMPONENT_INSTANCE = "design/component-instance"
-
-/**
- * The rows this loop draws: the `object` values inside its `data` list.
- *
- * Read leniently, the way every other accessor on this canvas is: a `data` that is not a list, or a
- * row that is not an object, draws nothing rather than taking the composition down. What is wrong
- * with the document is the export gate's to say, and it says it in a panel the canvas has to stay
- * alive to show.
- */
-private fun UiBuilderNode.forEachRows(): List<JsonObject> {
-  val data = obj("data")
-  if (data.wrapperType() != "list") return emptyList()
-  val values = data["values"] as? JsonArray ?: return emptyList()
-  return values.mapNotNull { row ->
-    val value = row as? JsonObject ?: return@mapNotNull null
-    if (value.wrapperType() != "object") return@mapNotNull null
-    value["fields"] as? JsonObject
-  }
-}
-
-private fun UiBuilderNode.componentKey(): String =
-  (component?.get("componentKey") as? JsonPrimitive)?.contentOrNull.orEmpty()
-
-/**
- * What a placement passes, with its own bound arguments resolved from the dictionary around it.
- *
- * A placement inside a loop template passes the row — `{"type":"binding","value":"shade"}` — and
- * the body reads the *placement's* dictionary, so without this substitution the body received the
- * wrapper and drew its fallback while the generated Kotlin varied correctly per row. One
- * substitution, the same one a property takes, at the one place a scope is handed on.
- */
-private fun UiBuilderNode.componentArguments(scope: JsonObject): JsonObject {
-  val declared = component?.get("arguments")?.objectOrEmpty() ?: JsonObject(emptyMap())
-  if (scope.isEmpty() || declared.isEmpty()) return declared
-  return JsonObject(
-    declared.mapValues { (_, value) ->
-      val binding = value as? JsonObject ?: return@mapValues value
-      val key = binding.bindingKey() ?: return@mapValues value
-      scope[key] ?: value
-    }
-  )
-}
-
-/** Where the placed component's body starts, or null when the design defines no such component. */
-private fun UiBuilderDocument.componentRoot(node: UiBuilderNode): String? {
-  val key = node.componentKey().takeIf { it.isNotEmpty() } ?: return null
-  val root = components[key]?.objectOrEmpty()?.optionalString("root") ?: return null
-  return root.takeIf { it in nodes }
-}
-
-/**
- * This node with its bound properties replaced by what the placement passed.
- *
- * A binding names one key of the dictionary in scope, and the value under that key is an ordinary
- * property value — so resolving one is a substitution rather than an evaluation. A key the
- * placement did not pass is left as it stands: the accessors then read their own fallback, which
- * draws the component's default rather than refusing to draw the design.
- */
-/**
- * The key this value wrapper reads, or null when it holds a value of its own.
- *
- * Read with safe casts rather than `optionalString`, which throws on a non-primitive. Placement
- * arguments and loop rows are open-keyed dictionaries the capability validator never type-checks,
- * so a wrapper shaped `{"type": "binding", "value": {}}` reaches the canvas intact — and the canvas
- * has to draw the rest of the design rather than go down with it. The exporter refuses the same
- * document by name; here the property simply keeps whatever it already held.
- */
-private fun JsonObject.bindingKey(): String? {
-  if (wrapperType() != "binding") return null
-  return (this["value"] as? JsonPrimitive)?.contentOrNull
 }
 
 /** The `type` a value wrapper declares, or null when it is absent or is not a scalar. */
