@@ -7275,18 +7275,32 @@ private fun CatalogThumbnail(
     CatalogDragHandle(dragKey, label, onDrag, onDrop)
     return
   }
-  val scale = size.width.value / PREVIEW_FRAME_WIDTH_DP
+  val density = LocalDensity.current
+  val fallbackScale = size.width.value / PREVIEW_FRAME_WIDTH_DP
+  var contentBounds by remember(document.id) { mutableStateOf<UiBuilderPixelBounds?>(null) }
+  val transform =
+    thumbnailContentTransform(
+      contentBounds = contentBounds,
+      tileSize = with(density) { Size(size.width.toPx(), size.height.toPx()) },
+      fallbackScale = fallbackScale,
+    )
   Box(
     Modifier.size(size)
       .clip(RoundedCornerShape(4.dp))
       .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-    contentAlignment = Alignment.Center,
+    contentAlignment = Alignment.TopStart,
   ) {
     Box(
       Modifier.requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
         .graphicsLayer {
-          scaleX = scale
-          scaleY = scale
+          // Top-start is intentional. The inspection snapshot below is in post-transform root
+          // pixels; a fixed origin lets it recover the component's source-frame bounds without
+          // guessing how Compose centred a 176dp child in a 44dp tile.
+          transformOrigin = TransformOrigin(0f, 0f)
+          scaleX = transform.scale
+          scaleY = transform.scale
+          translationX = transform.translation.x
+          translationY = transform.translation.y
         }
         // A picture of a Switch is not a Switch. Without this the row would publish every semantics
         // node inside the thumbnail — so a screen reader would read a palette row as a switch it
@@ -7294,7 +7308,14 @@ private fun CatalogThumbnail(
         // not on the canvas. The row's own name is set on the overlay below.
         .clearAndSetSemantics {}
     ) {
-      UiBuilderSurface(document = document, editorOverlay = false)
+      UiBuilderSurface(
+        document = document,
+        editorOverlay = false,
+        onInspectionSnapshot = { snapshot ->
+          val next = thumbnailContentBounds(snapshot, transform.scale)
+          if (next != contentBounds) contentBounds = next
+        },
+      )
     }
     // The gesture sits ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is
     // a real Switch and would eat the press that was meant to start a drag; a later sibling wins
@@ -7305,6 +7326,70 @@ private fun CatalogThumbnail(
       }
     )
   }
+}
+
+/** The transformed source frame that fills a palette thumbnail around its actual component. */
+internal data class ThumbnailContentTransform(val scale: Float, val translation: Offset)
+
+/**
+ * Fit the component's source-frame bounds into a palette tile without magnifying it into an
+ * artefact. Bounds are source pixels; [translation] is therefore also a graphics-layer pixel value.
+ */
+internal fun thumbnailContentTransform(
+  contentBounds: UiBuilderPixelBounds?,
+  tileSize: Size,
+  fallbackScale: Float,
+): ThumbnailContentTransform {
+  if (
+    contentBounds == null ||
+      contentBounds.width <= 0f ||
+      contentBounds.height <= 0f ||
+      !contentBounds.width.isFinite() ||
+      !contentBounds.height.isFinite()
+  ) {
+    return ThumbnailContentTransform(fallbackScale, Offset.Zero)
+  }
+  // A 24dp icon is useful at roughly twice its authored size; beyond that it stops reading as the
+  // component and starts reading as a clipped pixel crop.
+  val scale =
+    minOf(tileSize.width / contentBounds.width, tileSize.height / contentBounds.height, 2f)
+  val horizontalInset = (tileSize.width - contentBounds.width * scale) / 2f
+  val verticalInset = (tileSize.height - contentBounds.height * scale) / 2f
+  return ThumbnailContentTransform(
+    scale = scale,
+    translation =
+      Offset(
+        x = -contentBounds.x * scale + horizontalInset,
+        y = -contentBounds.y * scale + verticalInset,
+      ),
+  )
+}
+
+/**
+ * Convert the inspection collector's post-transform root pixels back into source-frame pixels. The
+ * frame entry provides the origin, so this stays correct when the palette scrolls or the tile
+ * itself is placed anywhere in the editor.
+ */
+internal fun thumbnailContentBounds(
+  snapshot: UiBuilderInspectionSnapshot,
+  scale: Float,
+): UiBuilderPixelBounds? {
+  if (scale <= 0f || !scale.isFinite()) return null
+  val frame =
+    snapshot.nodes.singleOrNull { it.nodeId == PREVIEW_FRAME_CELL_ID }?.bounds ?: return null
+  val componentBounds =
+    snapshot.nodes
+      .asSequence()
+      .filter { it.nodeId != PREVIEW_FRAME_CELL_ID }
+      .mapNotNull { it.bounds }
+      .filter { it.width > 0f && it.height > 0f }
+      .toList()
+  if (componentBounds.isEmpty()) return null
+  val left = componentBounds.minOf { (it.x - frame.x) / scale }
+  val top = componentBounds.minOf { (it.y - frame.y) / scale }
+  val right = componentBounds.maxOf { (it.right - frame.x) / scale }
+  val bottom = componentBounds.maxOf { (it.bottom - frame.y) / scale }
+  return UiBuilderPixelBounds(left, top, right - left, bottom - top)
 }
 
 /**

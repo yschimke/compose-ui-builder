@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.ui.geometry.Size
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import kotlin.test.Test
@@ -93,6 +94,30 @@ class CatalogThumbnailTest {
 
     assertEquals(before.document.revision, after.document.revision)
     assertEquals(before.operationSequence, after.operationSequence)
+  }
+
+  @Test
+  fun `a small component is cropped and magnified no more than twice`() {
+    val transform =
+      thumbnailContentTransform(
+        contentBounds = UiBuilderPixelBounds(x = 76f, y = 52f, width = 24f, height = 24f),
+        tileSize = Size(44f, 33f),
+        fallbackScale = .25f,
+      )
+
+    assertEquals(1.375f, transform.scale)
+    // A 24px square fits the tile height (33px), leaving 11px across. That spare space is split,
+    // not left as a visibly lopsided gutter beside every icon-shaped component.
+    assertEquals(-99f, transform.translation.x)
+    assertEquals(-71.5f, transform.translation.y)
+  }
+
+  @Test
+  fun `an absent inspection keeps the full frame thumbnail`() {
+    val transform = thumbnailContentTransform(null, Size(44f, 33f), fallbackScale = .25f)
+
+    assertEquals(.25f, transform.scale)
+    assertEquals(androidx.compose.ui.geometry.Offset.Zero, transform.translation)
   }
 
   private fun literalValue(encoded: kotlinx.serialization.json.JsonElement): String? =
