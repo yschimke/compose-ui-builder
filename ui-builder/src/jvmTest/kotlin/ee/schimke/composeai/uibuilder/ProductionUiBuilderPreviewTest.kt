@@ -2,9 +2,25 @@ package ee.schimke.composeai.uibuilder
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ProductionUiBuilderPreviewTest {
+  @Test
+  fun `production preview reads a pinned catalog's frame adapter`() {
+    val document =
+      decodeProductionRendererDocument(
+        """{"schema":"compose-ui-builder-document/v1-candidate","id":"wear","title":"Wear","revision":0,"catalogPin":{"systemId":"wear-m3"},"environment":{},"stateVariables":{},"roots":[],"nodes":{}}"""
+      )
+
+    val catalog = assertNotNull(productionPreviewCatalog(document))
+
+    assertEquals(
+      "frame/round-screen",
+      catalog.canvasAdapterIds["wear-m3/screen-scaffold"],
+    )
+  }
+
   @Test
   fun `production preview decodes a 99 node projected saved document without dropping typed data`() {
     val nodes =

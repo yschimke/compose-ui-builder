@@ -1,9 +1,14 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.overrides.previewOverrideString
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Fixed daemon entrypoint for revision-pinned production exports.
@@ -19,11 +24,33 @@ import kotlinx.serialization.json.Json
 fun ProductionUiBuilderPreview() {
   val source = previewOverrideString(PRODUCTION_DOCUMENT_OVERRIDE, DEFAULT_DOCUMENT_JSON)
   val document = decodeProductionRendererDocument(source)
-  UiBuilderSurface(document = document, editorOverlay = false)
+  val catalog = productionPreviewCatalog(document)
+  if (catalog == null) {
+    UiBuilderSurface(document = document, editorOverlay = false)
+  } else {
+    CompositionLocalProvider(
+      LocalUiBuilderCanvasAdapters provides catalog.canvasAdapterIds,
+      LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
+      LocalUiBuilderCatalogPlatform provides catalog.platform.wireValue,
+    ) {
+      UiBuilderSurface(document = document, editorOverlay = false)
+    }
+  }
 }
 
 internal fun decodeProductionRendererDocument(source: String): UiBuilderDocument =
   productionPreviewJson.decodeFromString(UiBuilderDocument.serializer(), source)
+
+/** The packaged catalog artifact for the document's pin, if this renderer carries one. */
+internal fun productionPreviewCatalog(document: UiBuilderDocument): CapabilityCatalog? {
+  val systemId =
+    document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull
+      ?: document.catalogPin["catalogId"]?.jsonPrimitive?.contentOrNull
+      ?: return null
+  val source =
+    UiBuilderDocument::class.java.getResource("/$systemId-capabilities-v1.json") ?: return null
+  return CapabilityCatalogParser.parse(source.readText())
+}
 
 const val PRODUCTION_DOCUMENT_OVERRIDE: String = "uiBuilder.document.v1"
 
