@@ -82,8 +82,10 @@ A successful first release lets a user:
 
 - Android-only projects, Wear catalogs that do not publish a Wasm target, or arbitrary JVM
   composables loaded dynamically in a browser.
-- Loading an arbitrary catalog Wasm binary into a running builder. The first app compiles in one
-  native `m3-catalog` adapter; multiple catalogs require a separately designed bundle/plugin ABI.
+- Loading arbitrary or unverified Wasm into the editor process. Multiple catalogs use the
+  separately designed catalog-renderer ABI: exact, integrity-checked renderer distributions execute
+  in opaque-origin sandbox frames and communicate through the versioned renderer protocol. See
+  [`UI_BUILDER_CATALOG_RENDERER_RUNTIME.md`](UI_BUILDER_CATALOG_RENDERER_RUNTIME.md).
 - A freeform vector drawing tool, absolute-positioned canvas, or Figma clone.
 - Persisting measured screen coordinates as the source of truth. Bounds are transient inspection
   output; the document stores Compose constraints and relationships.

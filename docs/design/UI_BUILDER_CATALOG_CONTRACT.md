@@ -985,8 +985,12 @@ indirection is not obvious from either end of it.
 - **It does not change the design document, the pin, or the record.** A design pinned to a catalog
   revision keeps meaning what it meant; `ui-builder.json` is versioned by the same revision the pin
   names, which is also the answer to the pack plan's follow-up 3 for catalogs, if not yet for packs.
-- **It does not move the Material 3 canvas adapters out of this repository.** They are the one
-  place a catalog's components are genuinely drawn, and Wasm can only draw what it links.
+- **Superseded: catalog adapters move into catalog-owned renderer runtimes.** This contract kept
+  Material adapters here because Wasm can only draw what its build links. The renderer-runtime
+  vertical slice now supplies the missing boundary: each catalog links its own components into a
+  self-contained Wasm distribution, and the editor loads it through an immutable, sandboxed
+  protocol rather than dynamically linking Kotlin. See
+  [`UI_BUILDER_CATALOG_RENDERER_RUNTIME.md`](UI_BUILDER_CATALOG_RENDERER_RUNTIME.md).
 
 ## Risks and open questions
 

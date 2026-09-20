@@ -94,6 +94,13 @@ canvas word to derive `platformSupported`/`adapterStatus`/`notes` and does not p
 a published catalog's adapters reach the editor only once that one line is added — after that
 repository bumps its own contracts pin.
 
+**Superseded as an ownership boundary:** adapter dispatch removed the component-id coupling, but
+the implementation still links every known catalog into this editor. The renderer-runtime vertical
+slice now makes the stronger boundary possible: the catalog builds the Wasm distribution containing
+its adapters, and the editor mounts that exact distribution through the sandbox protocol. Adapter
+ids remain useful for placeholders and inspection; they are not the executable extension mechanism.
+See [`UI_BUILDER_CATALOG_RENDERER_RUNTIME.md`](UI_BUILDER_CATALOG_RENDERER_RUNTIME.md).
+
 ### 4. The templates are Kotlin documents in the export module
 
 `UiBuilderTemplates.kt` builds the Wear screen, the Wear widgets and the blank mobile screen as
@@ -142,7 +149,7 @@ answers.
 1. ~~**The frame geometry** (§1)~~ — taken. It closed three exemptions in the equivalence gate,
    which is how the removal was verified.
 2. ~~**The device configuration** (§2)~~ — taken, off the platform word the catalog declares.
-3. **The frame adapter** (§3) — blocked on `WasmCapabilityV1.canvas`, a contracts change. The
-   reader is already live, so a published catalog can name an adapter today.
+3. ~~**The frame adapter dispatch** (§3)~~ — taken. **Moving its implementation** is now tracked by
+   the catalog-owned renderer runtime design linked above.
 4. **The templates** (§4) — a data freeze, not a redesign.
 5. **The emitters** (§5) — the contract's hard part, and worth doing last.
