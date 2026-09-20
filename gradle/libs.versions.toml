@@ -159,7 +159,7 @@ composeai-preview-daemon = "3.8.1"
 # catalog-renderer runtime manifest, descriptor, iframe and inspection wire types into their shared
 # home, together with canonical integrity framing. 3.5.0 lets a catalog select Browser Preview's
 # exported-artifact renderer and normalize its authored vocabulary onto a canvas adapter.
-composeai-contracts = "3.5.0"
+composeai-contracts = "3.6.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"
