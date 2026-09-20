@@ -25,6 +25,7 @@ kotlin {
   sourceSets {
     commonMain.dependencies {
       api(project(":ui-builder-export"))
+      @Suppress("DEPRECATION") implementation(compose.foundation)
       @Suppress("DEPRECATION") api(compose.runtime)
       @Suppress("DEPRECATION") api(compose.ui)
       implementation(libs.kotlinx.serialization.json)

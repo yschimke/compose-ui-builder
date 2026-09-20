@@ -9,7 +9,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -771,20 +770,23 @@ private fun RenderNode(
 ) {
   val node = entry.node
   val path = entry.path
-  val enabled = node.bool("enabled", true)
   val navigate = LocalUiBuilderNavigator.current
-  val activate = { node.dispatch("click", state, onState, navigate) }
-  if (node.eventBindings["click"] != null) {
-    semanticActions[node.id] = UiBuilderSemanticActionEntry(enabled = enabled, activate = activate)
-  }
   val themeCornerRadius = LocalUiBuilderCornerRadius.current
   val nativeOnly = LocalUiBuilderNativeOnly.current
-  val measured =
-    node.modifiers
-      .fold(modifier.onGloballyPositioned { onBounds(path, it) }) { result, value ->
-        result.applyModifier(value.objectOrEmpty(), themeCornerRadius)
-      }
-      .then(node.actionModifier(activate, enabled))
+  val prepared =
+    entry.prepare(
+      modifier = modifier,
+      state = state,
+      onState = onState,
+      onNavigate = navigate,
+      handlesClick = node.componentId in INTERACTIVE_COMPONENTS,
+      applyModifier = { current, value -> current.applyModifier(value, themeCornerRadius) },
+      onBounds = onBounds,
+      onSemanticAction = { id, action -> semanticActions[id] = action },
+    )
+  val enabled = prepared.enabled
+  val activate = { prepared.dispatch("click") }
+  val measured = prepared.modifier
   fun slot(name: String) = node.slots[name].orEmpty()
   val child: @Composable (String, Modifier) -> Unit = { id, next ->
     entry.child(id)?.let { childEntry ->
@@ -827,7 +829,7 @@ private fun RenderNode(
           modifier = next,
         )
       },
-      dispatchEvent = { event -> node.dispatch(event, state, onState, navigate) },
+      dispatchEvent = prepared::dispatch,
       recordText = { result -> onTextLayout(path, result) },
     )
   )
@@ -1198,9 +1200,7 @@ private fun RenderNode(
         node = node,
         modifier = measured,
         state = state,
-        onEvent = { event ->
-          event.bindingName()?.let { node.dispatch(it, state, onState, navigate) }
-        },
+        onEvent = { event -> event.bindingName()?.let(prepared::dispatch) },
         slotContent = { name, next ->
           Box(next) { slot(name).forEach { child(it, Modifier.fillMaxSize()) } }
         },
@@ -3720,13 +3720,6 @@ private fun isResolvableShape(value: String?): Boolean =
 
 private val NAMED_SHAPES = setOf("large", "medium", "small")
 
-private fun UiBuilderNode.actionModifier(
-  activate: () -> Unit,
-  enabled: Boolean,
-): Modifier =
-  if (eventBindings["click"] == null || componentId in INTERACTIVE_COMPONENTS) Modifier
-  else Modifier.clickable(enabled = enabled, onClick = activate)
-
 private fun UiBuilderSemanticActionEntry?.orEmpty() = this ?: UiBuilderSemanticActionEntry()
 
 /** The nine alignments a document may name, for `wrapContentSize` and the child alignment below. */
@@ -3807,27 +3800,6 @@ private fun verticalAlignmentFor(value: String): Alignment.Vertical =
     "bottom" -> Alignment.Bottom
     else -> Alignment.Top
   }
-
-private fun UiBuilderNode.dispatch(
-  event: String,
-  state: Map<String, String?>,
-  onState: (String, String?) -> Unit,
-  onNavigate: (String) -> Unit,
-) {
-  val actions = eventBindings[event] as? JsonArray ?: return
-  val working = state.toMutableMap()
-  actions.forEach { element ->
-    val action = element as? JsonObject ?: return@forEach
-    if (action.optionalString("type") == "navigatePage") {
-      action.optionalString("pageKey")?.takeIf(String::isNotBlank)?.let(onNavigate)
-    } else {
-      canvasStateWrite(action, working)?.also { (name, value) ->
-        working[name] = value
-        onState(name, value)
-      }
-    }
-  }
-}
 
 /** Later actions observe earlier writes even when a host applies callbacks after dispatch. */
 internal fun uiBuilderStateWrites(
