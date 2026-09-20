@@ -383,7 +383,7 @@ mutation plus revision, snapshot/replay, history, tombstones, export provenance,
 compaction. Its recovery, compensation, access, and durable-sequence behavior is executable in
 [`PersistentUiBuilderServiceTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceTest.kt)
 and
-[`FileDesignStoreTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/FileDesignStoreTest.kt).
+[`FileUiBuilderDesignStoreTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/FileUiBuilderDesignStoreTest.kt).
 
 The current implementation uses a file-backed, single-server-process store with an advisory lock,
 checksummed state, atomic replacement, retained backup recovery, bounded compaction, and startup
@@ -675,7 +675,7 @@ These workstreams proceeded in parallel against checked-in fixtures:
 | --- | --- | --- |
 | Contracts | Versioned document/command/event/capability DTOs, JSON fixtures, compatibility tests, release | Gate 0 schemas |
 | Catalog | Generated/hand-authored `m3-catalog` capabilities, native registry, conformance tests | Capability RFC |
-| Server | Reducer including compensating undo/redo, validator, in-memory `DesignStore`, HTTP/WS API, deterministic document hashing | Command fixtures |
+| Server | Reducer including compensating undo/redo, validator, authoritative `DesignStore`, HTTP/WS API, deterministic document hashing | Command fixtures |
 | Wasm editor | New builder shell, fixture document renderer, overlay architecture, tree/inspector scaffolding | Document fixtures |
 | Code export | Deterministic AST/template generator with fixture golden files | Document + capability fixtures |
 | SVG export | Chosen composite export prototype behind a pure render-host interface | SVG spike |
@@ -780,9 +780,9 @@ longer open decisions; they are executable in
 ## 17. Repository placement
 
 - `ui-builder` (preferred new isolated frontend directory/module): the distinct builder client,
-  native renderer protocol client, editor overlay, and Design API client. It may initially reuse
-  code proven in `wasm-ui`, but should not turn the preview browser prototype into the permanent
-  product boundary.
+  native renderer protocol client, editor overlay, and Design API client. Its browser-local and
+  Desktop modes use `LocalUiBuilderService` with `LocalDesignStore`; hosted persistence does not
+  live in this module.
 - `ui-builder-runtime`: a published, transport-free JVM module containing the authoritative
   reducer, catalog validation, persistence, revision/conflict semantics, the `DesignService` port,
   and revision-pinned export orchestration. It depends on released UI-builder contracts but not on
@@ -810,7 +810,8 @@ extractable from its first implementation:
 - frontend code lives under one top-level boundary and consumes only versioned HTTP/WebSocket and
   published contract shapes, never server source classes;
 - the MCP adapter is a client of the same Design API, not an in-process shortcut to the store;
-- builder persistence has its own `DesignStore` interface and configuration rather than hiding
+- hosted builder persistence has its own `DesignStore` interface and configuration in
+  `ui-builder-runtime`, rather than hiding
   inside `ServeSessionRegistry`, catalog caches, or preview history;
 - native catalog runtimes are version-addressed artifacts with a declared protocol, not project
   classes the editor assumes are present;

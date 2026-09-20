@@ -484,11 +484,11 @@ supported text/groups, and rasterizes within the product threshold.
       scalar compensation, durable storage/compaction, fanout/reconnect, authenticated actors, and
       restart recovery are covered by
       [`CollaborationConvergenceTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/CollaborationConvergenceTest.kt),
-      [`FileDesignStoreTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/FileDesignStoreTest.kt),
+      [`FileUiBuilderDesignStoreTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/FileUiBuilderDesignStoreTest.kt),
       and
       [`PersistentUiBuilderServiceTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceTest.kt).
       The opt-in
-      [`PersistentCollaborationSoakTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/PersistentCollaborationSoakTest.kt)
+      [`PersistentUiBuilderServiceSoakTest`](../../ui-builder-runtime/src/test/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderServiceSoakTest.kt)
       also completed its required 60-minute, three-client, restart-and-recovery run on
       [#113](https://github.com/yschimke/compose-preview-server/pull/113#issuecomment-5486199877).
 - [x] Implement the Jetcaster capability fixture, strict static validator, and native dispatch for

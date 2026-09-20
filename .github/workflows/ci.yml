@@ -128,3 +128,5 @@ jobs:
 
       - name: Wear port stays on the canvas
         run: .github/scripts/wear-port-canvas-only.sh
+      - name: Hosted design services stay out of the editor
+        run: .github/scripts/ui-builder-editor-service-boundary.sh
