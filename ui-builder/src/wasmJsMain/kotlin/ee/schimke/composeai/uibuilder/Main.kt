@@ -115,6 +115,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.yield
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -571,6 +572,9 @@ private fun LiveSessionApp(
   // watch face) and the home screen's list of everything, which is not catalog-scoped because the
   // question there is "what was I working on", not "what can this screen link to".
   var homeDesigns by remember { mutableStateOf(emptyList<UiBuilderHomeDesign>()) }
+  // Folders organize this browser's library, not the design content. Moving a file therefore does
+  // not change its revision or its export, and a newly created design starts at the top level.
+  var homeFolders by remember { mutableStateOf(readHomeFolders()) }
   LaunchedEffect(http, config.catalogSystemId) {
     val result = http.execute(ListDesignsRequestV1(cursor = null, limit = 200))
     val listed =
@@ -587,6 +591,7 @@ private fun LiveSessionApp(
             designId = it.designId,
             title = it.title,
             catalogSystemId = it.catalogPin.systemId,
+            folder = homeFolders[it.designId],
             updatedLabel =
               it.updatedAtEpochMillis
                 ?.let { at -> "updated ${formatLocalDateTime(at.toDouble())}" }
@@ -1285,6 +1290,19 @@ private fun LiveSessionApp(
           { source -> navigateToCopyDesign(source, NewDesignNames.random()) }
         } else null,
       onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
+      onMoveDesign =
+        if (localSession == null) {
+          { designId, folder ->
+            homeFolders =
+              homeFolders.toMutableMap().apply {
+                if (folder == null) remove(designId) else put(designId, folder)
+              }
+            writeHomeFolders(homeFolders)
+            homeDesigns = homeDesigns.map {
+              if (it.designId == designId) it.copy(folder = folder) else it
+            }
+          }
+        } else null,
       onCreate = createDesign,
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
@@ -2383,7 +2401,7 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
     "m3-catalog" ->
       UiBuilderNewDesignCatalog(
         systemId = "m3-catalog",
-        label = "Mobile",
+        label = "Android app",
         platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
           listOf(
@@ -2397,7 +2415,7 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
     "remote-m3" ->
       UiBuilderNewDesignCatalog(
         systemId = "remote-m3",
-        label = "RemoteCompose",
+        label = "Wear widget",
         platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
           listOf(
@@ -2426,7 +2444,7 @@ private fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCa
     "wear-m3" ->
       UiBuilderNewDesignCatalog(
         systemId = "wear-m3",
-        label = "Wear",
+        label = "Wear app",
         platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
           listOf(
@@ -3283,6 +3301,19 @@ private external fun readBrowserSetting(key: String): String
   }"""
 )
 private external fun writeBrowserSetting(key: String, value: String)
+
+private const val HOME_FOLDERS_KEY = "ui-builder.home-folders.v1"
+
+/** Tolerant read: a broken preference must never hide a server design. */
+private fun readHomeFolders(): Map<String, String> = runCatching {
+  Json.decodeFromString<Map<String, String>>(readBrowserSetting(HOME_FOLDERS_KEY))
+}
+  .getOrDefault(emptyMap())
+  .filter { (designId, folder) -> designId.matches(NEW_DESIGN_ID) && folder.isNotBlank() }
+
+private fun writeHomeFolders(folders: Map<String, String>) {
+  writeBrowserSetting(HOME_FOLDERS_KEY, Json.encodeToString(folders))
+}
 
 /**
  * What the status line calls this session: live against the server, or this browser's own copy.

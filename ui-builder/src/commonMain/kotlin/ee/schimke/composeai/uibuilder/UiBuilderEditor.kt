@@ -2769,6 +2769,8 @@ data class UiBuilderHomeDesign(
   val designId: String,
   val title: String,
   val catalogSystemId: String,
+  /** Personal organization only; null means this design is at the top level. */
+  val folder: String? = null,
   /** Already-formatted, e.g. `updated 3 days ago`. Empty renders nothing. */
   val updatedLabel: String = "",
 )
@@ -2803,6 +2805,8 @@ fun UiBuilderNewDesignScreen(
   onCopyDesign: ((designId: String) -> Unit)? = null,
   /** Leaves for the host's full designs index, or null where there is none. */
   onBrowseDesigns: (() -> Unit)? = null,
+  /** Moves a design into a personal folder. A null folder returns it to the top level. */
+  onMoveDesign: ((designId: String, folder: String?) -> Unit)? = null,
   onCreate:
     (
       catalogSystemId: String,
@@ -2850,6 +2854,7 @@ fun UiBuilderNewDesignScreen(
                 onOpenDesign = onOpenDesign,
                 onCopyDesign = onCopyDesign,
                 onBrowseDesigns = onBrowseDesigns,
+                onMoveDesign = onMoveDesign,
               )
             }
             val showDesigns = designs.isNotEmpty() || onBrowseDesigns != null
@@ -2869,7 +2874,7 @@ fun UiBuilderNewDesignScreen(
   }
 }
 
-/** **Start something new**: the New design form, as a panel rather than a modal. */
+/** **Create from a template**: the detailed creation form. */
 @Composable
 private fun NewDesignHomePanel(
   modifier: Modifier,
@@ -2900,7 +2905,43 @@ private fun NewDesignHomePanel(
       modifier = Modifier.padding(20.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-      Text("Start something new", style = MaterialTheme.typography.titleMedium)
+      Text("Create from a template", style = MaterialTheme.typography.titleMedium)
+      Text(
+        "Choose a kind of design, then give it a name.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      Text("Available kinds", style = MaterialTheme.typography.labelLarge)
+      FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        form.catalogs.forEach { catalog ->
+          FilterChip(
+            selected = form.selectedCatalogId == catalog.systemId,
+            onClick = {
+              form.selectedCatalogId = catalog.systemId
+              form.selectedTemplateId = catalog.templates.first().id
+            },
+            label = { Text(catalog.label) },
+          )
+        }
+        // These are intentionally named now, rather than hidden behind a generic blank Android
+        // screen. They are the next Android template shapes, so a person knows what the chooser is
+        // growing toward without being offered a button that cannot create the promised layout.
+        FilterChip(
+          selected = false,
+          onClick = {},
+          enabled = false,
+          label = { Text("Adaptive app") },
+        )
+        FilterChip(
+          selected = false,
+          onClick = {},
+          enabled = false,
+          label = { Text("List-detail screen") },
+        )
+      }
       NewDesignFormFields(form, submit)
       Button(
         onClick = submit,
@@ -2913,7 +2954,7 @@ private fun NewDesignHomePanel(
   }
 }
 
-/** **Your designs**: what is already on this host, and the two things to do with one from here. */
+/** **Open a file**: what is already on this host, and the things to do with one from here. */
 @Composable
 private fun ExistingDesignsPanel(
   modifier: Modifier,
@@ -2921,6 +2962,7 @@ private fun ExistingDesignsPanel(
   onOpenDesign: ((designId: String) -> Unit)?,
   onCopyDesign: ((designId: String) -> Unit)?,
   onBrowseDesigns: (() -> Unit)?,
+  onMoveDesign: ((designId: String, folder: String?) -> Unit)?,
 ) {
   Surface(
     modifier = modifier,
@@ -2932,7 +2974,12 @@ private fun ExistingDesignsPanel(
       modifier = Modifier.padding(20.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      Text("Your designs", style = MaterialTheme.typography.titleMedium)
+      Text("Open a file", style = MaterialTheme.typography.titleMedium)
+      Text(
+        "Open one of your designs or a design shared with you.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
       if (designs.isEmpty()) {
         Text(
           "Nothing here yet. The first design you create will be listed here.",
@@ -2955,6 +3002,13 @@ private fun ExistingDesignsPanel(
               style = MaterialTheme.typography.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (design.folder != null) {
+              Text(
+                "Folder · ${design.folder}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
               if (onOpenDesign != null) {
                 TextButton(
@@ -2973,6 +3027,13 @@ private fun ExistingDesignsPanel(
                   Text("Start from this")
                 }
               }
+              if (onMoveDesign != null) {
+                FolderMoveMenu(
+                  design = design,
+                  folders = designs.mapNotNull { it.folder }.distinct().sorted(),
+                  onMove = onMoveDesign,
+                )
+              }
             }
           }
           HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -2990,6 +3051,67 @@ private fun ExistingDesignsPanel(
           )
         }
       }
+    }
+  }
+}
+
+/** Lets a person keep designs together without making the first folder mandatory. */
+@Composable
+private fun FolderMoveMenu(
+  design: UiBuilderHomeDesign,
+  folders: List<String>,
+  onMove: (designId: String, folder: String?) -> Unit,
+) {
+  var expanded by remember(design.designId, design.folder) { mutableStateOf(false) }
+  var newFolder by remember(design.designId) { mutableStateOf("") }
+  Box {
+    TextButton(
+      onClick = { expanded = true },
+      modifier = Modifier.semantics { contentDescription = "Move ${design.designId}" },
+    ) {
+      Text("Move")
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      DropdownMenuItem(
+        text = { Text("No folder") },
+        onClick = {
+          expanded = false
+          onMove(design.designId, null)
+        },
+      )
+      folders
+        .filter { it != design.folder }
+        .forEach { folder ->
+          DropdownMenuItem(
+            text = { Text(folder) },
+            onClick = {
+              expanded = false
+              onMove(design.designId, folder)
+            },
+          )
+        }
+      HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+      OutlinedTextField(
+        value = newFolder,
+        onValueChange = { newFolder = it },
+        modifier =
+          Modifier.width(220.dp).padding(horizontal = 12.dp).semantics {
+            contentDescription = "New folder"
+          },
+        label = { Text("New folder") },
+        singleLine = true,
+      )
+      DropdownMenuItem(
+        text = { Text("Create folder and move") },
+        enabled = newFolder.trim().isNotEmpty(),
+        onClick = {
+          val folder = newFolder.trim()
+          if (folder.isNotEmpty()) {
+            expanded = false
+            onMove(design.designId, folder)
+          }
+        },
+      )
     }
   }
 }

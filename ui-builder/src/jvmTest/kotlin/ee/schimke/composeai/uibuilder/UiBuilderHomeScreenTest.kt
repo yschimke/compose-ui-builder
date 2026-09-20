@@ -48,8 +48,11 @@ class UiBuilderHomeScreenTest {
       )
     }
 
-    onNodeWithText("Start something new").assertIsDisplayed()
-    onNodeWithText("Your designs").assertIsDisplayed()
+    onNodeWithText("Create from a template").assertIsDisplayed()
+    onAllNodesWithText("Mobile").assertCountEquals(2)
+    onNodeWithText("Adaptive app").assertIsDisplayed()
+    onNodeWithText("List-detail screen").assertIsDisplayed()
+    onNodeWithText("Open a file").assertIsDisplayed()
     onNodeWithText("Morning player").assertIsDisplayed()
     onNodeWithText("morning-player · m3-catalog · updated yesterday").assertIsDisplayed()
     onNodeWithContentDescription("All designs").assertIsDisplayed()
@@ -77,6 +80,26 @@ class UiBuilderHomeScreenTest {
 
     onNodeWithContentDescription("Start from morning-player").performClick()
     assertEquals("morning-player", copied)
+  }
+
+  @Test
+  fun `a design starts unfiled and can be moved into a new folder`() = runComposeUiTest {
+    var moved: Pair<String, String?>? = null
+    setContent {
+      UiBuilderNewDesignScreen(
+        catalogs = catalogs,
+        initialCatalogSystemId = "m3-catalog",
+        designs = designs,
+        onMoveDesign = { designId, folder -> moved = designId to folder },
+        onCreate = { _, _, _, _ -> },
+      )
+    }
+
+    onNodeWithText("Folder ·").assertDoesNotExist()
+    onNodeWithContentDescription("Move morning-player").performClick()
+    onNodeWithContentDescription("New folder").performTextInput("Music")
+    onNodeWithText("Create folder and move").performClick()
+    assertEquals("morning-player" to "Music", moved)
   }
 
   /**
@@ -117,7 +140,7 @@ class UiBuilderHomeScreenTest {
       )
     }
 
-    onNodeWithText("Start something new").assertIsDisplayed()
-    onNodeWithText("Your designs").assertDoesNotExist()
+    onNodeWithText("Create from a template").assertIsDisplayed()
+    onNodeWithText("Open a file").assertDoesNotExist()
   }
 }
