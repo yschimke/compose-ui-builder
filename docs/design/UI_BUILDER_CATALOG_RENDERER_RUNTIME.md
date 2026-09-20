@@ -14,6 +14,13 @@ its remaining `UiBuilderSurface` callback is the implementation to replace catal
 The SDK declares a composite-build coordinate for that source dependency but applies no publishing
 plugin; only the catalog's verified ZIP crosses the delivery boundary.
 
+The first extraction seam is executable: `CanvasAdapterRegistry` and `CanvasNodeScope` let a
+catalog register real composable calls while the SDK owns resolved properties, state transitions,
+slots/items and inspection callbacks. `UiBuilderSurface` checks that registry before its legacy
+compatibility table, so adapters can move catalog by catalog without a flag day or a second
+interpreter. The compatibility table remains until those adapters and the outer traversal host have
+moved; an empty registry is intentionally the old renderer byte-for-byte at the Compose layer.
+
 This supersedes the earlier decision in
 [`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md) that Material canvas adapters stay
 in this repository. It also completes the separately-designed bundle/plugin ABI deferred by the

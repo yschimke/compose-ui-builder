@@ -26,9 +26,9 @@ kotlin {
     commonMain.dependencies {
       api(project(":ui-builder-export"))
       @Suppress("DEPRECATION") api(compose.runtime)
+      @Suppress("DEPRECATION") api(compose.ui)
       implementation(libs.kotlinx.serialization.json)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
-    getByName("wasmJsMain").dependencies { @Suppress("DEPRECATION") implementation(compose.ui) }
   }
 }
