@@ -7321,9 +7321,15 @@ internal fun thumbnailContentTransform(
   // component and starts reading as a clipped pixel crop.
   val scale =
     minOf(tileSize.width / contentBounds.width, tileSize.height / contentBounds.height, 2f)
+  val horizontalInset = (tileSize.width - contentBounds.width * scale) / 2f
+  val verticalInset = (tileSize.height - contentBounds.height * scale) / 2f
   return ThumbnailContentTransform(
     scale = scale,
-    translation = Offset(-contentBounds.x * scale, -contentBounds.y * scale),
+    translation =
+      Offset(
+        x = -contentBounds.x * scale + horizontalInset,
+        y = -contentBounds.y * scale + verticalInset,
+      ),
   )
 }
 

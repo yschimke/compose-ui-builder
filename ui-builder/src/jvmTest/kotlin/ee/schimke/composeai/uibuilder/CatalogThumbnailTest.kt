@@ -106,7 +106,9 @@ class CatalogThumbnailTest {
       )
 
     assertEquals(1.375f, transform.scale)
-    assertEquals(-104.5f, transform.translation.x)
+    // A 24px square fits the tile height (33px), leaving 11px across. That spare space is split,
+    // not left as a visibly lopsided gutter beside every icon-shaped component.
+    assertEquals(-99f, transform.translation.x)
     assertEquals(-71.5f, transform.translation.y)
   }
 
