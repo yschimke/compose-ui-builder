@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.30.0](https://github.com/yschimke/compose-ui-builder/compare/v3.29.0...v3.30.0) (2026-09-20)
+
+
+### Features
+
+* **ui-builder:** add OpenCode MCP prompt ([#95](https://github.com/yschimke/compose-ui-builder/issues/95)) ([991802f](https://github.com/yschimke/compose-ui-builder/commit/991802f48318048b5c8f6715406358d0f68a00fc))
+* **ui-builder:** draw the round screen frame by adapter, not by component id ([#79](https://github.com/yschimke/compose-ui-builder/issues/79)) ([0853936](https://github.com/yschimke/compose-ui-builder/commit/08539364fcbd5b964e32fc9f6ef19fceb2cebaa6))
+* **ui-builder:** make issues actionable ([#83](https://github.com/yschimke/compose-ui-builder/issues/83)) ([073f913](https://github.com/yschimke/compose-ui-builder/commit/073f91340043fd0bcb8d960bb455272d3641179c))
+
+
+### Bug Fixes
+
+* group compatible BOM updates ([#98](https://github.com/yschimke/compose-ui-builder/issues/98)) ([8fa95ac](https://github.com/yschimke/compose-ui-builder/commit/8fa95ac3df624c80298ad7ef56749a6ff0b54b83))
+* **remote-m3:** remove borrowed Material surface ([#81](https://github.com/yschimke/compose-ui-builder/issues/81)) ([89429d3](https://github.com/yschimke/compose-ui-builder/commit/89429d3eabd5a091065fafccc87b7d6788d32b07))
+* **ui-builder:** address review regressions ([#89](https://github.com/yschimke/compose-ui-builder/issues/89)) ([19ffb7f](https://github.com/yschimke/compose-ui-builder/commit/19ffb7fb282ad30be9e5aa4c60323db11bea371f))
+* **ui-builder:** crop palette thumbnails to component bounds ([#94](https://github.com/yschimke/compose-ui-builder/issues/94)) ([20eddcf](https://github.com/yschimke/compose-ui-builder/commit/20eddcf763c0b2c3e74a24f90b547d94b18ba76f))
+* **ui-builder:** honor explicit frame adapters for themes ([#86](https://github.com/yschimke/compose-ui-builder/issues/86)) ([674ca38](https://github.com/yschimke/compose-ui-builder/commit/674ca38a33495b6dd8366be2615ae1584cd3df64))
+* **ui-builder:** keep Wear list edges safe in every preview lane ([#88](https://github.com/yschimke/compose-ui-builder/issues/88)) ([41531dc](https://github.com/yschimke/compose-ui-builder/commit/41531dc1d6d0be3ba8143a832b66f27af497c8ac))
+* **ui-builder:** load adapters for direct catalog renders ([#91](https://github.com/yschimke/compose-ui-builder/issues/91)) ([55b900f](https://github.com/yschimke/compose-ui-builder/commit/55b900f77eb28f1f51e39e9b93cea8602e4d4ea7))
+* **ui-builder:** protect inspector drafts ([#82](https://github.com/yschimke/compose-ui-builder/issues/82)) ([8a6062d](https://github.com/yschimke/compose-ui-builder/commit/8a6062d54c937875a854afeedbeb706a20e93ade))
+* **ui-builder:** read a pane's locals in the editor, not inside its scene ([#80](https://github.com/yschimke/compose-ui-builder/issues/80)) ([45d311b](https://github.com/yschimke/compose-ui-builder/commit/45d311b881d6a0711f9bf9b5d1dce4ba38adb1c1))
+* **ui-builder:** use real preview components ([#84](https://github.com/yschimke/compose-ui-builder/issues/84)) ([3215f91](https://github.com/yschimke/compose-ui-builder/commit/3215f9148a7617f7f7c0a5cb335b153cd0633f69))
+
 ## [3.29.0](https://github.com/yschimke/compose-ui-builder/compare/v3.28.0...v3.29.0) (2026-09-19)
 
 
