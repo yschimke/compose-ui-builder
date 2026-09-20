@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * The half of the editor's URL building that is a pure function, and the half that was wrong.
@@ -43,5 +44,25 @@ class BrowserRequestUrlTest {
     // one that would carry such an id into a request if the rule ever loosened.
     assertEquals("/a%2Fb/api/previews", catalogAssetPath("a/b", "/api/previews"))
     assertEquals("/a%3Fb/api/previews", catalogAssetPath("a?b", "/api/previews"))
+  }
+
+  @Test
+  fun `OpenCode prompt hands an agent a credential-free MCP design handoff`() {
+    val prompt =
+      openCodeUiBuilderPrompt(
+        mcpEndpoint = "https://preview.example/mcp",
+        designUrl = "https://preview.example/ui-builder/settings",
+        designId = "settings",
+      )
+
+    assertTrue(
+      prompt.contains("https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder")
+    )
+    assertTrue(prompt.contains("https://preview.example/mcp"))
+    assertTrue(prompt.contains("https://preview.example/ui-builder/settings"))
+    assertTrue(prompt.contains("ui-builder-read`"))
+    assertTrue(prompt.contains("ui-builder-write`"))
+    assertTrue(prompt.contains("ui-builder-export`"))
+    assertFalse(prompt.contains("token="))
   }
 }

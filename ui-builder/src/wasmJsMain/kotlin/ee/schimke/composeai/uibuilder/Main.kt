@@ -1417,6 +1417,19 @@ private fun LiveSessionApp(
       onCreateDesign = createDesign,
       onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
       onHelp = ::openUiBuilderGuide,
+      onCopyAiPrompt =
+        if (localSession != null || !isDesignUrlPathSafe(config.designId)) null
+        else {
+          {
+            copyAiPrompt(
+              openCodeUiBuilderPrompt(
+                mcpEndpoint = "${pageOrigin().trimEnd('/')}/mcp",
+                designUrl = shareableUrl(designUrlPath(config.designId)),
+                designId = config.designId,
+              )
+            )
+          }
+        },
       onTakeOffline = takeOffline,
       onSyncToServer = syncToServer,
       exportHost = exportHost,
@@ -2717,6 +2730,31 @@ private fun navigateToNewDesign(
   """() => globalThis.open('https://github.com/yschimke/compose-ui-builder/blob/main/docs/UI_BUILDER_GETTING_STARTED.md', '_blank', 'noopener,noreferrer')"""
 )
 private external fun openUiBuilderGuide()
+
+/**
+ * A credential-free handoff: the agent asks for its own scoped grant instead of inheriting the
+ * browser session. Keeping this beside the browser host makes the copied endpoint documentary, not
+ * a second configuration format that can drift from the served page.
+ */
+internal fun openCodeUiBuilderPrompt(
+  mcpEndpoint: String,
+  designUrl: String,
+  designId: String,
+): String =
+  """
+  Work with the Compose UI Builder design `$designId`.
+
+  First load the `compose-ui-builder` skill from https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder and follow its collaboration and MCP guidance.
+
+  Connect to this server's MCP endpoint:
+  $mcpEndpoint
+
+  The design is:
+  $designUrl
+
+  Request `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` through the server's agent-access flow. Do not put a bearer token in a URL, command line, repository, or chat. Once approved, read the design and its comments before editing; use its current revision as `baseRevision`, make edits with `ui_builder_apply`, then check the Compose export with `ui_builder_export`. Report the design URL and revision after each visible step.
+  """
+    .trimIndent()
 
 /**
  * Leave for the host's index of every design this account may open.
