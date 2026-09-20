@@ -171,6 +171,53 @@ class EditorDesktopPointerInteractionTest {
       onNodeWithText("Uncommitted edit retained · Ctrl/⌘+Enter applies").assertExists()
     }
 
+  @Test
+  fun `submitting the authored value does not retain a hidden draft`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithText("Use sample text").performClick()
+      waitForIdle()
+      onNodeWithText("Use sample text").performClick()
+
+      onNodeWithText("1 uncommitted edit retained").assertDoesNotExist()
+    }
+
+  @Test
+  fun `deleting a node discards its retained draft`() =
+    runDesktopComposeUiTest(width = 800, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialLayersOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Text property").performTextReplacement("Discard this draft")
+      onNodeWithContentDescription("More editor actions").performClick()
+      onNodeWithText("Delete").performClick()
+
+      onNodeWithText("1 uncommitted edit retained").assertDoesNotExist()
+    }
+
   private fun androidx.compose.ui.test.ComposeUiTest.editor() {
     setContent {
       MaterialTheme {
