@@ -2261,7 +2261,7 @@ fun UiBuilderEditor(
                       // twenty.
                       badge =
                         when (entry) {
-                          EditorDock.Issues -> problems.size
+                          EditorDock.Issues -> problemBadgeCount(problems)
                           EditorDock.Comments -> comments.openThreads.size
                           else -> 0
                         },
@@ -7991,8 +7991,7 @@ private fun PropertyInspector(
             EditorInspectorMode.Properties -> "Properties"
             EditorInspectorMode.Theme -> "Theme"
             EditorInspectorMode.Screen -> "Screen"
-            EditorInspectorMode.Issues ->
-              if (problems.isEmpty()) "Issues" else "Issues · ${problems.size}"
+            EditorInspectorMode.Issues -> problemHeading(problems)
             EditorInspectorMode.Comments ->
               comments.openThreads.size.let { if (it == 0) "Talk" else "Talk · $it" }
             EditorInspectorMode.History -> "History"
@@ -8830,23 +8829,112 @@ private fun DraftPropertyControl(
   }
 }
 
-/**
- * What the export gate would refuse, listed where a person is already looking.
- *
- * Each row selects its node, because a message naming an id nobody can find is only half an answer.
- * Rows without a node — a catalog pin mismatch, an environment field — are not selectable and say
- * so by not reacting.
- */
+internal enum class ProblemAudience {
+  AUTHOR,
+  CATALOG_OR_TOOLING,
+}
+
+internal data class EditorProblemGroup(
+  val code: String,
+  val title: String,
+  val problems: List<EditorProblem>,
+  val blocking: Boolean,
+  val rootCause: Boolean,
+  val audience: ProblemAudience,
+) {
+  val nodeId: String?
+    get() = problems.first().nodeId
+
+  val componentId: String?
+    get() = problems.first().componentId
+}
+
+private val DOWNSTREAM_PROBLEM_CODES = setOf("COMPOSE_EXPORT_REFUSED")
+private val TOOLING_PROBLEM_CODES =
+  setOf("CATALOG_UNAVAILABLE", "CATALOG_PIN_MISMATCH", "COMPONENT_RECORD_UNAVAILABLE")
+
+/** Groups exact locations while keeping every precise diagnostic available in technical details. */
+internal fun triageProblems(problems: List<EditorProblem>): List<EditorProblemGroup> {
+  val structuralLocations =
+    problems
+      .filter { it.blocking && it.code !in DOWNSTREAM_PROBLEM_CODES }
+      .map { it.nodeId }
+      .toSet()
+  return problems
+    .groupBy {
+      listOf(
+          it.code,
+          it.nodeId.orEmpty(),
+          it.componentId.orEmpty(),
+          it.propertyName.orEmpty(),
+          it.blocking.toString(),
+        )
+        .joinToString("\u0000")
+    }
+    .values
+    .map { occurrences ->
+      val first = occurrences.first()
+      val downstream =
+        first.blocking &&
+          first.code in DOWNSTREAM_PROBLEM_CODES &&
+          structuralLocations.any { it == null || first.nodeId == null || it == first.nodeId }
+      EditorProblemGroup(
+        code = first.code,
+        title = problemTitle(first.code),
+        problems = occurrences,
+        blocking = first.blocking,
+        rootCause = first.blocking && !downstream,
+        audience =
+          if (first.nodeId == null || first.code in TOOLING_PROBLEM_CODES)
+            ProblemAudience.CATALOG_OR_TOOLING
+          else ProblemAudience.AUTHOR,
+      )
+    }
+    .sortedWith(
+      compareBy<EditorProblemGroup>(
+          { !it.blocking },
+          { !it.rootCause },
+          { it.audience != ProblemAudience.AUTHOR },
+          { it.title },
+          { it.nodeId.orEmpty() },
+        )
+        .thenBy { it.code }
+    )
+}
+
+private fun problemTitle(code: String): String =
+  when (code) {
+    "SLOT_CARDINALITY" -> "This slot has the wrong number of layers"
+    "UNKNOWN_CHILD" -> "A layer is in an unsupported slot"
+    "UNKNOWN_COMPONENT" -> "This component is not in the pinned catalog"
+    "MISSING_REQUIRED_PROPERTY" -> "A required property is missing"
+    "PROPERTY_NOT_DECLARED" -> "This property is no longer in the catalog"
+    "COMPOSE_EXPORT_REFUSED" -> "Compose could not generate this part of the design"
+    else -> code.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+  }
+
+internal fun problemBadgeCount(problems: List<EditorProblem>): Int {
+  val groups = triageProblems(problems)
+  return groups.count { it.rootCause }.takeIf { it > 0 } ?: groups.count { !it.blocking }
+}
+
+internal fun problemHeading(problems: List<EditorProblem>): String {
+  val groups = triageProblems(problems)
+  val roots = groups.count { it.rootCause }
+  val advisories = groups.count { !it.blocking }
+  return when {
+    roots > 0 -> "Issues · $roots root cause${if (roots == 1) "" else "s"}"
+    advisories > 0 -> "Issues · $advisories ${if (advisories == 1) "advisory" else "advisories"}"
+    else -> "Issues"
+  }
+}
+
+/** Designer-facing triage over the exact diagnostics produced by the export gate. */
 @Composable
 internal fun ProblemsInspector(
   problems: List<EditorProblem>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
-  // Two lists, because the panel makes a claim about every row it shows. "What the export gate
-  // refuses" is true of a missing required property and false of a component whose library has
-  // moved — that design still exports, and always will, because it holds the body it drew. Mixing
-  // them told somebody their export would fail when it would not.
-  val (blocking, advisories) = problems.partition { it.blocking }
   if (problems.isEmpty()) {
     Text(
       "Nothing is blocking a Compose export of this design.",
@@ -8855,65 +8943,63 @@ internal fun ProblemsInspector(
     )
     return
   }
+  val groups = triageProblems(problems)
+  val rootCount = groups.count { it.rootCause }
+  val downstreamCount = groups.count { it.blocking && !it.rootCause }
+  val advisoryCount = groups.count { !it.blocking }
   Text(
-    if (blocking.isEmpty())
-      "Nothing is blocking a Compose export of this design. These are worth knowing about."
-    else
-      "These are what the Compose export gate refuses, checked against the whole document rather " +
-        "than the last edit.",
+    buildList {
+        if (rootCount > 0) add("$rootCount blocking root cause${if (rootCount == 1) "" else "s"}")
+        if (downstreamCount > 0)
+          add("$downstreamCount downstream group${if (downstreamCount == 1) "" else "s"}")
+        if (advisoryCount > 0)
+          add("$advisoryCount ${if (advisoryCount == 1) "advisory" else "advisories"}")
+        if (problems.size != groups.size) add("${problems.size} total occurrences")
+      }
+      .joinToString(" · "),
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.labelSmall,
   )
-  // A refusal is something a person quotes — into an issue, into a chat, into a search — so the
-  // list is selectable. A tap still selects the node: [SelectionContainer] claims the long press
-  // and the drag, not the click underneath it.
-  SelectionContainer {
-    LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-      itemsIndexed(blocking) { _, problem -> ProblemRow(problem, blocking = true, dispatch) }
-      if (advisories.isNotEmpty() && blocking.isNotEmpty()) {
-        item {
-          Text(
-            "Not blocking an export",
-            Modifier.padding(top = 4.dp, bottom = 10.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
-          )
+  LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+    itemsIndexed(
+      groups,
+      key = { _, group ->
+        group.problems.first().let {
+          "${group.code}:${it.nodeId}:${it.propertyName}:${it.blocking}"
         }
-      }
-      itemsIndexed(advisories) { _, problem -> ProblemRow(problem, blocking = false, dispatch) }
+      },
+    ) { _, group ->
+      ProblemGroupRow(group, dispatch)
     }
   }
 }
 
-/**
- * One row, coloured by whether it stops an export.
- *
- * The error colour is the panel's loudest signal and it should mean one thing. An advisory in it
- * reads as a build failure at a glance, which is the misreading the split above exists to prevent.
- */
 @Composable
-private fun ProblemRow(
-  problem: EditorProblem,
-  blocking: Boolean,
+private fun ProblemGroupRow(
+  group: EditorProblemGroup,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
+  val problem = group.problems.first()
   var replacementsOpen by remember(problem.nodeId, problem.propertyName) { mutableStateOf(false) }
-  Column(
-    Modifier.fillMaxWidth().padding(bottom = 12.dp).let { base ->
-      problem.nodeId?.let { id -> base.clickable { dispatch(UiBuilderEditorEvent.SelectNode(id)) } }
-        ?: base
-    }
-  ) {
+  var detailsOpen by
+    remember(group.code, problem.nodeId, problem.propertyName) { mutableStateOf(false) }
+  Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
     Text(
-      problem.code,
+      group.title,
       color =
-        if (blocking) MaterialTheme.colorScheme.error
+        if (group.blocking) MaterialTheme.colorScheme.error
         else MaterialTheme.colorScheme.onSurfaceVariant,
       style = MaterialTheme.typography.labelMedium,
     )
-    Text(problem.message, style = MaterialTheme.typography.bodySmall)
-    val where =
-      listOfNotNull(problem.nodeId, problem.componentId).joinToString(" · ").ifEmpty { null }
+    Text(
+      when (group.audience) {
+        ProblemAudience.AUTHOR -> "You can fix this design here."
+        ProblemAudience.CATALOG_OR_TOOLING -> "A catalog or tooling owner needs to fix this."
+      },
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
+    val where = listOfNotNull(group.nodeId, group.componentId).joinToString(" · ").ifEmpty { null }
     if (where != null) {
       Text(
         where,
@@ -8921,8 +9007,41 @@ private fun ProblemRow(
         style = MaterialTheme.typography.labelSmall,
       )
     }
-    if (!blocking && problem.nodeId != null && problem.propertyName != null) {
-      Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(
+      Modifier.fillMaxWidth().padding(top = 4.dp),
+      horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+      if (problem.nodeId != null) {
+        TextButton(
+          onClick = {
+            dispatch(UiBuilderEditorEvent.SelectNode(problem.nodeId))
+            dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Properties))
+          },
+          modifier = Modifier.semantics { contentDescription = "Go to layer ${problem.nodeId}" },
+        ) {
+          Text("Go to layer")
+        }
+      }
+      TextButton(onClick = { detailsOpen = !detailsOpen }) {
+        Text(
+          if (detailsOpen) "Hide details"
+          else if (group.problems.size == 1) "Technical details"
+          else "${group.problems.size} occurrences"
+        )
+      }
+    }
+    if (detailsOpen) {
+      SelectionContainer {
+        Column {
+          Text(group.code, style = MaterialTheme.typography.labelSmall)
+          group.problems.forEach { occurrence ->
+            Text(occurrence.message, style = MaterialTheme.typography.bodySmall)
+          }
+        }
+      }
+    }
+    if (problem.nodeId != null && problem.propertyName != null) {
+      Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         TextButton(
           onClick = {
             dispatch(

@@ -286,6 +286,39 @@ fun UiBuilderDegradedDesignPreview() {
   }
 }
 
+/** Thirty raw findings reduced to five structural causes and five downstream groups. */
+@Preview(widthDp = 520, heightDp = 760)
+@Composable
+fun UiBuilderLargeIssuesTriagePreview() {
+  val problems =
+    (1..5).flatMap { index ->
+      listOf(
+        EditorProblem(
+          code = "SLOT_CARDINALITY",
+          message = "content accepts one child but contains two on card-$index",
+          nodeId = "card-$index",
+          componentId = "m3/card",
+        )
+      ) +
+        (1..5).map { occurrence ->
+          EditorProblem(
+            code = "COMPOSE_EXPORT_REFUSED",
+            message = "Emitter failure $occurrence caused by card-$index's invalid content slot",
+            nodeId = "card-$index",
+            componentId = "m3/card",
+          )
+        }
+    }
+  MaterialTheme {
+    Surface {
+      Column(Modifier.padding(24.dp)) {
+        Text(problemHeading(problems), style = MaterialTheme.typography.titleMedium)
+        ProblemsInspector(problems, dispatch = {})
+      }
+    }
+  }
+}
+
 /**
  * The new-design dialog, where a screen's state is declared.
  *
