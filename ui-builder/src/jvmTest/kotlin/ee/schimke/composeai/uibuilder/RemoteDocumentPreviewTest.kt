@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.rcplayer.compose.composeSupportReport
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import java.io.File
 import kotlin.io.encoding.Base64
 import kotlin.math.abs
@@ -76,25 +78,34 @@ class RemoteDocumentPreviewTest {
     )
     assertTrue(report.fullyRenderable, report.issues.toString())
     runDesktopComposeUiTest(width = 1200, height = 1000) {
-      val catalog =
-        CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
-        )
       var requested: UiBuilderDocument? = null
-      setContent {
-        UiBuilderEditor(
-          document(stem),
-          catalog,
-          initialPanes = setOf(EditorPane.Native),
-          onRequestDocumentPreview = {
-            requested = it
-            ready(it.revision, stem).copy(saved = saved)
-          },
+      val source = document(stem)
+      val pane =
+        UiBuilderVariantPane(
+          id = "fixture",
+          label = "Fixture",
+          widthDp = 360f,
+          heightDp = 360f,
+          document = source,
         )
+      setContent {
+        MaterialTheme {
+          RemoteDocumentDesignPreviewPane(
+            document = source,
+            variants = listOf(pane),
+            authoritativeGeneration = 0,
+            request = {
+              requested = it
+              ready(it.revision, stem).copy(saved = saved)
+            },
+            modifier = Modifier.fillMaxSize(),
+          )
+        }
       }
-      onNodeWithText(if (saved) "Live preview · revision 0" else "Live preview · unsaved changes")
-        .assertExists()
-      val target = onNodeWithContentDescription("Interactive document preview")
+      mainClock.advanceTimeBy(300)
+      waitForIdle()
+      val target = onNodeWithContentDescription("Remote document preview · Fixture")
+      target.assertExists()
       assertEquals(360f, target.fetchSemanticsNode().boundsInRoot.width)
       assertEquals(360f, target.fetchSemanticsNode().boundsInRoot.height)
       fun color(expected: Color) {
@@ -118,6 +129,84 @@ class RemoteDocumentPreviewTest {
       color(Color(0xff6750a4))
       assertEquals(document(stem), requested)
     }
+  }
+
+  @Test
+  fun `the previous document stays visible while its replacement is captured`() =
+    runDesktopComposeUiTest(width = 1000, height = 800) {
+      val replacement = CompletableDeferred<UiBuilderDocumentPreview>()
+      var current by mutableStateOf(document())
+      setContent {
+        val pane =
+          UiBuilderVariantPane(
+            id = "stable-pane",
+            label = "Stable",
+            widthDp = 360f,
+            heightDp = 360f,
+            document = current,
+          )
+        MaterialTheme {
+          RemoteDocumentDesignPreviewPane(
+            document = current,
+            variants = listOf(pane),
+            authoritativeGeneration = 0,
+            request = { requested ->
+              if (requested.revision == 0) ready(0)
+              else withContext(NonCancellable) { replacement.await() }
+            },
+            modifier = Modifier.fillMaxSize(),
+          )
+        }
+      }
+      mainClock.advanceTimeBy(300)
+      waitForIdle()
+      onNodeWithContentDescription("Remote document preview · Stable").assertExists()
+      onNodeWithText("Preparing preview…").assertDoesNotExist()
+
+      runOnIdle { current = current.copy(revision = 1) }
+
+      onNodeWithText("Updating Remote preview…").assertExists()
+      onNodeWithText("Preparing preview…").assertDoesNotExist()
+      runOnIdle { replacement.complete(ready(1)) }
+      waitUntil { onAllNodesWithText("Updating Remote preview…").fetchSemanticsNodes().isEmpty() }
+    }
+
+  @Test
+  fun `all widget hosts share one captured content document`() = runDesktopComposeUiTest {
+    val source = document()
+    val widget =
+      source.copy(
+        roots = listOf("widget-root"),
+        nodes =
+          mapOf(
+            "widget-root" to
+              UiBuilderNode(
+                id = "widget-root",
+                componentId = "remote-m3/widget-container-small",
+              )
+          ),
+      )
+    var calls = 0
+    setContent {
+      MaterialTheme {
+        RemoteDocumentDesignPreviewPane(
+          document = widget,
+          variants = emptyList(),
+          authoritativeGeneration = 0,
+          request = {
+            calls++
+            UiBuilderDocumentPreview.Failed("Captured once")
+          },
+          modifier = Modifier.fillMaxSize(),
+        )
+      }
+    }
+    mainClock.advanceTimeBy(300)
+    waitForIdle()
+    onNodeWithText("Pixel Watch").assertExists()
+    onNodeWithText("Samsung").assertExists()
+    onNodeWithText("Rectangular").assertExists()
+    runOnIdle { assertEquals(1, calls) }
   }
 
   @Test
@@ -146,28 +235,87 @@ class RemoteDocumentPreviewTest {
     }
 
   @Test
-  fun `the additional interactive pane uses the document preview host too`() =
+  fun `the catalog routes Browser Preview to document playback and leaves Native explicit`() =
     runDesktopComposeUiTest(width = 1600, height = 1000) {
-      val catalog =
+      val base =
         CapabilityCatalogParser.parse(
           checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
         )
-      var inspection: UiBuilderInspectionSnapshot? = null
+      val catalog =
+        base.copy(
+          browserPreview =
+            BrowserPreviewCapabilityV1.Builder(
+                BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER
+              )
+              .also { it.format = ExportFormatV1.RC }
+              .build()
+        )
+      var documentRequests = 0
+      var nativeRequests = 0
       setContent {
         UiBuilderEditor(
           document(),
           catalog,
-          initialPanes = setOf(EditorPane.Editor, EditorPane.Native),
-          onInspectionSnapshot = { inspection = it },
+          initialPanes = setOf(EditorPane.Preview),
+          initialVariantAxes = setOf(EditorVariantAxis.Dark),
           onRequestDocumentPreview = {
+            documentRequests++
             UiBuilderDocumentPreview.Failed("Compiled preview requested")
+          },
+          onRequestNativeRender = {
+            nativeRequests++
+            UiBuilderNativeRender(failure = "Native preview requested")
           },
         )
       }
-      if (UiBuilderBuildFeatures.remoteCompose)
-        onNodeWithText("Compiled preview requested").assertExists()
-      else onNodeWithText("Compiled preview requested").assertDoesNotExist()
-      assertNotNull(inspection?.nodes?.firstOrNull { it.nodeId == "choice" }?.bounds)
+      mainClock.advanceTimeBy(300)
+      waitForIdle()
+      onNodeWithText("Compiled preview requested").assertExists()
+      runOnIdle {
+        assertEquals(1, documentRequests)
+        assertEquals(0, nativeRequests)
+      }
+    }
+
+  @Test
+  fun `opening Native requests only the authoritative compile lane`() =
+    runDesktopComposeUiTest(width = 1200, height = 900) {
+      val base =
+        CapabilityCatalogParser.parse(
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        )
+      val catalog =
+        base.copy(
+          browserPreview =
+            BrowserPreviewCapabilityV1.Builder(
+                BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER
+              )
+              .also { it.format = ExportFormatV1.RC }
+              .build()
+        )
+      var documentRequests = 0
+      var nativeRequests = 0
+      setContent {
+        UiBuilderEditor(
+          document(),
+          catalog,
+          initialPanes = setOf(EditorPane.Native),
+          onRequestDocumentPreview = {
+            documentRequests++
+            UiBuilderDocumentPreview.Failed("Document lane should stay idle")
+          },
+          onRequestNativeRender = {
+            nativeRequests++
+            UiBuilderNativeRender(failure = "Authoritative native requested")
+          },
+        )
+      }
+      onNodeWithText("Authoritative native requested").assertExists()
+      onNodeWithText("Document lane should stay idle").assertDoesNotExist()
+      runOnIdle {
+        assertEquals(0, documentRequests)
+        assertEquals(1, nativeRequests)
+      }
     }
 
   @Test

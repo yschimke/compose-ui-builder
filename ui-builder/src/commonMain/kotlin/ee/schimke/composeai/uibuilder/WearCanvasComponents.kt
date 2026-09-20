@@ -135,19 +135,19 @@ internal fun WearCanvasListSubHeader(
  */
 @Composable
 internal fun WearCanvasSwitchButton(
-  label: String,
-  secondaryLabel: String,
   checked: Boolean,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  label: @Composable RowScope.() -> Unit,
+  secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
   SwitchButton(
     checked = checked,
     onCheckedChange = {},
     modifier = modifier.fillMaxWidth(),
     enabled = enabled,
-    label = { Text(label) },
-    secondaryLabel = secondaryLabel.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+    label = label,
+    secondaryLabel = secondaryLabel,
   )
 }
 
@@ -301,38 +301,38 @@ internal val LocalWearSurfaceTransformation =
 /** Wear's `CheckboxButton`: a full-width labelled row, not the mobile 20dp square. */
 @Composable
 internal fun WearCanvasCheckboxButton(
-  label: String,
-  secondaryLabel: String,
   checked: Boolean,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  label: @Composable RowScope.() -> Unit,
+  secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
   CheckboxButton(
     checked = checked,
     onCheckedChange = {},
     modifier = modifier.fillMaxWidth(),
     enabled = enabled,
-    label = { Text(label) },
-    secondaryLabel = secondaryLabel.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+    label = label,
+    secondaryLabel = secondaryLabel,
   )
 }
 
 /** Wear's `RadioButton`, the selection twin of the checkbox row above. */
 @Composable
 internal fun WearCanvasRadioButton(
-  label: String,
-  secondaryLabel: String,
   selected: Boolean,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  label: @Composable RowScope.() -> Unit,
+  secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
   RadioButton(
     selected = selected,
     onSelect = {},
     modifier = modifier.fillMaxWidth(),
     enabled = enabled,
-    label = { Text(label) },
-    secondaryLabel = secondaryLabel.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+    label = label,
+    secondaryLabel = secondaryLabel,
   )
 }
 

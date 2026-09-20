@@ -203,6 +203,8 @@ import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
@@ -531,7 +533,7 @@ fun UiBuilderEditor(
    * Ignored for every design whose root is not a widget container.
    */
   onRequestNativeRender: (suspend (WearWidgetHostShape) -> UiBuilderNativeRender)? = null,
-  /** Compiles the saved design to a document for the existing player's interactive Preview mode. */
+  /** Exports the current design for a catalog-declared document player in Browser Preview. */
   onRequestDocumentPreview: (suspend (UiBuilderDocument) -> UiBuilderDocumentPreview)? = null,
   /**
    * Opens the live session a native render named, or null where this host cannot stream one.
@@ -1462,14 +1464,31 @@ fun UiBuilderEditor(
     remember(state.document, devicePresets, state.variantAxes) {
       state.document.variantPanes(devicePresets, state.variantAxes)
     }
-  // The read-only pane: the same renderer, with the editor taken off it. Free of the host, which is
-  // the point — see [EditorPane.Preview].
+  // The read-only pane. The catalog decides whether this is the constrained canvas renderer or an
+  // exported artifact played by a browser adapter. No catalog or platform id is interpreted here:
+  // the typed capability is the whole switch, and an unknown adapter falls back to the canvas.
+  val documentBackedPreview =
+    catalog.browserPreview?.takeIf {
+      it.renderer == BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER &&
+        it.format == ExportFormatV1.RC &&
+        onRequestDocumentPreview != null
+    }
   val previewPane: @Composable (Modifier) -> Unit = { modifier ->
-    DesignPreviewPane(
-      document = state.document,
-      variants = variantPanes,
-      modifier = modifier,
-    )
+    if (documentBackedPreview != null) {
+      RemoteDocumentDesignPreviewPane(
+        document = state.document,
+        variants = variantPanes,
+        authoritativeGeneration = authoritativeGeneration,
+        request = requireNotNull(onRequestDocumentPreview),
+        modifier = modifier,
+      )
+    } else {
+      DesignPreviewPane(
+        document = state.document,
+        variants = variantPanes,
+        modifier = modifier,
+      )
+    }
   }
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     PinnedDesignCanvas(
@@ -1655,19 +1674,10 @@ fun UiBuilderEditor(
   // projection plus a full generator run, which nobody should pay for on every recomposition — or
   // at all, with the pane closed.
   var nativeRender by remember(document.id) { mutableStateOf(initialNativeRender) }
-  // The native pane is the host's compiled render wherever the host has a compile lane, because
-  // that lane is the only surface here that is actually the target platform: Robolectric-backed
-  // Android, or the desktop daemon. The Remote Compose player is this browser playing a document
-  // the host exported — nearer the Wasm panes than a native render — so it stands in only where
-  // there is no compile lane at all, which is the one case where it is the most faithful thing
-  // available.
-  val playedNativeRequest = onRequestDocumentPreview?.takeIf {
-    onRequestNativeRender == null && UiBuilderBuildFeatures.remoteCompose
-  }
   // Whether the native pane can draw anything at all. A host with neither lane still gets the row
   // in the menu, disabled and carrying the reason — a control that vanishes teaches nobody that the
   // pane exists.
-  val nativeAvailable = onRequestNativeRender != null || playedNativeRequest != null
+  val nativeAvailable = onRequestNativeRender != null
   // Whether the open panes need the host to compile anything. Derived rather than stored: the pane
   // set is the setting, and a second flag that could disagree with it is a bug waiting. Only the
   // native pane ever asks — which is the whole reason [EditorPane.Preview] is a separate choice.
@@ -1707,28 +1717,19 @@ fun UiBuilderEditor(
       if (nativeStream === opened) nativeStream = null
     }
   }
-  // The third pane: the design as the target platform draws it, compiled on the host — or played
-  // from the host's own export where there is no compile lane. Either way it is the host's answer
-  // rather than this browser's, which is why it is a separate pane from [EditorPane.Preview].
+  // The third pane: the design as the target platform draws it, compiled on the host. Document
+  // playback belongs only to Browser Preview; silently putting it here would make Native claim an
+  // authority it does not have and make opening Preview spend the wrong lane.
   val nativePane: @Composable (Modifier) -> Unit = { paneModifier ->
-    if (playedNativeRequest != null) {
-      RemoteDocumentPreviewPane(
-        document = state.document,
-        authoritativeGeneration = authoritativeGeneration,
-        request = playedNativeRequest,
-        modifier = paneModifier,
-      )
-    } else {
-      NativeRenderPane(
-        render = nativeRender,
-        pending = nativePending,
-        stream = nativeStream,
-        backend = catalog.previewSurfaces.native.backend,
-        selectedNodeId = state.selectedNodeId,
-        onNodeSelected = { selectNodeForEditing(it) },
-        modifier = paneModifier,
-      )
-    }
+    NativeRenderPane(
+      render = nativeRender,
+      pending = nativePending,
+      stream = nativeStream,
+      backend = catalog.previewSurfaces.native.backend,
+      selectedNodeId = state.selectedNodeId,
+      onNodeSelected = { selectNodeForEditing(it) },
+      modifier = paneModifier,
+    )
   }
   LaunchedEffect(pendingRemoteSource) {
     val source = pendingRemoteSource ?: return@LaunchedEffect
@@ -1979,6 +1980,7 @@ fun UiBuilderEditor(
     // From the catalog for the same reason as the two lines above: which adapter draws a component
     // is the catalog's statement, not this build's. Empty for every catalog today.
     LocalUiBuilderCanvasAdapters provides catalog.canvasAdapterIds,
+    LocalUiBuilderCanvasAdapterMappings provides catalog.canvasAdapterMappings,
     // And the frame, from the same place and for the same reason: which drawing frames a catalog's
     // screens, and how much room its content gets inside that drawing, is the catalog's statement.
     LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
@@ -6392,6 +6394,7 @@ private fun ConstrainedFramePane(
   val nativeOnlyIds = LocalUiBuilderNativeOnly.current
   val catalogComponentIds = LocalUiBuilderCatalogComponentIds.current
   val canvasAdapters = LocalUiBuilderCanvasAdapters.current
+  val canvasAdapterMappings = LocalUiBuilderCanvasAdapterMappings.current
   val frameGeometry = LocalUiBuilderFrameGeometry.current
   val catalogPlatform = LocalUiBuilderCatalogPlatform.current
   val ambientWidgetHostShape = LocalWearWidgetHostShape.current
@@ -6444,6 +6447,7 @@ private fun ConstrainedFramePane(
             LocalUiBuilderNativeOnly provides nativeOnlyIds,
             LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
             LocalUiBuilderCanvasAdapters provides canvasAdapters,
+            LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
             LocalUiBuilderFrameGeometry provides frameGeometry,
             LocalUiBuilderCatalogPlatform provides catalogPlatform,
             LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
