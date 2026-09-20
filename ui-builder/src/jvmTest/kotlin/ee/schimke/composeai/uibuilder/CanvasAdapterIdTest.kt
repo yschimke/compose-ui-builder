@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.material3.Text
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
@@ -86,6 +87,29 @@ class CanvasAdapterIdTest {
         onAllNodesWithText("Routed", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty(),
         "the node did not draw through the adapter the catalog named — it should have been drawn " +
           "as m3/text and shown its text",
+      )
+    }
+
+  @Test
+  fun `a catalog runtime draws through its executable registry`() =
+    runDesktopComposeUiTest(width = 400, height = 400) {
+      val registry = canvasAdapterRegistry {
+        register("acme/text") { Text(string("text"), modifier = modifier) }
+      }
+      setContent {
+        UiBuilderSurface(
+          document("acme/headline", "Catalog owned"),
+          catalogComponentIds = setOf("acme/headline"),
+          canvasAdapterIds = mapOf("acme/headline" to "acme/text"),
+          canvasAdapterRegistry = registry,
+        )
+      }
+
+      assertTrue(
+        onAllNodesWithText("Catalog owned", useUnmergedTree = true)
+          .fetchSemanticsNodes()
+          .isNotEmpty(),
+        "the generic interpreter did not invoke the catalog-owned adapter",
       )
     }
 

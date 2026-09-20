@@ -248,21 +248,6 @@ internal val LocalUiBuilderCanvasAdapters =
 internal val LocalUiBuilderCanvasAdapterMappings =
   staticCompositionLocalOf<Map<String, CanvasAdapterMappingV1>> { emptyMap() }
 
-/** A read-only adapter view: the authored node and every export remain untouched. */
-private fun UiBuilderNode.forCanvas(mapping: CanvasAdapterMappingV1?): UiBuilderNode {
-  if (mapping == null) return this
-  val mappedProperties = buildMap {
-    putAll(mapping.defaults)
-    putAll(properties)
-    mapping.properties.forEach { (target, source) -> properties[source]?.let { put(target, it) } }
-  }
-  val mappedSlots = buildMap {
-    putAll(slots)
-    mapping.slots.forEach { (target, source) -> slots[source]?.let { put(target, it) } }
-  }
-  return copy(properties = JsonObject(mappedProperties), slots = mappedSlots)
-}
-
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
 /**
@@ -454,6 +439,8 @@ fun UiBuilderSurface(
   /** Canvas-only vocabulary projections paired with [canvasAdapterIds]. */
   canvasAdapterMappings: Map<String, CanvasAdapterMappingV1> =
     LocalUiBuilderCanvasAdapterMappings.current,
+  /** Executable adapter implementations supplied by the selected catalog runtime. */
+  canvasAdapterRegistry: CanvasAdapterRegistry = LocalCanvasAdapterRegistry.current,
   /**
    * Draw the design at its whole extent rather than at its frame — see [LocalUiBuilderUnrolled] for
    * what that swaps and what it costs.
@@ -515,7 +502,7 @@ fun UiBuilderSurface(
   }
   SideEffect {
     if (appliedDeclarations != document.stateVariables) {
-      reconcilePreviewState(state, appliedDeclarations, document.stateVariables)
+      reconcileCanvasState(state, appliedDeclarations, document.stateVariables)
       appliedDeclarations = document.stateVariables
     }
   }
@@ -617,6 +604,7 @@ fun UiBuilderSurface(
     LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
     LocalUiBuilderCanvasAdapters provides canvasAdapterIds,
     LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
+    LocalCanvasAdapterRegistry provides canvasAdapterRegistry,
     LocalUiBuilderUnrolled provides unrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
     *wearDevice,
@@ -774,9 +762,13 @@ private fun RenderNode(
   // Bindings are resolved once, here, rather than at each accessor: below this line a bound
   // property is an ordinary value, so every reader — colour, text, dimension, the modifier chain —
   // sees what the placement passed without knowing a placement happened.
-  val sourceNode = authored.withArguments(arguments).withPreviewState(state)
   val node =
-    sourceNode.forCanvas(LocalUiBuilderCanvasAdapterMappings.current[sourceNode.componentId])
+    resolveCanvasNode(
+      authored,
+      arguments,
+      state,
+      LocalUiBuilderCanvasAdapterMappings.current[authored.componentId],
+    )
   val enabled = node.bool("enabled", true)
   val navigate = LocalUiBuilderNavigator.current
   val activate = { node.dispatch("click", state, onState, navigate) }
@@ -812,6 +804,40 @@ private fun RenderNode(
   // The adapter the catalog names, or the component's own id when it names none — which is every
   // component today. See [LocalUiBuilderCanvasAdapters].
   val adapterId = LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
+
+  // Catalog implementations take precedence over the compatibility table below. The interpreter
+  // has already resolved bindings/state, applied authored modifiers and built traversal callbacks;
+  // the adapter's only job is to invoke its real component. An empty registry preserves every
+  // existing render while branches move out one catalog at a time.
+  LocalCanvasAdapterRegistry.current[adapterId]?.let { adapter ->
+    val scope =
+      CanvasNodeScope(
+        node = node,
+        modifier = measured,
+        mode =
+          if (LocalUiBuilderUnrolled.current) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
+        renderSlot = { name, next -> slot(name).forEach { child(it, next) } },
+        renderItems = { name, content ->
+          slot(name).forEach { id ->
+            document.nodes[id]?.let { authoredItem ->
+              val item =
+                resolveCanvasNode(
+                  authoredItem,
+                  arguments,
+                  state,
+                  LocalUiBuilderCanvasAdapterMappings.current[authoredItem.componentId],
+                )
+              val itemScope = CanvasItemScope { next -> child(id, next) }
+              content(itemScope, item)
+            }
+          }
+        },
+        dispatchEvent = { event -> node.dispatch(event, state, onState, navigate) },
+        recordText = { result -> onTextLayout(path, result) },
+      )
+    adapter(scope)
+    return
+  }
 
   when (adapterId) {
     // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
@@ -1977,46 +2003,6 @@ private fun JsonObject.bindingKey(): String? {
 
 /** The `type` a value wrapper declares, or null when it is absent or is not a scalar. */
 private fun JsonObject.wrapperType(): String? = (this["type"] as? JsonPrimitive)?.contentOrNull
-
-private fun UiBuilderNode.withArguments(arguments: JsonObject): UiBuilderNode {
-  if (arguments.isEmpty() || properties.isEmpty()) return this
-  var substituted = false
-  val resolved = properties.mapValues { (_, value) ->
-    val binding = value as? JsonObject ?: return@mapValues value
-    val key = binding.bindingKey() ?: return@mapValues value
-    val argument = arguments[key] ?: return@mapValues value
-    substituted = true
-    argument
-  }
-  return if (substituted) copy(properties = JsonObject(resolved)) else this
-}
-
-/** Resolve reads for every property accessor while retaining the variable for two-way controls. */
-private fun UiBuilderNode.withPreviewState(state: Map<String, String?>): UiBuilderNode =
-  copy(
-    properties =
-      JsonObject(
-        properties.mapValues { (_, encoded) ->
-          val binding = encoded as? JsonObject ?: return@mapValues encoded
-          val variable =
-            (binding["variable"] as? JsonPrimitive)?.content ?: return@mapValues encoded
-          when (binding.wrapperType()) {
-            "state" ->
-              JsonObject(binding + ("value" to (state[variable]?.let(::JsonPrimitive) ?: JsonNull)))
-            "stateEquals" ->
-              JsonObject(
-                binding +
-                  mapOf(
-                    "type" to JsonPrimitive("bool"),
-                    "value" to
-                      JsonPrimitive(uiBuilderStateEquals(state[variable], binding["value"])),
-                  )
-              )
-            else -> encoded
-          }
-        }
-      )
-  )
 
 /**
  * The brush this gradient layer paints, on the axis its `direction` names.
@@ -3847,7 +3833,7 @@ private fun UiBuilderNode.dispatch(
     if (action.optionalString("type") == "navigatePage") {
       action.optionalString("pageKey")?.takeIf(String::isNotBlank)?.let(onNavigate)
     } else {
-      uiBuilderStateWrite(action, working)?.also { (name, value) ->
+      canvasStateWrite(action, working)?.also { (name, value) ->
         working[name] = value
         onState(name, value)
       }
@@ -3859,14 +3845,7 @@ private fun UiBuilderNode.dispatch(
 internal fun uiBuilderStateWrites(
   actions: JsonArray,
   state: Map<String, String?>,
-): List<Pair<String, String?>> {
-  val working = state.toMutableMap()
-  return actions.mapNotNull { element ->
-    (element as? JsonObject)
-      ?.let { uiBuilderStateWrite(it, working) }
-      ?.also { (name, value) -> working[name] = value }
-  }
-}
+): List<Pair<String, String?>> = canvasStateWrites(actions, state)
 
 /** Authoring a declaration resets that variable's preview value; unrelated interactions survive. */
 internal fun reconcilePreviewState(
@@ -3874,12 +3853,7 @@ internal fun reconcilePreviewState(
   before: JsonObject,
   after: JsonObject,
 ) {
-  (before.keys - after.keys).forEach { state.remove(it) }
-  after.forEach { (name, declaration) ->
-    if (declaration != before[name])
-      state[name] =
-        ((declaration as? JsonObject)?.get("initialValue") as? JsonPrimitive)?.contentOrNull
-  }
+  reconcileCanvasState(state, before, after)
 }
 
 /**
@@ -3891,39 +3865,7 @@ internal fun reconcilePreviewState(
 internal fun uiBuilderStateWrite(
   action: JsonObject,
   state: Map<String, String?>,
-): Pair<String, String?>? {
-  val variable =
-    (action["variable"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull ?: return null
-  val kind = (action["type"] as? JsonPrimitive)?.contentOrNull
-  // An imported experimental document may contain a binding the current preview cannot resolve.
-  // Preserve the current state for that action; neither crash nor turn an unresolved value into
-  // null.
-  val operand = action["value"]
-  if (
-    kind in setOf("set", "select", "setText", "selectOrClear") &&
-      operand != null &&
-      operand !is JsonPrimitive
-  )
-    return null
-  val value = (operand as? JsonPrimitive)?.contentOrNull
-  return when (kind) {
-    "select",
-    "setText",
-    // `set` is the protocol's own name for an assignment and behaves exactly as `select` does:
-    // write the value. It was unimplemented, so a document authored by any other client using it
-    // crashed this renderer rather than working.
-    "set" -> variable to value
-    "selectOrClear" -> variable to if (state[variable] == value) null else value
-    // Declared by the protocol and previously fatal here. A flag is stored in its string form,
-    // which is how `stateEquals` already compares it.
-    "toggle" -> variable to (state[variable]?.toBooleanStrictOrNull() != true).toString()
-    // Not an error. This renderer is fed wire data authored by other clients and by future
-    // versions of this one, and a preview that dies on a single unrecognised action loses the
-    // whole screen — including every part that does work. Losing one interaction is the smaller
-    // failure, and a visible one: the control does nothing when pressed.
-    else -> null
-  }
-}
+): Pair<String, String?>? = canvasStateWrite(action, state)
 
 /**
  * An integer property, read from state where the document says so.
@@ -3970,12 +3912,7 @@ private fun UiBuilderNode.resolvedBool(name: String, state: Map<String, String?>
  * properly unequal.
  */
 internal fun uiBuilderStateEquals(held: String?, operand: JsonElement?): Boolean {
-  val primitive = operand as? JsonPrimitive
-  val expected = primitive?.contentOrNull
-  if (held == expected) return true
-  if (held == null || expected == null || primitive.isString) return false
-  val number = held.toDoubleOrNull() ?: return false
-  return number == expected.toDoubleOrNull()
+  return canvasStateEquals(held, operand)
 }
 
 private fun UiBuilderNode.obj(name: String): JsonObject =
