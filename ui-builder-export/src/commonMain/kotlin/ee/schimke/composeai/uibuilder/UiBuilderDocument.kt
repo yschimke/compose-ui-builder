@@ -51,6 +51,8 @@ data class UiBuilderDocument(
    * exactly what it did before the field existed.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val components: JsonObject = JsonObject(emptyMap()),
+  /** Starter template identity retained by persisted designs; it does not affect interpretation. */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val template: String? = null,
 )
 
 @OptIn(ExperimentalSerializationApi::class)
