@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.31.0](https://github.com/yschimke/compose-ui-builder/compare/v3.30.0...v3.31.0) (2026-09-20)
+
+
+### Features
+
+* **ui-builder:** play catalog document previews in browser ([#100](https://github.com/yschimke/compose-ui-builder/issues/100)) ([d105d7f](https://github.com/yschimke/compose-ui-builder/commit/d105d7fd1f52538eb46b7de9495d8394e8cdf1b4))
+
+
+### Bug Fixes
+
+* **ui-builder:** align Jetcaster oracle with real components ([#99](https://github.com/yschimke/compose-ui-builder/issues/99)) ([4ddc6f6](https://github.com/yschimke/compose-ui-builder/commit/4ddc6f64f567ae085474befe55d71ec4ec7a23cb))
+
 ## [3.30.0](https://github.com/yschimke/compose-ui-builder/compare/v3.29.0...v3.30.0) (2026-09-20)
 
 
