@@ -628,792 +628,459 @@ private fun RenderNode(
   host: CanvasDocumentScope,
   modifier: Modifier = Modifier,
 ) {
-  val node = entry.node
-  val path = entry.path
-  val state = host.state
   val navigate = LocalUiBuilderNavigator.current
   val themeCornerRadius = LocalUiBuilderCornerRadius.current
   val nativeOnly = LocalUiBuilderNativeOnly.current
-  val prepared =
-    entry.prepare(
-      modifier = modifier,
-      state = state,
-      onState = host::setState,
-      onNavigate = navigate,
-      handlesClick = node.componentId in INTERACTIVE_COMPONENTS,
-      applyModifier = { current, value -> current.applyModifier(value, themeCornerRadius) },
-      onBounds = host::recordNodeBounds,
-      onSemanticAction = host::registerSemanticAction,
-    )
-  val enabled = prepared.enabled
-  val activate = { prepared.dispatch("click") }
-  val measured = prepared.modifier
-  fun slot(name: String) = node.slots[name].orEmpty()
-  val renderChild: @Composable (CanvasRenderNode, Modifier) -> Unit = { childEntry, next ->
-    RenderNode(
-      document,
-      childEntry,
-      host,
-      next,
-    )
-  }
-  val child: @Composable (String, Modifier) -> Unit = { id, next ->
-    entry.child(id)?.let { renderChild(it, next) }
-  }
+  host.RenderCanvasNode(
+    entry = entry,
+    registry = LocalCanvasAdapterRegistry.current,
+    modifier = modifier,
+    onNavigate = navigate,
+    handlesClick = { it.componentId in INTERACTIVE_COMPONENTS },
+    applyModifier = { current, value -> current.applyModifier(value, themeCornerRadius) },
+    missingComponent = { label, next -> UnsupportedComponentDiagnostic(label, next) },
+  ) {
+    val node = this.node
+    val path = this.path
+    val state = this.state
+    val enabled = prepared.enabled
+    val activate = { prepared.dispatch("click") }
+    val measured = prepared.modifier
+    fun slot(name: String) = this.slot(name)
+    val renderChild = this.renderChild
+    val child: @Composable (String, Modifier) -> Unit = { id, next -> Child(id, next) }
 
-  // The adapter the catalog names, or the component's own id when it names none — which is every
-  // component today. See [LocalUiBuilderCanvasAdapters].
-  val adapterId = entry.adapterId
-
-  // Catalog implementations take precedence over the compatibility table below. The interpreter
-  // has already resolved bindings/state, applied authored modifiers and built traversal callbacks;
-  // the adapter's only job is to invoke its real component. An empty registry preserves every
-  // existing render while branches move out one catalog at a time.
-  if (
-    entry.renderAdapter(
-      registry = LocalCanvasAdapterRegistry.current,
-      modifier = measured,
-      mode = host.mode,
-      renderChild = renderChild,
-      dispatchEvent = prepared::dispatch,
-      recordText = { result -> host.recordTextLayout(path, result) },
-    )
-  )
-    return
-
-  if (
-    entry.renderStructure(
-      modifier = measured,
-      renderChild = renderChild,
-      missingComponent = { label, next -> UnsupportedComponentDiagnostic(label, next) },
-    )
-  )
-    return
-
-  when (adapterId) {
-    // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
-    // from `hostSpec` rather than written here, so this canvas and the native render beside it
-    // cannot disagree about what the host reserves — see [WearWidgetHostSpec].
-    "remote-m3/widget-container-small",
-    "remote-m3/widget-container-large" -> {
-      // Never null in this branch — the two ids are the enum's own — and `Small` rather than `!!`
-      // for the reason every other lookup here refuses to throw: a canvas that crashes cannot draw
-      // the Issues panel that would explain why.
-      val size =
-        WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == node.componentId }
-          ?: WearWidgetScaffoldSize.Small
-      WearWidgetContainerScaffold(
-        node = node,
-        modifier = measured,
-        spec = size.hostSpec(LocalWearWidgetHostShape.current),
-        brushes = { next -> slot("background").forEach { child(it, next) } },
-        hasBrushes = slot("background").isNotEmpty(),
-      ) {
-        slot("content").forEach { child(it, Modifier.fillMaxSize()) }
-      }
-    }
-    // The Wear screen. Unlike the widget container above, this stand-in is EMITTED rather than
-    // erased: `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter` names
-    // it. What is faked is only the drawing — the canvas has no Wear Compose to draw with.
-    ROUND_SCREEN_FRAME ->
-      WearScreenScaffold(
-        node = node,
-        modifier = measured,
-        frame = LocalUiBuilderFrameGeometry.current,
-        screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
-        edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
-        hasEdgeButton = slot("edgeButton").isNotEmpty(),
-      ) { next ->
-        slot("content").forEach { child(it, next) }
-      }
-    // Wear's own `ListHeader`, drawn by Wear Compose. This used to be a `Box` of
-    // `WEAR_LIST_HEADER_HEIGHT_DP` with a centred `Text` at `WEAR_LIST_HEADER_SP`, which is the
-    // hand-assembled replica `WearCanvasComponents`' KDoc explains the canvas no longer has to
-    // keep: those two numbers were read off upstream and nothing in this build could check them.
-    "wear-m3/list-header" ->
-      WearCanvasListHeader(
-        text = node.string("text"),
-        modifier = measured,
-        // The label's truncation, which upstream's `ListHeader` cannot take — it takes a content
-        // lambda — so it belongs on the `Text` inside. Both properties were declared and read by
-        // nobody, so a header a design clipped to one line drew as many as it wrapped to.
-        maxLines = node.lineCount("maxLines"),
-        overflow = node.textOverflow(),
-      )
-    // Previously undrawn entirely: Wear publishes a sub-header of its own and the canvas had no
-    // Material 3 component that could stand in for it, so `google-home-wear`'s seven of these were
-    // dashed placeholders until the port arrived.
-    "wear-m3/list-sub-header" ->
-      WearCanvasListSubHeader(
-        text = node.string("text"),
-        modifier = measured,
-        maxLines = node.lineCount("maxLines"),
-        overflow = node.textOverflow(),
-      )
-    "wear-m3/switch-button" ->
-      WearCanvasSwitchButton(
-        checked = node.bool("checked"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-        label = {
-          if (slot("label").isEmpty()) Text(node.string("label"))
-          else slot("label").forEach { child(it, Modifier) }
-        },
-        secondaryLabel =
-          when {
-            slot("secondaryLabel").isNotEmpty() -> ({
-                slot("secondaryLabel").forEach { child(it, Modifier) }
-              })
-            node.string("secondaryLabel").isNotEmpty() -> ({ Text(node.string("secondaryLabel")) })
-            else -> null
-          },
-      )
-    "wear-m3/slider" ->
-      WearCanvasSlider(
-        value = node.float("value"),
-        valueFrom = node.float("valueFrom"),
-        valueTo = node.float("valueTo", 1f),
-        steps = node.integer("steps"),
-        segmented = node.bool("segmented"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-      )
-    "wear-m3/checkbox-button" ->
-      WearCanvasCheckboxButton(
-        checked = node.bool("checked"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-        label = {
-          if (slot("label").isEmpty()) Text(node.string("label"))
-          else slot("label").forEach { child(it, Modifier) }
-        },
-        secondaryLabel =
-          when {
-            slot("secondaryLabel").isNotEmpty() -> ({
-                slot("secondaryLabel").forEach { child(it, Modifier) }
-              })
-            node.string("secondaryLabel").isNotEmpty() -> ({ Text(node.string("secondaryLabel")) })
-            else -> null
-          },
-      )
-    "wear-m3/radio-button" ->
-      WearCanvasRadioButton(
-        selected = node.bool("selected"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-        label = {
-          if (slot("label").isEmpty()) Text(node.string("label"))
-          else slot("label").forEach { child(it, Modifier) }
-        },
-        secondaryLabel =
-          when {
-            slot("secondaryLabel").isNotEmpty() -> ({
-                slot("secondaryLabel").forEach { child(it, Modifier) }
-              })
-            node.string("secondaryLabel").isNotEmpty() -> ({ Text(node.string("secondaryLabel")) })
-            else -> null
-          },
-      )
-    "wear-m3/stepper" ->
-      WearCanvasStepper(
-        value = node.float("value"),
-        valueFrom = node.float("valueFrom"),
-        valueTo = node.float("valueTo", 1f),
-        steps = node.integer("steps"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-      ) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    "wear-m3/progress-indicator" ->
-      WearCanvasProgressIndicator(
-        variant = node.string("variant"),
-        progress = node.float("progress"),
-        segments = node.integer("segments", 1),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-      )
-    "wear-m3/page-indicator" ->
-      WearCanvasPageIndicator(
-        vertical = node.string("variant") == "vertical",
-        modifier = measured,
-      )
-    "wear-m3/edge-button" ->
-      WearCanvasEdgeButton(
-        size = node.string("size"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-      ) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    "wear-m3/button-group" -> {
-      val children = slot("children")
-      WearCanvasButtonGroup(childCount = children.size, modifier = measured) { index ->
-        child(children[index], Modifier)
-      }
-    }
-    "wear-m3/icon-button" ->
-      WearCanvasIconButton(
-        variant = node.string("variant"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-      ) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    "wear-m3/text-button" ->
-      WearCanvasTextButton(
-        variant = node.string("variant"),
-        enabled = node.bool("enabled", true),
-        modifier = measured,
-      ) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    // Routed to the canvas's own icon drawer rather than to Wear's `Icon`. An icon is a tinted
-    // vector at a size on both platforms — Wear publishes no shape of its own here — and
-    // `BuilderIcon` is what owns this build's key table, its tint resolution and the
-    // structured-path export the SVG lane needs. Drawing it twice would be two answers to one
-    // question.
-    "wear-m3/icon" -> BuilderIcon(node, measured)
-    // Wear's own `Text`, out of the port the canvas links: Wear Compose publishes its own text
-    // component, and the canvas has no reason to call the mobile one.
-    //
-    // The difference is not the name. This branch used to read four properties (`text`, `color`,
-    // `style`, `maxLines`) where the catalog declares sixteen, so every `fontSizeSp`,
-    // `lineHeightSp`, `softWrap` and `overflow` a design set on a Wear text node was inert on the
-    // canvas while the mobile branch beside it honoured all of them. Wear's `Text` takes the same
-    // argument list, so this now reads what the mobile one reads.
-    //
-    // The style comes from `wearTextStyle`, which resolves the role names against Wear's own
-    // typography — Wear's type scale, not Material 3's — and is what makes the sizes right when a
-    // design sets none.
-    "wear-m3/text" ->
-      WearText(
-        node.string("text"),
-        measured,
-        color = node.color("color", Color.Unspecified),
-        style = wearTextStyle(node.string("style")),
-        fontWeight = node.fontWeight(),
-        fontStyle = node.fontStyle(),
-        fontSize =
-          node.float("fontSizeSp").takeIf { it > 0f }?.sp
-            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
-        lineHeight =
-          node.float("lineHeightSp").takeIf { it > 0f }?.sp
-            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
-        letterSpacing =
-          node.float("letterSpacingSp").takeIf { "letterSpacingSp" in node.properties }?.sp
-            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
-        textDecoration = node.textDecoration(),
-        minLines = node.integer("minLines", 1),
-        maxLines = node.integer("maxLines", Int.MAX_VALUE),
-        softWrap = node.bool("softWrap", true),
-        overflow = node.textOverflow(),
-        textAlign = node.textAlign(),
-        onTextLayout = { host.recordTextLayout(path, it) },
-      )
-    "wear-m3/card" ->
-      WearCanvasCard(node.string("variant"), measured) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    "wear-m3/button" ->
-      WearCanvasButton(node.string("variant"), node.bool("enabled", true), measured) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    // The dialogs. Drawn only when the document says they are showing: `visible` is the flag the
-    // generated screen hangs them on, and a canvas that drew every dialog at once would describe a
-    // screen nobody can reach.
-    "wear-m3/alert-dialog" ->
-      if (node.bool("visible", true)) {
-        WearCanvasAlertDialog(
-          title = node.string("title"),
-          text = node.string("text"),
+    when (adapterId) {
+      // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
+      // from `hostSpec` rather than written here, so this canvas and the native render beside it
+      // cannot disagree about what the host reserves — see [WearWidgetHostSpec].
+      "remote-m3/widget-container-small",
+      "remote-m3/widget-container-large" -> {
+        // Never null in this branch — the two ids are the enum's own — and `Small` rather than `!!`
+        // for the reason every other lookup here refuses to throw: a canvas that crashes cannot
+        // draw
+        // the Issues panel that would explain why.
+        val size =
+          WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == node.componentId }
+            ?: WearWidgetScaffoldSize.Small
+        WearWidgetContainerScaffold(
+          node = node,
           modifier = measured,
-          hasConfirm = slot("confirmButton").isNotEmpty(),
-          hasDismiss = slot("dismissButton").isNotEmpty(),
+          spec = size.hostSpec(LocalWearWidgetHostShape.current),
+          brushes = { next -> slot("background").forEach { child(it, next) } },
+          hasBrushes = slot("background").isNotEmpty(),
         ) {
-          slot("content").forEach { child(it, Modifier) }
+          slot("content").forEach { child(it, Modifier.fillMaxSize()) }
         }
       }
-    "wear-m3/confirmation-dialog" ->
-      if (node.bool("visible", true)) {
-        WearCanvasConfirmationDialog(
+      // The Wear screen. Unlike the widget container above, this stand-in is EMITTED rather than
+      // erased: `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter`
+      // names
+      // it. What is faked is only the drawing — the canvas has no Wear Compose to draw with.
+      ROUND_SCREEN_FRAME ->
+        WearScreenScaffold(
+          node = node,
+          modifier = measured,
+          frame = LocalUiBuilderFrameGeometry.current,
+          screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
+          edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
+          hasEdgeButton = slot("edgeButton").isNotEmpty(),
+        ) { next ->
+          slot("content").forEach { child(it, next) }
+        }
+      // Wear's own `ListHeader`, drawn by Wear Compose. This used to be a `Box` of
+      // `WEAR_LIST_HEADER_HEIGHT_DP` with a centred `Text` at `WEAR_LIST_HEADER_SP`, which is the
+      // hand-assembled replica `WearCanvasComponents`' KDoc explains the canvas no longer has to
+      // keep: those two numbers were read off upstream and nothing in this build could check them.
+      "wear-m3/list-header" ->
+        WearCanvasListHeader(
           text = node.string("text"),
-          variant = node.string("variant"),
+          modifier = measured,
+          // The label's truncation, which upstream's `ListHeader` cannot take — it takes a content
+          // lambda — so it belongs on the `Text` inside. Both properties were declared and read by
+          // nobody, so a header a design clipped to one line drew as many as it wrapped to.
+          maxLines = node.lineCount("maxLines"),
+          overflow = node.textOverflow(),
+        )
+      // Previously undrawn entirely: Wear publishes a sub-header of its own and the canvas had no
+      // Material 3 component that could stand in for it, so `google-home-wear`'s seven of these
+      // were
+      // dashed placeholders until the port arrived.
+      "wear-m3/list-sub-header" ->
+        WearCanvasListSubHeader(
+          text = node.string("text"),
+          modifier = measured,
+          maxLines = node.lineCount("maxLines"),
+          overflow = node.textOverflow(),
+        )
+      "wear-m3/switch-button" ->
+        WearCanvasSwitchButton(
+          checked = node.bool("checked"),
+          enabled = node.bool("enabled", true),
+          modifier = measured,
+          label = {
+            if (slot("label").isEmpty()) Text(node.string("label"))
+            else slot("label").forEach { child(it, Modifier) }
+          },
+          secondaryLabel =
+            when {
+              slot("secondaryLabel").isNotEmpty() -> ({
+                  slot("secondaryLabel").forEach { child(it, Modifier) }
+                })
+              node.string("secondaryLabel").isNotEmpty() -> ({
+                  Text(node.string("secondaryLabel"))
+                })
+              else -> null
+            },
+        )
+      "wear-m3/slider" ->
+        WearCanvasSlider(
+          value = node.float("value"),
+          valueFrom = node.float("valueFrom"),
+          valueTo = node.float("valueTo", 1f),
+          steps = node.integer("steps"),
+          segmented = node.bool("segmented"),
+          enabled = node.bool("enabled", true),
           modifier = measured,
         )
-      }
-    "wear-m3/open-on-phone-dialog" ->
-      if (node.bool("visible", true)) {
-        WearCanvasOpenOnPhoneDialog(text = node.string("text"), modifier = measured)
-      }
-    "wear-m3/date-picker" ->
-      WearCanvasDatePicker(
-        initialDate = node.string("initialDate"),
-        type = node.string("type"),
-        modifier = measured,
-      )
-    "wear-m3/time-picker" ->
-      WearCanvasTimePicker(
-        initialTime = node.string("initialTime"),
-        type = node.string("type"),
-        modifier = measured,
-      )
-    "wear-m3/transforming-lazy-column" -> {
-      val items = slot("items")
-      if (LocalUiBuilderUnrolled.current) {
-        // At the extent the list is a Column: no viewport, no row transformation, and the rows are
-        // the list's unscaled layout — which is exactly the `ScrollMode.LONG` reference, whose
-        // stitch turns the transformation off. The real lazy layout cannot be measured against an
-        // unbounded height: it reports infinity, and the canvas fails outright with
-        // `Size(w x 2147483647) is out of range` — the same wall `layout/scaffold` and
-        // `layout/lazy-column` each already draw around. Without this the whole editor is blank for
-        // a Wear screen, because the extent's height is the content's.
-        Column(
+      "wear-m3/checkbox-button" ->
+        WearCanvasCheckboxButton(
+          checked = node.bool("checked"),
+          enabled = node.bool("enabled", true),
           modifier = measured,
-          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp", 4f).dp),
+          label = {
+            if (slot("label").isEmpty()) Text(node.string("label"))
+            else slot("label").forEach { child(it, Modifier) }
+          },
+          secondaryLabel =
+            when {
+              slot("secondaryLabel").isNotEmpty() -> ({
+                  slot("secondaryLabel").forEach { child(it, Modifier) }
+                })
+              node.string("secondaryLabel").isNotEmpty() -> ({
+                  Text(node.string("secondaryLabel"))
+                })
+              else -> null
+            },
+        )
+      "wear-m3/radio-button" ->
+        WearCanvasRadioButton(
+          selected = node.bool("selected"),
+          enabled = node.bool("enabled", true),
+          modifier = measured,
+          label = {
+            if (slot("label").isEmpty()) Text(node.string("label"))
+            else slot("label").forEach { child(it, Modifier) }
+          },
+          secondaryLabel =
+            when {
+              slot("secondaryLabel").isNotEmpty() -> ({
+                  slot("secondaryLabel").forEach { child(it, Modifier) }
+                })
+              node.string("secondaryLabel").isNotEmpty() -> ({
+                  Text(node.string("secondaryLabel"))
+                })
+              else -> null
+            },
+        )
+      "wear-m3/stepper" ->
+        WearCanvasStepper(
+          value = node.float("value"),
+          valueFrom = node.float("valueFrom"),
+          valueTo = node.float("valueTo", 1f),
+          steps = node.integer("steps"),
+          enabled = node.bool("enabled", true),
+          modifier = measured,
         ) {
-          items.forEach { child(it, Modifier) }
-        }
-      } else {
-        // The real lazy column, scaling and fading its rows through the library's own
-        // `transformedHeight`. The `Column` this replaces said in its own comment that the
-        // transformation "does not exist off Android"; it does now, via the CMP port.
-        WearCanvasTransformingLazyColumn(
-          itemCount = items.size,
-          verticalSpacingDp = node.float("verticalSpacingDp", 4f),
-          modifier = measured,
-          // `transformation` is the design's choice, and the canvas read it nowhere: the rows
-          // always
-          // carried the treatment here while the generated screen honoured the property.
-          transformation = node.string("transformation") != "none",
-        ) { index, itemModifier ->
-          child(items[index], itemModifier)
-        }
-      }
-    }
-    "layout/supporting-pane-scaffold" ->
-      AdaptiveSupportingPaneScaffold(
-        node,
-        measured,
-        { next -> slot("mainPane").forEach { child(it, next) } },
-        { next -> slot("supportingPane").forEach { child(it, next) } },
-      )
-    // The vocabulary switch. Everything below is `@RemoteComposable` in the code this design
-    // generates, and this canvas draws it with the ordinary Compose stand-ins the `remote-m3`
-    // catalog has always used for the same components — a `RemoteColumn` is drawn by a `Column`.
-    //
-    // Framed rather than drawn flush, and the frame is the honest part. The browser has no Remote
-    // Compose writer, so these are the shapes the generated body *describes* rather than the pixels
-    // a player produces; the frame is what stops an author reading them as the latter. The rule
-    // this keeps is `wear-m3`'s — never fake a component so it runs in Wasm — applied to a whole
-    // subtree rather than to one component.
-    //
-    // Once a host has captured the subtree ([LocalRemoteComposeCaptures]) none of that applies:
-    // there are real bytes, and they are played by the same `RcComposePlayer` that draws the
-    // embedded document beside it. The frame stays — the boundary is still a fact about the design
-    // — but it stops standing in for the content, which is the difference between marking a scope
-    // and approximating it.
-    REMOTE_COMPOSE_INLINE_COMPONENT_ID -> {
-      val captured = LocalRemoteComposeCaptures.current(node.id)
-      RemoteContentFrame(
-        label = "Remote Compose",
-        detail = if (captured == null) null else "played",
-        modifier = measured,
-      ) {
-        if (captured == null) {
-          slot("content").forEach { child(it, Modifier.fillMaxWidth()) }
-        } else {
-          PlayedInlineRemoteContent(
-            document = document,
-            node = node,
-            captured = captured,
-            modifier = Modifier.fillMaxWidth(),
-            slotContent = { fill, next -> Box(next) { child(fill, Modifier.fillMaxWidth()) } },
-          )
-        }
-      }
-    }
-    // The way back out. A custom component is a hole the document reserves for host content, so
-    // what the canvas draws inside it is ordinary Compose — which is also what a registered
-    // renderer draws on a real player. The name is on the frame because it is the whole contract:
-    // a preview draws this only where a custom component of that name is registered, and an author
-    // who cannot see the name cannot check that.
-    REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
-      RemoteContentFrame(
-        label = "Custom",
-        detail = node.string("name").ifEmpty { "unnamed" },
-        modifier =
-          measured
-            .then(node.dimension("widthDp")?.let { Modifier.width(it) } ?: Modifier)
-            .then(node.dimension("heightDp")?.let { Modifier.height(it) } ?: Modifier),
-      ) {
-        slot("content").forEach { child(it, Modifier.fillMaxWidth()) }
-      }
-    "remote-compose/document" ->
-      RemoteComposeDocument(
-        document = document,
-        node = node,
-        modifier = measured,
-        state = state,
-        onEvent = { event -> event.bindingName()?.let(prepared::dispatch) },
-        slotContent = { name, next ->
-          Box(next) { slot(name).forEach { child(it, Modifier.fillMaxSize()) } }
-        },
-      )
-    // The Lottie element. Drawn as its identity and place, like the Wear components below and for
-    // a sharper version of the same reason: the animation this node carries is not *played* by the
-    // export at all — Horologist's `LottieAnimation` compiles it into the document's own operations
-    // while the widget is being built — and the browser can neither run that Android-only creation
-    // API nor host a Lottie runtime to fake it with. What the canvas can say truthfully is which
-    // animation is here and whether it is ready to export, so that is what it says.
-    "remote-m3/lottie" -> LottiePlaceholder(node, measured)
-    "layout/scaffold" -> {
-      val containerColor = node.color("containerColor", MaterialTheme.colorScheme.background)
-      // `Scaffold` is a `SubcomposeLayout`, and one measured against an unbounded height does not
-      // grow — it fails outright with `Size(w x 2147483647) is out of range`. So the extent draws
-      // the same three parts as a plain Column: the bar, then the content under it.
-      //
-      // The snackbar host is dropped rather than stacked below the content. It is a transient
-      // overlay that floats above the *viewport*, and a strip three screens long has no viewport to
-      // float above — drawing it at the bottom of the extent would put it where nobody will ever
-      // see it and add a band of empty space where the design has none. The frame pane beside the
-      // extent is a real `Scaffold`, so that is where a snackbar keeps its meaning.
-      if (LocalUiBuilderUnrolled.current) {
-        Column(measured.background(containerColor)) {
-          slot("topBar").forEach { child(it, Modifier) }
           slot("content").forEach { child(it, Modifier) }
         }
-      } else {
-        Scaffold(
+      "wear-m3/progress-indicator" ->
+        WearCanvasProgressIndicator(
+          variant = node.string("variant"),
+          progress = node.float("progress"),
+          segments = node.integer("segments", 1),
+          enabled = node.bool("enabled", true),
           modifier = measured,
-          containerColor = containerColor,
-          contentWindowInsets = WindowInsets(0, 0, 0, 0),
-          topBar = { slot("topBar").forEach { child(it, Modifier) } },
-          snackbarHost = { slot("snackbarHost").forEach { child(it, Modifier) } },
-        ) { padding ->
-          slot("content").forEach { child(it, Modifier.padding(padding)) }
+        )
+      "wear-m3/page-indicator" ->
+        WearCanvasPageIndicator(
+          vertical = node.string("variant") == "vertical",
+          modifier = measured,
+        )
+      "wear-m3/edge-button" ->
+        WearCanvasEdgeButton(
+          size = node.string("size"),
+          enabled = node.bool("enabled", true),
+          modifier = measured,
+        ) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      "wear-m3/button-group" -> {
+        val children = slot("children")
+        WearCanvasButtonGroup(childCount = children.size, modifier = measured) { index ->
+          child(children[index], Modifier)
         }
       }
-    }
-    "layout/box" ->
-      Box(measured) {
-        val children =
-          if (UiBuilderBuildFeatures.remoteCompose && SHOW_BY_STATE in node.properties)
-            listOfNotNull(node.stateSelection()?.selectedNode(state, document.stateVariables))
-          else slot("children")
-        children.forEach { id ->
-          val item = document.nodes.getValue(id)
-          val parentSizing =
-            if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
-          child(
-            id,
-            parentSizing.align(alignmentFor(item.boxAlignment())).zIndex(item.float("zIndex")),
+      "wear-m3/icon-button" ->
+        WearCanvasIconButton(
+          variant = node.string("variant"),
+          enabled = node.bool("enabled", true),
+          modifier = measured,
+        ) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      "wear-m3/text-button" ->
+        WearCanvasTextButton(
+          variant = node.string("variant"),
+          enabled = node.bool("enabled", true),
+          modifier = measured,
+        ) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      // Routed to the canvas's own icon drawer rather than to Wear's `Icon`. An icon is a tinted
+      // vector at a size on both platforms — Wear publishes no shape of its own here — and
+      // `BuilderIcon` is what owns this build's key table, its tint resolution and the
+      // structured-path export the SVG lane needs. Drawing it twice would be two answers to one
+      // question.
+      "wear-m3/icon" -> BuilderIcon(node, measured)
+      // Wear's own `Text`, out of the port the canvas links: Wear Compose publishes its own text
+      // component, and the canvas has no reason to call the mobile one.
+      //
+      // The difference is not the name. This branch used to read four properties (`text`, `color`,
+      // `style`, `maxLines`) where the catalog declares sixteen, so every `fontSizeSp`,
+      // `lineHeightSp`, `softWrap` and `overflow` a design set on a Wear text node was inert on the
+      // canvas while the mobile branch beside it honoured all of them. Wear's `Text` takes the same
+      // argument list, so this now reads what the mobile one reads.
+      //
+      // The style comes from `wearTextStyle`, which resolves the role names against Wear's own
+      // typography — Wear's type scale, not Material 3's — and is what makes the sizes right when a
+      // design sets none.
+      "wear-m3/text" ->
+        WearText(
+          node.string("text"),
+          measured,
+          color = node.color("color", Color.Unspecified),
+          style = wearTextStyle(node.string("style")),
+          fontWeight = node.fontWeight(),
+          fontStyle = node.fontStyle(),
+          fontSize =
+            node.float("fontSizeSp").takeIf { it > 0f }?.sp
+              ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+          lineHeight =
+            node.float("lineHeightSp").takeIf { it > 0f }?.sp
+              ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+          letterSpacing =
+            node.float("letterSpacingSp").takeIf { "letterSpacingSp" in node.properties }?.sp
+              ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+          textDecoration = node.textDecoration(),
+          minLines = node.integer("minLines", 1),
+          maxLines = node.integer("maxLines", Int.MAX_VALUE),
+          softWrap = node.bool("softWrap", true),
+          overflow = node.textOverflow(),
+          textAlign = node.textAlign(),
+          onTextLayout = { host.recordTextLayout(path, it) },
+        )
+      "wear-m3/card" ->
+        WearCanvasCard(node.string("variant"), measured) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      "wear-m3/button" ->
+        WearCanvasButton(node.string("variant"), node.bool("enabled", true), measured) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      // The dialogs. Drawn only when the document says they are showing: `visible` is the flag the
+      // generated screen hangs them on, and a canvas that drew every dialog at once would describe
+      // a
+      // screen nobody can reach.
+      "wear-m3/alert-dialog" ->
+        if (node.bool("visible", true)) {
+          WearCanvasAlertDialog(
+            title = node.string("title"),
+            text = node.string("text"),
+            modifier = measured,
+            hasConfirm = slot("confirmButton").isNotEmpty(),
+            hasDismiss = slot("dismissButton").isNotEmpty(),
+          ) {
+            slot("content").forEach { child(it, Modifier) }
+          }
+        }
+      "wear-m3/confirmation-dialog" ->
+        if (node.bool("visible", true)) {
+          WearCanvasConfirmationDialog(
+            text = node.string("text"),
+            variant = node.string("variant"),
+            modifier = measured,
           )
         }
-      }
-    "layout/column" ->
-      Column(
-        measured,
-        verticalArrangement = node.verticalArrangement(),
-        horizontalAlignment = node.horizontalAlignment(),
-      ) {
-        slot("children").forEach { id ->
-          val item = document.nodes.getValue(id)
-          val weight = item.layoutWeight()
-          // A weight is a share of what is left over, and at the extent there is no "left over":
-          // the column is measured against an unbounded height, so a weighted child is handed no
-          // space at all and draws nothing. That is the failure that looks most like success — the
-          // strip measures a plausible height and the list inside it is simply blank — so the
-          // extent drops every weight, authored or inferred, and lets each child wrap.
-          val sized =
-            when {
-              LocalUiBuilderUnrolled.current ->
-                if (item.componentId == "layout/lazy-column") Modifier.fillMaxWidth() else Modifier
-              weight != null -> Modifier.weight(weight.weight, weight.fill ?: true)
-              // A lazy column with no weight of its own would measure its children unbounded and
-              // fail; taking what is left is the only sane reading of "put a list here".
-              item.componentId == "layout/lazy-column" -> Modifier.fillMaxWidth().weight(1f)
-              else -> Modifier
-            }
-          val aligned =
-            item.crossAxisAlignment()?.let { sized.align(horizontalAlignmentFor(it)) } ?: sized
-          child(id, aligned)
+      "wear-m3/open-on-phone-dialog" ->
+        if (node.bool("visible", true)) {
+          WearCanvasOpenOnPhoneDialog(text = node.string("text"), modifier = measured)
         }
-      }
-    "layout/row" ->
-      Row(
-        measured,
-        horizontalArrangement = node.horizontalArrangement(),
-        verticalAlignment = node.verticalAlignment(),
-      ) {
-        slot("children").forEach { id ->
-          val item = document.nodes.getValue(id)
-          val weight = item.layoutWeight()
-          val sized =
-            if (weight == null) Modifier else Modifier.weight(weight.weight, weight.fill ?: true)
-          val aligned =
-            item.crossAxisAlignment()?.let { sized.align(verticalAlignmentFor(it)) } ?: sized
-          child(id, aligned)
-        }
-      }
-    // A row that wraps. The one layout primitive in this catalog whose response to a narrow
-    // window needs no breakpoint, no `if` and no second design: children that do not fit the line
-    // go on the next one, which is what a Material chip group has always done and what
-    // `layout/row` cannot do — at 411 dp a row of four filter chips squeezes each one to a letter
-    // per line rather than wrapping (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 3).
-    //
-    // Every property it reads is one `layout/row` and `layout/lazy-grid` already declare, read by
-    // the same two helpers: the main axis is a row's `horizontalArrangement`/`horizontalSpacingDp`
-    // and the cross axis — the gap BETWEEN lines — is a column's pair. Nothing new to learn, and
-    // nothing new for the wire to carry.
-    "layout/flow-row" ->
-      FlowRow(
-        measured,
-        horizontalArrangement = node.horizontalArrangement(),
-        verticalArrangement = node.verticalArrangement(),
-        // Absent and zero both mean "as many as fit", which is the whole point of the component;
-        // a design that wants three per line says three.
-        maxItemsInEachRow = node.integer("maxItemsInEachRow").takeIf { it > 0 } ?: Int.MAX_VALUE,
-      ) {
-        slot("children").forEach { child(it, Modifier) }
-      }
-    "layout/lazy-row" -> {
-      val lazyState = rememberLazyListState()
-      LazyRow(
-        modifier = measured,
-        state = lazyState,
-        contentPadding = node.obj("contentPadding").paddingValues(),
-        horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
-      ) {
-        items(slot("items"), key = { it }) { child(it, Modifier) }
-      }
-    }
-    "layout/lazy-column" -> {
-      // A list drawn at the extent is a Column of the same children: same order, same spacing,
-      // same padding, no viewport. See [LocalUiBuilderUnrolled].
-      if (LocalUiBuilderUnrolled.current) {
-        Column(
-          modifier = measured.padding(node.obj("contentPadding").paddingValues()),
-          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
-        ) {
-          slot("items").forEach { child(it, Modifier) }
-        }
-      } else {
-        val lazyState = rememberLazyListState()
-        host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
-        LazyColumn(
+      "wear-m3/date-picker" ->
+        WearCanvasDatePicker(
+          initialDate = node.string("initialDate"),
+          type = node.string("type"),
           modifier = measured,
-          state = lazyState,
-          contentPadding = node.obj("contentPadding").paddingValues(),
-          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
-        ) {
-          items(slot("items"), key = { it }) { child(it, Modifier) }
-        }
-      }
-    }
-    "layout/lazy-grid" -> {
-      val minimum = node.obj("columns").number("minimumCellWidthDp", 362f).coerceAtLeast(1f)
-      // A vertical grid refuses an unbounded height for the same reason a column does, so the
-      // extent draws its cells as wrapping rows. Spans are lost with the lazy layout; a `full`
-      // span still takes the row it is given rather than the whole line.
-      if (LocalUiBuilderUnrolled.current) {
-        FlowRow(
-          modifier = measured.padding(node.obj("contentPadding").paddingValues()),
-          horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
-          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
-        ) {
-          slot("items").forEach { child(it, Modifier.width(minimum.dp)) }
-        }
-      } else {
-        val lazyState = rememberLazyGridState()
-        host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
-        LazyVerticalGrid(
-          columns = GridCells.Adaptive(minimum.dp),
+        )
+      "wear-m3/time-picker" ->
+        WearCanvasTimePicker(
+          initialTime = node.string("initialTime"),
+          type = node.string("type"),
           modifier = measured,
-          state = lazyState,
-          contentPadding = node.obj("contentPadding").paddingValues(),
-          // The catalog declares both on this component and nothing read either, so a grid's
-          // spacing was authored, stored, offered in the inspector, and drawn as zero.
-          verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
-          horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
-        ) {
-          items(
-            items = slot("items"),
-            key = { it },
-            span = { id ->
-              if (document.nodes.getValue(id).string("span") == "full") GridItemSpan(maxLineSpan)
-              else GridItemSpan(1)
-            },
+        )
+      "wear-m3/transforming-lazy-column" -> {
+        val items = slot("items")
+        if (LocalUiBuilderUnrolled.current) {
+          // At the extent the list is a Column: no viewport, no row transformation, and the rows
+          // are
+          // the list's unscaled layout — which is exactly the `ScrollMode.LONG` reference, whose
+          // stitch turns the transformation off. The real lazy layout cannot be measured against an
+          // unbounded height: it reports infinity, and the canvas fails outright with
+          // `Size(w x 2147483647) is out of range` — the same wall `layout/scaffold` and
+          // `layout/lazy-column` each already draw around. Without this the whole editor is blank
+          // for
+          // a Wear screen, because the extent's height is the content's.
+          Column(
+            modifier = measured,
+            verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp", 4f).dp),
           ) {
-            child(it, Modifier)
+            items.forEach { child(it, Modifier) }
+          }
+        } else {
+          // The real lazy column, scaling and fading its rows through the library's own
+          // `transformedHeight`. The `Column` this replaces said in its own comment that the
+          // transformation "does not exist off Android"; it does now, via the CMP port.
+          WearCanvasTransformingLazyColumn(
+            itemCount = items.size,
+            verticalSpacingDp = node.float("verticalSpacingDp", 4f),
+            modifier = measured,
+            // `transformation` is the design's choice, and the canvas read it nowhere: the rows
+            // always
+            // carried the treatment here while the generated screen honoured the property.
+            transformation = node.string("transformation") != "none",
+          ) { index, itemModifier ->
+            child(items[index], itemModifier)
           }
         }
       }
-    }
-    "layout/horizontal-carousel" -> {
-      val items = slot("items")
-      if (
-        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
-          UiBuilderRenderStrategy.AUTHORING_ADAPTER
-      ) {
-        val lazyState = rememberLazyListState()
-        CompatibleHorizontalCarousel(node, measured, lazyState, items) { id, next ->
-          child(id, next)
-        }
-      } else {
-        val carouselState = rememberCarouselState { items.size }
-        host.updateSemanticAction(node.id) { it.copy(scrollBy = carouselState::dispatchRawDelta) }
-        HorizontalUncontainedCarousel(
-          state = carouselState,
-          itemWidth = node.float("itemWidthDp", 128f).dp,
+      "layout/supporting-pane-scaffold" ->
+        AdaptiveSupportingPaneScaffold(
+          node,
+          measured,
+          { next -> slot("mainPane").forEach { child(it, next) } },
+          { next -> slot("supportingPane").forEach { child(it, next) } },
+        )
+      // The vocabulary switch. Everything below is `@RemoteComposable` in the code this design
+      // generates, and this canvas draws it with the ordinary Compose stand-ins the `remote-m3`
+      // catalog has always used for the same components — a `RemoteColumn` is drawn by a `Column`.
+      //
+      // Framed rather than drawn flush, and the frame is the honest part. The browser has no Remote
+      // Compose writer, so these are the shapes the generated body *describes* rather than the
+      // pixels
+      // a player produces; the frame is what stops an author reading them as the latter. The rule
+      // this keeps is `wear-m3`'s — never fake a component so it runs in Wasm — applied to a whole
+      // subtree rather than to one component.
+      //
+      // Once a host has captured the subtree ([LocalRemoteComposeCaptures]) none of that applies:
+      // there are real bytes, and they are played by the same `RcComposePlayer` that draws the
+      // embedded document beside it. The frame stays — the boundary is still a fact about the
+      // design
+      // — but it stops standing in for the content, which is the difference between marking a scope
+      // and approximating it.
+      REMOTE_COMPOSE_INLINE_COMPONENT_ID -> {
+        val captured = LocalRemoteComposeCaptures.current(node.id)
+        RemoteContentFrame(
+          label = "Remote Compose",
+          detail = if (captured == null) null else "played",
           modifier = measured,
-          itemSpacing = node.float("itemSpacingDp").dp,
-          contentPadding = PaddingValues(start = node.float("contentPaddingStartDp").dp),
-        ) { index ->
-          child(items[index], Modifier)
-        }
-      }
-    }
-    "m3/center-aligned-top-app-bar" ->
-      CenterAlignedTopAppBar(
-        modifier = measured,
-        colors =
-          TopAppBarDefaults.topAppBarColors(
-            containerColor = node.color("containerColor", Color.Transparent),
-            scrolledContainerColor = node.color("scrolledContainerColor", Color.Transparent),
-          ),
-        title = { slot("title").forEach { child(it, Modifier) } },
-      )
-    "m3/search-bar" -> {
-      val inputField: @Composable () -> Unit = {
-        slot("inputField").forEach { child(it, Modifier.fillMaxSize()) }
-      }
-      if (
-        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
-          UiBuilderRenderStrategy.AUTHORING_ADAPTER
-      ) {
-        Surface(
-          measured.height(56.dp),
-          shape = CircleShape,
-          color = MaterialTheme.colorScheme.surfaceContainerHigh,
-          tonalElevation = node.float("tonalElevationDp").dp,
         ) {
-          Column { inputField() }
-        }
-      } else {
-        SearchBar(
-          inputField = inputField,
-          expanded = node.bool("expanded"),
-          onExpandedChange = {},
-          modifier = measured,
-          tonalElevation = node.float("tonalElevationDp").dp,
-        ) {
-          slot("expandedContent").forEach { child(it, Modifier) }
-        }
-      }
-    }
-    "m3/search-input-field" -> {
-      val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
-      val value = variable?.let(state::get).orEmpty()
-      val onValueChange: (String) -> Unit = { if (variable != null) host.setState(variable, it) }
-      if (
-        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
-          UiBuilderRenderStrategy.AUTHORING_ADAPTER
-      ) {
-        Row(
-          measured.padding(horizontal = 16.dp, vertical = 12.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-          slot("leadingIcon").forEach { child(it, Modifier) }
-          Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) slot("placeholder").forEach { child(it, Modifier) }
-            BasicTextField(
-              value,
-              onValueChange,
-              Modifier.fillMaxWidth(),
-              enabled = node.bool("enabled", true),
-              textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
-              singleLine = true,
+          if (captured == null) {
+            slot("content").forEach { child(it, Modifier.fillMaxWidth()) }
+          } else {
+            PlayedInlineRemoteContent(
+              document = document,
+              node = node,
+              captured = captured,
+              modifier = Modifier.fillMaxWidth(),
+              slotContent = { fill, next -> Box(next) { child(fill, Modifier.fillMaxWidth()) } },
             )
           }
-          slot("trailingIcon").forEach { child(it, Modifier) }
         }
-      } else {
-        SearchBarDefaults.InputField(
-          query = value,
-          onQueryChange = onValueChange,
-          onSearch = {},
-          expanded = false,
-          onExpandedChange = {},
-          modifier = measured,
-          enabled = node.bool("enabled", true),
-          placeholder = { slot("placeholder").forEach { child(it, Modifier) } },
-          leadingIcon = { slot("leadingIcon").forEach { child(it, Modifier) } },
-          trailingIcon = { slot("trailingIcon").forEach { child(it, Modifier) } },
-        )
       }
-    }
-    "m3/snackbar-host" ->
-      if (node.bool("visible")) Snackbar(measured) { Text(node.string("message")) }
-      else Box(measured)
-    "m3/filter-chip" ->
-      FilterChip(
-        selected = node.resolvedBool("selected", state),
-        onClick = activate,
-        modifier = measured,
-        enabled = enabled,
-        label = { slot("label").forEach { child(it, Modifier) } },
-        leadingIcon =
-          slot("leadingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
-            { ids.forEach { child(it, Modifier) } }
-          },
-      )
-    // Both read state, because a tab row is the one place where clicking is the whole point. The
-    // click already reached the reducer; the row drew its indicator from the literal the design was
-    // saved with and the tab drew its own selection the same way, so the press moved the variable
-    // and nothing on the canvas moved with it.
-    "m3/primary-tab-row" ->
-      PrimaryTabRow(node.resolvedInteger("selectedIndex", state), measured) {
-        slot("tabs").forEach { child(it, Modifier) }
-      }
-    "m3/tab" ->
-      Tab(
-        node.resolvedBool("selected", state),
-        activate,
-        measured,
-        enabled = enabled,
-        text = { slot("text").forEach { child(it, Modifier) } },
-      )
-    "m3/list-item" ->
-      LegacyListItem(node, measured, slot("headline"), slot("supporting"), slot("trailing"), child)
-    "m3/surface" ->
-      Surface(
-        measured,
-        shape = node.shape(themeCornerRadius),
-        color = node.color("containerColor", Color.Transparent),
-        tonalElevation = node.float("tonalElevationDp").dp,
-      ) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    "m3/card" ->
-      Card(
-        measured,
-        shape = node.shape(themeCornerRadius),
-        elevation = CardDefaults.cardElevation(defaultElevation = node.float("elevationDp").dp),
-        colors =
-          CardDefaults.cardColors(
-            node.color("containerColor", MaterialTheme.colorScheme.surfaceContainer)
-          ),
-      ) {
-        // Filled only along the axes the card was given a size on — see [cardContentFill] for why
-        // `fillMaxSize` here made a card with no height swallow its column (#483).
-        val fill = node.cardContentFill()
-        Box(
-          Modifier.then(if (fill.width) Modifier.fillMaxWidth() else Modifier)
-            .then(if (fill.height) Modifier.fillMaxHeight() else Modifier)
+      // The way back out. A custom component is a hole the document reserves for host content, so
+      // what the canvas draws inside it is ordinary Compose — which is also what a registered
+      // renderer draws on a real player. The name is on the frame because it is the whole contract:
+      // a preview draws this only where a custom component of that name is registered, and an
+      // author
+      // who cannot see the name cannot check that.
+      REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
+        RemoteContentFrame(
+          label = "Custom",
+          detail = node.string("name").ifEmpty { "unnamed" },
+          modifier =
+            measured
+              .then(node.dimension("widthDp")?.let { Modifier.width(it) } ?: Modifier)
+              .then(node.dimension("heightDp")?.let { Modifier.height(it) } ?: Modifier),
         ) {
-          slot("content").forEach { id ->
+          slot("content").forEach { child(it, Modifier.fillMaxWidth()) }
+        }
+      "remote-compose/document" ->
+        RemoteComposeDocument(
+          document = document,
+          node = node,
+          modifier = measured,
+          state = state,
+          onEvent = { event -> event.bindingName()?.let(prepared::dispatch) },
+          slotContent = { name, next ->
+            Box(next) { slot(name).forEach { child(it, Modifier.fillMaxSize()) } }
+          },
+        )
+      // The Lottie element. Drawn as its identity and place, like the Wear components below and for
+      // a sharper version of the same reason: the animation this node carries is not *played* by
+      // the
+      // export at all — Horologist's `LottieAnimation` compiles it into the document's own
+      // operations
+      // while the widget is being built — and the browser can neither run that Android-only
+      // creation
+      // API nor host a Lottie runtime to fake it with. What the canvas can say truthfully is which
+      // animation is here and whether it is ready to export, so that is what it says.
+      "remote-m3/lottie" -> LottiePlaceholder(node, measured)
+      "layout/scaffold" -> {
+        val containerColor = node.color("containerColor", MaterialTheme.colorScheme.background)
+        // `Scaffold` is a `SubcomposeLayout`, and one measured against an unbounded height does not
+        // grow — it fails outright with `Size(w x 2147483647) is out of range`. So the extent draws
+        // the same three parts as a plain Column: the bar, then the content under it.
+        //
+        // The snackbar host is dropped rather than stacked below the content. It is a transient
+        // overlay that floats above the *viewport*, and a strip three screens long has no viewport
+        // to
+        // float above — drawing it at the bottom of the extent would put it where nobody will ever
+        // see it and add a band of empty space where the design has none. The frame pane beside the
+        // extent is a real `Scaffold`, so that is where a snackbar keeps its meaning.
+        if (LocalUiBuilderUnrolled.current) {
+          Column(measured.background(containerColor)) {
+            slot("topBar").forEach { child(it, Modifier) }
+            slot("content").forEach { child(it, Modifier) }
+          }
+        } else {
+          Scaffold(
+            modifier = measured,
+            containerColor = containerColor,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = { slot("topBar").forEach { child(it, Modifier) } },
+            snackbarHost = { slot("snackbarHost").forEach { child(it, Modifier) } },
+          ) { padding ->
+            slot("content").forEach { child(it, Modifier.padding(padding)) }
+          }
+        }
+      }
+      "layout/box" ->
+        Box(measured) {
+          val children =
+            if (UiBuilderBuildFeatures.remoteCompose && SHOW_BY_STATE in node.properties)
+              listOfNotNull(node.stateSelection()?.selectedNode(state, document.stateVariables))
+            else slot("children")
+          children.forEach { id ->
             val item = document.nodes.getValue(id)
             val parentSizing =
               if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
@@ -1423,291 +1090,628 @@ private fun RenderNode(
             )
           }
         }
-      }
-    // `onCheckedChange` rather than the clickable modifier every node gets: a control that reports
-    // its own change is what makes the box tickable in the live playground, and Material draws the
-    // ripple and the state layer for it.
-    "m3/checkbox" ->
-      Checkbox(
-        checked = node.resolvedBool("checked", state),
-        onCheckedChange = { activate() },
-        modifier = measured,
-        enabled = enabled,
-      )
-    "m3/switch" ->
-      Switch(
-        checked = node.resolvedBool("checked", state),
-        onCheckedChange = { activate() },
-        modifier = measured,
-        enabled = enabled,
-      )
-    "m3/slider" -> {
-      // The variable the slider writes, the same seam a text field's `value` uses. A slider with no
-      // variable still moves — Material needs a value to draw a thumb — but the movement goes
-      // nowhere, which is what an unbound control means everywhere else in this catalog.
-      val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
-      val from = node.float("valueFrom", 0f)
-      val to = node.float("valueTo", 1f).coerceAtLeast(from)
-      val bound = variable?.let { state[it]?.toFloatOrNull() }
-      Slider(
-        value = (bound ?: node.float("value")).coerceIn(from, to),
-        onValueChange = { next -> if (variable != null) host.setState(variable, next.toString()) },
-        modifier = measured,
-        enabled = enabled,
-        valueRange = from..to,
-        steps = node.integer("steps"),
-      )
-    }
-    "m3/progress-indicator" -> {
-      val variable = node.obj("progress")["variable"]?.jsonPrimitive?.contentOrNull
-      val fraction =
-        (variable?.let { state[it]?.toFloatOrNull() } ?: node.float("progress")).coerceIn(0f, 1f)
-      // Indeterminate is Material's other overload rather than a value, and the document
-      // environment freezes animation, so what the canvas shows is its first frame. That is the
-      // honest still of a thing that moves, and it is what makes the render diffable.
-      val indeterminate = node.bool("indeterminate")
-      if (node.string("variant") == "circular") {
-        if (indeterminate) CircularProgressIndicator(modifier = measured)
-        else CircularProgressIndicator(progress = { fraction }, modifier = measured)
-      } else {
-        if (indeterminate) LinearProgressIndicator(modifier = measured)
-        else LinearProgressIndicator(progress = { fraction }, modifier = measured)
-      }
-    }
-    "m3/radio-button" ->
-      RadioButton(
-        selected = node.resolvedBool("selected", state),
-        onClick = activate,
-        modifier = measured,
-        enabled = enabled,
-      )
-    "m3/text-field" -> {
-      // The variable the field writes, not a local `remember`. A design's text field is a view of a
-      // declared state variable — that is what makes typing in the canvas change the design rather
-      // than a field's own private memory, and it is the same seam `m3/search-input-field` uses.
-      val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
-      val value = variable?.let(state::get) ?: node.string("value")
-      val label: (@Composable () -> Unit)? =
-        slot("label").takeIf(List<String>::isNotEmpty)?.let { ids ->
-          { ids.forEach { child(it, Modifier) } }
-        }
-      val placeholder: (@Composable () -> Unit)? =
-        slot("placeholder").takeIf(List<String>::isNotEmpty)?.let { ids ->
-          { ids.forEach { child(it, Modifier) } }
-        }
-      val supporting: (@Composable () -> Unit)? =
-        slot("supportingText").takeIf(List<String>::isNotEmpty)?.let { ids ->
-          { ids.forEach { child(it, Modifier) } }
-        }
-      val leading: (@Composable () -> Unit)? =
-        slot("leadingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
-          { ids.forEach { child(it, Modifier) } }
-        }
-      val trailing: (@Composable () -> Unit)? =
-        slot("trailingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
-          { ids.forEach { child(it, Modifier) } }
-        }
-      val onValueChange: (String) -> Unit = { next ->
-        if (variable != null) host.setState(variable, next)
-      }
-      if (node.string("variant") == "outlined") {
-        OutlinedTextField(
-          value = value,
-          onValueChange = onValueChange,
-          modifier = measured,
-          enabled = enabled,
-          readOnly = node.bool("readOnly"),
-          label = label,
-          placeholder = placeholder,
-          supportingText = supporting,
-          leadingIcon = leading,
-          trailingIcon = trailing,
-          isError = node.bool("isError"),
-          singleLine = node.bool("singleLine", true),
-        )
-      } else {
-        TextField(
-          value = value,
-          onValueChange = onValueChange,
-          modifier = measured,
-          enabled = enabled,
-          readOnly = node.bool("readOnly"),
-          label = label,
-          placeholder = placeholder,
-          supportingText = supporting,
-          leadingIcon = leading,
-          trailingIcon = trailing,
-          isError = node.bool("isError"),
-          singleLine = node.bool("singleLine", true),
-        )
-      }
-    }
-    "m3/dialog" -> {
-      if (
-        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
-          UiBuilderRenderStrategy.AUTHORING_ADAPTER
-      ) {
-        BuilderDialogSurface(
-          node = node,
-          modifier = measured,
-          icon = { next -> slot("icon").forEach { child(it, next) } },
-          title = { next -> slot("title").forEach { child(it, next) } },
-          text = { next -> slot("text").forEach { child(it, next) } },
-          hasIcon = slot("icon").isNotEmpty(),
-          hasTitle = slot("title").isNotEmpty(),
-          hasText = slot("text").isNotEmpty(),
-          buttons = { next ->
-            slot("dismissButton").forEach { child(it, next) }
-            slot("confirmButton").forEach { child(it, next) }
-          },
-        )
-      } else {
-        AlertDialog(
-          onDismissRequest = {},
-          confirmButton = { slot("confirmButton").forEach { child(it, Modifier) } },
-          modifier = measured,
-          dismissButton = { slot("dismissButton").forEach { child(it, Modifier) } },
-          icon = { slot("icon").forEach { child(it, Modifier) } },
-          title = { slot("title").forEach { child(it, Modifier) } },
-          text = { slot("text").forEach { child(it, Modifier) } },
-          shape = RoundedCornerShape(node.float("shapeDp", DIALOG_CORNER_DP).dp),
-          containerColor =
-            node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHigh),
-          tonalElevation = node.float("tonalElevationDp", DIALOG_TONAL_ELEVATION_DP).dp,
-        )
-      }
-    }
-    "m3/date-picker" -> BuilderDatePicker(node, measured)
-    "m3/time-picker" -> BuilderTimePicker(node, measured)
-    "m3/icon-button" ->
-      IconButton(
-        onClick = activate,
-        modifier =
-          measured
-            .size(node.float("sizeDp", 48f).dp)
-            .then(
-              if ("selected" in node.properties) {
-                Modifier.background(Color.Black.copy(alpha = 0.46f), CircleShape)
-              } else {
-                Modifier
+      "layout/column" ->
+        Column(
+          measured,
+          verticalArrangement = node.verticalArrangement(),
+          horizontalAlignment = node.horizontalAlignment(),
+        ) {
+          slot("children").forEach { id ->
+            val item = document.nodes.getValue(id)
+            val weight = item.layoutWeight()
+            // A weight is a share of what is left over, and at the extent there is no "left over":
+            // the column is measured against an unbounded height, so a weighted child is handed no
+            // space at all and draws nothing. That is the failure that looks most like success —
+            // the
+            // strip measures a plausible height and the list inside it is simply blank — so the
+            // extent drops every weight, authored or inferred, and lets each child wrap.
+            val sized =
+              when {
+                LocalUiBuilderUnrolled.current ->
+                  if (item.componentId == "layout/lazy-column") Modifier.fillMaxWidth()
+                  else Modifier
+                weight != null -> Modifier.weight(weight.weight, weight.fill ?: true)
+                // A lazy column with no weight of its own would measure its children unbounded and
+                // fail; taking what is left is the only sane reading of "put a list here".
+                item.componentId == "layout/lazy-column" -> Modifier.fillMaxWidth().weight(1f)
+                else -> Modifier
               }
+            val aligned =
+              item.crossAxisAlignment()?.let { sized.align(horizontalAlignmentFor(it)) } ?: sized
+            child(id, aligned)
+          }
+        }
+      "layout/row" ->
+        Row(
+          measured,
+          horizontalArrangement = node.horizontalArrangement(),
+          verticalAlignment = node.verticalAlignment(),
+        ) {
+          slot("children").forEach { id ->
+            val item = document.nodes.getValue(id)
+            val weight = item.layoutWeight()
+            val sized =
+              if (weight == null) Modifier else Modifier.weight(weight.weight, weight.fill ?: true)
+            val aligned =
+              item.crossAxisAlignment()?.let { sized.align(verticalAlignmentFor(it)) } ?: sized
+            child(id, aligned)
+          }
+        }
+      // A row that wraps. The one layout primitive in this catalog whose response to a narrow
+      // window needs no breakpoint, no `if` and no second design: children that do not fit the line
+      // go on the next one, which is what a Material chip group has always done and what
+      // `layout/row` cannot do — at 411 dp a row of four filter chips squeezes each one to a letter
+      // per line rather than wrapping (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 3).
+      //
+      // Every property it reads is one `layout/row` and `layout/lazy-grid` already declare, read by
+      // the same two helpers: the main axis is a row's
+      // `horizontalArrangement`/`horizontalSpacingDp`
+      // and the cross axis — the gap BETWEEN lines — is a column's pair. Nothing new to learn, and
+      // nothing new for the wire to carry.
+      "layout/flow-row" ->
+        FlowRow(
+          measured,
+          horizontalArrangement = node.horizontalArrangement(),
+          verticalArrangement = node.verticalArrangement(),
+          // Absent and zero both mean "as many as fit", which is the whole point of the component;
+          // a design that wants three per line says three.
+          maxItemsInEachRow = node.integer("maxItemsInEachRow").takeIf { it > 0 } ?: Int.MAX_VALUE,
+        ) {
+          slot("children").forEach { child(it, Modifier) }
+        }
+      "layout/lazy-row" -> {
+        val lazyState = rememberLazyListState()
+        LazyRow(
+          modifier = measured,
+          state = lazyState,
+          contentPadding = node.obj("contentPadding").paddingValues(),
+          horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+        ) {
+          items(slot("items"), key = { it }) { child(it, Modifier) }
+        }
+      }
+      "layout/lazy-column" -> {
+        // A list drawn at the extent is a Column of the same children: same order, same spacing,
+        // same padding, no viewport. See [LocalUiBuilderUnrolled].
+        if (LocalUiBuilderUnrolled.current) {
+          Column(
+            modifier = measured.padding(node.obj("contentPadding").paddingValues()),
+            verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+          ) {
+            slot("items").forEach { child(it, Modifier) }
+          }
+        } else {
+          val lazyState = rememberLazyListState()
+          host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          LazyColumn(
+            modifier = measured,
+            state = lazyState,
+            contentPadding = node.obj("contentPadding").paddingValues(),
+            verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+          ) {
+            items(slot("items"), key = { it }) { child(it, Modifier) }
+          }
+        }
+      }
+      "layout/lazy-grid" -> {
+        val minimum = node.obj("columns").number("minimumCellWidthDp", 362f).coerceAtLeast(1f)
+        // A vertical grid refuses an unbounded height for the same reason a column does, so the
+        // extent draws its cells as wrapping rows. Spans are lost with the lazy layout; a `full`
+        // span still takes the row it is given rather than the whole line.
+        if (LocalUiBuilderUnrolled.current) {
+          FlowRow(
+            modifier = measured.padding(node.obj("contentPadding").paddingValues()),
+            horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+            verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+          ) {
+            slot("items").forEach { child(it, Modifier.width(minimum.dp)) }
+          }
+        } else {
+          val lazyState = rememberLazyGridState()
+          host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          LazyVerticalGrid(
+            columns = GridCells.Adaptive(minimum.dp),
+            modifier = measured,
+            state = lazyState,
+            contentPadding = node.obj("contentPadding").paddingValues(),
+            // The catalog declares both on this component and nothing read either, so a grid's
+            // spacing was authored, stored, offered in the inspector, and drawn as zero.
+            verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp").dp),
+            horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+          ) {
+            items(
+              items = slot("items"),
+              key = { it },
+              span = { id ->
+                if (document.nodes.getValue(id).string("span") == "full") GridItemSpan(maxLineSpan)
+                else GridItemSpan(1)
+              },
+            ) {
+              child(it, Modifier)
+            }
+          }
+        }
+      }
+      "layout/horizontal-carousel" -> {
+        val items = slot("items")
+        if (
+          uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+            UiBuilderRenderStrategy.AUTHORING_ADAPTER
+        ) {
+          val lazyState = rememberLazyListState()
+          CompatibleHorizontalCarousel(node, measured, lazyState, items) { id, next ->
+            child(id, next)
+          }
+        } else {
+          val carouselState = rememberCarouselState { items.size }
+          host.updateSemanticAction(node.id) { it.copy(scrollBy = carouselState::dispatchRawDelta) }
+          HorizontalUncontainedCarousel(
+            state = carouselState,
+            itemWidth = node.float("itemWidthDp", 128f).dp,
+            modifier = measured,
+            itemSpacing = node.float("itemSpacingDp").dp,
+            contentPadding = PaddingValues(start = node.float("contentPaddingStartDp").dp),
+          ) { index ->
+            child(items[index], Modifier)
+          }
+        }
+      }
+      "m3/center-aligned-top-app-bar" ->
+        CenterAlignedTopAppBar(
+          modifier = measured,
+          colors =
+            TopAppBarDefaults.topAppBarColors(
+              containerColor = node.color("containerColor", Color.Transparent),
+              scrolledContainerColor = node.color("scrolledContainerColor", Color.Transparent),
             ),
-        enabled = enabled,
-      ) {
-        slot("content").forEach { child(it, Modifier) }
+          title = { slot("title").forEach { child(it, Modifier) } },
+        )
+      "m3/search-bar" -> {
+        val inputField: @Composable () -> Unit = {
+          slot("inputField").forEach { child(it, Modifier.fillMaxSize()) }
+        }
+        if (
+          uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+            UiBuilderRenderStrategy.AUTHORING_ADAPTER
+        ) {
+          Surface(
+            measured.height(56.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = node.float("tonalElevationDp").dp,
+          ) {
+            Column { inputField() }
+          }
+        } else {
+          SearchBar(
+            inputField = inputField,
+            expanded = node.bool("expanded"),
+            onExpandedChange = {},
+            modifier = measured,
+            tonalElevation = node.float("tonalElevationDp").dp,
+          ) {
+            slot("expandedContent").forEach { child(it, Modifier) }
+          }
+        }
       }
-    "m3/button" ->
-      BuilderButton(node, measured, activate, enabled) {
-        slot("content").forEach { child(it, Modifier) }
-      }
-    "m3/horizontal-floating-toolbar" ->
-      CompatibleFloatingToolbar(node, measured) { slot("content").forEach { child(it, Modifier) } }
-    "m3/horizontal-divider" ->
-      HorizontalDivider(
-        measured,
-        // Absent means Material's own thickness, not zero — a hairline is what a divider is, and
-        // `float(name)`'s zero fallback would have drawn nothing at all.
-        thickness = node.dimension("thicknessDp") ?: DividerDefaults.Thickness,
-        color = node.color("color", MaterialTheme.colorScheme.outlineVariant),
-      )
-    "m3/icon" -> BuilderIcon(node, measured)
-    "m3/text" ->
-      Text(
-        node.string("text"),
-        measured,
-        color = node.color("color", Color.Unspecified),
-        style = node.textStyle(),
-        fontWeight = node.fontWeight(),
-        fontStyle = node.fontStyle(),
-        fontSize =
-          node.float("fontSizeSp").takeIf { it > 0f }?.sp
-            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
-        lineHeight =
-          node.float("lineHeightSp").takeIf { it > 0f }?.sp
-            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
-        letterSpacing =
-          node.float("letterSpacingSp").takeIf { "letterSpacingSp" in node.properties }?.sp
-            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
-        textDecoration = node.textDecoration(),
-        minLines = node.integer("minLines", 1),
-        maxLines = node.integer("maxLines", Int.MAX_VALUE),
-        softWrap = node.bool("softWrap", true),
-        overflow = node.textOverflow(),
-        textAlign = node.textAlign(),
-        onTextLayout = { host.recordTextLayout(path, it) },
-      )
-    "asset/image" -> AssetImage(document, node, measured)
-    "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
-    "shape/radial-gradient" -> {
-      val inner =
-        node
-          .color("innerColor", MaterialTheme.colorScheme.primary)
-          .copy(alpha = node.float("innerAlpha", 1f))
-      val outer = node.color("outerColor", Color.Transparent)
-      Box(
-        measured.drawBehind {
-          drawRect(
-            Brush.radialGradient(
-              listOf(inner, outer),
-              center = if (node.string("center") == "topStart") Offset.Zero else center,
-              radius = size.maxDimension * 0.82f,
-            )
+      "m3/search-input-field" -> {
+        val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
+        val value = variable?.let(state::get).orEmpty()
+        val onValueChange: (String) -> Unit = { if (variable != null) host.setState(variable, it) }
+        if (
+          uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+            UiBuilderRenderStrategy.AUTHORING_ADAPTER
+        ) {
+          Row(
+            measured.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+          ) {
+            slot("leadingIcon").forEach { child(it, Modifier) }
+            Box(Modifier.weight(1f)) {
+              if (value.isEmpty()) slot("placeholder").forEach { child(it, Modifier) }
+              BasicTextField(
+                value,
+                onValueChange,
+                Modifier.fillMaxWidth(),
+                enabled = node.bool("enabled", true),
+                textStyle =
+                  LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
+                singleLine = true,
+              )
+            }
+            slot("trailingIcon").forEach { child(it, Modifier) }
+          }
+        } else {
+          SearchBarDefaults.InputField(
+            query = value,
+            onQueryChange = onValueChange,
+            onSearch = {},
+            expanded = false,
+            onExpandedChange = {},
+            modifier = measured,
+            enabled = node.bool("enabled", true),
+            placeholder = { slot("placeholder").forEach { child(it, Modifier) } },
+            leadingIcon = { slot("leadingIcon").forEach { child(it, Modifier) } },
+            trailingIcon = { slot("trailingIcon").forEach { child(it, Modifier) } },
           )
         }
-      )
-    }
-    "shape/colour-dot" ->
-      Box(
-        measured
-          .size(node.float("diameterDp", 8f).dp)
-          .clip(CircleShape)
-          .background(Color(parseArgb(node.string("color"))))
-      )
-    // A Wear component with no Material 3 counterpart, drawn as a named placeholder and not as a
-    // lookalike. See [NativeOnlyPlaceholder] for why this is the honest shape rather than a
-    // gap in the implementation.
-    in WEAR_NATIVE_ONLY ->
-      NativeOnlyPlaceholder(node, measured) {
-        // Every slot's children, flattened. A placeholder cannot lay a child out the way the real
-        // component would — that is what makes it a placeholder — but dropping the children would
-        // hide whole subtrees from the layers panel's counterpart on the canvas, and an icon
-        // inside an icon button is the thing an author is looking for.
-        node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
       }
-    // A pack's component: declared by the catalog, proven by another catalog's record, and drawn
-    // here as its name and place for the reason the Wear ones are — the browser cannot link the
-    // classes that draw it. The caption says whose it is, because a `Session Card` on a Material
-    // 3 palette is a thing worth being told came from Confetti.
-    in nativeOnly ->
-      NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
-        node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+      "m3/snackbar-host" ->
+        if (node.bool("visible")) Snackbar(measured) { Text(node.string("message")) }
+        else Box(measured)
+      "m3/filter-chip" ->
+        FilterChip(
+          selected = node.resolvedBool("selected", state),
+          onClick = activate,
+          modifier = measured,
+          enabled = enabled,
+          label = { slot("label").forEach { child(it, Modifier) } },
+          leadingIcon =
+            slot("leadingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
+              { ids.forEach { child(it, Modifier) } }
+            },
+        )
+      // Both read state, because a tab row is the one place where clicking is the whole point. The
+      // click already reached the reducer; the row drew its indicator from the literal the design
+      // was
+      // saved with and the tab drew its own selection the same way, so the press moved the variable
+      // and nothing on the canvas moved with it.
+      "m3/primary-tab-row" ->
+        PrimaryTabRow(node.resolvedInteger("selectedIndex", state), measured) {
+          slot("tabs").forEach { child(it, Modifier) }
+        }
+      "m3/tab" ->
+        Tab(
+          node.resolvedBool("selected", state),
+          activate,
+          measured,
+          enabled = enabled,
+          text = { slot("text").forEach { child(it, Modifier) } },
+        )
+      "m3/list-item" ->
+        LegacyListItem(
+          node,
+          measured,
+          slot("headline"),
+          slot("supporting"),
+          slot("trailing"),
+          child,
+        )
+      "m3/surface" ->
+        Surface(
+          measured,
+          shape = node.shape(themeCornerRadius),
+          color = node.color("containerColor", Color.Transparent),
+          tonalElevation = node.float("tonalElevationDp").dp,
+        ) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      "m3/card" ->
+        Card(
+          measured,
+          shape = node.shape(themeCornerRadius),
+          elevation = CardDefaults.cardElevation(defaultElevation = node.float("elevationDp").dp),
+          colors =
+            CardDefaults.cardColors(
+              node.color("containerColor", MaterialTheme.colorScheme.surfaceContainer)
+            ),
+        ) {
+          // Filled only along the axes the card was given a size on — see [cardContentFill] for why
+          // `fillMaxSize` here made a card with no height swallow its column (#483).
+          val fill = node.cardContentFill()
+          Box(
+            Modifier.then(if (fill.width) Modifier.fillMaxWidth() else Modifier)
+              .then(if (fill.height) Modifier.fillMaxHeight() else Modifier)
+          ) {
+            slot("content").forEach { id ->
+              val item = document.nodes.getValue(id)
+              val parentSizing =
+                if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
+              child(
+                id,
+                parentSizing.align(alignmentFor(item.boxAlignment())).zIndex(item.float("zIndex")),
+              )
+            }
+          }
+        }
+      // `onCheckedChange` rather than the clickable modifier every node gets: a control that
+      // reports
+      // its own change is what makes the box tickable in the live playground, and Material draws
+      // the
+      // ripple and the state layer for it.
+      "m3/checkbox" ->
+        Checkbox(
+          checked = node.resolvedBool("checked", state),
+          onCheckedChange = { activate() },
+          modifier = measured,
+          enabled = enabled,
+        )
+      "m3/switch" ->
+        Switch(
+          checked = node.resolvedBool("checked", state),
+          onCheckedChange = { activate() },
+          modifier = measured,
+          enabled = enabled,
+        )
+      "m3/slider" -> {
+        // The variable the slider writes, the same seam a text field's `value` uses. A slider with
+        // no
+        // variable still moves — Material needs a value to draw a thumb — but the movement goes
+        // nowhere, which is what an unbound control means everywhere else in this catalog.
+        val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
+        val from = node.float("valueFrom", 0f)
+        val to = node.float("valueTo", 1f).coerceAtLeast(from)
+        val bound = variable?.let { state[it]?.toFloatOrNull() }
+        Slider(
+          value = (bound ?: node.float("value")).coerceIn(from, to),
+          onValueChange = { next ->
+            if (variable != null) host.setState(variable, next.toString())
+          },
+          modifier = measured,
+          enabled = enabled,
+          valueRange = from..to,
+          steps = node.integer("steps"),
+        )
       }
-    // On the palette, exportable, rendered by its own catalog — and this canvas has no case for
-    // it. The shelf already promises exactly this picture; see [LocalUiBuilderCatalogComponentIds]
-    // for why membership answers the question and `adapterStatus` does not.
-    //
-    // Below every specific case, so it can only ever catch an id that would otherwise have drawn
-    // an error: nothing this renderer knows how to draw can be demoted to a placeholder by it.
-    // Both of these ask about the COMPONENT id, not the adapter id above, which is why they are an
-    // `if` inside the `else` rather than two more `when` branches. Keying the membership test on
-    // the adapter would mean a component whose catalog names an adapter this build lacks — the one
-    // case item 17 exists to handle — comparing an adapter id against a set of component ids,
-    // missing, and drawing an ERROR where the contract says it must draw a placeholder.
-    else ->
-      if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {
-        // On the palette, exportable, rendered by its own catalog — and this canvas has no case
-        // for it, either because its id has no branch or because the adapter it named is one this
-        // build does not ship. The shelf already promises exactly this picture.
+      "m3/progress-indicator" -> {
+        val variable = node.obj("progress")["variable"]?.jsonPrimitive?.contentOrNull
+        val fraction =
+          (variable?.let { state[it]?.toFloatOrNull() } ?: node.float("progress")).coerceIn(0f, 1f)
+        // Indeterminate is Material's other overload rather than a value, and the document
+        // environment freezes animation, so what the canvas shows is its first frame. That is the
+        // honest still of a thing that moves, and it is what makes the render diffable.
+        val indeterminate = node.bool("indeterminate")
+        if (node.string("variant") == "circular") {
+          if (indeterminate) CircularProgressIndicator(modifier = measured)
+          else CircularProgressIndicator(progress = { fraction }, modifier = measured)
+        } else {
+          if (indeterminate) LinearProgressIndicator(modifier = measured)
+          else LinearProgressIndicator(progress = { fraction }, modifier = measured)
+        }
+      }
+      "m3/radio-button" ->
+        RadioButton(
+          selected = node.resolvedBool("selected", state),
+          onClick = activate,
+          modifier = measured,
+          enabled = enabled,
+        )
+      "m3/text-field" -> {
+        // The variable the field writes, not a local `remember`. A design's text field is a view of
+        // a
+        // declared state variable — that is what makes typing in the canvas change the design
+        // rather
+        // than a field's own private memory, and it is the same seam `m3/search-input-field` uses.
+        val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
+        val value = variable?.let(state::get) ?: node.string("value")
+        val label: (@Composable () -> Unit)? =
+          slot("label").takeIf(List<String>::isNotEmpty)?.let { ids ->
+            { ids.forEach { child(it, Modifier) } }
+          }
+        val placeholder: (@Composable () -> Unit)? =
+          slot("placeholder").takeIf(List<String>::isNotEmpty)?.let { ids ->
+            { ids.forEach { child(it, Modifier) } }
+          }
+        val supporting: (@Composable () -> Unit)? =
+          slot("supportingText").takeIf(List<String>::isNotEmpty)?.let { ids ->
+            { ids.forEach { child(it, Modifier) } }
+          }
+        val leading: (@Composable () -> Unit)? =
+          slot("leadingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
+            { ids.forEach { child(it, Modifier) } }
+          }
+        val trailing: (@Composable () -> Unit)? =
+          slot("trailingIcon").takeIf(List<String>::isNotEmpty)?.let { ids ->
+            { ids.forEach { child(it, Modifier) } }
+          }
+        val onValueChange: (String) -> Unit = { next ->
+          if (variable != null) host.setState(variable, next)
+        }
+        if (node.string("variant") == "outlined") {
+          OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = measured,
+            enabled = enabled,
+            readOnly = node.bool("readOnly"),
+            label = label,
+            placeholder = placeholder,
+            supportingText = supporting,
+            leadingIcon = leading,
+            trailingIcon = trailing,
+            isError = node.bool("isError"),
+            singleLine = node.bool("singleLine", true),
+          )
+        } else {
+          TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = measured,
+            enabled = enabled,
+            readOnly = node.bool("readOnly"),
+            label = label,
+            placeholder = placeholder,
+            supportingText = supporting,
+            leadingIcon = leading,
+            trailingIcon = trailing,
+            isError = node.bool("isError"),
+            singleLine = node.bool("singleLine", true),
+          )
+        }
+      }
+      "m3/dialog" -> {
+        if (
+          uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+            UiBuilderRenderStrategy.AUTHORING_ADAPTER
+        ) {
+          BuilderDialogSurface(
+            node = node,
+            modifier = measured,
+            icon = { next -> slot("icon").forEach { child(it, next) } },
+            title = { next -> slot("title").forEach { child(it, next) } },
+            text = { next -> slot("text").forEach { child(it, next) } },
+            hasIcon = slot("icon").isNotEmpty(),
+            hasTitle = slot("title").isNotEmpty(),
+            hasText = slot("text").isNotEmpty(),
+            buttons = { next ->
+              slot("dismissButton").forEach { child(it, next) }
+              slot("confirmButton").forEach { child(it, next) }
+            },
+          )
+        } else {
+          AlertDialog(
+            onDismissRequest = {},
+            confirmButton = { slot("confirmButton").forEach { child(it, Modifier) } },
+            modifier = measured,
+            dismissButton = { slot("dismissButton").forEach { child(it, Modifier) } },
+            icon = { slot("icon").forEach { child(it, Modifier) } },
+            title = { slot("title").forEach { child(it, Modifier) } },
+            text = { slot("text").forEach { child(it, Modifier) } },
+            shape = RoundedCornerShape(node.float("shapeDp", DIALOG_CORNER_DP).dp),
+            containerColor =
+              node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHigh),
+            tonalElevation = node.float("tonalElevationDp", DIALOG_TONAL_ELEVATION_DP).dp,
+          )
+        }
+      }
+      "m3/date-picker" -> BuilderDatePicker(node, measured)
+      "m3/time-picker" -> BuilderTimePicker(node, measured)
+      "m3/icon-button" ->
+        IconButton(
+          onClick = activate,
+          modifier =
+            measured
+              .size(node.float("sizeDp", 48f).dp)
+              .then(
+                if ("selected" in node.properties) {
+                  Modifier.background(Color.Black.copy(alpha = 0.46f), CircleShape)
+                } else {
+                  Modifier
+                }
+              ),
+          enabled = enabled,
+        ) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      "m3/button" ->
+        BuilderButton(node, measured, activate, enabled) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      "m3/horizontal-floating-toolbar" ->
+        CompatibleFloatingToolbar(node, measured) {
+          slot("content").forEach { child(it, Modifier) }
+        }
+      "m3/horizontal-divider" ->
+        HorizontalDivider(
+          measured,
+          // Absent means Material's own thickness, not zero — a hairline is what a divider is, and
+          // `float(name)`'s zero fallback would have drawn nothing at all.
+          thickness = node.dimension("thicknessDp") ?: DividerDefaults.Thickness,
+          color = node.color("color", MaterialTheme.colorScheme.outlineVariant),
+        )
+      "m3/icon" -> BuilderIcon(node, measured)
+      "m3/text" ->
+        Text(
+          node.string("text"),
+          measured,
+          color = node.color("color", Color.Unspecified),
+          style = node.textStyle(),
+          fontWeight = node.fontWeight(),
+          fontStyle = node.fontStyle(),
+          fontSize =
+            node.float("fontSizeSp").takeIf { it > 0f }?.sp
+              ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+          lineHeight =
+            node.float("lineHeightSp").takeIf { it > 0f }?.sp
+              ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+          letterSpacing =
+            node.float("letterSpacingSp").takeIf { "letterSpacingSp" in node.properties }?.sp
+              ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+          textDecoration = node.textDecoration(),
+          minLines = node.integer("minLines", 1),
+          maxLines = node.integer("maxLines", Int.MAX_VALUE),
+          softWrap = node.bool("softWrap", true),
+          overflow = node.textOverflow(),
+          textAlign = node.textAlign(),
+          onTextLayout = { host.recordTextLayout(path, it) },
+        )
+      "asset/image" -> AssetImage(document, node, measured)
+      "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
+      "shape/radial-gradient" -> {
+        val inner =
+          node
+            .color("innerColor", MaterialTheme.colorScheme.primary)
+            .copy(alpha = node.float("innerAlpha", 1f))
+        val outer = node.color("outerColor", Color.Transparent)
+        Box(
+          measured.drawBehind {
+            drawRect(
+              Brush.radialGradient(
+                listOf(inner, outer),
+                center = if (node.string("center") == "topStart") Offset.Zero else center,
+                radius = size.maxDimension * 0.82f,
+              )
+            )
+          }
+        )
+      }
+      "shape/colour-dot" ->
+        Box(
+          measured
+            .size(node.float("diameterDp", 8f).dp)
+            .clip(CircleShape)
+            .background(Color(parseArgb(node.string("color"))))
+        )
+      // A Wear component with no Material 3 counterpart, drawn as a named placeholder and not as a
+      // lookalike. See [NativeOnlyPlaceholder] for why this is the honest shape rather than a
+      // gap in the implementation.
+      in WEAR_NATIVE_ONLY ->
         NativeOnlyPlaceholder(node, measured) {
-          // The children, for the reason the Wear and pack placeholders keep theirs: an icon
-          // inside an icon button is the thing an author is looking for, and dropping it would
-          // hide whole subtrees from the canvas.
+          // Every slot's children, flattened. A placeholder cannot lay a child out the way the real
+          // component would — that is what makes it a placeholder — but dropping the children would
+          // hide whole subtrees from the layers panel's counterpart on the canvas, and an icon
+          // inside an icon button is the thing an author is looking for.
           node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
         }
-      } else {
-        // Not the catalog's at all. Now the only thing this says, and it is true when it says it.
-        UnsupportedComponentDiagnostic(node.componentId, measured)
-      }
+      // A pack's component: declared by the catalog, proven by another catalog's record, and drawn
+      // here as its name and place for the reason the Wear ones are — the browser cannot link the
+      // classes that draw it. The caption says whose it is, because a `Session Card` on a Material
+      // 3 palette is a thing worth being told came from Confetti.
+      in nativeOnly ->
+        NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
+          node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+        }
+      // On the palette, exportable, rendered by its own catalog — and this canvas has no case for
+      // it. The shelf already promises exactly this picture; see
+      // [LocalUiBuilderCatalogComponentIds]
+      // for why membership answers the question and `adapterStatus` does not.
+      //
+      // Below every specific case, so it can only ever catch an id that would otherwise have drawn
+      // an error: nothing this renderer knows how to draw can be demoted to a placeholder by it.
+      // Both of these ask about the COMPONENT id, not the adapter id above, which is why they are
+      // an
+      // `if` inside the `else` rather than two more `when` branches. Keying the membership test on
+      // the adapter would mean a component whose catalog names an adapter this build lacks — the
+      // one
+      // case item 17 exists to handle — comparing an adapter id against a set of component ids,
+      // missing, and drawing an ERROR where the contract says it must draw a placeholder.
+      else ->
+        if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {
+          // On the palette, exportable, rendered by its own catalog — and this canvas has no case
+          // for it, either because its id has no branch or because the adapter it named is one this
+          // build does not ship. The shelf already promises exactly this picture.
+          NativeOnlyPlaceholder(node, measured) {
+            // The children, for the reason the Wear and pack placeholders keep theirs: an icon
+            // inside an icon button is the thing an author is looking for, and dropping it would
+            // hide whole subtrees from the canvas.
+            node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
+          }
+        } else {
+          // Not the catalog's at all. Now the only thing this says, and it is true when it says it.
+          UnsupportedComponentDiagnostic(node.componentId, measured)
+        }
+    }
   }
 }
 
