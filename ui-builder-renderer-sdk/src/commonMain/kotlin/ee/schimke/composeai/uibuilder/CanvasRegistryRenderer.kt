@@ -78,6 +78,7 @@ fun CanvasDocumentScope.RenderCanvasNode(
       mode = mode,
       renderChild = renderChild,
       dispatchEvent = prepared::dispatch,
+      updateState = ::setState,
       recordText = { result -> recordTextLayout(entry.path, result) },
     )
   ) {
