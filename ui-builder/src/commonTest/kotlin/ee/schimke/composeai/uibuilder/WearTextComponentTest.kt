@@ -33,6 +33,7 @@ import kotlin.test.assertTrue
 class WearTextComponentTest {
   @Test
   fun `text nodes are recognised on both platforms`() {
+    assertTrue("material3/Text".isUiBuilderTextComponent())
     assertTrue("m3/text".isUiBuilderTextComponent())
     // The one that regressed before. `wear-m3/text` was recognised only because the borrow table
     // mapped it onto `m3/text`; with the table gone it has to be named, or Wear text silently
