@@ -95,6 +95,10 @@ fun CanvasRenderNode.renderAdapter(
           content(itemScope, item.node)
         }
       },
+      countItems = { name -> slot(name).size },
+      renderItem = { name, index, next ->
+        slot(name).getOrNull(index)?.let { item -> renderChild(item, next) }
+      },
       dispatchEvent = dispatchEvent,
       recordText = recordText,
     )
@@ -122,6 +126,8 @@ class CanvasNodeScope(
   private val renderItems:
     @Composable
     (String, @Composable CanvasItemScope.(UiBuilderNode) -> Unit) -> Unit,
+  private val countItems: (String) -> Int,
+  private val renderItem: @Composable (String, Int, Modifier) -> Unit,
   private val dispatchEvent: (String) -> Unit,
   private val recordText: (TextLayoutResult) -> Unit,
 ) {
@@ -133,6 +139,22 @@ class CanvasNodeScope(
   @Composable
   fun Items(name: String, content: @Composable CanvasItemScope.(UiBuilderNode) -> Unit) {
     renderItems(name, content)
+  }
+
+  /** Number of resolved descendants in [name], for receiver-scoped lazy layout APIs. */
+  fun itemCount(name: String): Int = countItems(name)
+
+  /**
+   * Render one resolved descendant from [name].
+   *
+   * This is the indexed counterpart to [Items]: a catalog adapter can let a real lazy-layout
+   * receiver decide when to compose each item while traversal, instance paths and inspection remain
+   * in the SDK. An out-of-range index emits nothing so a half-authored document cannot take down
+   * the canvas.
+   */
+  @Composable
+  fun Item(name: String, index: Int, modifier: Modifier = Modifier) {
+    renderItem(name, index, modifier)
   }
 
   fun dispatch(event: String) = dispatchEvent(event)
