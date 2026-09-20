@@ -403,101 +403,6 @@ fun uiBuilderLayers(editorOverlay: Boolean): List<UiBuilderLayer> =
   if (editorOverlay) listOf(UiBuilderLayer.Design, UiBuilderLayer.EditorOverlay)
   else listOf(UiBuilderLayer.Design)
 
-sealed interface UiBuilderSemanticActionResult {
-  data object Applied : UiBuilderSemanticActionResult
-
-  data class Rejected(val code: String, val message: String) : UiBuilderSemanticActionResult
-}
-
-internal data class UiBuilderSemanticActionEntry(
-  val enabled: Boolean = true,
-  val activate: (() -> Unit)? = null,
-  val scrollBy: ((Float) -> Float)? = null,
-)
-
-class UiBuilderSemanticActionController {
-  private var entries = emptyMap<String, UiBuilderSemanticActionEntry>()
-  private var viewportBounds: UiBuilderPixelBounds? = null
-
-  internal fun install(
-    value: Map<String, UiBuilderSemanticActionEntry>,
-    viewport: UiBuilderPixelBounds?,
-  ) {
-    entries = value
-    viewportBounds = viewport
-  }
-
-  fun dispatch(
-    action: CatalogRuntimeAction,
-    snapshot: UiBuilderInspectionSnapshot?,
-  ): UiBuilderSemanticActionResult {
-    if (
-      snapshot == null ||
-        snapshot.documentId != action.documentId ||
-        snapshot.documentRevision != action.documentRevision
-    ) {
-      return UiBuilderSemanticActionResult.Rejected(
-        "STALE_DOCUMENT",
-        "action does not target the current inspection snapshot",
-      )
-    }
-    val inspected =
-      snapshot.nodes.singleOrNull { it.nodeId == action.nodeId }
-        ?: return UiBuilderSemanticActionResult.Rejected(
-          "UNKNOWN_NODE",
-          "semantic node was not found",
-        )
-    val bounds = inspected.bounds
-    val viewport = viewportBounds
-    if (bounds == null || viewport == null || !bounds.intersects(viewport)) {
-      return UiBuilderSemanticActionResult.Rejected(
-        "ACTION_NOT_VISIBLE",
-        "semantic node is not measured inside the current Compose viewport",
-      )
-    }
-    val entry =
-      entries[action.nodeId]
-        ?: return UiBuilderSemanticActionResult.Rejected(
-          "ACTION_NOT_AVAILABLE",
-          "semantic node does not expose this action in the current composition",
-        )
-    return when (action.kind) {
-      "activate" -> {
-        if (!entry.enabled || inspected.semantics.enabled == false) {
-          UiBuilderSemanticActionResult.Rejected("ACTION_DISABLED", "semantic node is disabled")
-        } else if ("click" !in inspected.semantics.actions || entry.activate == null) {
-          UiBuilderSemanticActionResult.Rejected(
-            "ACTION_NOT_AVAILABLE",
-            "semantic node does not expose activate",
-          )
-        } else {
-          entry.activate.invoke()
-          UiBuilderSemanticActionResult.Applied
-        }
-      }
-      "scrollBy" -> {
-        val scrollBy =
-          entry.scrollBy
-            ?: return UiBuilderSemanticActionResult.Rejected(
-              "ACTION_NOT_AVAILABLE",
-              "semantic node does not expose vertical scrollBy",
-            )
-        scrollBy(requireNotNull(action.deltaY).toFloat())
-        UiBuilderSemanticActionResult.Applied
-      }
-      else -> UiBuilderSemanticActionResult.Rejected("UNSUPPORTED_ACTION", "unsupported action")
-    }
-  }
-}
-
-private fun UiBuilderPixelBounds.intersects(other: UiBuilderPixelBounds): Boolean =
-  width > 0f &&
-    height > 0f &&
-    x < other.right &&
-    right > other.x &&
-    y < other.bottom &&
-    bottom > other.y
-
 /** Native Compose design pixels plus an optional sibling-only editor overlay. */
 @Composable
 fun UiBuilderSurface(
@@ -4415,21 +4320,6 @@ private val JetcasterDarkColorScheme =
     surfaceContainerHigh = Color(0xFF282A30),
     surfaceContainerHighest = Color(0xFF33353B),
   )
-
-/**
- * Whether a component id is a text node, on either platform.
- *
- * This replaces `wearScreenStandIn`, a table that mapped `wear-m3/text`, `wear-m3/card` and
- * `wear-m3/button` onto their Material 3 near-twins so the canvas could draw *something* for them.
- * Every Wear id is drawn by Wear Compose now, so the table has no drawing left to do — but it had
- * quietly acquired a second job, which is this one: `UiBuilderInspection` used "maps to `m3/text`"
- * as its test for "is a text node", and deleting the table without replacing that would have
- * silently stopped Wear text reporting its layout.
- *
- * A predicate rather than a mapping, because that is what the caller actually wanted to ask.
- */
-internal fun String.isUiBuilderTextComponent(): Boolean =
-  this == "m3/text" || this == "wear-m3/text"
 
 /**
  * A dialog drawn where it sits, with `AlertDialog`'s own surface, spacing and button row.

@@ -437,7 +437,7 @@ Wasm boundary. The executable
 [`ui-builder-renderer.spec.mjs`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/ui-builder-renderer.spec.mjs) proves that the
 overlay maps measured bounds across the sandbox surface, remains pointer-inert, and does not change
 the rendered pixels. Runtime manifest validation is covered by
-[`CatalogRuntimeProtocolTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/CatalogRuntimeProtocolTest.kt),
+[`CatalogRuntimeProtocolTest`](../../ui-builder-renderer-sdk/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/CatalogRuntimeProtocolTest.kt),
 and exact immutable server hosting by
 [`ServeUiBuilderRuntimeAssetsTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt).
 Deployments still need an explicit support-window and retirement policy for retained bundles; a
@@ -511,7 +511,7 @@ supported text/groups, and rasterizes within the product threshold.
       zero-pixel/zero-layout sibling-overlay invariance are
       covered by
       [`ServeUiBuilderRuntimeAssetsTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderRuntimeAssetsTest.kt),
-      [`CatalogRuntimeProtocolTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/CatalogRuntimeProtocolTest.kt),
+      [`CatalogRuntimeProtocolTest`](../../ui-builder-renderer-sdk/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/CatalogRuntimeProtocolTest.kt),
       and
       [`ui-builder-renderer.spec.mjs`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/preview-harness/ui-builder-renderer.spec.mjs).
       Runtime routes have no floating alias, so retained exact bundles remain addressable by id.

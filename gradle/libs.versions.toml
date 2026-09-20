@@ -155,8 +155,10 @@ composeai-preview-daemon = "3.8.1"
 # that reads the dictionary in scope (compose-preview-contracts#57) — which is the wire behind the
 # component placements and loop rows this repository's canvas and exporter already draw from its
 # own document model.
-# 3.1.0 is the first release publishing `compose-preview-contracts-bom`.
-composeai-contracts = "3.3.0"
+# 3.1.0 is the first release publishing `compose-preview-contracts-bom`. 3.4.0 moves the
+# catalog-renderer runtime manifest, descriptor, iframe and inspection wire types into their shared
+# home, together with canonical integrity framing.
+composeai-contracts = "3.4.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"

@@ -169,7 +169,7 @@ rootProject.name = "compose-ui-builder"
 
 // ── The UI builder ─────────────────────────────────────────────────────────────────────────────
 //
-// Nine modules, extracted from yschimke/compose-preview-server, where they were already a second
+// Extracted from yschimke/compose-preview-server, where these modules were already a second
 // project with an enforced boundary (`docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`, which came with
 // them). That boundary is now a repository boundary, and the four modules its table named as seams
 // are what the server still consumes.
@@ -185,6 +185,10 @@ include(":ui-builder-export")
 include(":ui-builder-runtime")
 
 include(":ui-builder-renderer")
+
+// The catalog-facing source seam: protocol, inspection DTOs and the sandboxed Wasm host. Catalogs
+// compile it from a pinned source checkout and ship only their self-contained renderer ZIP.
+include(":ui-builder-renderer-sdk")
 
 include(":ui-builder-web")
 

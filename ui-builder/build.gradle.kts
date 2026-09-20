@@ -282,6 +282,9 @@ kotlin {
       // `:ui-builder-renderer` is that consumer, and with the dependency hidden its wasmJs compile
       // fails on "Cannot access class UiBuilderDocument. Check your module classpath".
       api(project(":ui-builder-export"))
+      // Public protocol and inspection types moved to the catalog renderer SDK. Keep this `api` so
+      // existing consumers of :ui-builder see the same signatures transitively.
+      api(project(":ui-builder-renderer-sdk"))
       implementation(libs.composeai.rc.player.compose)
       implementation(libs.kotlinx.serialization.json)
       implementation(project(":ui-builder-artwork"))

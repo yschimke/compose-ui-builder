@@ -5,7 +5,7 @@ real, compiled catalog components into a semantic Compose tree, sees that tree r
 Compose/Wasm, and exports the same saved design as Figma-compatible SVG or readable Compose source.
 
 Extracted from [`yschimke/compose-preview-server`](https://github.com/yschimke/compose-preview-server),
-where these nine modules were already a second project with an enforced boundary. That boundary is
+where these modules were already a second project with an enforced boundary. That boundary is
 now a repository boundary; the document that defined it came with them and is still the normative
 statement of what may depend on what
 ([`docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`](docs/design/UI_BUILDER_PROJECT_BOUNDARY.md)).
@@ -23,6 +23,7 @@ for running it.
 | `:ui-builder-runtime` | JVM | the design service: state, catalog validation, revision-pinned export |
 | `:ui-builder-export` | `jvm`, `wasmJs` | design → screen-model projection |
 | `:ui-builder-renderer` | `wasmJs` | the sandboxed renderer-only runtime |
+| `:ui-builder-renderer-sdk` | `jvm`, `wasmJs` | catalog-facing renderer protocol, inspection model and sandbox host |
 | `:ui-builder-web` | — | packages the editor's Wasm output as an immutable archive |
 | `:ui-builder-render-bundle` | — | packages the editor's JVM previews as the polyglot render bundle |
 | `:ui-builder-artwork` | `jvm`, `wasmJs` | offline artwork bindings |

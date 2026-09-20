@@ -15,6 +15,7 @@ bin/
 
 # Kotlin
 .kotlin/
+kotlin-js-store/
 
 # Java
 *.class
@@ -54,4 +55,3 @@ __pycache__/
 # for checkouts that still carry a pre-#3407 `<moduleDir>/.compose-preview-history/`, which the
 # daemon keeps using when present. Ignore at any depth.
 .compose-preview-history/
-

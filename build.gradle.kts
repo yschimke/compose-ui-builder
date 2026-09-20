@@ -92,6 +92,7 @@ tasks.named("check") {
     ":ui-builder-reference-jetcaster:check",
     ":ui-builder-render-bundle:check",
     ":ui-builder-renderer:check",
+    ":ui-builder-renderer-sdk:check",
     ":ui-builder-runtime:check",
     ":ui-builder-web:check",
   )
