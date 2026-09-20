@@ -3443,7 +3443,10 @@ private val HANDLED_FIELDS =
     "m3/progress-indicator" to HandledFields(setOf("variant", "progress", "indeterminate")),
     "m3/radio-button" to HandledFields(setOf("selected", "enabled"), events = setOf("click")),
     "m3/search-bar" to
-      HandledFields(setOf("expanded", "tonalElevationDp"), slots = setOf("inputField")),
+      HandledFields(
+        setOf("expanded", "tonalElevationDp"),
+        slots = setOf("inputField", "expandedContent"),
+      ),
     "m3/search-input-field" to
       HandledFields(
         setOf("enabled", "value"),
