@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
+import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
@@ -85,6 +86,49 @@ class CanvasAdapterIdTest {
         onAllNodesWithText("Routed", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty(),
         "the node did not draw through the adapter the catalog named — it should have been drawn " +
           "as m3/text and shown its text",
+      )
+    }
+
+  @Test
+  fun `a catalog can normalize a property only for its canvas adapter`() =
+    runDesktopComposeUiTest(width = 400, height = 400) {
+      val source =
+        document("acme/headline", "ignored").let { document ->
+          document.copy(
+            nodes =
+              document.nodes.mapValues { (_, node) ->
+                node.copy(
+                  properties =
+                    JsonObject(
+                      mapOf(
+                        "remoteText" to
+                          JsonObject(
+                            mapOf(
+                              "type" to JsonPrimitive("string"),
+                              "value" to JsonPrimitive("Mapped"),
+                            )
+                          )
+                      )
+                    )
+                )
+              }
+          )
+        }
+      val mapping =
+        CanvasAdapterMappingV1.Builder()
+          .also { it.properties = mapOf("text" to "remoteText") }
+          .build()
+      setContent {
+        UiBuilderSurface(
+          source,
+          catalogComponentIds = setOf("acme/headline"),
+          canvasAdapterIds = mapOf("acme/headline" to "m3/text"),
+          canvasAdapterMappings = mapOf("acme/headline" to mapping),
+        )
+      }
+
+      assertTrue(
+        onAllNodesWithText("Mapped", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
       )
     }
 

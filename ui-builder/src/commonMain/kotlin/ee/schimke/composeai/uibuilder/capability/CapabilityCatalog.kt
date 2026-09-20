@@ -8,6 +8,8 @@ import ee.schimke.composeai.uibuilder.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.UiBuilderPreviewSurfaces
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
+import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -25,6 +27,7 @@ data class CapabilityCatalog(
   val benchmark: CapabilityBenchmark,
   val statusSemantics: JsonObject = JsonObject(emptyMap()),
   val components: List<ComponentCapability>,
+  val browserPreview: BrowserPreviewCapabilityV1? = null,
 ) {
   val componentsById: Map<String, ComponentCapability> by lazy {
     components.associateBy(ComponentCapability::componentId)
@@ -275,6 +278,7 @@ data class WasmCapability(
    * picture the shelf already promises for a component with no adapter.
    */
   val canvas: String? = null,
+  val canvasMapping: CanvasAdapterMappingV1? = null,
 )
 
 @Serializable

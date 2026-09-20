@@ -186,6 +186,7 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
 import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
 import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
+import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import ee.schimke.wearcmp.port.LocalWearDeviceConfiguration
 import ee.schimke.wearcmp.port.WearDeviceConfiguration
 import kotlin.io.encoding.Base64
@@ -242,6 +243,25 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
  */
 internal val LocalUiBuilderCanvasAdapters =
   staticCompositionLocalOf<Map<String, String>> { emptyMap() }
+
+/** Canvas-only vocabulary projections for the adapters above. */
+internal val LocalUiBuilderCanvasAdapterMappings =
+  staticCompositionLocalOf<Map<String, CanvasAdapterMappingV1>> { emptyMap() }
+
+/** A read-only adapter view: the authored node and every export remain untouched. */
+private fun UiBuilderNode.forCanvas(mapping: CanvasAdapterMappingV1?): UiBuilderNode {
+  if (mapping == null) return this
+  val mappedProperties = buildMap {
+    putAll(mapping.defaults)
+    putAll(properties)
+    mapping.properties.forEach { (target, source) -> properties[source]?.let { put(target, it) } }
+  }
+  val mappedSlots = buildMap {
+    putAll(slots)
+    mapping.slots.forEach { (target, source) -> slots[source]?.let { put(target, it) } }
+  }
+  return copy(properties = JsonObject(mappedProperties), slots = mappedSlots)
+}
 
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
 
@@ -431,6 +451,9 @@ fun UiBuilderSurface(
    * [LocalUiBuilderCanvasAdapters]. Inherited from an enclosing provider, like the two sets above.
    */
   canvasAdapterIds: Map<String, String> = LocalUiBuilderCanvasAdapters.current,
+  /** Canvas-only vocabulary projections paired with [canvasAdapterIds]. */
+  canvasAdapterMappings: Map<String, CanvasAdapterMappingV1> =
+    LocalUiBuilderCanvasAdapterMappings.current,
   /**
    * Draw the design at its whole extent rather than at its frame — see [LocalUiBuilderUnrolled] for
    * what that swaps and what it costs.
@@ -593,6 +616,7 @@ fun UiBuilderSurface(
     LocalUiBuilderNativeOnly provides nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
     LocalUiBuilderCanvasAdapters provides canvasAdapterIds,
+    LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
     LocalUiBuilderUnrolled provides unrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
     *wearDevice,
@@ -750,7 +774,9 @@ private fun RenderNode(
   // Bindings are resolved once, here, rather than at each accessor: below this line a bound
   // property is an ordinary value, so every reader — colour, text, dimension, the modifier chain —
   // sees what the placement passed without knowing a placement happened.
-  val node = authored.withArguments(arguments).withPreviewState(state)
+  val sourceNode = authored.withArguments(arguments).withPreviewState(state)
+  val node =
+    sourceNode.forCanvas(LocalUiBuilderCanvasAdapterMappings.current[sourceNode.componentId])
   val enabled = node.bool("enabled", true)
   val navigate = LocalUiBuilderNavigator.current
   val activate = { node.dispatch("click", state, onState, navigate) }
@@ -849,11 +875,21 @@ private fun RenderNode(
       )
     "wear-m3/switch-button" ->
       WearCanvasSwitchButton(
-        label = node.string("label"),
-        secondaryLabel = node.string("secondaryLabel"),
         checked = node.bool("checked"),
         enabled = node.bool("enabled", true),
         modifier = measured,
+        label = {
+          if (slot("label").isEmpty()) Text(node.string("label"))
+          else slot("label").forEach { child(it, Modifier) }
+        },
+        secondaryLabel =
+          when {
+            slot("secondaryLabel").isNotEmpty() -> ({
+                slot("secondaryLabel").forEach { child(it, Modifier) }
+              })
+            node.string("secondaryLabel").isNotEmpty() -> ({ Text(node.string("secondaryLabel")) })
+            else -> null
+          },
       )
     "wear-m3/slider" ->
       WearCanvasSlider(
@@ -867,19 +903,39 @@ private fun RenderNode(
       )
     "wear-m3/checkbox-button" ->
       WearCanvasCheckboxButton(
-        label = node.string("label"),
-        secondaryLabel = node.string("secondaryLabel"),
         checked = node.bool("checked"),
         enabled = node.bool("enabled", true),
         modifier = measured,
+        label = {
+          if (slot("label").isEmpty()) Text(node.string("label"))
+          else slot("label").forEach { child(it, Modifier) }
+        },
+        secondaryLabel =
+          when {
+            slot("secondaryLabel").isNotEmpty() -> ({
+                slot("secondaryLabel").forEach { child(it, Modifier) }
+              })
+            node.string("secondaryLabel").isNotEmpty() -> ({ Text(node.string("secondaryLabel")) })
+            else -> null
+          },
       )
     "wear-m3/radio-button" ->
       WearCanvasRadioButton(
-        label = node.string("label"),
-        secondaryLabel = node.string("secondaryLabel"),
         selected = node.bool("selected"),
         enabled = node.bool("enabled", true),
         modifier = measured,
+        label = {
+          if (slot("label").isEmpty()) Text(node.string("label"))
+          else slot("label").forEach { child(it, Modifier) }
+        },
+        secondaryLabel =
+          when {
+            slot("secondaryLabel").isNotEmpty() -> ({
+                slot("secondaryLabel").forEach { child(it, Modifier) }
+              })
+            node.string("secondaryLabel").isNotEmpty() -> ({ Text(node.string("secondaryLabel")) })
+            else -> null
+          },
       )
     "wear-m3/stepper" ->
       WearCanvasStepper(
@@ -898,6 +954,11 @@ private fun RenderNode(
         progress = node.float("progress"),
         segments = node.integer("segments", 1),
         enabled = node.bool("enabled", true),
+        modifier = measured,
+      )
+    "wear-m3/page-indicator" ->
+      WearCanvasPageIndicator(
+        vertical = node.string("variant") == "vertical",
         modifier = measured,
       )
     "wear-m3/edge-button" ->
@@ -2367,7 +2428,7 @@ private const val WEAR_EDGE_BUTTON_INSET = 0.04f
  * widget's own `WearWidgetBrush` chain drawn into that same rounded rect.
  */
 @Composable
-private fun WearWidgetContainerScaffold(
+internal fun WearWidgetContainerScaffold(
   node: UiBuilderNode,
   modifier: Modifier,
   spec: WearWidgetHostSpec,

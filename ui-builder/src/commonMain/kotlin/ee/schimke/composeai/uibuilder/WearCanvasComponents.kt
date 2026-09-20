@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.CurvedScope
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AlertDialogContent
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppCard
@@ -34,6 +35,7 @@ import androidx.wear.compose.material3.FailureConfirmationDialogContent
 import androidx.wear.compose.material3.FilledIconButton
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.FilledTonalIconButton
+import androidx.wear.compose.material3.HorizontalPageIndicator
 import androidx.wear.compose.material3.IconButton
 import androidx.wear.compose.material3.LinearProgressIndicator
 import androidx.wear.compose.material3.ListHeader
@@ -57,6 +59,7 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TextButton
 import androidx.wear.compose.material3.TextButtonDefaults
 import androidx.wear.compose.material3.TitleCard
+import androidx.wear.compose.material3.VerticalPageIndicator
 import androidx.wear.compose.material3.confirmationDialogCurvedText
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
@@ -135,19 +138,19 @@ internal fun WearCanvasListSubHeader(
  */
 @Composable
 internal fun WearCanvasSwitchButton(
-  label: String,
-  secondaryLabel: String,
   checked: Boolean,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  label: @Composable RowScope.() -> Unit,
+  secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
   SwitchButton(
     checked = checked,
     onCheckedChange = {},
     modifier = modifier.fillMaxWidth(),
     enabled = enabled,
-    label = { Text(label) },
-    secondaryLabel = secondaryLabel.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+    label = label,
+    secondaryLabel = secondaryLabel,
   )
 }
 
@@ -301,38 +304,38 @@ internal val LocalWearSurfaceTransformation =
 /** Wear's `CheckboxButton`: a full-width labelled row, not the mobile 20dp square. */
 @Composable
 internal fun WearCanvasCheckboxButton(
-  label: String,
-  secondaryLabel: String,
   checked: Boolean,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  label: @Composable RowScope.() -> Unit,
+  secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
   CheckboxButton(
     checked = checked,
     onCheckedChange = {},
     modifier = modifier.fillMaxWidth(),
     enabled = enabled,
-    label = { Text(label) },
-    secondaryLabel = secondaryLabel.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+    label = label,
+    secondaryLabel = secondaryLabel,
   )
 }
 
 /** Wear's `RadioButton`, the selection twin of the checkbox row above. */
 @Composable
 internal fun WearCanvasRadioButton(
-  label: String,
-  secondaryLabel: String,
   selected: Boolean,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  label: @Composable RowScope.() -> Unit,
+  secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
   RadioButton(
     selected = selected,
     onSelect = {},
     modifier = modifier.fillMaxWidth(),
     enabled = enabled,
-    label = { Text(label) },
-    secondaryLabel = secondaryLabel.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+    label = label,
+    secondaryLabel = secondaryLabel,
   )
 }
 
@@ -408,6 +411,20 @@ internal fun WearCanvasProgressIndicator(
     else ->
       CircularProgressIndicator(progress = { clamped }, modifier = modifier, enabled = enabled)
   }
+}
+
+/**
+ * Wear's real page indicators at a deterministic default page.
+ *
+ * Remote Compose carries the pager as a `RemotePageIndicatorState`, which is target state rather
+ * than a scalar an editing canvas can reproduce. The authoritative Browser Preview plays that state
+ * from the exported document; this canvas counterpart deliberately shows page one of four.
+ */
+@Composable
+internal fun WearCanvasPageIndicator(vertical: Boolean, modifier: Modifier = Modifier) {
+  val state = rememberPagerState(initialPage = 0) { 4 }
+  if (vertical) VerticalPageIndicator(pagerState = state, modifier = modifier)
+  else HorizontalPageIndicator(pagerState = state, modifier = modifier)
 }
 
 /**

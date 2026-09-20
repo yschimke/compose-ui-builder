@@ -83,6 +83,14 @@ internal val CapabilityCatalog.canvasAdapterIds: Map<String, String>
       }
       .toMap()
 
+/** Vocabulary projections carried beside [canvasAdapterIds], keyed by source component id. */
+internal val CapabilityCatalog.canvasAdapterMappings:
+  Map<String, ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1>
+  get() =
+    components
+      .mapNotNull { component -> component.wasm.canvasMapping?.let { component.componentId to it } }
+      .toMap()
+
 internal val CapabilityCatalog.nativeOnlyComponentIds: Set<String>
   get() = componentPacks.packs.flatMapTo(mutableSetOf()) { it.componentIds }
 
