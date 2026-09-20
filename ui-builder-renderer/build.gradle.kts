@@ -15,7 +15,7 @@ plugins {
 ktfmt { googleStyle() }
 
 val rendererRuntimeId =
-  providers.gradleProperty("uiBuilderRendererRuntimeId").orElse("m3-2026.09-protocol1")
+  providers.gradleProperty("uiBuilderRendererRuntimeId").orElse("m3-2026.09-protocol2")
 
 kotlin {
   @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
@@ -91,7 +91,7 @@ abstract class AssembleRendererRuntime : DefaultTask() {
     output
       .resolve("runtime-manifest.json")
       .writeText(
-        """{"schema":"compose-ui-builder-runtime/v1","runtimeId":"${runtimeId.get()}","protocolVersion":1,"entrypoint":"index.html","integritySha256":"$integrity"}"""
+        """{"schema":"compose-ui-builder-runtime/v1","runtimeId":"${runtimeId.get()}","protocolVersion":2,"entrypoint":"index.html","integritySha256":"$integrity"}"""
       )
   }
 }
@@ -157,7 +157,7 @@ abstract class VerifyRendererRuntime : DefaultTask() {
       }
       val manifest = zip.getInputStream(zip.getEntry("runtime-manifest.json")).reader().readText()
       check(manifest.contains("\"runtimeId\":\"${expectedRuntimeId.get()}\""))
-      check(manifest.contains("\"protocolVersion\":1"))
+      check(manifest.contains("\"protocolVersion\":2"))
       check(manifest.contains(Regex("\"integritySha256\":\"[a-f0-9]{64}\"")))
       val wasm =
         zip

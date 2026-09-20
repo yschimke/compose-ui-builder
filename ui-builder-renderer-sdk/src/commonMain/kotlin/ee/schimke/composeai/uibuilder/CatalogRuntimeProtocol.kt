@@ -2,9 +2,12 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_INSPECTION_SCHEMA_V1
 import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V1
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V2
 import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_PROTOCOL_VERSION_V2
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererActionV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererMessageV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -14,15 +17,19 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-const val CATALOG_RUNTIME_PROTOCOL_VERSION = UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1
-const val CATALOG_RUNTIME_PROTOCOL_SCHEMA = UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V1
+const val CATALOG_RUNTIME_PROTOCOL_VERSION = UI_BUILDER_RENDERER_PROTOCOL_VERSION_V2
+const val CATALOG_RUNTIME_PROTOCOL_SCHEMA = UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V2
 
 typealias CatalogRuntimeMessage = UiBuilderRendererMessageV1
 
 sealed interface CatalogRuntimeCommand {
   data class Reply(val message: CatalogRuntimeMessage) : CatalogRuntimeCommand
 
-  data class Render(val requestId: String, val document: UiBuilderDocument) : CatalogRuntimeCommand
+  data class Render(
+    val requestId: String,
+    val document: UiBuilderDocument,
+    val surface: UiBuilderRendererSurfaceV2?,
+  ) : CatalogRuntimeCommand
 
   data class DispatchAction(val requestId: String, val action: CatalogRuntimeAction) :
     CatalogRuntimeCommand
@@ -56,6 +63,7 @@ class CatalogRuntimeProtocolEndpoint(
   private val runtimeId: String,
   private val protocolVersion: Int = CATALOG_RUNTIME_PROTOCOL_VERSION,
 ) {
+  private val protocolSchema = rendererProtocolSchema(protocolVersion)
   private var parentOrigin: String? = null
   private var activeDocument: DocumentRef? = null
   private var pendingRender: Pair<String, DocumentRef>? = null
@@ -73,7 +81,7 @@ class CatalogRuntimeProtocolEndpoint(
         return null
       }
     if (
-      message.schema != CATALOG_RUNTIME_PROTOCOL_SCHEMA ||
+      message.schema != protocolSchema ||
         message.runtimeId != runtimeId ||
         message.protocolVersion != protocolVersion ||
         message.requestId.isBlank()
@@ -110,21 +118,51 @@ class CatalogRuntimeProtocolEndpoint(
       }
       "renderDocument" -> {
         if (lockedOrigin == null) return null
+        val renderPayload =
+          if (protocolVersion == UI_BUILDER_RENDERER_PROTOCOL_VERSION_V2) {
+            val documentElement = message.payload["document"] as? JsonObject
+            if (documentElement == null) {
+              return message.error(
+                "INVALID_DOCUMENT",
+                "renderDocument payload is not a UI-builder document",
+              )
+            }
+            val surface =
+              try {
+                RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
+                  UiBuilderRendererSurfaceV2.serializer(),
+                  message.payload.getValue("surface"),
+                )
+              } catch (_: Exception) {
+                return message.error("INVALID_SURFACE", "renderDocument surface is malformed")
+              }
+            if (!surface.isValid()) {
+              return message.error(
+                "INVALID_SURFACE",
+                "renderDocument surface dimensions, density or id are invalid",
+              )
+            }
+            documentElement to surface
+          } else {
+            val documentElement = message.payload["document"] as? JsonObject
+            if (documentElement == null) {
+              return message.error(
+                "INVALID_DOCUMENT",
+                "renderDocument payload is not a UI-builder document",
+              )
+            }
+            documentElement to null
+          }
         val document =
           try {
             RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
               UiBuilderDocument.serializer(),
-              message.payload.getValue("document"),
+              renderPayload.first,
             )
           } catch (_: Exception) {
-            return CatalogRuntimeCommand.Reply(
-              message.reply(
-                "error",
-                buildJsonObject {
-                  put("code", "INVALID_DOCUMENT")
-                  put("message", "renderDocument payload is not a UI-builder document")
-                },
-              )
+            return message.error(
+              "INVALID_DOCUMENT",
+              "renderDocument payload is not a UI-builder document",
             )
           }
         if (document.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull != runtimeId) {
@@ -141,7 +179,7 @@ class CatalogRuntimeProtocolEndpoint(
         activeDocument = null
         pendingActions.clear()
         pendingRender = message.requestId to DocumentRef(document.id, document.revision)
-        CatalogRuntimeCommand.Render(message.requestId, document)
+        CatalogRuntimeCommand.Render(message.requestId, document, renderPayload.second)
       }
       "dispatchAction" -> parseAction(message)
       else ->
@@ -189,6 +227,7 @@ class CatalogRuntimeProtocolEndpoint(
   fun actionRejected(requestId: String, code: String, description: String): CatalogRuntimeMessage {
     pendingActions.remove(requestId)
     return CatalogRuntimeMessage(
+      schema = protocolSchema,
       protocolVersion = protocolVersion,
       runtimeId = runtimeId,
       requestId = requestId,
@@ -207,6 +246,7 @@ class CatalogRuntimeProtocolEndpoint(
     snapshot: UiBuilderInspectionSnapshot,
   ): CatalogRuntimeMessage =
     CatalogRuntimeMessage(
+      schema = protocolSchema,
       protocolVersion = protocolVersion,
       runtimeId = runtimeId,
       requestId = requestId,
@@ -268,6 +308,8 @@ class CatalogRuntimeHostSession(
   private val protocolVersion: Int = CATALOG_RUNTIME_PROTOCOL_VERSION,
   private val rendererOrigin: String = "null",
 ) {
+  private val protocolSchema = rendererProtocolSchema(protocolVersion)
+
   private sealed interface Pending {
     data object Initialize : Pending
 
@@ -305,6 +347,7 @@ class CatalogRuntimeHostSession(
       }
     return RUNTIME_PROTOCOL_JSON.encodeToString(
       CatalogRuntimeMessage(
+        schema = protocolSchema,
         protocolVersion = protocolVersion,
         runtimeId = runtimeId,
         requestId = requestId,
@@ -324,7 +367,7 @@ class CatalogRuntimeHostSession(
       }
     val expected = pending[response.requestId]
     if (
-      response.schema != CATALOG_RUNTIME_PROTOCOL_SCHEMA ||
+      response.schema != protocolSchema ||
         response.protocolVersion != protocolVersion ||
         response.runtimeId != runtimeId ||
         expected == null
@@ -416,6 +459,26 @@ private fun UiBuilderPixelBounds.isValid(): Boolean =
     width <= MAX_INSPECTION_COORDINATE &&
     height <= MAX_INSPECTION_COORDINATE
 
+private fun UiBuilderRendererSurfaceV2.isValid(): Boolean =
+  widthDp.isFinite() &&
+    widthDp > 0f &&
+    widthDp <= MAX_SURFACE_DP &&
+    heightDp.isFinite() &&
+    heightDp > 0f &&
+    heightDp <= MAX_SURFACE_DP &&
+    density.isFinite() &&
+    density > 0f &&
+    density <= MAX_SURFACE_DENSITY &&
+    surfaceId.isNotBlank() &&
+    surfaceId.length <= MAX_SURFACE_ID_LENGTH
+
+private fun rendererProtocolSchema(protocolVersion: Int): String =
+  when (protocolVersion) {
+    UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1 -> UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V1
+    UI_BUILDER_RENDERER_PROTOCOL_VERSION_V2 -> UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V2
+    else -> error("unsupported catalog renderer protocol version: $protocolVersion")
+  }
+
 private fun CatalogRuntimeMessage.reply(type: String, payload: JsonObject) =
   copy(type = type, payload = payload)
 
@@ -439,6 +502,9 @@ private const val MAX_SLOT_CHILDREN = 10_000
 private const val MAX_SEMANTIC_ACTIONS = 64
 private const val MAX_STABILITY_FRAMES = 120
 private const val MAX_INSPECTION_COORDINATE = 1_000_000f
+private const val MAX_SURFACE_DP = 10_000f
+private const val MAX_SURFACE_DENSITY = 16f
+private const val MAX_SURFACE_ID_LENGTH = 256
 
 internal val RUNTIME_PROTOCOL_JSON = Json {
   encodeDefaults = true

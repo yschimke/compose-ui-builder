@@ -184,8 +184,10 @@ Preview remains the separate daemon-backed rung and retains its own resource lim
 
 ## Protocol surfaces
 
-Protocol v2 adds a surface description to `renderDocument` rather than making the renderer infer
-authoring intent by mutating the document:
+Protocol v2 now carries a surface description on `renderDocument` rather than making the renderer
+infer authoring intent by mutating the document. The host still accepts immutable protocol-v1
+runtimes and sends their original document-only payload; a v2 runtime rejects a missing or invalid
+surface before composing:
 
 ```json
 {

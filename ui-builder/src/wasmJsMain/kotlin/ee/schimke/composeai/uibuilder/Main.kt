@@ -243,21 +243,22 @@ private external fun sandboxRendererRuntimeId(): String
 private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit =
   js(
     """(async function () {
-      const protocolVersion = 1;
-      const schema = 'compose-ui-builder-renderer/v1';
-      const root = '/ui-builder/runtime/' + encodeURIComponent(runtimeId) + '/';
+       const root = '/ui-builder/runtime/' + encodeURIComponent(runtimeId) + '/';
       const response = await fetch(root + 'runtime-manifest.json', {
         credentials: 'same-origin', headers: { Accept: 'application/json' }
       });
       if (!response.ok) throw new Error('runtime manifest HTTP ' + response.status);
       const manifest = await response.json();
-      if (manifest.schema !== 'compose-ui-builder-runtime/v1' ||
-          manifest.runtimeId !== runtimeId || manifest.protocolVersion !== protocolVersion ||
+       if (manifest.schema !== 'compose-ui-builder-runtime/v1' ||
+           manifest.runtimeId !== runtimeId || ![1, 2].includes(manifest.protocolVersion) ||
           typeof manifest.entrypoint !== 'string' ||
           !/^[A-Za-z0-9._/-]+$/.test(manifest.entrypoint) ||
           manifest.entrypoint.split('/').some((part) => !part || part === '.' || part === '..')) {
-        throw new Error('pinned runtime manifest does not match the editor protocol');
-      }
+         throw new Error('pinned runtime manifest does not match the editor protocol');
+       }
+       const protocolVersion = manifest.protocolVersion;
+       const schema = 'compose-ui-builder-renderer/v' + protocolVersion;
+       const renderedDocument = JSON.parse(documentJson);
 
       const shell = document.getElementById('composeApp');
       shell.replaceChildren();
@@ -276,17 +277,22 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
 
       let sequence = 0;
       let initialized = false;
-      let initializeTimer = null;
-      const pending = new Map();
+       let initializeTimer = null;
+       let activeSurface = null;
+       const pending = new Map();
       const responses = new Map();
       const rendererGeometry = () => {
-        const frameRect = frame.getBoundingClientRect();
-        const shellRect = shell.getBoundingClientRect();
-        return {
-          offsetX: frameRect.left - shellRect.left,
-          offsetY: frameRect.top - shellRect.top,
-          scaleX: frameRect.width / frame.clientWidth,
-          scaleY: frameRect.height / frame.clientHeight,
+         const frameRect = frame.getBoundingClientRect();
+         const shellRect = shell.getBoundingClientRect();
+         const rendererWidth = activeSurface
+           ? activeSurface.widthDp * activeSurface.density : frame.clientWidth;
+         const rendererHeight = activeSurface
+           ? activeSurface.heightDp * activeSurface.density : frame.clientHeight;
+         return {
+           offsetX: frameRect.left - shellRect.left,
+           offsetY: frameRect.top - shellRect.top,
+           scaleX: frameRect.width / rendererWidth,
+           scaleY: frameRect.height / rendererHeight,
         };
       };
       const rendererToShell = (x, y) => {
@@ -296,7 +302,7 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
           y: geometry.offsetY + y * geometry.scaleY,
         };
       };
-      const request = (type, payload) => {
+       const request = (type, payload) => {
         const requestId = 'browser-' + (++sequence);
         const document = type === 'renderDocument' ? payload?.document : null;
         const action = type === 'dispatchAction' ? payload : null;
@@ -308,8 +314,25 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
         frame.contentWindow.postMessage(JSON.stringify({
           schema, protocolVersion, runtimeId, requestId, type, payload: payload || {}
         }), '*'); // opaque sandbox origins require `*`; source and response origin are checked.
-        return requestId;
-      };
+         return requestId;
+       };
+       const renderPayload = () => {
+         if (protocolVersion === 1) return { document: renderedDocument };
+         const authoredDensity = Number(renderedDocument.environment?.density);
+         const density = Number.isFinite(authoredDensity) && authoredDensity > 0
+           ? authoredDensity : globalThis.devicePixelRatio || 1;
+         activeSurface = {
+           mode: 'authoring-unrolled',
+           widthDp: Math.max(1, frame.clientWidth),
+           heightDp: Math.max(1, frame.clientHeight),
+           density,
+           surfaceId: 'editor',
+         };
+         return {
+           document: renderedDocument,
+           surface: activeSurface,
+         };
+       };
       const finiteBound = (value) => Number.isFinite(value) && Math.abs(value) <= 1000000;
       const validBounds = (bounds) => bounds == null || (
         finiteBound(bounds.x) && finiteBound(bounds.y) &&
@@ -389,7 +412,7 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
           if (initialized) return;
           initialized = true;
           if (initializeTimer !== null) clearInterval(initializeTimer);
-          request('renderDocument', { document: JSON.parse(documentJson) });
+           request('renderDocument', renderPayload());
         } else if (message.type === 'rendered') {
           drawOverlay(message.payload.inspection);
           document.documentElement.dataset.uiBuilderSandboxReady = 'true';

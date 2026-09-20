@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.ComposeViewport
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 
 private var document by mutableStateOf<UiBuilderDocument?>(null)
 private var renderRequest by mutableStateOf<RenderRequest?>(null)
@@ -18,7 +19,12 @@ private var latestSnapshot: UiBuilderInspectionSnapshot? = null
 private var completedRenderRequestId: String? = null
 private lateinit var endpoint: CatalogRuntimeProtocolEndpoint
 
-private data class RenderRequest(val requestId: String, val documentId: String, val revision: Int)
+private data class RenderRequest(
+  val requestId: String,
+  val documentId: String,
+  val revision: Int,
+  val surface: UiBuilderRendererSurfaceV2,
+)
 
 /**
  * Starts the opaque-origin renderer frame and delegates only the Compose drawing to its catalog.
@@ -32,6 +38,7 @@ fun startCatalogRenderer(
     @Composable
     (
       document: UiBuilderDocument,
+      surface: UiBuilderRendererSurfaceV2,
       renderSessionId: String,
       onInspectionSnapshot: (UiBuilderInspectionSnapshot) -> Unit,
     ) -> Unit,
@@ -43,8 +50,14 @@ fun startCatalogRenderer(
       null -> Unit
       is CatalogRuntimeCommand.Reply -> postRuntimeMessage(endpoint.encode(command.message))
       is CatalogRuntimeCommand.Render -> {
+        val surface = command.surface ?: return@installRuntimeReceiver
         renderRequest =
-          RenderRequest(command.requestId, command.document.id, command.document.revision)
+          RenderRequest(
+            command.requestId,
+            command.document.id,
+            command.document.revision,
+            surface,
+          )
         completedRenderRequestId = null
         latestSnapshot = null
         document = command.document
@@ -66,7 +79,7 @@ fun startCatalogRenderer(
   ComposeViewport(viewportContainerId = "composeApp") {
     document?.let { current ->
       val request = renderRequest ?: return@let
-      content(current, request.requestId) { snapshot ->
+      content(current, request.surface, request.requestId) { snapshot ->
         if (
           snapshot.documentId != request.documentId || snapshot.documentRevision != request.revision
         )
