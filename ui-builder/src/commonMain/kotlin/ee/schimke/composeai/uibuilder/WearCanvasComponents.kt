@@ -1,7 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -20,6 +22,7 @@ import androidx.wear.compose.material3.ArcProgressIndicator
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonGroup
 import androidx.wear.compose.material3.Card
+import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CheckboxButton
 import androidx.wear.compose.material3.ChildButton
 import androidx.wear.compose.material3.CircularProgressIndicator
@@ -217,7 +220,11 @@ internal fun WearCanvasTransformingLazyColumn(
   val spec = rememberTransformationSpec()
   TransformingLazyColumn(
     state = state,
-    modifier = modifier.fillMaxWidth(),
+    // `ScreenScaffold` gives this to its list; it is content padding, not padding around a shorter
+    // viewport. That distinction is visible at either end of a round screen: a lazy list needs the
+    // room in its scroll range so its first and last rows can settle clear of the bezel.
+    contentPadding = LocalWearScreenContentPadding.current,
+    modifier = modifier.fillMaxSize(),
     verticalArrangement = Arrangement.spacedBy(verticalSpacingDp.dp),
   ) {
     items(itemCount) { index ->
@@ -225,7 +232,11 @@ internal fun WearCanvasTransformingLazyColumn(
         // The design asked for none, which is a real choice: a stitched `ScrollMode.LONG` capture
         // turns the transformation off in order to stitch, so a list drawn against one wants the
         // same. Both halves are off — the layout half and the drawing half below.
-        item(index, Modifier.fillMaxWidth())
+        item(
+          index,
+          Modifier.fillMaxWidth()
+            .minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding),
+        )
       } else {
         // **Both halves of the transformation.** `transformedHeight` is the layout half — the row
         // gets shorter as it approaches the bezel — and `SurfaceTransformation` is the drawing
@@ -237,7 +248,12 @@ internal fun WearCanvasTransformingLazyColumn(
         CompositionLocalProvider(
           LocalWearSurfaceTransformation provides SurfaceTransformation(spec)
         ) {
-          item(index, Modifier.fillMaxWidth().transformedHeight(this, spec))
+          item(
+            index,
+            Modifier.fillMaxWidth()
+              .minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)
+              .transformedHeight(this, spec),
+          )
         }
       }
     }
@@ -256,6 +272,9 @@ internal val LocalWearScreenListState =
   staticCompositionLocalOf<androidx.wear.compose.foundation.lazy.TransformingLazyColumnState?> {
     null
   }
+
+/** The `ScreenScaffold` content padding the enclosing transforming list must consume. */
+internal val LocalWearScreenContentPadding = staticCompositionLocalOf { PaddingValues() }
 
 /**
  * The row transformation the enclosing Wear list is applying, or null outside one.

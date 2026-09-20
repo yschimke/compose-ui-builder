@@ -9557,6 +9557,32 @@ private fun LiveNativeFrame(
                 }
               }
             }
+          }
+          // A Wear pane has no browser scroll surface: a wheel over it is a turn of the rotating
+          // side button. The stream protocol and daemon call this `rotaryScroll`; previously this
+          // pane only forwarded presses, so native Compose never received the wheel at all.
+          .pointerInput(imageWidth, imageHeight, scale) {
+            awaitPointerEventScope {
+              while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Main)
+                if (event.type != PointerEventType.Scroll) continue
+                val change = event.changes.firstOrNull() ?: continue
+                onInput(
+                  UiBuilderNativeInput(
+                    kind = "rotaryScroll",
+                    pixelX =
+                      (change.position.x / scale).roundToInt().coerceIn(0, imageWidth.toInt() - 1),
+                    pixelY =
+                      (change.position.y / scale).roundToInt().coerceIn(0, imageHeight.toInt() - 1),
+                    // Browser wheel deltas are CSS-pixel motion; the daemon's rotary input is
+                    // device-pixel motion. Keep the same half-pixel conversion the Wasm device
+                    // scene uses so moving from Preview to Native does not double the RSB speed.
+                    scrollDeltaY = change.scrollDelta.y * 0.5f,
+                  )
+                )
+                change.consume()
+              }
+            }
           },
     )
   }

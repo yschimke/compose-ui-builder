@@ -440,6 +440,7 @@ internal class WearContentEmitter(
   private var usesBox = false
   private val usesButtonSymbol = mutableSetOf<String>()
   private var usesCard = false
+  private var usesCardListPadding = false
   private var usesListHeader = false
   private var usesEdgeButton = false
   private var usesArrangement = false
@@ -1198,6 +1199,13 @@ internal class WearContentEmitter(
   private fun transformedHeight(transformed: Boolean): String? =
     if (transformed) "transformedHeight(this, spec)" else null
 
+  /** The card-row safe inset Wear Material 3 asks a transforming list to honour at its edges. */
+  private fun minimumVerticalListContentPadding(transformed: Boolean, symbol: String): String? =
+    if (transformed && symbol in setOf("Card", "OutlinedCard", "TitleCard")) {
+      usesCardListPadding = true
+      "minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)"
+    } else null
+
   /**
    * What a **surface** node adds to its call: the row treatment, and the tag if one is being
    * written.
@@ -1230,8 +1238,12 @@ internal class WearContentEmitter(
     transformed: Boolean,
     symbol: String,
   ): List<String> =
-    (modifierChain(nodeId, transformedHeight(transformed))?.let { listOf("${pad}modifier = $it,") }
-      ?: emptyList()) +
+    (modifierChain(
+        nodeId,
+        minimumVerticalListContentPadding(transformed, symbol),
+        transformedHeight(transformed),
+      )
+      ?.let { listOf("${pad}modifier = $it,") } ?: emptyList()) +
       if (transformed && symbol in WearScreenCodeExporter.SURFACE_TRANSFORMATION_SYMBOLS)
         listOf("${pad}transformation = SurfaceTransformation(spec),")
       else emptyList()
@@ -1481,6 +1493,7 @@ internal class WearContentEmitter(
     if (usesListHeader) add("androidx.wear.compose.material3.ListHeader")
     if (usesCard) add("androidx.wear.compose.material3.TitleCard")
     usesPlainCard.forEach { add("androidx.wear.compose.material3.$it") }
+    if (usesCardListPadding) add("androidx.wear.compose.material3.CardDefaults")
     add("androidx.wear.compose.material3.lazy.rememberTransformationSpec")
     add("androidx.wear.compose.material3.lazy.transformedHeight")
     // `androidx.wear.compose:compose-ui-tooling`, not `androidx.wear:wear-tooling-preview`. The

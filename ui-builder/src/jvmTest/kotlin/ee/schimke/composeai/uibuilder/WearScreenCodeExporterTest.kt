@@ -40,6 +40,10 @@ class WearScreenCodeExporterTest {
     assertTrue("ScreenScaffold(scrollState = listState" in source, source)
     assertTrue("TransformingLazyColumn(" in source, source)
     assertTrue("contentPadding = contentPadding," in source, source)
+    assertTrue(
+      "minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)" in source,
+      source,
+    )
     assertTrue("Modifier.transformedHeight(this, spec)" in source, source)
     assertTrue("transformation = SurfaceTransformation(spec)" in source, source)
     assertTrue("val spec = rememberTransformationSpec()" in source, source)
