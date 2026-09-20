@@ -1,7 +1,13 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererInspectionGenerationV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererInspectionV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererNodeInspectionV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererPixelBoundsV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSemanticsInspectionV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSlotInspectionV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererTextInspectionV1
 import kotlin.math.roundToInt
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.booleanOrNull
@@ -17,86 +23,30 @@ import kotlinx.serialization.json.jsonPrimitive
  * measured immediate children in that slot; an empty or entirely off-screen lazy slot has no
  * bounds.
  */
-@Serializable
-data class UiBuilderInspectionSnapshot(
-  val schema: String = "compose-ui-builder-inspection/v1",
-  val documentId: String,
-  val documentRevision: Int,
-  val coordinateSpace: String = "root-render-pixels",
-  val coordinatePrecision: String = "1/64px",
-  val generation: UiBuilderInspectionGeneration,
-  val nodes: List<UiBuilderNodeInspection>,
-  val slots: List<UiBuilderSlotInspection>,
-)
+typealias UiBuilderInspectionSnapshot = UiBuilderRendererInspectionV1
 
 /**
  * The expected inventories are authored document identities, including lazy/off-screen nodes.
  * `completed` means no renderer measurements changed for [stabilityFrames] browser frames; it does
  * not claim that virtualized nodes were composed.
  */
-@Serializable
-data class UiBuilderInspectionGeneration(
-  val key: String,
-  val completed: Boolean = false,
-  val stabilityFrames: Int = 2,
-  val expectedAuthoredNodeIds: List<String>,
-  val expectedAuthoredTextNodeIds: List<String>,
-  val measuredNodeIds: List<String>,
-  val measuredTextNodeIds: List<String>,
-)
+typealias UiBuilderInspectionGeneration = UiBuilderRendererInspectionGenerationV1
 
-@Serializable
-data class UiBuilderNodeInspection(
-  val nodeId: String,
-  val componentId: String,
-  val bounds: UiBuilderPixelBounds? = null,
-  /** Absolute root-pixel baselines; present only for native text nodes that were laid out. */
-  val text: UiBuilderTextInspection? = null,
-  val semantics: UiBuilderSemanticsInspection,
-)
+typealias UiBuilderNodeInspection = UiBuilderRendererNodeInspectionV1
 
-@Serializable
-data class UiBuilderSlotInspection(
-  val parentNodeId: String,
-  val slotName: String,
-  val childNodeIds: List<String>,
-  val measuredChildNodeIds: List<String>,
-  val bounds: UiBuilderPixelBounds? = null,
-)
+typealias UiBuilderSlotInspection = UiBuilderRendererSlotInspectionV1
 
-@Serializable
-data class UiBuilderPixelBounds(
-  val x: Float,
-  val y: Float,
-  val width: Float,
-  val height: Float,
-) {
-  val right: Float
-    get() = x + width
+typealias UiBuilderPixelBounds = UiBuilderRendererPixelBoundsV1
 
-  val bottom: Float
-    get() = y + height
-}
+val UiBuilderPixelBounds.right: Float
+  get() = x + width
 
-@Serializable
-data class UiBuilderTextInspection(
-  val text: String,
-  val lineCount: Int,
-  val firstBaselineY: Float,
-  val lastBaselineY: Float,
-)
+val UiBuilderPixelBounds.bottom: Float
+  get() = y + height
 
-@Serializable
-data class UiBuilderSemanticsInspection(
-  /** This is authored-node metadata, not Compose's merged accessibility semantics tree. */
-  val source: String = "authored-node-properties",
-  val role: String,
-  val label: String? = null,
-  val contentDescription: String? = null,
-  val enabled: Boolean? = null,
-  val selected: Boolean? = null,
-  val actions: List<String> = emptyList(),
-)
+typealias UiBuilderTextInspection = UiBuilderRendererTextInspectionV1
+
+typealias UiBuilderSemanticsInspection = UiBuilderRendererSemanticsInspectionV1
 
 /** Whether a catalog adapter draws one of the protocol's native text node kinds. */
 fun String.isUiBuilderTextComponent(): Boolean = this == "m3/text" || this == "wear-m3/text"

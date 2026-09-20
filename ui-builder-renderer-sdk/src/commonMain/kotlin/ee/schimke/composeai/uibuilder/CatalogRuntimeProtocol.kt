@@ -1,6 +1,10 @@
 package ee.schimke.composeai.uibuilder
 
-import kotlinx.serialization.Serializable
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_INSPECTION_SCHEMA_V1
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V1
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererActionV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererMessageV1
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -10,18 +14,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-const val CATALOG_RUNTIME_PROTOCOL_VERSION = 1
-const val CATALOG_RUNTIME_PROTOCOL_SCHEMA = "compose-ui-builder-renderer/v1"
+const val CATALOG_RUNTIME_PROTOCOL_VERSION = UI_BUILDER_RENDERER_PROTOCOL_VERSION_V1
+const val CATALOG_RUNTIME_PROTOCOL_SCHEMA = UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V1
 
-@Serializable
-data class CatalogRuntimeMessage(
-  val schema: String = CATALOG_RUNTIME_PROTOCOL_SCHEMA,
-  val protocolVersion: Int,
-  val runtimeId: String,
-  val requestId: String,
-  val type: String,
-  val payload: JsonObject = JsonObject(emptyMap()),
-)
+typealias CatalogRuntimeMessage = UiBuilderRendererMessageV1
 
 sealed interface CatalogRuntimeCommand {
   data class Reply(val message: CatalogRuntimeMessage) : CatalogRuntimeCommand
@@ -32,15 +28,7 @@ sealed interface CatalogRuntimeCommand {
     CatalogRuntimeCommand
 }
 
-@Serializable
-data class CatalogRuntimeAction(
-  val documentId: String,
-  val documentRevision: Int,
-  val nodeId: String,
-  val kind: String,
-  val deltaX: Double? = null,
-  val deltaY: Double? = null,
-)
+typealias CatalogRuntimeAction = UiBuilderRendererActionV1
 
 fun interface CatalogRuntimeActionDispatcher {
   fun dispatch(
@@ -260,9 +248,9 @@ class CatalogRuntimeProtocolEndpoint(
         "activate" -> action.deltaX == null && action.deltaY == null
         "scrollBy" ->
           action.deltaX == 0.0 &&
-            action.deltaY?.isFinite() == true &&
-            action.deltaY != 0.0 &&
-            kotlin.math.abs(action.deltaY) <= MAX_SCROLL_DELTA
+            action.deltaY?.let {
+              it.isFinite() && it != 0.0 && kotlin.math.abs(it) <= MAX_SCROLL_DELTA
+            } == true
         else -> return message.error("UNSUPPORTED_ACTION", "action kind is not supported")
       }
     if (!valid) return message.error("INVALID_ACTION", "semantic action fields are invalid")
@@ -444,7 +432,7 @@ private fun CatalogRuntimeMessage.error(code: String, description: String) =
 
 private const val MAX_NODE_ID_LENGTH = 512
 private const val MAX_SCROLL_DELTA = 100_000.0
-private const val INSPECTION_SCHEMA = "compose-ui-builder-inspection/v1"
+private const val INSPECTION_SCHEMA = UI_BUILDER_RENDERER_INSPECTION_SCHEMA_V1
 private const val MAX_INSPECTION_NODES = 10_000
 private const val MAX_INSPECTION_SLOTS = 20_000
 private const val MAX_SLOT_CHILDREN = 10_000

@@ -1,40 +1,23 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RUNTIME_MANIFEST_NAME_V1
+import ee.schimke.composeai.uibuilder.protocol.UI_BUILDER_RUNTIME_MANIFEST_SCHEMA_V1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRuntimeDescriptorV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRuntimeLifecycleV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRuntimeManifestV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRuntimeValidationIssueV1
+import ee.schimke.composeai.uibuilder.protocol.validateContract
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-/** An immutable renderer bundle retained for reopening designs pinned to an older catalog. */
-@Serializable
-data class CatalogRuntimeDescriptor(
-  val runtimeId: String,
-  val catalogSystemId: String,
-  val catalogRevision: String,
-  val capabilityDigest: String,
-  val protocolVersion: Int,
-  val assetRoot: String,
-  val integritySha256: String,
-  val lifecycle: CatalogRuntimeLifecycle = CatalogRuntimeLifecycle.RETAINED,
-)
+typealias CatalogRuntimeDescriptor = UiBuilderRuntimeDescriptorV1
 
-@Serializable
-enum class CatalogRuntimeLifecycle {
-  RETAINED,
-  DEPRECATED,
-  RETIRED,
-}
+typealias CatalogRuntimeLifecycle = UiBuilderRuntimeLifecycleV1
 
-/** Manifest served from an exact version-addressed runtime root. */
-@Serializable
-data class CatalogRuntimeManifest(
-  val schema: String,
-  val runtimeId: String,
-  val protocolVersion: Int,
-  val entrypoint: String,
-  val integritySha256: String,
-)
+typealias CatalogRuntimeManifest = UiBuilderRuntimeManifestV1
 
 data class CatalogRuntimeManifestResponse(val statusCode: Int, val body: String)
 
@@ -112,19 +95,17 @@ class CatalogRuntimeAssetLoader(
         )
       }
     val mismatch =
-      when {
-        manifest.schema != RUNTIME_MANIFEST_SCHEMA -> "runtime manifest schema is unsupported"
-        manifest.runtimeId != runtime.runtimeId -> "runtime manifest id does not match the pin"
-        manifest.protocolVersion != runtime.protocolVersion ->
-          "runtime manifest protocol does not match the pin"
-        manifest.protocolVersion !in supportedProtocolVersions ->
-          "the pinned native runtime protocol is unsupported"
-        manifest.integritySha256 != runtime.integritySha256 ->
-          "runtime manifest integrity does not match the pin"
-        normalizeRuntimeAssetPath(manifest.entrypoint) != manifest.entrypoint ->
-          "runtime manifest entrypoint is unsafe"
-        else -> null
-      }
+      manifest.validateContract(setOf(manifest.entrypoint)).firstOrNull()?.manifestProblem()
+        ?: when {
+          manifest.runtimeId != runtime.runtimeId -> "runtime manifest id does not match the pin"
+          manifest.protocolVersion != runtime.protocolVersion ->
+            "runtime manifest protocol does not match the pin"
+          manifest.protocolVersion !in supportedProtocolVersions ->
+            "the pinned native runtime protocol is unsupported"
+          manifest.integritySha256 != runtime.integritySha256 ->
+            "runtime manifest integrity does not match the pin"
+          else -> null
+        }
     if (mismatch != null) {
       return CatalogRuntimeLoadResult.InvalidRuntime(runtime.runtimeId, mismatch)
     }
@@ -136,14 +117,7 @@ class CatalogRuntimeAssetLoader(
   }
 
   private fun validateRuntimeDescriptor(runtime: CatalogRuntimeDescriptor): String? =
-    when {
-      !runtime.runtimeId.matches(SAFE_RUNTIME_ID) || runtime.runtimeId in RESERVED_RUNTIME_IDS ->
-        "runtime id is unsafe or reserved"
-      runtime.assetRoot != "/ui-builder/runtime/${runtime.runtimeId}/" ->
-        "runtime asset root is not the exact version-addressed path"
-      !runtime.integritySha256.matches(SHA256) -> "runtime integrity is not a lowercase SHA-256"
-      else -> null
-    }
+    runtime.validateContract().firstOrNull()?.descriptorProblem()
 }
 
 sealed interface CatalogRuntimeResolution {
@@ -227,37 +201,35 @@ class CatalogRuntimeRegistry(
     )
 
   private fun validateDescriptor(runtime: CatalogRuntimeDescriptor) {
-    require(
-      runtime.runtimeId.matches(SAFE_RUNTIME_ID) && runtime.runtimeId !in RESERVED_RUNTIME_IDS
-    ) {
-      "runtimeId must be safe for an immutable asset path"
-    }
-    require(runtime.catalogSystemId.isNotBlank()) { "catalogSystemId must be nonblank" }
-    require(runtime.catalogRevision.isNotBlank()) { "catalogRevision must be nonblank" }
-    require(runtime.capabilityDigest.isNotBlank()) { "capabilityDigest must be nonblank" }
-    require(runtime.protocolVersion > 0) { "protocolVersion must be positive" }
-    require(runtime.assetRoot == "/ui-builder/runtime/${runtime.runtimeId}/") {
-      "runtime assetRoot must be the immutable version-addressed builder path"
-    }
-    require(runtime.integritySha256.matches(Regex("[a-f0-9]{64}"))) {
-      "runtime integritySha256 must be a lowercase SHA-256 digest"
+    val issues = runtime.validateContract()
+    require(issues.isEmpty()) {
+      "invalid catalog runtime descriptor: " +
+        issues.joinToString { issue -> "${issue.field}:${issue.code}" }
     }
   }
 }
 
-private const val RUNTIME_MANIFEST_SCHEMA = "compose-ui-builder-runtime/v1"
-private const val RUNTIME_MANIFEST_NAME = "runtime-manifest.json"
-private val SAFE_RUNTIME_ID = Regex("[A-Za-z0-9._-]+")
-private val RESERVED_RUNTIME_IDS = setOf("current", "latest")
-private val SHA256 = Regex("[a-f0-9]{64}")
+private const val RUNTIME_MANIFEST_SCHEMA = UI_BUILDER_RUNTIME_MANIFEST_SCHEMA_V1
+private const val RUNTIME_MANIFEST_NAME = UI_BUILDER_RUNTIME_MANIFEST_NAME_V1
 private val RUNTIME_JSON = Json { ignoreUnknownKeys = false }
 
-private fun normalizeRuntimeAssetPath(path: String): String? {
-  if (path.isBlank() || path.startsWith('/') || '\\' in path || '\u0000' in path) return null
-  val segments = path.split('/')
-  if (segments.any { it.isBlank() || it == "." || it == ".." }) return null
-  return segments.joinToString("/")
-}
+private fun UiBuilderRuntimeValidationIssueV1.manifestProblem(): String =
+  when (field) {
+    "schema" -> "runtime manifest schema is unsupported"
+    "runtimeId" -> "runtime manifest id is unsafe or reserved"
+    "protocolVersion" -> "runtime manifest protocol must be positive"
+    "entrypoint" -> "runtime manifest entrypoint is unsafe or missing"
+    "integritySha256" -> "runtime manifest integrity is not a lowercase SHA-256"
+    else -> "runtime manifest field '$field' is invalid"
+  }
+
+private fun UiBuilderRuntimeValidationIssueV1.descriptorProblem(): String =
+  when (field) {
+    "runtimeId" -> "runtime id is unsafe or reserved"
+    "assetRoot" -> "runtime asset root is not the exact version-addressed path"
+    "integritySha256" -> "runtime integrity is not a lowercase SHA-256"
+    else -> "runtime descriptor field '$field' is invalid"
+  }
 
 @Serializable data class RuntimePoint(val x: Float, val y: Float)
 
