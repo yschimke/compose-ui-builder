@@ -42,6 +42,19 @@ data class CatalogRuntimeAction(
   val deltaY: Double? = null,
 )
 
+fun interface CatalogRuntimeActionDispatcher {
+  fun dispatch(
+    action: CatalogRuntimeAction,
+    snapshot: UiBuilderInspectionSnapshot?,
+  ): UiBuilderSemanticActionResult
+}
+
+sealed interface UiBuilderSemanticActionResult {
+  data object Applied : UiBuilderSemanticActionResult
+
+  data class Rejected(val code: String, val message: String) : UiBuilderSemanticActionResult
+}
+
 private data class DocumentRef(val id: String, val revision: Int)
 
 /**

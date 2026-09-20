@@ -4044,7 +4044,7 @@ class UiBuilderEditorReducer(
             pointY <= bounds.bottom
         }
         .filter { slot -> acceptsComponent(state.document, slot, component) }
-        .minByOrNull { slot -> slot.bounds!!.width * slot.bounds.height }
+        .minByOrNull { slot -> requireNotNull(slot.bounds).let { it.width * it.height } }
     return hit?.let { ParentSlot(it.parentNodeId, it.slotName) }
       ?: findDestination(state.document, state.selectedNodeId, component)
   }

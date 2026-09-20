@@ -50,7 +50,7 @@ both were decisions nothing was checking.
 
 `:ui-builder` · `:ui-builder-artwork` · `:ui-builder-desktop` · `:ui-builder-export` · `:ui-builder-generated-jetcaster` ·
 `:ui-builder-reference-jetcaster` · `:ui-builder-render-bundle` · `:ui-builder-renderer` ·
-`:ui-builder-runtime` · `:ui-builder-web`
+`:ui-builder-renderer-sdk` · `:ui-builder-runtime` · `:ui-builder-web`
 
 **The server** — the host, its transports and the surfaces that are not the builder:
 

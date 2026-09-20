@@ -7,6 +7,13 @@
 builds that distribution. A catalog must build and publish the renderer that calls its components;
 the editor must not compile every catalog's implementation into one application.
 
+The catalog-facing source seam is now `:ui-builder-renderer-sdk`: it owns the protocol endpoint,
+inspection model, semantic-action correlation and opaque-origin Wasm host. The existing
+`:ui-builder-renderer` consumes that seam through the same callback a catalog-owned renderer uses;
+its remaining `UiBuilderSurface` callback is the implementation to replace catalog by catalog.
+The SDK declares a composite-build coordinate for that source dependency but applies no publishing
+plugin; only the catalog's verified ZIP crosses the delivery boundary.
+
 This supersedes the earlier decision in
 [`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md) that Material canvas adapters stay
 in this repository. It also completes the separately-designed bundle/plugin ABI deferred by the
