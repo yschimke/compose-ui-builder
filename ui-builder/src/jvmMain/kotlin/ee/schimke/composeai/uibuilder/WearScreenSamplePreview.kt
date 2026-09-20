@@ -119,15 +119,16 @@ private val wearScreenPreviewCatalog by lazy {
 }
 
 /**
- * The frame the catalog declares, provided for a preview that composes the surface directly.
+ * The frame and adapter the catalog declares, provided for a preview that composes the surface
+ * directly.
  *
  * The editor provides this for every surface it draws (see `UiBuilderEditor`); a preview that calls
- * `UiBuilderSurface` itself is the host, and a host that provides nothing gets the frame its
- * document names and no insets.
+ * `UiBuilderSurface` itself is the host, so it provides the same catalog facts the editor does.
  */
 @Composable
 private fun WearScreenPreviewFrame(content: @Composable () -> Unit) {
   CompositionLocalProvider(
+    LocalUiBuilderCanvasAdapters provides wearScreenPreviewCatalog.canvasAdapterIds,
     LocalUiBuilderFrameGeometry provides wearScreenPreviewCatalog.frameGeometry,
     LocalUiBuilderCatalogPlatform provides wearScreenPreviewCatalog.platform.wireValue,
     content = content,
