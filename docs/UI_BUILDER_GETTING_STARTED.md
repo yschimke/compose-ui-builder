@@ -1233,3 +1233,34 @@ credential arrived on. The host repository's
 [`design/CATALOG_MCP.md`](https://github.com/yschimke/compose-preview-server/blob/main/docs/design/CATALOG_MCP.md)
 carries the whole surface and explains why this is one endpoint rather than the sidecar the product
 spec planned.
+
+### OpenCode
+
+The **Copy OpenCode AI prompt** button in a live design copies the current design URL, this host's
+MCP endpoint, and the link to the maintained
+[`compose-ui-builder` skill](https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder).
+Paste it into an OpenCode session to hand the design to an agent without sharing the browser's
+credential.
+
+For repeated work against one host, add the MCP server to the project's `opencode.jsonc` (or the
+global OpenCode configuration). Replace the example URL with the builder host:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "ui-builder": {
+        "type": "remote",
+        "url": "https://preview.example/mcp",
+        "oauth": false,
+      },
+    },
+  },
+}
+```
+
+`oauth: false` is deliberate: this host uses its UI-builder agent-grant flow rather than MCP OAuth.
+Do not add a bearer header or browser token to this configuration. The agent requests its own
+short-lived `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` grant and passes that
+token only to the UI-builder tool calls that need it.
