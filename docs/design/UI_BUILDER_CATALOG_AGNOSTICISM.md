@@ -65,29 +65,34 @@ provided by the editor from `statusSemantics.platform` and compared against
 composition drawn with a watch library?"), it is declared data, and it holds for a board holding one
 Wear card as much as for a whole screen.
 
-### 3. The frame *adapter* is a branch on a component id — blocked on a contracts field
+### 3. The frame *adapter* was a branch on a component id — taken
 
-`wear-m3/screen-scaffold` is still special-cased by id in the renderer, and its stand-in — the
-stadium, the clock, the content insets — is Wear-specific code in the generic renderer. The contract
-puts the fact in the catalog (`frame.adapter: "frame/round-screen"`, a drawing this build ships) and
-the policy file declares it; the renderer cannot yet dispatch on it, and the reason is worth
-recording precisely.
+`wear-m3/screen-scaffold` was special-cased by id in the renderer, so the frame's drawing — the
+stadium, the clock, the content insets — was Wear-specific code in a generic renderer, and a catalog
+whose screen root was called anything else could not ask for it.
 
-**`WasmCapabilityV1` — the wire type a catalog's per-component declarations travel in — has no
-`canvas` field.** Its fields are `platformSupported`, `adapterStatus`, `notes` and `unrolled`
-(`javap` on `ui-builder-protocol-jvm-3.2.0`). The *editor's* model has the field
-(`CapabilityCatalog.WasmCapability.canvas`, whose KDoc says so: "the published Wear catalog carries
-the field and leaves it null on all 78. So this reads as a no-op until a catalog populates it, which
-is the point: the consumer half can land first"), and `LocalUiBuilderCanvasAdapters` already
-dispatches on it. What is missing is the producer half for a *synthesised* catalog: it cannot state
-an adapter at all, so the renderer has to keep recognising the id or the frame disappears.
+**Taken, in three steps:**
 
-**Correction, in order:** the protocol grows `canvas` on `WasmCapabilityV1`; the renderer's branch
-becomes a case for the adapter id, and the id-based special cases around it (the screen theme, the
-root alignment) key on the adapter; the synthesised catalog declares
-`canvas = "frame/round-screen"` on its screen root. Until the first step a *published* catalog can
-already name an adapter — the reader is live — so this is a contracts change before it is a builder
-one.
+1. **compose-preview-contracts** grew `canvas` on `WasmCapabilityV1`
+   ([#87](https://github.com/yschimke/compose-preview-contracts/pull/87), released as 3.3.0). It is
+   optional, like every property added since `unrolled`, because the constructor is internal and a
+   required one would remove the old `<init>` signature — the break `unrolled` itself caused.
+2. **this repository dispatches on the adapter**: the branch is `ROUND_SCREEN_FRAME ->`, and the two
+   other id-based special cases (the screen theme, the root's placement) key on the adapter too.
+   `WearCatalogIsCompleteTest` counts a component as drawn when the renderer has a branch for its id
+   **or for the adapter its catalog declares**, resolving `const val`s in the renderer's source
+   because a branch label may be a constant.
+3. **the Wear catalog names it**: the synthesised catalog sets `canvas = "frame/round-screen"` on its
+   screen root, and the transitional `wear-m3/` id is gone from the renderer.
+
+The property the change is for: a screen root under a name this build has never seen, with
+`frame/round-screen` declared for it, is framed **identically** to the Wear one
+(`WearCanvasDeviceSizeTest`).
+
+**Still open in the server:** `PublishedUiBuilderCatalog.wasm(...)` reads a *published* catalog's
+canvas word to derive `platformSupported`/`adapterStatus`/`notes` and does not put it on the wire, so
+a published catalog's adapters reach the editor only once that one line is added — after that
+repository bumps its own contracts pin.
 
 ### 4. The templates are Kotlin documents in the export module
 

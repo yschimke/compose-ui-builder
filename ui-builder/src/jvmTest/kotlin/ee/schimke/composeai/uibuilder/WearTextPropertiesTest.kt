@@ -83,10 +83,12 @@ class WearTextPropertiesTest {
   private fun text(fontSizeSp: Float, maxLines: Int = Int.MAX_VALUE): TextNode {
     var snapshot: UiBuilderInspectionSnapshot? = null
     renderComposeScene(SCENE_PX, SCENE_PX, Density(1f)) {
-      UiBuilderSurface(
-        document = document(fontSizeSp, maxLines),
-        onInspectionSnapshot = { snapshot = it },
-      )
+      WearCatalogAdapters {
+        UiBuilderSurface(
+          document = document(fontSizeSp, maxLines),
+          onInspectionSnapshot = { snapshot = it },
+        )
+      }
     }
     val node =
       checkNotNull(snapshot).nodes.firstOrNull { it.nodeId == "label" }

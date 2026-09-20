@@ -595,7 +595,10 @@ fun UiBuilderSurface(
   val typography =
     MaterialTheme.typography.let { base -> fontFamily?.let(base::withFontFamily) ?: base }
   val wearScreen =
-    document.roots.singleOrNull()?.let(document.nodes::get)?.componentId == WEAR_SCREEN_SCAFFOLD
+    document.roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
+      val adapter = LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
+      adapter == ROUND_SCREEN_FRAME
+    } == true
   val baseColorScheme =
     when {
       wearScreen -> WearDarkColorScheme
@@ -684,8 +687,11 @@ fun UiBuilderSurface(
                 true -> Modifier.align(Alignment.Center)
               // A screen is taller than its frame by design — the stadium IS the scroll extent —
               // so it is pinned to the top and centred across, the way a long screenshot reads.
-              document.nodes[root]?.componentId == "wear-m3/screen-scaffold" ->
-                Modifier.align(Alignment.TopCenter)
+              document.nodes[root]?.let { node ->
+                val adapter =
+                  LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
+                adapter == ROUND_SCREEN_FRAME
+              } == true -> Modifier.align(Alignment.TopCenter)
               else -> Modifier
             }
           RenderNode(
@@ -874,7 +880,7 @@ private fun RenderNode(
     // The Wear screen. Unlike the widget container above, this stand-in is EMITTED rather than
     // erased: `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter` names
     // it. What is faked is only the drawing — the canvas has no Wear Compose to draw with.
-    "wear-m3/screen-scaffold" ->
+    ROUND_SCREEN_FRAME ->
       WearScreenScaffold(
         node = node,
         modifier = measured,
@@ -2273,8 +2279,16 @@ private val WEAR_SCREEN_ON_SURFACE = Color(0xFFF6EDFF)
 
 private val WEAR_SCREEN_ON_SURFACE_VARIANT = Color(0xFFFFDCC2)
 
-/** The component id the renderer keys the Wear screen's theme and geometry off. */
-private const val WEAR_SCREEN_SCAFFOLD = "wear-m3/screen-scaffold"
+/**
+ * The drawing that frames a round screen: a stadium at the frame's width, the clock over it, and
+ * the slot that hugs the bottom curve.
+ *
+ * A catalog names it in `wasm.canvas` for its screen root, which is what
+ * [LocalUiBuilderCanvasAdapters] reads, so the same drawing serves a catalog whose screen root is
+ * called something else — or is called nothing this build has heard of. The Wear catalog names it
+ * like any other, which is why there is no `wear-m3/` id here at all.
+ */
+private const val ROUND_SCREEN_FRAME = "frame/round-screen"
 
 /** Measured off the reference card: inset 26dp at its top row, full width 26dp down. */
 private const val WEAR_CARD_CORNER_RADIUS_DP = 26f

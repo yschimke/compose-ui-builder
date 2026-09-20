@@ -73,6 +73,36 @@ class WearCanvasDeviceSizeTest {
    */
   private val browserViewport = WearDeviceConfiguration(screenWidthDp = 1440, screenHeightDp = 900)
 
+  /**
+   * The frame is drawn by the adapter the catalog names, not by recognising a component id.
+   *
+   * `frame/round-screen` is a drawing this build ships; a catalog points its screen root at it. The
+   * test draws a screen root under a name this build has never seen and asserts the same ring is
+   * the same picture — which is the property that lets a catalog published under other ids use the
+   * frame, and the reason the renderer no longer has to recognise `wear-m3/`.
+   */
+  @Test
+  fun `a screen root drawn by the frame adapter is framed the same way`() {
+    val byAdapter =
+      screenFrame(
+        "acme/watch-screen",
+        adapters = mapOf("acme/watch-screen" to "frame/round-screen"),
+      )
+    val byId = screenFrame("wear-m3/screen-scaffold", adapters = wearCatalogAdapters)
+
+    assertEquals(
+      byId,
+      byAdapter,
+      "the round-screen drawing should not depend on what the catalog calls its screen root",
+    )
+    // And it is the frame, not a zero-sized box: the stadium is the frame's width.
+    assertEquals(
+      FRAME_WIDTH_PX.toFloat(),
+      byAdapter.width,
+      "the frame's width at the document's diameter",
+    )
+  }
+
   @Test
   fun `a browser host's viewport does not resize the watch`() {
     val onTheWatch = strokes(hostDevice = null)
@@ -96,6 +126,70 @@ class WearCanvasDeviceSizeTest {
    * The ring's two edge thicknesses on the horizontal line through its centre, in device pixels:
    * the indicator's stroke and the track's, in that order.
    */
+  /** The bounds of a screen root drawn with [rootId], under the adapters a catalog declares. */
+  private fun screenFrame(
+    rootId: String,
+    adapters: Map<String, String>,
+  ): UiBuilderPixelBounds {
+    var snapshot: UiBuilderInspectionSnapshot? = null
+    renderComposeScene(SCENE_PX, SCENE_PX, Density(1f)) {
+      CompositionLocalProvider(
+        LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue,
+        LocalUiBuilderCanvasAdapters provides adapters,
+      ) {
+        UiBuilderSurface(document = screen(rootId), onInspectionSnapshot = { snapshot = it })
+      }
+    }
+    return checkNotNull(checkNotNull(snapshot).nodes.firstOrNull { it.nodeId == rootId }?.bounds) {
+      "the screen root was not measured"
+    }
+  }
+
+  /** A screen root under [rootId] holding one label, which is all the frame needs to draw. */
+  private fun screen(rootId: String) =
+    UiBuilderDocument(
+      schema = "compose-ui-builder-document/v1-candidate",
+      id = "screen-frame",
+      title = "Screen frame",
+      revision = 0,
+      catalogPin = JsonObject(emptyMap()),
+      environment =
+        Json.parseToJsonElement(
+            """
+            {
+              "widthDp": 192, "heightDp": 192, "density": 2.0, "theme": "dark",
+              "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr",
+              "animations": "settled"
+            }
+            """
+          )
+          .jsonObject,
+      stateVariables = JsonObject(emptyMap()),
+      roots = listOf(rootId),
+      nodes =
+        mapOf(
+          rootId to
+            UiBuilderNode(
+              id = rootId,
+              componentId = rootId,
+              properties =
+                JsonObject(
+                  mapOf("timeText" to literal("10:10"), "background" to literal("#000000"))
+                ),
+              modifiers = JsonArray(emptyList()),
+              slots = mapOf("content" to listOf("label")),
+            ),
+          "label" to
+            UiBuilderNode(
+              id = "label",
+              componentId = "wear-m3/text",
+              properties = JsonObject(mapOf("text" to literal("Activity"))),
+              modifiers = JsonArray(emptyList()),
+              slots = emptyMap(),
+            ),
+        ),
+    )
+
   private fun strokes(hostDevice: WearDeviceConfiguration?): Pair<Int, Int> {
     var snapshot: UiBuilderInspectionSnapshot? = null
     val image =
@@ -193,6 +287,9 @@ class WearCanvasDeviceSizeTest {
   private companion object {
     /** Room for the 192dp frame at the document's 2.0 density, with the ring centred in it. */
     const val SCENE_PX = 384
+
+    /** The document's diameter at its 2.0 density: 192dp of frame. */
+    const val FRAME_WIDTH_PX = 384
 
     /**
      * `CircularProgressIndicator`'s stroke on a small screen: 8dp at 2.0 density. The large

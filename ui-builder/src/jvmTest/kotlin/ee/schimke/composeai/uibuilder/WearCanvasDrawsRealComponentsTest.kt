@@ -52,7 +52,7 @@ class WearCanvasDrawsRealComponentsTest {
   @Test
   fun `a switch row is drawn by a component that publishes toggleable semantics`() =
     runDesktopComposeUiTest(width = 400, height = 1600) {
-      setContent { UiBuilderSurface(wearDesign(), unrolled = true) }
+      setContent { WearCatalogAdapters { UiBuilderSurface(wearDesign(), unrolled = true) } }
 
       val toggleables =
         onAllNodes(
@@ -78,7 +78,7 @@ class WearCanvasDrawsRealComponentsTest {
   @Test
   fun `sub-header labels reach the composition`() =
     runDesktopComposeUiTest(width = 400, height = 1600) {
-      setContent { UiBuilderSurface(wearDesign(), unrolled = true) }
+      setContent { WearCatalogAdapters { UiBuilderSurface(wearDesign(), unrolled = true) } }
 
       // Authored on a `wear-m3/list-sub-header`, which had no canvas drawing at all before the port
       // — the id resolved to a dashed placeholder, so this text was absent from the tree.

@@ -46,13 +46,65 @@ class WearCatalogIsCompleteTest {
       if (relative.isFile) relative else java.io.File("ui-builder/${relative.path}")
     }
 
-  /** Ids with a `"wear-m3/…" ->` branch in the renderer's dispatch. */
-  private fun drawnIds(): Set<String> {
+  /**
+   * The labels the renderer has a dispatch branch for: component ids and canvas adapter ids alike.
+   *
+   * A component is drawn when the renderer has a case for **its id or for the adapter its catalog
+   * declares** — `wasm.canvas` in the golden, which the editor reads into
+   * `LocalUiBuilderCanvasAdapters` and the renderer dispatches on. That is the whole point of the
+   * adapter field: a catalog whose screen root is not called `wear-m3/screen-scaffold` asks for the
+   * same drawing by naming `frame/round-screen`, so a check that only looked for ids would report
+   * it as undrawn.
+   *
+   * Branch labels are read as any quoted string followed by `->` at the dispatch's own indentation,
+   * because a branch may name several (`ROUND_SCREEN_FRAME, WEAR_SCREEN_SCAFFOLD ->`) and the id
+   * that is still there for a synthesised catalog is a label like any other.
+   */
+  private fun drawnLabels(): Set<String> {
     assertTrue(rendererSource.isFile, "cannot find the renderer source at $rendererSource")
-    return Regex("\"(wear-m3/[a-z0-9-]+)\"\\s*->")
-      .findAll(rendererSource.readText())
+    val source = rendererSource.readText()
+    // A branch may name a constant rather than a literal (`ROUND_SCREEN_FRAME ->`), so the
+    // constants in this file are resolved first: a check that only read quoted labels would report
+    // a component drawn by a named adapter as undrawn.
+    val constants =
+      Regex("const val ([A-Za-z0-9_]+) = \"([^\"]+)\"").findAll(source).associate {
+        it.groupValues[1] to it.groupValues[2]
+      }
+    val branchLabels =
+      Regex(
+          "^\\s*((?:[A-Za-z0-9_]+|\"[A-Za-z0-9/_.-]+\")(?:\\s*,\\s*(?:[A-Za-z0-9_]+|\"[A-Za-z0-9/_.-]+\"))*)\\s*->",
+          RegexOption.MULTILINE,
+        )
+        .findAll(source)
+        .flatMap { match -> match.groupValues[1].split(",") }
+        .map { it.trim().trim('"') }
+        .toSet()
+    return branchLabels.map { constants[it] ?: it }.toSet()
+  }
+
+  /** Ids the renderer draws, by the component's own id or by the adapter the catalog gives it. */
+  private fun drawnIds(): Set<String> =
+    declaredIds()
+      .filter { id -> id in drawnLabels() || declaredAdapter(id) in drawnLabels() }
+      .toSet()
+
+  /** Every id the catalog publishes, whatever its adapter status. */
+  private fun declaredIds(): Set<String> =
+    Regex("\"componentId\"\\s*:\\s*\"(wear-m3/[a-z0-9-]+)\"")
+      .findAll(catalogJson)
       .map { it.groupValues[1] }
       .toSet()
+
+  /** The `wasm.canvas` adapter this catalog names for [id], or the empty string. */
+  private fun declaredAdapter(id: String): String {
+    val at = catalogJson.indexOf("\"componentId\": \"$id\"")
+    val wasmAt = catalogJson.indexOf("\"wasm\"", at)
+    val end = catalogJson.indexOf("\"svg\"", wasmAt).let { if (it < 0) catalogJson.length else it }
+    return Regex("\"canvas\"\\s*:\\s*\"([^\"]+)\"")
+      .find(catalogJson.substring(wasmAt, end))
+      ?.groupValues
+      ?.get(1)
+      .orEmpty()
   }
 
   /** Ids the catalog declares `supported` on the canvas. */
