@@ -20,6 +20,8 @@ import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -56,6 +58,55 @@ class EditorDesktopPointerInteractionTest {
 
       onNodeWithText("Duplicate").assertExists()
       onNodeWithText("Delete").assertExists()
+    }
+
+  @Test
+  fun `toolbar history reverses and restores an inspector edit`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+      val originalText =
+        assertNotNull(latest).document.nodes.getValue("main-episode-title").properties
+
+      onNodeWithContentDescription("Text property").performTextReplacement("History episode")
+      onNodeWithContentDescription("Apply text").performClick()
+      waitForIdle()
+      runOnIdle {
+        assertTrue(
+          assertNotNull(latest).document.nodes.getValue("main-episode-title").properties !=
+            originalText
+        )
+      }
+
+      onNodeWithContentDescription("Undo (Ctrl/⌘+Z)").performClick()
+      waitForIdle()
+      runOnIdle {
+        assertEquals(
+          originalText,
+          assertNotNull(latest).document.nodes.getValue("main-episode-title").properties,
+        )
+      }
+
+      onNodeWithContentDescription("Redo (Ctrl/⌘+Shift+Z)").performClick()
+      waitForIdle()
+      runOnIdle {
+        assertTrue(
+          assertNotNull(latest).document.nodes.getValue("main-episode-title").properties !=
+            originalText
+        )
+      }
     }
 
   @Test
@@ -169,6 +220,53 @@ class EditorDesktopPointerInteractionTest {
 
       onNodeWithContentDescription("Text property").assertTextEquals("Retained draft")
       onNodeWithText("Uncommitted edit retained · Ctrl/⌘+Enter applies").assertExists()
+    }
+
+  @Test
+  fun `submitting the authored value does not retain a hidden draft`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithText("Use sample text").performClick()
+      waitForIdle()
+      onNodeWithText("Use sample text").performClick()
+
+      onNodeWithText("1 uncommitted edit retained").assertDoesNotExist()
+    }
+
+  @Test
+  fun `deleting a node discards its retained draft`() =
+    runDesktopComposeUiTest(width = 800, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialLayersOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Text property").performTextReplacement("Discard this draft")
+      onNodeWithContentDescription("More editor actions").performClick()
+      onNodeWithText("Delete").performClick()
+
+      onNodeWithText("1 uncommitted edit retained").assertDoesNotExist()
     }
 
   private fun androidx.compose.ui.test.ComposeUiTest.editor() {

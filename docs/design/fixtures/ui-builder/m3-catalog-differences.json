@@ -978,7 +978,7 @@
   },
   {
     "field": "previewSurfaces",
-    "why": "The frozen m3-catalog capabilities carry no previewSurfaces block, unlike the two Wear goldens. The catalog's own statement is the more informative one and is consistent with the Wear catalogs' native lane: authoritative under Robolectric against this module's classpath, approximate on the Wasm canvas which links its own Material 3 rather than these Android artifacts. Reviewed as a description of the two lanes that actually exist, since the frozen side cannot check it.",
+    "why": "Both catalogs now state their actual lanes, and those lanes deliberately differ. The published Android catalog is authoritative under Robolectric against its own classpath. This repository's frozen fallback compiles generated source on desktop and pins Compose Multiplatform Material 3 1.9.0, which does not publish HorizontalFloatingToolbar; both its bounded Wasm renderer and generated desktop source therefore declare the toolbar compatibility adapter instead of claiming authority. The values are pinned separately so a dependency upgrade or backend change re-surfaces this decision.",
     "policy": {
       "wasm": {
         "fidelity": "approximate",
@@ -990,7 +990,17 @@
         "reason": "The generated Kotlin compiled against this module's own classpath and rendered under Robolectric — the same lane that produces this catalog's stickers."
       }
     },
-    "frozen": null
+    "frozen": {
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "HorizontalFloatingToolbar is not available in the pinned Compose Multiplatform Material 3 dependency; designs using it render a declared compatibility adapter."
+      },
+      "native": {
+        "fidelity": "approximate",
+        "backend": "desktop",
+        "reason": "Generated source uses a declared HorizontalFloatingToolbar compatibility adapter until the pinned Material 3 dependency supplies the real API."
+      }
+    }
   },
   {
     "field": "templates",

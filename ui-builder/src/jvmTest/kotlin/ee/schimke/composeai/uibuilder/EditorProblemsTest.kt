@@ -315,18 +315,19 @@ class EditorProblemsTest {
   fun `a warning the export proceeds through is not listed as a blocker`() {
     // The panel's one claim is what stops the build. A diagnostic the export notes and carries on
     // past would make that claim untrue in the other direction. The checked-in fixture holds a
-    // carousel, whose compatibility note is exactly such a warning.
+    // floating toolbar, whose dependency-floor compatibility note is exactly such a warning.
     val diagnostics = CapabilityComposeCodeExporter.diagnose(document, catalog)
     assertTrue(
       diagnostics.any {
-        it.code == "CAROUSEL_COMPATIBILITY_HELPER" && it.severity == ComposeExportSeverity.WARNING
+        it.code == "FLOATING_TOOLBAR_COMPATIBILITY_HELPER" &&
+          it.severity == ComposeExportSeverity.WARNING
       },
       "the fixture should still raise the warning this test is about: $diagnostics",
     )
 
     // The claim is unchanged and still the point: a warning is not a blocker. What the panel does
     // list for this fixture are the export gate's refusals, which do stop a build.
-    assertTrue(problems(document).none { it.code == "CAROUSEL_COMPATIBILITY_HELPER" })
+    assertTrue(problems(document).none { it.code == "FLOATING_TOOLBAR_COMPATIBILITY_HELPER" })
   }
 
   @Test

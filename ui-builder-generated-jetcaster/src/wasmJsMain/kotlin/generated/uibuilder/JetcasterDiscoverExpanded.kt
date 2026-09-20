@@ -1,4 +1,4 @@
-// Generator content SHA-256: ebd2fc01bd448cc3f241623ae0e355bb7269920d385fa58a420a5c553c0c29ca
+// Generator content SHA-256: 39e8d7021451da21eafa9bd91c7a07c6f2a9d9722d8fabfbf5d49decfd6838f4
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.automirrored.outlined.*
@@ -34,6 +33,8 @@ import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationIt
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,9 +58,10 @@ import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 
 // Generated from design fixture-jetcaster-discover-expanded revision 108.
 // Catalog m3-catalog@candidate; capability candidate.
+// TODO[FLOATING_TOOLBAR_COMPATIBILITY_HELPER] node=floating-toolbar: the pinned Material 3
+// dependency does not provide HorizontalFloatingToolbar; generated code uses the adapter declared
+// in export provenance
 // TODO[UNEMITTED_EVENT] node=podcast-card-android: event 'click' is not emitted
-// TODO[CAROUSEL_COMPATIBILITY_HELPER] node=podcast-carousel: row helper preserves order and sizing
-// but not Material carousel masking
 @Composable
 fun JetcasterDiscoverExpandedSupportingPane() {
   var searchQuery: String by remember { mutableStateOf("") }
@@ -106,55 +108,60 @@ fun JetcasterDiscoverExpandedSupportingPane() {
             topBar = {
               // node:search-bar component:m3/search-bar symbol:SearchBar
               // typed-properties:{"expanded":{"type":"bool","value":false},"tonalElevationDp":{"type":"float","value":2}}
-              BuilderSearchBar(
+              SearchBar(
+                inputField = {
+                  // node:search-input component:m3/search-input-field
+                  // symbol:SearchBarDefaults.InputField
+                  // typed-properties:{"enabled":{"type":"bool","value":true},"value":{"type":"state","variable":"searchQuery"}}
+                  SearchBarDefaults.InputField(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onSearch = {},
+                    expanded = false,
+                    onExpandedChange = {},
+                    enabled = true,
+                    leadingIcon = {
+                      // node:search-leading-icon component:m3/icon symbol:Icon
+                      // typed-properties:{"contentDescription":{"type":"string","value":"Search"},"iconKey":{"type":"enum","value":"search"}}
+                      Icon(
+                        imageVector = builderIcon("search"),
+                        contentDescription = "Search",
+                        tint = LocalContentColor.current,
+                        modifier = Modifier.semantics { contentDescription = "Search" },
+                      )
+                    },
+                    placeholder = {
+                      // node:search-placeholder component:m3/text symbol:Text
+                      // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"bodyLarge"},"text":{"type":"string","value":"Search for a podcast"}}
+                      Text(
+                        text = "Search for a podcast",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = null,
+                        maxLines = 2147483647,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier,
+                      )
+                    },
+                    trailingIcon = {
+                      // node:search-account-icon component:m3/icon symbol:Icon
+                      // typed-properties:{"contentDescription":{"type":"string","value":"Account"},"iconKey":{"type":"enum","value":"accountCircle"}}
+                      Icon(
+                        imageVector = builderIcon("accountCircle"),
+                        contentDescription = "Account",
+                        tint = LocalContentColor.current,
+                        modifier = Modifier.semantics { contentDescription = "Account" },
+                      )
+                    },
+                  )
+                },
                 expanded = false,
+                onExpandedChange = {},
                 tonalElevation = 2.dp,
                 modifier =
                   Modifier.fillMaxWidth()
                     .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
-              ) {
-                // node:search-input component:m3/search-input-field
-                // symbol:SearchBarDefaults.InputField
-                // typed-properties:{"enabled":{"type":"bool","value":true},"value":{"type":"state","variable":"searchQuery"}}
-                BuilderSearchInputField(
-                  value = searchQuery,
-                  onValueChange = { searchQuery = it },
-                  enabled = true,
-                  leadingIcon = {
-                    // node:search-leading-icon component:m3/icon symbol:Icon
-                    // typed-properties:{"contentDescription":{"type":"string","value":"Search"},"iconKey":{"type":"enum","value":"search"}}
-                    Icon(
-                      imageVector = builderIcon("search"),
-                      contentDescription = "Search",
-                      tint = LocalContentColor.current,
-                      modifier = Modifier.semantics { contentDescription = "Search" },
-                    )
-                  },
-                  placeholder = {
-                    // node:search-placeholder component:m3/text symbol:Text
-                    // typed-properties:{"color":{"type":"colorToken","value":"onSurfaceVariant"},"style":{"type":"typographyToken","value":"bodyLarge"},"text":{"type":"string","value":"Search for a podcast"}}
-                    Text(
-                      text = "Search for a podcast",
-                      style = MaterialTheme.typography.bodyLarge,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant,
-                      fontWeight = null,
-                      maxLines = 2147483647,
-                      overflow = TextOverflow.Ellipsis,
-                      modifier = Modifier,
-                    )
-                  },
-                  trailingIcon = {
-                    // node:search-account-icon component:m3/icon symbol:Icon
-                    // typed-properties:{"contentDescription":{"type":"string","value":"Account"},"iconKey":{"type":"enum","value":"accountCircle"}}
-                    Icon(
-                      imageVector = builderIcon("accountCircle"),
-                      contentDescription = "Account",
-                      tint = LocalContentColor.current,
-                      modifier = Modifier.semantics { contentDescription = "Account" },
-                    )
-                  },
-                )
-              }
+              ) {}
             },
             snackbarHost = {
               // node:snackbar-host component:m3/snackbar-host symbol:SnackbarHost
@@ -274,188 +281,193 @@ fun JetcasterDiscoverExpandedSupportingPane() {
                         // node:podcast-carousel component:layout/horizontal-carousel
                         // symbol:HorizontalUncontainedCarousel
                         // typed-properties:{"contentPaddingStartDp":{"type":"float","value":8},"itemSpacingDp":{"type":"float","value":4},"itemWidthDp":{"type":"float","value":128},"kind":{"type":"enum","value":"uncontained"},"scrollStateKey":{"type":"string","value":"discover-podcast-carousel"},"span":{"type":"enum","value":"full"}}
-                        BuilderHorizontalCarousel(
-                          kind = "uncontained",
+                        val carouselState = rememberCarouselState { 2 }
+                        HorizontalUncontainedCarousel(
+                          state = carouselState,
                           itemWidth = 128.dp,
-                          spacing = 4.dp,
-                          contentPaddingStart = 8.dp,
-                        ) { itemWidth ->
-                          Box(Modifier.width(itemWidth)) {
-                            key("android-developers-backstage") {
-                              // node:podcast-card-android component:m3/card symbol:Card
-                              // typed-properties:{"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"android-developers-backstage"}}
-                              Card(
-                                modifier =
-                                  Modifier.size(width = 128.dp, height = 128.dp)
-                                    .clip(RoundedCornerShape(16.dp)),
-                                shape = RoundedCornerShape(16.dp),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                                colors = builderCardColors(Color.Unspecified),
-                              ) {
-                                Box(Modifier.fillMaxSize()) {
-                                  // node:podcast-card-android-image component:asset/image
-                                  // symbol:Image
-                                  // typed-properties:{"assetKey":{"type":"assetKey","value":"jetcaster.cover.android-developers-backstage"},"contentDescription":{"type":"string","value":"Android Developers Backstage cover"},"contentScale":{"type":"enum","value":"crop"}}
-                                  BuilderAssetImage(
-                                    assetKey = "jetcaster.cover.android-developers-backstage",
-                                    contentDescription = "Android Developers Backstage cover",
-                                    contentScale = "crop",
-                                    modifier =
-                                      Modifier.matchParentSize().semantics {
-                                        contentDescription = "Android Developers Backstage cover"
-                                      },
-                                  )
-                                  // node:podcast-card-android-gradient
-                                  // component:shape/linear-gradient
-                                  // symbol:Modifier.background(Brush.linearGradient)
-                                  // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"endColor":{"type":"color","value":"#FF000000"},"startColor":{"type":"color","value":"#00000000"}}
-                                  Box(
-                                    Modifier.matchParentSize()
-                                      .background(
-                                        Brush.verticalGradient(
-                                          listOf(Color(0x00000000), Color(0xFF000000))
+                          itemSpacing = 4.dp,
+                          contentPadding = PaddingValues(start = 8.dp),
+                          modifier = Modifier,
+                        ) { index ->
+                          when (index) {
+                            0 -> {
+                              key("android-developers-backstage") {
+                                // node:podcast-card-android component:m3/card symbol:Card
+                                // typed-properties:{"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"android-developers-backstage"}}
+                                Card(
+                                  modifier =
+                                    Modifier.size(width = 128.dp, height = 128.dp)
+                                      .clip(RoundedCornerShape(16.dp)),
+                                  shape = RoundedCornerShape(16.dp),
+                                  elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                  colors = builderCardColors(Color.Unspecified),
+                                ) {
+                                  Box(Modifier.fillMaxSize()) {
+                                    // node:podcast-card-android-image component:asset/image
+                                    // symbol:Image
+                                    // typed-properties:{"assetKey":{"type":"assetKey","value":"jetcaster.cover.android-developers-backstage"},"contentDescription":{"type":"string","value":"Android Developers Backstage cover"},"contentScale":{"type":"enum","value":"crop"}}
+                                    BuilderAssetImage(
+                                      assetKey = "jetcaster.cover.android-developers-backstage",
+                                      contentDescription = "Android Developers Backstage cover",
+                                      contentScale = "crop",
+                                      modifier =
+                                        Modifier.matchParentSize().semantics {
+                                          contentDescription = "Android Developers Backstage cover"
+                                        },
+                                    )
+                                    // node:podcast-card-android-gradient
+                                    // component:shape/linear-gradient
+                                    // symbol:Modifier.background(Brush.linearGradient)
+                                    // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"endColor":{"type":"color","value":"#FF000000"},"startColor":{"type":"color","value":"#00000000"}}
+                                    Box(
+                                      Modifier.matchParentSize()
+                                        .background(
+                                          Brush.verticalGradient(
+                                            listOf(Color(0x00000000), Color(0xFF000000))
+                                          )
                                         )
+                                    )
+                                    // node:podcast-card-android-follow component:m3/icon-button
+                                    // symbol:IconButton
+                                    // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"contentDescription":{"type":"string","value":"Unfollow Android Developers Backstage"},"selected":{"type":"bool","value":true}}
+                                    IconButton(
+                                      onClick = {},
+                                      modifier =
+                                        Modifier.padding(
+                                            start = 4.dp,
+                                            top = 4.dp,
+                                            end = 4.dp,
+                                            bottom = 4.dp,
+                                          )
+                                          .align(Alignment.TopStart)
+                                          .semantics {
+                                            contentDescription =
+                                              "Unfollow Android Developers Backstage"
+                                          }
+                                          .semantics { selected = true }
+                                          .background(Color.Black.copy(alpha = .46f), CircleShape),
+                                    ) {
+                                      // node:podcast-card-android-follow-icon component:m3/icon
+                                      // symbol:Icon
+                                      // typed-properties:{"color":{"type":"colorToken","value":"primary"},"iconKey":{"type":"enum","value":"checkCircle"}}
+                                      Icon(
+                                        imageVector = builderIcon("checkCircle"),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier,
                                       )
-                                  )
-                                  // node:podcast-card-android-follow component:m3/icon-button
-                                  // symbol:IconButton
-                                  // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"contentDescription":{"type":"string","value":"Unfollow Android Developers Backstage"},"selected":{"type":"bool","value":true}}
-                                  IconButton(
-                                    onClick = {},
-                                    modifier =
-                                      Modifier.padding(
-                                          start = 4.dp,
-                                          top = 4.dp,
-                                          end = 4.dp,
-                                          bottom = 4.dp,
-                                        )
-                                        .align(Alignment.TopStart)
-                                        .semantics {
-                                          contentDescription =
-                                            "Unfollow Android Developers Backstage"
-                                        }
-                                        .semantics { selected = true }
-                                        .background(Color.Black.copy(alpha = .46f), CircleShape),
-                                  ) {
-                                    // node:podcast-card-android-follow-icon component:m3/icon
-                                    // symbol:Icon
-                                    // typed-properties:{"color":{"type":"colorToken","value":"primary"},"iconKey":{"type":"enum","value":"checkCircle"}}
-                                    Icon(
-                                      imageVector = builderIcon("checkCircle"),
-                                      contentDescription = null,
-                                      tint = MaterialTheme.colorScheme.primary,
-                                      modifier = Modifier,
+                                    }
+                                    // node:podcast-card-android-title component:m3/text symbol:Text
+                                    // typed-properties:{"alignment":{"type":"enum","value":"bottomStart"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Android Developers Backstage"}}
+                                    Text(
+                                      text = "Android Developers Backstage",
+                                      style = MaterialTheme.typography.bodyMedium,
+                                      color = Color(0xFFFFFFFF),
+                                      fontWeight = null,
+                                      maxLines = 2,
+                                      overflow = TextOverflow.Ellipsis,
+                                      modifier =
+                                        Modifier.padding(
+                                            start = 16.dp,
+                                            top = 0.dp,
+                                            end = 16.dp,
+                                            bottom = 16.dp,
+                                          )
+                                          .align(Alignment.BottomStart),
                                     )
                                   }
-                                  // node:podcast-card-android-title component:m3/text symbol:Text
-                                  // typed-properties:{"alignment":{"type":"enum","value":"bottomStart"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Android Developers Backstage"}}
-                                  Text(
-                                    text = "Android Developers Backstage",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFFFFFFFF),
-                                    fontWeight = null,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier =
-                                      Modifier.padding(
-                                          start = 16.dp,
-                                          top = 0.dp,
-                                          end = 16.dp,
-                                          bottom = 16.dp,
-                                        )
-                                        .align(Alignment.BottomStart),
-                                  )
                                 }
                               }
                             }
-                          }
-                          Box(Modifier.width(itemWidth)) {
-                            key("google-developers-podcast") {
-                              // node:podcast-card-google component:m3/card symbol:Card
-                              // typed-properties:{"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"google-developers-podcast"}}
-                              Card(
-                                modifier =
-                                  Modifier.size(width = 128.dp, height = 128.dp)
-                                    .clip(RoundedCornerShape(16.dp)),
-                                shape = RoundedCornerShape(16.dp),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                                colors = builderCardColors(Color.Unspecified),
-                              ) {
-                                Box(Modifier.fillMaxSize()) {
-                                  // node:podcast-card-google-image component:asset/image
-                                  // symbol:Image
-                                  // typed-properties:{"assetKey":{"type":"assetKey","value":"jetcaster.cover.google-developers-podcast"},"contentDescription":{"type":"string","value":"Google Developers podcast cover"},"contentScale":{"type":"enum","value":"crop"}}
-                                  BuilderAssetImage(
-                                    assetKey = "jetcaster.cover.google-developers-podcast",
-                                    contentDescription = "Google Developers podcast cover",
-                                    contentScale = "crop",
-                                    modifier =
-                                      Modifier.matchParentSize().semantics {
-                                        contentDescription = "Google Developers podcast cover"
-                                      },
-                                  )
-                                  // node:podcast-card-google-gradient
-                                  // component:shape/linear-gradient
-                                  // symbol:Modifier.background(Brush.linearGradient)
-                                  // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"endColor":{"type":"color","value":"#FF000000"},"startColor":{"type":"color","value":"#00000000"}}
-                                  Box(
-                                    Modifier.matchParentSize()
-                                      .background(
-                                        Brush.verticalGradient(
-                                          listOf(Color(0x00000000), Color(0xFF000000))
+                            1 -> {
+                              key("google-developers-podcast") {
+                                // node:podcast-card-google component:m3/card symbol:Card
+                                // typed-properties:{"shape":{"type":"shapeToken","value":"large"},"stableKey":{"type":"string","value":"google-developers-podcast"}}
+                                Card(
+                                  modifier =
+                                    Modifier.size(width = 128.dp, height = 128.dp)
+                                      .clip(RoundedCornerShape(16.dp)),
+                                  shape = RoundedCornerShape(16.dp),
+                                  elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                  colors = builderCardColors(Color.Unspecified),
+                                ) {
+                                  Box(Modifier.fillMaxSize()) {
+                                    // node:podcast-card-google-image component:asset/image
+                                    // symbol:Image
+                                    // typed-properties:{"assetKey":{"type":"assetKey","value":"jetcaster.cover.google-developers-podcast"},"contentDescription":{"type":"string","value":"Google Developers podcast cover"},"contentScale":{"type":"enum","value":"crop"}}
+                                    BuilderAssetImage(
+                                      assetKey = "jetcaster.cover.google-developers-podcast",
+                                      contentDescription = "Google Developers podcast cover",
+                                      contentScale = "crop",
+                                      modifier =
+                                        Modifier.matchParentSize().semantics {
+                                          contentDescription = "Google Developers podcast cover"
+                                        },
+                                    )
+                                    // node:podcast-card-google-gradient
+                                    // component:shape/linear-gradient
+                                    // symbol:Modifier.background(Brush.linearGradient)
+                                    // typed-properties:{"direction":{"type":"enum","value":"topToBottom"},"endColor":{"type":"color","value":"#FF000000"},"startColor":{"type":"color","value":"#00000000"}}
+                                    Box(
+                                      Modifier.matchParentSize()
+                                        .background(
+                                          Brush.verticalGradient(
+                                            listOf(Color(0x00000000), Color(0xFF000000))
+                                          )
                                         )
+                                    )
+                                    // node:podcast-card-google-follow component:m3/icon-button
+                                    // symbol:IconButton
+                                    // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"contentDescription":{"type":"string","value":"Follow Google Developers podcast"},"selected":{"type":"bool","value":false}}
+                                    IconButton(
+                                      onClick = {},
+                                      modifier =
+                                        Modifier.padding(
+                                            start = 4.dp,
+                                            top = 4.dp,
+                                            end = 4.dp,
+                                            bottom = 4.dp,
+                                          )
+                                          .align(Alignment.TopStart)
+                                          .semantics {
+                                            contentDescription = "Follow Google Developers podcast"
+                                          }
+                                          .semantics { selected = false }
+                                          .background(Color.Black.copy(alpha = .46f), CircleShape),
+                                    ) {
+                                      // node:podcast-card-google-follow-icon component:m3/icon
+                                      // symbol:Icon
+                                      // typed-properties:{"color":{"type":"color","value":"#FFFFFFFF"},"iconKey":{"type":"enum","value":"addCircle"}}
+                                      Icon(
+                                        imageVector = builderIcon("addCircle"),
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFFFFF),
+                                        modifier = Modifier,
                                       )
-                                  )
-                                  // node:podcast-card-google-follow component:m3/icon-button
-                                  // symbol:IconButton
-                                  // typed-properties:{"alignment":{"type":"enum","value":"topStart"},"contentDescription":{"type":"string","value":"Follow Google Developers podcast"},"selected":{"type":"bool","value":false}}
-                                  IconButton(
-                                    onClick = {},
-                                    modifier =
-                                      Modifier.padding(
-                                          start = 4.dp,
-                                          top = 4.dp,
-                                          end = 4.dp,
-                                          bottom = 4.dp,
-                                        )
-                                        .align(Alignment.TopStart)
-                                        .semantics {
-                                          contentDescription = "Follow Google Developers podcast"
-                                        }
-                                        .semantics { selected = false }
-                                        .background(Color.Black.copy(alpha = .46f), CircleShape),
-                                  ) {
-                                    // node:podcast-card-google-follow-icon component:m3/icon
-                                    // symbol:Icon
-                                    // typed-properties:{"color":{"type":"color","value":"#FFFFFFFF"},"iconKey":{"type":"enum","value":"addCircle"}}
-                                    Icon(
-                                      imageVector = builderIcon("addCircle"),
-                                      contentDescription = null,
-                                      tint = Color(0xFFFFFFFF),
-                                      modifier = Modifier,
+                                    }
+                                    // node:podcast-card-google-title component:m3/text symbol:Text
+                                    // typed-properties:{"alignment":{"type":"enum","value":"bottomStart"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Google Developers podcast"}}
+                                    Text(
+                                      text = "Google Developers podcast",
+                                      style = MaterialTheme.typography.bodyMedium,
+                                      color = Color(0xFFFFFFFF),
+                                      fontWeight = null,
+                                      maxLines = 2,
+                                      overflow = TextOverflow.Ellipsis,
+                                      modifier =
+                                        Modifier.padding(
+                                            start = 16.dp,
+                                            top = 0.dp,
+                                            end = 16.dp,
+                                            bottom = 16.dp,
+                                          )
+                                          .align(Alignment.BottomStart),
                                     )
                                   }
-                                  // node:podcast-card-google-title component:m3/text symbol:Text
-                                  // typed-properties:{"alignment":{"type":"enum","value":"bottomStart"},"color":{"type":"color","value":"#FFFFFFFF"},"maxLines":{"type":"int","value":2},"overflow":{"type":"enum","value":"ellipsis"},"style":{"type":"typographyToken","value":"bodyMedium"},"text":{"type":"string","value":"Google Developers podcast"}}
-                                  Text(
-                                    text = "Google Developers podcast",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFFFFFFFF),
-                                    fontWeight = null,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier =
-                                      Modifier.padding(
-                                          start = 16.dp,
-                                          top = 0.dp,
-                                          end = 16.dp,
-                                          bottom = 16.dp,
-                                        )
-                                        .align(Alignment.BottomStart),
-                                  )
                                 }
                               }
                             }
+                            else -> Unit
                           }
                         }
                       }
@@ -1301,117 +1313,8 @@ private fun PaneScaffoldScope.BuilderPane(width: Dp?, content: @Composable () ->
 }
 
 @Composable
-private fun BuilderHorizontalCarousel(
-  kind: String,
-  itemWidth: Dp,
-  spacing: Dp,
-  contentPaddingStart: Dp,
-  content: @Composable RowScope.(Dp) -> Unit,
-) {
-  check(kind == "uncontained") { "Unsupported carousel kind: $kind" }
-  Row(
-    Modifier.padding(start = contentPaddingStart),
-    horizontalArrangement = Arrangement.spacedBy(spacing),
-  ) {
-    content(itemWidth)
-  }
-}
-
-@Composable
-private fun BuilderSearchBar(
-  expanded: Boolean,
-  tonalElevation: Dp,
-  modifier: Modifier = Modifier,
-  content: @Composable () -> Unit,
-) {
-  Surface(
-    modifier.height(56.dp).semantics {
-      stateDescription = if (expanded) "expanded" else "collapsed"
-    },
-    shape = CircleShape,
-    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    tonalElevation = tonalElevation,
-  ) {
-    Box(Modifier.fillMaxSize()) { content() }
-  }
-}
-
-@Composable
-private fun BuilderSearchInputField(
-  value: String,
-  onValueChange: (String) -> Unit,
-  enabled: Boolean,
-  leadingIcon: @Composable () -> Unit,
-  placeholder: @Composable () -> Unit,
-  trailingIcon: @Composable () -> Unit,
-) {
-  Row(
-    Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
-    horizontalArrangement = Arrangement.spacedBy(16.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    leadingIcon()
-    BasicTextField(
-      value,
-      onValueChange,
-      Modifier.weight(1f),
-      enabled = enabled,
-      decorationBox = { inner ->
-        if (value.isEmpty()) placeholder()
-        inner()
-      },
-    )
-    trailingIcon()
-  }
-}
-
-@Composable
 private fun BuilderSnackbarHost(visible: Boolean) {
   if (visible) Snackbar { Text("Snackbar") }
-}
-
-@Composable
-private fun BuilderDialogSurface(
-  containerColor: Color,
-  tonalElevation: Dp,
-  cornerRadius: Dp,
-  hasIcon: Boolean,
-  hasTitle: Boolean,
-  hasText: Boolean,
-  modifier: Modifier = Modifier,
-  icon: @Composable () -> Unit,
-  title: @Composable () -> Unit,
-  text: @Composable () -> Unit,
-  buttons: @Composable RowScope.() -> Unit,
-) {
-  Surface(
-    modifier.widthIn(min = 280.dp, max = 560.dp),
-    shape = RoundedCornerShape(cornerRadius),
-    color =
-      if (containerColor == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh
-      else containerColor,
-    contentColor = MaterialTheme.colorScheme.onSurface,
-    tonalElevation = tonalElevation,
-  ) {
-    Column(
-      Modifier.padding(24.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
-      horizontalAlignment = if (hasIcon) Alignment.CenterHorizontally else Alignment.Start,
-    ) {
-      if (hasIcon) icon()
-      if (hasTitle) title()
-      if (hasText)
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-          text()
-        }
-      Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-        verticalAlignment = Alignment.CenterVertically,
-        content = buttons,
-      )
-    }
-  }
 }
 
 @Composable

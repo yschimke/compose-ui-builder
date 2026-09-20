@@ -185,10 +185,13 @@ class PersistentUiBuilderServiceSoakTest {
     }
 
     val reconnectFallbacks = clients.sumOf(SoakClient::snapshotFallbacks)
-    clients.forEach { it.connect(service, forceSnapshot = true) }
     val finalSnapshot = snapshot(service)
     clients.forEach { client ->
-      assertEquals(finalSnapshot.state, client.state, "${client.name} state")
+      assertEquals(finalSnapshot.state, client.state, "${client.name} live state")
+    }
+    clients.forEach { it.connect(service, forceSnapshot = true) }
+    clients.forEach { client ->
+      assertEquals(finalSnapshot.state, client.state, "${client.name} recovered snapshot state")
       client.disconnect()
     }
 
@@ -300,12 +303,33 @@ class PersistentUiBuilderServiceSoakTest {
           state = update.snapshot.state
         }
         is UiBuilderServiceUpdate.Delta -> {
-          val last = update.delta.operations.lastOrNull()?.outcome ?: return
-          state =
-            state.copy(
-              lastSequence = last.sequence,
-              document = state.document.copy(revision = last.committedRevision),
-            )
+          update.delta.operations.forEach { committed ->
+            val command = assertIs<DesignCommandV1>(committed.submission)
+            var nodes = state.document.nodes
+            command.operations.forEach { mutation ->
+              val property = assertIs<SetPropertyMutationV1>(mutation)
+              val node = nodes.getValue(property.nodeId)
+              nodes =
+                nodes +
+                  (node.id to
+                    node.copy(
+                      properties =
+                        if (property.value is NullValueV1) node.properties - property.property
+                        else node.properties + (property.property to property.value)
+                    ))
+            }
+            val outcome = committed.outcome
+            state =
+              state.copy(
+                lastSequence = outcome.sequence,
+                document =
+                  state.document.copy(
+                    revision = outcome.committedRevision,
+                    updatedAtEpochMillis = assertNotNull(outcome.documentUpdatedAtEpochMillis),
+                    nodes = nodes,
+                  ),
+              )
+          }
         }
         is UiBuilderServiceUpdate.Outcome -> {
           val accepted = update.outcome as? AcceptedOutcomeV1 ?: return

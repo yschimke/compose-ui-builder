@@ -9,6 +9,17 @@
   },
   "statusSemantics": {
     "platform": "mobile",
+    "previewSurfaces": {
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "HorizontalFloatingToolbar is not available in the pinned Compose Multiplatform Material 3 dependency; designs using it render a declared compatibility adapter."
+      },
+      "native": {
+        "fidelity": "approximate",
+        "backend": "desktop",
+        "reason": "Generated source uses a declared HorizontalFloatingToolbar compatibility adapter until the pinned Material 3 dependency supplies the real API."
+      }
+    },
     "colorTokens": {
       "$comment": "The theme roles a colour property or a background modifier may name, which are the roles the canvas draws. A colour is otherwise a #RRGGBB or #AARRGGBB literal. Mirrored by PropertyValueKinds.CANVAS_COLOR_TOKENS in :ui-builder-export and by the runtime's catalog executor; a test pins the three to this list.",
       "roles": ["background", "surface", "surfaceContainer", "surfaceContainerLow", "surfaceContainerHigh", "surfaceContainerHighest", "primary", "onPrimary", "tertiary", "onTertiary", "onSurface", "onSurfaceVariant", "outlineVariant", "transparent"]

@@ -51,6 +51,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -76,6 +77,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
@@ -99,6 +102,8 @@ import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationIt
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberDatePickerState
@@ -345,6 +350,28 @@ public val LocalRemoteComposeCaptures:
  * stadium, for the same reason and with the same honesty about it.
  */
 internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
+
+internal enum class UiBuilderRenderStrategy {
+  REAL,
+  AUTHORING_ADAPTER,
+  COMPATIBILITY_ADAPTER,
+}
+
+/** The audited boundary between editor-only stand-ins and bounded Preview components. */
+internal fun uiBuilderRenderStrategy(
+  componentId: String,
+  unrolled: Boolean,
+): UiBuilderRenderStrategy =
+  when (componentId) {
+    "layout/horizontal-carousel",
+    "m3/search-bar",
+    "m3/search-input-field",
+    "m3/dialog" ->
+      if (unrolled) UiBuilderRenderStrategy.AUTHORING_ADAPTER else UiBuilderRenderStrategy.REAL
+    // Compose Multiplatform 1.12 resolves Material 3 1.9, before this API was added.
+    "m3/horizontal-floating-toolbar" -> UiBuilderRenderStrategy.COMPATIBILITY_ADAPTER
+    else -> UiBuilderRenderStrategy.REAL
+  }
 
 /**
  * The density the design is drawn at: the one its environment names, not the host's.
@@ -596,7 +623,7 @@ fun UiBuilderSurface(
     MaterialTheme.typography.let { base -> fontFamily?.let(base::withFontFamily) ?: base }
   val wearScreen =
     document.roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
-      val adapter = LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
+      val adapter = canvasAdapterIds[node.componentId] ?: node.componentId
       adapter == ROUND_SCREEN_FRAME
     } == true
   val baseColorScheme =
@@ -1385,9 +1412,28 @@ private fun RenderNode(
       }
     }
     "layout/horizontal-carousel" -> {
-      val lazyState = rememberLazyListState()
-      CompatibleHorizontalCarousel(node, measured, lazyState, slot("items")) { id, next ->
-        child(id, next)
+      val items = slot("items")
+      if (
+        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+          UiBuilderRenderStrategy.AUTHORING_ADAPTER
+      ) {
+        val lazyState = rememberLazyListState()
+        CompatibleHorizontalCarousel(node, measured, lazyState, items) { id, next ->
+          child(id, next)
+        }
+      } else {
+        val carouselState = rememberCarouselState { items.size }
+        semanticActions[node.id] =
+          semanticActions[node.id].orEmpty().copy(scrollBy = carouselState::dispatchRawDelta)
+        HorizontalUncontainedCarousel(
+          state = carouselState,
+          itemWidth = node.float("itemWidthDp", 128f).dp,
+          modifier = measured,
+          itemSpacing = node.float("itemSpacingDp").dp,
+          contentPadding = PaddingValues(start = node.float("contentPaddingStartDp").dp),
+        ) { index ->
+          child(items[index], Modifier)
+        }
       }
     }
     "m3/center-aligned-top-app-bar" ->
@@ -1400,36 +1446,74 @@ private fun RenderNode(
           ),
         title = { slot("title").forEach { child(it, Modifier) } },
       )
-    "m3/search-bar" ->
-      Surface(
-        measured.height(56.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = node.float("tonalElevationDp").dp,
-      ) {
-        Column { slot("inputField").forEach { child(it, Modifier.fillMaxSize()) } }
+    "m3/search-bar" -> {
+      val inputField: @Composable () -> Unit = {
+        slot("inputField").forEach { child(it, Modifier.fillMaxSize()) }
       }
+      if (
+        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+          UiBuilderRenderStrategy.AUTHORING_ADAPTER
+      ) {
+        Surface(
+          measured.height(56.dp),
+          shape = CircleShape,
+          color = MaterialTheme.colorScheme.surfaceContainerHigh,
+          tonalElevation = node.float("tonalElevationDp").dp,
+        ) {
+          Column { inputField() }
+        }
+      } else {
+        SearchBar(
+          inputField = inputField,
+          expanded = node.bool("expanded"),
+          onExpandedChange = {},
+          modifier = measured,
+          tonalElevation = node.float("tonalElevationDp").dp,
+        ) {
+          slot("expandedContent").forEach { child(it, Modifier) }
+        }
+      }
+    }
     "m3/search-input-field" -> {
       val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
       val value = variable?.let(state::get).orEmpty()
-      Row(
-        measured.padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+      val onValueChange: (String) -> Unit = { if (variable != null) onState(variable, it) }
+      if (
+        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+          UiBuilderRenderStrategy.AUTHORING_ADAPTER
       ) {
-        slot("leadingIcon").forEach { child(it, Modifier) }
-        Box(Modifier.weight(1f)) {
-          if (value.isEmpty()) slot("placeholder").forEach { child(it, Modifier) }
-          BasicTextField(
-            value,
-            { if (variable != null) onState(variable, it) },
-            Modifier.fillMaxWidth(),
-            enabled = node.bool("enabled", true),
-            textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
-            singleLine = true,
-          )
+        Row(
+          measured.padding(horizontal = 16.dp, vertical = 12.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+          slot("leadingIcon").forEach { child(it, Modifier) }
+          Box(Modifier.weight(1f)) {
+            if (value.isEmpty()) slot("placeholder").forEach { child(it, Modifier) }
+            BasicTextField(
+              value,
+              onValueChange,
+              Modifier.fillMaxWidth(),
+              enabled = node.bool("enabled", true),
+              textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
+              singleLine = true,
+            )
+          }
+          slot("trailingIcon").forEach { child(it, Modifier) }
         }
-        slot("trailingIcon").forEach { child(it, Modifier) }
+      } else {
+        SearchBarDefaults.InputField(
+          query = value,
+          onQueryChange = onValueChange,
+          onSearch = {},
+          expanded = false,
+          onExpandedChange = {},
+          modifier = measured,
+          enabled = node.bool("enabled", true),
+          placeholder = { slot("placeholder").forEach { child(it, Modifier) } },
+          leadingIcon = { slot("leadingIcon").forEach { child(it, Modifier) } },
+          trailingIcon = { slot("trailingIcon").forEach { child(it, Modifier) } },
+        )
       }
     }
     "m3/snackbar-host" ->
@@ -1620,21 +1704,41 @@ private fun RenderNode(
         )
       }
     }
-    "m3/dialog" ->
-      BuilderDialogSurface(
-        node = node,
-        modifier = measured,
-        icon = { next -> slot("icon").forEach { child(it, next) } },
-        title = { next -> slot("title").forEach { child(it, next) } },
-        text = { next -> slot("text").forEach { child(it, next) } },
-        hasIcon = slot("icon").isNotEmpty(),
-        hasTitle = slot("title").isNotEmpty(),
-        hasText = slot("text").isNotEmpty(),
-        buttons = { next ->
-          slot("dismissButton").forEach { child(it, next) }
-          slot("confirmButton").forEach { child(it, next) }
-        },
-      )
+    "m3/dialog" -> {
+      if (
+        uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+          UiBuilderRenderStrategy.AUTHORING_ADAPTER
+      ) {
+        BuilderDialogSurface(
+          node = node,
+          modifier = measured,
+          icon = { next -> slot("icon").forEach { child(it, next) } },
+          title = { next -> slot("title").forEach { child(it, next) } },
+          text = { next -> slot("text").forEach { child(it, next) } },
+          hasIcon = slot("icon").isNotEmpty(),
+          hasTitle = slot("title").isNotEmpty(),
+          hasText = slot("text").isNotEmpty(),
+          buttons = { next ->
+            slot("dismissButton").forEach { child(it, next) }
+            slot("confirmButton").forEach { child(it, next) }
+          },
+        )
+      } else {
+        AlertDialog(
+          onDismissRequest = {},
+          confirmButton = { slot("confirmButton").forEach { child(it, Modifier) } },
+          modifier = measured,
+          dismissButton = { slot("dismissButton").forEach { child(it, Modifier) } },
+          icon = { slot("icon").forEach { child(it, Modifier) } },
+          title = { slot("title").forEach { child(it, Modifier) } },
+          text = { slot("text").forEach { child(it, Modifier) } },
+          shape = RoundedCornerShape(node.float("shapeDp", DIALOG_CORNER_DP).dp),
+          containerColor =
+            node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHigh),
+          tonalElevation = node.float("tonalElevationDp", DIALOG_TONAL_ELEVATION_DP).dp,
+        )
+      }
+    }
     "m3/date-picker" -> BuilderDatePicker(node, measured)
     "m3/time-picker" -> BuilderTimePicker(node, measured)
     "m3/icon-button" ->
@@ -2136,8 +2240,21 @@ private fun WearScreenScaffold(
     // screenshot agrees: `ScrollMode.LONG` sets `LocalScrollCaptureInProgress`, the emitted
     // scaffold reads it and draws none, and the stitched capture comes back clean.
   ) {
-    CompositionLocalProvider(LocalWearScreenListState provides listState) {
-      Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+    CompositionLocalProvider(
+      LocalWearScreenListState provides listState,
+      LocalWearScreenContentPadding provides padding,
+    ) {
+      // This is intentionally not `Column.padding(padding)`: native `ScreenScaffold` hands the
+      // padding to its `TransformingLazyColumn`, where it belongs to the list's scroll range. An
+      // outer padded viewport leaves the final row clipped at the round frame when it reaches end.
+      if (LocalUiBuilderUnrolled.current) {
+        // The extent is deliberately not a viewport. Keep its ordinary inset so every item is
+        // legible, including the first and last ones, while the frame pane below uses the real
+        // lazy-list content-padding path.
+        Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+      } else {
+        content(Modifier.fillMaxSize())
+      }
     }
     // Overlaid, not a band above the content. `TimeText` belongs to `AppScaffold` and is drawn
     // over the screen; what makes room for it is the list's own top content padding, which is

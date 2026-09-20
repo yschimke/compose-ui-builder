@@ -30,6 +30,45 @@ class ProblemsInspectorTriageTest {
   }
 
   @Test
+  fun `unlocated design refusals remain author owned`() {
+    val group =
+      triageProblems(
+          listOf(
+            EditorProblem(
+              code = "COMPOSE_EXPORT_REFUSED",
+              message = "Widget padding must be 20dp",
+            )
+          )
+        )
+        .single()
+
+    assertEquals(ProblemAudience.AUTHOR, group.audience)
+  }
+
+  @Test
+  fun `same diagnostic on different components remains distinct`() {
+    val groups =
+      triageProblems(
+        listOf(
+          EditorProblem(
+            "COMPONENT_DRIFTED",
+            "Card drifted",
+            componentId = "m3/card",
+            blocking = false,
+          ),
+          EditorProblem(
+            "COMPONENT_DRIFTED",
+            "Text drifted",
+            componentId = "m3/text",
+            blocking = false,
+          ),
+        )
+      )
+
+    assertEquals(listOf("m3/card", "m3/text"), groups.mapNotNull { it.componentId }.sorted())
+  }
+
+  @Test
   fun `located group visibly navigates and retains copyable technical details`() =
     runDesktopComposeUiTest(width = 520, height = 700) {
       val events = mutableListOf<UiBuilderEditorEvent>()

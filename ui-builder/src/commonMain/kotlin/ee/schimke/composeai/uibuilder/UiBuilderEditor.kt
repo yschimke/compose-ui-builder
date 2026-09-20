@@ -7980,6 +7980,18 @@ private fun PropertyInspector(
     remember(state.document.id) {
       mutableStateMapOf<InspectorPropertyDraftKey, InspectorPropertyDraft>()
     }
+  LaunchedEffect(state.document.nodes.keys) {
+    propertyDrafts.keys
+      .filterNot { it.nodeId in state.document.nodes }
+      .forEach(propertyDrafts::remove)
+  }
+  LaunchedEffect(state.selectedNodeId, fields.map { it.name }) {
+    val selectedNodeId = state.selectedNodeId ?: return@LaunchedEffect
+    val visibleProperties = fields.mapTo(mutableSetOf()) { it.name }
+    propertyDrafts.keys
+      .filter { it.nodeId == selectedNodeId && it.property !in visibleProperties }
+      .forEach(propertyDrafts::remove)
+  }
   Surface(modifier, color = MaterialTheme.colorScheme.surface) {
     Column {
       // The four inspectors used to share a row of tabs inside this panel, which is why it had to
@@ -8696,7 +8708,11 @@ private fun DraftPropertyControl(
     )
   }
   fun submit(next: String = value) {
-    if (next == field.value || (!showSteppers || next.toDoubleOrNull() != null)) {
+    if (next == field.value) {
+      onDraftChange(null)
+      return
+    }
+    if (!showSteppers || next.toDoubleOrNull() != null) {
       onDraftChange(InspectorPropertyDraft(next, field.value, InspectorPropertyDraftStatus.PENDING))
       commit(next)
     }
@@ -8853,6 +8869,16 @@ private val DOWNSTREAM_PROBLEM_CODES = setOf("COMPOSE_EXPORT_REFUSED")
 private val TOOLING_PROBLEM_CODES =
   setOf("CATALOG_UNAVAILABLE", "CATALOG_PIN_MISMATCH", "COMPONENT_RECORD_UNAVAILABLE")
 
+private fun problemGroupKey(problem: EditorProblem): String =
+  listOf(
+      problem.code,
+      problem.nodeId.orEmpty(),
+      problem.componentId.orEmpty(),
+      problem.propertyName.orEmpty(),
+      problem.blocking.toString(),
+    )
+    .joinToString("\u0000")
+
 /** Groups exact locations while keeping every precise diagnostic available in technical details. */
 internal fun triageProblems(problems: List<EditorProblem>): List<EditorProblemGroup> {
   val structuralLocations =
@@ -8861,16 +8887,7 @@ internal fun triageProblems(problems: List<EditorProblem>): List<EditorProblemGr
       .map { it.nodeId }
       .toSet()
   return problems
-    .groupBy {
-      listOf(
-          it.code,
-          it.nodeId.orEmpty(),
-          it.componentId.orEmpty(),
-          it.propertyName.orEmpty(),
-          it.blocking.toString(),
-        )
-        .joinToString("\u0000")
-    }
+    .groupBy(::problemGroupKey)
     .values
     .map { occurrences ->
       val first = occurrences.first()
@@ -8885,8 +8902,7 @@ internal fun triageProblems(problems: List<EditorProblem>): List<EditorProblemGr
         blocking = first.blocking,
         rootCause = first.blocking && !downstream,
         audience =
-          if (first.nodeId == null || first.code in TOOLING_PROBLEM_CODES)
-            ProblemAudience.CATALOG_OR_TOOLING
+          if (first.code in TOOLING_PROBLEM_CODES) ProblemAudience.CATALOG_OR_TOOLING
           else ProblemAudience.AUTHOR,
       )
     }
@@ -8963,11 +8979,7 @@ internal fun ProblemsInspector(
   LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
     itemsIndexed(
       groups,
-      key = { _, group ->
-        group.problems.first().let {
-          "${group.code}:${it.nodeId}:${it.propertyName}:${it.blocking}"
-        }
-      },
+      key = { _, group -> problemGroupKey(group.problems.first()) },
     ) { _, group ->
       ProblemGroupRow(group, dispatch)
     }
@@ -9555,6 +9567,32 @@ private fun LiveNativeFrame(
                     break
                   }
                 }
+              }
+            }
+          }
+          // A Wear pane has no browser scroll surface: a wheel over it is a turn of the rotating
+          // side button. The stream protocol and daemon call this `rotaryScroll`; previously this
+          // pane only forwarded presses, so native Compose never received the wheel at all.
+          .pointerInput(imageWidth, imageHeight, scale) {
+            awaitPointerEventScope {
+              while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Main)
+                if (event.type != PointerEventType.Scroll) continue
+                val change = event.changes.firstOrNull() ?: continue
+                onInput(
+                  UiBuilderNativeInput(
+                    kind = "rotaryScroll",
+                    pixelX =
+                      (change.position.x / scale).roundToInt().coerceIn(0, imageWidth.toInt() - 1),
+                    pixelY =
+                      (change.position.y / scale).roundToInt().coerceIn(0, imageHeight.toInt() - 1),
+                    // Browser wheel deltas are CSS-pixel motion; the daemon's rotary input is
+                    // device-pixel motion. Keep the same half-pixel conversion the Wasm device
+                    // scene uses so moving from Preview to Native does not double the RSB speed.
+                    scrollDeltaY = change.scrollDelta.y * 0.5f,
+                  )
+                )
+                change.consume()
               }
             }
           },

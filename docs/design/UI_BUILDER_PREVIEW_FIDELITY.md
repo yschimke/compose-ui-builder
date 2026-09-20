@@ -62,8 +62,9 @@ This is not a licence to fabricate. `AGENTS.md` forbids hand-assembling a lookal
 library the canvas cannot link, and the renderer keeps that rule with two different shapes:
 
 - an **adapter**, where the canvas has a real component that carries the same contract —
-  `CompatibleHorizontalCarousel` over a `LazyRow`, because Material's uncontained carousel is not on
-  the dependency floor. The node draws, and what it draws is a real component;
+  `CompatibleHorizontalCarousel` over a `LazyRow`, because the real lazy carousel cannot expose all
+  authored children in the unbounded editor extent. The node draws, and what it draws is a real
+  component; Preview switches to `HorizontalUncontainedCarousel`;
 - a **named placeholder** ([`NativeOnlyPlaceholder`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt)),
   where it does not. The node says what it is, keeps its children so the tree is still navigable, and
   makes no claim about how it looks.
@@ -174,10 +175,28 @@ And it says where to look: *"it looks wrong in the editor"* is rung 1 doing its 
 otherwise; *"it looks wrong in the preview"* is a design bug; *"it looks wrong natively"* is an export
 bug.
 
-## Where the implementation is against this
+## Sanctioned substitutes
 
-The ladder is the design. Two rungs of it hold today and one does not, and saying which is the point
-of writing it down.
+The substitute inventory is deliberately short and executable in `PreviewFidelityInventoryTest`.
+Anything not listed here is a fidelity defect.
+
+| Component | Visual editor | Preview | Generated Native |
+| --- | --- | --- | --- |
+| lazy lists, grids, Scaffold, TransformingLazyColumn | unrolled authoring layout | real component | real component |
+| `layout/supporting-pane-scaffold` | unfolded authoring scaffold | real adaptive scaffold | real adaptive scaffold |
+| `layout/horizontal-carousel` | `LazyRow` authoring adapter | `HorizontalUncontainedCarousel` | `HorizontalUncontainedCarousel` |
+| `m3/search-bar` / `m3/search-input-field` | inline `Surface` / `BasicTextField` adapters | `SearchBar` / `SearchBarDefaults.InputField` | the same real APIs |
+| `m3/dialog` | inline dialog surface, so its children remain editable | `AlertDialog` | `AlertDialog` |
+| `m3/horizontal-floating-toolbar` | compatibility adapter | compatibility adapter | compatibility adapter, declared in export provenance |
+| a component unavailable to Wasm | named `NativeOnlyPlaceholder` | named placeholder and an approximate/none catalog claim | real platform component |
+
+The floating toolbar is the sole Material 3 exception on the current dependency floor. Compose
+Multiplatform 1.12 resolves Material 3 1.9.0, which does not publish
+`HorizontalFloatingToolbar`. Its exporter warning and `component-adapter:<node>:<component>`
+provenance entry prevent a compiled result from silently claiming API parity. Remove that row — and
+the helper — when the pinned Material dependency supplies the real API.
+
+## Where the implementation stands
 
 **Holds.** The editor's unrolled extent versus the preview's bounded composition is real and
 implemented — `CanvasExtentLayout` unrolls, `ConstrainedFramePane` does not, and the KDoc on the
@@ -205,24 +224,12 @@ scaffold cannot be measured against an unbounded height (`Size(1280 x 2147483647
 which is exactly how the authoring canvas measures so a list can be edited past its fold. A 1-vs-2
 disagreement about pane count is therefore expected, and it is the first row of the table above.
 
-**Does not hold yet: the rest of rung 2's components are rung 1's.** Both panes go through the same
-[`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt),
-so the preview inherits every remaining unconditional stand-in the editor uses. The known Material
-3 cases are `layout/horizontal-carousel` (`LazyRow` instead of `HorizontalUncontainedCarousel`),
-`m3/horizontal-floating-toolbar` (`Surface` + `Row`), and the hand-built `m3/search-bar` /
-`m3/search-input-field`. The inline dialog surface is deliberate for editing, but it also remains in
-the bounded pane. `wear-m3` is the catalog-level exception described above.
-
-The compiled rung does not repair all of these today: the capability exporter emits `Builder*`
-helpers for the carousel, search components, floating toolbar and dialog, so compiling that source
-still compiles a substitute rather than the catalog's declared symbol. Tracked in
-[#61](https://github.com/yschimke/compose-ui-builder/issues/61).
-
-Closing these is the direction, and the scaffold is the worked example of what closing one looks
-like: keep a stand-in only in the unrolled editor where authoring needs it, link the real library in
-the bounded pane where it is KMP-capable, emit the real component from the exporter, and let the
-properties the component derives for itself stop being authored. Where that is impossible, the
-surface must say it is approximate rather than claiming rung 2 or 3 fidelity.
+**Holds for every API on the dependency floor.** The renderer's explicit strategy boundary keeps
+carousel, search and dialog stand-ins in the unrolled editor and selects their real Material APIs in
+the bounded pane. The capability exporter emits those same real calls; it no longer writes
+`BuilderHorizontalCarousel`, `BuilderSearchBar`, `BuilderSearchInputField`, or
+`BuilderDialogSurface` lookalikes. The inventory above records the one dependency-floor exception
+instead of allowing it to disappear inside an otherwise authoritative generated file.
 
 ## See also
 
