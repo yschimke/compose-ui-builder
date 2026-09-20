@@ -688,6 +688,13 @@ fun UiBuilderEditor(
     null,
   onHelp: (() -> Unit)? = null,
   /**
+   * Copies an OpenCode-ready prompt for working on this live design through MCP.
+   *
+   * Null where this editor has no live server or clipboard. The host owns the prompt because it
+   * knows its origin; the editor only makes the workflow discoverable.
+   */
+  onCopyAiPrompt: (suspend () -> String)? = null,
+  /**
    * Leaves the editor for the host's index of every design this account may open, or null where the
    * host has no such page.
    *
@@ -2042,6 +2049,8 @@ fun UiBuilderEditor(
               onBrowseDesigns = onBrowseDesigns,
               onReconnect = onReconnect,
               onHelp = onHelp,
+              onCopyAiPrompt = onCopyAiPrompt,
+              onNotice = ::say,
               onTakeOffline = onTakeOffline,
               onSyncToServer = onSyncToServer,
               exportHost = exportHost,
@@ -2061,6 +2070,8 @@ fun UiBuilderEditor(
               onBrowseDesigns = onBrowseDesigns,
               onReconnect = onReconnect,
               onHelp = onHelp,
+              onCopyAiPrompt = onCopyAiPrompt,
+              onNotice = ::say,
               onTakeOffline = onTakeOffline,
               onSyncToServer = onSyncToServer,
               exportHost = exportHost,
@@ -2995,6 +3006,8 @@ private fun MobileEditorToolbar(
   onBrowseDesigns: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
+  onCopyAiPrompt: (suspend () -> String)?,
+  onNotice: (String) -> Unit,
   onTakeOffline: (() -> Unit)?,
   onSyncToServer: (() -> Unit)?,
   exportHost: UiBuilderExportHost?,
@@ -3002,6 +3015,7 @@ private fun MobileEditorToolbar(
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var expanded by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
   Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
     Row(
       Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 8.dp),
@@ -3137,6 +3151,16 @@ private fun MobileEditorToolbar(
               },
             )
           }
+          if (onCopyAiPrompt != null) {
+            DropdownMenuItem(
+              text = { Text("Copy OpenCode AI prompt") },
+              leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+              onClick = {
+                expanded = false
+                scope.launch { onNotice(onCopyAiPrompt()) }
+              },
+            )
+          }
           if (onHelp != null) {
             DropdownMenuItem(
               text = { Text("Help") },
@@ -3214,6 +3238,8 @@ private fun EditorToolbar(
   onBrowseDesigns: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
+  onCopyAiPrompt: (suspend () -> String)?,
+  onNotice: (String) -> Unit,
   onTakeOffline: (() -> Unit)? = null,
   onSyncToServer: (() -> Unit)? = null,
   /** Copies, links and downloads the render, or null where the host cannot; hides the menu. */
@@ -3232,6 +3258,7 @@ private fun EditorToolbar(
 ) {
   var showShortcuts by remember { mutableStateOf(false) }
   var overflowOpen by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
   if (showShortcuts) {
     EditorShortcutsDialog(onDismiss = { showShortcuts = false })
   }
@@ -3287,6 +3314,11 @@ private fun EditorToolbar(
       }
       if (onNewDesign != null) {
         ToolbarIconAction("New design", "", Icons.AutoMirrored.Filled.NoteAdd, true, onNewDesign)
+      }
+      if (onCopyAiPrompt != null) {
+        ToolbarIconAction("Copy OpenCode AI prompt", "", Icons.Filled.ContentCopy, true) {
+          scope.launch { onNotice(onCopyAiPrompt()) }
+        }
       }
       Box {
         ToolbarIconAction("More editor actions", "", Icons.Filled.MoreVert, true) {

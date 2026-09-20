@@ -158,6 +158,15 @@ internal suspend fun copyDesignLink(path: String): String {
   return if (outcome.isEmpty()) "Link copied · $link" else outcome
 }
 
+/** Copies agent instructions without routing credentials through the browser URL. */
+internal suspend fun copyAiPrompt(prompt: String): String =
+  try {
+    val outcome = awaitJsString(copyTextPromise(prompt))
+    if (outcome.isEmpty()) "OpenCode prompt copied" else outcome
+  } catch (failure: Exception) {
+    "Copy AI prompt failed: ${failure.message ?: "unknown error"}"
+  }
+
 /**
  * An absolute URL for sharing: resolved against the page, with no credential on it.
  *
