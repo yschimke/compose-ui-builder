@@ -114,6 +114,10 @@ interface CanvasNodeScope {
     name: String,
     content: @Composable CanvasItemScope.(CanvasNode) -> Unit,
   )
+
+  fun itemCount(name: String): Int
+
+  @Composable fun Item(name: String, index: Int, modifier: Modifier = Modifier)
 }
 
 sealed interface SlotPresentation {
@@ -125,9 +129,10 @@ sealed interface SlotPresentation {
 }
 ```
 
-The helpers own traversal and inspection. The catalog still calls its real composables. A Wear list
-can therefore apply its real item-scope modifier rather than asking a generic JSON interpreter to
-approximate it.
+The helpers own traversal and inspection. `itemCount` / `Item` are the lazy counterpart to `Items`:
+the catalog's real lazy receiver decides when to compose an indexed child, while the SDK still
+resolves and renders that child. A Wear list can therefore apply its real item-scope modifier rather
+than asking a generic JSON interpreter to approximate it.
 
 ## Identity and immutability
 
