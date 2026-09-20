@@ -637,6 +637,13 @@ fun UiBuilderSurface(
             )
           }
       ) {
+        val renderTree =
+          CanvasRenderTree(
+            document = document,
+            state = state,
+            adapterIds = LocalUiBuilderCanvasAdapters.current,
+            adapterMappings = LocalUiBuilderCanvasAdapterMappings.current,
+          )
         document.roots.forEach { root ->
           val rootModifier =
             when {
@@ -651,67 +658,72 @@ fun UiBuilderSurface(
               } == true -> Modifier.align(Alignment.TopCenter)
               else -> Modifier
             }
-          RenderNode(
-            document = document,
-            nodeId = root,
-            path = UiBuilderInstancePath.of(root),
-            state = state,
-            onState = { key, value ->
-              state[key] = value
-              inspection.updateState(state)
-            },
-            onBounds = { path, coordinates ->
-              // The node's own box in root pixels, not the part of it the viewport happens to show.
-              // `boundsInRoot` is *clipped* to the visible area, so a node scrolled out of view
-              // reports 0x0 at the origin and a scrolled one reports where the viewport cut it —
-              // and
-              // a drop plan that ordered a slot's children by those boxes put every off-screen
-              // child
-              // at the top. The origin is the placement mapped to root space without that clipping,
-              // and the size is the node's own carried through the same transform: the canvas draws
-              // the design scaled (zoom, and the design's density against the host's), so a node's
-              // local pixels are not root pixels.
-              val unit =
-                coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
-              val rootBounds =
-                Rect(
-                  offset = coordinates.positionInRoot(),
-                  size =
-                    Size(
-                      coordinates.size.width * unit.x,
-                      coordinates.size.height * unit.y,
-                    ),
+          renderTree.root(root)?.let { entry ->
+            RenderNode(
+              document = document,
+              entry = entry,
+              state = state,
+              onState = { key, value ->
+                state[key] = value
+                inspection.updateState(state)
+              },
+              onBounds = { path, coordinates ->
+                // The node's own box in root pixels, not the part of it the viewport happens to
+                // show.
+                // `boundsInRoot` is *clipped* to the visible area, so a node scrolled out of view
+                // reports 0x0 at the origin and a scrolled one reports where the viewport cut it —
+                // and
+                // a drop plan that ordered a slot's children by those boxes put every off-screen
+                // child
+                // at the top. The origin is the placement mapped to root space without that
+                // clipping,
+                // and the size is the node's own carried through the same transform: the canvas
+                // draws
+                // the design scaled (zoom, and the design's density against the host's), so a
+                // node's
+                // local pixels are not root pixels.
+                val unit =
+                  coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
+                val rootBounds =
+                  Rect(
+                    offset = coordinates.positionInRoot(),
+                    size =
+                      Size(
+                        coordinates.size.width * unit.x,
+                        coordinates.size.height * unit.y,
+                      ),
+                  )
+                bounds[path] = rootBounds
+                surfaceCoordinates?.let { surface ->
+                  overlayBounds[path] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
+                }
+                // The inspection snapshot is a published wire shape keyed by authored node id
+                // (`compose-ui-builder-inspection/v1`), so it is told which node drew rather than
+                // which box. Carrying copies there is a schema change, and belongs with whatever
+                // first draws one.
+                inspection.recordNodeBounds(
+                  path.nodeId,
+                  rootBounds.left,
+                  rootBounds.top,
+                  rootBounds.right,
+                  rootBounds.bottom,
                 )
-              bounds[path] = rootBounds
-              surfaceCoordinates?.let { surface ->
-                overlayBounds[path] = surface.localBoundingBoxOf(coordinates, clipBounds = false)
-              }
-              // The inspection snapshot is a published wire shape keyed by authored node id
-              // (`compose-ui-builder-inspection/v1`), so it is told which node drew rather than
-              // which box. Carrying copies there is a schema change, and belongs with whatever
-              // first draws one.
-              inspection.recordNodeBounds(
-                path.nodeId,
-                rootBounds.left,
-                rootBounds.top,
-                rootBounds.right,
-                rootBounds.bottom,
-              )
-            },
-            onTextLayout = { path, result ->
-              inspection.recordTextLayout(
-                path.nodeId,
-                result.lineCount,
-                result.firstBaseline,
-                result.lastBaseline,
-                with(density) {
-                  document.nodes.getValue(path.nodeId).textContentTopPaddingDp().dp.toPx()
-                },
-              )
-            },
-            semanticActions = semanticActions,
-            modifier = rootModifier,
-          )
+              },
+              onTextLayout = { path, result ->
+                inspection.recordTextLayout(
+                  path.nodeId,
+                  result.lineCount,
+                  result.firstBaseline,
+                  result.lastBaseline,
+                  with(density) {
+                    document.nodes.getValue(path.nodeId).textContentTopPaddingDp().dp.toPx()
+                  },
+                )
+              },
+              semanticActions = semanticActions,
+              modifier = rootModifier,
+            )
+          }
         }
         if (editorOverlay) {
           // Every box the selected node drew, not one: a node id is what the editor selects, and
@@ -749,39 +761,16 @@ fun UiBuilderSurface(
 @Composable
 private fun RenderNode(
   document: UiBuilderDocument,
-  nodeId: String,
-  /** Which drawn box this composition is — the node id itself, until something draws one twice. */
-  path: UiBuilderInstancePath,
+  entry: CanvasRenderNode,
   state: Map<String, String?>,
   onState: (String, String?) -> Unit,
   onBounds: (UiBuilderInstancePath, LayoutCoordinates) -> Unit,
   onTextLayout: (UiBuilderInstancePath, TextLayoutResult) -> Unit,
   semanticActions: MutableMap<String, UiBuilderSemanticActionEntry>,
   modifier: Modifier = Modifier,
-  ancestors: Set<String> = emptySet(),
-  /**
-   * The dictionary a `binding` value reads, which is the arguments of the component placement this
-   * box is drawn inside — empty for a node the design placed itself.
-   */
-  arguments: JsonObject = JsonObject(emptyMap()),
 ) {
-  // A reference to a node that is not there, and a reference to one already on this path, are both
-  // things the export gate reports — `UNKNOWN_CHILD`, `GRAPH_CYCLE`. `requireNotNull` and an
-  // unbounded recursion took the whole composition down instead, which meant the editor could not
-  // draw the document its own Issues panel exists to describe. Drawing nothing for the bad
-  // reference and everything else as usual is what leaves the diagnostic to the panel.
-  val authored = document.nodes[nodeId]
-  if (authored == null || nodeId in ancestors) return
-  // Bindings are resolved once, here, rather than at each accessor: below this line a bound
-  // property is an ordinary value, so every reader — colour, text, dimension, the modifier chain —
-  // sees what the placement passed without knowing a placement happened.
-  val node =
-    resolveCanvasNode(
-      authored,
-      arguments,
-      state,
-      LocalUiBuilderCanvasAdapterMappings.current[authored.componentId],
-    )
+  val node = entry.node
+  val path = entry.path
   val enabled = node.bool("enabled", true)
   val navigate = LocalUiBuilderNavigator.current
   val activate = { node.dispatch("click", state, onState, navigate) }
@@ -797,60 +786,52 @@ private fun RenderNode(
       }
       .then(node.actionModifier(activate, enabled))
   fun slot(name: String) = node.slots[name].orEmpty()
-  val here = ancestors + nodeId
   val child: @Composable (String, Modifier) -> Unit = { id, next ->
-    RenderNode(
-      document,
-      id,
-      path.child(id),
-      state,
-      onState,
-      onBounds,
-      onTextLayout,
-      semanticActions,
-      next,
-      here,
-      arguments,
-    )
+    entry.child(id)?.let { childEntry ->
+      RenderNode(
+        document,
+        childEntry,
+        state,
+        onState,
+        onBounds,
+        onTextLayout,
+        semanticActions,
+        next,
+      )
+    }
   }
 
   // The adapter the catalog names, or the component's own id when it names none — which is every
   // component today. See [LocalUiBuilderCanvasAdapters].
-  val adapterId = LocalUiBuilderCanvasAdapters.current[node.componentId] ?: node.componentId
+  val adapterId = entry.adapterId
 
   // Catalog implementations take precedence over the compatibility table below. The interpreter
   // has already resolved bindings/state, applied authored modifiers and built traversal callbacks;
   // the adapter's only job is to invoke its real component. An empty registry preserves every
   // existing render while branches move out one catalog at a time.
-  LocalCanvasAdapterRegistry.current[adapterId]?.let { adapter ->
-    val scope =
-      CanvasNodeScope(
-        node = node,
-        modifier = measured,
-        mode =
-          if (LocalUiBuilderUnrolled.current) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
-        renderSlot = { name, next -> slot(name).forEach { child(it, next) } },
-        renderItems = { name, content ->
-          slot(name).forEach { id ->
-            document.nodes[id]?.let { authoredItem ->
-              val item =
-                resolveCanvasNode(
-                  authoredItem,
-                  arguments,
-                  state,
-                  LocalUiBuilderCanvasAdapterMappings.current[authoredItem.componentId],
-                )
-              val itemScope = CanvasItemScope { next -> child(id, next) }
-              content(itemScope, item)
-            }
-          }
-        },
-        dispatchEvent = { event -> node.dispatch(event, state, onState, navigate) },
-        recordText = { result -> onTextLayout(path, result) },
-      )
-    adapter(scope)
+  if (
+    entry.renderAdapter(
+      registry = LocalCanvasAdapterRegistry.current,
+      modifier = measured,
+      mode =
+        if (LocalUiBuilderUnrolled.current) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
+      renderChild = { childEntry, next ->
+        RenderNode(
+          document = document,
+          entry = childEntry,
+          state = state,
+          onState = onState,
+          onBounds = onBounds,
+          onTextLayout = onTextLayout,
+          semanticActions = semanticActions,
+          modifier = next,
+        )
+      },
+      dispatchEvent = { event -> node.dispatch(event, state, onState, navigate) },
+      recordText = { result -> onTextLayout(path, result) },
+    )
+  )
     return
-  }
 
   when (adapterId) {
     // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
@@ -1862,20 +1843,17 @@ private fun RenderNode(
         val template = slot("template").firstOrNull()
         if (template != null) {
           rows.forEachIndexed { index, row ->
-            RenderNode(
-              document = document,
-              nodeId = template,
-              // The copy, then the node: two rows draw the same template node as two boxes, which
-              // is what an instance path is for.
-              path = path.occurrence(index).child(template),
-              state = state,
-              onState = onState,
-              onBounds = onBounds,
-              onTextLayout = onTextLayout,
-              semanticActions = semanticActions,
-              ancestors = here,
-              arguments = row,
-            )
+            entry.occurrenceChild(template, index, row)?.let { templateEntry ->
+              RenderNode(
+                document = document,
+                entry = templateEntry,
+                state = state,
+                onState = onState,
+                onBounds = onBounds,
+                onTextLayout = onTextLayout,
+                semanticActions = semanticActions,
+              )
+            }
           }
         }
       }
@@ -1893,21 +1871,18 @@ private fun RenderNode(
         )
       } else {
         Box(measured) {
-          RenderNode(
-            document = document,
-            nodeId = root,
-            path = path.placement().child(root),
-            state = state,
-            onState = onState,
-            onBounds = onBounds,
-            onTextLayout = onTextLayout,
-            semanticActions = semanticActions,
-            // `here`, so a component that places itself — directly or through another — draws
-            // nothing rather than taking the composition down, which is the rule every other
-            // reference in this renderer follows.
-            ancestors = here,
-            arguments = node.componentArguments(arguments),
-          )
+          entry.placementChild(root, node.componentArguments(entry.bindingArguments))?.let {
+            componentEntry ->
+            RenderNode(
+              document = document,
+              entry = componentEntry,
+              state = state,
+              onState = onState,
+              onBounds = onBounds,
+              onTextLayout = onTextLayout,
+              semanticActions = semanticActions,
+            )
+          }
         }
       }
     }

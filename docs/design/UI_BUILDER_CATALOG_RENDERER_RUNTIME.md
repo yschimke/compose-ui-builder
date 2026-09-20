@@ -18,8 +18,11 @@ The first extraction seam is executable: `CanvasAdapterRegistry` and `CanvasNode
 catalog register real composable calls while the SDK owns resolved properties, state transitions,
 slots/items and inspection callbacks. `UiBuilderSurface` checks that registry before its legacy
 compatibility table, so adapters can move catalog by catalog without a flag day or a second
-interpreter. The compatibility table remains until those adapters and the outer traversal host have
-moved; an empty registry is intentionally the old renderer byte-for-byte at the Compose layer.
+interpreter. `CanvasRenderTree` now owns node entry, cycle rejection, bindings, canvas mappings,
+adapter selection and descendant paths, including repeated templates and component placements; its
+registry dispatch owns slot and item recursion. The compatibility table remains until its authored
+modifiers, inspection hooks and generic component-instance/`for-each` branches move behind that SDK
+entry point; an empty registry is intentionally the old renderer byte-for-byte at the Compose layer.
 
 This supersedes the earlier decision in
 [`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md) that Material canvas adapters stay
