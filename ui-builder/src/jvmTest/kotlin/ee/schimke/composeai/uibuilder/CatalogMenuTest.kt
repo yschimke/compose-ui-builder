@@ -238,6 +238,16 @@ class CatalogMenuTest {
   }
 
   @Test
+  fun `an exact component name leads broader search matches`() {
+    val searching = reducer.reduce(state, UiBuilderEditorEvent.SearchCatalog("Text"))
+
+    assertEquals(
+      "m3/text",
+      rows(searching).filterIsInstance<EditorCatalogRow.Component>().first().item.componentId,
+    )
+  }
+
+  @Test
   fun `a component the declaration does not know joins the shelf its kind names`() {
     // `remote-m3`'s real shape: the two `remote-m3/widget-container-*` scaffolds the m3
     // declaration says nothing about, beside the m3 components it does. Their kind label is

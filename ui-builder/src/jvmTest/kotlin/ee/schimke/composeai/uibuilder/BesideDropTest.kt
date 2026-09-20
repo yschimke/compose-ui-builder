@@ -40,7 +40,7 @@ class BesideDropTest {
 
   @Test
   fun `a palette drop builds an editable component beside the design`() =
-    runDesktopComposeUiTest(width = 1600, height = 1050) {
+    runDesktopComposeUiTest(width = 1400, height = 900) {
       var frameBounds = Rect.Zero
       setContent {
         MaterialTheme {
@@ -98,7 +98,7 @@ class BesideDropTest {
 
   @Test
   fun `a palette drop inside the design still inserts into a slot`() =
-    runDesktopComposeUiTest(width = 1600, height = 1050) {
+    runDesktopComposeUiTest(width = 1400, height = 900) {
       var frameBounds = Rect.Zero
       setContent {
         MaterialTheme {

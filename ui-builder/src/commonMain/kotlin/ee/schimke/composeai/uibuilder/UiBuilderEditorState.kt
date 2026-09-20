@@ -2377,7 +2377,7 @@ class UiBuilderEditorReducer(
         // make the switch a lie.
         .filter { it.pack == null || it.pack in state.enabledPacks }
         .filter { it.matches(needle) }
-        .sortedBy(EditorCatalogItem::displayName)
+        .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
     // The declared shelves, then the kind labels an unshelved catalog falls back to — in *kind*
     // order, so a catalog `ComponentMenu` says nothing about reads Scaffolds, Containers,
     // Composables exactly as this panel always did, rather than alphabetically.
@@ -2420,7 +2420,13 @@ class UiBuilderEditorReducer(
       // Declared order first, then alphabetically — a group the table forgot to order, and the
       // kind labels a second catalog falls back to, still land somewhere a reader can predict
       // rather than wherever the map happened to put them.
-      .sortedWith(compareBy({ order[it.key] ?: Int.MAX_VALUE }, { it.key }))
+      .sortedWith(
+        if (filtering) {
+          compareBy({ (_, groupItems) -> groupItems.minOf { it.searchRank(needle) } }, { it.key })
+        } else {
+          compareBy({ order[it.key] ?: Int.MAX_VALUE }, { it.key })
+        }
+      )
       .forEach { (group, groupItems) ->
         val expanded = filtering || group !in state.collapsedCatalogGroups
         rows += EditorCatalogRow.Group(group, groupItems.size, expanded)
@@ -5536,6 +5542,20 @@ private fun EditorCatalogItem.matches(needle: String): Boolean =
     kind.label.lowercase().contains(needle) ||
     group.lowercase().contains(needle) ||
     variants.any { it.label.lowercase().contains(needle) || it.value.lowercase().contains(needle) }
+
+/** Exact names lead search results; matches found only through a shelf or variant follow them. */
+private fun EditorCatalogItem.searchRank(needle: String): Int =
+  when {
+    displayName.lowercase() == needle -> 0
+    displayName.lowercase().startsWith(needle) -> 1
+    componentId.lowercase() == needle -> 2
+    componentId.lowercase().contains(needle) -> 3
+    variants.any {
+      it.label.lowercase().contains(needle) || it.value.lowercase().contains(needle)
+    } -> 4
+    kind.label.lowercase().contains(needle) -> 5
+    else -> 6
+  }
 
 /**
  * A catalog enum value as a person reads it: `filledTonal` → "Filled tonal".
