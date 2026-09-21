@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.35.0](https://github.com/yschimke/compose-ui-builder/compare/v3.34.0...v3.35.0) (2026-09-21)
+
+
+### Features
+
+* pin catalogs to delivered runtimes ([#125](https://github.com/yschimke/compose-ui-builder/issues/125)) ([4b28f70](https://github.com/yschimke/compose-ui-builder/commit/4b28f7060c0a51f414e0502bb94403c71aa222e7))
+
+
+### Bug Fixes
+
+* preserve catalog executor constructor ABI ([#127](https://github.com/yschimke/compose-ui-builder/issues/127)) ([d372cc9](https://github.com/yschimke/compose-ui-builder/commit/d372cc962c4bbc6c1562c79853690e402f949895))
+
 ## [3.34.0](https://github.com/yschimke/compose-ui-builder/compare/v3.33.0...v3.34.0) (2026-09-21)
 
 
