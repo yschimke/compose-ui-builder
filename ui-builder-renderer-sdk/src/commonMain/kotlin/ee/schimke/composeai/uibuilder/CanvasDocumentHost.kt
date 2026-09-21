@@ -121,6 +121,9 @@ fun CanvasDocumentHost(
       appliedDeclarations = document.stateVariables
     }
     inspection.updateState(state)
+    // A hidden or background browser surface may not receive a layout frame immediately. Publish
+    // the generation now; later bounds and text callbacks replace it with measured snapshots.
+    inspection.publishSnapshot()
     onStateSnapshot?.invoke(state.toMap())
     val size = surfaceCoordinates?.size
     runtimeActionController?.install(
