@@ -23,6 +23,9 @@ version =
 repositories {
   google()
   mavenCentral()
+  // The IntelliJ Gradle plugin resolves its sandbox from project repositories, so it cannot inherit
+  // the root's group-fenced port repository. This is repository metadata, not a port declaration:
+  // the port remains declared only by :ui-builder, where the canvas uses it.
   maven("https://raw.githubusercontent.com/yschimke/wear-m3-catalog/wear-compose-cmp-maven/") {
     content { includeGroup("ee.schimke.wearcmp") }
   }

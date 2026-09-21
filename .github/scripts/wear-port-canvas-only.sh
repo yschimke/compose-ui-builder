@@ -42,6 +42,10 @@ allowed_module="ui-builder"
 status=0
 
 # ── 1. Only the canvas may declare the port ───────────────────────────────────────────────────────
+#
+# A repository that is fenced to the port's group is not a dependency declaration: it is needed by
+# the IntelliJ sandbox to resolve :ui-builder's transitive canvas dependency. Match the version
+# catalog accessor used to declare the port instead, so the guard tests the rule it describes.
 while IFS= read -r file; do
   file="${file#./}"
   module="${file%%/*}"
@@ -52,7 +56,7 @@ while IFS= read -r file; do
   echo "  Only :${allowed_module} (the canvas) may link it. Code generation and the native lane" >&2
   echo "  must run against the real androidx.wear.compose AARs — see this script's header." >&2
   status=1
-done < <(grep -rl --include='*.gradle.kts' --include='*.toml' -e 'wearcmp' . \
+done < <(grep -rl --include='*.gradle.kts' -e 'libs\.wearcmp\.' . \
   --exclude-dir=build --exclude-dir=.git || true)
 
 # ── 2. The exporter must not import Wear Compose at all ───────────────────────────────────────────

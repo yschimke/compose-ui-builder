@@ -17,6 +17,7 @@ import androidx.compose.ui.window.application
 import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
@@ -65,9 +66,11 @@ fun main(args: Array<String>) = application {
 fun OfflineUiBuilderApp(
   storagePath: Path,
   sessionLabel: String,
+  catalogSystemId: String = OfflineCatalog.M3.systemId,
   remoteServer: String? = null,
 ) {
-  val catalogText = remember { resourceText("m3-catalog-capabilities-v1.json") }
+  val offlineCatalog = remember(catalogSystemId) { OfflineCatalog.forSystem(catalogSystemId) }
+  val catalogText = remember(offlineCatalog) { resourceText(offlineCatalog.capabilitiesResource) }
   val catalog = remember(catalogText) { CapabilityCatalogParser.parse(catalogText) }
   val catalogCapability =
     remember(catalogText) { Json.decodeFromString(CatalogCapabilityV1.serializer(), catalogText) }
@@ -97,7 +100,12 @@ fun OfflineUiBuilderApp(
     when (val open = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
       is SnapshotResponseV1 -> snapshot = open
       is ErrorResponseV1 -> {
-        val seed = fixtureDocument().copy(id = DESKTOP_DESIGN_ID, title = "Desktop workspace")
+        val seed =
+          offlineCatalog.seed(
+            designId = DESKTOP_DESIGN_ID,
+            catalogRevision = catalog.benchmark.catalogRevision,
+            nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
+          )
         when (val created = service.create(seed)) {
           is SnapshotResponseV1 -> snapshot = created
           is ErrorResponseV1 -> failure = created.error.message
@@ -155,6 +163,41 @@ private fun fixtureDocument(): UiBuilderDocument =
       Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject
     )
     .document
+
+/** A packaged catalog that the offline hosts can author against without a server. */
+public enum class OfflineCatalog(
+  val systemId: String,
+  val capabilitiesResource: String,
+  private val templateId: String,
+) {
+  M3("m3-catalog", "m3-catalog-capabilities-v1.json", UiBuilderNewDesignSeed.DEFAULT_TEMPLATE),
+  WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE);
+
+  fun seed(
+    designId: String,
+    catalogRevision: String,
+    nativeRuntimeId: String,
+  ): UiBuilderDocument =
+    if (this == M3) {
+      fixtureDocument().copy(id = designId, title = "Desktop workspace")
+    } else {
+      UiBuilderNewDesignSeed.document(
+        designId = designId,
+        catalogSystemId = systemId,
+        templateId = templateId,
+        catalogRevision = catalogRevision,
+        nativeRuntimeId = nativeRuntimeId,
+        fixture =
+          Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
+      )
+    }
+
+  companion object {
+    fun forSystem(systemId: String): OfflineCatalog =
+      entries.firstOrNull { it.systemId == systemId }
+        ?: error("offline UI Builder has no packaged catalog '$systemId'")
+  }
+}
 
 private fun resourceText(name: String): String =
   checkNotNull(object {}.javaClass.getResource("/$name")) { "missing desktop resource $name" }

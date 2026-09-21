@@ -94,7 +94,8 @@ environment.
 
 The `:ui-builder-intellij-plugin` module embeds that same offline editor in a **Compose UI
 Builder** tool window. It uses Jewel's Swing bridge for the Compose/Swing boundary and stores a
-separate workspace for each IDE project under the IDE system directory.
+separate workspace for each IDE project and catalog under the IDE system directory. The tool window
+has **Material 3** and **Wear M3** tabs; each authors against its matching packaged catalog.
 
 Run a sandbox IDE with:
 
