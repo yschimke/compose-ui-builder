@@ -31,6 +31,10 @@ supplied only as a temporary fallback continuation. The compatibility table rema
 component adapters and theme/frame policy move into their catalogs; an empty registry is
 intentionally the old renderer byte-for-byte at the Compose layer.
 
+Authored modifier parsing and application are SDK-owned as well. `applyCanvasModifier` applies the
+generic chain and asks the catalog only to resolve theme colors and shapes; catalogs do not carry a
+second modifier interpreter.
+
 This supersedes the earlier decision in
 [`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md) that Material canvas adapters stay
 in this repository. It also completes the separately-designed bundle/plugin ABI deferred by the

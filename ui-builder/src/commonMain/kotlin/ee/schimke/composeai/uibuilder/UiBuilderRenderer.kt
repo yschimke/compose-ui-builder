@@ -8,9 +8,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,13 +27,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -46,11 +42,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -125,7 +119,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -135,7 +128,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -145,7 +137,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -637,7 +628,14 @@ private fun RenderNode(
     modifier = modifier,
     onNavigate = navigate,
     handlesClick = { it.componentId in INTERACTIVE_COMPONENTS },
-    applyModifier = { current, value -> current.applyModifier(value, themeCornerRadius) },
+    applyModifier = { current, value ->
+      current.applyCanvasModifier(
+        value = value,
+        mode = host.mode,
+        resolveColor = ::uiBuilderColor,
+        resolveShape = { shapeFor(it, themeCornerRadius = themeCornerRadius) },
+      )
+    },
     missingComponent = { label, next -> UnsupportedComponentDiagnostic(label, next) },
   ) {
     val node = this.node
@@ -3161,323 +3159,6 @@ private fun UnsupportedComponentDiagnostic(componentId: String, modifier: Modifi
     )
   }
 }
-
-@Composable
-private fun Modifier.applyModifier(value: JsonObject, themeCornerRadius: Float): Modifier =
-  when (val plan = uiBuilderModifier(value)) {
-    UiBuilderModifierPlan.FillMaxSize -> fillMaxSize()
-    UiBuilderModifierPlan.FillMaxWidth -> fillMaxWidth()
-    UiBuilderModifierPlan.FillMaxHeight -> fillMaxHeight()
-    // Applied by the owning BoxScope so it does not contribute to the parent's measurement.
-    UiBuilderModifierPlan.MatchParentSize -> this
-    // Applied by the parent composing this child, which is the only place their scope exists.
-    is UiBuilderModifierPlan.Align -> this
-    is UiBuilderModifierPlan.AlignHorizontal -> this
-    is UiBuilderModifierPlan.AlignVertical -> this
-    is UiBuilderModifierPlan.Weight -> this
-    is UiBuilderModifierPlan.Padding ->
-      padding(plan.startDp.dp, plan.topDp.dp, plan.endDp.dp, plan.bottomDp.dp)
-    is UiBuilderModifierPlan.Size ->
-      when {
-        plan.widthDp != null && plan.heightDp != null -> size(plan.widthDp.dp, plan.heightDp.dp)
-        plan.widthDp != null -> width(plan.widthDp.dp)
-        else -> plan.heightDp?.let { height(it.dp) } ?: this
-      }
-    is UiBuilderModifierPlan.Clip ->
-      clip(shapeFor(plan.shape, themeCornerRadius = themeCornerRadius))
-    is UiBuilderModifierPlan.Width -> width(plan.dp.dp)
-    is UiBuilderModifierPlan.Height -> height(plan.dp.dp)
-    is UiBuilderModifierPlan.WidthIn ->
-      widthIn(plan.minDp?.dp ?: Dp.Unspecified, plan.maxDp?.dp ?: Dp.Unspecified)
-    is UiBuilderModifierPlan.HeightIn ->
-      heightIn(plan.minDp?.dp ?: Dp.Unspecified, plan.maxDp?.dp ?: Dp.Unspecified)
-    is UiBuilderModifierPlan.AspectRatio -> aspectRatio(plan.ratio)
-    is UiBuilderModifierPlan.WrapContentSize -> wrapContentSize(alignmentFor(plan.alignment))
-    is UiBuilderModifierPlan.Offset -> offset(plan.xDp.dp, plan.yDp.dp)
-    is UiBuilderModifierPlan.ZIndex -> zIndex(plan.value)
-    is UiBuilderModifierPlan.Background ->
-      background(
-        uiBuilderColor(plan.color),
-        if (plan.shape == null) RectangleShape
-        else shapeFor(plan.shape, themeCornerRadius = themeCornerRadius),
-      )
-    is UiBuilderModifierPlan.Border ->
-      border(
-        plan.widthDp.dp,
-        uiBuilderColor(plan.color),
-        if (plan.shape == null) RectangleShape
-        else shapeFor(plan.shape, themeCornerRadius = themeCornerRadius),
-      )
-    is UiBuilderModifierPlan.Alpha -> alpha(plan.alpha)
-    is UiBuilderModifierPlan.Shadow ->
-      shadow(
-        plan.elevationDp.dp,
-        if (plan.shape == null) RectangleShape
-        else shapeFor(plan.shape, themeCornerRadius = themeCornerRadius),
-        clip = plan.clip ?: (plan.elevationDp > 0f),
-      )
-    is UiBuilderModifierPlan.Rotate -> rotate(plan.degrees)
-    is UiBuilderModifierPlan.Scale -> scale(plan.scaleX, plan.scaleY)
-    // The position is the renderer's, not the document's: two people looking at one design scroll
-    // independently, so the state is remembered per composition and never persisted.
-    // Dropped at the extent: the pane's whole point is that nothing is behind a scroll position,
-    // and a scrollable measured against an unbounded height does not grow, it fails.
-    UiBuilderModifierPlan.VerticalScroll ->
-      if (LocalUiBuilderUnrolled.current) this else verticalScroll(rememberScrollState())
-    UiBuilderModifierPlan.HorizontalScroll -> horizontalScroll(rememberScrollState())
-    is UiBuilderModifierPlan.TestTag -> testTag(plan.tag)
-    // Not an error, for the reason `uiBuilderStateWrite` gives: one unusable modifier costs one
-    // node its layout, and throwing costs the whole screen.
-    null -> this
-  }
-
-/**
- * What this renderer can make of one authored modifier, or null when it can make nothing of it.
- *
- * Extracted for the reason [uiBuilderStateWrite] was — the reading is pure, and it is the half
- * worth testing — and separating it from application is what makes an unusable modifier skippable.
- * Applying one used to throw on three inputs the wire can carry: a `type` this build does not know,
- * a missing `type`, and a `size` naming neither dimension. Each took the whole preview down
- * mid-composition, so a document authored by a newer client cost every working part of the screen
- * rather than one node's layout.
- */
-internal sealed interface UiBuilderModifierPlan {
-  data object FillMaxSize : UiBuilderModifierPlan
-
-  data object FillMaxWidth : UiBuilderModifierPlan
-
-  data object MatchParentSize : UiBuilderModifierPlan
-
-  data class Padding(
-    val startDp: Float,
-    val topDp: Float,
-    val endDp: Float,
-    val bottomDp: Float,
-  ) : UiBuilderModifierPlan
-
-  /** At least one dimension is usable; a `size` naming neither is not a size. */
-  data class Size(val widthDp: Float?, val heightDp: Float?) : UiBuilderModifierPlan
-
-  data class Clip(val shape: String?) : UiBuilderModifierPlan
-
-  data object FillMaxHeight : UiBuilderModifierPlan
-
-  data class Width(val dp: Float) : UiBuilderModifierPlan
-
-  data class Height(val dp: Float) : UiBuilderModifierPlan
-
-  /** At least one edge is usable; a bound constraining neither end is not a bound. */
-  data class WidthIn(val minDp: Float?, val maxDp: Float?) : UiBuilderModifierPlan
-
-  data class HeightIn(val minDp: Float?, val maxDp: Float?) : UiBuilderModifierPlan
-
-  data class AspectRatio(val ratio: Float) : UiBuilderModifierPlan
-
-  data class WrapContentSize(val alignment: String?) : UiBuilderModifierPlan
-
-  data class Offset(val xDp: Float, val yDp: Float) : UiBuilderModifierPlan
-
-  data class ZIndex(val value: Float) : UiBuilderModifierPlan
-
-  /** The colour is kept as its authored token or literal; resolving one needs the theme. */
-  data class Background(val color: String, val shape: String?) : UiBuilderModifierPlan
-
-  data class Border(val widthDp: Float, val color: String, val shape: String?) :
-    UiBuilderModifierPlan
-
-  data class Alpha(val alpha: Float) : UiBuilderModifierPlan
-
-  data class Shadow(val elevationDp: Float, val shape: String?, val clip: Boolean?) :
-    UiBuilderModifierPlan
-
-  data class Rotate(val degrees: Float) : UiBuilderModifierPlan
-
-  data class Scale(val scaleX: Float, val scaleY: Float) : UiBuilderModifierPlan
-
-  data object VerticalScroll : UiBuilderModifierPlan
-
-  data object HorizontalScroll : UiBuilderModifierPlan
-
-  data class TestTag(val tag: String) : UiBuilderModifierPlan
-
-  /**
-   * The four only a parent can apply.
-   *
-   * Read here so the write is accepted and the chain is legible, and applied by the `Box`, `Row` or
-   * `Column` composing the child: a scope receiver cannot cross the call that renders it, which is
-   * the same reason `matchParentSize` has always been applied one level up.
-   */
-  data class Align(val alignment: String) : UiBuilderModifierPlan
-
-  data class AlignHorizontal(val alignment: String) : UiBuilderModifierPlan
-
-  data class AlignVertical(val alignment: String) : UiBuilderModifierPlan
-
-  data class Weight(val weight: Float, val fill: Boolean?) : UiBuilderModifierPlan
-}
-
-internal fun uiBuilderModifier(value: JsonObject): UiBuilderModifierPlan? =
-  when (value.optionalString("type")) {
-    "fillMaxSize" -> UiBuilderModifierPlan.FillMaxSize
-    "fillMaxWidth" -> UiBuilderModifierPlan.FillMaxWidth
-    "matchParentSize" -> UiBuilderModifierPlan.MatchParentSize
-    "padding" ->
-      UiBuilderModifierPlan.Padding(
-        value.number("startDp"),
-        value.number("topDp"),
-        value.number("endDp"),
-        value.number("bottomDp"),
-      )
-    "size" -> {
-      // The wire type requires both dimensions and neither is guaranteed to be a number: a JSON
-      // null or a string decodes into the document and reaches here. Reading that as "no size" is
-      // the only thing this can honestly do with it.
-      val width = value.numberOrNull("widthDp")
-      val height = value.numberOrNull("heightDp")
-      if (width == null && height == null) null else UiBuilderModifierPlan.Size(width, height)
-    }
-    // A spelling `shapeFor` cannot resolve is rejected here rather than there, so the application
-    // step has nothing left to fail on. `shape` is a free string on the wire.
-    "clip" ->
-      value.optionalString("shape").let { shape ->
-        if (isResolvableShape(shape)) UiBuilderModifierPlan.Clip(shape) else null
-      }
-    "fillMaxHeight" -> UiBuilderModifierPlan.FillMaxHeight
-    "width" -> value.numberOrNull("widthDp")?.let(UiBuilderModifierPlan::Width)
-    "height" -> value.numberOrNull("heightDp")?.let(UiBuilderModifierPlan::Height)
-    // A bound constraining neither end is not a bound, the same reading `size` gets.
-    "widthIn" -> {
-      val min = value.numberOrNull("minDp")
-      val max = value.numberOrNull("maxDp")
-      if (min == null && max == null) null else UiBuilderModifierPlan.WidthIn(min, max)
-    }
-    "heightIn" -> {
-      val min = value.numberOrNull("minDp")
-      val max = value.numberOrNull("maxDp")
-      if (min == null && max == null) null else UiBuilderModifierPlan.HeightIn(min, max)
-    }
-    // Zero and negative ratios are a divide by nothing in the layout pass, which is a crash rather
-    // than a bad layout.
-    "aspectRatio" ->
-      value.numberOrNull("ratio")?.takeIf { it > 0f }?.let(UiBuilderModifierPlan::AspectRatio)
-    "wrapContentSize" ->
-      value.optionalString("alignment").let { alignment ->
-        if (alignment == null || isResolvableAlignment(alignment))
-          UiBuilderModifierPlan.WrapContentSize(alignment)
-        else null
-      }
-    "offset" -> UiBuilderModifierPlan.Offset(value.number("xDp"), value.number("yDp"))
-    "zIndex" -> value.numberOrNull("zIndex")?.let(UiBuilderModifierPlan::ZIndex)
-    // The colour is read here and resolved at application, where the theme is: an unresolvable
-    // token is refused now rather than throwing mid-composition.
-    "background" ->
-      uiBuilderColorValue(value["color"])?.let { color ->
-        val shape = value.optionalString("shape")
-        if (shape == null || isResolvableShape(shape)) {
-          UiBuilderModifierPlan.Background(color, shape)
-        } else null
-      }
-    "border" ->
-      uiBuilderColorValue(value["color"])?.let { color ->
-        val width = value.numberOrNull("widthDp") ?: return@let null
-        val shape = value.optionalString("shape")
-        if (shape == null || isResolvableShape(shape)) {
-          UiBuilderModifierPlan.Border(width, color, shape)
-        } else null
-      }
-    "alpha" -> value.numberOrNull("alpha")?.let(UiBuilderModifierPlan::Alpha)
-    "shadow" ->
-      value.numberOrNull("elevationDp")?.let { elevation ->
-        val shape = value.optionalString("shape")
-        if (shape == null || isResolvableShape(shape)) {
-          UiBuilderModifierPlan.Shadow(elevation, shape, value["clip"]?.booleanOrNull())
-        } else null
-      }
-    "rotate" -> value.numberOrNull("degrees")?.let(UiBuilderModifierPlan::Rotate)
-    "scale" -> {
-      val x = value.numberOrNull("scaleX")
-      val y = value.numberOrNull("scaleY")
-      if (x == null || y == null) null else UiBuilderModifierPlan.Scale(x, y)
-    }
-    "align" ->
-      value
-        .optionalString("alignment")
-        ?.takeIf(::isResolvableAlignment)
-        ?.let(UiBuilderModifierPlan::Align)
-    "alignHorizontal" ->
-      value
-        .optionalString("alignment")
-        ?.takeIf { it in HORIZONTAL_ALIGNMENTS }
-        ?.let(UiBuilderModifierPlan::AlignHorizontal)
-    "alignVertical" ->
-      value
-        .optionalString("alignment")
-        ?.takeIf { it in VERTICAL_ALIGNMENTS }
-        ?.let(UiBuilderModifierPlan::AlignVertical)
-    // A weight of zero or less is not a share of anything, and Compose throws on one.
-    "weight" ->
-      value
-        .numberOrNull("weight")
-        ?.takeIf { it > 0f }
-        ?.let { UiBuilderModifierPlan.Weight(it, value["fill"]?.booleanOrNull()) }
-    "verticalScroll" -> UiBuilderModifierPlan.VerticalScroll
-    "horizontalScroll" -> UiBuilderModifierPlan.HorizontalScroll
-    "testTag" ->
-      value.optionalString("tag")?.takeIf(String::isNotBlank)?.let(UiBuilderModifierPlan::TestTag)
-    else -> null
-  }
-
-/**
- * The authored colour inside a modifier, as the token or literal the theme resolves.
- *
- * A `UiValueV1` on the wire — `{"type": "colorToken", "value": "primary"}` or a `#AARRGGBB` literal
- * — read here so an unresolvable spelling is a refused write rather than a composition that throws.
- * The same rule `clip` follows for shapes.
- */
-private fun uiBuilderColorValue(element: JsonElement?): String? {
-  val value = (element as? JsonObject)?.optionalString("value") ?: return null
-  return value.takeIf { isResolvableColor(it) }
-}
-
-private fun JsonElement.booleanOrNull(): Boolean? = (this as? JsonPrimitive)?.booleanOrNull
-
-private fun isResolvableShape(value: String?): Boolean =
-  value.isNullOrEmpty() || value in NAMED_SHAPES || value.toFloatOrNull() != null
-
-private val NAMED_SHAPES = setOf("large", "medium", "small")
-
-/** The nine alignments a document may name, for `wrapContentSize` and the child alignment below. */
-private fun alignmentFor(value: String?): Alignment =
-  when (value) {
-    "topStart" -> Alignment.TopStart
-    "topCenter" -> Alignment.TopCenter
-    "topEnd" -> Alignment.TopEnd
-    "centerStart" -> Alignment.CenterStart
-    "centerEnd" -> Alignment.CenterEnd
-    "bottomStart" -> Alignment.BottomStart
-    "bottomCenter" -> Alignment.BottomCenter
-    "bottomEnd" -> Alignment.BottomEnd
-    else -> Alignment.Center
-  }
-
-private fun isResolvableAlignment(value: String): Boolean = value in RESOLVABLE_ALIGNMENTS
-
-private val HORIZONTAL_ALIGNMENTS = setOf("start", "centerHorizontally", "end")
-
-private val VERTICAL_ALIGNMENTS = setOf("top", "centerVertically", "bottom")
-
-private val RESOLVABLE_ALIGNMENTS =
-  setOf(
-    "topStart",
-    "topCenter",
-    "topEnd",
-    "centerStart",
-    "center",
-    "centerEnd",
-    "bottomStart",
-    "bottomCenter",
-    "bottomEnd",
-  )
 
 /**
  * Where a `Box` child sits, from its chain and then from the property that used to say it.
