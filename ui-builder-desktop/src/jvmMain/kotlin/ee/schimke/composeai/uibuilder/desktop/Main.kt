@@ -43,12 +43,30 @@ private const val CLIENT_ID = "desktop-client"
 fun main(args: Array<String>) = application {
   val options = DesktopLaunchOptions.parse(args)
   Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder") {
-    MaterialTheme { Surface(Modifier.fillMaxSize()) { DesktopUiBuilderApp(options.remoteServer) } }
+    MaterialTheme {
+      Surface(Modifier.fillMaxSize()) {
+        OfflineUiBuilderApp(
+          storagePath = designStorePath(),
+          sessionLabel = "Desktop offline · saved locally",
+          remoteServer = options.remoteServer,
+        )
+      }
+    }
   }
 }
 
+/**
+ * Hosts the offline editor without tying it to a windowing toolkit.
+ *
+ * Desktop and IntelliJ hosts decide where a workspace belongs, then pass that path across this
+ * boundary. In particular, this composable deliberately has no IntelliJ Platform types in its API.
+ */
 @Composable
-private fun DesktopUiBuilderApp(remoteServer: String?) {
+fun OfflineUiBuilderApp(
+  storagePath: Path,
+  sessionLabel: String,
+  remoteServer: String? = null,
+) {
   val catalogText = remember { resourceText("m3-catalog-capabilities-v1.json") }
   val catalog = remember(catalogText) { CapabilityCatalogParser.parse(catalogText) }
   val catalogCapability =
@@ -56,7 +74,7 @@ private fun DesktopUiBuilderApp(remoteServer: String?) {
   val service =
     remember(catalogCapability) {
       LocalUiBuilderService(
-        store = LocalDesignStore(FileLocalDesignStorage(designStorePath())),
+        store = LocalDesignStore(FileLocalDesignStorage(storagePath)),
         catalogs = { listOf(catalogCapability) },
         clock = System::currentTimeMillis,
       )
@@ -122,7 +140,7 @@ private fun DesktopUiBuilderApp(remoteServer: String?) {
       actorId = ACTOR_ID,
       clientId = CLIENT_ID,
       operationIdPrefix = CLIENT_ID,
-      sessionLabel = "Desktop offline · saved locally",
+      sessionLabel = sessionLabel,
       onRequestNativeRender =
         remotePreview?.let { client -> { shape -> client.render(previewDocument, shape) } },
       onStateChanged = { state -> previewDocument = state.collaboration.document },

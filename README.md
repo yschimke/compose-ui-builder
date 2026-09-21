@@ -20,6 +20,7 @@ for running it.
 | --- | --- | --- |
 | `:ui-builder` | `jvm`, `wasmJs` | the editor — canvas, palette, inspector, reducer, exporters, offline service |
 | `:ui-builder-desktop` | JVM desktop | native offline host for the editor; useful for testing and embedding |
+| `:ui-builder-intellij-plugin` | IntelliJ Platform | proof-of-concept Jewel tool-window host for the native editor |
 | `:ui-builder-runtime` | JVM | the design service: state, catalog validation, revision-pinned export |
 | `:ui-builder-export` | `jvm`, `wasmJs` | design → screen-model projection |
 | `:ui-builder-renderer` | `wasmJs` | the sandboxed renderer-only runtime |

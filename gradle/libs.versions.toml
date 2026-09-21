@@ -24,6 +24,7 @@ java-ui-builder = "21"
 kotlin = "2.4.20"
 ktfmt = "0.27.0"
 ktfmt-cli = "0.64"
+intellij-platform-gradle = "2.19.0"
 compose-multiplatform = "1.12.0"
 # Material 3 adaptive, for the real `SupportingPaneScaffold` on the editor's canvas and preview
 # panes. Its own version line rather than the Compose Multiplatform one, which is why it is a
@@ -305,3 +306,4 @@ compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-m
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 compose-preview = { id = "ee.schimke.composeai.preview", version.ref = "composeai-tools" }
+intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-platform-gradle" }
