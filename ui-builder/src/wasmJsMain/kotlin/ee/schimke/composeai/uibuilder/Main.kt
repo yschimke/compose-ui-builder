@@ -424,6 +424,12 @@ private fun positionCatalogRuntimeSurface(
       const insetLeft = Math.max(0, visibleLeft - left);
       host.style.clipPath = 'inset(' + insetTop + 'px ' + insetRight + 'px ' +
         insetBottom + 'px ' + insetLeft + 'px)';
+      const controller = host.__uiBuilderCatalogRuntime;
+      if (controller?.frame) {
+        controller.frame.style.transform = 'scale(' +
+          (Math.max(0, width) / controller.nativeWidth) + ',' +
+          (Math.max(0, height) / controller.nativeHeight) + ')';
+      }
     })()"""
   )
 
@@ -454,7 +460,7 @@ private fun updateCatalogRuntimeSurface(
       host.style.pointerEvents = mode === 'device' ? 'auto' : 'none';
       host.style.zIndex = mode === 'device' ? '20' : '0';
       let controller = host.__uiBuilderCatalogRuntime;
-      if (controller && controller.runtimeId === runtimeId &&
+      if (controller && !controller.disposed && controller.runtimeId === runtimeId &&
           controller.compositionKey === compositionKey) {
         controller.render = render;
         controller.drawOverlay();
@@ -466,7 +472,12 @@ private fun updateCatalogRuntimeSurface(
       const frame = document.createElement('iframe');
       frame.title = 'Pinned catalog design renderer';
       frame.sandbox = 'allow-scripts';
-      frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent';
+      const nativeWidth = Math.max(1, widthDp * density);
+      const nativeHeight = Math.max(1, heightDp * density);
+      frame.style.cssText = 'position:absolute;top:0;left:0;width:' + nativeWidth +
+        'px;height:' + nativeHeight + 'px;border:0;background:transparent;transform-origin:top left;' +
+        'transform:scale(' + (host.clientWidth / nativeWidth) + ',' +
+        (host.clientHeight / nativeHeight) + ')';
       const overlay = document.createElement('div');
       overlay.setAttribute('aria-label', 'Editor selection overlay');
       overlay.style.cssText = 'position:absolute;inset:0;z-index:1;overflow:hidden';
@@ -480,6 +491,9 @@ private fun updateCatalogRuntimeSurface(
       controller = {
         runtimeId,
         compositionKey,
+        frame,
+        nativeWidth,
+        nativeHeight,
         render,
         disposed: false,
         request(type, payload) {
@@ -620,6 +634,7 @@ private fun updateCatalogRuntimeSurface(
       }).catch((error) => {
         if (controller.disposed) return;
         controller.dispose();
+        delete host.__uiBuilderCatalogRuntime;
         host.replaceChildren();
         host.textContent = 'Pinned catalog runtime unavailable: ' + error.message;
         host.__uiBuilderRuntimeError = error.message;
