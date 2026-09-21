@@ -744,8 +744,10 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
          const authoredDensity = Number(renderedDocument.environment?.density);
          const density = Number.isFinite(authoredDensity) && authoredDensity > 0
            ? authoredDensity : globalThis.devicePixelRatio || 1;
-         activeSurface = {
-           mode: 'authoring-unrolled',
+          activeSurface = {
+            // This transport fixture proves semantic scrolling, so it is a device surface. The
+            // editor's separate extent smoke uses authoring-unrolled through CatalogRuntimeCanvas.
+            mode: 'device',
            widthDp: Math.max(1, frame.clientWidth),
            heightDp: Math.max(1, frame.clientHeight),
            density,

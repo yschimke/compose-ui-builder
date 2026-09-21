@@ -9,10 +9,10 @@ consumable ZIP.
 ./gradlew :ui-builder-renderer:check :ui-builder-renderer:wasmRendererDist
 compose-preview-server \
   --ui-builder-dir ui-builder/build/wasmDist \
-  --ui-builder-runtime-dir m3-2026.09-protocol1=ui-builder-renderer/build/wasmRendererDist
+  --ui-builder-runtime-dir m3-2026.09-protocol2=ui-builder-renderer/build/wasmRendererDist
 ```
 
-Open `/ui-builder/?rendererRuntimeId=m3-2026.09-protocol1` to exercise the isolated vertical slice.
+Open `/ui-builder/?rendererRuntimeId=m3-2026.09-protocol2` to exercise the isolated vertical slice.
 The editor resolves only that exact id and mounts the manifest entrypoint in an `allow-scripts`
 iframe. The frame has an opaque origin. Both sides verify `MessageEvent.source`, origin, protocol,
 runtime identity and request correlation.

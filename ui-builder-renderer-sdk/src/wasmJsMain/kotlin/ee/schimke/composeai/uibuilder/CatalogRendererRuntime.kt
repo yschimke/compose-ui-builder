@@ -77,7 +77,10 @@ fun startCatalogRenderer(
         if (state == null) {
           RuntimeRenderState(pending).also {
             renderState = it
-            startRuntimeViewport(it, content)
+            // ComposeViewport creates browser frame machinery and must not be entered re-entrantly
+            // from the window message callback that delivered the document. Start it on the next
+            // task with the already-populated state so its first scene contains catalog content.
+            scheduleRuntimeViewport { startRuntimeViewport(it, content) }
           }
         } else {
           // DOM message callbacks sit outside Compose's mutable snapshot. Once a viewport exists,
@@ -125,7 +128,10 @@ private fun startRuntimeViewport(
           return@content
         latestSnapshot = snapshot
         if (completedRenderRequestId == request.requestId) return@content
-        scheduleMeasuredResponse {
+        scheduleMeasuredResponse(
+          if (snapshot.generation.measuredNodeIds.isEmpty()) UNMEASURED_SETTLE_MS
+          else MEASURED_SETTLE_MS
+        ) {
           if (completedRenderRequestId == request.requestId) return@scheduleMeasuredResponse
           val response = endpoint.rendered(request.requestId, snapshot)
           if (response.type == "rendered") completedRenderRequestId = request.requestId
@@ -182,7 +188,10 @@ private fun installRuntimeReceiver(handler: (String, String) -> Unit): Unit =
 private fun postRuntimeMessage(encoded: String): Unit =
   js("globalThis.parent.postMessage(encoded, globalThis.__uiBuilderParentOrigin)")
 
-private fun scheduleMeasuredResponse(callback: () -> Unit): Unit =
+private const val MEASURED_SETTLE_MS = 32
+private const val UNMEASURED_SETTLE_MS = 250
+
+private fun scheduleMeasuredResponse(delayMs: Int, callback: () -> Unit): Unit =
   js(
     """(function () {
       const token = (globalThis.__uiBuilderMeasureToken || 0) + 1;
@@ -193,9 +202,11 @@ private fun scheduleMeasuredResponse(callback: () -> Unit): Unit =
       setTimeout(function () {
         if (globalThis.__uiBuilderMeasureToken !== token) return;
         callback();
-      }, 32);
+      }, delayMs);
     })()"""
   )
+
+private fun scheduleRuntimeViewport(callback: () -> Unit): Unit = js("setTimeout(callback, 0)")
 
 private fun scheduleActionCompletion(callback: () -> Unit): Unit =
   js(
