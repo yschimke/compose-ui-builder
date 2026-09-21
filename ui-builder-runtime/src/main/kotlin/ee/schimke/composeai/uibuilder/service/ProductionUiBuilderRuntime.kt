@@ -66,6 +66,25 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+private data class Configuration(
+  val source: String,
+  val catalogSystemIds: Set<String>,
+  val exportCapabilities: ExportCapabilitiesV1,
+  val composeExportFor: (String) -> Boolean,
+  val packs: List<UiBuilderComponentPackSource>,
+  val published: Map<String, CatalogCapabilityV1>,
+  val nativeRuntimeIds: Map<String, String> = emptyMap(),
+)
+
+private fun defaultExportCapabilities(): ExportCapabilitiesV1 =
+  ExportCapabilitiesV1.Builder()
+    .also {
+      it.composeCode = true
+      it.svg = false
+      it.png = false
+    }
+    .build()
+
 /**
  * The explicitly enabled production catalogs admitted by the v1 service.
  *
@@ -75,76 +94,117 @@ import kotlinx.serialization.json.putJsonObject
  * host without the packaged daemon lane advertises Compose only instead of claiming artifacts it
  * cannot produce.
  */
-public class CurrentM3UiBuilderCatalogExecutor(
-  source: String = packagedM3CatalogSource(),
-  catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID),
-  exportCapabilities: ExportCapabilitiesV1 =
-    ExportCapabilitiesV1.Builder()
-      .also {
-        it.composeCode = true
-        it.svg = false
-        it.png = false
-      }
-      .build(),
+public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration: Configuration) :
+  UiBuilderCatalogExecutor {
+  private val source = configuration.source
+  private val catalogSystemIds = configuration.catalogSystemIds
+  private val exportCapabilities = configuration.exportCapabilities
+  private val composeExportFor = configuration.composeExportFor
+  private val packs = configuration.packs
+  private val published = configuration.published
+  private val nativeRuntimeIds = configuration.nativeRuntimeIds
+
   /**
-   * Whether a given catalog can export Compose, asked per catalog rather than once.
+   * The original constructor, retained temporarily for binary-compatible migration.
    *
-   * `exportCapabilities` is a field of `CatalogCapabilityV1` — one per catalog on the wire — and
-   * the host used to compute a single boolean and copy it onto every enabled catalog. So a
-   * deployment serving `m3-catalog` (which has a component record) alongside `remote-m3` (which
-   * deliberately does not, Remote Compose being outside the Compose exporter) advertised no Compose
-   * export **anywhere**, and the builder withdrew the action from the catalog that could have used
-   * it. Defaults to the flat value, so a caller that does not care is unaffected.
+   * Use [Builder] for new hosts. Kotlin compiles defaulted constructors into synthetic bridges, so
+   * adding a parameter here would strand already compiled Preview Server releases. This constructor
+   * is deprecated now and can be removed only in the next planned ABI break.
    */
-  composeExportFor: (String) -> Boolean = { exportCapabilities.composeCode },
-  /**
-   * Component packs admitted by the host, merged into every enabled catalog of the same platform.
-   *
-   * A pack is another catalog's components — a served application catalog such as
-   * `confetti-mobile`, projected from its published component record — offered inside the authoring
-   * catalogs it is compatible with. Merged here rather than served as catalogs of their own because
-   * a design is pinned to one catalog and a pack is not a thing to pin to: it has no scaffold, no
-   * templates and no canvas adapter of its own. What it has is components, and a Material 3 phone
-   * screen that can hold a `SessionCard` beside its `m3/card` is the whole point.
-   *
-   * Which catalogs a pack reaches is decided by platform, never by name. A mobile pack lands in
-   * `m3-catalog`; it does not land in `remote-m3`, whose widget body is `@RemoteComposable` and
-   * cannot call it, nor in `wear-m3`, which is not Material 3. The catalog declares what it carried
-   * under `statusSemantics.componentPacks` so the editor can shelve the pack under its own name and
-   * let an author switch it on and off.
-   */
-  packs: List<UiBuilderComponentPackSource> = emptyList(),
-  /**
-   * Catalogs composed from what a catalog repository PUBLISHED, keyed by system id.
-   *
-   * The cutover of `docs/design/UI_BUILDER_CATALOG_CONTRACT.md`, and the reason this class can stop
-   * being the place a catalog is written. An entry here is preferred over the synthesised catalog
-   * of the same id, and an id with no synthesiser is served from here alone — which is what lets a
-   * catalog this binary has never heard of appear in the chooser.
-   *
-   * Per catalog and reversible on purpose: a catalog that publishes nothing, or whose published
-   * file will not compose, keeps the synthesised one and a startup line says which source each came
-   * from. Composing the file is `:server`'s job (it needs the component record reader, which
-   * `checkUiBuilderRuntimeBoundary` keeps off this module's classpath), so this takes the finished
-   * catalogs rather than the files.
-   */
-  published: Map<String, CatalogCapabilityV1> = emptyMap(),
-  /**
-   * Immutable renderer runtime ids supplied by the host, keyed by catalog system id.
-   *
-   * A catalog capability and its executable arrive through different delivery records: the
-   * capability may be synthesised here or composed from `ui-builder.json`, while the host verifies
-   * and retains the runtime archive declared by `catalog.json`. The document pin has to name the
-   * latter exactly. Applying that host-owned fact here keeps catalog resolution, validation and
-   * reference generation on one authoritative pin instead of making the host decorate wire replies
-   * after this executor has already captured its accepted references.
-   *
-   * The source catalog's pin remains accepted below, so a design saved before executable runtimes
-   * were attached can still open and be migrated deliberately. Empty preserves the standalone and
-   * test behaviour.
-   */
-  nativeRuntimeIds: Map<String, String> = emptyMap(),
-) : UiBuilderCatalogExecutor {
+  @Deprecated("Use CurrentM3UiBuilderCatalogExecutor.Builder", ReplaceWith("Builder().build()"))
+  public constructor(
+    source: String = packagedM3CatalogSource(),
+    catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID),
+    exportCapabilities: ExportCapabilitiesV1 = defaultExportCapabilities(),
+    /**
+     * Whether a given catalog can export Compose, asked per catalog rather than once.
+     *
+     * `exportCapabilities` is a field of `CatalogCapabilityV1` — one per catalog on the wire — and
+     * the host used to compute a single boolean and copy it onto every enabled catalog. So a
+     * deployment serving `m3-catalog` (which has a component record) alongside `remote-m3` (which
+     * deliberately does not, Remote Compose being outside the Compose exporter) advertised no
+     * Compose export **anywhere**, and the builder withdrew the action from the catalog that could
+     * have used it. Defaults to the flat value, so a caller that does not care is unaffected.
+     */
+    composeExportFor: (String) -> Boolean = { exportCapabilities.composeCode },
+    /**
+     * Component packs admitted by the host, merged into every enabled catalog of the same platform.
+     *
+     * A pack is another catalog's components — a served application catalog such as
+     * `confetti-mobile`, projected from its published component record — offered inside the
+     * authoring catalogs it is compatible with. Merged here rather than served as catalogs of their
+     * own because a design is pinned to one catalog and a pack is not a thing to pin to: it has no
+     * scaffold, no templates and no canvas adapter of its own. What it has is components, and a
+     * Material 3 phone screen that can hold a `SessionCard` beside its `m3/card` is the whole
+     * point.
+     *
+     * Which catalogs a pack reaches is decided by platform, never by name. A mobile pack lands in
+     * `m3-catalog`; it does not land in `remote-m3`, whose widget body is `@RemoteComposable` and
+     * cannot call it, nor in `wear-m3`, which is not Material 3. The catalog declares what it
+     * carried under `statusSemantics.componentPacks` so the editor can shelve the pack under its
+     * own name and let an author switch it on and off.
+     */
+    packs: List<UiBuilderComponentPackSource> = emptyList(),
+    /**
+     * Catalogs composed from what a catalog repository PUBLISHED, keyed by system id.
+     *
+     * The cutover of `docs/design/UI_BUILDER_CATALOG_CONTRACT.md`, and the reason this class can
+     * stop being the place a catalog is written. An entry here is preferred over the synthesised
+     * catalog of the same id, and an id with no synthesiser is served from here alone — which is
+     * what lets a catalog this binary has never heard of appear in the chooser.
+     *
+     * Per catalog and reversible on purpose: a catalog that publishes nothing, or whose published
+     * file will not compose, keeps the synthesised one and a startup line says which source each
+     * came from. Composing the file is `:server`'s job (it needs the component record reader, which
+     * `checkUiBuilderRuntimeBoundary` keeps off this module's classpath), so this takes the
+     * finished catalogs rather than the files.
+     */
+    published: Map<String, CatalogCapabilityV1> = emptyMap(),
+  ) : this(
+    Configuration(
+      source = source,
+      catalogSystemIds = catalogSystemIds,
+      exportCapabilities = exportCapabilities,
+      composeExportFor = composeExportFor,
+      packs = packs,
+      published = published,
+    )
+  )
+
+  /** JVM compatibility for callers compiled against the all-default primary constructor. */
+  @Deprecated("Use CurrentM3UiBuilderCatalogExecutor.Builder", ReplaceWith("Builder().build()"))
+  public constructor() :
+    this(
+      source = packagedM3CatalogSource(),
+      catalogSystemIds = setOf(DEFAULT_CATALOG_SYSTEM_ID),
+      exportCapabilities = defaultExportCapabilities(),
+      composeExportFor = { it -> defaultExportCapabilities().composeCode },
+    )
+
+  /** Additive host configuration for catalogs delivered with immutable renderer runtimes. */
+  public class Builder {
+    public var source: String = packagedM3CatalogSource()
+    public var catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID)
+    public var exportCapabilities: ExportCapabilitiesV1 = defaultExportCapabilities()
+    public var composeExportFor: (String) -> Boolean = { exportCapabilities.composeCode }
+    public var packs: List<UiBuilderComponentPackSource> = emptyList()
+    public var published: Map<String, CatalogCapabilityV1> = emptyMap()
+    public var nativeRuntimeIds: Map<String, String> = emptyMap()
+
+    public fun build(): CurrentM3UiBuilderCatalogExecutor =
+      CurrentM3UiBuilderCatalogExecutor(
+        Configuration(
+          source = source,
+          catalogSystemIds = catalogSystemIds,
+          exportCapabilities = exportCapabilities,
+          composeExportFor = composeExportFor,
+          packs = packs,
+          published = published,
+          nativeRuntimeIds = nativeRuntimeIds,
+        )
+      )
+  }
+
   private val baseCatalog =
     json
       .decodeFromString<CatalogCapabilityV1>(source)

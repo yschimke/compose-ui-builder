@@ -103,7 +103,9 @@ class ProductionUiBuilderRuntimeTest {
   fun `host runtime ids become exact document pins without stranding the source pin`() {
     val runtimeId = "m3-catalog-p2-deadbeef"
     val catalogs =
-      CurrentM3UiBuilderCatalogExecutor(nativeRuntimeIds = mapOf("m3-catalog" to runtimeId))
+      CurrentM3UiBuilderCatalogExecutor.Builder()
+        .also { it.nativeRuntimeIds = mapOf("m3-catalog" to runtimeId) }
+        .build()
     val catalog = catalogs.listCatalogs().single()
     val reference = assertNotNull(catalogs.reference(catalog))
 
