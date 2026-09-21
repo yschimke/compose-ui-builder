@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.36.0](https://github.com/yschimke/compose-ui-builder/compare/v3.35.0...v3.36.0) (2026-09-21)
+
+
+### Features
+
+* **ui-builder:** add IntelliJ plugin POC ([#124](https://github.com/yschimke/compose-ui-builder/issues/124)) ([8c732d0](https://github.com/yschimke/compose-ui-builder/commit/8c732d0fd350927d4c188fff44bdf8265a31f2dd))
+
+
+### Bug Fixes
+
+* retain canvas for legacy runtime pins ([#129](https://github.com/yschimke/compose-ui-builder/issues/129)) ([5eb14ac](https://github.com/yschimke/compose-ui-builder/commit/5eb14ac76430c15a7f0d6bbaad6f63b36728a968))
+
 ## [3.35.0](https://github.com/yschimke/compose-ui-builder/compare/v3.34.0...v3.35.0) (2026-09-21)
 
 
