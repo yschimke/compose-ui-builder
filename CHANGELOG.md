@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.33.0](https://github.com/yschimke/compose-ui-builder/compare/v3.32.0...v3.33.0) (2026-09-21)
+
+
+### Features
+
+* organize designs into folders ([#108](https://github.com/yschimke/compose-ui-builder/issues/108)) ([bbe3412](https://github.com/yschimke/compose-ui-builder/commit/bbe3412692aa27cf48e2da06785d4a3f3992828a))
+* **renderer-sdk:** apply canvas modifiers ([#116](https://github.com/yschimke/compose-ui-builder/issues/116)) ([4d5b7f1](https://github.com/yschimke/compose-ui-builder/commit/4d5b7f1367f75a17fbcdd00a99b5213fcb455c96))
+* **renderer-sdk:** expose indexed slot items ([#114](https://github.com/yschimke/compose-ui-builder/issues/114)) ([598536e](https://github.com/yschimke/compose-ui-builder/commit/598536ecbf9eecb60597fcde7ec3bfb8cefd7bb9))
+* **renderer-sdk:** expose material icon vectors ([#117](https://github.com/yschimke/compose-ui-builder/issues/117)) ([1aca136](https://github.com/yschimke/compose-ui-builder/commit/1aca136b7bab288662bbed0364ee0e9f76213cad))
+* **renderer-sdk:** host canvas documents ([#113](https://github.com/yschimke/compose-ui-builder/issues/113)) ([0dfba04](https://github.com/yschimke/compose-ui-builder/commit/0dfba047c37a82fe30056d425667db00dda4c3bf))
+* **renderer-sdk:** own canvas tree traversal ([#110](https://github.com/yschimke/compose-ui-builder/issues/110)) ([49916f9](https://github.com/yschimke/compose-ui-builder/commit/49916f97ba57496727cdc0f59eceef8c5ed905da))
+* **renderer-sdk:** prepare canvas nodes ([#111](https://github.com/yschimke/compose-ui-builder/issues/111)) ([aeffdf0](https://github.com/yschimke/compose-ui-builder/commit/aeffdf02b7ac48b24bd63e9cf1d8abbf6db8d476))
+* **renderer-sdk:** render catalog registries ([#115](https://github.com/yschimke/compose-ui-builder/issues/115)) ([ae04eec](https://github.com/yschimke/compose-ui-builder/commit/ae04eecf62c8563429c8ef5d0307a1d7bba3b2a0))
+* **renderer-sdk:** render structural nodes ([#112](https://github.com/yschimke/compose-ui-builder/issues/112)) ([59aa310](https://github.com/yschimke/compose-ui-builder/commit/59aa310ef483d9acae5451a4a2a375053b820657))
+* **renderer-sdk:** update bound adapter state ([#119](https://github.com/yschimke/compose-ui-builder/issues/119)) ([4ec9153](https://github.com/yschimke/compose-ui-builder/commit/4ec915397e1704cac8df9f7301a3d03237bef83b))
+
+
+### Bug Fixes
+
+* **renderer-sdk:** retain document template metadata ([#118](https://github.com/yschimke/compose-ui-builder/issues/118)) ([8e0763b](https://github.com/yschimke/compose-ui-builder/commit/8e0763b23975461697e332e74de085f80847a1ef))
+* **ui-builder:** recover designs from stale catalog pins ([#120](https://github.com/yschimke/compose-ui-builder/issues/120)) ([55e1234](https://github.com/yschimke/compose-ui-builder/commit/55e1234cae86d932e58dab34fdc2615051cd8cba))
+
 ## [3.32.0](https://github.com/yschimke/compose-ui-builder/compare/v3.31.0...v3.32.0) (2026-09-20)
 
 
