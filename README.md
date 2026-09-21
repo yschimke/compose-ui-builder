@@ -61,10 +61,12 @@ A release goes out in two halves, because the four seams are not the same kind o
 the runtime, so its coordinate appears in the runtime's POM, and a POM naming an artifact nobody
 uploaded is what made `compose-preview-serve` unresolvable for six consecutive releases.
 
-**GitHub release assets — a Wasm ZIP and a Linux Desktop app.**
+**GitHub release assets — a Wasm ZIP, a Linux Desktop app, and an IntelliJ plugin.**
 `compose-preview-ui-builder-web-<version>.zip` is the Wasm editor, which a host unpacks; nothing
 compiles against it or resolves it transitively. The release also carries
-`compose-ui-builder-desktop_<version>_amd64.deb`, the native offline Compose Desktop application.
+`compose-ui-builder-desktop_<version>_amd64.deb`, the native offline Compose Desktop application,
+and `compose-ui-builder-intellij-plugin-<version>.zip`, which installs the offline editor as an
+IntelliJ tool window.
 The web bundle stays off Central because a 40 MB frontend distribution published there is permanent
 and serves no one. compose-preview-server reaches it through a group-fenced ivy repository over
 this repository's releases, so it remains an ordinary versioned dependency:
@@ -118,8 +120,10 @@ Then, with the release version in `PLUGIN_VERSION`:
 ```bash
 PLUGIN_VERSION=0.1.0 ./gradlew publishReleaseArtifacts
 PLUGIN_VERSION=0.1.0 ./gradlew :ui-builder-web:webArchive
+PLUGIN_VERSION=0.1.0 ./gradlew :ui-builder-intellij-plugin:buildPlugin
 gh release upload v0.1.0 \
-  ui-builder-web/build/distributions/compose-preview-ui-builder-web-0.1.0.zip
+  ui-builder-web/build/distributions/compose-preview-ui-builder-web-0.1.0.zip \
+  ui-builder-intellij-plugin/build/distributions/compose-ui-builder-intellij-plugin-0.1.0.zip
 ```
 
 `.github/workflows/release.yml` does all of this from a `v*` tag, given the four secrets, and runs

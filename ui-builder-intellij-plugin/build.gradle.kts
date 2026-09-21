@@ -9,6 +9,17 @@ ktfmt { googleStyle() }
 
 kotlin { jvmToolchain(libs.versions.java.ui.builder.get().toInt()) }
 
+// Keep the plugin descriptor and release asset on the repository's version line. CI supplies the
+// tag-derived version; local builds use the same next-patch snapshot convention as :ui-builder-web.
+version =
+  providers.environmentVariable("PLUGIN_VERSION").orNull
+    ?: run {
+      val manifest = rootDir.resolve(".release-please-manifest.json").readText()
+      val current = Regex(""""\.":\s*"([^"]+)"""").find(manifest)!!.groupValues[1]
+      val (major, minor, patch) = current.split(".").map { it.toInt() }
+      "$major.$minor.${patch + 1}-SNAPSHOT"
+    }
+
 repositories {
   google()
   mavenCentral()
@@ -47,10 +58,15 @@ dependencies {
 intellijPlatform {
   pluginConfiguration {
     name = "Compose UI Builder POC"
-    version = "0.0.1"
+    version = project.version.toString()
     ideaVersion {
       sinceBuild = "262"
       untilBuild = provider { null }
     }
   }
+}
+
+tasks.named<Zip>("buildPlugin") {
+  archiveBaseName.set("compose-ui-builder-intellij-plugin")
+  archiveVersion.set(project.version.toString())
 }

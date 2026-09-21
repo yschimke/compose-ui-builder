@@ -106,6 +106,9 @@ Open **View → Tool Windows → Compose UI Builder** in the sandbox. This is in
 proof of concept: it persists edits locally but does not yet discover the open project's composables
 or connect to the preview server's collaboration and native-render lanes.
 
+Repository releases include `compose-ui-builder-intellij-plugin-<version>.zip`. Install it with
+**Settings → Plugins → Install Plugin from Disk**, then restart the IDE and open the tool window.
+
 ### The flags underneath, and one that is easy to confuse
 
 Both modes are `serve` with flags added, and every flag stays available:
