@@ -80,6 +80,7 @@ fun CanvasRenderNode.renderAdapter(
   mode: CanvasMode,
   renderChild: @Composable (CanvasRenderNode, Modifier) -> Unit,
   dispatchEvent: (String) -> Unit,
+  updateState: (String, String?) -> Unit,
   recordText: (TextLayoutResult) -> Unit,
 ): Boolean {
   val adapter = registry[adapterId] ?: return false
@@ -100,6 +101,7 @@ fun CanvasRenderNode.renderAdapter(
         slot(name).getOrNull(index)?.let { item -> renderChild(item, next) }
       },
       dispatchEvent = dispatchEvent,
+      updateState = updateState,
       recordText = recordText,
     )
   adapter(scope)
@@ -129,6 +131,7 @@ class CanvasNodeScope(
   private val countItems: (String) -> Int,
   private val renderItem: @Composable (String, Int, Modifier) -> Unit,
   private val dispatchEvent: (String) -> Unit,
+  private val updateState: (String, String?) -> Unit,
   private val recordText: (TextLayoutResult) -> Unit,
 ) {
   @Composable
@@ -158,6 +161,19 @@ class CanvasNodeScope(
   }
 
   fun dispatch(event: String) = dispatchEvent(event)
+
+  /**
+   * Update the state variable named by a resolved `state` property wrapper.
+   *
+   * Binding lookup remains in the SDK: adapters name only their API parameter and provide its new
+   * scalar value. A literal or non-state property is intentionally a no-op.
+   */
+  fun updateBoundState(property: String, value: String?) {
+    val wrapper = node.properties[property] as? JsonObject ?: return
+    if ((wrapper["type"] as? JsonPrimitive)?.contentOrNull != "state") return
+    val variable = (wrapper["variable"] as? JsonPrimitive)?.contentOrNull ?: return
+    updateState(variable, value)
+  }
 
   fun recordTextLayout(result: TextLayoutResult) = recordText(result)
 
