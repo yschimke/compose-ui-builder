@@ -15,6 +15,19 @@ import kotlinx.serialization.json.put
 
 class CatalogRuntimeProtocolTest {
   @Test
+  fun `render accepts persisted template metadata`() {
+    val command =
+      requestRender(
+        initializedEndpoint(),
+        CatalogRuntimeHostSession(RUNTIME),
+        "template-render",
+        document().copy(template = "hello-widget"),
+      )
+
+    assertEquals("hello-widget", command.document.template)
+  }
+
+  @Test
   fun `correlates render and semantic action with exact document`() {
     val endpoint = initializedEndpoint()
     val host = CatalogRuntimeHostSession(RUNTIME)
