@@ -1992,22 +1992,26 @@ private fun LiveSessionApp(
       onCanvasMetrics = ::publishEditorCanvasMetrics,
       onCanvasBoundsChanged = ::publishEditorCanvasBounds,
       onDropTargetChanged = ::publishEditorDropTarget,
-      canvasRenderer = {
-        rendered,
-        surface,
-        selectedNodeId,
-        selectionEnabled,
-        onNodeSelected,
-        onInspection ->
-        CatalogRuntimeCanvas(
-          rendered,
-          surface,
-          selectedNodeId,
-          selectionEnabled,
-          onNodeSelected,
-          onInspection,
-        )
-      },
+      // `candidate` predates catalog-delivered runtimes. Keep its in-process canvas until every
+      // deployed catalog has been verified through the hosted editor and native-export lanes; it
+      // names no immutable archive, so asking the runtime route for it can only return 404.
+      canvasRenderer =
+        if (
+          loadedDocument.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull == "candidate"
+        ) {
+          null
+        } else {
+          { rendered, surface, selectedNodeId, selectionEnabled, onNodeSelected, onInspection ->
+            CatalogRuntimeCanvas(
+              rendered,
+              surface,
+              selectedNodeId,
+              selectionEnabled,
+              onNodeSelected,
+              onInspection,
+            )
+          }
+        },
       onInspectionSnapshot = inspectionPublisher::publish,
       onInspectionInvalidated = { collector ->
         inspectionPublisher.offer(collector, loadedDocument.revision)
