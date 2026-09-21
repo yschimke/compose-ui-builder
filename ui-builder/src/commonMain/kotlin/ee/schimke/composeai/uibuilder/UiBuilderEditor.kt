@@ -411,6 +411,12 @@ data class UiBuilderCanvasSurface(
   val positionVersion: Int = 0,
 )
 
+/** One renderer inspection in its native pixels and in the editor root used for hit-testing. */
+data class UiBuilderCanvasInspection(
+  val renderer: UiBuilderInspectionSnapshot,
+  val editor: UiBuilderInspectionSnapshot,
+)
+
 typealias UiBuilderCanvasRenderer =
   @Composable
   (
@@ -419,7 +425,7 @@ typealias UiBuilderCanvasRenderer =
     selectedNodeId: String?,
     selectionEnabled: Boolean,
     onNodeSelected: (String) -> Unit,
-    onInspectionSnapshot: (UiBuilderInspectionSnapshot) -> Unit,
+    onInspectionSnapshot: (UiBuilderCanvasInspection) -> Unit,
   ) -> Unit
 
 private val LocalUiBuilderCanvasRenderer = compositionLocalOf<UiBuilderCanvasRenderer?> { null }
@@ -6014,6 +6020,9 @@ internal fun PinnedDesignCanvas(
                   else Modifier
                 ),
               shape = RoundedCornerShape(0.dp),
+              color =
+                if (canvasRenderer == null) MaterialTheme.colorScheme.surface
+                else Color.Transparent,
               shadowElevation = 0.dp,
             ) {
               // Where a right-click landed on the design, in the frame's own pixels, and null
@@ -6169,10 +6178,11 @@ internal fun PinnedDesignCanvas(
                       selectedNodeId,
                       showSelectionOverlay,
                       onNodeSelected,
-                    ) { snapshot ->
+                    ) { snapshots ->
+                      val snapshot = snapshots.editor
                       inspection = snapshot
                       val measuredBottom =
-                        snapshot.nodes.mapNotNull { it.bounds?.bottom }.maxOrNull() ?: 0f
+                        snapshots.renderer.nodes.mapNotNull { it.bounds?.bottom }.maxOrNull() ?: 0f
                       val measuredHeightDp =
                         measuredBottom / document.renderDensity(density).density
                       if (measuredHeightDp > expandedHeightDp) expandedHeightDp = measuredHeightDp
@@ -6656,7 +6666,7 @@ private fun DragLivePreviewGhost(
           null,
           false,
           {},
-          inspection,
+          { snapshots -> inspection(snapshots.editor) },
         )
       }
     }
@@ -7656,7 +7666,7 @@ private fun CatalogThumbnail(
           null,
           false,
           {},
-          inspection,
+          { snapshots -> inspection(snapshots.editor) },
         )
       }
     }

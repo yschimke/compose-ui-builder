@@ -51,8 +51,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -252,7 +255,7 @@ private fun CatalogRuntimeCanvas(
   selectedNodeId: String?,
   selectionEnabled: Boolean,
   onNodeSelected: (String) -> Unit,
-  onInspectionSnapshot: (UiBuilderInspectionSnapshot) -> Unit,
+  onInspectionSnapshot: (UiBuilderCanvasInspection) -> Unit,
 ) {
   val runtimeId = document.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull.orEmpty()
   val surfaceId = remember { nextCatalogRuntimeSurfaceId() }
@@ -272,7 +275,9 @@ private fun CatalogRuntimeCanvas(
           .getOrNull()
           ?.takeIf { it.documentId == document.id && it.documentRevision == document.revision }
           ?.let { snapshot ->
-            coordinates?.let(snapshot::inEditorCoordinates)?.let(onInspectionSnapshot)
+            coordinates
+              ?.let { UiBuilderCanvasInspection(snapshot, snapshot.inEditorCoordinates(it)) }
+              ?.let(onInspectionSnapshot)
           }
       }
       delay(100)
@@ -284,15 +289,8 @@ private fun CatalogRuntimeCanvas(
   }
   SideEffect {
     mountCatalogRuntimeSurface(surfaceId)
-    coordinates?.boundsInWindow()?.let { bounds ->
-      positionCatalogRuntimeSurface(
-        surfaceId,
-        bounds.left,
-        bounds.top,
-        bounds.width,
-        bounds.height,
-        surface.positionVersion,
-      )
+    coordinates?.let { nextCoordinates ->
+      positionCatalogRuntimeSurface(surfaceId, nextCoordinates, surface.positionVersion)
     }
     updateCatalogRuntimeSurface(
       surfaceId = surfaceId,
@@ -307,18 +305,53 @@ private fun CatalogRuntimeCanvas(
     )
   }
   Box(
-    Modifier.fillMaxSize().onGloballyPositioned { nextCoordinates ->
-      coordinates = nextCoordinates
-      val bounds = nextCoordinates.boundsInWindow()
-      positionCatalogRuntimeSurface(
-        surfaceId,
-        bounds.left,
-        bounds.top,
-        bounds.width,
-        bounds.height,
-        surface.positionVersion,
-      )
-    }
+    Modifier.fillMaxSize()
+      // Catalog pixels live in the DOM layer immediately below Compose. Punch out only their exact
+      // rectangle; editor-owned Compose overlays are later siblings and remain above the runtime.
+      .drawWithContent {
+        drawRect(Color.Transparent, blendMode = BlendMode.Clear)
+        drawContent()
+      }
+      .onGloballyPositioned { nextCoordinates ->
+        coordinates = nextCoordinates
+        positionCatalogRuntimeSurface(surfaceId, nextCoordinates, surface.positionVersion)
+      }
+  )
+}
+
+private fun positionCatalogRuntimeSurface(
+  surfaceId: String,
+  coordinates: LayoutCoordinates,
+  positionVersion: Int,
+) {
+  val visible = coordinates.boundsInWindow()
+  val corners =
+    listOf(
+      coordinates.localToWindow(Offset.Zero),
+      coordinates.localToWindow(Offset(coordinates.size.width.toFloat(), 0f)),
+      coordinates.localToWindow(Offset(0f, coordinates.size.height.toFloat())),
+      coordinates.localToWindow(
+        Offset(coordinates.size.width.toFloat(), coordinates.size.height.toFloat())
+      ),
+    )
+  val full =
+    Rect(
+      left = corners.minOf { it.x },
+      top = corners.minOf { it.y },
+      right = corners.maxOf { it.x },
+      bottom = corners.maxOf { it.y },
+    )
+  positionCatalogRuntimeSurface(
+    surfaceId,
+    full.left,
+    full.top,
+    full.width,
+    full.height,
+    visible.left,
+    visible.top,
+    visible.right,
+    visible.bottom,
+    positionVersion,
   )
 }
 
@@ -355,7 +388,12 @@ private fun mountCatalogRuntimeSurface(surfaceId: String): Unit =
       if (document.getElementById(surfaceId)) return;
       const host = document.createElement('div');
       host.id = surfaceId;
-      host.style.cssText = 'position:fixed;overflow:hidden;z-index:20;pointer-events:none';
+      const app = document.getElementById('composeApp');
+      if (app) {
+        app.style.position = app.style.position || 'relative';
+        app.style.zIndex = '1';
+      }
+      host.style.cssText = 'position:fixed;overflow:hidden;z-index:0;pointer-events:none';
       document.body.append(host);
     })()"""
   )
@@ -366,6 +404,10 @@ private fun positionCatalogRuntimeSurface(
   top: Float,
   width: Float,
   height: Float,
+  visibleLeft: Float,
+  visibleTop: Float,
+  visibleRight: Float,
+  visibleBottom: Float,
   positionVersion: Int,
 ): Unit =
   js(
@@ -376,6 +418,12 @@ private fun positionCatalogRuntimeSurface(
       host.style.top = top + 'px';
       host.style.width = Math.max(0, width) + 'px';
       host.style.height = Math.max(0, height) + 'px';
+      const insetTop = Math.max(0, visibleTop - top);
+      const insetRight = Math.max(0, left + width - visibleRight);
+      const insetBottom = Math.max(0, top + height - visibleBottom);
+      const insetLeft = Math.max(0, visibleLeft - left);
+      host.style.clipPath = 'inset(' + insetTop + 'px ' + insetRight + 'px ' +
+        insetBottom + 'px ' + insetLeft + 'px)';
     })()"""
   )
 
@@ -403,6 +451,7 @@ private fun updateCatalogRuntimeSurface(
         documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled
       };
       host.style.pointerEvents = mode === 'device' ? 'auto' : 'none';
+      host.style.zIndex = mode === 'device' ? '20' : '0';
       let controller = host.__uiBuilderCatalogRuntime;
       if (controller && controller.runtimeId === runtimeId) {
         controller.render = render;
