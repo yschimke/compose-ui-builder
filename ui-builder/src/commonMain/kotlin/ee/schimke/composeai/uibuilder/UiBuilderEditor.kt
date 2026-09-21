@@ -211,6 +211,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -402,13 +403,19 @@ data class UiBuilderNativeNodeBounds(
 }
 
 /** Host-supplied isolated renderer for the editor's authoritative design surface. */
+data class UiBuilderCanvasSurface(
+  val widthDp: Float,
+  val heightDp: Float,
+  val density: Float,
+  val mode: UiBuilderRendererSurfaceModeV2,
+  val positionVersion: Int = 0,
+)
+
 typealias UiBuilderCanvasRenderer =
   @Composable
   (
     document: UiBuilderDocument,
-    widthDp: Float,
-    heightDp: Float,
-    density: Float,
+    surface: UiBuilderCanvasSurface,
     selectedNodeId: String?,
     selectionEnabled: Boolean,
     onNodeSelected: (String) -> Unit,
@@ -6047,6 +6054,32 @@ internal fun PinnedDesignCanvas(
                     onDragged = onNodeDragged,
                     onEnded = onNodeDragEnded,
                   )
+                  .then(
+                    if (canvasRenderer != null && showSelectionOverlay) {
+                      Modifier.pointerInput(document.revision, inspection) {
+                        detectTapGestures { position ->
+                          val point =
+                            Offset(
+                              frameOrigin.x + position.x * drawScale,
+                              frameOrigin.y + position.y * drawScale,
+                            )
+                          inspection
+                            ?.nodes
+                            .orEmpty()
+                            .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                            .filter { (_, bounds) ->
+                              point.x >= bounds.x &&
+                                point.x <= bounds.right &&
+                                point.y >= bounds.y &&
+                                point.y <= bounds.bottom
+                            }
+                            .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                            ?.first
+                            ?.let(onNodeSelected)
+                        }
+                      }
+                    } else Modifier
+                  )
                   .onSecondaryClick(document.id) { position ->
                     if (!showSelectionOverlay) return@onSecondaryClick
                     // The inspection reports each box in root pixels, which is the space this press
@@ -6126,9 +6159,13 @@ internal fun PinnedDesignCanvas(
                   ) {
                     canvasRenderer(
                       document,
-                      sourceWidth,
-                      expandedHeightDp,
-                      document.renderDensity(density).density,
+                      UiBuilderCanvasSurface(
+                        sourceWidth,
+                        expandedHeightDp,
+                        document.renderDensity(density).density,
+                        UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
+                        horizontalScrollState.value * 31 + verticalScrollState.value,
+                      ),
                       selectedNodeId,
                       showSelectionOverlay,
                       onNodeSelected,
@@ -6610,9 +6647,12 @@ private fun DragLivePreviewGhost(
       } else {
         renderer(
           document,
-          widthDp,
-          heightDp,
-          document.renderDensity(density).density,
+          UiBuilderCanvasSurface(
+            widthDp,
+            heightDp,
+            document.renderDensity(density).density,
+            UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
+          ),
           null,
           false,
           {},
@@ -6743,9 +6783,12 @@ private fun ConstrainedFramePane(
       if (renderer != null) {
         renderer(
           document,
-          widthDp,
-          heightDp,
-          document.renderDensity(LocalDensity.current).density,
+          UiBuilderCanvasSurface(
+            widthDp,
+            heightDp,
+            document.renderDensity(LocalDensity.current).density,
+            UiBuilderRendererSurfaceModeV2.DEVICE,
+          ),
           null,
           false,
           {},
@@ -7604,9 +7647,12 @@ private fun CatalogThumbnail(
       } else {
         renderer(
           document,
-          PREVIEW_FRAME_WIDTH_DP.toFloat(),
-          PREVIEW_FRAME_HEIGHT_DP.toFloat(),
-          document.renderDensity(density).density,
+          UiBuilderCanvasSurface(
+            PREVIEW_FRAME_WIDTH_DP.toFloat(),
+            PREVIEW_FRAME_HEIGHT_DP.toFloat(),
+            document.renderDensity(density).density,
+            UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
+          ),
           null,
           false,
           {},

@@ -51,11 +51,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -245,9 +248,7 @@ private external fun sandboxRendererRuntimeId(): String
 @Composable
 private fun CatalogRuntimeCanvas(
   document: UiBuilderDocument,
-  widthDp: Float,
-  heightDp: Float,
-  density: Float,
+  surface: UiBuilderCanvasSurface,
   selectedNodeId: String?,
   selectionEnabled: Boolean,
   onNodeSelected: (String) -> Unit,
@@ -258,28 +259,23 @@ private fun CatalogRuntimeCanvas(
   val documentJson =
     remember(document) { inspectionJson.encodeToString(UiBuilderDocument.serializer(), document) }
   var lastInspection by remember(surfaceId) { mutableStateOf("") }
-  var lastSelection by remember(surfaceId) { mutableStateOf("") }
+  var coordinates by remember(surfaceId) { mutableStateOf<LayoutCoordinates?>(null) }
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
-    while (selectionEnabled || lastInspection.isEmpty()) {
+    while (lastInspection.isEmpty()) {
       val encoded = readCatalogRuntimeInspection(surfaceId)
       if (encoded.isNotEmpty() && encoded != lastInspection) {
         lastInspection = encoded
         runCatching {
-            inspectionJson.decodeFromString(UiBuilderInspectionSnapshot.serializer(), encoded)
-          }
+          inspectionJson.decodeFromString(UiBuilderInspectionSnapshot.serializer(), encoded)
+        }
           .getOrNull()
           ?.takeIf { it.documentId == document.id && it.documentRevision == document.revision }
-          ?.let(onInspectionSnapshot)
+          ?.let { snapshot ->
+            coordinates?.let(snapshot::inEditorCoordinates)?.let(onInspectionSnapshot)
+          }
       }
-      if (selectionEnabled) {
-        val selection = readCatalogRuntimeSelection(surfaceId)
-        if (selection.isNotEmpty() && selection != lastSelection) {
-          lastSelection = selection
-          onNodeSelected(selection)
-        }
-      }
-      delay(if (selectionEnabled) 16 else 100)
+      delay(100)
     }
   }
   DisposableEffect(surfaceId) {
@@ -288,28 +284,59 @@ private fun CatalogRuntimeCanvas(
   }
   SideEffect {
     mountCatalogRuntimeSurface(surfaceId)
-    updateCatalogRuntimeSurface(
-      surfaceId = surfaceId,
-      runtimeId = runtimeId,
-      documentJson = documentJson,
-      widthDp = widthDp,
-      heightDp = heightDp,
-      density = density,
-      selectedNodeId = selectedNodeId.orEmpty(),
-      selectionEnabled = selectionEnabled,
-    )
-  }
-  Box(
-    Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
-      val bounds = coordinates.boundsInWindow()
+    coordinates?.boundsInWindow()?.let { bounds ->
       positionCatalogRuntimeSurface(
         surfaceId,
         bounds.left,
         bounds.top,
         bounds.width,
         bounds.height,
+        surface.positionVersion,
       )
     }
+    updateCatalogRuntimeSurface(
+      surfaceId = surfaceId,
+      runtimeId = runtimeId,
+      documentJson = documentJson,
+      widthDp = surface.widthDp,
+      heightDp = surface.heightDp,
+      density = surface.density,
+      mode = surface.mode.name.lowercase().replace('_', '-'),
+      selectedNodeId = selectedNodeId.orEmpty(),
+      selectionEnabled = selectionEnabled,
+    )
+  }
+  Box(
+    Modifier.fillMaxSize().onGloballyPositioned { nextCoordinates ->
+      coordinates = nextCoordinates
+      val bounds = nextCoordinates.boundsInWindow()
+      positionCatalogRuntimeSurface(
+        surfaceId,
+        bounds.left,
+        bounds.top,
+        bounds.width,
+        bounds.height,
+        surface.positionVersion,
+      )
+    }
+  )
+}
+
+private fun UiBuilderInspectionSnapshot.inEditorCoordinates(
+  coordinates: LayoutCoordinates
+): UiBuilderInspectionSnapshot {
+  val origin = coordinates.positionInRoot()
+  val unit = coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
+  fun UiBuilderPixelBounds.shifted() =
+    copy(
+      x = origin.x + x * unit.x,
+      y = origin.y + y * unit.y,
+      width = width * unit.x,
+      height = height * unit.y,
+    )
+  return copy(
+    nodes = nodes.map { node -> node.copy(bounds = node.bounds?.shifted()) },
+    slots = slots.map { slot -> slot.copy(bounds = slot.bounds?.shifted()) },
   )
 }
 
@@ -328,7 +355,7 @@ private fun mountCatalogRuntimeSurface(surfaceId: String): Unit =
       if (document.getElementById(surfaceId)) return;
       const host = document.createElement('div');
       host.id = surfaceId;
-      host.style.cssText = 'position:fixed;overflow:hidden;z-index:20';
+      host.style.cssText = 'position:fixed;overflow:hidden;z-index:20;pointer-events:none';
       document.body.append(host);
     })()"""
   )
@@ -339,6 +366,7 @@ private fun positionCatalogRuntimeSurface(
   top: Float,
   width: Float,
   height: Float,
+  positionVersion: Int,
 ): Unit =
   js(
     """(function () {
@@ -358,6 +386,7 @@ private fun updateCatalogRuntimeSurface(
   widthDp: Float,
   heightDp: Float,
   density: Float,
+  mode: String,
   selectedNodeId: String,
   selectionEnabled: Boolean,
 ): Unit =
@@ -371,8 +400,9 @@ private fun updateCatalogRuntimeSurface(
         return;
       }
       const render = {
-        documentJson, widthDp, heightDp, density, selectedNodeId, selectionEnabled
+        documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled
       };
+      host.style.pointerEvents = mode === 'device' ? 'auto' : 'none';
       let controller = host.__uiBuilderCatalogRuntime;
       if (controller && controller.runtimeId === runtimeId) {
         controller.render = render;
@@ -432,7 +462,7 @@ private fun updateCatalogRuntimeSurface(
           const payload = manifest.protocolVersion === 1 ? { document: parsed } : {
             document: parsed,
             surface: {
-              mode: 'authoring-unrolled',
+              mode: current.mode,
               widthDp: Math.max(1, current.widthDp),
               heightDp: Math.max(1, current.heightDp),
               density: Math.max(0.01, current.density),
@@ -443,7 +473,7 @@ private fun updateCatalogRuntimeSurface(
         },
         drawOverlay() {
           overlay.replaceChildren();
-          overlay.style.pointerEvents = this.render.selectionEnabled ? 'auto' : 'none';
+          overlay.style.pointerEvents = 'none';
           const inspection = host.__uiBuilderInspection;
           if (!inspection || !this.render.selectionEnabled) return;
           const scaleX = host.clientWidth / (this.render.widthDp * this.render.density);
@@ -470,20 +500,6 @@ private fun updateCatalogRuntimeSurface(
         },
       };
       host.__uiBuilderCatalogRuntime = controller;
-      overlay.addEventListener('click', (event) => {
-        const inspection = host.__uiBuilderInspection;
-        if (!controller.render.selectionEnabled || !inspection) return;
-        const rect = overlay.getBoundingClientRect();
-        const x = (event.clientX - rect.left) * controller.render.widthDp *
-          controller.render.density / rect.width;
-        const y = (event.clientY - rect.top) * controller.render.heightDp *
-          controller.render.density / rect.height;
-        const selected = inspection.nodes
-          .filter((node) => node.bounds && x >= node.bounds.x && y >= node.bounds.y &&
-            x <= node.bounds.x + node.bounds.width && y <= node.bounds.y + node.bounds.height)
-          .sort((a, b) => a.bounds.width * a.bounds.height - b.bounds.width * b.bounds.height)[0];
-        if (selected) host.__uiBuilderSelectedNodeId = selected.nodeId;
-      });
       const finiteBound = (value) => Number.isFinite(value) && Math.abs(value) <= 1000000;
       const validBounds = (bounds) => bounds == null || (
         finiteBound(bounds.x) && finiteBound(bounds.y) &&
@@ -563,9 +579,6 @@ private fun updateCatalogRuntimeSurface(
 private fun readCatalogRuntimeInspection(surfaceId: String): String =
   js("document.getElementById(surfaceId)?.__uiBuilderInspectionJson || ''")
 
-private fun readCatalogRuntimeSelection(surfaceId: String): String =
-  js("document.getElementById(surfaceId)?.__uiBuilderSelectedNodeId || ''")
-
 private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
   js(
     """(function () {
@@ -575,7 +588,6 @@ private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
       delete host.__uiBuilderCatalogRuntime;
       delete host.__uiBuilderInspectionJson;
       delete host.__uiBuilderInspection;
-      delete host.__uiBuilderSelectedNodeId;
       host.remove();
     })()"""
   )
@@ -1914,18 +1926,14 @@ private fun LiveSessionApp(
       onDropTargetChanged = ::publishEditorDropTarget,
       canvasRenderer = {
         rendered,
-        widthDp,
-        heightDp,
-        density,
+        surface,
         selectedNodeId,
         selectionEnabled,
         onNodeSelected,
         onInspection ->
         CatalogRuntimeCanvas(
           rendered,
-          widthDp,
-          heightDp,
-          density,
+          surface,
           selectedNodeId,
           selectionEnabled,
           onNodeSelected,
