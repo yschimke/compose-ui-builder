@@ -143,6 +143,7 @@ fun CanvasDocumentHost(
       updateState = { name, value ->
         state[name] = value
         inspection.updateState(state)
+        onStateSnapshot?.invoke(state.toMap())
       },
       recordBounds = { path, coordinates ->
         val unit = coordinates.localToRoot(Offset(1f, 1f)) - coordinates.localToRoot(Offset.Zero)
