@@ -193,10 +193,12 @@ tab C -> wear-m3-p2-5e77ab31
 tab D -> an older wear-m3 runtime leased for an upgrade comparison
 ```
 
-Each tab mounts the selected runtime in its own opaque-origin iframe. Multiple Preview device panes
-inside that tab use independent surface/session ids against that runtime. Session keys include the
-editor instance, design id, document revision and surface id; neither runtime state nor inspection
-may be keyed by catalog id alone.
+Each mounted surface uses an opaque-origin iframe for the selected runtime. A tab can therefore draw
+the editable extent, Preview device panes, variants, drag ghosts and visible catalog thumbnails at
+the same time without one surface replacing another runtime's document. The browser shares fetched
+and compiled immutable assets while every iframe keeps an independent Compose lifecycle. Session
+keys include the editor instance, design id, document revision and surface id; neither runtime state
+nor inspection may be keyed by catalog id alone.
 
 The Wasm runs in the browser. Concurrent tabs do not start one server process per renderer. Native
 Preview remains the separate daemon-backed rung and retains its own resource limits.
