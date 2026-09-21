@@ -3,7 +3,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /** One generated Material icon binding shared by validation, rendering, selection and export. */
-internal data class GoogleMaterialIcon(
+data class GoogleMaterialIcon(
   val key: String,
   val label: String,
   val composeExpression: String,
@@ -19,7 +19,7 @@ internal data class GoogleMaterialIcon(
 }
 
 /** Every style-qualified icon supplied by material-icons-extended, plus the original 46 aliases. */
-internal val GoogleMaterialIcons: List<GoogleMaterialIcon> =
+val GoogleMaterialIcons: List<GoogleMaterialIcon> =
   GeneratedGoogleMaterialIcons.sortedWith(
     compareByDescending<GoogleMaterialIcon>(GoogleMaterialIcon::canonical)
       .thenBy(GoogleMaterialIcon::label)
@@ -27,11 +27,14 @@ internal val GoogleMaterialIcons: List<GoogleMaterialIcon> =
   )
 
 /** Picker rows exclude compatibility aliases, so one vector never appears twice. */
-internal val SelectableGoogleMaterialIcons: List<GoogleMaterialIcon> =
+val SelectableGoogleMaterialIcons: List<GoogleMaterialIcon> =
   GoogleMaterialIcons.filter(GoogleMaterialIcon::canonical)
 
 private val GoogleMaterialIconsByKey: Map<String, GoogleMaterialIcon> by lazy {
   GoogleMaterialIcons.associateBy(GoogleMaterialIcon::key)
 }
 
-internal fun googleMaterialIcon(key: String): GoogleMaterialIcon? = GoogleMaterialIconsByKey[key]
+fun googleMaterialIcon(key: String): GoogleMaterialIcon? = GoogleMaterialIconsByKey[key]
+
+/** Resolve one authored icon key without making a catalog copy the generated icon inventory. */
+fun googleMaterialIconImageVector(key: String): ImageVector? = googleMaterialIcon(key)?.imageVector

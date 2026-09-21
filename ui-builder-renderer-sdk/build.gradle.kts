@@ -26,10 +26,12 @@ kotlin {
     commonMain.dependencies {
       api(project(":ui-builder-export"))
       @Suppress("DEPRECATION") implementation(compose.foundation)
+      @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
       @Suppress("DEPRECATION") api(compose.runtime)
       @Suppress("DEPRECATION") api(compose.ui)
       implementation(libs.kotlinx.serialization.json)
     }
+    commonMain { kotlin.srcDir(rootProject.tasks.named("generateMaterialIconUiSources")) }
     commonTest.dependencies { implementation(kotlin("test")) }
   }
 }

@@ -243,7 +243,6 @@ kotlin {
 
   sourceSets {
     commonMain {
-      kotlin.srcDir(rootProject.tasks.named("generateMaterialIconUiSources"))
       kotlin.srcDir(
         embedComponentRecord.map { layout.buildDirectory.dir("generated/componentRecord") }
       )
