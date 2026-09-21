@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.34.0](https://github.com/yschimke/compose-ui-builder/compare/v3.33.0...v3.34.0) (2026-09-21)
+
+
+### Features
+
+* mount pinned catalog runtimes in the editor ([#121](https://github.com/yschimke/compose-ui-builder/issues/121)) ([1faa1e3](https://github.com/yschimke/compose-ui-builder/commit/1faa1e39c6798c69537fcace49d78fdb3c3bf665))
+
+
+### Bug Fixes
+
+* settle actionable runtime geometry ([#123](https://github.com/yschimke/compose-ui-builder/issues/123)) ([76c7964](https://github.com/yschimke/compose-ui-builder/commit/76c7964895859340ecf79b750faf2164e037e4a1))
+
 ## [3.33.0](https://github.com/yschimke/compose-ui-builder/compare/v3.32.0...v3.33.0) (2026-09-21)
 
 
