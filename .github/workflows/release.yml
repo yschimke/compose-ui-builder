@@ -45,11 +45,12 @@ concurrency:
 #     naming an artifact nobody uploaded is what made compose-preview-serve unresolvable for six
 #     consecutive releases.
 #
-#   - TWO GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor, and a
-#     Linux `.deb` for the native Desktop host. A host unpacks the former; nothing compiles against
-#     either. compose-preview-server resolves the web archive through a group-fenced ivy repository
-#     over this release, which keeps it a normal versioned dependency without putting a 40 MB
-#     frontend distribution on Central forever.
+#   - THREE GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor; a
+#     Linux `.deb` for the native Desktop host; and `compose-ui-builder-intellij-plugin-<v>.zip`,
+#     the installable IntelliJ plugin. Nothing compiles against them. compose-preview-server
+#     resolves the web archive through a group-fenced ivy repository over this release, which keeps
+#     it a normal versioned dependency without putting a 40 MB frontend distribution on Central
+#     forever.
 #
 # The Maven set is DERIVED, never listed: `publishReleaseArtifacts` publishes every module applying
 # `composeai.maven-publishing` and fails first if that set has lost a seam or the BOM.
@@ -198,6 +199,11 @@ jobs:
           UI_BUILDER_DESKTOP_VERSION: ${{ env.PLUGIN_VERSION }}
         run: ./gradlew :ui-builder-desktop:packageDistributionForCurrentOS
 
+      # The plugin ZIP is platform-neutral: Compose and Skiko come from the target IDE's bundled
+      # modules rather than from an OS-specific runtime inside this archive.
+      - name: Build the IntelliJ plugin
+        run: ./gradlew :ui-builder-intellij-plugin:buildPlugin
+
       # These five secret names are the ones compose-preview-server used while it published these
       # same coordinates, so one set of repository secrets serves both. `signingInMemoryKeyId` is
       # the one that looks droppable and is not: without it the signing plugin uses the keyring's
@@ -221,6 +227,7 @@ jobs:
         run: |
           tag="${{ needs.release-please.outputs.publish_tag }}"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
+          intellij_plugin="ui-builder-intellij-plugin/build/distributions/compose-ui-builder-intellij-plugin-${PLUGIN_VERSION}.zip"
           desktop_package=$(find ui-builder-desktop/build/compose/binaries -type f -name '*.deb' -print -quit)
           if [ -z "$desktop_package" ]; then
             echo "::error::the Desktop package task produced no .deb"
@@ -231,9 +238,9 @@ jobs:
           # release whose draft was deleted - because `gh release upload` cannot create a Release
           # and would otherwise fail AFTER the Central publish had gone out.
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$archive" "$desktop_package" --clobber
+            gh release upload "$tag" "$archive" "$desktop_package" "$intellij_plugin" --clobber
           else
-            gh release create "$tag" "$archive" "$desktop_package" --title "$tag" --generate-notes --draft
+            gh release create "$tag" "$archive" "$desktop_package" "$intellij_plugin" --title "$tag" --generate-notes --draft
           fi
 
   finish-release:

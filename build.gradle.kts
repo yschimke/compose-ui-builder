@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask
 
 plugins {
   base
@@ -9,6 +10,7 @@ plugins {
   alias(libs.plugins.compose.compiler) apply false
   alias(libs.plugins.ktfmt) apply false
   alias(libs.plugins.maven.publish) apply false
+  alias(libs.plugins.intellij.platform) apply false
 }
 
 val materialIconGeneratorClasspath =
@@ -86,6 +88,7 @@ tasks.named("check") {
   dependsOn(
     ":ui-builder:check",
     ":ui-builder-desktop:check",
+    ":ui-builder-intellij-plugin:check",
     ":ui-builder-artwork:check",
     ":ui-builder-export:check",
     ":ui-builder-generated-jetcaster:check",
@@ -136,6 +139,15 @@ val wasmLinkLane =
 
 subprojects {
   tasks.withType<KotlinJsIrLink>().configureEach { usesService(wasmLinkLane) }
+}
+
+// Kotlin registers this root task after the Wasm projects are configured. Its action already treats
+// an absent lock as "no dependencies", but Gradle 9 validates the task's non-optional input first
+// and fails before that action can make the decision. On a fresh CI checkout Yarn can legitimately
+// produce no lock (for example while its cache is restored), so skip the store operation in that
+// case. When Yarn does write the lock, this remains the normal task and copies it to kotlin-js-store.
+tasks.withType<YarnLockStoreTask>().configureEach {
+  onlyIf("the generated Yarn lock exists") { inputFile.asFile.get().isFile }
 }
 
 // The ktfmt tasks write per-file results under `build/tmp/<task>/<uuid>/` and delete the directory

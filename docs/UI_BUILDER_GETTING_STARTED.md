@@ -90,6 +90,26 @@ Linux releases also include a `compose-ui-builder-desktop_<version>_amd64.deb` i
 with your distribution's package installer, then launch **Compose UI Builder** from the desktop
 environment.
 
+### As an IntelliJ Platform plugin (proof of concept)
+
+The `:ui-builder-intellij-plugin` module embeds that same offline editor in a **Compose UI
+Builder** tool window. It uses Jewel's Swing bridge for the Compose/Swing boundary and stores a
+separate workspace for each IDE project and catalog under the IDE system directory. The tool window
+has **Material 3** and **Wear M3** tabs; each authors against its matching packaged catalog.
+
+Run a sandbox IDE with:
+
+```bash
+./gradlew :ui-builder-intellij-plugin:runIde
+```
+
+Open **View → Tool Windows → Compose UI Builder** in the sandbox. This is intentionally an offline
+proof of concept: it persists edits locally but does not yet discover the open project's composables
+or connect to the preview server's collaboration and native-render lanes.
+
+Repository releases include `compose-ui-builder-intellij-plugin-<version>.zip`. Install it with
+**Settings → Plugins → Install Plugin from Disk**, then restart the IDE and open the tool window.
+
 ### The flags underneath, and one that is easy to confuse
 
 Both modes are `serve` with flags added, and every flag stays available:

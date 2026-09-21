@@ -5,6 +5,7 @@ build/
 
 # IDE
 .idea/
+.intellijPlatform/
 *.iml
 *.ipr
 *.iws

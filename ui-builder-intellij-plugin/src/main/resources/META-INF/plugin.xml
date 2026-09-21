@@ -1,0 +1,18 @@
+<idea-plugin>
+  <id>ee.schimke.composeai.ui-builder-poc</id>
+  <name>Compose UI Builder POC</name>
+  <vendor>Yuri Schimke</vendor>
+
+  <description><![CDATA[
+    Embeds the native Compose UI Builder in an IntelliJ Platform tool window.
+  ]]></description>
+
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow
+        id="Compose UI Builder"
+        anchor="right"
+        factoryClass="ee.schimke.composeai.uibuilder.intellij.UiBuilderToolWindowFactory" />
+  </extensions>
+</idea-plugin>
