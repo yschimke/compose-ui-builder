@@ -99,6 +99,29 @@ class ProductionUiBuilderRuntimeTest {
     assertEquals("UNKNOWN_COMPONENT", catalogs.validate(invalid, catalog)?.code)
   }
 
+  @Test
+  fun `host runtime ids become exact document pins without stranding the source pin`() {
+    val runtimeId = "m3-catalog-p2-deadbeef"
+    val catalogs =
+      CurrentM3UiBuilderCatalogExecutor(nativeRuntimeIds = mapOf("m3-catalog" to runtimeId))
+    val catalog = catalogs.listCatalogs().single()
+    val reference = assertNotNull(catalogs.reference(catalog))
+
+    assertEquals(runtimeId, catalog.benchmark.nativeRuntimeId)
+    assertEquals(runtimeId, reference.nativeRuntimeId)
+    assertEquals(catalog, catalogs.resolve(reference))
+    assertEquals(
+      catalog,
+      catalogs.resolve(document().catalogPin),
+      "the source pin remains an accepted migration input",
+    )
+    assertNull(
+      catalogs.resolve(reference.copy(nativeRuntimeId = "m3-catalog-p2-other")),
+      "an arbitrary runtime id must not float to the current implementation",
+    )
+    assertNull(catalogs.validate(document().copy(catalogPin = reference), catalog))
+  }
+
   /**
    * A design may place its own components against the real packaged catalog.
    *
