@@ -5,16 +5,18 @@
 
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 
-private var document by mutableStateOf<UiBuilderDocument?>(null)
-private var renderRequest by mutableStateOf<RenderRequest?>(null)
 private var latestSnapshot: UiBuilderInspectionSnapshot? = null
 private var completedRenderRequestId: String? = null
 private lateinit var endpoint: CatalogRuntimeProtocolEndpoint
@@ -25,6 +27,12 @@ private data class RenderRequest(
   val revision: Int,
   val surface: UiBuilderRendererSurfaceV2,
 )
+
+private data class PendingRender(val document: UiBuilderDocument, val request: RenderRequest)
+
+private class RuntimeRenderState(initial: PendingRender) {
+  var render by mutableStateOf(initial)
+}
 
 /**
  * Starts the opaque-origin renderer frame and delegates only the Compose drawing to its catalog.
@@ -44,6 +52,7 @@ fun startCatalogRenderer(
     ) -> Unit,
 ) {
   val runtimeId = runtimeIdFromPath()
+  var renderState: RuntimeRenderState? = null
   endpoint = CatalogRuntimeProtocolEndpoint(runtimeId)
   installRuntimeReceiver { origin, encoded ->
     when (val command = endpoint.receive(origin, sourceIsParent = true, encoded)) {
@@ -51,16 +60,31 @@ fun startCatalogRenderer(
       is CatalogRuntimeCommand.Reply -> postRuntimeMessage(endpoint.encode(command.message))
       is CatalogRuntimeCommand.Render -> {
         val surface = command.surface ?: return@installRuntimeReceiver
-        renderRequest =
-          RenderRequest(
-            command.requestId,
-            command.document.id,
-            command.document.revision,
-            surface,
+        val pending =
+          PendingRender(
+            document = command.document,
+            request =
+              RenderRequest(
+                command.requestId,
+                command.document.id,
+                command.document.revision,
+                surface,
+              ),
           )
         completedRenderRequestId = null
         latestSnapshot = null
-        document = command.document
+        val state = renderState
+        if (state == null) {
+          RuntimeRenderState(pending).also {
+            renderState = it
+            startRuntimeViewport(it, content)
+          }
+        } else {
+          // DOM message callbacks sit outside Compose's mutable snapshot. Once a viewport exists,
+          // explicitly apply later revisions so its active scene invalidates reliably.
+          Snapshot.withMutableSnapshot { state.render = pending }
+          Snapshot.sendApplyNotifications()
+        }
       }
       is CatalogRuntimeCommand.DispatchAction -> {
         when (val result = actionDispatcher.dispatch(command.action, latestSnapshot)) {
@@ -76,9 +100,24 @@ fun startCatalogRenderer(
       }
     }
   }
+}
+
+private fun startRuntimeViewport(
+  state: RuntimeRenderState,
+  content:
+    @Composable
+    (
+      document: UiBuilderDocument,
+      surface: UiBuilderRendererSurfaceV2,
+      renderSessionId: String,
+      onInspectionSnapshot: (UiBuilderInspectionSnapshot) -> Unit,
+    ) -> Unit,
+) {
   ComposeViewport(viewportContainerId = "composeApp") {
-    document?.let { current ->
-      val request = renderRequest ?: return@let
+    Box(Modifier.fillMaxSize()) {
+      val pending = state.render
+      val current = pending.document
+      val request = pending.request
       content(current, request.surface, request.requestId) { snapshot ->
         if (
           snapshot.documentId != request.documentId || snapshot.documentRevision != request.revision
@@ -148,12 +187,13 @@ private fun scheduleMeasuredResponse(callback: () -> Unit): Unit =
     """(function () {
       const token = (globalThis.__uiBuilderMeasureToken || 0) + 1;
       globalThis.__uiBuilderMeasureToken = token;
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          if (globalThis.__uiBuilderMeasureToken !== token) return;
-          callback();
-        });
-      });
+      // Opaque sandbox frames can have requestAnimationFrame suspended while offscreen or behind
+      // another editor surface. A short cancellable settle window still coalesces layout snapshots
+      // without tying protocol completion to browser visibility.
+      setTimeout(function () {
+        if (globalThis.__uiBuilderMeasureToken !== token) return;
+        callback();
+      }, 32);
     })()"""
   )
 

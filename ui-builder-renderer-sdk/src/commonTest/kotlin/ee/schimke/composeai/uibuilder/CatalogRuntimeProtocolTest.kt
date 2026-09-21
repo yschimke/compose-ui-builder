@@ -15,6 +15,18 @@ import kotlinx.serialization.json.put
 
 class CatalogRuntimeProtocolTest {
   @Test
+  fun `inspection publishes a generation before browser layout`() {
+    val snapshots = mutableListOf<UiBuilderInspectionSnapshot>()
+    val collector = UiBuilderInspectionCollector(document(), onSnapshot = snapshots::add)
+
+    collector.publishSnapshot()
+
+    assertEquals(1, snapshots.size)
+    assertEquals(listOf("root"), snapshots.single().generation.expectedAuthoredNodeIds)
+    assertEquals(emptyList(), snapshots.single().generation.measuredNodeIds)
+  }
+
+  @Test
   fun `render accepts persisted template metadata`() {
     val command =
       requestRender(

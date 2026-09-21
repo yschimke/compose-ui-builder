@@ -123,6 +123,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -399,6 +400,22 @@ data class UiBuilderNativeNodeBounds(
   internal val area: Long
     get() = width.toLong() * height.toLong()
 }
+
+/** Host-supplied isolated renderer for the editor's authoritative design surface. */
+typealias UiBuilderCanvasRenderer =
+  @Composable
+  (
+    document: UiBuilderDocument,
+    widthDp: Float,
+    heightDp: Float,
+    density: Float,
+    selectedNodeId: String?,
+    selectionEnabled: Boolean,
+    onNodeSelected: (String) -> Unit,
+    onInspectionSnapshot: (UiBuilderInspectionSnapshot) -> Unit,
+  ) -> Unit
+
+private val LocalUiBuilderCanvasRenderer = compositionLocalOf<UiBuilderCanvasRenderer?> { null }
 
 @Composable
 fun UiBuilderEditor(
@@ -796,6 +813,13 @@ fun UiBuilderEditor(
    * with no asset lane — the node is not broken, its picture is elsewhere.
    */
   resolveDesignAsset: (suspend (String) -> ByteArray)? = null,
+  /**
+   * Draws the editable design through its pinned catalog runtime.
+   *
+   * Null keeps the in-process renderer for JVM previews and tests. The browser host supplies an
+   * isolated renderer; all editor overlays remain siblings in [PinnedDesignCanvas].
+   */
+  canvasRenderer: UiBuilderCanvasRenderer? = null,
 ) {
   val reducer =
     remember(catalog, catalogRecord, actorId, clientId, operationIdPrefix) {
@@ -1557,6 +1581,7 @@ fun UiBuilderEditor(
         onInspectionSnapshot?.invoke(snapshot)
       },
       onInspectionInvalidated = onInspectionInvalidated,
+      canvasRenderer = canvasRenderer,
       selectionMenu = selectionMenu,
       hoverEditor =
         if (state.selection.size != 1) null
@@ -1995,6 +2020,7 @@ fun UiBuilderEditor(
     LocalUiBuilderNavigator provides onNavigatePage,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
+    LocalUiBuilderCanvasRenderer provides canvasRenderer,
     // Here for the same reason as the line above it: the canvas, the extent beside it and every
     // variant pane draw the same widget, and all of them should draw the frame being viewed.
     LocalWearWidgetHostShape provides state.wearWidgetHostShape,
@@ -5786,6 +5812,7 @@ internal fun PinnedDesignCanvas(
   onCommentThreadSelected: (String) -> Unit,
   onInspectionSnapshot: ((UiBuilderInspectionSnapshot) -> Unit)?,
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
+  canvasRenderer: UiBuilderCanvasRenderer? = null,
   /** The verbs a layer answers to, for the canvas's own context menu. */
   selectionMenu: @Composable (() -> Unit) -> Unit,
   /**
@@ -5847,6 +5874,9 @@ internal fun PinnedDesignCanvas(
     // that is the surface edits land on, the way the Wear stadium already works. Until the content
     // has been measured this is the frame's own height, which is what a design that fits stays at.
     var expandedHeightDp by remember(document.id) { mutableStateOf(sourceHeight) }
+    LaunchedEffect(document.revision, canvasRenderer) {
+      if (canvasRenderer != null) expandedHeightDp = sourceHeight
+    }
     // Only a design that outgrows its frame gets the second pane. One that fits would be drawn
     // twice identically, and two identical pictures side by side say nothing the one said.
     val overflowsFrame = expandedHeightDp > sourceHeight + 0.5f
@@ -6071,21 +6101,48 @@ internal fun PinnedDesignCanvas(
                     selectionMenu { menuAt = null }
                   }
                 }
-                UiBuilderSurface(
-                  document = document,
-                  editorOverlay = showSelectionOverlay,
-                  selectedNodeId = selectedNodeId,
-                  onNodeSelected = onNodeSelected,
-                  // The extent is a proxy: lists unrolled, scrolling dropped, sized by content.
-                  // Compose will not measure a real scrollable against an unbounded height, so
-                  // this is what lets a long list be drawn — and edited — whole.
-                  unrolled = true,
-                  onInspectionSnapshot = { snapshot ->
-                    inspection = snapshot
-                    onInspectionSnapshot?.invoke(snapshot)
-                  },
-                  onInspectionInvalidated = onInspectionInvalidated,
-                )
+                if (canvasRenderer == null) {
+                  UiBuilderSurface(
+                    document = document,
+                    editorOverlay = showSelectionOverlay,
+                    selectedNodeId = selectedNodeId,
+                    onNodeSelected = onNodeSelected,
+                    // The extent is a proxy: lists unrolled, scrolling dropped, sized by content.
+                    // Compose will not measure a real scrollable against an unbounded height, so
+                    // this is what lets a long list be drawn — and edited — whole.
+                    unrolled = true,
+                    onInspectionSnapshot = { snapshot ->
+                      inspection = snapshot
+                      onInspectionSnapshot?.invoke(snapshot)
+                    },
+                    onInspectionInvalidated = onInspectionInvalidated,
+                  )
+                } else {
+                  Box(
+                    Modifier.requiredSize(
+                      (sourceWidth * densityRatio).dp,
+                      (expandedHeightDp * densityRatio).dp,
+                    )
+                  ) {
+                    canvasRenderer(
+                      document,
+                      sourceWidth,
+                      expandedHeightDp,
+                      document.renderDensity(density).density,
+                      selectedNodeId,
+                      showSelectionOverlay,
+                      onNodeSelected,
+                    ) { snapshot ->
+                      inspection = snapshot
+                      val measuredBottom =
+                        snapshot.nodes.mapNotNull { it.bounds?.bottom }.maxOrNull() ?: 0f
+                      val measuredHeightDp =
+                        measuredBottom / document.renderDensity(density).density
+                      if (measuredHeightDp > expandedHeightDp) expandedHeightDp = measuredHeightDp
+                      onInspectionSnapshot?.invoke(snapshot)
+                    }
+                  }
+                }
                 SlotPlaceholderOverlay(
                   placeholders = slotPlaceholders,
                   frameOrigin = frameOrigin,
@@ -6518,6 +6575,14 @@ private fun DragLivePreviewGhost(
   modifier: Modifier = Modifier,
 ) {
   val rootId = document.roots.firstOrNull() ?: return
+  val renderer = LocalUiBuilderCanvasRenderer.current
+  val density = LocalDensity.current
+  val widthDp =
+    document.environment["widthDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()
+      ?: PREVIEW_FRAME_WIDTH_DP.toFloat()
+  val heightDp =
+    document.environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()
+      ?: PREVIEW_FRAME_HEIGHT_DP.toFloat()
   Box(modifier) {
     Box(
       (ghostConstraints ?: Modifier)
@@ -6530,16 +6595,30 @@ private fun DragLivePreviewGhost(
         // A picture of a Switch is not a Switch — the same rule the palette row keeps.
         .clearAndSetSemantics {}
     ) {
-      UiBuilderSurface(
-        document = document,
-        editorOverlay = false,
-        // The same answer the editing surface gives: a list in the air is drawn unrolled, which
-        // is what will land on the extent — not a clipped scroll nobody is dropping.
-        unrolled = true,
-        onInspectionSnapshot = { snapshot ->
-          onContentBounds(snapshot.nodes.firstOrNull { it.nodeId == rootId }?.bounds)
-        },
-      )
+      val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
+        onContentBounds(snapshot.nodes.firstOrNull { it.nodeId == rootId }?.bounds)
+      }
+      if (renderer == null) {
+        UiBuilderSurface(
+          document = document,
+          editorOverlay = false,
+          // The same answer the editing surface gives: a list in the air is drawn unrolled, which
+          // is what will land on the extent — not a clipped scroll nobody is dropping.
+          unrolled = true,
+          onInspectionSnapshot = inspection,
+        )
+      } else {
+        renderer(
+          document,
+          widthDp,
+          heightDp,
+          document.renderDensity(density).density,
+          null,
+          false,
+          {},
+          inspection,
+        )
+      }
     }
   }
 }
@@ -6610,6 +6689,7 @@ private fun ConstrainedFramePane(
   renderSessionId: String = FRAME_COMPANION_SESSION,
   wearWidgetHostShape: WearWidgetHostShape? = null,
 ) {
+  val renderer = LocalUiBuilderCanvasRenderer.current
   // **Read in the editor's composition, never inside the scene.** A scene starts with no
   // `CompositionLocal`s, so `provides LocalX.current` written in the content lambda below resolves
   // against the scene's empty context and yields each local's default. That is what silently cost
@@ -6660,35 +6740,47 @@ private fun ConstrainedFramePane(
       // by value because a scene starts with none of them, and the list is the pane's own: a
       // design's components, its assets and the host shape it is drawn in are the same ones the
       // canvas beside it uses.
-      DeviceSceneHost(
-        key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
-        sizePx =
-          IntSize(
-            (widthDp * densityRatio).roundToInt(),
-            (heightDp * densityRatio).roundToInt(),
-          ),
-        density = LocalDensity.current,
-        content = {
-          CompositionLocalProvider(
-            LocalUiBuilderNativeOnly provides nativeOnlyIds,
-            LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
-            LocalUiBuilderCanvasAdapters provides canvasAdapters,
-            LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
-            LocalUiBuilderFrameGeometry provides frameGeometry,
-            LocalUiBuilderCatalogPlatform provides catalogPlatform,
-            LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
-            LocalRemoteComposeDocuments provides remoteDocuments,
-            LocalUiBuilderAssetBitmaps provides assetBitmaps,
-          ) {
-            UiBuilderSurface(
-              document = document,
-              editorOverlay = false,
-              renderSessionId = renderSessionId,
-              unrolled = false,
-            )
-          }
-        },
-      )
+      if (renderer != null) {
+        renderer(
+          document,
+          widthDp,
+          heightDp,
+          document.renderDensity(LocalDensity.current).density,
+          null,
+          false,
+          {},
+          {},
+        )
+      } else
+        DeviceSceneHost(
+          key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
+          sizePx =
+            IntSize(
+              (widthDp * densityRatio).roundToInt(),
+              (heightDp * densityRatio).roundToInt(),
+            ),
+          density = LocalDensity.current,
+          content = {
+            CompositionLocalProvider(
+              LocalUiBuilderNativeOnly provides nativeOnlyIds,
+              LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
+              LocalUiBuilderCanvasAdapters provides canvasAdapters,
+              LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
+              LocalUiBuilderFrameGeometry provides frameGeometry,
+              LocalUiBuilderCatalogPlatform provides catalogPlatform,
+              LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
+              LocalRemoteComposeDocuments provides remoteDocuments,
+              LocalUiBuilderAssetBitmaps provides assetBitmaps,
+            ) {
+              UiBuilderSurface(
+                document = document,
+                editorOverlay = false,
+                renderSessionId = renderSessionId,
+                unrolled = false,
+              )
+            }
+          },
+        )
     }
   }
 }
@@ -7466,6 +7558,7 @@ private fun CatalogThumbnail(
     return
   }
   val density = LocalDensity.current
+  val renderer = LocalUiBuilderCanvasRenderer.current
   val fallbackScale = size.width.value / PREVIEW_FRAME_WIDTH_DP
   var contentBounds by remember(document.id) { mutableStateOf<UiBuilderPixelBounds?>(null) }
   val transform =
@@ -7498,14 +7591,28 @@ private fun CatalogThumbnail(
         // not on the canvas. The row's own name is set on the overlay below.
         .clearAndSetSemantics {}
     ) {
-      UiBuilderSurface(
-        document = document,
-        editorOverlay = false,
-        onInspectionSnapshot = { snapshot ->
-          val next = thumbnailContentBounds(snapshot, transform.scale)
-          if (next != contentBounds) contentBounds = next
-        },
-      )
+      val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
+        val next = thumbnailContentBounds(snapshot, transform.scale)
+        if (next != contentBounds) contentBounds = next
+      }
+      if (renderer == null) {
+        UiBuilderSurface(
+          document = document,
+          editorOverlay = false,
+          onInspectionSnapshot = inspection,
+        )
+      } else {
+        renderer(
+          document,
+          PREVIEW_FRAME_WIDTH_DP.toFloat(),
+          PREVIEW_FRAME_HEIGHT_DP.toFloat(),
+          document.renderDensity(density).density,
+          null,
+          false,
+          {},
+          inspection,
+        )
+      }
     }
     // The gesture sits ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is
     // a real Switch and would eat the press that was meant to start a drag; a later sibling wins

@@ -41,6 +41,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -239,6 +242,344 @@ private external fun showWebGlRequiredMessage()
 )
 private external fun sandboxRendererRuntimeId(): String
 
+@Composable
+private fun CatalogRuntimeCanvas(
+  document: UiBuilderDocument,
+  widthDp: Float,
+  heightDp: Float,
+  density: Float,
+  selectedNodeId: String?,
+  selectionEnabled: Boolean,
+  onNodeSelected: (String) -> Unit,
+  onInspectionSnapshot: (UiBuilderInspectionSnapshot) -> Unit,
+) {
+  val runtimeId = document.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull.orEmpty()
+  val surfaceId = remember { nextCatalogRuntimeSurfaceId() }
+  val documentJson =
+    remember(document) { inspectionJson.encodeToString(UiBuilderDocument.serializer(), document) }
+  var lastInspection by remember(surfaceId) { mutableStateOf("") }
+  var lastSelection by remember(surfaceId) { mutableStateOf("") }
+  LaunchedEffect(surfaceId, runtimeId, document.revision) {
+    lastInspection = ""
+    while (selectionEnabled || lastInspection.isEmpty()) {
+      val encoded = readCatalogRuntimeInspection(surfaceId)
+      if (encoded.isNotEmpty() && encoded != lastInspection) {
+        lastInspection = encoded
+        runCatching {
+            inspectionJson.decodeFromString(UiBuilderInspectionSnapshot.serializer(), encoded)
+          }
+          .getOrNull()
+          ?.takeIf { it.documentId == document.id && it.documentRevision == document.revision }
+          ?.let(onInspectionSnapshot)
+      }
+      if (selectionEnabled) {
+        val selection = readCatalogRuntimeSelection(surfaceId)
+        if (selection.isNotEmpty() && selection != lastSelection) {
+          lastSelection = selection
+          onNodeSelected(selection)
+        }
+      }
+      delay(if (selectionEnabled) 16 else 100)
+    }
+  }
+  DisposableEffect(surfaceId) {
+    mountCatalogRuntimeSurface(surfaceId)
+    onDispose { disposeCatalogRuntimeSurface(surfaceId) }
+  }
+  SideEffect {
+    mountCatalogRuntimeSurface(surfaceId)
+    updateCatalogRuntimeSurface(
+      surfaceId = surfaceId,
+      runtimeId = runtimeId,
+      documentJson = documentJson,
+      widthDp = widthDp,
+      heightDp = heightDp,
+      density = density,
+      selectedNodeId = selectedNodeId.orEmpty(),
+      selectionEnabled = selectionEnabled,
+    )
+  }
+  Box(
+    Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+      val bounds = coordinates.boundsInWindow()
+      positionCatalogRuntimeSurface(
+        surfaceId,
+        bounds.left,
+        bounds.top,
+        bounds.width,
+        bounds.height,
+      )
+    }
+  )
+}
+
+@JsFun(
+  """() => {
+    const next = (globalThis.__uiBuilderCatalogRuntimeSurfaceSequence || 0) + 1;
+    globalThis.__uiBuilderCatalogRuntimeSurfaceSequence = next;
+    return 'ui-builder-catalog-runtime-' + next;
+  }"""
+)
+private external fun nextCatalogRuntimeSurfaceId(): String
+
+private fun mountCatalogRuntimeSurface(surfaceId: String): Unit =
+  js(
+    """(function () {
+      if (document.getElementById(surfaceId)) return;
+      const host = document.createElement('div');
+      host.id = surfaceId;
+      host.style.cssText = 'position:fixed;overflow:hidden;z-index:20';
+      document.body.append(host);
+    })()"""
+  )
+
+private fun positionCatalogRuntimeSurface(
+  surfaceId: String,
+  left: Float,
+  top: Float,
+  width: Float,
+  height: Float,
+): Unit =
+  js(
+    """(function () {
+      const host = document.getElementById(surfaceId);
+      if (!host) return;
+      host.style.left = left + 'px';
+      host.style.top = top + 'px';
+      host.style.width = Math.max(0, width) + 'px';
+      host.style.height = Math.max(0, height) + 'px';
+    })()"""
+  )
+
+private fun updateCatalogRuntimeSurface(
+  surfaceId: String,
+  runtimeId: String,
+  documentJson: String,
+  widthDp: Float,
+  heightDp: Float,
+  density: Float,
+  selectedNodeId: String,
+  selectionEnabled: Boolean,
+): Unit =
+  js(
+    """(function () {
+      const host = document.getElementById(surfaceId);
+      if (!host) return;
+      if (!runtimeId || !/^[A-Za-z0-9._-]+$/.test(runtimeId) ||
+          runtimeId === 'latest' || runtimeId === 'current') {
+        host.textContent = 'This design has no compatible pinned catalog runtime.';
+        return;
+      }
+      const render = {
+        documentJson, widthDp, heightDp, density, selectedNodeId, selectionEnabled
+      };
+      let controller = host.__uiBuilderCatalogRuntime;
+      if (controller && controller.runtimeId === runtimeId) {
+        controller.render = render;
+        controller.renderLatest();
+        controller.drawOverlay();
+        return;
+      }
+      if (controller) controller.dispose();
+      host.replaceChildren();
+      const root = '/ui-builder/runtime/' + encodeURIComponent(runtimeId) + '/';
+      const frame = document.createElement('iframe');
+      frame.title = 'Pinned catalog design renderer';
+      frame.sandbox = 'allow-scripts';
+      frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent';
+      const overlay = document.createElement('div');
+      overlay.setAttribute('aria-label', 'Editor selection overlay');
+      overlay.style.cssText = 'position:absolute;inset:0;z-index:1;overflow:hidden';
+      host.append(frame, overlay);
+      let sequence = 0;
+      let initialized = false;
+      let initializing = null;
+      let manifest = null;
+      let lastRenderKey = '';
+      const pending = new Map();
+      controller = {
+        runtimeId,
+        render,
+        disposed: false,
+        request(type, payload) {
+          if (!manifest || !frame.contentWindow) return;
+          const requestId = surfaceId + '-' + (++sequence);
+          const body = type === 'renderDocument' ? payload.document : null;
+          pending.set(requestId, {
+            type,
+            documentId: body?.id,
+            documentRevision: body?.revision,
+          });
+          frame.contentWindow.postMessage(JSON.stringify({
+            schema: 'compose-ui-builder-renderer/v' + manifest.protocolVersion,
+            protocolVersion: manifest.protocolVersion,
+            runtimeId,
+            requestId,
+            type,
+            payload: payload || {},
+          }), '*');
+        },
+        renderLatest() {
+          if (!initialized || this.disposed) return;
+          const current = this.render;
+          const key = current.documentJson + '|' + current.widthDp + '|' +
+            current.heightDp + '|' + current.density;
+          if (key === lastRenderKey) return;
+          lastRenderKey = key;
+          delete host.__uiBuilderInspection;
+          delete host.__uiBuilderInspectionJson;
+          const parsed = JSON.parse(current.documentJson);
+          const payload = manifest.protocolVersion === 1 ? { document: parsed } : {
+            document: parsed,
+            surface: {
+              mode: 'authoring-unrolled',
+              widthDp: Math.max(1, current.widthDp),
+              heightDp: Math.max(1, current.heightDp),
+              density: Math.max(0.01, current.density),
+              surfaceId,
+            },
+          };
+          this.request('renderDocument', payload);
+        },
+        drawOverlay() {
+          overlay.replaceChildren();
+          overlay.style.pointerEvents = this.render.selectionEnabled ? 'auto' : 'none';
+          const inspection = host.__uiBuilderInspection;
+          if (!inspection || !this.render.selectionEnabled) return;
+          const scaleX = host.clientWidth / (this.render.widthDp * this.render.density);
+          const scaleY = host.clientHeight / (this.render.heightDp * this.render.density);
+          for (const node of inspection.nodes) {
+            if (!node.bounds || node.nodeId !== this.render.selectedNodeId) continue;
+            const marker = document.createElement('div');
+            marker.dataset.nodeId = node.nodeId;
+            marker.style.cssText = 'position:absolute;box-sizing:border-box;border:2px solid #6750a4;pointer-events:none';
+            marker.style.left = (node.bounds.x * scaleX) + 'px';
+            marker.style.top = (node.bounds.y * scaleY) + 'px';
+            marker.style.width = (node.bounds.width * scaleX) + 'px';
+            marker.style.height = (node.bounds.height * scaleY) + 'px';
+            overlay.append(marker);
+          }
+        },
+        dispose() {
+          this.disposed = true;
+          if (initializing !== null) clearInterval(initializing);
+          removeEventListener('message', onMessage);
+          pending.clear();
+          frame.remove();
+          overlay.remove();
+        },
+      };
+      host.__uiBuilderCatalogRuntime = controller;
+      overlay.addEventListener('click', (event) => {
+        const inspection = host.__uiBuilderInspection;
+        if (!controller.render.selectionEnabled || !inspection) return;
+        const rect = overlay.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * controller.render.widthDp *
+          controller.render.density / rect.width;
+        const y = (event.clientY - rect.top) * controller.render.heightDp *
+          controller.render.density / rect.height;
+        const selected = inspection.nodes
+          .filter((node) => node.bounds && x >= node.bounds.x && y >= node.bounds.y &&
+            x <= node.bounds.x + node.bounds.width && y <= node.bounds.y + node.bounds.height)
+          .sort((a, b) => a.bounds.width * a.bounds.height - b.bounds.width * b.bounds.height)[0];
+        if (selected) host.__uiBuilderSelectedNodeId = selected.nodeId;
+      });
+      const finiteBound = (value) => Number.isFinite(value) && Math.abs(value) <= 1000000;
+      const validBounds = (bounds) => bounds == null || (
+        finiteBound(bounds.x) && finiteBound(bounds.y) &&
+        finiteBound(bounds.width) && finiteBound(bounds.height) &&
+        bounds.width >= 0 && bounds.height >= 0
+      );
+      const validInspection = (inspection, expected) => {
+        if (!inspection || inspection.schema !== 'compose-ui-builder-inspection/v1' ||
+            inspection.documentId !== expected.documentId ||
+            inspection.documentRevision !== expected.documentRevision ||
+            inspection.coordinateSpace !== 'root-render-pixels' ||
+            inspection.coordinatePrecision !== '1/64px' ||
+            !Array.isArray(inspection.nodes) || inspection.nodes.length > 10000 ||
+            !Array.isArray(inspection.slots) || inspection.slots.length > 20000) return false;
+        return inspection.nodes.every((node) => node && typeof node.nodeId === 'string' &&
+          node.nodeId && validBounds(node.bounds));
+      };
+      const onMessage = (event) => {
+        if (controller.disposed || event.source !== frame.contentWindow ||
+            event.origin !== 'null' || typeof event.data !== 'string') return;
+        let message;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (!manifest || message.schema !== 'compose-ui-builder-renderer/v' + manifest.protocolVersion ||
+            message.protocolVersion !== manifest.protocolVersion ||
+            message.runtimeId !== runtimeId || !pending.has(message.requestId)) return;
+        const expected = pending.get(message.requestId);
+        const expectedType = expected.type === 'initialize' ? 'initialized' : 'rendered';
+        if (message.type !== 'error' && message.type !== expectedType) return;
+        if (message.type === 'rendered' &&
+            !validInspection(message.payload?.inspection, expected)) return;
+        pending.delete(message.requestId);
+        if (message.type === 'initialized') {
+          initialized = true;
+          if (initializing !== null) clearInterval(initializing);
+          controller.renderLatest();
+        } else if (message.type === 'rendered') {
+          host.__uiBuilderInspection = message.payload.inspection;
+          host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
+          controller.drawOverlay();
+        } else if (message.type === 'error') {
+          host.__uiBuilderRuntimeError = message.payload;
+        }
+      };
+      addEventListener('message', onMessage);
+      fetch(root + 'runtime-manifest.json', {
+        credentials: 'same-origin', headers: { Accept: 'application/json' },
+      }).then((response) => {
+        if (!response.ok) throw new Error('runtime manifest HTTP ' + response.status);
+        return response.json();
+      }).then((loaded) => {
+        if (controller.disposed) return;
+        if (loaded.schema !== 'compose-ui-builder-runtime/v1' ||
+            loaded.runtimeId !== runtimeId || ![1, 2].includes(loaded.protocolVersion) ||
+            typeof loaded.entrypoint !== 'string' ||
+            !/^[A-Za-z0-9._/-]+$/.test(loaded.entrypoint) ||
+            loaded.entrypoint.split('/').some((part) => !part || part === '.' || part === '..')) {
+          throw new Error('pinned runtime manifest does not match the editor protocol');
+        }
+        manifest = loaded;
+        frame.addEventListener('load', () => {
+          controller.request('initialize', {});
+          initializing = setInterval(() => {
+            if (!initialized) controller.request('initialize', {});
+          }, 250);
+        }, { once: true });
+        frame.src = root + loaded.entrypoint;
+      }).catch((error) => {
+        if (controller.disposed) return;
+        controller.dispose();
+        host.replaceChildren();
+        host.textContent = 'Pinned catalog runtime unavailable: ' + error.message;
+        host.__uiBuilderRuntimeError = error.message;
+      });
+    })()"""
+  )
+
+private fun readCatalogRuntimeInspection(surfaceId: String): String =
+  js("document.getElementById(surfaceId)?.__uiBuilderInspectionJson || ''")
+
+private fun readCatalogRuntimeSelection(surfaceId: String): String =
+  js("document.getElementById(surfaceId)?.__uiBuilderSelectedNodeId || ''")
+
+private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
+  js(
+    """(function () {
+      const host = document.getElementById(surfaceId);
+      if (!host) return;
+      host.__uiBuilderCatalogRuntime?.dispose();
+      delete host.__uiBuilderCatalogRuntime;
+      delete host.__uiBuilderInspectionJson;
+      delete host.__uiBuilderInspection;
+      delete host.__uiBuilderSelectedNodeId;
+      host.remove();
+    })()"""
+  )
+
 /**
  * Minimal editor-side vertical slice for the isolated runtime. The iframe owns design pixels; the
  * absolutely positioned sibling owns selection geometry and never participates in renderer layout.
@@ -273,7 +614,6 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
       frame.title = 'Native Compose design renderer';
       frame.sandbox = 'allow-scripts';
       frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent';
-      frame.src = root + manifest.entrypoint;
       const overlay = document.createElement('div');
       overlay.id = 'ui-builder-renderer-overlay';
       overlay.setAttribute('aria-hidden', 'true');
@@ -433,6 +773,7 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
           if (!initialized) request('initialize');
         }, 250);
       });
+      frame.src = root + manifest.entrypoint;
       globalThis.__uiBuilderSandboxDispatchAction = (payload) => request('dispatchAction', payload);
       globalThis.__uiBuilderSandboxResponse = (requestId) => responses.get(requestId) || null;
       globalThis.__uiBuilderSandboxActivateNode = (nodeId) => {
@@ -1571,6 +1912,27 @@ private fun LiveSessionApp(
       onCanvasMetrics = ::publishEditorCanvasMetrics,
       onCanvasBoundsChanged = ::publishEditorCanvasBounds,
       onDropTargetChanged = ::publishEditorDropTarget,
+      canvasRenderer = {
+        rendered,
+        widthDp,
+        heightDp,
+        density,
+        selectedNodeId,
+        selectionEnabled,
+        onNodeSelected,
+        onInspection ->
+        CatalogRuntimeCanvas(
+          rendered,
+          widthDp,
+          heightDp,
+          density,
+          selectedNodeId,
+          selectionEnabled,
+          onNodeSelected,
+          onInspection,
+        )
+      },
+      onInspectionSnapshot = inspectionPublisher::publish,
       onInspectionInvalidated = { collector ->
         inspectionPublisher.offer(collector, loadedDocument.revision)
       },
@@ -3212,6 +3574,10 @@ private class CoalescingInspectionPublisher(private val scope: CoroutineScope) {
       )
       publishInspection(encoded)
     }
+  }
+
+  fun publish(snapshot: UiBuilderInspectionSnapshot) {
+    publishInspection(inspectionJson.encodeToString(snapshot))
   }
 }
 

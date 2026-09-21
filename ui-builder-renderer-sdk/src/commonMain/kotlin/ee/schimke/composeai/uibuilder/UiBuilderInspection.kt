@@ -123,6 +123,9 @@ class UiBuilderInspectionCollector(
     if (onInvalidated == null) onSnapshot(snapshot()) else onInvalidated.invoke(this)
   }
 
+  /** Publishes the current generation even before layout has measured any node bounds. */
+  fun publishSnapshot() = publish()
+
   fun snapshot(): UiBuilderInspectionSnapshot =
     UiBuilderInspectionSnapshot(
       documentId = document.id,
