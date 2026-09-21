@@ -20,17 +20,17 @@ class UnopenableDesignGuidanceTest {
    * The case that produced the bug report: 36 designs on `preview.coo.ee` after the catalog source
    * flip, every one of them opening to nothing.
    *
-   * Reloading is precisely what does not help here — the pin names a source this deployment does
-   * not serve, and no number of retries changes that — so the guidance has to say so rather than
-   * offering the reflex.
+   * Reloading is precisely what does not help here. The page now offers a validated recovery, so
+   * the guidance points at that action rather than an operator or the retry reflex.
    */
   @Test
-  fun `an unavailable catalog tells the reader not to retry`() {
+  fun `an unavailable catalog points the reader at exact pin recovery`() {
     val guidance = unopenableDesignGuidance(ServiceErrorCodeV1.CATALOG_UNAVAILABLE)
 
     assertTrue(guidance.contains("no longer serves"), guidance)
-    assertTrue(guidance.contains("Reloading will not change that"), guidance)
-    assertTrue(guidance.contains("operator"), guidance)
+    assertTrue(guidance.contains("validates against the current catalog"), guidance)
+    assertTrue(guidance.contains("new exact pin"), guidance)
+    assertFalse(guidance.contains("Reloading"), guidance)
   }
 
   /** A private design must not be told apart from a missing one by the guidance either. */

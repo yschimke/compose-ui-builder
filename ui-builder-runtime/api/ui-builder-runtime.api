@@ -849,6 +849,17 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceReques
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$PreviewCurrentCatalogUpgrade : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$PreviewCurrentCatalogUpgrade;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$PreviewCurrentCatalogUpgrade;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$PreviewCurrentCatalogUpgrade;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesignId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest$RenameDesign : ee/schimke/composeai/uibuilder/service/UiBuilderServiceRequest {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun component1 ()Ljava/lang/String;

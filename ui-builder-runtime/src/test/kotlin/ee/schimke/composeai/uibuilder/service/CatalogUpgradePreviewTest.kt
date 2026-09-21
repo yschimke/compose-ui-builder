@@ -293,6 +293,96 @@ class CatalogUpgradePreviewTest {
   }
 
   @Test
+  fun `an owner can preview and apply recovery after the old pin disappears`() {
+    val root = createTempDirectory("upgrade")
+    create(service(root), "widget")
+    val stranded = service(root, sourceAvailable = false)
+
+    assertEquals(
+      ServiceErrorCodeV1.CATALOG_UNAVAILABLE,
+      assertIs<UiBuilderServiceResponse.Error>(
+          execute(stranded, owner, UiBuilderServiceRequest.OpenDesign("widget"))
+        )
+        .error
+        .code,
+    )
+    val preview =
+      assertIs<UiBuilderServiceResponse.CatalogUpgradePreview>(
+          execute(
+            stranded,
+            owner,
+            UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade("widget"),
+          )
+        )
+        .preview
+    assertEquals(CatalogUpgradePreviewStatusV1.READY, preview.status)
+    assertEquals(SOURCE, preview.sourceCatalogPin)
+    assertEquals(TARGET, preview.targetCatalogPin)
+
+    val outcome =
+      assertIs<UiBuilderServiceResponse.OperationOutcome>(
+          execute(
+            stranded,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              UiBuilderSubmission.Batch(
+                designId = "widget",
+                operationId = "recover-pin",
+                clientId = "browser",
+                baseRevision = preview.baseRevision,
+                operations = listOf(preview.mutation()),
+              )
+            ),
+          )
+        )
+        .outcome
+    assertIs<AcceptedOutcomeV1>(outcome)
+    val opened =
+      assertIs<UiBuilderServiceResponse.Snapshot>(
+        execute(stranded, owner, UiBuilderServiceRequest.OpenDesign("widget"))
+      )
+    assertEquals(TARGET, opened.snapshot.state.document.catalogPin)
+    assertEquals(1, opened.snapshot.state.document.revision)
+    assertEquals(0, stranded.diagnostics().unusableDesigns)
+  }
+
+  @Test
+  fun `recovery refuses a preview digest that was not the one shown`() {
+    val root = createTempDirectory("upgrade")
+    create(service(root), "widget")
+    val stranded = service(root, sourceAvailable = false)
+    val preview =
+      assertIs<UiBuilderServiceResponse.CatalogUpgradePreview>(
+          execute(
+            stranded,
+            owner,
+            UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade("widget"),
+          )
+        )
+        .preview
+
+    val outcome =
+      assertIs<UiBuilderServiceResponse.OperationOutcome>(
+          execute(
+            stranded,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              UiBuilderSubmission.Batch(
+                "widget",
+                "tampered-recovery",
+                "browser",
+                preview.baseRevision,
+                listOf(preview.mutation().copy(previewDigest = "not-the-preview")),
+              )
+            ),
+          )
+        )
+        .outcome
+    assertIs<RejectedOutcomeV1>(outcome)
+    assertEquals(1, stranded.diagnostics().unusableDesigns)
+  }
+
+  @Test
   fun `a design broken in itself stays refused, because no catalog move repairs it`() {
     val root = createTempDirectory("upgrade")
     create(service(root), "widget")
@@ -440,8 +530,10 @@ class CatalogUpgradePreviewTest {
    * flipped to the published catalogs, so the pin a stored design carries now resolves to a catalog
    * that has never declared `m3/text`, and the design is quarantined at boot.
    */
-  private inner class TwoPinCatalogs(private val borrowedStillDeclaresText: Boolean = true) :
-    UiBuilderCatalogExecutor {
+  private inner class TwoPinCatalogs(
+    private val borrowedStillDeclaresText: Boolean = true,
+    private val sourceAvailable: Boolean = true,
+  ) : UiBuilderCatalogExecutor {
     private val published = remoteM3()
     private val borrowed =
       published
@@ -459,12 +551,12 @@ class CatalogUpgradePreviewTest {
         }
         .build()
 
-    override fun listCatalogs(): List<CatalogCapabilityV1> = listOf(published, borrowed)
+    override fun listCatalogs(): List<CatalogCapabilityV1> = listOf(published)
 
     override fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1? =
       when (reference) {
         TARGET -> published
-        SOURCE -> borrowed
+        SOURCE -> borrowed.takeIf { sourceAvailable }
         else -> null
       }
 
@@ -522,10 +614,11 @@ class CatalogUpgradePreviewTest {
   private fun service(
     root: Path,
     borrowedStillDeclaresText: Boolean = true,
+    sourceAvailable: Boolean = true,
   ): PersistentUiBuilderService =
     PersistentUiBuilderService(
       designStore = UiBuilderDesignStateStore.open(root),
-      catalogs = TwoPinCatalogs(borrowedStillDeclaresText),
+      catalogs = TwoPinCatalogs(borrowedStillDeclaresText, sourceAvailable),
       exporter = UiBuilderExportExecutor { error("no export in this test") },
       clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
     )
@@ -555,6 +648,15 @@ class CatalogUpgradePreviewTest {
         )
       )
       .preview
+
+  private fun CatalogUpgradePreviewV1.mutation(): CatalogUpgradeMutationV1 =
+    CatalogUpgradeMutationV1(
+      sourceCatalogPin = sourceCatalogPin,
+      targetCatalogPin = targetCatalogPin,
+      sourceDocumentHash = sourceDocumentHash,
+      targetDocumentHash = assertNotNull(candidateDocumentHash),
+      previewDigest = previewDigest,
+    )
 
   private fun node(id: String, componentId: String, properties: Map<String, String>) =
     DesignNodeV1(

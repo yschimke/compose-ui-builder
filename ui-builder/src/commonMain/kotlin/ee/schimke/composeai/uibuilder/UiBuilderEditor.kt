@@ -204,6 +204,10 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeMutationV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewStatusV1
+import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
+import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import kotlin.math.roundToInt
@@ -2686,6 +2690,9 @@ fun UiBuilderUnavailableScreen(
   catalogSystemId: String,
   reason: String,
   code: ServiceErrorCodeV1?,
+  recovery: UiBuilderCatalogRecoveryUi? = null,
+  recoveryLoading: Boolean = false,
+  recoveryError: String? = null,
 ) {
   MaterialTheme(colorScheme = EditorColors) {
     Box(
@@ -2718,6 +2725,25 @@ fun UiBuilderUnavailableScreen(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           textAlign = TextAlign.Center,
         )
+        if (code == ServiceErrorCodeV1.CATALOG_UNAVAILABLE) {
+          Spacer(Modifier.height(20.dp))
+          when {
+            recoveryLoading ->
+              Text(
+                "Checking the current catalog…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            recovery != null -> CatalogRecoveryPanel(recovery)
+            recoveryError != null ->
+              Text(
+                recoveryError,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+              )
+          }
+        }
         Spacer(Modifier.height(20.dp))
         // Both ids, because the first question anyone asks about a page that will not open is
         // which design and which catalog, and the URL is not always what was typed.
@@ -2732,6 +2758,84 @@ fun UiBuilderUnavailableScreen(
   }
 }
 
+data class UiBuilderCatalogRecoveryUi(
+  val sourceRevision: String,
+  val targetRevision: String,
+  val changeCount: Int,
+  val issues: List<String>,
+  val canApply: Boolean,
+  val loading: Boolean,
+  val error: String?,
+  val onApply: () -> Unit,
+)
+
+/** The exact, idempotent write corresponding to one READY recovery preview. */
+internal fun CatalogUpgradePreviewV1.catalogRecoveryCommand(
+  actorId: String,
+  clientId: String,
+): DesignCommandV1? {
+  val targetHash = candidateDocumentHash ?: return null
+  if (status != CatalogUpgradePreviewStatusV1.READY) return null
+  return DesignCommandV1(
+    designId = designId,
+    operationId = "catalog-recovery:$previewDigest",
+    actorId = actorId,
+    clientId = clientId,
+    baseRevision = baseRevision,
+    operations =
+      listOf(
+        CatalogUpgradeMutationV1(
+          sourceCatalogPin = sourceCatalogPin,
+          targetCatalogPin = targetCatalogPin,
+          sourceDocumentHash = sourceDocumentHash,
+          targetDocumentHash = targetHash,
+          previewDigest = previewDigest,
+        )
+      ),
+  )
+}
+
+@Composable
+private fun CatalogRecoveryPanel(recovery: UiBuilderCatalogRecoveryUi) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Text(
+      "A compatible catalog update is available",
+      style = MaterialTheme.typography.titleMedium,
+      color = MaterialTheme.colorScheme.onBackground,
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+      "${recovery.sourceRevision} → ${recovery.targetRevision} · " +
+        "${recovery.changeCount} document changes",
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      textAlign = TextAlign.Center,
+    )
+    recovery.issues.take(5).forEach { issue ->
+      Spacer(Modifier.height(4.dp))
+      Text(
+        issue,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+      )
+    }
+    Spacer(Modifier.height(12.dp))
+    Button(onClick = recovery.onApply, enabled = recovery.canApply && !recovery.loading) {
+      Text(if (recovery.loading) "Re-pinning…" else "Re-pin and reopen")
+    }
+    recovery.error?.let {
+      Spacer(Modifier.height(8.dp))
+      Text(
+        it,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+        textAlign = TextAlign.Center,
+      )
+    }
+  }
+}
+
 /**
  * The one sentence that says whether the reader can act, keyed on the service's code.
  *
@@ -2741,8 +2845,8 @@ fun UiBuilderUnavailableScreen(
 internal fun unopenableDesignGuidance(code: ServiceErrorCodeV1?): String =
   when (code) {
     ServiceErrorCodeV1.CATALOG_UNAVAILABLE ->
-      "This design is pinned to a catalog source this deployment no longer serves. Reloading will " +
-        "not change that — it needs an operator to restore the catalog or re-pin the design."
+      "This design is pinned to a catalog source this deployment no longer serves. If its content " +
+        "validates against the current catalog, you can preview and confirm a new exact pin below."
     ServiceErrorCodeV1.NOT_FOUND ->
       "No design with this id exists here, or it is not one this account may open."
     ServiceErrorCodeV1.FORBIDDEN,
