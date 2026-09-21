@@ -450,12 +450,13 @@ private fun updateCatalogRuntimeSurface(
       const render = {
         documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled
       };
+      const compositionKey = documentJson + '|' + widthDp + '|' + heightDp + '|' + density + '|' + mode;
       host.style.pointerEvents = mode === 'device' ? 'auto' : 'none';
       host.style.zIndex = mode === 'device' ? '20' : '0';
       let controller = host.__uiBuilderCatalogRuntime;
-      if (controller && controller.runtimeId === runtimeId) {
+      if (controller && controller.runtimeId === runtimeId &&
+          controller.compositionKey === compositionKey) {
         controller.render = render;
-        controller.renderLatest();
         controller.drawOverlay();
         return;
       }
@@ -478,6 +479,7 @@ private fun updateCatalogRuntimeSurface(
       const pending = new Map();
       controller = {
         runtimeId,
+        compositionKey,
         render,
         disposed: false,
         request(type, payload) {
