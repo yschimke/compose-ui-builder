@@ -129,6 +129,21 @@ public class CurrentM3UiBuilderCatalogExecutor(
    * catalogs rather than the files.
    */
   published: Map<String, CatalogCapabilityV1> = emptyMap(),
+  /**
+   * Immutable renderer runtime ids supplied by the host, keyed by catalog system id.
+   *
+   * A catalog capability and its executable arrive through different delivery records: the
+   * capability may be synthesised here or composed from `ui-builder.json`, while the host verifies
+   * and retains the runtime archive declared by `catalog.json`. The document pin has to name the
+   * latter exactly. Applying that host-owned fact here keeps catalog resolution, validation and
+   * reference generation on one authoritative pin instead of making the host decorate wire replies
+   * after this executor has already captured its accepted references.
+   *
+   * The source catalog's pin remains accepted below, so a design saved before executable runtimes
+   * were attached can still open and be migrated deliberately. Empty preserves the standalone and
+   * test behaviour.
+   */
+  nativeRuntimeIds: Map<String, String> = emptyMap(),
 ) : UiBuilderCatalogExecutor {
   private val baseCatalog =
     json
@@ -326,6 +341,16 @@ public class CurrentM3UiBuilderCatalogExecutor(
         catalog
           .newBuilder()
           .also {
+            nativeRuntimeIds[systemId]?.let { runtimeId ->
+              require(runtimeId.isNotBlank()) {
+                "UI-builder catalog $systemId has a blank native runtime id"
+              }
+              it.benchmark =
+                catalog.benchmark
+                  .newBuilder()
+                  .also { benchmark -> benchmark.nativeRuntimeId = runtimeId }
+                  .build()
+            }
             it.components =
               catalog.components.map { component ->
                 if (!UiBuilderBuildFeatures.remoteCompose)
