@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.37.0](https://github.com/yschimke/compose-ui-builder/compare/v3.36.0...v3.37.0) (2026-09-22)
+
+
+### Features
+
+* **ui-builder:** add host-selectable editor chrome ([#130](https://github.com/yschimke/compose-ui-builder/issues/130)) ([21a7fcd](https://github.com/yschimke/compose-ui-builder/commit/21a7fcd5787cc4ae8e4aac26580d3089b1e5e031))
+* **ui-builder:** add Jewel component browser chrome ([#133](https://github.com/yschimke/compose-ui-builder/issues/133)) ([b05aa97](https://github.com/yschimke/compose-ui-builder/commit/b05aa97dd261ef62781a30b18e32006945c99365))
+* **ui-builder:** add Jewel editor toolbars ([#134](https://github.com/yschimke/compose-ui-builder/issues/134)) ([1d61ec0](https://github.com/yschimke/compose-ui-builder/commit/1d61ec08265cb110ec64c1898c3389f10dce52c8))
+* **ui-builder:** render editor menus with host chrome ([#132](https://github.com/yschimke/compose-ui-builder/issues/132)) ([092f5a4](https://github.com/yschimke/compose-ui-builder/commit/092f5a4062733d307678365171de60eb2f789aa2))
+
 ## [3.36.0](https://github.com/yschimke/compose-ui-builder/compare/v3.35.0...v3.36.0) (2026-09-21)
 
 
