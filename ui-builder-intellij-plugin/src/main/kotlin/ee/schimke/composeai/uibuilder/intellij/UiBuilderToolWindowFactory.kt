@@ -18,6 +18,7 @@ class UiBuilderToolWindowFactory : ToolWindowFactory {
         storagePath = storagePath.resolve(OfflineCatalog.M3.systemId),
         sessionLabel = "IntelliJ · ${project.name} · Material 3 · saved locally",
         catalogSystemId = OfflineCatalog.M3.systemId,
+        chrome = JewelUiBuilderChrome,
       )
     }
     toolWindow.addComposeTab("Wear M3") {
@@ -25,6 +26,7 @@ class UiBuilderToolWindowFactory : ToolWindowFactory {
         storagePath = storagePath.resolve(OfflineCatalog.WEAR_M3.systemId),
         sessionLabel = "IntelliJ · ${project.name} · Wear M3 · saved locally",
         catalogSystemId = OfflineCatalog.WEAR_M3.systemId,
+        chrome = JewelUiBuilderChrome,
       )
     }
   }

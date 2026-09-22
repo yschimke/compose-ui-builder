@@ -21,7 +21,8 @@ kotlin {
       resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
     }
     jvmMain.dependencies {
-      implementation(project(":ui-builder"))
+      // OfflineUiBuilderApp exposes UiBuilderChrome so embedding hosts can supply native chrome.
+      api(project(":ui-builder"))
       @Suppress("DEPRECATION") implementation(compose.material3)
       @Suppress("DEPRECATION") implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutines.core)

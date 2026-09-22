@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import ee.schimke.composeai.uibuilder.EditorSubmission
+import ee.schimke.composeai.uibuilder.MaterialUiBuilderChrome
+import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.UiBuilderNewDesignSeed
@@ -68,6 +70,7 @@ fun OfflineUiBuilderApp(
   sessionLabel: String,
   catalogSystemId: String = OfflineCatalog.M3.systemId,
   remoteServer: String? = null,
+  chrome: UiBuilderChrome = MaterialUiBuilderChrome,
 ) {
   val offlineCatalog = remember(catalogSystemId) { OfflineCatalog.forSystem(catalogSystemId) }
   val catalogText = remember(offlineCatalog) { resourceText(offlineCatalog.capabilitiesResource) }
@@ -145,6 +148,7 @@ fun OfflineUiBuilderApp(
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
       catalog = catalog,
+      chrome = chrome,
       actorId = ACTOR_ID,
       clientId = CLIENT_ID,
       operationIdPrefix = CLIENT_ID,
