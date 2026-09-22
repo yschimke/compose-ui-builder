@@ -58,7 +58,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -68,15 +67,11 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CodeOff
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -84,13 +79,10 @@ import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.IosShare
-import androidx.compose.material.icons.filled.Keyboard
-import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
@@ -1251,8 +1243,8 @@ fun UiBuilderEditor(
    * into, is there anything to unwrap — is the reducer's, and the answers change with every edit.
    * The lambda takes the dismiss the menu owns, so the rows can close the menu they are in.
    */
-  val selectionMenu: @Composable (() -> Unit) -> Unit = { close ->
-    EditorSelectionMenuItems(
+  val selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry> = { close ->
+    editorSelectionMenuEntries(
       modifierToggles = reducer.modifierToggles(state),
       onToggleModifier = { type ->
         focusEditor()
@@ -3306,7 +3298,7 @@ private fun MobileEditorToolbar(
         ) {
           Text("More")
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        val menuEntries = buildList {
           // The host container shapes, on a widget design. Rows rather than the wide toolbar's
           // menu-inside-a-menu, because this is already the overflow: a second dropdown off one
           // row is a worse thing to hit on a narrow screen than two rows that read as a pair. The
@@ -3315,136 +3307,125 @@ private fun MobileEditorToolbar(
           state.document.wearWidgetScaffoldSize()?.let { size ->
             WearWidgetHostShape.entries.forEach { option ->
               val spec = size.hostSpec(option)
-              DropdownMenuItem(
-                text = {
-                  Text("${option.label} container · ${spec.frameWidthDp}×${spec.frameHeightDp}dp")
-                },
-                onClick = {
-                  expanded = false
-                  dispatch(UiBuilderEditorEvent.ShowWearWidgetHostShape(option))
-                },
-                leadingIcon = {
-                  if (option == state.wearWidgetHostShape) {
-                    Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(18.dp))
-                  }
-                },
+              add(
+                UiBuilderMenuEntry.Action(
+                  label =
+                    "${option.label} container · ${spec.frameWidthDp}×${spec.frameHeightDp}dp",
+                  selected = option == state.wearWidgetHostShape,
+                  reserveIconSpace = true,
+                  compactLeadingIcon = true,
+                  onClick = {
+                    expanded = false
+                    dispatch(UiBuilderEditorEvent.ShowWearWidgetHostShape(option))
+                  },
+                )
               )
             }
           }
           if (onNewDesign != null) {
-            DropdownMenuItem(
-              text = { Text("New design") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("New design") {
                 expanded = false
                 onNewDesign()
-              },
+              }
             )
           }
           if (onBrowseDesigns != null) {
-            DropdownMenuItem(
-              text = { Text("My designs") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("My designs") {
                 expanded = false
                 onBrowseDesigns()
-              },
+              }
             )
           }
-          DropdownMenuItem(
-            text = { Text("Duplicate") },
-            enabled = canDuplicate,
-            onClick = {
+          add(
+            UiBuilderMenuEntry.Action("Duplicate", enabled = canDuplicate) {
               expanded = false
               dispatch(UiBuilderEditorEvent.DuplicateSelected)
-            },
+            }
           )
-          DropdownMenuItem(
-            text = { Text("Copy") },
-            enabled = canCopy,
-            onClick = {
+          add(
+            UiBuilderMenuEntry.Action("Copy", enabled = canCopy) {
               expanded = false
               dispatch(UiBuilderEditorEvent.CopySelected)
-            },
+            }
           )
-          DropdownMenuItem(
-            text = { Text("Cut") },
-            enabled = canCut,
-            onClick = {
+          add(
+            UiBuilderMenuEntry.Action("Cut", enabled = canCut) {
               expanded = false
               dispatch(UiBuilderEditorEvent.CutSelected)
-            },
+            }
           )
-          DropdownMenuItem(
-            text = { Text("Paste") },
-            enabled = canPaste,
-            onClick = {
+          add(
+            UiBuilderMenuEntry.Action("Paste", enabled = canPaste) {
               expanded = false
               dispatch(UiBuilderEditorEvent.Paste)
-            },
+            }
           )
-          DropdownMenuItem(
-            text = { Text("Delete") },
-            enabled = canDelete,
-            onClick = {
+          add(
+            UiBuilderMenuEntry.Action("Delete", enabled = canDelete) {
               expanded = false
               dispatch(UiBuilderEditorEvent.DeleteSelected)
-            },
+            }
           )
           if (onReconnect != null) {
-            DropdownMenuItem(
-              text = { Text("Reconnect") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Reconnect") {
                 expanded = false
                 onReconnect()
-              },
+              }
             )
           }
           if (onTakeOffline != null) {
-            DropdownMenuItem(
-              text = { Text("Keep in this browser") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Keep in this browser") {
                 expanded = false
                 onTakeOffline()
-              },
+              }
             )
           }
           if (onSyncToServer != null) {
-            DropdownMenuItem(
-              text = { Text("Sync to the server") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Sync to the server") {
                 expanded = false
                 onSyncToServer()
-              },
+              }
             )
           }
           if (onComponentPacks != null) {
-            DropdownMenuItem(
-              text = { Text("Component packs…") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Component packs…") {
                 expanded = false
                 onComponentPacks()
-              },
+              }
             )
           }
           if (onCopyAiPrompt != null) {
-            DropdownMenuItem(
-              text = { Text("Copy OpenCode AI prompt") },
-              leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
-              onClick = {
-                expanded = false
-                scope.launch { onNotice(onCopyAiPrompt()) }
-              },
+            add(
+              UiBuilderMenuEntry.Action(
+                label = "Copy OpenCode AI prompt",
+                icon = UiBuilderMenuIcon.Copy,
+                onClick = {
+                  expanded = false
+                  scope.launch { onNotice(onCopyAiPrompt()) }
+                },
+              )
             )
           }
           if (onHelp != null) {
-            DropdownMenuItem(
-              text = { Text("Help") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Help") {
                 expanded = false
                 onHelp()
-              },
+              }
             )
           }
         }
+        LocalUiBuilderChrome.current.PopupMenu(
+          expanded = expanded,
+          onDismissRequest = { expanded = false },
+          entries = menuEntries,
+        )
       }
       Text("r${state.document.revision}", style = MaterialTheme.typography.labelMedium)
     }
@@ -3598,86 +3579,84 @@ private fun EditorToolbar(
         ToolbarIconAction("More editor actions", "", Icons.Filled.MoreVert, true) {
           overflowOpen = true
         }
-        DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
+        val menuEntries = buildList {
           if (onBrowseDesigns != null) {
-            DropdownMenuItem(
-              text = { Text("My designs") },
-              leadingIcon = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("My designs", icon = UiBuilderMenuIcon.Folder) {
                 overflowOpen = false
                 onBrowseDesigns()
-              },
+              }
             )
           }
-          DropdownMenuItem(
-            text = { Text("Keyboard shortcuts") },
-            leadingIcon = { Icon(Icons.Filled.Keyboard, contentDescription = null) },
-            onClick = {
+          add(
+            UiBuilderMenuEntry.Action(
+              "Keyboard shortcuts",
+              icon = UiBuilderMenuIcon.Keyboard,
+            ) {
               overflowOpen = false
               showShortcuts = true
-            },
+            }
           )
           if (onTidy != null) {
-            DropdownMenuItem(
-              text = { Text("Tidy to the 4dp grid") },
-              leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null) },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action(
+                "Tidy to the 4dp grid",
+                icon = UiBuilderMenuIcon.Tidy,
+              ) {
                 overflowOpen = false
                 onTidy.invoke()
-              },
+              }
             )
           }
           if (onReconnect != null) {
-            DropdownMenuItem(
-              text = { Text("Reconnect") },
-              leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Reconnect", icon = UiBuilderMenuIcon.Refresh) {
                 overflowOpen = false
                 onReconnect()
-              },
+              }
             )
           }
           if (onTakeOffline != null) {
-            DropdownMenuItem(
-              text = { Text("Keep in this browser") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Keep in this browser") {
                 overflowOpen = false
                 onTakeOffline()
-              },
+              }
             )
           }
           if (onSyncToServer != null) {
-            DropdownMenuItem(
-              text = { Text("Sync to the server") },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Sync to the server") {
                 overflowOpen = false
                 onSyncToServer()
-              },
+              }
             )
           }
           if (onComponentPacks != null) {
-            DropdownMenuItem(
-              text = { Text("Component packs…") },
-              leadingIcon = { Icon(Icons.Filled.Widgets, contentDescription = null) },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action(
+                "Component packs…",
+                icon = UiBuilderMenuIcon.Components,
+              ) {
                 overflowOpen = false
                 onComponentPacks()
-              },
+              }
             )
           }
           if (onHelp != null) {
-            DropdownMenuItem(
-              text = { Text("Help") },
-              leadingIcon = {
-                Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null)
-              },
-              onClick = {
+            add(
+              UiBuilderMenuEntry.Action("Help", icon = UiBuilderMenuIcon.Help) {
                 overflowOpen = false
                 onHelp()
-              },
+              }
             )
           }
         }
+        LocalUiBuilderChrome.current.PopupMenu(
+          expanded = overflowOpen,
+          onDismissRequest = { overflowOpen = false },
+          entries = menuEntries,
+        )
       }
     }
   }
@@ -3723,20 +3702,43 @@ private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
     }
     Box {
       ToolbarIconAction("Export", "", Icons.Filled.IosShare, true) { open = true }
-      DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-        ExportMenuRows(groups) { entry ->
-          open = false
-          scope.launch {
-            status =
-              try {
-                host.perform(entry)
-              } catch (failure: Exception) {
-                "${entry.label} failed: ${failure.message ?: "unknown error"}"
+      LocalUiBuilderChrome.current.PopupMenu(
+        expanded = open,
+        onDismissRequest = { open = false },
+        entries =
+          groups.flatMapIndexed { index, group ->
+            buildList {
+              if (index > 0) add(UiBuilderMenuEntry.Divider)
+              group.forEach { entry ->
+                add(
+                  UiBuilderMenuEntry.Action(
+                    label = entry.label,
+                    detail = entry.detail,
+                    detailStyle = UiBuilderMenuDetailStyle.Body,
+                    icon =
+                      when (entry) {
+                        is EditorExportMenuEntry.CopyPicture -> UiBuilderMenuIcon.Copy
+                        is EditorExportMenuEntry.CopyLink -> UiBuilderMenuIcon.Link
+                        is EditorExportMenuEntry.Download -> UiBuilderMenuIcon.Download
+                      },
+                    onClick = {
+                      open = false
+                      scope.launch {
+                        status =
+                          try {
+                            host.perform(entry)
+                          } catch (failure: Exception) {
+                            "${entry.label} failed: ${failure.message ?: "unknown error"}"
+                          }
+                        statusGeneration++
+                      }
+                    },
+                  )
+                )
               }
-            statusGeneration++
-          }
-        }
-      }
+            }
+          },
+      )
     }
   }
 }
@@ -3865,35 +3867,30 @@ private fun WidgetHostShapeMenu(
       Text(shape.label, Modifier.padding(start = 6.dp))
       Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
     }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-      WearWidgetHostShape.entries.forEach { option ->
-        val spec = size.hostSpec(option)
-        DropdownMenuItem(
-          text = {
-            Column {
-              Text(option.label)
-              // The footprint, because that is what the choice actually changes and a designer
-              // comparing two frames wants the numbers rather than an adjective.
-              Text(
-                "${spec.frameWidthDp}×${spec.frameHeightDp}dp frame · " +
-                  "${spec.contentWidthDp}×${spec.contentHeightDp}dp content",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-          },
-          onClick = {
-            dispatch(UiBuilderEditorEvent.ShowWearWidgetHostShape(option))
-            open = false
-          },
-          leadingIcon = {
-            if (option == shape) {
-              Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(18.dp))
-            }
-          },
-        )
-      }
-    }
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = open,
+      onDismissRequest = { open = false },
+      entries =
+        WearWidgetHostShape.entries.map { option ->
+          val spec = size.hostSpec(option)
+          UiBuilderMenuEntry.Action(
+            label = option.label,
+            // The footprint, because that is what the choice actually changes and a designer
+            // comparing two frames wants the numbers rather than an adjective.
+            detail =
+              "${spec.frameWidthDp}×${spec.frameHeightDp}dp frame · " +
+                "${spec.contentWidthDp}×${spec.contentHeightDp}dp content",
+            detailStyle = UiBuilderMenuDetailStyle.Body,
+            selected = option == shape,
+            reserveIconSpace = true,
+            compactLeadingIcon = true,
+            onClick = {
+              dispatch(UiBuilderEditorEvent.ShowWearWidgetHostShape(option))
+              open = false
+            },
+          )
+        },
+    )
   }
 }
 
@@ -3948,36 +3945,30 @@ private fun WorkspacePanesMenu(
       Text(label, Modifier.padding(start = 6.dp))
       Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
     }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-      EditorPane.entries.forEach { pane ->
-        val shown = pane in panes
-        val available = pane != EditorPane.Native || nativeAvailable
-        // Off it may not go while it is the only thing on screen; on it may not go where the host
-        // cannot draw it.
-        val enabled = available && !(shown && panes.size == 1)
-        DropdownMenuItem(
-          text = {
-            Column {
-              Text(pane.title)
-              Text(
-                if (available) pane.supportingText(surfaces) else pane.unavailableText(surfaces),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall,
-              )
-            }
-          },
-          enabled = enabled,
-          leadingIcon = {
-            if (shown) Icon(Icons.Filled.Check, contentDescription = null)
-            else Spacer(Modifier.size(24.dp))
-          },
-          onClick = {
-            open = false
-            dispatch(UiBuilderEditorEvent.TogglePane(pane))
-          },
-        )
-      }
-    }
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = open,
+      onDismissRequest = { open = false },
+      entries =
+        EditorPane.entries.map { pane ->
+          val shown = pane in panes
+          val available = pane != EditorPane.Native || nativeAvailable
+          // Off it may not go while it is the only thing on screen; on it may not go where the host
+          // cannot draw it.
+          val enabled = available && !(shown && panes.size == 1)
+          UiBuilderMenuEntry.Action(
+            label = pane.title,
+            detail =
+              if (available) pane.supportingText(surfaces) else pane.unavailableText(surfaces),
+            selected = shown,
+            reserveIconSpace = true,
+            enabled = enabled,
+            onClick = {
+              open = false
+              dispatch(UiBuilderEditorEvent.TogglePane(pane))
+            },
+          )
+        },
+    )
   }
 }
 
@@ -4135,8 +4126,7 @@ private fun Modifier.canvasNodeDrag(
  * present, mostly greyed, and nowhere near the layer they act on. A context menu puts them under
  * the pointer that is already on the thing, which is where every other design tool keeps them.
  */
-@Composable
-private fun EditorSelectionMenuItems(
+private fun editorSelectionMenuEntries(
   /** The layout modifiers this selection can be given or have taken away; empty for many nodes. */
   modifierToggles: List<EditorModifierToggle>,
   onToggleModifier: (String) -> Unit,
@@ -4152,19 +4142,17 @@ private fun EditorSelectionMenuItems(
   onCopyLink: (() -> Unit)? = null,
   onDismiss: () -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
-) {
+): List<UiBuilderMenuEntry> = buildList {
   fun act(event: UiBuilderEditorEvent) {
     onDismiss()
     dispatch(event)
   }
   if (onOpenProperties != null) {
-    DropdownMenuItem(
-      text = { Text("Properties") },
-      leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null) },
-      onClick = {
+    add(
+      UiBuilderMenuEntry.Action("Properties", icon = UiBuilderMenuIcon.Properties) {
         onDismiss()
         onOpenProperties()
-      },
+      }
     )
   }
   // Beside Properties rather than among the clipboard verbs, because both of these are ways of
@@ -4172,108 +4160,113 @@ private fun EditorSelectionMenuItems(
   // Copy link is the design's address; this one is a layer's, which is the thing somebody pastes
   // when they mean "this button, here".
   if (onCopyLink != null) {
-    DropdownMenuItem(
-      text = { Text("Copy link") },
-      leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
-      modifier = Modifier.semantics { contentDescription = "Copy link to this layer" },
-      onClick = {
-        onDismiss()
-        onCopyLink()
-      },
+    add(
+      UiBuilderMenuEntry.Action(
+        label = "Copy link",
+        icon = UiBuilderMenuIcon.Link,
+        contentDescription = "Copy link to this layer",
+        onClick = {
+          onDismiss()
+          onCopyLink()
+        },
+      )
     )
   }
-  if (onOpenProperties != null || onCopyLink != null) HorizontalDivider()
-  DropdownMenuItem(
-    text = { Text("Duplicate") },
-    enabled = canDuplicate,
-    leadingIcon = { Icon(Icons.Filled.LibraryAdd, contentDescription = null) },
-    trailingIcon = { MenuShortcut("Ctrl/\u2318+D") },
-    onClick = { act(UiBuilderEditorEvent.DuplicateSelected) },
+  if (onOpenProperties != null || onCopyLink != null) add(UiBuilderMenuEntry.Divider)
+  add(
+    UiBuilderMenuEntry.Action(
+      "Duplicate",
+      icon = UiBuilderMenuIcon.Duplicate,
+      enabled = canDuplicate,
+      shortcut = "Ctrl/⌘+D",
+    ) {
+      act(UiBuilderEditorEvent.DuplicateSelected)
+    }
   )
-  DropdownMenuItem(
-    text = { Text("Copy") },
-    enabled = canCopy,
-    leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
-    trailingIcon = { MenuShortcut("Ctrl/\u2318+C") },
-    onClick = { act(UiBuilderEditorEvent.CopySelected) },
+  add(
+    UiBuilderMenuEntry.Action(
+      "Copy",
+      icon = UiBuilderMenuIcon.Copy,
+      enabled = canCopy,
+      shortcut = "Ctrl/⌘+C",
+    ) {
+      act(UiBuilderEditorEvent.CopySelected)
+    }
   )
-  DropdownMenuItem(
-    text = { Text("Cut") },
-    enabled = canCut,
-    leadingIcon = { Icon(Icons.Filled.ContentCut, contentDescription = null) },
-    trailingIcon = { MenuShortcut("Ctrl/\u2318+X") },
-    onClick = { act(UiBuilderEditorEvent.CutSelected) },
+  add(
+    UiBuilderMenuEntry.Action(
+      "Cut",
+      icon = UiBuilderMenuIcon.Cut,
+      enabled = canCut,
+      shortcut = "Ctrl/⌘+X",
+    ) {
+      act(UiBuilderEditorEvent.CutSelected)
+    }
   )
-  DropdownMenuItem(
-    text = { Text("Paste") },
-    enabled = canPaste,
-    leadingIcon = { Icon(Icons.Filled.ContentPaste, contentDescription = null) },
-    trailingIcon = { MenuShortcut("Ctrl/\u2318+V") },
-    onClick = { act(UiBuilderEditorEvent.Paste) },
+  add(
+    UiBuilderMenuEntry.Action(
+      "Paste",
+      icon = UiBuilderMenuIcon.Paste,
+      enabled = canPaste,
+      shortcut = "Ctrl/⌘+V",
+    ) {
+      act(UiBuilderEditorEvent.Paste)
+    }
   )
-  DropdownMenuItem(
-    text = { Text("Delete") },
-    enabled = canDelete,
-    leadingIcon = { Icon(Icons.Filled.DeleteOutline, contentDescription = null) },
-    trailingIcon = { MenuShortcut("Delete") },
-    onClick = { act(UiBuilderEditorEvent.DeleteSelected) },
+  add(
+    UiBuilderMenuEntry.Action(
+      "Delete",
+      icon = UiBuilderMenuIcon.Delete,
+      enabled = canDelete,
+      shortcut = "Delete",
+    ) {
+      act(UiBuilderEditorEvent.DeleteSelected)
+    }
   )
   // Layout before the container verbs, because it is what a right-click on a laid-out node is
   // usually for: the chain is the node's own business, and wrapping is its parent's.
   if (modifierToggles.isNotEmpty()) {
-    HorizontalDivider()
+    add(UiBuilderMenuEntry.Divider)
     modifierToggles.forEach { toggle ->
-      DropdownMenuItem(
-        text = { Text(toggle.label) },
-        leadingIcon = {
+      add(
+        UiBuilderMenuEntry.Action(
+          label = toggle.label,
           // The tick says what is already true. A menu of layout verbs with no state is one people
           // press twice to find out what it did.
-          if (toggle.applied) Icon(Icons.Filled.Check, contentDescription = null)
-        },
-        modifier =
-          Modifier.semantics {
-            contentDescription =
-              if (toggle.applied) "Remove ${toggle.label}" else "Apply ${toggle.label}"
+          selected = toggle.applied,
+          reserveIconSpace = true,
+          contentDescription =
+            if (toggle.applied) "Remove ${toggle.label}" else "Apply ${toggle.label}",
+          onClick = {
+            onDismiss()
+            onToggleModifier(toggle.type)
           },
-        onClick = {
-          onDismiss()
-          onToggleModifier(toggle.type)
-        },
+        )
       )
     }
   }
-  if (wrapCandidates.isNotEmpty() || canUnwrap) HorizontalDivider()
+  if (wrapCandidates.isNotEmpty() || canUnwrap) add(UiBuilderMenuEntry.Divider)
   // Behind one row rather than inline: the containers a selection can be wrapped in run to thirty
   // on this catalog, and a menu whose last verb is thirty rows below the first is not a menu.
   if (wrapCandidates.isNotEmpty()) {
-    var wrapOpen by remember { mutableStateOf(false) }
-    Box {
-      DropdownMenuItem(
-        text = { Text("Wrap in…") },
-        leadingIcon = { Icon(Icons.Filled.Widgets, contentDescription = null) },
-        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-        onClick = { wrapOpen = true },
-      )
-      // Only what will work: the candidates are computed from both ends, so every row here is a
-      // promise rather than a guess.
-      DropdownMenu(expanded = wrapOpen, onDismissRequest = { wrapOpen = false }) {
-        wrapCandidates.forEach { candidate ->
-          DropdownMenuItem(
-            text = { Text(candidate.displayName) },
-            onClick = {
-              wrapOpen = false
+    add(
+      UiBuilderMenuEntry.Action(
+        label = "Wrap in…",
+        icon = UiBuilderMenuIcon.Wrap,
+        // Only what will work: the candidates are computed from both ends, so every row here is a
+        // promise rather than a guess.
+        children =
+          wrapCandidates.map { candidate ->
+            UiBuilderMenuEntry.Action(candidate.displayName) {
               act(UiBuilderEditorEvent.WrapSelection(candidate.componentId))
-            },
-          )
-        }
-      }
-    }
+            }
+          },
+        onClick = {},
+      )
+    )
   }
   if (canUnwrap) {
-    DropdownMenuItem(
-      text = { Text("Unwrap") },
-      onClick = { act(UiBuilderEditorEvent.UnwrapSelection) },
-    )
+    add(UiBuilderMenuEntry.Action("Unwrap") { act(UiBuilderEditorEvent.UnwrapSelection) })
   }
 }
 
@@ -4355,16 +4348,6 @@ private fun EditorUrlBanner(
   }
 }
 
-/** The chord beside a menu row, in the quiet the rest of this editor spells shortcuts in. */
-@Composable
-private fun MenuShortcut(chord: String) {
-  Text(
-    chord,
-    color = MaterialTheme.colorScheme.onSurfaceVariant,
-    style = MaterialTheme.typography.labelSmall,
-  )
-}
-
 /**
  * What can be done to the selection, beside the selection, only while there is one.
  *
@@ -4388,7 +4371,7 @@ private fun SelectionActionBar(
   onBreadcrumbSelected: (String) -> Unit,
   onOpenProperties: (() -> Unit)?,
   /** The same rows the context menus carry; the bar holds no second copy of the verbs. */
-  selectionMenu: @Composable (() -> Unit) -> Unit,
+  selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry>,
   modifier: Modifier = Modifier,
 ) {
   var menuOpen by remember { mutableStateOf(false) }
@@ -4432,9 +4415,11 @@ private fun SelectionActionBar(
       // for a button instead, and it is where the chords are written down.
       Box {
         ToolbarIconAction("Selection actions", "", Icons.Filled.MoreVert, true) { menuOpen = true }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-          selectionMenu { menuOpen = false }
-        }
+        LocalUiBuilderChrome.current.PopupMenu(
+          expanded = menuOpen,
+          onDismissRequest = { menuOpen = false },
+          entries = selectionMenu { menuOpen = false },
+        )
       }
     }
   }
@@ -5146,7 +5131,7 @@ private enum class NavigatorTab(val label: String) {
 private fun EditorNavigator(
   state: UiBuilderEditorState,
   /** The verbs a layer answers to, for the tree's context menu. */
-  selectionMenu: @Composable (() -> Unit) -> Unit,
+  selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry>,
   tab: NavigatorTab,
   onClose: (() -> Unit)?,
   catalogSystemId: String,
@@ -5448,7 +5433,7 @@ private fun InsertPanel(
 private fun LayersPanel(
   state: UiBuilderEditorState,
   layerRows: List<EditorLayerRow>,
-  selectionMenu: @Composable (() -> Unit) -> Unit,
+  selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry>,
   collaborators: List<UiBuilderCollaborator>,
   dropTarget: ParentSlot?,
   moveRefusal: (String, ParentSlot) -> EditorMoveRefusal?,
@@ -5803,7 +5788,7 @@ internal fun PinnedDesignCanvas(
   onInspectionInvalidated: ((UiBuilderInspectionCollector) -> Unit)?,
   canvasRenderer: UiBuilderCanvasRenderer? = null,
   /** The verbs a layer answers to, for the canvas's own context menu. */
-  selectionMenu: @Composable (() -> Unit) -> Unit,
+  selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry>,
   /**
    * The tight editor that follows the selection over the design, or null where there is nothing to
    * follow. Positioned here, because only the canvas knows where the selected node is drawn.
@@ -6105,9 +6090,10 @@ internal fun PinnedDesignCanvas(
                   }
               ) {
                 Box {
-                  DropdownMenu(
+                  LocalUiBuilderChrome.current.PopupMenu(
                     expanded = menuAt != null,
                     onDismissRequest = { menuAt = null },
+                    entries = selectionMenu { menuAt = null },
                     offset =
                       with(density) {
                         DpOffset(
@@ -6115,9 +6101,7 @@ internal fun PinnedDesignCanvas(
                           ((menuAt?.y ?: 0f) * drawScale).toDp(),
                         )
                       },
-                  ) {
-                    selectionMenu { menuAt = null }
-                  }
+                  )
                 }
                 if (canvasRenderer == null) {
                   UiBuilderSurface(
@@ -7905,7 +7889,7 @@ private fun LayerRow(
   dragged: Boolean,
   landing: LayerLanding?,
   collaborators: List<UiBuilderCollaborator>,
-  selectionMenu: @Composable (() -> Unit) -> Unit,
+  selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry>,
   /** `false` for a context click, whose menu is the next interaction instead. */
   onSelect: (LayerSelectionGesture, Boolean) -> Unit,
   onDragTo: (Float) -> Unit,
@@ -7955,13 +7939,12 @@ private fun LayerRow(
   ) {
     // A zero-size anchor, so the menu opens where the pointer is rather than off the row's start.
     Box {
-      DropdownMenu(
+      LocalUiBuilderChrome.current.PopupMenu(
         expanded = menuAt != null,
         onDismissRequest = { menuAt = null },
+        entries = selectionMenu { menuAt = null },
         offset = DpOffset(with(density) { (menuAt?.x ?: 0f).toDp() }, 0.dp),
-      ) {
-        selectionMenu { menuAt = null }
-      }
+      )
     }
     // A 16dp icon in a 26dp target. The icon is the affordance; the box is what a pointer actually
     // has to hit, and the difference is most of why the drag read as broken.

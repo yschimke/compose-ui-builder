@@ -16,16 +16,23 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
+import ee.schimke.composeai.uibuilder.UiBuilderMenuEntry
+import ee.schimke.composeai.uibuilder.UiBuilderMenuIcon
 import org.jetbrains.jewel.foundation.ExperimentalJewelApi
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.ActionButton
 import org.jetbrains.jewel.ui.component.Divider
 import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.MenuScope
+import org.jetbrains.jewel.ui.component.PopupMenu
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.TextField
+import org.jetbrains.jewel.ui.component.separator
+import org.jetbrains.jewel.ui.icon.IconKey
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
 
 /** IntelliJ-native implementation of the editor chrome that has crossed the host boundary. */
@@ -119,4 +126,80 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
       fontWeight = FontWeight.SemiBold,
     )
   }
+
+  @Composable
+  override fun PopupMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    entries: List<UiBuilderMenuEntry>,
+    offset: DpOffset,
+  ) {
+    if (!expanded) return
+    PopupMenu(
+      onDismissRequest = {
+        onDismissRequest()
+        true
+      },
+      horizontalAlignment = Alignment.Start,
+      modifier = Modifier.offset(offset.x, offset.y),
+      adContent = null,
+    ) {
+      jewelEntries(entries)
+    }
+  }
 }
+
+private fun MenuScope.jewelEntries(entries: List<UiBuilderMenuEntry>) {
+  entries.forEach { entry ->
+    when (entry) {
+      UiBuilderMenuEntry.Divider -> separator()
+      is UiBuilderMenuEntry.Action ->
+        if (entry.children.isEmpty()) {
+          selectableItem(
+            selected = false,
+            iconKey = if (entry.selected) AllIconsKeys.Actions.Checked else entry.icon?.jewelIcon(),
+            keybinding = entry.shortcut?.let(::setOf),
+            onClick = entry.onClick,
+            enabled = entry.enabled,
+          ) {
+            JewelMenuLabel(entry)
+          }
+        } else {
+          submenu(
+            enabled = entry.enabled,
+            iconKey = entry.icon?.jewelIcon(),
+            submenu = { jewelEntries(entry.children) },
+          ) {
+            Text(entry.label)
+          }
+        }
+    }
+  }
+}
+
+@Composable
+private fun JewelMenuLabel(entry: UiBuilderMenuEntry.Action) {
+  Column {
+    Text(entry.label)
+    entry.detail?.let { Text(it) }
+  }
+}
+
+private fun UiBuilderMenuIcon.jewelIcon(): IconKey =
+  when (this) {
+    UiBuilderMenuIcon.Folder -> AllIconsKeys.Nodes.Folder
+    UiBuilderMenuIcon.Keyboard -> AllIconsKeys.General.Keyboard
+    UiBuilderMenuIcon.Tidy -> AllIconsKeys.Actions.ReformatCode
+    UiBuilderMenuIcon.Refresh -> AllIconsKeys.Actions.Refresh
+    UiBuilderMenuIcon.Components -> AllIconsKeys.Nodes.Plugin
+    UiBuilderMenuIcon.Help -> AllIconsKeys.Actions.Help
+    UiBuilderMenuIcon.Copy -> AllIconsKeys.Actions.Copy
+    UiBuilderMenuIcon.Link -> AllIconsKeys.Actions.MenuOpen
+    UiBuilderMenuIcon.Download -> AllIconsKeys.Actions.Download
+    UiBuilderMenuIcon.Properties -> AllIconsKeys.Actions.Properties
+    UiBuilderMenuIcon.Duplicate -> AllIconsKeys.Actions.Copy
+    UiBuilderMenuIcon.Cut -> AllIconsKeys.Actions.MenuCut
+    UiBuilderMenuIcon.Paste -> AllIconsKeys.Actions.MenuPaste
+    UiBuilderMenuIcon.Delete -> AllIconsKeys.Actions.DeleteTag
+    UiBuilderMenuIcon.Wrap -> AllIconsKeys.Actions.GroupBy
+  }
