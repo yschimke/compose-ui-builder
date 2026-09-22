@@ -1,3 +1,5 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
 plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.jvm)
@@ -8,6 +10,16 @@ plugins {
 ktfmt { googleStyle() }
 
 kotlin { jvmToolchain(libs.versions.java.ui.builder.get().toInt()) }
+
+val integrationTestSourceSet =
+  sourceSets.create("integrationTest") {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+  }
+
+configurations.getByName("integrationTestImplementation") {
+  extendsFrom(configurations.testImplementation.get())
+}
 
 // Keep the plugin descriptor and release asset on the repository's version line. CI supplies the
 // tag-derived version; local builds use the same next-patch snapshot convention as :ui-builder-web.
@@ -46,6 +58,16 @@ dependencies {
   // Compile the @Composable tool-window lambda against the same API the platform bundles. Keeping
   // this compile-only avoids shipping a second Compose runtime inside the plugin.
   compileOnly("org.jetbrains.compose.runtime:runtime:${libs.versions.compose.multiplatform.get()}")
+  add("integrationTestImplementation", "org.junit.jupiter:junit-jupiter:5.11.4")
+  add("integrationTestImplementation", "org.kodein.di:kodein-di-jvm:7.26.1")
+  // Starter calls TeamCityReporter even under NoCIServer, but its published Gradle metadata omits
+  // the service-message classes that reporter loads at runtime.
+  add("integrationTestRuntimeOnly", "org.jetbrains.teamcity:serviceMessages:2024.07")
+  add("integrationTestImplementation", libs.kotlinx.coroutines.core)
+  add(
+    "integrationTestCompileOnly",
+    "org.jetbrains.compose.runtime:runtime:${libs.versions.compose.multiplatform.get()}",
+  )
 
   intellijPlatform {
     // IntelliJ uses one unified distribution from the 253 platform onward.
@@ -55,6 +77,7 @@ dependencies {
     bundledModule("intellij.platform.jewel.ideLafBridge")
     bundledModule("intellij.libraries.compose.foundation.desktop")
     bundledModule("intellij.libraries.skiko")
+    testFramework(TestFrameworkType.Starter, configurationName = "integrationTestImplementation")
   }
 }
 
@@ -72,6 +95,31 @@ intellijPlatform {
 tasks.named<Zip>("buildPlugin") {
   archiveBaseName.set("compose-ui-builder-intellij-plugin")
   archiveVersion.set(project.version.toString())
+}
+
+intellijPlatformTesting.testIdeUi.register("installedPluginSmoke") {
+  task {
+    dependsOn(tasks.named("buildPlugin"))
+    testClassesDirs = integrationTestSourceSet.output.classesDirs
+    classpath = integrationTestSourceSet.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    useJUnitPlatform { excludeEngines("junit-vintage") }
+    systemProperty(
+      "path.to.build.plugin",
+      tasks.named<Zip>("buildPlugin").flatMap { it.archiveFile }.get().asFile.absolutePath,
+    )
+    systemProperty(
+      "ui.builder.smoke.project",
+      layout.projectDirectory
+        .dir("src/integrationTest/resources/smoke-project")
+        .asFile
+        .absolutePath,
+    )
+    systemProperty(
+      "ui.builder.smoke.ide",
+      providers.systemProperty("ui.builder.smoke.ide").getOrElse("all"),
+    )
+  }
 }
 
 // `check` must validate the installed archive's descriptor, not only compile against bundled IDE
