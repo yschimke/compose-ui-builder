@@ -198,7 +198,7 @@ class CanvasFillLayoutTest {
       onCommentThreadSelected = {},
       onInspectionSnapshot = onInspection,
       onInspectionInvalidated = null,
-      selectionMenu = {},
+      selectionMenu = { emptyList() },
       hoverEditor = null,
       zoom = 1f,
       onZoomChanged = {},

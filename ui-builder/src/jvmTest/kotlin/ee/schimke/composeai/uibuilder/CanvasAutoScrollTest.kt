@@ -255,7 +255,7 @@ class CanvasAutoScrollTest {
       onCommentThreadSelected = {},
       onInspectionSnapshot = onInspection,
       onInspectionInvalidated = null,
-      selectionMenu = {},
+      selectionMenu = { emptyList() },
       hoverEditor = null,
       zoom = zoom,
       onZoomChanged = {},

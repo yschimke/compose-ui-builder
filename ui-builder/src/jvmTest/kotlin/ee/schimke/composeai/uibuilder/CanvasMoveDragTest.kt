@@ -226,7 +226,7 @@ class CanvasMoveDragTest {
       onCommentThreadSelected = {},
       onInspectionSnapshot = onInspection,
       onInspectionInvalidated = null,
-      selectionMenu = {},
+      selectionMenu = { emptyList() },
       hoverEditor = null,
       zoom = zoom,
       onZoomChanged = {},

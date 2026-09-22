@@ -100,7 +100,7 @@ class CanvasFrameDensityTest {
           onCommentThreadSelected = {},
           onInspectionSnapshot = { snapshot = it },
           onInspectionInvalidated = null,
-          selectionMenu = {},
+          selectionMenu = { emptyList() },
           hoverEditor = null,
           zoom = 1f,
           onZoomChanged = {},
