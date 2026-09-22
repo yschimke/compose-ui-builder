@@ -20,8 +20,11 @@ import ee.schimke.composeai.uibuilder.MaterialUiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.local.FileLocalDesignStorage
@@ -43,6 +46,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -101,6 +105,24 @@ fun OfflineUiBuilderApp(
 }
 
 /** One persisted offline design shared by every IDE view that displays it. */
+interface UiBuilderSession : AutoCloseable {
+  val catalog: CapabilityCatalog
+  val snapshot: StateFlow<SnapshotResponseV1?>
+  val failure: StateFlow<String?>
+  val actorId: String
+  val clientId: String
+  val operationIdPrefix: String
+  val nativeRenderAvailable: Boolean
+
+  fun submit(submission: EditorSubmission)
+
+  suspend fun renderNative(
+    document: UiBuilderDocument,
+    hostShape: WearWidgetHostShape,
+  ): UiBuilderNativeRender?
+}
+
+/** One persisted offline design shared by every IDE view that displays it. */
 class OfflineUiBuilderSession
 private constructor(
   storage: LocalDesignStorage,
@@ -110,7 +132,7 @@ private constructor(
   private val initialDocument: UiBuilderDocument?,
   private val onDocumentCommitted:
     suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
-) : AutoCloseable {
+) : UiBuilderSession {
 
   constructor(
     storagePath: Path,
@@ -144,7 +166,7 @@ private constructor(
 
   internal val offlineCatalog = OfflineCatalog.forSystem(catalogSystemId)
   private val catalogText = resourceText(offlineCatalog.capabilitiesResource)
-  internal val catalog = CapabilityCatalogParser.parse(catalogText)
+  override val catalog = CapabilityCatalogParser.parse(catalogText)
   private val catalogCapability =
     Json.decodeFromString(CatalogCapabilityV1.serializer(), catalogText)
   private val service =
@@ -157,9 +179,13 @@ private constructor(
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   private val submissions = Channel<EditorSubmission>(Channel.UNLIMITED)
   private val mutableSnapshot = MutableStateFlow<SnapshotResponseV1?>(null)
-  internal val snapshot = mutableSnapshot.asStateFlow()
+  override val snapshot = mutableSnapshot.asStateFlow()
   private val mutableFailure = MutableStateFlow<String?>(null)
-  internal val failure = mutableFailure.asStateFlow()
+  override val failure = mutableFailure.asStateFlow()
+  override val actorId: String = ACTOR_ID
+  override val clientId: String = CLIENT_ID
+  override val operationIdPrefix: String = CLIENT_ID
+  override val nativeRenderAvailable: Boolean = remotePreview != null
 
   init {
     scope.launch { openOrCreate() }
@@ -185,9 +211,14 @@ private constructor(
     }
   }
 
-  internal fun submit(submission: EditorSubmission) {
+  override fun submit(submission: EditorSubmission) {
     submissions.trySend(submission)
   }
+
+  override suspend fun renderNative(
+    document: UiBuilderDocument,
+    hostShape: WearWidgetHostShape,
+  ): UiBuilderNativeRender? = remotePreview?.render(document, hostShape)
 
   private suspend fun openOrCreate() {
     when (val open = service.execute(OpenDesignRequestV1(designId))) {
@@ -239,7 +270,7 @@ private constructor(
 /** Displays one view of a shared [OfflineUiBuilderSession]. */
 @Composable
 fun OfflineUiBuilderSessionView(
-  session: OfflineUiBuilderSession,
+  session: UiBuilderSession,
   sessionLabel: String,
   chrome: UiBuilderChrome = MaterialUiBuilderChrome,
   initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
@@ -257,15 +288,17 @@ fun OfflineUiBuilderSessionView(
       document = current.snapshot.state.document.toUiBuilderDocument(),
       catalog = session.catalog,
       chrome = chrome,
-      actorId = ACTOR_ID,
-      clientId = CLIENT_ID,
-      operationIdPrefix = CLIENT_ID,
+      actorId = session.actorId,
+      clientId = session.clientId,
+      operationIdPrefix = session.operationIdPrefix,
       sessionLabel = sessionLabel,
       initialPanes = initialPanes,
       availablePanes = availablePanes,
       openDefaultPreview = openDefaultPreview,
       onRequestNativeRender =
-        session.remotePreview?.let { client -> { shape -> client.render(previewDocument, shape) } },
+        if (session.nativeRenderAvailable) {
+          { shape -> session.renderNative(previewDocument, shape) ?: UiBuilderNativeRender() }
+        } else null,
       onStateChanged = { state -> previewDocument = state.collaboration.document },
       onSubmission = session::submit,
     )
@@ -307,6 +340,10 @@ public enum class OfflineCatalog(
           Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
       )
     }
+
+  /** The packaged capability used while a remote session loads its authoritative snapshot. */
+  fun capabilityCatalog(): CapabilityCatalog =
+    CapabilityCatalogParser.parse(resourceText(capabilitiesResource))
 
   companion object {
     fun forSystem(systemId: String): OfflineCatalog =
