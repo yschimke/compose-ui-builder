@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.39.0](https://github.com/yschimke/compose-ui-builder/compare/v3.38.0...v3.39.0) (2026-09-22)
+
+
+### Features
+
+* register catalog source export adapters ([#143](https://github.com/yschimke/compose-ui-builder/issues/143)) ([3bfb2a2](https://github.com/yschimke/compose-ui-builder/commit/3bfb2a26a7dc2a378a3d9f4f783af6e58696fc32))
+* **ui-builder:** add Jewel screen pickers ([#144](https://github.com/yschimke/compose-ui-builder/issues/144)) ([bdf64e9](https://github.com/yschimke/compose-ui-builder/commit/bdf64e97604749b50b4bea7a12fbe63899b44bd6))
+
 ## [3.38.0](https://github.com/yschimke/compose-ui-builder/compare/v3.37.0...v3.38.0) (2026-09-22)
 
 
