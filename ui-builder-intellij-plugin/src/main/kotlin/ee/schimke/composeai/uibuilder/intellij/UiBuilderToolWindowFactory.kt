@@ -29,20 +29,22 @@ class UiBuilderToolWindowFactory : ToolWindowFactory {
   override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
     val service = project.getService(UiBuilderProjectService::class.java)
     toolWindow.addComposeTab(PREVIEW_CONTENT) {
-      val selection by service.activeSession.collectAsState()
-      selection?.let { active ->
-        val session by active.session.collectAsState()
-        val status by active.status.collectAsState()
-        OfflineUiBuilderSessionView(
-          session = session,
-          sessionLabel =
-            "IntelliJ preview · ${project.name} · ${active.title}" +
-              status?.let { " · $it" }.orEmpty(),
-          chrome = JewelUiBuilderChrome,
-          initialPanes = setOf(EditorPane.Preview),
-          availablePanes = setOf(EditorPane.Preview),
-          openDefaultPreview = false,
-        )
+      ProvideUiBuilderNavigationEventDispatcher {
+        val selection by service.activeSession.collectAsState()
+        selection?.let { active ->
+          val session by active.session.collectAsState()
+          val status by active.status.collectAsState()
+          OfflineUiBuilderSessionView(
+            session = session,
+            sessionLabel =
+              "IntelliJ preview · ${project.name} · ${active.title}" +
+                status?.let { " · $it" }.orEmpty(),
+            chrome = JewelUiBuilderChrome,
+            initialPanes = setOf(EditorPane.Preview),
+            availablePanes = setOf(EditorPane.Preview),
+            openDefaultPreview = false,
+          )
+        }
       }
     }
     service.attachPreviewToolWindow(toolWindow)
@@ -157,10 +159,10 @@ private class OpenProjectDesignAction(private val project: Project) :
         project,
         root,
       ) ?: return
-    if (!isProjectDesign(project, file)) {
+    if (!isProjectDesign(file)) {
       Messages.showErrorDialog(
         project,
-        "Choose a supported DesignDocumentV1 JSON file under ui-builder/designs.",
+        "Choose a supported DesignDocumentV1 JSON file.",
         "Not a UI Builder Design",
       )
       return

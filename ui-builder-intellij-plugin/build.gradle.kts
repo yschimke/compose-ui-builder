@@ -58,6 +58,17 @@ dependencies {
   // Compile the @Composable tool-window lambda against the same API the platform bundles. Keeping
   // this compile-only avoids shipping a second Compose runtime inside the plugin.
   compileOnly("org.jetbrains.compose.runtime:runtime:${libs.versions.compose.multiplatform.get()}")
+  // Material 3's desktop variant loads this at runtime (for example, SearchBar calls its
+  // PredictiveBackHandler). IntelliJ's Compose foundation module does not include it. Keep its
+  // transitive Compose runtime/UI dependencies out of the ZIP: those must stay supplied by the
+  // platform, or the plugin would load a second Compose runtime and Skiko native library.
+  implementation(
+    "org.jetbrains.compose.ui:ui-backhandler-desktop:${libs.versions.compose.multiplatform.get()}"
+  ) {
+    exclude(group = "androidx.compose.runtime")
+    exclude(group = "org.jetbrains.compose.runtime")
+    exclude(group = "org.jetbrains.compose.ui")
+  }
   add("integrationTestImplementation", "org.junit.jupiter:junit-jupiter:5.11.4")
   add("integrationTestImplementation", "org.kodein.di:kodein-di-jvm:7.26.1")
   // Starter calls TeamCityReporter even under NoCIServer, but its published Gradle metadata omits

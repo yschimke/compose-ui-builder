@@ -40,7 +40,7 @@ internal class UiBuilderFileEditorProvider : FileEditorProvider {
 
 /** Adds the visual editor beside JSON for checked-in files under `ui-builder/designs`. */
 internal class UiBuilderProjectFileEditorProvider : FileEditorProvider {
-  override fun accept(project: Project, file: VirtualFile): Boolean = isProjectDesign(project, file)
+  override fun accept(project: Project, file: VirtualFile): Boolean = isProjectDesign(file)
 
   override fun createEditor(project: Project, file: VirtualFile): FileEditor {
     val service = project.getService(UiBuilderProjectService::class.java)
@@ -61,23 +61,25 @@ private class UiBuilderFileEditor(
   private val changes = PropertyChangeSupport(this)
   private val projectService = project.getService(UiBuilderProjectService::class.java)
   private val component = JewelComposePanel {
-    val session by selection.session.collectAsState()
-    val status by selection.status.collectAsState()
-    OfflineUiBuilderSessionView(
-      session = session,
-      sessionLabel =
-        (if (file is UiBuilderRemoteVirtualFile) {
-          "Remote design · ${file.name}"
-        } else if (selection.projectFile == null) {
-          "IntelliJ · ${project.name} · ${selection.catalog.displayName} · saved locally"
-        } else {
-          "Project design · ${selection.projectFile.presentableUrl}"
-        }) + status?.let { " · $it" }.orEmpty(),
-      chrome = JewelUiBuilderChrome,
-      initialPanes = setOf(EditorPane.Editor),
-      availablePanes = setOf(EditorPane.Editor),
-      openDefaultPreview = false,
-    )
+    ProvideUiBuilderNavigationEventDispatcher {
+      val session by selection.session.collectAsState()
+      val status by selection.status.collectAsState()
+      OfflineUiBuilderSessionView(
+        session = session,
+        sessionLabel =
+          (if (file is UiBuilderRemoteVirtualFile) {
+            "Remote design · ${file.name}"
+          } else if (selection.projectFile == null) {
+            "IntelliJ · ${project.name} · ${selection.catalog.displayName} · saved locally"
+          } else {
+            "Project design · ${selection.projectFile.presentableUrl}"
+          }) + status?.let { " · $it" }.orEmpty(),
+        chrome = JewelUiBuilderChrome,
+        initialPanes = setOf(EditorPane.Editor),
+        availablePanes = setOf(EditorPane.Editor),
+        openDefaultPreview = false,
+      )
+    }
   }
 
   override fun getComponent(): JComponent = component
