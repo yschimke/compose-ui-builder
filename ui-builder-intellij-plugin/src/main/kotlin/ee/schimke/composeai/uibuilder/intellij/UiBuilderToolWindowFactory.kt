@@ -27,6 +27,7 @@ class UiBuilderToolWindowFactory : ToolWindowFactory {
         )
       }
     }
+    service.attachPreviewToolWindow(toolWindow)
     toolWindow.setTitleActions(
       OfflineCatalog.entries.map { catalog -> OpenUiBuilderEditorAction(project, catalog) }
     )

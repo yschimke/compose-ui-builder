@@ -4,6 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.LightVirtualFile
 import ee.schimke.composeai.uibuilder.desktop.OfflineCatalog
 import ee.schimke.composeai.uibuilder.desktop.OfflineUiBuilderSession
@@ -13,6 +14,7 @@ import java.nio.file.Path
 internal class UiBuilderProjectService(private val project: Project) : Disposable {
   private val sessions = mutableMapOf<OfflineCatalog, OfflineUiBuilderSession>()
   private val files = mutableMapOf<OfflineCatalog, UiBuilderVirtualFile>()
+  private var previewToolWindow: ToolWindow? = null
 
   fun session(catalog: OfflineCatalog): OfflineUiBuilderSession =
     sessions.getOrPut(catalog) {
@@ -25,11 +27,23 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
   fun openEditor(catalog: OfflineCatalog) {
     val file = files.getOrPut(catalog) { UiBuilderVirtualFile(catalog) }
     FileEditorManager.getInstance(project).openFile(file, true)
+    selectPreview(catalog)
+  }
+
+  /** Keeps the auxiliary Preview view paired with whichever visual editor is active. */
+  fun attachPreviewToolWindow(toolWindow: ToolWindow) {
+    previewToolWindow = toolWindow
+  }
+
+  fun selectPreview(catalog: OfflineCatalog) {
+    val content = previewToolWindow?.contentManager?.findContent(catalog.displayName) ?: return
+    previewToolWindow?.contentManager?.setSelectedContent(content, false)
   }
 
   override fun dispose() {
     sessions.values.forEach(OfflineUiBuilderSession::close)
     sessions.clear()
+    previewToolWindow = null
   }
 }
 
