@@ -4,7 +4,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.MouseButton
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -58,12 +60,13 @@ class CanvasMoveDragTest {
 
       // The hold arms the drag; the pointer then travels without the slop cancelling it, because
       // once armed the gesture owns the pointer.
-      onRoot().performTouchInput {
-        down(pressAt)
+      onRoot().performMouseInput {
+        moveTo(pressAt)
+        press(MouseButton.Primary)
         advanceEventTime(1_000)
         moveTo(Offset(pressAt.x, pressAt.y + (dropAt.y - pressAt.y) / 2))
         moveTo(dropAt)
-        up()
+        release(MouseButton.Primary)
       }
       waitForIdle()
 

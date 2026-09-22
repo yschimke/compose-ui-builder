@@ -64,12 +64,9 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.CodeOff
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Download
@@ -132,7 +129,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -5313,25 +5309,31 @@ private fun InsertPanel(
         state.document.roots.isEmpty() -> "Adds as this design's first item"
         else -> "Adds beside the design, on a new board"
       }
-    Text(
+    val destination =
       when {
         state.addBeside -> besideDestination ?: besideRefusal.orEmpty()
         dropTarget != null ->
           "Adds into ${dropTargetLabel ?: "${dropTarget.nodeId}.${dropTarget.slot}"}"
         else -> "Select a layer that can hold a component"
-      },
-      Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
-      color =
-        if (if (state.addBeside) besideDestination == null else dropTarget == null)
-          MaterialTheme.colorScheme.onSurfaceVariant
-        else MaterialTheme.colorScheme.primary,
-      style = MaterialTheme.typography.labelSmall,
-      maxLines = 2,
-      overflow = TextOverflow.Ellipsis,
+      }
+    LocalUiBuilderChrome.current.ComponentBrowserDestination(
+      destination,
+      available = if (state.addBeside) besideDestination != null else dropTarget != null,
     )
-    AddBesideSwitch(state.addBeside) { dispatch(UiBuilderEditorEvent.ToggleAddBeside) }
+    LocalUiBuilderChrome.current.ComponentBrowserAddBeside(state.addBeside) {
+      dispatch(UiBuilderEditorEvent.ToggleAddBeside)
+    }
     if (!packs.isEmpty && onManagePacks != null) {
-      PacksSummaryRow(packs, state.enabledPacks, onManagePacks)
+      val on = packs.packs.count { it.id in state.enabledPacks }
+      LocalUiBuilderChrome.current.ComponentBrowserPacksSummary(
+        label =
+          when {
+            on == 0 ->
+              "${packs.packs.size} component ${if (packs.packs.size == 1) "pack" else "packs"} off"
+            else -> "$on of ${packs.packs.size} component packs on"
+          },
+        onManage = onManagePacks,
+      )
     }
     // The palette is a visual chooser. A grid gives each component's rendered stem enough room to
     // be recognised, while full-width shelf headings keep the catalog's component families clear.
@@ -5344,7 +5346,7 @@ private fun InsertPanel(
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       item(span = { GridItemSpan(maxLineSpan) }) {
-        CatalogAllRow(totalCatalogComponents) {
+        LocalUiBuilderChrome.current.ComponentBrowserAllRow(totalCatalogComponents) {
           if (state.catalogQuery.isNotBlank()) dispatch(UiBuilderEditorEvent.SearchCatalog(""))
           dispatch(UiBuilderEditorEvent.ExpandAllCatalogGroups)
         }
@@ -5358,7 +5360,12 @@ private fun InsertPanel(
       ) { row ->
         when (row) {
           is EditorCatalogRow.Group ->
-            CatalogGroupRow(row) { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.name)) }
+            LocalUiBuilderChrome.current.ComponentBrowserGroupRow(
+              name = row.name,
+              count = row.count,
+              expanded = row.expanded,
+              onToggle = { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.name)) },
+            )
           is EditorCatalogRow.Component ->
             CatalogComponentTile(
               item = row.item,
@@ -7067,213 +7074,6 @@ private fun RemoteComposeSourceRow(
   }
 }
 
-/**
- * The row above the shelves: how many components there are in total, and a way back to all of them.
- *
- * The catalog's tree leads with the same row for the same reason — the default view of a catalog
- * should be the whole catalog, and once you have filtered or collapsed your way into a corner of it
- * there has to be something to press to get back out. Pressing it clears the search and opens every
- * shelf.
- */
-/**
- * How many packs are on, and the way to the switch — said in the palette, because the palette is
- * where somebody notices a component they expected is not there.
- */
-@Composable
-private fun PacksSummaryRow(
-  packs: UiBuilderComponentPacks,
-  enabledPacks: Set<String>,
-  onManagePacks: () -> Unit,
-) {
-  val on = packs.packs.count { it.id in enabledPacks }
-  Row(
-    Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Text(
-      when {
-        on == 0 ->
-          "${packs.packs.size} component ${if (packs.packs.size == 1) "pack" else "packs"} off"
-        else -> "$on of ${packs.packs.size} component packs on"
-      },
-      Modifier.weight(1f),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
-    TextButton(
-      onClick = onManagePacks,
-      modifier = Modifier.semantics { contentDescription = "Manage component packs" },
-    ) {
-      Text("Packs…", style = MaterialTheme.typography.labelMedium)
-    }
-  }
-}
-
-@Composable
-private fun CatalogAllRow(total: Int, onShowAll: () -> Unit) {
-  Surface(
-    Modifier.fillMaxWidth()
-      .padding(horizontal = 12.dp, vertical = 4.dp)
-      .clip(RoundedCornerShape(20.dp))
-      .clickable(onClick = onShowAll),
-    shape = RoundedCornerShape(20.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant,
-  ) {
-    Row(
-      Modifier.padding(start = 16.dp, end = 8.dp).height(40.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Text(
-        "All",
-        Modifier.weight(1f).semantics { contentDescription = "Show all $total components" },
-        style = MaterialTheme.typography.bodyLarge,
-      )
-      Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-      ) {
-        Text(
-          total.toString(),
-          Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-          color = MaterialTheme.colorScheme.onPrimaryContainer,
-          style = MaterialTheme.typography.labelMedium,
-        )
-      }
-    }
-  }
-}
-
-/**
- * A shelf: its name, how many components are on it, and a twisty.
- *
- * Sentence case on a plain ground, not the small-caps label on a filled bar the kind headings used
- * to draw. That styling belonged to a heading over a run of rows; this is a **row** — the whole
- * width is the hit target, it opens and shuts, and it is the top of a tree whose other rows are
- * sentence case too. An open shelf takes the accent bar and the accent colour, which is the only
- * thing on the panel saying which branch you are inside.
- */
-@Composable
-private fun CatalogGroupRow(row: EditorCatalogRow.Group, onToggle: () -> Unit) {
-  val accent =
-    if (row.expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-  Row(
-    Modifier.fillMaxWidth().height(40.dp).clickable(onClick = onToggle).semantics {
-      contentDescription = "${if (row.expanded) "Collapse" else "Expand"} ${row.name}"
-    },
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    // The accent bar, drawn in the gutter every child row's guide line also runs down, so the open
-    // shelf and its contents are one column rather than a coloured row above unrelated rows.
-    Box(
-      Modifier.padding(start = 8.dp)
-        .width(3.dp)
-        .height(24.dp)
-        .background(
-          if (row.expanded) MaterialTheme.colorScheme.primary else Color.Transparent,
-          RoundedCornerShape(2.dp),
-        )
-    )
-    DisclosureTriangle(row.expanded, accent, Modifier.padding(start = 5.dp))
-    Text(
-      row.name,
-      Modifier.padding(start = 2.dp).weight(1f),
-      color = accent,
-      style = MaterialTheme.typography.bodyLarge,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
-    RowCount(row.count, MaterialTheme.colorScheme.surfaceVariant)
-  }
-}
-
-/**
- * The twisty a shelf or a component turns to say whether it is open.
- *
- * One glyph rotated rather than two, so the states cannot drift apart in weight, and a solid
- * triangle rather than a chevron because that is what the catalog's tree draws and this panel is
- * meant to read as the same control.
- */
-@Composable
-private fun DisclosureTriangle(expanded: Boolean, tint: Color, modifier: Modifier = Modifier) {
-  Icon(
-    Icons.Filled.ArrowDropDown,
-    contentDescription = null,
-    modifier.size(20.dp).rotate(if (expanded) 0f else -90f),
-    tint = tint,
-  )
-}
-
-/** A placeholder the width of [DisclosureTriangle], so rows without one still line up. */
-@Composable
-private fun DisclosureSpacer() {
-  Spacer(Modifier.width(20.dp))
-}
-
-/**
- * How many things are under a row.
- *
- * A shelf count sits in a pill and a component's variant count does not, which is the weighting the
- * catalog's tree uses: the top level is how you choose where to look, and a number that far down is
- * a detail about one row.
- */
-@Composable
-private fun RowCount(count: Int, background: Color) {
-  Surface(
-    Modifier.padding(end = 12.dp),
-    shape = RoundedCornerShape(10.dp),
-    color = background,
-  ) {
-    Text(
-      count.toString(),
-      Modifier.padding(horizontal = 7.dp, vertical = 1.dp),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-    )
-  }
-}
-
-/**
- * The vertical rule that runs down a shelf's children, in the gutter its heading's accent bar is
- * in.
- *
- * Without it a component row indented under a heading and a component row indented under nothing
- * look the same, which at 280 dp — where a long display name pushes the indent out of view — is
- * most of them.
- */
-@Composable
-private fun IndentGuide(depth: Int) {
-  Box(Modifier.width(9.dp + 12.dp * (depth - 1)).fillMaxHeight(), Alignment.CenterStart) {
-    Box(
-      Modifier.padding(start = 9.dp)
-        .width(1.dp)
-        .fillMaxHeight()
-        .background(MaterialTheme.colorScheme.outlineVariant)
-    )
-  }
-}
-
-/** The star that keeps a component at the top of the palette. */
-@Composable
-private fun PinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
-  Box(
-    Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).clickable(onClick = onToggle).semantics(
-      mergeDescendants = true
-    ) {
-      contentDescription = if (pinned) "Unpin $componentName" else "Pin $componentName"
-    },
-    contentAlignment = Alignment.Center,
-  ) {
-    Icon(
-      if (pinned) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-      contentDescription = null,
-      modifier = Modifier.size(16.dp),
-      tint = if (pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-    )
-  }
-}
-
 /** One draggable stem component in the visual palette. Variants stay behind its disclosure. */
 @Composable
 private fun CatalogComponentTile(
@@ -7290,60 +7090,32 @@ private fun CatalogComponentTile(
   onTogglePinned: () -> Unit,
 ) {
   val unexportable = item.exportsToCompose == false
-  Column(
-    Modifier.fillMaxWidth()
-      .clip(RoundedCornerShape(10.dp))
-      .background(MaterialTheme.colorScheme.surfaceVariant)
-      .padding(6.dp)
+  LocalUiBuilderChrome.current.ComponentBrowserTile(
+    model =
+      UiBuilderCatalogTileModel(
+        title = item.displayName,
+        supporting = refusal ?: item.componentId,
+        supportingIsError = refusal != null,
+        unexportable = unexportable,
+        pinned = pinned,
+        variantCount = item.variants.size,
+        variantsExpanded = expanded,
+        canAdd = canAdd,
+        addContentDescription =
+          if (refusal == null) "Add ${item.displayName}" else "Add ${item.displayName} — $refusal",
+        onAdd = onAdd,
+        onTogglePinned = onTogglePinned,
+        onToggleVariants = onToggleVariants,
+      )
   ) {
-    Box(Modifier.fillMaxWidth().unexportable(unexportable), contentAlignment = Alignment.Center) {
-      CatalogThumbnail(
-        document = thumbnail,
-        dragKey = item.componentId,
-        label = item.displayName,
-        size = DpSize(104.dp, 72.dp),
-        onDrag = onDrag,
-        onDrop = onDrop,
-      )
-    }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-      Text(
-        item.displayName,
-        Modifier.weight(1f).unexportable(unexportable),
-        style = MaterialTheme.typography.labelLarge,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-      if (unexportable) UnexportableBadge(item.displayName)
-      PinnedStar(item.displayName, pinned, onTogglePinned)
-    }
-    Text(
-      refusal ?: item.componentId,
-      color =
-        if (refusal != null) MaterialTheme.colorScheme.error
-        else MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-      maxLines = if (refusal == null) 1 else 2,
-      overflow = TextOverflow.Ellipsis,
+    CatalogThumbnail(
+      document = thumbnail,
+      dragKey = item.componentId,
+      label = item.displayName,
+      size = DpSize(104.dp, 72.dp),
+      onDrag = onDrag,
+      onDrop = onDrop,
     )
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-      if (item.variants.isNotEmpty()) {
-        TextButton(
-          onClick = onToggleVariants,
-          modifier =
-            Modifier.weight(1f).semantics {
-              contentDescription =
-                "${if (expanded) "Hide" else "Show"} ${item.displayName} variants"
-            },
-          contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-        ) {
-          Text(if (expanded) "Hide variants" else "${item.variants.size} variants")
-        }
-      } else {
-        Spacer(Modifier.weight(1f))
-      }
-      CatalogAddButton(canAdd, onAdd, item.displayName, refusal)
-    }
   }
 }
 
@@ -7362,131 +7134,27 @@ private fun CatalogVariantTile(
   val label = variant.label
   val qualified = "$label $componentName"
   val unexportable = variant.exportsToCompose == false
-  Column(
-    Modifier.fillMaxWidth()
-      .clip(RoundedCornerShape(8.dp))
-      .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-      .padding(6.dp)
-  ) {
-    Box(Modifier.fillMaxWidth().unexportable(unexportable), contentAlignment = Alignment.Center) {
-      CatalogThumbnail(
-        document = thumbnail,
-        dragKey = "${variant.componentId}#${variant.value}",
-        label = qualified,
-        size = DpSize(96.dp, 64.dp),
-        onDrag = onDrag,
-        onDrop = onDrop,
+  LocalUiBuilderChrome.current.ComponentBrowserTile(
+    model =
+      UiBuilderCatalogTileModel(
+        title = label,
+        supporting = null,
+        variant = true,
+        defaultVariant = variant.default,
+        unexportable = unexportable,
+        canAdd = canAdd,
+        addContentDescription =
+          if (refusal == null) "Add $qualified" else "Add $qualified — $refusal",
+        onAdd = onAdd,
       )
-    }
-    Text(
-      label,
-      Modifier.unexportable(unexportable),
-      style = MaterialTheme.typography.labelMedium,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-      if (variant.default) {
-        Text(
-          "default",
-          Modifier.weight(1f),
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.labelSmall,
-        )
-      } else {
-        Spacer(Modifier.weight(1f))
-      }
-      CatalogAddButton(canAdd, onAdd, qualified, refusal)
-    }
-  }
-}
-
-/**
- * How far a row the Compose export cannot write fades.
- *
- * Faded rather than disabled, because the row is not broken: the canvas draws the component, the
- * PNG and SVG exports carry it, and only the Kotlin is missing. Far enough to read as greyed at a
- * glance next to a covered row, not so far that the name and the picture stop being legible — the
- * row still has to be findable by someone who wants the thing on the canvas.
- */
-private const val UNEXPORTABLE_ALPHA = 0.45f
-
-private fun Modifier.unexportable(unexportable: Boolean): Modifier =
-  if (unexportable) alpha(UNEXPORTABLE_ALPHA) else this
-
-/**
- * The mark on a row the Compose export cannot write, beside the Add it does not take away.
- *
- * An icon rather than a word, and the reason is the panel's width. It is 280 dp at its narrowest
- * and the name column gives way to whatever sits here: a two-word label turned "Supporting pane"
- * into "Supporting" and "Search input field" into "Search" — the row saying less about what the
- * component is in order to say what it cannot do. Code, crossed out, is the whole message in 16 dp;
- * the fade on the rest of the row is what makes it read at a glance, and the description carries
- * the sentence for the reader who cannot see either. "Compose export" rather than "export": the PNG
- * and SVG exports do carry these, and the toolbar's Export offers all three.
- */
-@Composable
-private fun UnexportableBadge(componentName: String) {
-  Icon(
-    Icons.Filled.CodeOff,
-    contentDescription =
-      "$componentName renders on the canvas, but the Compose export cannot write it yet",
-    modifier = Modifier.padding(end = 6.dp).size(16.dp),
-    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-  )
-}
-
-/**
- * The one verb every palette row carries, sized so two levels of indent still leave room for it.
- */
-@Composable
-private fun CatalogAddButton(
-  canAdd: Boolean,
-  onAdd: () -> Unit,
-  label: String,
-  refusal: String? = null,
-) {
-  TextButton(
-    onClick = onAdd,
-    enabled = canAdd,
-    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
   ) {
-    // A disabled button is not reachable by touch exploration in every reader, so the reason rides
-    // on the label rather than only on the row's own text.
-    Text(
-      "Add",
-      Modifier.semantics {
-        contentDescription = if (refusal == null) "Add $label" else "Add $label — $refusal"
-      },
-    )
-  }
-}
-
-/** Whether Add fills the selection or starts a sibling item on the design board. */
-@Composable
-private fun AddBesideSwitch(checked: Boolean, onToggle: () -> Unit) {
-  Row(
-    Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, bottom = 4.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Column(Modifier.weight(1f)) {
-      Text("Add beside", style = MaterialTheme.typography.labelMedium)
-      Text(
-        "Place items side by side instead of inside the selection",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-      )
-    }
-    Switch(
-      checked = checked,
-      onCheckedChange = { onToggle() },
-      modifier =
-        Modifier.semantics {
-          contentDescription =
-            if (checked) "Add into the selected layer instead" else "Add beside the design instead"
-        },
+    CatalogThumbnail(
+      document = thumbnail,
+      dragKey = "${variant.componentId}#${variant.value}",
+      label = qualified,
+      size = DpSize(96.dp, 64.dp),
+      onDrag = onDrag,
+      onDrop = onDrop,
     )
   }
 }

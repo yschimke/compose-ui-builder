@@ -37,7 +37,14 @@ class PalettePinUiTest {
   fun `the star pins a component into a shelf at the top`() =
     runDesktopComposeUiTest(width = 1600, height = 1050) {
       setContent {
-        MaterialTheme { UiBuilderEditor(document, catalog, initialComponentsOpen = true) }
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialComponentsOpen = true,
+          )
+        }
       }
       waitForIdle()
 
