@@ -38,6 +38,7 @@ import ee.schimke.composeai.uibuilder.UiBuilderChromeIcon
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorActionModel
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorPropertyModel
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorTextFieldModel
+import ee.schimke.composeai.uibuilder.UiBuilderInspectorValueFieldModel
 import ee.schimke.composeai.uibuilder.UiBuilderMenuEntry
 import ee.schimke.composeai.uibuilder.UiBuilderMenuIcon
 import ee.schimke.composeai.uibuilder.UiBuilderRailItemModel
@@ -556,6 +557,39 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
   @Composable
   override fun InspectorMessage(text: String, modifier: Modifier) {
     Text(text, modifier, color = JewelTheme.globalColors.text.info)
+  }
+
+  @Composable
+  override fun InspectorFormHeader(title: String, supporting: String) {
+    Text(title, fontWeight = FontWeight.SemiBold)
+    Text(
+      supporting,
+      Modifier.padding(top = 3.dp, bottom = 12.dp),
+      color = JewelTheme.globalColors.text.info,
+    )
+  }
+
+  @Composable
+  override fun InspectorValueField(model: UiBuilderInspectorValueFieldModel) {
+    var fieldValue by remember(model.label) { mutableStateOf(TextFieldValue(model.value)) }
+    LaunchedEffect(model.value) {
+      if (model.value != fieldValue.text) fieldValue = TextFieldValue(model.value)
+    }
+    Column(model.modifier) {
+      Text(model.label)
+      TextField(
+        value = fieldValue,
+        onValueChange = {
+          fieldValue = it
+          model.onValueChange(it.text)
+        },
+        modifier =
+          Modifier.fillMaxWidth()
+            .padding(top = 4.dp, bottom = 8.dp)
+            .onFocusChanged { model.onFocusChanged(it.isFocused) }
+            .semantics { contentDescription = model.label },
+      )
+    }
   }
 
   @Composable

@@ -52,6 +52,16 @@ internal object PointerTestUiBuilderChrome : UiBuilderChrome by MaterialUiBuilde
   }
 
   @Composable
+  override fun InspectorValueField(model: UiBuilderInspectorValueFieldModel) {
+    MaterialUiBuilderChrome.InspectorValueField(model.copy(modifier = model.modifier.padding(1.dp)))
+  }
+
+  @Composable
+  override fun InspectorFormHeader(title: String, supporting: String) {
+    Box(Modifier.padding(1.dp)) { MaterialUiBuilderChrome.InspectorFormHeader(title, supporting) }
+  }
+
+  @Composable
   override fun InspectorAction(model: UiBuilderInspectorActionModel) {
     MaterialUiBuilderChrome.InspectorAction(model.copy(modifier = model.modifier.padding(1.dp)))
   }

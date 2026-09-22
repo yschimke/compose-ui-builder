@@ -10284,12 +10284,9 @@ private fun ThemeBuilder(
   var typeScale by remember(settings) { mutableStateOf(settings.typeScale.toString()) }
   var cornerRadius by remember(settings) { mutableStateOf(settings.cornerRadiusDp.toString()) }
 
-  Text("Theme builder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-  Text(
+  LocalUiBuilderChrome.current.InspectorFormHeader(
+    "Theme builder",
     "Design-wide colours, typography and shapes",
-    Modifier.padding(top = 3.dp, bottom = 14.dp),
-    color = MaterialTheme.colorScheme.onSurfaceVariant,
-    style = MaterialTheme.typography.bodySmall,
   )
   ThemeField("Primary colour", primary, onTextInputFocusChanged) { primary = it }
   ThemeField("Background colour", background, onTextInputFocusChanged) { background = it }
@@ -10297,25 +10294,28 @@ private fun ThemeBuilder(
   ThemeField("Content colour", content, onTextInputFocusChanged) { content = it }
   ThemeField("Type scale (0.75–1.5)", typeScale, onTextInputFocusChanged) { typeScale = it }
   ThemeField("Corner radius (0–48dp)", cornerRadius, onTextInputFocusChanged) { cornerRadius = it }
-  Button(
-    onClick = {
-      dispatch(
-        UiBuilderEditorEvent.ApplyTheme(
-          EditorThemeSettings(
-            primaryColor = primary,
-            backgroundColor = background,
-            surfaceColor = surface,
-            contentColor = content,
-            typeScale = typeScale.toFloatOrNull() ?: Float.NaN,
-            cornerRadiusDp = cornerRadius.toFloatOrNull() ?: Float.NaN,
+  LocalUiBuilderChrome.current.InspectorAction(
+    UiBuilderInspectorActionModel(
+      label = "Apply theme",
+      primary = true,
+      filled = true,
+      modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+      onClick = {
+        dispatch(
+          UiBuilderEditorEvent.ApplyTheme(
+            EditorThemeSettings(
+              primaryColor = primary,
+              backgroundColor = background,
+              surfaceColor = surface,
+              contentColor = content,
+              typeScale = typeScale.toFloatOrNull() ?: Float.NaN,
+              cornerRadiusDp = cornerRadius.toFloatOrNull() ?: Float.NaN,
+            )
           )
         )
-      )
-    },
-    modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
-  ) {
-    Text("Apply theme")
-  }
+      },
+    )
+  )
 }
 
 @Composable
@@ -10325,20 +10325,14 @@ private fun ThemeField(
   onFocusChanged: (Boolean) -> Unit,
   onValueChange: (String) -> Unit,
 ) {
-  Text(label, style = MaterialTheme.typography.labelMedium)
-  BasicTextField(
-    value = value,
-    onValueChange = onValueChange,
-    modifier =
-      Modifier.fillMaxWidth()
-        .padding(top = 4.dp, bottom = 10.dp)
-        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-        .onFocusChanged { onFocusChanged(it.isFocused) }
-        .semantics { contentDescription = label }
-        .padding(horizontal = 10.dp, vertical = 8.dp),
-    singleLine = true,
-    textStyle =
-      MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+  LocalUiBuilderChrome.current.InspectorValueField(
+    UiBuilderInspectorValueFieldModel(
+      label = label,
+      value = value,
+      modifier = Modifier.fillMaxWidth(),
+      onFocusChanged = onFocusChanged,
+      onValueChange = onValueChange,
+    )
   )
 }
 
