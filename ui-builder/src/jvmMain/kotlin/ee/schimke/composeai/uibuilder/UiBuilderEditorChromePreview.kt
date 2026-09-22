@@ -534,6 +534,35 @@ fun UiBuilderDevicePresetTabletPreview() {
   )
 }
 
+/** IntelliJ's main editor-area view: the editable canvas without an embedded Preview pane. */
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderEditorAreaPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument.onDevice(PREVIEW_PHONE),
+    catalog = editorChromePreviewCatalog,
+    initialSelectedNodeId = "discover-grid",
+    initialPanes = setOf(EditorPane.Editor),
+    availablePanes = setOf(EditorPane.Editor),
+    openDefaultPreview = false,
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
+/** IntelliJ's separate Preview tool-window view, sharing the editor's persisted session. */
+@Preview(widthDp = 720, heightDp = 900)
+@Composable
+fun UiBuilderSeparatePreviewViewPreview() {
+  UiBuilderEditor(
+    document = editorChromePreviewDocument.onDevice(PREVIEW_PHONE),
+    catalog = editorChromePreviewCatalog,
+    initialPanes = setOf(EditorPane.Preview),
+    availablePanes = setOf(EditorPane.Preview),
+    openDefaultPreview = false,
+    devicePresets = PREVIEW_DEVICE_PRESETS,
+  )
+}
+
 /**
  * Three frames for the two previews above, and nothing else reads them.
  *

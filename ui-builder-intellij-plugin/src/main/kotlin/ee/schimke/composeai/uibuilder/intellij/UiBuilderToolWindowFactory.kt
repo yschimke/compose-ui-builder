@@ -1,36 +1,44 @@
 package ee.schimke.composeai.uibuilder.intellij
 
-import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import ee.schimke.composeai.uibuilder.EditorPane
 import ee.schimke.composeai.uibuilder.desktop.OfflineCatalog
-import ee.schimke.composeai.uibuilder.desktop.OfflineUiBuilderApp
-import java.nio.file.Path
+import ee.schimke.composeai.uibuilder.desktop.OfflineUiBuilderSessionView
 import org.jetbrains.jewel.bridge.addComposeTab
 
 /** IntelliJ Platform edge for the otherwise platform-independent offline editor host. */
 class UiBuilderToolWindowFactory : ToolWindowFactory {
   override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-    val storagePath = projectStoragePath(project)
-    toolWindow.addComposeTab("Material 3") {
-      OfflineUiBuilderApp(
-        storagePath = storagePath.resolve(OfflineCatalog.M3.systemId),
-        sessionLabel = "IntelliJ · ${project.name} · Material 3 · saved locally",
-        catalogSystemId = OfflineCatalog.M3.systemId,
-        chrome = JewelUiBuilderChrome,
-      )
+    val service = project.getService(UiBuilderProjectService::class.java)
+    OfflineCatalog.entries.forEach { catalog ->
+      toolWindow.addComposeTab(catalog.displayName) {
+        OfflineUiBuilderSessionView(
+          session = service.session(catalog),
+          sessionLabel =
+            "IntelliJ preview · ${project.name} · ${catalog.displayName} · saved locally",
+          chrome = JewelUiBuilderChrome,
+          initialPanes = setOf(EditorPane.Preview),
+          availablePanes = setOf(EditorPane.Preview),
+          openDefaultPreview = false,
+        )
+      }
     }
-    toolWindow.addComposeTab("Wear M3") {
-      OfflineUiBuilderApp(
-        storagePath = storagePath.resolve(OfflineCatalog.WEAR_M3.systemId),
-        sessionLabel = "IntelliJ · ${project.name} · Wear M3 · saved locally",
-        catalogSystemId = OfflineCatalog.WEAR_M3.systemId,
-        chrome = JewelUiBuilderChrome,
-      )
-    }
+    toolWindow.setTitleActions(
+      OfflineCatalog.entries.map { catalog -> OpenUiBuilderEditorAction(project, catalog) }
+    )
+    service.openEditor(OfflineCatalog.M3)
   }
 }
 
-private fun projectStoragePath(project: Project): Path =
-  Path.of(PathManager.getSystemPath(), "compose-ui-builder", project.locationHash)
+private class OpenUiBuilderEditorAction(
+  private val project: Project,
+  private val catalog: OfflineCatalog,
+) : AnAction("Open ${catalog.displayName} editor") {
+  override fun actionPerformed(event: AnActionEvent) {
+    project.getService(UiBuilderProjectService::class.java).openEditor(catalog)
+  }
+}

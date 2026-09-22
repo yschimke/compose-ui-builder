@@ -92,10 +92,12 @@ environment.
 
 ### As an IntelliJ Platform plugin (proof of concept)
 
-The `:ui-builder-intellij-plugin` module embeds that same offline editor in a **Compose UI
-Builder** tool window. It uses Jewel's Swing bridge for the Compose/Swing boundary and stores a
-separate workspace for each IDE project and catalog under the IDE system directory. The tool window
-has **Material 3** and **Wear M3** tabs; each authors against its matching packaged catalog.
+The `:ui-builder-intellij-plugin` module embeds that same offline editor in IntelliJ's main editor
+area. It uses Jewel's Swing bridge for the Compose/Swing boundary and stores a separate workspace
+for each IDE project and catalog under the IDE system directory. The **Compose UI Builder** tool
+window is the separate preview view, with **Material 3** and **Wear M3** tabs. Its title actions open
+the corresponding visual-editor tab; opening the tool window for the first time opens Material 3.
+The editor and preview share one project session, so a saved edit is reconciled into both views.
 
 Run a sandbox IDE with:
 
@@ -103,9 +105,12 @@ Run a sandbox IDE with:
 ./gradlew :ui-builder-intellij-plugin:runIde
 ```
 
-Open **View → Tool Windows → Compose UI Builder** in the sandbox. This is intentionally an offline
-proof of concept: it persists edits locally but does not yet discover the open project's composables
-or connect to the preview server's collaboration and native-render lanes.
+Open **View → Tool Windows → Compose UI Builder** in the sandbox, then use **Open Material 3
+editor** or **Open Wear M3 editor** in the tool-window title bar. The visual canvas occupies an IDE
+editor tab; Preview (and Native where a host supplies it) stays in the tool window. This is
+intentionally an offline proof of concept: it persists edits locally but does not yet discover the
+open project's composables or connect to the preview server's collaboration and native-render
+lanes.
 
 The plugin supplies Jewel chrome for the shared editor toolbar, panel rails, property-inspector
 shells, draft and Theme fields, binding/actions, boolean and Add-property controls, Insert/Layers

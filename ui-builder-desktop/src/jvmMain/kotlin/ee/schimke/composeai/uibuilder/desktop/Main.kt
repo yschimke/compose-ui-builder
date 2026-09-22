@@ -6,7 +6,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import ee.schimke.composeai.uibuilder.EditorPane
 import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.MaterialUiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
@@ -34,7 +35,14 @@ import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.toUiBuilderDocument
 import java.nio.file.Path
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -71,37 +79,81 @@ fun OfflineUiBuilderApp(
   catalogSystemId: String = OfflineCatalog.M3.systemId,
   remoteServer: String? = null,
   chrome: UiBuilderChrome = MaterialUiBuilderChrome,
+  initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
+  availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
+  openDefaultPreview: Boolean = true,
 ) {
-  val offlineCatalog = remember(catalogSystemId) { OfflineCatalog.forSystem(catalogSystemId) }
-  val catalogText = remember(offlineCatalog) { resourceText(offlineCatalog.capabilitiesResource) }
-  val catalog = remember(catalogText) { CapabilityCatalogParser.parse(catalogText) }
-  val catalogCapability =
-    remember(catalogText) { Json.decodeFromString(CatalogCapabilityV1.serializer(), catalogText) }
-  val service =
-    remember(catalogCapability) {
-      LocalUiBuilderService(
-        store = LocalDesignStore(FileLocalDesignStorage(storagePath)),
-        catalogs = { listOf(catalogCapability) },
-        clock = System::currentTimeMillis,
-      )
+  val session =
+    remember(storagePath, catalogSystemId, remoteServer) {
+      OfflineUiBuilderSession(storagePath, catalogSystemId, remoteServer)
     }
-  val remotePreview = remember(remoteServer) { remoteServer?.let(::RemotePreviewClient) }
-  var snapshot by remember { mutableStateOf<SnapshotResponseV1?>(null) }
-  var failure by remember { mutableStateOf<String?>(null) }
-  val submissions = remember { Channel<EditorSubmission>(Channel.UNLIMITED) }
-  DisposableEffect(submissions) { onDispose { submissions.close() } }
+  DisposableEffect(session) { onDispose { session.close() } }
+  OfflineUiBuilderSessionView(
+    session = session,
+    sessionLabel = sessionLabel,
+    chrome = chrome,
+    initialPanes = initialPanes,
+    availablePanes = availablePanes,
+    openDefaultPreview = openDefaultPreview,
+  )
+}
 
-  suspend fun refresh() {
-    when (val result = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
-      is SnapshotResponseV1 -> snapshot = result
-      is ErrorResponseV1 -> failure = result.error.message
-      else -> failure = "unexpected response while opening the desktop design"
+/** One persisted offline design shared by every IDE view that displays it. */
+class OfflineUiBuilderSession(
+  storagePath: Path,
+  catalogSystemId: String = OfflineCatalog.M3.systemId,
+  remoteServer: String? = null,
+) : AutoCloseable {
+  internal val offlineCatalog = OfflineCatalog.forSystem(catalogSystemId)
+  private val catalogText = resourceText(offlineCatalog.capabilitiesResource)
+  internal val catalog = CapabilityCatalogParser.parse(catalogText)
+  private val catalogCapability =
+    Json.decodeFromString(CatalogCapabilityV1.serializer(), catalogText)
+  private val service =
+    LocalUiBuilderService(
+      store = LocalDesignStore(FileLocalDesignStorage(storagePath)),
+      catalogs = { listOf(catalogCapability) },
+      clock = System::currentTimeMillis,
+    )
+  internal val remotePreview = remoteServer?.let(::RemotePreviewClient)
+  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+  private val submissions = Channel<EditorSubmission>(Channel.UNLIMITED)
+  private val mutableSnapshot = MutableStateFlow<SnapshotResponseV1?>(null)
+  internal val snapshot = mutableSnapshot.asStateFlow()
+  private val mutableFailure = MutableStateFlow<String?>(null)
+  internal val failure = mutableFailure.asStateFlow()
+
+  init {
+    scope.launch { openOrCreate() }
+    // One protocol command at a time, just like the browser session. The next submission must use
+    // the revision the previous one produced, otherwise quick edits conflict with their own store.
+    scope.launch {
+      for (submission in submissions) {
+        val baseRevision =
+          mutableSnapshot.value?.snapshot?.state?.document?.revision?.toInt() ?: continue
+        when (
+          val result =
+            service.execute(
+              ApplyOperationRequestV1(
+                submission.toProtocolSubmission(ACTOR_ID, CLIENT_ID, baseRevision)
+              )
+            )
+        ) {
+          is OperationOutcomeResponseV1 -> refresh()
+          is ErrorResponseV1 -> mutableFailure.value = result.error.message
+          else -> mutableFailure.value = "unexpected response while saving the desktop design"
+        }
+      }
     }
   }
 
-  LaunchedEffect(service) {
+  internal fun submit(submission: EditorSubmission) {
+    submissions.trySend(submission)
+  }
+
+  private suspend fun openOrCreate() {
     when (val open = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
-      is SnapshotResponseV1 -> snapshot = open
+      is SnapshotResponseV1 -> mutableSnapshot.value = open
       is ErrorResponseV1 -> {
         val seed =
           offlineCatalog.seed(
@@ -110,36 +162,41 @@ fun OfflineUiBuilderApp(
             nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
           )
         when (val created = service.create(seed)) {
-          is SnapshotResponseV1 -> snapshot = created
-          is ErrorResponseV1 -> failure = created.error.message
-          else -> failure = "unexpected response while creating the desktop design"
+          is SnapshotResponseV1 -> mutableSnapshot.value = created
+          is ErrorResponseV1 -> mutableFailure.value = created.error.message
+          else -> mutableFailure.value = "unexpected response while creating the desktop design"
         }
       }
-      else -> failure = "unexpected response while opening the desktop design"
+      else -> mutableFailure.value = "unexpected response while opening the desktop design"
     }
   }
 
-  // One protocol command at a time, just like the browser session. The next submission must use
-  // the revision that the previous one produced, otherwise a quick sequence of edits conflicts
-  // with its own locally persisted history.
-  LaunchedEffect(service, submissions) {
-    for (submission in submissions) {
-      val baseRevision = snapshot?.snapshot?.state?.document?.revision?.toInt() ?: continue
-      when (
-        val result =
-          service.execute(
-            ApplyOperationRequestV1(
-              submission.toProtocolSubmission(ACTOR_ID, CLIENT_ID, baseRevision)
-            )
-          )
-      ) {
-        is OperationOutcomeResponseV1 -> refresh()
-        is ErrorResponseV1 -> failure = result.error.message
-        else -> failure = "unexpected response while saving the desktop design"
-      }
+  private suspend fun refresh() {
+    when (val result = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
+      is SnapshotResponseV1 -> mutableSnapshot.value = result
+      is ErrorResponseV1 -> mutableFailure.value = result.error.message
+      else -> mutableFailure.value = "unexpected response while opening the desktop design"
     }
   }
 
+  override fun close() {
+    submissions.close()
+    scope.cancel()
+  }
+}
+
+/** Displays one view of a shared [OfflineUiBuilderSession]. */
+@Composable
+fun OfflineUiBuilderSessionView(
+  session: OfflineUiBuilderSession,
+  sessionLabel: String,
+  chrome: UiBuilderChrome = MaterialUiBuilderChrome,
+  initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
+  availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
+  openDefaultPreview: Boolean = true,
+) {
+  val snapshot by session.snapshot.collectAsState()
+  val failure by session.failure.collectAsState()
   snapshot?.let { current ->
     var previewDocument by
       remember(current.snapshot.state.document.revision) {
@@ -147,16 +204,19 @@ fun OfflineUiBuilderApp(
       }
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
-      catalog = catalog,
+      catalog = session.catalog,
       chrome = chrome,
       actorId = ACTOR_ID,
       clientId = CLIENT_ID,
       operationIdPrefix = CLIENT_ID,
       sessionLabel = sessionLabel,
+      initialPanes = initialPanes,
+      availablePanes = availablePanes,
+      openDefaultPreview = openDefaultPreview,
       onRequestNativeRender =
-        remotePreview?.let { client -> { shape -> client.render(previewDocument, shape) } },
+        session.remotePreview?.let { client -> { shape -> client.render(previewDocument, shape) } },
       onStateChanged = { state -> previewDocument = state.collaboration.document },
-      onSubmission = { submissions.trySend(it) },
+      onSubmission = session::submit,
     )
   }
   failure?.let { Text(it) }
