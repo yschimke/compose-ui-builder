@@ -224,10 +224,9 @@ internal val OfflineCatalog.displayName: String
       OfflineCatalog.REMOTE_M3 -> "Wear widgets"
     }
 
-internal fun isProjectDesign(project: Project, file: VirtualFile): Boolean {
-  if (file.isDirectory || file.extension != "json" || file.name == "index.json") return false
-  val root = project.basePath?.trimEnd('/') ?: return false
-  if (!file.path.startsWith("$root/ui-builder/designs/")) return false
+/** Recognizes a design by its declared document shape, not by where its JSON file is stored. */
+internal fun isProjectDesign(file: VirtualFile): Boolean {
+  if (file.isDirectory || file.extension != "json") return false
   return readProjectDesign(file)?.catalogPin?.systemId?.let { systemId ->
     runCatching { OfflineCatalog.forSystem(systemId) }.isSuccess
   } == true

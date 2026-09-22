@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -25,6 +26,14 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.Dispatchers
+
+/**
+ * Carries host-specific root locals into a [DeviceScene], whose composition cannot inherit them.
+ */
+public val LocalDeviceSceneRoot =
+  staticCompositionLocalOf<@Composable (@Composable () -> Unit) -> Unit> {
+    { content -> content() }
+  }
 
 /**
  * A device pane drawn by **its own Compose scene**, so the design can be driven the way a watch
@@ -91,9 +100,10 @@ internal fun DeviceSceneHost(
   // design inside a scene that is already standing, instead of tearing down and rebuilding a
   // composition on every keystroke.
   val latestContent = rememberUpdatedState(content)
+  val sceneRoot = LocalDeviceSceneRoot.current
   val holder =
     remember(key, sizePx, density, layoutDirection) {
-      DeviceScene(sizePx, density, layoutDirection) { latestContent.value() }
+      DeviceScene(sizePx, density, layoutDirection) { sceneRoot { latestContent.value() } }
     }
   DisposableEffect(holder) { onDispose { holder.close() } }
   // The pump asks for frames only while the scene has work: a design that has settled costs a draw,
