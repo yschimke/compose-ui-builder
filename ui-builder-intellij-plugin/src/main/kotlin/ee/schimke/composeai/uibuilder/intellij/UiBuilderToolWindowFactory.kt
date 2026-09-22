@@ -31,9 +31,13 @@ class UiBuilderToolWindowFactory : ToolWindowFactory {
     toolWindow.addComposeTab(PREVIEW_CONTENT) {
       val selection by service.activeSession.collectAsState()
       selection?.let { active ->
+        val session by active.session.collectAsState()
+        val status by active.status.collectAsState()
         OfflineUiBuilderSessionView(
-          session = active.session,
-          sessionLabel = "IntelliJ preview · ${project.name} · ${active.title}",
+          session = session,
+          sessionLabel =
+            "IntelliJ preview · ${project.name} · ${active.title}" +
+              status?.let { " · $it" }.orEmpty(),
           chrome = JewelUiBuilderChrome,
           initialPanes = setOf(EditorPane.Preview),
           availablePanes = setOf(EditorPane.Preview),

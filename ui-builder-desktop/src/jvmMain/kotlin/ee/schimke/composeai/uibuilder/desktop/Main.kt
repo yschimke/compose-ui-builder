@@ -104,7 +104,7 @@ fun OfflineUiBuilderApp(
   )
 }
 
-/** One persisted offline design shared by every IDE view that displays it. */
+/** One authoritative design session shared by every IDE view that displays it. */
 interface UiBuilderSession : AutoCloseable {
   val catalog: CapabilityCatalog
   val snapshot: StateFlow<SnapshotResponseV1?>
@@ -267,7 +267,7 @@ private constructor(
   }
 }
 
-/** Displays one view of a shared [OfflineUiBuilderSession]. */
+/** Displays one view of a shared [UiBuilderSession]. */
 @Composable
 fun OfflineUiBuilderSessionView(
   session: UiBuilderSession,

@@ -117,8 +117,9 @@ The plugin also recognizes published `DesignDocumentV1` files under the project'
 `ui-builder/designs/` directory. Open one from the Project view, or choose **Open checked-in
 design** in the UI Builder tool-window title bar. Its **Design** editor tab and the separate Preview
 edit the checked-in JSON directly; the ordinary JSON editor remains available beside it for review
-and git diffs. An external or unsaved JSON change is never overwritten: reopen the visual editor to
-adopt it before making another visual edit.
+and git diffs. A valid saved change from the JSON editor, an IDE agent or another process is adopted
+automatically by the open visual editor and Preview. Invalid JSON leaves the last valid design on
+screen with a status message, and an unsaved or concurrent JSON change is never overwritten.
 
 Choose **Browse server designs** to connect to a compose-preview host. The plugin requests a
 short-lived `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` grant, opens its approval
@@ -127,8 +128,8 @@ live editor tab. Server, browser, agent, editor, and Preview changes all use the
 protocol and update stream.
 
 **Copy active design for an agent** copies a source-specific handoff. For a checked-in design it
-names the repository JSON file, which an IDE agent can read and edit directly; reopen the visual
-editor after such an external edit. For a remote design it names the design id and the server's
+names the repository JSON file, which an IDE agent can read and edit directly while the visual
+editor automatically follows valid saves. For a remote design it names the design id and the server's
 `/mcp` endpoint, where the agent requests its own grant rather than receiving the IDE's credential.
 The plugin deliberately does not embed another MCP server: HTTP/WebSocket routes and MCP tools
 belong to the compose-preview host, while the checked-in file is already the local agent boundary.

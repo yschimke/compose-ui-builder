@@ -8,6 +8,9 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.LightVirtualFile
 import ee.schimke.composeai.uibuilder.desktop.OfflineCatalog
@@ -23,18 +26,46 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-internal data class UiBuilderSessionSelection(
-  val session: UiBuilderSession,
+internal class UiBuilderSessionSelection(
+  initialSession: UiBuilderSession,
   val title: String,
-  val catalog: OfflineCatalog,
+  initialCatalog: OfflineCatalog,
   val projectFile: VirtualFile? = null,
   val agentPrompt: String,
+) {
+  var catalog: OfflineCatalog = initialCatalog
+    private set
+
+  private val mutableSession = MutableStateFlow(initialSession)
+  val session = mutableSession.asStateFlow()
+  val currentSession: UiBuilderSession
+    get() = mutableSession.value
+
+  private val mutableStatus = MutableStateFlow<String?>(null)
+  val status = mutableStatus.asStateFlow()
+
+  fun replaceSession(replacement: UiBuilderSession, replacementCatalog: OfflineCatalog = catalog) {
+    val previous = mutableSession.value
+    catalog = replacementCatalog
+    mutableSession.value = replacement
+    previous.close()
+  }
+
+  fun reportStatus(message: String?) {
+    mutableStatus.value = message
+  }
+}
+
+private data class ProjectDesignBinding(
+  val selection: UiBuilderSessionSelection,
+  val writer: ProjectDesignWriter,
+  var reloadScheduled: Boolean = false,
 )
 
 /** Project lifetime shared by visual editors and the active Preview tool-window view. */
 internal class UiBuilderProjectService(private val project: Project) : Disposable {
   private val catalogSessions = mutableMapOf<OfflineCatalog, UiBuilderSessionSelection>()
-  private val projectSessions = mutableMapOf<String, UiBuilderSessionSelection>()
+  private val projectSessions = mutableMapOf<String, ProjectDesignBinding>()
   private val remoteSessions = mutableMapOf<String, UiBuilderSessionSelection>()
   private val files = mutableMapOf<OfflineCatalog, UiBuilderVirtualFile>()
   private val remoteFiles = mutableMapOf<String, UiBuilderRemoteVirtualFile>()
@@ -42,16 +73,29 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
   val activeSession = mutableActiveSession.asStateFlow()
   private var previewToolWindow: ToolWindow? = null
 
+  init {
+    project.messageBus
+      .connect(this)
+      .subscribe(
+        VirtualFileManager.VFS_CHANGES,
+        object : BulkFileListener {
+          override fun after(events: List<VFileEvent>) {
+            events.mapNotNull { it.file }.distinctBy { it.url }.forEach(::projectFileChanged)
+          }
+        },
+      )
+  }
+
   fun catalogSession(catalog: OfflineCatalog): UiBuilderSessionSelection =
     catalogSessions.getOrPut(catalog) {
       UiBuilderSessionSelection(
-        session =
+        initialSession =
           OfflineUiBuilderSession(
             storagePath = projectStoragePath(project).resolve(catalog.systemId),
             catalogSystemId = catalog.systemId,
           ),
         title = catalog.displayName,
-        catalog = catalog,
+        initialCatalog = catalog,
         agentPrompt =
           "Open the active Compose UI Builder workspace in IntelliJ. It is an IDE-local scratch " +
             "design and is not available to external agents; ask me to save it under " +
@@ -60,24 +104,26 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
     }
 
   fun projectSession(file: VirtualFile): UiBuilderSessionSelection {
-    // FileEditorProvider calls this when the Design tab is created. Closing and reopening that tab
-    // is the explicit way to adopt JSON written by an agent or the ordinary text editor.
-    projectSessions.remove(file.url)?.session?.close()
+    projectSessions[file.url]?.let {
+      return it.selection
+    }
     val document =
       requireNotNull(readProjectDesign(file)) { "${file.path} is not a UI Builder design" }
     val catalog = OfflineCatalog.forSystem(document.catalogPin.systemId)
     val writer = ProjectDesignWriter(file)
-    return UiBuilderSessionSelection(
-        session =
+    val selection =
+      UiBuilderSessionSelection(
+        initialSession =
           OfflineUiBuilderSession.projectDocument(document.toUiBuilderDocument()) { committed ->
             writer.write(committed)
           },
         title = document.title.ifBlank { document.id },
-        catalog = catalog,
+        initialCatalog = catalog,
         projectFile = file,
         agentPrompt = projectAgentPrompt(file),
       )
-      .also { projectSessions[file.url] = it }
+    projectSessions[file.url] = ProjectDesignBinding(selection, writer)
+    return selection
   }
 
   fun openRemoteDesign(connection: RemoteUiBuilderConnection, design: RemoteUiBuilderDesign) {
@@ -85,9 +131,9 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
     val selection =
       remoteSessions.getOrPut(key) {
         UiBuilderSessionSelection(
-          session = connection.openDesign(design),
+          initialSession = connection.openDesign(design),
           title = design.title.ifBlank { design.designId },
-          catalog = OfflineCatalog.forSystem(design.catalogSystemId),
+          initialCatalog = OfflineCatalog.forSystem(design.catalogSystemId),
           agentPrompt = remoteAgentPrompt(connection, design),
         )
       }
@@ -116,9 +162,41 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
     }
   }
 
+  private fun projectFileChanged(file: VirtualFile) {
+    val binding = projectSessions[file.url] ?: return
+    if (binding.writer.isWriting || binding.writer.matches(file.modificationStamp)) return
+    if (binding.reloadScheduled) return
+    binding.reloadScheduled = true
+    ApplicationManager.getApplication().invokeLater {
+      binding.reloadScheduled = false
+      if (project.isDisposed || !file.isValid) return@invokeLater
+      if (binding.writer.matches(file.modificationStamp)) return@invokeLater
+      val document = readProjectDesign(file)
+      if (document == null) {
+        binding.selection.reportStatus("external JSON is not a valid DesignDocumentV1")
+        return@invokeLater
+      }
+      val catalog = runCatching {
+        OfflineCatalog.forSystem(document.catalogPin.systemId)
+      }
+        .getOrNull()
+      if (catalog == null) {
+        binding.selection.reportStatus("external JSON names a catalog this plugin cannot open")
+        return@invokeLater
+      }
+      binding.writer.adopt(file.modificationStamp)
+      val replacement =
+        OfflineUiBuilderSession.projectDocument(document.toUiBuilderDocument()) { committed ->
+          binding.writer.write(committed)
+        }
+      binding.selection.reportStatus(null)
+      binding.selection.replaceSession(replacement, catalog)
+    }
+  }
+
   override fun dispose() {
-    (catalogSessions.values + projectSessions.values + remoteSessions.values)
-      .map { it.session }
+    (catalogSessions.values + projectSessions.values.map { it.selection } + remoteSessions.values)
+      .map { it.currentSession }
       .distinct()
       .forEach(UiBuilderSession::close)
     catalogSessions.clear()
@@ -166,6 +244,15 @@ private fun readProjectDesign(file: VirtualFile): DesignDocumentV1? = runCatchin
 
 private class ProjectDesignWriter(private val file: VirtualFile) {
   private var expectedModificationStamp = file.modificationStamp
+  @Volatile
+  var isWriting: Boolean = false
+    private set
+
+  fun matches(modificationStamp: Long): Boolean = expectedModificationStamp == modificationStamp
+
+  fun adopt(modificationStamp: Long) {
+    expectedModificationStamp = modificationStamp
+  }
 
   fun write(document: DesignDocumentV1) {
     val bytes = projectDesignJson.encodeToString(document).encodeToByteArray()
@@ -182,7 +269,12 @@ private class ProjectDesignWriter(private val file: VirtualFile) {
       }
     }
     val application = ApplicationManager.getApplication()
-    if (application.isDispatchThread) write() else application.invokeAndWait(write)
+    isWriting = true
+    try {
+      if (application.isDispatchThread) write() else application.invokeAndWait(write)
+    } finally {
+      isWriting = false
+    }
   }
 }
 
@@ -200,8 +292,8 @@ internal const val PREVIEW_CONTENT = "Preview"
 private fun projectAgentPrompt(file: VirtualFile): String =
   """Work on the active Compose UI Builder design stored at `${file.path}`.
 Read the `compose-ui-builder` skill first. This is a checked-in DesignDocumentV1, not a live server
-design. Read and edit that JSON file directly, preserve its schema and catalog pin, and tell me to
-reopen the visual editor after an external edit so IntelliJ adopts the new document."""
+design. Read and edit that JSON file directly and preserve its schema, id and catalog pin. IntelliJ
+automatically adopts each valid saved version in the open visual editor and Preview."""
 
 private fun remoteAgentPrompt(
   connection: RemoteUiBuilderConnection,

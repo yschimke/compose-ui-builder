@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.intellij
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
@@ -59,16 +61,18 @@ private class UiBuilderFileEditor(
   private val changes = PropertyChangeSupport(this)
   private val projectService = project.getService(UiBuilderProjectService::class.java)
   private val component = JewelComposePanel {
+    val session by selection.session.collectAsState()
+    val status by selection.status.collectAsState()
     OfflineUiBuilderSessionView(
-      session = selection.session,
+      session = session,
       sessionLabel =
-        if (file is UiBuilderRemoteVirtualFile) {
+        (if (file is UiBuilderRemoteVirtualFile) {
           "Remote design · ${file.name}"
         } else if (selection.projectFile == null) {
           "IntelliJ · ${project.name} · ${selection.catalog.displayName} · saved locally"
         } else {
           "Project design · ${selection.projectFile.presentableUrl}"
-        },
+        }) + status?.let { " · $it" }.orEmpty(),
       chrome = JewelUiBuilderChrome,
       initialPanes = setOf(EditorPane.Editor),
       availablePanes = setOf(EditorPane.Editor),
