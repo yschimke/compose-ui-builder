@@ -16,10 +16,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
@@ -27,7 +35,9 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.UiBuilderCatalogTileModel
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChromeIcon
+import ee.schimke.composeai.uibuilder.UiBuilderInspectorActionModel
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorPropertyModel
+import ee.schimke.composeai.uibuilder.UiBuilderInspectorTextFieldModel
 import ee.schimke.composeai.uibuilder.UiBuilderMenuEntry
 import ee.schimke.composeai.uibuilder.UiBuilderMenuIcon
 import ee.schimke.composeai.uibuilder.UiBuilderRailItemModel
@@ -46,6 +56,7 @@ import org.jetbrains.jewel.ui.component.MenuScope
 import org.jetbrains.jewel.ui.component.OutlinedSlimButton
 import org.jetbrains.jewel.ui.component.PopupMenu
 import org.jetbrains.jewel.ui.component.Text
+import org.jetbrains.jewel.ui.component.TextArea
 import org.jetbrains.jewel.ui.component.TextField
 import org.jetbrains.jewel.ui.component.ToggleableIconActionButton
 import org.jetbrains.jewel.ui.component.separator
@@ -548,6 +559,94 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
   }
 
   @Composable
+  override fun InspectorTextField(model: UiBuilderInspectorTextFieldModel) {
+    var fieldValue by remember(model.label) { mutableStateOf(TextFieldValue(model.value)) }
+    LaunchedEffect(model.value) {
+      if (model.value != fieldValue.text) fieldValue = TextFieldValue(model.value)
+    }
+    val onValueChange: (TextFieldValue) -> Unit = {
+      fieldValue = it
+      model.onValueChange(it.text)
+    }
+    val modifier =
+      model.modifier
+        .padding(top = 6.dp)
+        .onFocusChanged { model.onFocusChanged(it.isFocused) }
+        .onPreviewKeyEvent { event ->
+          val submitChord =
+            event.type == KeyEventType.KeyDown &&
+              event.key in INSPECTOR_ENTER_KEYS &&
+              (!model.multiline || event.isCtrlPressed || event.isMetaPressed)
+          if (submitChord && model.submitEnabled) {
+            model.onSubmit()
+            true
+          } else false
+        }
+        .semantics { contentDescription = "${model.label} property" }
+    val keyboardOptions =
+      androidx.compose.foundation.text.KeyboardOptions(
+        imeAction = if (model.multiline) ImeAction.Default else ImeAction.Done
+      )
+    val keyboardActions =
+      androidx.compose.foundation.text.KeyboardActions(
+        onDone = { if (model.submitEnabled) model.onSubmit() }
+      )
+    if (model.multiline) {
+      TextArea(
+        value = fieldValue,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+      )
+    } else {
+      TextField(
+        value = fieldValue,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+      )
+    }
+  }
+
+  @Composable
+  override fun InspectorAction(model: UiBuilderInspectorActionModel) {
+    val modifier = model.modifier.semantics { contentDescription = model.contentDescription }
+    if (model.primary || model.filled) {
+      DefaultSlimButton(onClick = model.onClick, enabled = model.enabled, modifier = modifier) {
+        Text(model.label)
+      }
+    } else {
+      OutlinedSlimButton(onClick = model.onClick, enabled = model.enabled, modifier = modifier) {
+        Text(model.label)
+      }
+    }
+  }
+
+  @Composable
+  override fun InspectorBinding(variable: String, onUnbind: () -> Unit) {
+    Row(
+      Modifier.fillMaxWidth().padding(top = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Text(
+        "state · $variable",
+        Modifier.clip(RoundedCornerShape(4.dp))
+          .background(JewelTheme.globalColors.panelBackground)
+          .padding(horizontal = 6.dp, vertical = 3.dp),
+      )
+      OutlinedSlimButton(
+        onClick = onUnbind,
+        modifier = Modifier.semantics { contentDescription = "Unbind $variable" },
+      ) {
+        Text("Unbind")
+      }
+    }
+  }
+
+  @Composable
   override fun PopupMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
@@ -650,3 +749,5 @@ private fun UiBuilderChromeIcon.jewelIcon(): IconKey =
     UiBuilderChromeIcon.History -> AllIconsKeys.General.History
     UiBuilderChromeIcon.Close -> AllIconsKeys.Actions.Close
   }
+
+private val INSPECTOR_ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)

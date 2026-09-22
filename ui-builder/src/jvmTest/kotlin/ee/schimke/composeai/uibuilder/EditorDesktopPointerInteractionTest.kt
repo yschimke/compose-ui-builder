@@ -265,6 +265,86 @@ class EditorDesktopPointerInteractionTest {
     }
 
   @Test
+  fun `host rendered binding controls unbind and rebind a property`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialSelectedNodeId = "chip-crime",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Unbind selectedCategory").performClick()
+      waitForIdle()
+
+      runOnIdle {
+        assertEquals(
+          null,
+          reducer
+            .propertyFields(assertNotNull(latest))
+            .single { it.name == "selected" }
+            .boundVariable,
+        )
+      }
+
+      onNodeWithContentDescription("Bind Selected to state").performClick()
+      onNodeWithText("selectedCategory").performClick()
+      onNodeWithContentDescription("Selected state comparison").performTextReplacement("Crime")
+      onNodeWithText("Bind").performClick()
+      waitForIdle()
+
+      runOnIdle {
+        assertEquals(
+          "selectedCategory",
+          reducer
+            .propertyFields(assertNotNull(latest))
+            .single { it.name == "selected" }
+            .boundVariable,
+        )
+      }
+    }
+
+  @Test
+  fun `host rendered enum control commits a menu choice`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Style property").performClick()
+      onNodeWithText("bodyLarge").performClick()
+      waitForIdle()
+
+      runOnIdle {
+        assertEquals(
+          "bodyLarge",
+          reducer.propertyFields(assertNotNull(latest)).single { it.name == "style" }.value,
+        )
+      }
+    }
+
+  @Test
   fun `selection changes retain an uncommitted property draft`() =
     runDesktopComposeUiTest(width = 1400, height = 900) {
       setContent {

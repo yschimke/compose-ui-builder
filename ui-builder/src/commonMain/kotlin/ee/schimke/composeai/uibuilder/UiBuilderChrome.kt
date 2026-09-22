@@ -1,10 +1,13 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -44,6 +47,8 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,10 +80,18 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -168,6 +181,13 @@ interface UiBuilderChrome {
 
   @Composable fun InspectorMessage(text: String, modifier: Modifier = Modifier)
 
+  /** A property draft editor; the model owns commit policy while the host owns field visuals. */
+  @Composable fun InspectorTextField(model: UiBuilderInspectorTextFieldModel)
+
+  @Composable fun InspectorAction(model: UiBuilderInspectorActionModel)
+
+  @Composable fun InspectorBinding(variable: String, onUnbind: () -> Unit)
+
   /** A host-native popup over a semantic list shared by browser and IDE chrome. */
   @Composable
   fun PopupMenu(
@@ -205,6 +225,29 @@ data class UiBuilderInspectorPropertyModel(
   val label: String,
   val notes: String? = null,
   val error: String? = null,
+)
+
+data class UiBuilderInspectorTextFieldModel(
+  val value: String,
+  val label: String,
+  val multiline: Boolean,
+  val submitEnabled: Boolean,
+  val modifier: Modifier = Modifier,
+  val onFocusChanged: (Boolean) -> Unit,
+  val onValueChange: (String) -> Unit,
+  val onSubmit: () -> Unit,
+)
+
+data class UiBuilderInspectorActionModel(
+  val label: String,
+  val contentDescription: String = label,
+  val enabled: Boolean = true,
+  val primary: Boolean = false,
+  val filled: Boolean = false,
+  val compactLabel: Boolean = false,
+  val horizontalPaddingDp: Int? = null,
+  val modifier: Modifier = Modifier,
+  val onClick: () -> Unit,
 )
 
 /** Toolkit-neutral names for controls that can be rendered by Material or the IntelliJ host. */
@@ -894,6 +937,90 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
   }
 
   @Composable
+  override fun InspectorTextField(model: UiBuilderInspectorTextFieldModel) {
+    BasicTextField(
+      value = model.value,
+      onValueChange = model.onValueChange,
+      modifier =
+        model.modifier
+          .onFocusChanged { model.onFocusChanged(it.isFocused) }
+          .onPreviewKeyEvent { event ->
+            val submitChord =
+              event.type == KeyEventType.KeyDown &&
+                event.key in INSPECTOR_ENTER_KEYS &&
+                (!model.multiline || event.isCtrlPressed || event.isMetaPressed)
+            if (submitChord && model.submitEnabled) {
+              model.onSubmit()
+              true
+            } else false
+          }
+          .semantics { contentDescription = "${model.label} property" }
+          .padding(top = 7.dp)
+          .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+          .padding(10.dp),
+      textStyle =
+        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+      singleLine = !model.multiline,
+      keyboardOptions =
+        KeyboardOptions(imeAction = if (model.multiline) ImeAction.Default else ImeAction.Done),
+      keyboardActions = KeyboardActions(onDone = { if (model.submitEnabled) model.onSubmit() }),
+    )
+  }
+
+  @Composable
+  override fun InspectorAction(model: UiBuilderInspectorActionModel) {
+    if (model.filled) {
+      Button(
+        onClick = model.onClick,
+        enabled = model.enabled,
+        modifier = model.modifier.semantics { contentDescription = model.contentDescription },
+      ) {
+        Text(model.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      }
+    } else {
+      TextButton(
+        onClick = model.onClick,
+        enabled = model.enabled,
+        modifier = model.modifier.semantics { contentDescription = model.contentDescription },
+        contentPadding =
+          model.horizontalPaddingDp?.let { PaddingValues(horizontal = it.dp) }
+            ?: ButtonDefaults.TextButtonContentPadding,
+      ) {
+        Text(
+          model.label,
+          style =
+            if (model.compactLabel) MaterialTheme.typography.labelMedium
+            else MaterialTheme.typography.labelLarge,
+        )
+      }
+    }
+  }
+
+  @Composable
+  override fun InspectorBinding(variable: String, onUnbind: () -> Unit) {
+    Row(
+      Modifier.fillMaxWidth().padding(top = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+        Text(
+          "state · $variable",
+          Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+          style = MaterialTheme.typography.labelMedium,
+        )
+      }
+      InspectorAction(
+        UiBuilderInspectorActionModel(
+          label = "Unbind",
+          contentDescription = "Unbind $variable",
+          onClick = onUnbind,
+        )
+      )
+    }
+  }
+
+  @Composable
   override fun PopupMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
@@ -950,6 +1077,8 @@ private fun UiBuilderChromeIcon.materialIcon(): ImageVector =
     UiBuilderChromeIcon.History -> Icons.Filled.History
     UiBuilderChromeIcon.Close -> Icons.Filled.Close
   }
+
+private val INSPECTOR_ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)
 
 @Composable
 private fun MaterialPinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
