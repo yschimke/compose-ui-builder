@@ -36,6 +36,7 @@ import ee.schimke.composeai.uibuilder.UiBuilderCatalogTileModel
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChromeIcon
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorActionModel
+import ee.schimke.composeai.uibuilder.UiBuilderInspectorChoiceModel
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorPropertyModel
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorTextFieldModel
 import ee.schimke.composeai.uibuilder.UiBuilderInspectorValueFieldModel
@@ -589,6 +590,31 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
             .onFocusChanged { model.onFocusChanged(it.isFocused) }
             .semantics { contentDescription = model.label },
       )
+    }
+  }
+
+  @Composable
+  override fun InspectorChoiceRow(
+    label: String,
+    choices: List<UiBuilderInspectorChoiceModel>,
+  ) {
+    Text(label, Modifier.padding(top = 6.dp), color = JewelTheme.globalColors.text.info)
+    Row(
+      Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
+      horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+      choices.forEach { choice ->
+        val modifier =
+          Modifier.weight(1f).semantics {
+            contentDescription = choice.contentDescription
+            selected = choice.selected
+          }
+        if (choice.selected) {
+          DefaultSlimButton(onClick = choice.onClick, modifier = modifier) { Text(choice.label) }
+        } else {
+          OutlinedSlimButton(onClick = choice.onClick, modifier = modifier) { Text(choice.label) }
+        }
+      }
     }
   }
 

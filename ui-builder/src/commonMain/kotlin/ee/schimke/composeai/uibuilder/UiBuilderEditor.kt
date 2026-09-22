@@ -9772,41 +9772,28 @@ private fun ScreenEnvironmentInspector(
     onFocusChanged = onTextInputFocusChanged,
     onValueChange = { locale = it },
   )
-  EnvironmentChoiceHeading("Theme")
-  Row(Modifier.fillMaxWidth()) {
-    EditorScreenTheme.entries.forEach { option ->
-      TextButton(
+  LocalUiBuilderChrome.current.InspectorChoiceRow(
+    "Theme",
+    EditorScreenTheme.entries.map { option ->
+      UiBuilderInspectorChoiceModel(
+        label = option.label,
+        contentDescription = "${option.label} theme",
+        selected = theme == option,
         onClick = { theme = option },
-        modifier = Modifier.weight(1f).semantics { contentDescription = "${option.label} theme" },
-      ) {
-        Text(
-          option.label,
-          fontWeight = if (theme == option) FontWeight.Bold else FontWeight.Normal,
-          color =
-            if (theme == option) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-    }
-  }
-  EnvironmentChoiceHeading("Layout direction")
-  Row(Modifier.fillMaxWidth()) {
-    EditorLayoutDirection.entries.forEach { option ->
-      TextButton(
+      )
+    },
+  )
+  LocalUiBuilderChrome.current.InspectorChoiceRow(
+    "Layout direction",
+    EditorLayoutDirection.entries.map { option ->
+      UiBuilderInspectorChoiceModel(
+        label = option.label,
+        contentDescription = "${option.label} layout direction",
+        selected = layoutDirection == option,
         onClick = { layoutDirection = option },
-        modifier =
-          Modifier.weight(1f).semantics { contentDescription = "${option.label} layout direction" },
-      ) {
-        Text(
-          option.label,
-          fontWeight = if (layoutDirection == option) FontWeight.Bold else FontWeight.Normal,
-          color =
-            if (layoutDirection == option) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-    }
-  }
+      )
+    },
+  )
   validationError?.let {
     SelectionContainer {
       Text(
@@ -9816,28 +9803,31 @@ private fun ScreenEnvironmentInspector(
       )
     }
   }
-  Button(
-    onClick = {
-      // `current.withScreenFields`, never a fresh `ScreenEnvironmentSettings`: this button owns
-      // seven fields and the dock's object has more, so building one from scratch here resets
-      // whatever the other writers own. That is #903 — every Apply cleared `exportDevices`.
-      val parsed =
-        current.withScreenFields(
-          widthDp = width.toIntOrNull() ?: Int.MIN_VALUE,
-          heightDp = height.toIntOrNull() ?: Int.MIN_VALUE,
-          density = density.toDoubleOrNull() ?: Double.NaN,
-          fontScale = fontScale.toDoubleOrNull() ?: Double.NaN,
-          locale = locale.trim(),
-          theme = theme,
-          layoutDirection = layoutDirection,
-        )
-      validationError = parsed.validationError()
-      if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(parsed))
-    },
-    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-  ) {
-    Text("Apply screen settings")
-  }
+  LocalUiBuilderChrome.current.InspectorAction(
+    UiBuilderInspectorActionModel(
+      label = "Apply screen settings",
+      primary = true,
+      filled = true,
+      modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+      onClick = {
+        // `current.withScreenFields`, never a fresh `ScreenEnvironmentSettings`: this button owns
+        // seven fields and the dock's object has more, so building one from scratch here resets
+        // whatever the other writers own. That is #903 — every Apply cleared `exportDevices`.
+        val parsed =
+          current.withScreenFields(
+            widthDp = width.toIntOrNull() ?: Int.MIN_VALUE,
+            heightDp = height.toIntOrNull() ?: Int.MIN_VALUE,
+            density = density.toDoubleOrNull() ?: Double.NaN,
+            fontScale = fontScale.toDoubleOrNull() ?: Double.NaN,
+            locale = locale.trim(),
+            theme = theme,
+            layoutDirection = layoutDirection,
+          )
+        validationError = parsed.validationError()
+        if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(parsed))
+      },
+    )
+  )
   // Which is the other half of the confusion: the two device menus commit as you pick them and
   // these fields do not, so a button sitting under all three looked like it applied all three —
   // and picking a device, typing a width, then pressing it read as one action that was two.
@@ -10231,16 +10221,6 @@ private fun Double.editorNumber(integer: Boolean): String =
   if (integer || this % 1.0 == 0.0) toLong().toString() else toString()
 
 @Composable
-private fun EnvironmentChoiceHeading(label: String) {
-  Text(
-    label,
-    Modifier.padding(top = 8.dp),
-    style = MaterialTheme.typography.labelLarge,
-    color = MaterialTheme.colorScheme.onSurfaceVariant,
-  )
-}
-
-@Composable
 private fun EnvironmentTextField(
   label: String,
   value: String,
@@ -10248,27 +10228,16 @@ private fun EnvironmentTextField(
   onFocusChanged: (Boolean) -> Unit,
   onValueChange: (String) -> Unit,
 ) {
-  Column(modifier) {
-    Text(
-      label,
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    BasicTextField(
+  LocalUiBuilderChrome.current.InspectorValueField(
+    UiBuilderInspectorValueFieldModel(
+      label = label,
       value = value,
+      style = UiBuilderInspectorValueFieldStyle.Screen,
+      modifier = modifier,
+      onFocusChanged = onFocusChanged,
       onValueChange = onValueChange,
-      modifier =
-        Modifier.fillMaxWidth()
-          .onFocusChanged { onFocusChanged(it.isFocused) }
-          .semantics { contentDescription = label }
-          .padding(top = 3.dp)
-          .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-          .padding(horizontal = 8.dp, vertical = 7.dp),
-      textStyle =
-        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-      singleLine = true,
     )
-  }
+  )
 }
 
 @Composable
