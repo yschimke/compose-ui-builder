@@ -69,6 +69,7 @@ class EditorDesktopPointerInteractionTest {
           UiBuilderEditor(
             document = document,
             catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
             initialSelectedNodeId = "main-episode-title",
             initialInspectorOpen = true,
             initialCanvasZoom = 1f,
@@ -107,6 +108,28 @@ class EditorDesktopPointerInteractionTest {
             originalText
         )
       }
+    }
+
+  @Test
+  fun `host rendered rail opens and closes the component browser`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Open components panel").performClick()
+      onNodeWithContentDescription("Component catalog search").assertExists()
+
+      onNodeWithContentDescription("Close components panel").performClick()
+      onNodeWithContentDescription("Component catalog search").assertDoesNotExist()
     }
 
   @Test

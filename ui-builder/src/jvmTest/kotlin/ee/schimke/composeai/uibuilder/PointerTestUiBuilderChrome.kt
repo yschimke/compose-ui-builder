@@ -11,6 +11,16 @@ import androidx.compose.ui.unit.dp
  */
 internal object PointerTestUiBuilderChrome : UiBuilderChrome by MaterialUiBuilderChrome {
   @Composable
+  override fun ToolbarAction(model: UiBuilderToolbarActionModel) {
+    Box(Modifier.padding(1.dp)) { MaterialUiBuilderChrome.ToolbarAction(model) }
+  }
+
+  @Composable
+  override fun EditorRail(items: List<UiBuilderRailItemModel>, modifier: Modifier) {
+    MaterialUiBuilderChrome.EditorRail(items, modifier.padding(1.dp))
+  }
+
+  @Composable
   override fun ComponentBrowserTile(
     model: UiBuilderCatalogTileModel,
     thumbnail: @Composable () -> Unit,
