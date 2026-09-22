@@ -276,6 +276,9 @@ fun OfflineUiBuilderSessionView(
   initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
   availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
   openDefaultPreview: Boolean = true,
+  initialComponentsOpen: Boolean = false,
+  initialLayersOpen: Boolean = false,
+  initialInspectorOpen: Boolean = false,
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
@@ -295,6 +298,9 @@ fun OfflineUiBuilderSessionView(
       initialPanes = initialPanes,
       availablePanes = availablePanes,
       openDefaultPreview = openDefaultPreview,
+      initialComponentsOpen = initialComponentsOpen,
+      initialLayersOpen = initialLayersOpen,
+      initialInspectorOpen = initialInspectorOpen,
       onRequestNativeRender =
         if (session.nativeRenderAvailable) {
           { shape -> session.renderNative(previewDocument, shape) ?: UiBuilderNativeRender() }
