@@ -62,6 +62,14 @@ internal object PointerTestUiBuilderChrome : UiBuilderChrome by MaterialUiBuilde
   }
 
   @Composable
+  override fun InspectorChoiceRow(
+    label: String,
+    choices: List<UiBuilderInspectorChoiceModel>,
+  ) {
+    Box(Modifier.padding(1.dp)) { MaterialUiBuilderChrome.InspectorChoiceRow(label, choices) }
+  }
+
+  @Composable
   override fun InspectorAction(model: UiBuilderInspectorActionModel) {
     MaterialUiBuilderChrome.InspectorAction(model.copy(modifier = model.modifier.padding(1.dp)))
   }

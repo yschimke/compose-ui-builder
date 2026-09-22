@@ -293,6 +293,39 @@ class EditorDesktopPointerInteractionTest {
     }
 
   @Test
+  fun `host rendered screen fields and choices apply together`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialInspectorMode = EditorInspectorMode.Screen,
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Width (dp)").performTextReplacement("777")
+      onNodeWithContentDescription("Dark theme").performClick()
+      onNodeWithContentDescription("Right to left layout direction").performClick()
+      onNodeWithContentDescription("Apply screen settings").performClick()
+      waitForIdle()
+
+      runOnIdle {
+        val settings = assertNotNull(latest).document.screenEnvironmentSettings()
+        assertEquals(777, settings.widthDp)
+        assertEquals(EditorScreenTheme.Dark, settings.theme)
+        assertEquals(EditorLayoutDirection.Rtl, settings.layoutDirection)
+      }
+    }
+
+  @Test
   fun `host rendered binding controls unbind and rebind a property`() =
     runDesktopComposeUiTest(width = 1400, height = 900) {
       var latest: UiBuilderEditorState? = null

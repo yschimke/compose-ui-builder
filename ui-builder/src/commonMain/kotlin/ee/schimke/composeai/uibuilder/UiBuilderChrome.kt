@@ -185,6 +185,8 @@ interface UiBuilderChrome {
 
   @Composable fun InspectorValueField(model: UiBuilderInspectorValueFieldModel)
 
+  @Composable fun InspectorChoiceRow(label: String, choices: List<UiBuilderInspectorChoiceModel>)
+
   /** A property draft editor; the model owns commit policy while the host owns field visuals. */
   @Composable fun InspectorTextField(model: UiBuilderInspectorTextFieldModel)
 
@@ -245,9 +247,22 @@ data class UiBuilderInspectorTextFieldModel(
 data class UiBuilderInspectorValueFieldModel(
   val label: String,
   val value: String,
+  val style: UiBuilderInspectorValueFieldStyle = UiBuilderInspectorValueFieldStyle.Theme,
   val modifier: Modifier = Modifier,
   val onFocusChanged: (Boolean) -> Unit,
   val onValueChange: (String) -> Unit,
+)
+
+enum class UiBuilderInspectorValueFieldStyle {
+  Theme,
+  Screen,
+}
+
+data class UiBuilderInspectorChoiceModel(
+  val label: String,
+  val contentDescription: String,
+  val selected: Boolean,
+  val onClick: () -> Unit,
 )
 
 data class UiBuilderInspectorActionModel(
@@ -962,21 +977,76 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
   @Composable
   override fun InspectorValueField(model: UiBuilderInspectorValueFieldModel) {
     Column(model.modifier) {
-      Text(model.label, style = MaterialTheme.typography.labelMedium)
+      Text(
+        model.label,
+        style =
+          when (model.style) {
+            UiBuilderInspectorValueFieldStyle.Theme -> MaterialTheme.typography.labelMedium
+            UiBuilderInspectorValueFieldStyle.Screen -> MaterialTheme.typography.labelSmall
+          },
+        color =
+          when (model.style) {
+            UiBuilderInspectorValueFieldStyle.Theme -> Color.Unspecified
+            UiBuilderInspectorValueFieldStyle.Screen -> MaterialTheme.colorScheme.onSurfaceVariant
+          },
+      )
       BasicTextField(
         value = model.value,
         onValueChange = model.onValueChange,
         modifier =
           Modifier.fillMaxWidth()
-            .padding(top = 4.dp, bottom = 10.dp)
+            .then(
+              when (model.style) {
+                UiBuilderInspectorValueFieldStyle.Theme ->
+                  Modifier.padding(top = 4.dp, bottom = 10.dp)
+                UiBuilderInspectorValueFieldStyle.Screen -> Modifier.padding(top = 3.dp)
+              }
+            )
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
             .onFocusChanged { model.onFocusChanged(it.isFocused) }
             .semantics { contentDescription = model.label }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .then(
+              when (model.style) {
+                UiBuilderInspectorValueFieldStyle.Theme ->
+                  Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                UiBuilderInspectorValueFieldStyle.Screen ->
+                  Modifier.padding(horizontal = 8.dp, vertical = 7.dp)
+              }
+            ),
         singleLine = true,
         textStyle =
           MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
       )
+    }
+  }
+
+  @Composable
+  override fun InspectorChoiceRow(
+    label: String,
+    choices: List<UiBuilderInspectorChoiceModel>,
+  ) {
+    Text(
+      label,
+      Modifier.padding(top = 8.dp),
+      style = MaterialTheme.typography.labelLarge,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Row(Modifier.fillMaxWidth()) {
+      choices.forEach { choice ->
+        TextButton(
+          onClick = choice.onClick,
+          modifier =
+            Modifier.weight(1f).semantics { contentDescription = choice.contentDescription },
+        ) {
+          Text(
+            choice.label,
+            fontWeight = if (choice.selected) FontWeight.Bold else FontWeight.Normal,
+            color =
+              if (choice.selected) MaterialTheme.colorScheme.primary
+              else MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
+      }
     }
   }
 
