@@ -17,12 +17,18 @@ import org.jetbrains.jewel.bridge.JewelComposePanel
 
 /** Selects the visual editor for the synthetic catalog files opened by the plugin. */
 internal class UiBuilderFileEditorProvider : FileEditorProvider {
-  override fun accept(project: Project, file: VirtualFile): Boolean = file is UiBuilderVirtualFile
+  override fun accept(project: Project, file: VirtualFile): Boolean =
+    file is UiBuilderVirtualFile || file is UiBuilderRemoteVirtualFile
 
   override fun createEditor(project: Project, file: VirtualFile): FileEditor {
-    require(file is UiBuilderVirtualFile)
     val service = project.getService(UiBuilderProjectService::class.java)
-    return UiBuilderFileEditor(project, file, service.catalogSession(file.catalog))
+    val selection =
+      when (file) {
+        is UiBuilderVirtualFile -> service.catalogSession(file.catalog)
+        is UiBuilderRemoteVirtualFile -> file.selection
+        else -> error("unsupported UI Builder virtual file")
+      }
+    return UiBuilderFileEditor(project, file, selection)
   }
 
   override fun getEditorTypeId(): String = "compose-ui-builder-visual-editor"
@@ -56,7 +62,9 @@ private class UiBuilderFileEditor(
     OfflineUiBuilderSessionView(
       session = selection.session,
       sessionLabel =
-        if (selection.projectFile == null) {
+        if (file is UiBuilderRemoteVirtualFile) {
+          "Remote design · ${file.name}"
+        } else if (selection.projectFile == null) {
           "IntelliJ · ${project.name} · ${selection.catalog.displayName} · saved locally"
         } else {
           "Project design · ${selection.projectFile.presentableUrl}"

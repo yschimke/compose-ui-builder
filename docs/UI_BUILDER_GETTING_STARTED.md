@@ -120,6 +120,19 @@ edit the checked-in JSON directly; the ordinary JSON editor remains available be
 and git diffs. An external or unsaved JSON change is never overwritten: reopen the visual editor to
 adopt it before making another visual edit.
 
+Choose **Browse server designs** to connect to a compose-preview host. The plugin requests a
+short-lived `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` grant, opens its approval
+page in the browser, lists the designs that actor may access, and opens the selected design as a
+live editor tab. Server, browser, agent, editor, and Preview changes all use the same revisioned
+protocol and update stream.
+
+**Copy active design for an agent** copies a source-specific handoff. For a checked-in design it
+names the repository JSON file, which an IDE agent can read and edit directly; reopen the visual
+editor after such an external edit. For a remote design it names the design id and the server's
+`/mcp` endpoint, where the agent requests its own grant rather than receiving the IDE's credential.
+The plugin deliberately does not embed another MCP server: HTTP/WebSocket routes and MCP tools
+belong to the compose-preview host, while the checked-in file is already the local agent boundary.
+
 The plugin supplies Jewel chrome for the shared editor toolbar, panel rails, property-inspector
 shells, draft and Theme fields, binding/actions, boolean and Add-property controls, Insert/Layers
 navigator frame, headings, close action, search fields, component-browser controls and tile shells,
