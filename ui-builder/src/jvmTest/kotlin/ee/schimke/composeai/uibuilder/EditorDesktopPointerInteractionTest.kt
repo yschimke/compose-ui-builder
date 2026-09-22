@@ -36,6 +36,7 @@ import kotlinx.serialization.json.jsonObject
 @OptIn(ExperimentalTestApi::class)
 class EditorDesktopPointerInteractionTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
+  private val reducer = UiBuilderEditorReducer(catalog)
   private val document = UiBuilderReducer.replay(fixture).document
 
   @Test
@@ -166,6 +167,7 @@ class EditorDesktopPointerInteractionTest {
           UiBuilderEditor(
             document = document,
             catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
             initialSelectedNodeId = "main-episode-title",
             initialInspectorOpen = true,
             initialCanvasZoom = 1f,
@@ -191,6 +193,7 @@ class EditorDesktopPointerInteractionTest {
           UiBuilderEditor(
             document = document,
             catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
             initialSelectedNodeId = "main-episode-title",
             initialInspectorOpen = true,
             initialCanvasZoom = 1f,
@@ -217,6 +220,48 @@ class EditorDesktopPointerInteractionTest {
       onNodeWithContentDescription("Color property").performKeyInput { pressKey(Key.Enter) }
       onNodeWithText("Edit was not applied · value retained").assertExists()
       onNodeWithContentDescription("Color property").assertTextEquals("not-a-color")
+    }
+
+  @Test
+  fun `host rendered boolean property commits its checked state`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      val softWrap =
+        reducer.propertyFields(reducer.initial(document, "main-episode-title")).single {
+          it.name == "softWrap"
+        }
+      val initial = softWrap.value.toBoolean()
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Property search").performTextReplacement("soft wrap")
+      if (!softWrap.written) {
+        onNodeWithContentDescription("Add ${softWrap.label} property").performClick()
+      }
+      onNodeWithContentDescription("${softWrap.label} property").performClick()
+      waitForIdle()
+
+      runOnIdle {
+        val committed =
+          reducer
+            .propertyFields(assertNotNull(latest))
+            .single { it.name == "softWrap" }
+            .value
+            .toBoolean()
+        assertEquals(!initial, committed)
+      }
     }
 
   @Test

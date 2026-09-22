@@ -146,6 +146,28 @@ interface UiBuilderChrome {
   /** A vertical strip of panel switches flanking the shared canvas. */
   @Composable fun EditorRail(items: List<UiBuilderRailItemModel>, modifier: Modifier = Modifier)
 
+  /** The host-native background around the selected inspector body. */
+  @Composable fun InspectorSurface(modifier: Modifier, content: @Composable () -> Unit)
+
+  /** The component and node names at the start of the Properties inspector. */
+  @Composable fun InspectorNodeIdentity(componentId: String, nodeId: String)
+
+  /** Label, help and validation chrome around one shared property editor. */
+  @Composable
+  fun InspectorProperty(
+    model: UiBuilderInspectorPropertyModel,
+    content: @Composable () -> Unit,
+  )
+
+  @Composable
+  fun InspectorBooleanProperty(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit)
+
+  @Composable fun InspectorAddPropertyRow(label: String, type: String, onAdd: () -> Unit)
+
+  @Composable fun InspectorSection(title: String, supporting: String? = null)
+
+  @Composable fun InspectorMessage(text: String, modifier: Modifier = Modifier)
+
   /** A host-native popup over a semantic list shared by browser and IDE chrome. */
   @Composable
   fun PopupMenu(
@@ -177,6 +199,12 @@ data class UiBuilderRailItemModel(
   val selected: Boolean,
   val badge: Int = 0,
   val onClick: () -> Unit,
+)
+
+data class UiBuilderInspectorPropertyModel(
+  val label: String,
+  val notes: String? = null,
+  val error: String? = null,
 )
 
 /** Toolkit-neutral names for controls that can be rendered by Material or the IntelliJ host. */
@@ -757,6 +785,112 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
         }
       }
     }
+  }
+
+  @Composable
+  override fun InspectorSurface(modifier: Modifier, content: @Composable () -> Unit) {
+    Surface(modifier, color = MaterialTheme.colorScheme.surface) { content() }
+  }
+
+  @Composable
+  override fun InspectorNodeIdentity(componentId: String, nodeId: String) {
+    Text(componentId, Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.primary)
+    Text(
+      nodeId,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+    HorizontalDivider(
+      Modifier.padding(vertical = 14.dp),
+      color = MaterialTheme.colorScheme.outline,
+    )
+  }
+
+  @Composable
+  override fun InspectorProperty(
+    model: UiBuilderInspectorPropertyModel,
+    content: @Composable () -> Unit,
+  ) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+      Text(model.label, style = MaterialTheme.typography.labelLarge)
+      content()
+      model.notes?.let {
+        Text(
+          it,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+        )
+      }
+      model.error?.let {
+        SelectionContainer {
+          Text(
+            it,
+            Modifier.semantics { contentDescription = "${model.label} validation error" },
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelSmall,
+          )
+        }
+      }
+    }
+  }
+
+  @Composable
+  override fun InspectorBooleanProperty(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+  ) {
+    Row(
+      Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Text(if (checked) "On" else "Off", style = MaterialTheme.typography.bodySmall)
+      Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = Modifier.semantics { contentDescription = "$label property" },
+      )
+    }
+  }
+
+  @Composable
+  override fun InspectorAddPropertyRow(label: String, type: String, onAdd: () -> Unit) {
+    TextButton(
+      onClick = onAdd,
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Add $label property" },
+    ) {
+      Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(16.dp))
+      Spacer(Modifier.width(8.dp))
+      Text(label, Modifier.weight(1f))
+      Text(
+        type,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+  }
+
+  @Composable
+  override fun InspectorSection(title: String, supporting: String?) {
+    Text(title, style = MaterialTheme.typography.labelLarge)
+    if (supporting != null) {
+      Text(
+        supporting,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+  }
+
+  @Composable
+  override fun InspectorMessage(text: String, modifier: Modifier) {
+    Text(
+      text,
+      modifier,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
   }
 
   @Composable

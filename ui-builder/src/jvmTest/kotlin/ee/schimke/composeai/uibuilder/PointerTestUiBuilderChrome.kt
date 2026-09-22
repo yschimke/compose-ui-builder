@@ -21,6 +21,32 @@ internal object PointerTestUiBuilderChrome : UiBuilderChrome by MaterialUiBuilde
   }
 
   @Composable
+  override fun InspectorProperty(
+    model: UiBuilderInspectorPropertyModel,
+    content: @Composable () -> Unit,
+  ) {
+    Box(Modifier.padding(1.dp)) { MaterialUiBuilderChrome.InspectorProperty(model, content) }
+  }
+
+  @Composable
+  override fun InspectorAddPropertyRow(label: String, type: String, onAdd: () -> Unit) {
+    Box(Modifier.padding(1.dp)) {
+      MaterialUiBuilderChrome.InspectorAddPropertyRow(label, type, onAdd)
+    }
+  }
+
+  @Composable
+  override fun InspectorBooleanProperty(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+  ) {
+    Box(Modifier.padding(1.dp)) {
+      MaterialUiBuilderChrome.InspectorBooleanProperty(label, checked, onCheckedChange)
+    }
+  }
+
+  @Composable
   override fun ComponentBrowserTile(
     model: UiBuilderCatalogTileModel,
     thumbnail: @Composable () -> Unit,
