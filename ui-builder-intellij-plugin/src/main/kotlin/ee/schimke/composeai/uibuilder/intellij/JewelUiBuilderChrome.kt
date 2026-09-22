@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.UiBuilderCatalogTileModel
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChromeIcon
+import ee.schimke.composeai.uibuilder.UiBuilderInspectorPropertyModel
 import ee.schimke.composeai.uibuilder.UiBuilderMenuEntry
 import ee.schimke.composeai.uibuilder.UiBuilderMenuIcon
 import ee.schimke.composeai.uibuilder.UiBuilderRailItemModel
@@ -459,6 +460,91 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
         }
       }
     }
+  }
+
+  @Composable
+  override fun InspectorSurface(modifier: Modifier, content: @Composable () -> Unit) {
+    Column(modifier.background(JewelTheme.globalColors.toolwindowBackground)) { content() }
+  }
+
+  @Composable
+  override fun InspectorNodeIdentity(componentId: String, nodeId: String) {
+    Text(
+      componentId,
+      Modifier.padding(top = 6.dp),
+      color = JewelTheme.globalColors.text.info,
+      fontWeight = FontWeight.SemiBold,
+    )
+    Text(nodeId, color = JewelTheme.globalColors.text.info)
+    Divider(
+      orientation = Orientation.Horizontal,
+      modifier = Modifier.padding(vertical = 10.dp),
+    )
+  }
+
+  @Composable
+  override fun InspectorProperty(
+    model: UiBuilderInspectorPropertyModel,
+    content: @Composable () -> Unit,
+  ) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+      Text(model.label, fontWeight = FontWeight.SemiBold)
+      content()
+      model.notes?.let { Text(it, color = JewelTheme.globalColors.text.info) }
+      model.error?.let {
+        SelectionContainer {
+          Text(
+            it,
+            Modifier.semantics { contentDescription = "${model.label} validation error" },
+            color = JewelTheme.globalColors.text.error,
+          )
+        }
+      }
+    }
+  }
+
+  @Composable
+  override fun InspectorBooleanProperty(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+  ) {
+    Row(
+      Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Text(if (checked) "On" else "Off")
+      Checkbox(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = Modifier.semantics { contentDescription = "$label property" },
+      )
+    }
+  }
+
+  @Composable
+  override fun InspectorAddPropertyRow(label: String, type: String, onAdd: () -> Unit) {
+    OutlinedSlimButton(
+      onClick = onAdd,
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Add $label property" },
+    ) {
+      Icon(AllIconsKeys.General.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+      Text(label, Modifier.padding(start = 6.dp))
+      Spacer(Modifier.width(8.dp))
+      Text(type, color = JewelTheme.globalColors.text.info)
+    }
+  }
+
+  @Composable
+  override fun InspectorSection(title: String, supporting: String?) {
+    Text(title, fontWeight = FontWeight.SemiBold)
+    if (supporting != null) Text(supporting, color = JewelTheme.globalColors.text.info)
+  }
+
+  @Composable
+  override fun InspectorMessage(text: String, modifier: Modifier) {
+    Text(text, modifier, color = JewelTheme.globalColors.text.info)
   }
 
   @Composable

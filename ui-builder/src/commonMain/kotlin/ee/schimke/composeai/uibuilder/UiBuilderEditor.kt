@@ -7914,7 +7914,7 @@ private fun PropertyInspector(
       .filter { it.nodeId == selectedNodeId && it.property !in visibleProperties }
       .forEach(propertyDrafts::remove)
   }
-  Surface(modifier, color = MaterialTheme.colorScheme.surface) {
+  LocalUiBuilderChrome.current.InspectorSurface(modifier) {
     Column {
       // The four inspectors used to share a row of tabs inside this panel, which is why it had to
       // be 360 dp wide: the tabs, not the controls, set the floor. They are switches for a panel
@@ -8102,27 +8102,13 @@ private fun InspectorBody(
       return@Column
     }
     if (node == null) {
-      Text(
+      LocalUiBuilderChrome.current.InspectorMessage(
         "Select a layer on the canvas or in the tree.",
         Modifier.padding(top = 16.dp),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
       return@Column
     }
-    Text(
-      node.componentId,
-      Modifier.padding(top = 8.dp),
-      color = MaterialTheme.colorScheme.primary,
-    )
-    Text(
-      node.id,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-    )
-    HorizontalDivider(
-      Modifier.padding(vertical = 14.dp),
-      color = MaterialTheme.colorScheme.outline,
-    )
+    LocalUiBuilderChrome.current.InspectorNodeIdentity(node.componentId, node.id)
     // Which properties this node has been given since it was selected. Local and per node: adding
     // one here means "show me the control", not "write a value" — nothing reaches the document
     // until the control is used, so a property revealed and left alone changes neither the design
@@ -8222,33 +8208,24 @@ private fun InspectorBody(
       }
       if (fields.isEmpty()) {
         item {
-          Text(
-            "This component has no catalog properties.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-          )
+          LocalUiBuilderChrome.current.InspectorMessage("This component has no catalog properties.")
         }
       } else if (visibleFields.isEmpty() && !addOpen) {
         item {
-          Text(
-            "Nothing is set on this layer. Add a property to give it one.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
+          LocalUiBuilderChrome.current.InspectorMessage(
+            "Nothing is set on this layer. Add a property to give it one."
           )
         }
       }
       if (addOpen) {
         item {
           HorizontalDivider(Modifier.padding(vertical = 12.dp))
-          Text(
-            if (propertyQuery.isBlank()) "Add a property"
-            else "Add a property · ${addableFields.size} match",
-            style = MaterialTheme.typography.labelLarge,
-          )
-          Text(
-            "The catalog allows these. Adding one shows its control; the export writes it once it has a value.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
+          LocalUiBuilderChrome.current.InspectorSection(
+            title =
+              if (propertyQuery.isBlank()) "Add a property"
+              else "Add a property · ${addableFields.size} match",
+            supporting =
+              "The catalog allows these. Adding one shows its control; the export writes it once it has a value.",
           )
         }
         itemsIndexed(addableFields, key = { _, field -> "add:${field.name}" }) { _, field ->
@@ -8260,11 +8237,9 @@ private fun InspectorBody(
         }
         if (addableFields.isEmpty()) {
           item {
-            Text(
+            LocalUiBuilderChrome.current.InspectorMessage(
               "Every property this component declares is already here.",
               Modifier.padding(top = 6.dp),
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              style = MaterialTheme.typography.bodySmall,
             )
           }
         }
@@ -8389,20 +8364,11 @@ private fun InspectorBody(
 /** One property the node does not have yet, and the press that puts its control on the panel. */
 @Composable
 private fun AddPropertyRow(field: EditorPropertyField, onAdd: () -> Unit) {
-  TextButton(
-    onClick = onAdd,
-    modifier =
-      Modifier.fillMaxWidth().semantics { contentDescription = "Add ${field.label} property" },
-  ) {
-    Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(16.dp))
-    Spacer(Modifier.width(8.dp))
-    Text(field.label, Modifier.weight(1f))
-    Text(
-      field.control.name.lowercase(),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-    )
-  }
+  LocalUiBuilderChrome.current.InspectorAddPropertyRow(
+    field.label,
+    field.control.name.lowercase(),
+    onAdd,
+  )
 }
 
 @Composable
@@ -8417,89 +8383,62 @@ private fun PropertyControl(
   onUnbind: () -> Unit,
   commit: (String) -> Unit,
 ) {
-  Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-    Text(
-      field.label +
-        (if (field.required) " *" else "") +
-        // Say what an edit will hit. A control that silently spans six nodes is one people stop
-        // trusting the first time it changes something they were not looking at.
-        (if (field.nodeCount > 1) " · ${field.nodeCount} selected" else "") +
-        (if (field.mixed) " · mixed" else ""),
-      style = MaterialTheme.typography.labelLarge,
+  val bound = field.boundVariable
+  LocalUiBuilderChrome.current.InspectorProperty(
+    UiBuilderInspectorPropertyModel(
+      label =
+        field.label +
+          (if (field.required) " *" else "") +
+          (if (field.nodeCount > 1) " · ${field.nodeCount} selected" else "") +
+          (if (field.mixed) " · mixed" else ""),
+      // A bound property replaces its literal editor and its supporting diagnostics with the
+      // binding row, matching the existing inspector behavior.
+      notes = field.notes?.takeIf { bound == null },
+      error = field.error?.takeIf { bound == null },
     )
-    val bound = field.boundVariable
+  ) {
     if (bound != null) {
       // The literal control is not drawn for a bound property, because it does not work: an edit
       // is refused with "cannot be safely edited from its catalog metadata", which is a true
       // message and a poor answer to a control that looks editable. What a bound property needs is
       // to say what it is bound to and offer the way back.
       StateBindingRow(bound, onUnbind)
-      return@Column
-    }
-    if (stateVariables.isNotEmpty() && field.control != EditorPropertyControl.Unsupported) {
-      StateBindMenu(field, stateVariables, needsComparison, onTextInputFocusChanged, onBind)
-    }
-    when (field.control) {
-      EditorPropertyControl.Boolean -> {
-        val checked = field.value.toBooleanStrictOrNull() ?: false
-        Row(
-          Modifier.fillMaxWidth(),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-          Text(if (checked) "On" else "Off", style = MaterialTheme.typography.bodySmall)
-          Switch(
-            checked = checked,
-            onCheckedChange = { commit(it.toString()) },
-            modifier = Modifier.semantics { contentDescription = "${field.label} property" },
-          )
-        }
+    } else {
+      if (stateVariables.isNotEmpty() && field.control != EditorPropertyControl.Unsupported) {
+        StateBindMenu(field, stateVariables, needsComparison, onTextInputFocusChanged, onBind)
       }
-      EditorPropertyControl.Enum ->
-        if (field.name == "iconKey")
-          GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
-        else EnumPropertyControl(field, commit)
-      EditorPropertyControl.Number ->
-        DraftPropertyControl(
-          field,
-          onTextInputFocusChanged,
-          draft,
-          onDraftChange,
-          commit,
-          showSteppers = true,
-        )
-      EditorPropertyControl.Text,
-      EditorPropertyControl.Color ->
-        DraftPropertyControl(
-          field,
-          onTextInputFocusChanged,
-          draft,
-          onDraftChange,
-          commit,
-          showSteppers = false,
-        )
-      EditorPropertyControl.Unsupported ->
-        Text(
-          field.value.ifEmpty { "Not set" },
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.bodySmall,
-        )
-    }
-    field.notes?.let {
-      Text(
-        it,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-      )
-    }
-    field.error?.let {
-      SelectionContainer {
-        Text(
-          it,
-          Modifier.semantics { contentDescription = "${field.label} validation error" },
-          color = MaterialTheme.colorScheme.error,
-          style = MaterialTheme.typography.labelSmall,
-        )
+      when (field.control) {
+        EditorPropertyControl.Boolean -> {
+          val checked = field.value.toBooleanStrictOrNull() ?: false
+          LocalUiBuilderChrome.current.InspectorBooleanProperty(field.label, checked) {
+            commit(it.toString())
+          }
+        }
+        EditorPropertyControl.Enum ->
+          if (field.name == "iconKey")
+            GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
+          else EnumPropertyControl(field, commit)
+        EditorPropertyControl.Number ->
+          DraftPropertyControl(
+            field,
+            onTextInputFocusChanged,
+            draft,
+            onDraftChange,
+            commit,
+            showSteppers = true,
+          )
+        EditorPropertyControl.Text,
+        EditorPropertyControl.Color ->
+          DraftPropertyControl(
+            field,
+            onTextInputFocusChanged,
+            draft,
+            onDraftChange,
+            commit,
+            showSteppers = false,
+          )
+        EditorPropertyControl.Unsupported ->
+          LocalUiBuilderChrome.current.InspectorMessage(field.value.ifEmpty { "Not set" })
       }
     }
   }
