@@ -8,6 +8,14 @@
   ]]></description>
 
   <depends>com.intellij.modules.platform</depends>
+  <!--
+    addComposeTab is compiled from the bundled Jewel bridge, but a bundledModule Gradle dependency
+    only supplies the compile classpath. Declaring the runtime module here makes the bridge (and its
+    ToolWindowScope) a parent of this plugin's classloader in an installed IDE.
+  -->
+  <dependencies>
+    <module name="intellij.platform.jewel.ideLafBridge" />
+  </dependencies>
 
   <extensions defaultExtensionNs="com.intellij">
     <toolWindow
