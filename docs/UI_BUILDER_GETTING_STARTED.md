@@ -98,6 +98,7 @@ for each IDE project and catalog under the IDE system directory. The **Compose U
 window is the separate preview view, with **Material 3** and **Wear M3** tabs. Its title actions open
 the corresponding visual-editor tab; opening the tool window for the first time opens Material 3.
 The editor and preview share one project session, so a saved edit is reconciled into both views.
+Selecting a Material 3 or Wear M3 editor tab selects its matching Preview tab as well.
 
 Run a sandbox IDE with:
 

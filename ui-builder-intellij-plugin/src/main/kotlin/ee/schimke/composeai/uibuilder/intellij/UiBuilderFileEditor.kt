@@ -33,8 +33,8 @@ internal class UiBuilderFileEditorProvider : FileEditorProvider {
 private class UiBuilderFileEditor(project: Project, private val file: UiBuilderVirtualFile) :
   UserDataHolderBase(), FileEditor {
   private val changes = PropertyChangeSupport(this)
-  private val session =
-    project.getService(UiBuilderProjectService::class.java).session(file.catalog)
+  private val projectService = project.getService(UiBuilderProjectService::class.java)
+  private val session = projectService.session(file.catalog)
   private val component = JewelComposePanel {
     OfflineUiBuilderSessionView(
       session = session,
@@ -59,6 +59,10 @@ private class UiBuilderFileEditor(project: Project, private val file: UiBuilderV
   override fun isModified(): Boolean = false
 
   override fun isValid(): Boolean = file.isValid
+
+  override fun selectNotify() {
+    projectService.selectPreview(file.catalog)
+  }
 
   override fun addPropertyChangeListener(listener: PropertyChangeListener) {
     changes.addPropertyChangeListener(listener)
