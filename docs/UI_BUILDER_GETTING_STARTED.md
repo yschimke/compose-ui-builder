@@ -113,6 +113,13 @@ intentionally an offline proof of concept: it persists edits locally but does no
 open project's composables or connect to the preview server's collaboration and native-render
 lanes.
 
+The plugin also recognizes published `DesignDocumentV1` files under the project's conventional
+`ui-builder/designs/` directory. Open one from the Project view, or choose **Open checked-in
+design** in the UI Builder tool-window title bar. Its **Design** editor tab and the separate Preview
+edit the checked-in JSON directly; the ordinary JSON editor remains available beside it for review
+and git diffs. An external or unsaved JSON change is never overwritten: reopen the visual editor to
+adopt it before making another visual edit.
+
 The plugin supplies Jewel chrome for the shared editor toolbar, panel rails, property-inspector
 shells, draft and Theme fields, binding/actions, boolean and Add-property controls, Insert/Layers
 navigator frame, headings, close action, search fields, component-browser controls and tile shells,

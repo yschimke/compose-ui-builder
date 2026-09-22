@@ -11,6 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -18,6 +19,40 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
 class OfflineUiBuilderSessionTest {
+  @Test
+  fun `a project document writes its authoritative revision back through the host`() = runBlocking {
+    val seed =
+      OfflineUiBuilderSession(Files.createTempDirectory("ui-builder-project-seed")).use { session ->
+        withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+          .snapshot
+          .state
+          .document
+          .toUiBuilderDocument()
+      }
+    val committed = CompletableDeferred<ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1>()
+    OfflineUiBuilderSession.projectDocument(seed) { committed.complete(it) }
+      .use { session ->
+        val opened = withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+        val document = opened.snapshot.state.document.toUiBuilderDocument()
+        val reducer = UiBuilderEditorReducer(session.catalog, "project-test", "project-test")
+        val initial = reducer.initial(document)
+        val settings = document.screenEnvironmentSettings()
+        val edited =
+          reducer.reduce(
+            initial,
+            UiBuilderEditorEvent.UpdateEnvironment(settings.copy(heightDp = settings.heightDp + 1)),
+          )
+
+        session.submit(
+          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited))
+        )
+
+        val saved = withTimeout(10.seconds) { committed.await() }.toUiBuilderDocument()
+        assertEquals(settings.heightDp + 1, saved.screenEnvironmentSettings().heightDp)
+        assertEquals(document.revision + 1, saved.revision)
+      }
+  }
+
   @Test
   fun `editor submissions are persisted in order and broadcast to every view`() = runBlocking {
     val storage = Files.createTempDirectory("ui-builder-session-test")

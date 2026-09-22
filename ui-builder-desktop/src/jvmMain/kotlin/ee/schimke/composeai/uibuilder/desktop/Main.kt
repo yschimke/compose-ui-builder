@@ -25,6 +25,8 @@ import ee.schimke.composeai.uibuilder.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.local.FileLocalDesignStorage
+import ee.schimke.composeai.uibuilder.local.InMemoryLocalDesignStorage
+import ee.schimke.composeai.uibuilder.local.LocalDesignStorage
 import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
@@ -99,11 +101,47 @@ fun OfflineUiBuilderApp(
 }
 
 /** One persisted offline design shared by every IDE view that displays it. */
-class OfflineUiBuilderSession(
-  storagePath: Path,
-  catalogSystemId: String = OfflineCatalog.M3.systemId,
-  remoteServer: String? = null,
+class OfflineUiBuilderSession
+private constructor(
+  storage: LocalDesignStorage,
+  catalogSystemId: String,
+  remoteServer: String?,
+  private val designId: String,
+  private val initialDocument: UiBuilderDocument?,
+  private val onDocumentCommitted:
+    suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
 ) : AutoCloseable {
+
+  constructor(
+    storagePath: Path,
+    catalogSystemId: String = OfflineCatalog.M3.systemId,
+    remoteServer: String? = null,
+  ) : this(
+    storage = FileLocalDesignStorage(storagePath),
+    catalogSystemId = catalogSystemId,
+    remoteServer = remoteServer,
+    designId = DESKTOP_DESIGN_ID,
+    initialDocument = null,
+    onDocumentCommitted = {},
+  )
+
+  companion object {
+    /** Opens a published project document as the primary persisted artifact. */
+    fun projectDocument(
+      document: UiBuilderDocument,
+      onDocumentCommitted:
+        suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
+    ): OfflineUiBuilderSession =
+      OfflineUiBuilderSession(
+        storage = InMemoryLocalDesignStorage(),
+        catalogSystemId = document.catalogPin.getValue("systemId").toString().trim('"'),
+        remoteServer = null,
+        designId = document.id,
+        initialDocument = document,
+        onDocumentCommitted = onDocumentCommitted,
+      )
+  }
+
   internal val offlineCatalog = OfflineCatalog.forSystem(catalogSystemId)
   private val catalogText = resourceText(offlineCatalog.capabilitiesResource)
   internal val catalog = CapabilityCatalogParser.parse(catalogText)
@@ -111,7 +149,7 @@ class OfflineUiBuilderSession(
     Json.decodeFromString(CatalogCapabilityV1.serializer(), catalogText)
   private val service =
     LocalUiBuilderService(
-      store = LocalDesignStore(FileLocalDesignStorage(storagePath)),
+      store = LocalDesignStore(storage),
       catalogs = { listOf(catalogCapability) },
       clock = System::currentTimeMillis,
     )
@@ -139,7 +177,7 @@ class OfflineUiBuilderSession(
               )
             )
         ) {
-          is OperationOutcomeResponseV1 -> refresh()
+          is OperationOutcomeResponseV1 -> refresh(persist = true)
           is ErrorResponseV1 -> mutableFailure.value = result.error.message
           else -> mutableFailure.value = "unexpected response while saving the desktop design"
         }
@@ -152,15 +190,16 @@ class OfflineUiBuilderSession(
   }
 
   private suspend fun openOrCreate() {
-    when (val open = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
+    when (val open = service.execute(OpenDesignRequestV1(designId))) {
       is SnapshotResponseV1 -> mutableSnapshot.value = open
       is ErrorResponseV1 -> {
         val seed =
-          offlineCatalog.seed(
-            designId = DESKTOP_DESIGN_ID,
-            catalogRevision = catalog.benchmark.catalogRevision,
-            nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-          )
+          initialDocument
+            ?: offlineCatalog.seed(
+              designId = designId,
+              catalogRevision = catalog.benchmark.catalogRevision,
+              nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
+            )
         when (val created = service.create(seed)) {
           is SnapshotResponseV1 -> mutableSnapshot.value = created
           is ErrorResponseV1 -> mutableFailure.value = created.error.message
@@ -171,9 +210,21 @@ class OfflineUiBuilderSession(
     }
   }
 
-  private suspend fun refresh() {
-    when (val result = service.execute(OpenDesignRequestV1(DESKTOP_DESIGN_ID))) {
-      is SnapshotResponseV1 -> mutableSnapshot.value = result
+  private suspend fun refresh(persist: Boolean = false) {
+    when (val result = service.execute(OpenDesignRequestV1(designId))) {
+      is SnapshotResponseV1 -> {
+        mutableSnapshot.value = result
+        if (persist) {
+          try {
+            onDocumentCommitted(result.snapshot.state.document)
+            mutableFailure.value = null
+          } catch (failure: Exception) {
+            mutableFailure.value =
+              "the design changed in memory but could not be written: " +
+                (failure.message ?: failure::class.simpleName)
+          }
+        }
+      }
       is ErrorResponseV1 -> mutableFailure.value = result.error.message
       else -> mutableFailure.value = "unexpected response while opening the desktop design"
     }
@@ -235,7 +286,8 @@ public enum class OfflineCatalog(
   private val templateId: String,
 ) {
   M3("m3-catalog", "m3-catalog-capabilities-v1.json", UiBuilderNewDesignSeed.DEFAULT_TEMPLATE),
-  WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE);
+  WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE),
+  REMOTE_M3("remote-m3", "remote-m3-capabilities-v1.json", "wear-widget-small");
 
   fun seed(
     designId: String,

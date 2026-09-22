@@ -21,7 +21,8 @@ internal class UiBuilderFileEditorProvider : FileEditorProvider {
 
   override fun createEditor(project: Project, file: VirtualFile): FileEditor {
     require(file is UiBuilderVirtualFile)
-    return UiBuilderFileEditor(project, file)
+    val service = project.getService(UiBuilderProjectService::class.java)
+    return UiBuilderFileEditor(project, file, service.catalogSession(file.catalog))
   }
 
   override fun getEditorTypeId(): String = "compose-ui-builder-visual-editor"
@@ -29,16 +30,37 @@ internal class UiBuilderFileEditorProvider : FileEditorProvider {
   override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 
+/** Adds the visual editor beside JSON for checked-in files under `ui-builder/designs`. */
+internal class UiBuilderProjectFileEditorProvider : FileEditorProvider {
+  override fun accept(project: Project, file: VirtualFile): Boolean = isProjectDesign(project, file)
+
+  override fun createEditor(project: Project, file: VirtualFile): FileEditor {
+    val service = project.getService(UiBuilderProjectService::class.java)
+    return UiBuilderFileEditor(project, file, service.projectSession(file))
+  }
+
+  override fun getEditorTypeId(): String = "compose-ui-builder-project-design-editor"
+
+  override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.PLACE_BEFORE_DEFAULT_EDITOR
+}
+
 /** A Jewel Compose canvas occupying IntelliJ's main editor area. */
-private class UiBuilderFileEditor(project: Project, private val file: UiBuilderVirtualFile) :
-  UserDataHolderBase(), FileEditor {
+private class UiBuilderFileEditor(
+  project: Project,
+  private val file: VirtualFile,
+  private val selection: UiBuilderSessionSelection,
+) : UserDataHolderBase(), FileEditor {
   private val changes = PropertyChangeSupport(this)
   private val projectService = project.getService(UiBuilderProjectService::class.java)
-  private val session = projectService.session(file.catalog)
   private val component = JewelComposePanel {
     OfflineUiBuilderSessionView(
-      session = session,
-      sessionLabel = "IntelliJ · ${project.name} · ${file.catalog.displayName} · saved locally",
+      session = selection.session,
+      sessionLabel =
+        if (selection.projectFile == null) {
+          "IntelliJ · ${project.name} · ${selection.catalog.displayName} · saved locally"
+        } else {
+          "Project design · ${selection.projectFile.presentableUrl}"
+        },
       chrome = JewelUiBuilderChrome,
       initialPanes = setOf(EditorPane.Editor),
       availablePanes = setOf(EditorPane.Editor),
@@ -61,7 +83,7 @@ private class UiBuilderFileEditor(project: Project, private val file: UiBuilderV
   override fun isValid(): Boolean = file.isValid
 
   override fun selectNotify() {
-    projectService.selectPreview(file.catalog)
+    projectService.activate(selection)
   }
 
   override fun addPropertyChangeListener(listener: PropertyChangeListener) {
