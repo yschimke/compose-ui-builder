@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.38.0](https://github.com/yschimke/compose-ui-builder/compare/v3.37.0...v3.38.0) (2026-09-22)
+
+
+### Features
+
+* **ui-builder:** add Jewel inspector field controls ([#137](https://github.com/yschimke/compose-ui-builder/issues/137)) ([faefbed](https://github.com/yschimke/compose-ui-builder/commit/faefbed7b74372f24a8fb9f163cd679b836f2b26))
+* **ui-builder:** add Jewel property inspector chrome ([#135](https://github.com/yschimke/compose-ui-builder/issues/135)) ([0c0ae31](https://github.com/yschimke/compose-ui-builder/commit/0c0ae3127bba7819417ae04d472b469786af9b42))
+* **ui-builder:** add Jewel screen inspector ([#140](https://github.com/yschimke/compose-ui-builder/issues/140)) ([3391ada](https://github.com/yschimke/compose-ui-builder/commit/3391ada33ed874449c4ab0853b64d32df882f70b))
+* **ui-builder:** add Jewel theme inspector ([#138](https://github.com/yschimke/compose-ui-builder/issues/138)) ([340dbbe](https://github.com/yschimke/compose-ui-builder/commit/340dbbe25fdb22845233e2ebca475822d386b7c0))
+
+
+### Bug Fixes
+
+* **intellij:** declare Jewel bridge runtime dependency ([#139](https://github.com/yschimke/compose-ui-builder/issues/139)) ([bf9e1cd](https://github.com/yschimke/compose-ui-builder/commit/bf9e1cd7ad8e6c044bbbe1569b7475412a8c50f9))
+
 ## [3.37.0](https://github.com/yschimke/compose-ui-builder/compare/v3.36.0...v3.37.0) (2026-09-22)
 
 
