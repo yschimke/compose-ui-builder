@@ -181,6 +181,10 @@ interface UiBuilderChrome {
 
   @Composable fun InspectorMessage(text: String, modifier: Modifier = Modifier)
 
+  @Composable fun InspectorFormHeader(title: String, supporting: String)
+
+  @Composable fun InspectorValueField(model: UiBuilderInspectorValueFieldModel)
+
   /** A property draft editor; the model owns commit policy while the host owns field visuals. */
   @Composable fun InspectorTextField(model: UiBuilderInspectorTextFieldModel)
 
@@ -236,6 +240,14 @@ data class UiBuilderInspectorTextFieldModel(
   val onFocusChanged: (Boolean) -> Unit,
   val onValueChange: (String) -> Unit,
   val onSubmit: () -> Unit,
+)
+
+data class UiBuilderInspectorValueFieldModel(
+  val label: String,
+  val value: String,
+  val modifier: Modifier = Modifier,
+  val onFocusChanged: (Boolean) -> Unit,
+  val onValueChange: (String) -> Unit,
 )
 
 data class UiBuilderInspectorActionModel(
@@ -934,6 +946,38 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       style = MaterialTheme.typography.bodySmall,
     )
+  }
+
+  @Composable
+  override fun InspectorFormHeader(title: String, supporting: String) {
+    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text(
+      supporting,
+      Modifier.padding(top = 3.dp, bottom = 14.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
+  }
+
+  @Composable
+  override fun InspectorValueField(model: UiBuilderInspectorValueFieldModel) {
+    Column(model.modifier) {
+      Text(model.label, style = MaterialTheme.typography.labelMedium)
+      BasicTextField(
+        value = model.value,
+        onValueChange = model.onValueChange,
+        modifier =
+          Modifier.fillMaxWidth()
+            .padding(top = 4.dp, bottom = 10.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+            .onFocusChanged { model.onFocusChanged(it.isFocused) }
+            .semantics { contentDescription = model.label }
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        singleLine = true,
+        textStyle =
+          MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+      )
+    }
   }
 
   @Composable

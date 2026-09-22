@@ -108,15 +108,17 @@ proof of concept: it persists edits locally but does not yet discover the open p
 or connect to the preview server's collaboration and native-render lanes.
 
 The plugin supplies Jewel chrome for the shared editor toolbar, panel rails, property-inspector
-shells, draft fields, binding/actions, boolean and Add-property controls, Insert/Layers navigator
-frame, headings, close action, search fields, component-browser controls and tile shells, editor and
-export menus, workspace choices, and layer/canvas context menus. The web and standalone desktop
-hosts continue to render those controls with Material 3. In every host the canvas and the content
-inside component thumbnails remain the same catalog-backed Compose render: Jewel changes the IDE
-controls around a design, not the design being authored.
+shells, draft and Theme fields, binding/actions, boolean and Add-property controls, Insert/Layers
+navigator frame, headings, close action, search fields, component-browser controls and tile shells,
+editor and export menus, workspace choices, and layer/canvas context menus. The web and standalone
+desktop hosts continue to render those controls with Material 3. In every host the canvas and the
+content inside component thumbnails remain the same catalog-backed Compose render: Jewel changes
+the IDE controls around a design, not the design being authored.
 
 Repository releases include `compose-ui-builder-intellij-plugin-<version>.zip`. Install it with
 **Settings → Plugins → Install Plugin from Disk**, then restart the IDE and open the tool window.
+The plugin requires IntelliJ Platform build 262 or newer (IntelliJ IDEA 2026.2+); older IDEs filter
+the ZIP out of the plugin chooser as incompatible.
 
 ### The flags underneath, and one that is easy to confuse
 

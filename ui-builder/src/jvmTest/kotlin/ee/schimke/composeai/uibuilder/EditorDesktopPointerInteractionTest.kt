@@ -265,6 +265,34 @@ class EditorDesktopPointerInteractionTest {
     }
 
   @Test
+  fun `host rendered theme fields apply as one edit`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialInspectorMode = EditorInspectorMode.Theme,
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Primary colour").performTextReplacement("#ff123456")
+      onNodeWithContentDescription("Apply theme").performClick()
+      waitForIdle()
+
+      runOnIdle {
+        assertEquals("#ff123456", reducer.themeSettings(assertNotNull(latest)).primaryColor)
+      }
+    }
+
+  @Test
   fun `host rendered binding controls unbind and rebind a property`() =
     runDesktopComposeUiTest(width = 1400, height = 900) {
       var latest: UiBuilderEditorState? = null
