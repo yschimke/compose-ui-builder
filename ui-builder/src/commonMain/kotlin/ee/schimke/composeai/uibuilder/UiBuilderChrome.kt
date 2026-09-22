@@ -49,10 +49,12 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -187,6 +189,13 @@ interface UiBuilderChrome {
 
   @Composable fun InspectorChoiceRow(label: String, choices: List<UiBuilderInspectorChoiceModel>)
 
+  @Composable
+  fun InspectorToggleRow(
+    label: String,
+    supporting: String?,
+    choices: List<UiBuilderInspectorChoiceModel>,
+  )
+
   /** A property draft editor; the model owns commit policy while the host owns field visuals. */
   @Composable fun InspectorTextField(model: UiBuilderInspectorTextFieldModel)
 
@@ -262,6 +271,7 @@ data class UiBuilderInspectorChoiceModel(
   val label: String,
   val contentDescription: String,
   val selected: Boolean,
+  val enabled: Boolean = true,
   val onClick: () -> Unit,
 )
 
@@ -328,6 +338,9 @@ sealed interface UiBuilderMenuEntry {
     val detailStyle: UiBuilderMenuDetailStyle = UiBuilderMenuDetailStyle.Label,
     val icon: UiBuilderMenuIcon? = null,
     val selected: Boolean = false,
+    val selectionIndicator: UiBuilderMenuSelectionIndicator =
+      UiBuilderMenuSelectionIndicator.Checkmark,
+    val emphasized: Boolean = false,
     val reserveIconSpace: Boolean = false,
     val compactLeadingIcon: Boolean = false,
     val enabled: Boolean = true,
@@ -337,7 +350,14 @@ sealed interface UiBuilderMenuEntry {
     val onClick: () -> Unit,
   ) : UiBuilderMenuEntry
 
+  data class Heading(val label: String) : UiBuilderMenuEntry
+
   data object Divider : UiBuilderMenuEntry
+}
+
+enum class UiBuilderMenuSelectionIndicator {
+  Checkmark,
+  Checkbox,
 }
 
 /** The two supporting-text treatments used by the existing Material menus. */
@@ -1035,6 +1055,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
       choices.forEach { choice ->
         TextButton(
           onClick = choice.onClick,
+          enabled = choice.enabled,
           modifier =
             Modifier.weight(1f).semantics { contentDescription = choice.contentDescription },
         ) {
@@ -1046,6 +1067,36 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
               else MaterialTheme.colorScheme.onSurfaceVariant,
           )
         }
+      }
+    }
+  }
+
+  @Composable
+  override fun InspectorToggleRow(
+    label: String,
+    supporting: String?,
+    choices: List<UiBuilderInspectorChoiceModel>,
+  ) {
+    Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+    if (supporting != null) {
+      Text(
+        supporting,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
+    Row(
+      Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp),
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+      choices.forEach { choice ->
+        FilterChip(
+          selected = choice.selected,
+          enabled = choice.enabled,
+          onClick = choice.onClick,
+          modifier = Modifier.semantics { contentDescription = choice.contentDescription },
+          label = { Text(choice.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        )
       }
     }
   }
@@ -1145,6 +1196,14 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
       entries.forEach { entry ->
         when (entry) {
           UiBuilderMenuEntry.Divider -> HorizontalDivider()
+          is UiBuilderMenuEntry.Heading ->
+            Text(
+              entry.label,
+              Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+            )
           is UiBuilderMenuEntry.Action -> MaterialMenuAction(entry)
         }
       }
@@ -1244,6 +1303,9 @@ private fun MaterialMenuAction(entry: UiBuilderMenuEntry.Action) {
   val iconModifier = if (entry.compactLeadingIcon) Modifier.size(18.dp) else Modifier
   val leadingIcon: (@Composable () -> Unit)? =
     when {
+      entry.selectionIndicator == UiBuilderMenuSelectionIndicator.Checkbox -> {
+        { Checkbox(checked = entry.selected, onCheckedChange = null) }
+      }
       entry.selected -> {
         { Icon(Icons.Filled.Check, contentDescription = null, modifier = iconModifier) }
       }
@@ -1275,7 +1337,10 @@ private fun MaterialMenuAction(entry: UiBuilderMenuEntry.Action) {
     DropdownMenuItem(
       text = {
         Column {
-          Text(entry.label)
+          Text(
+            entry.label,
+            fontWeight = if (entry.emphasized) FontWeight.Bold else FontWeight.Normal,
+          )
           entry.detail?.let {
             Text(
               it,

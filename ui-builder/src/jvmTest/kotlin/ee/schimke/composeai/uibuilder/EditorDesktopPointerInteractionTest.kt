@@ -326,6 +326,46 @@ class EditorDesktopPointerInteractionTest {
     }
 
   @Test
+  fun `host rendered screen pickers update the frame exports and comparison strip`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      val phone = UiBuilderDevicePreset("id:pixel_7", "Pixel 7", "Phones", 411, 914, 2.625)
+      val tablet =
+        UiBuilderDevicePreset("id:pixel_tablet", "Pixel Tablet", "Tablets", 1280, 800, 2.0)
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            devicePresets = listOf(phone, tablet),
+            initialInspectorMode = EditorInspectorMode.Screen,
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Device preset").performClick()
+      onNodeWithContentDescription("Pixel Tablet").performClick()
+      onNodeWithContentDescription("Compare Dark").performClick()
+      onNodeWithContentDescription("Export devices").performClick()
+      onNodeWithContentDescription("Pixel 7").performClick()
+      waitForIdle()
+
+      runOnIdle {
+        val state = assertNotNull(latest)
+        val settings = state.document.screenEnvironmentSettings()
+        assertEquals(1280, settings.widthDp)
+        assertEquals(800, settings.heightDp)
+        assertEquals(listOf(phone.id), settings.exportDevices)
+        assertTrue(EditorVariantAxis.Dark in state.variantAxes)
+      }
+    }
+
+  @Test
   fun `host rendered binding controls unbind and rebind a property`() =
     runDesktopComposeUiTest(width = 1400, height = 900) {
       var latest: UiBuilderEditorState? = null
