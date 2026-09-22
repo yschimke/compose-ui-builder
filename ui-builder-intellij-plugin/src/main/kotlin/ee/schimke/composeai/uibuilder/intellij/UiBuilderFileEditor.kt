@@ -38,7 +38,7 @@ internal class UiBuilderFileEditorProvider : FileEditorProvider {
   override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 
-/** Adds the visual editor beside JSON for checked-in files under `ui-builder/designs`. */
+/** Adds the visual editor beside the source of a recognized UI Builder design JSON file. */
 internal class UiBuilderProjectFileEditorProvider : FileEditorProvider {
   override fun accept(project: Project, file: VirtualFile): Boolean = isProjectDesign(file)
 
@@ -78,6 +78,11 @@ private class UiBuilderFileEditor(
         initialPanes = setOf(EditorPane.Editor),
         availablePanes = setOf(EditorPane.Editor),
         openDefaultPreview = false,
+        // Match IntelliJ's GUI Designer: the containment tree and selected-component inspector
+        // are visible as soon as a design opens, while the Components rail still exposes the
+        // palette without taking over the source editor.
+        initialLayersOpen = true,
+        initialInspectorOpen = true,
       )
     }
   }

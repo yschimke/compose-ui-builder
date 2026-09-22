@@ -227,10 +227,18 @@ internal val OfflineCatalog.displayName: String
 /** Recognizes a design by its declared document shape, not by where its JSON file is stored. */
 internal fun isProjectDesign(file: VirtualFile): Boolean {
   if (file.isDirectory || file.extension != "json") return false
-  return readProjectDesign(file)?.catalogPin?.systemId?.let { systemId ->
-    runCatching { OfflineCatalog.forSystem(systemId) }.isSuccess
+  return readProjectDesign(file)?.let { document ->
+    document.schema in supportedProjectDesignSchemas &&
+      runCatching { OfflineCatalog.forSystem(document.catalogPin.systemId) }.isSuccess
   } == true
 }
+
+/** The document declarations this offline v1 editor can safely load and write back. */
+private val supportedProjectDesignSchemas =
+  setOf(
+    "compose-ui-builder-document/v1",
+    "compose-ui-builder-document/v1-candidate",
+  )
 
 private fun readProjectDesign(file: VirtualFile): DesignDocumentV1? = runCatching {
   val text = file.inputStream.reader().use { it.readText() }
