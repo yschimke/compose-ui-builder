@@ -29,7 +29,13 @@ class SlotPlaceholderUiTest {
     runDesktopComposeUiTest(width = 1400, height = 900) {
       setContent {
         MaterialTheme {
-          UiBuilderEditor(document, catalog, initialComponentsOpen = true, initialCanvasZoom = 1f)
+          UiBuilderEditor(
+            document,
+            catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialComponentsOpen = true,
+            initialCanvasZoom = 1f,
+          )
         }
       }
       waitForIdle()

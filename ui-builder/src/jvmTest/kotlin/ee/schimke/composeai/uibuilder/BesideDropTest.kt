@@ -47,6 +47,7 @@ class BesideDropTest {
           UiBuilderEditor(
             document,
             catalog,
+            chrome = PointerTestUiBuilderChrome,
             initialComponentsOpen = true,
             initialInspectorOpen = true,
             initialCanvasZoom = 1f,
@@ -105,6 +106,7 @@ class BesideDropTest {
           UiBuilderEditor(
             document,
             catalog,
+            chrome = PointerTestUiBuilderChrome,
             initialComponentsOpen = true,
             initialCanvasZoom = 1f,
             onCanvasBoundsChanged = { frameBounds = it },
@@ -134,6 +136,45 @@ class BesideDropTest {
         onAllNodesWithText("New text").fetchSemanticsNodes().isNotEmpty(),
         "the inserted text is on the canvas",
       )
+    }
+
+  @Test
+  fun `a mouse drag reorders layers through their handles`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            initialLayersOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      val handle = onNodeWithContentDescription("Reorder beside-a")
+      val handleOrigin = handle.fetchSemanticsNode().boundsInRoot.topLeft
+      val target = onNodeWithContentDescription("Select beside-b").fetchSemanticsNode().boundsInRoot
+      handle.performMouseInput {
+        moveTo(center)
+        press(MouseButton.Primary)
+        moveTo(center + Offset(12f, 12f))
+        moveTo(Offset(center.x, target.bottom - handleOrigin.y - 2f))
+        release(MouseButton.Primary)
+      }
+      waitForIdle()
+
+      runOnIdle {
+        val siblings =
+          requireNotNull(latest).document.nodes.getValue("beside-column").slots.getValue("children")
+        assertTrue(
+          siblings.indexOf("beside-a") > siblings.indexOf("beside-b"),
+          "the mouse drop moved beside-a after beside-b: $siblings",
+        )
+      }
     }
 
   /** The palette row whose thumbnail carries the drag named by [contentDescription]. */
@@ -188,6 +229,17 @@ class BesideDropTest {
                   "id": "beside-a",
                   "componentId": "m3/text",
                   "properties": {"text": {"type": "string", "value": "A"}}
+                }
+              },
+              {
+                "operationId": "b",
+                "type": "insertNode",
+                "parent": {"nodeId": "beside-column", "slot": "children"},
+                "afterNodeId": "beside-a",
+                "node": {
+                  "id": "beside-b",
+                  "componentId": "m3/text",
+                  "properties": {"text": {"type": "string", "value": "B"}}
                 }
               }
             ]

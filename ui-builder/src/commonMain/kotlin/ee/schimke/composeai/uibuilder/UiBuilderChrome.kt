@@ -1,13 +1,18 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CodeOff
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
@@ -27,7 +32,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -36,6 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -72,6 +82,28 @@ interface UiBuilderChrome {
 
   @Composable fun GroupHeading(title: String)
 
+  @Composable fun ComponentBrowserDestination(text: String, available: Boolean)
+
+  @Composable fun ComponentBrowserAddBeside(checked: Boolean, onToggle: () -> Unit)
+
+  @Composable fun ComponentBrowserPacksSummary(label: String, onManage: () -> Unit)
+
+  @Composable fun ComponentBrowserAllRow(total: Int, onShowAll: () -> Unit)
+
+  @Composable
+  fun ComponentBrowserGroupRow(
+    name: String,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+  )
+
+  @Composable
+  fun ComponentBrowserTile(
+    model: UiBuilderCatalogTileModel,
+    thumbnail: @Composable () -> Unit,
+  )
+
   /** A host-native popup over a semantic list shared by browser and IDE chrome. */
   @Composable
   fun PopupMenu(
@@ -81,6 +113,24 @@ interface UiBuilderChrome {
     offset: DpOffset = DpOffset.Zero,
   )
 }
+
+/** The chrome around one shared, catalog-rendered component thumbnail. */
+data class UiBuilderCatalogTileModel(
+  val title: String,
+  val supporting: String?,
+  val supportingIsError: Boolean = false,
+  val variant: Boolean = false,
+  val defaultVariant: Boolean = false,
+  val unexportable: Boolean = false,
+  val pinned: Boolean? = null,
+  val variantCount: Int = 0,
+  val variantsExpanded: Boolean = false,
+  val canAdd: Boolean,
+  val addContentDescription: String,
+  val onAdd: () -> Unit,
+  val onTogglePinned: (() -> Unit)? = null,
+  val onToggleVariants: (() -> Unit)? = null,
+)
 
 /** A popup row or separator with no UI-toolkit types in its model. */
 sealed interface UiBuilderMenuEntry {
@@ -239,6 +289,252 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
   }
 
   @Composable
+  override fun ComponentBrowserDestination(text: String, available: Boolean) {
+    Text(
+      text,
+      Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
+      color =
+        if (available) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 2,
+      overflow = TextOverflow.Ellipsis,
+    )
+  }
+
+  @Composable
+  override fun ComponentBrowserAddBeside(checked: Boolean, onToggle: () -> Unit) {
+    Row(
+      Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, bottom = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Column(Modifier.weight(1f)) {
+        Text("Add beside", style = MaterialTheme.typography.labelMedium)
+        Text(
+          "Place items side by side instead of inside the selection",
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
+      Switch(
+        checked = checked,
+        onCheckedChange = { onToggle() },
+        modifier =
+          Modifier.semantics {
+            contentDescription =
+              if (checked) "Add into the selected layer instead"
+              else "Add beside the design instead"
+          },
+      )
+    }
+  }
+
+  @Composable
+  override fun ComponentBrowserPacksSummary(label: String, onManage: () -> Unit) {
+    Row(
+      Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+        label,
+        Modifier.weight(1f),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      TextButton(
+        onClick = onManage,
+        modifier = Modifier.semantics { contentDescription = "Manage component packs" },
+      ) {
+        Text("Packs…", style = MaterialTheme.typography.labelMedium)
+      }
+    }
+  }
+
+  @Composable
+  override fun ComponentBrowserAllRow(total: Int, onShowAll: () -> Unit) {
+    Surface(
+      Modifier.fillMaxWidth()
+        .padding(horizontal = 12.dp, vertical = 4.dp)
+        .clip(RoundedCornerShape(20.dp))
+        .clickable(onClick = onShowAll),
+      shape = RoundedCornerShape(20.dp),
+      color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+      Row(
+        Modifier.padding(start = 16.dp, end = 8.dp).height(40.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Text(
+          "All",
+          Modifier.weight(1f).semantics { contentDescription = "Show all $total components" },
+          style = MaterialTheme.typography.bodyLarge,
+        )
+        Surface(
+          shape = RoundedCornerShape(12.dp),
+          color = MaterialTheme.colorScheme.primaryContainer,
+        ) {
+          Text(
+            total.toString(),
+            Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            style = MaterialTheme.typography.labelMedium,
+          )
+        }
+      }
+    }
+  }
+
+  @Composable
+  override fun ComponentBrowserGroupRow(
+    name: String,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+  ) {
+    val accent =
+      if (expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    Row(
+      Modifier.fillMaxWidth().height(40.dp).clickable(onClick = onToggle).semantics {
+        contentDescription = "${if (expanded) "Collapse" else "Expand"} $name"
+      },
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Box(
+        Modifier.padding(start = 8.dp)
+          .width(3.dp)
+          .height(24.dp)
+          .background(
+            if (expanded) MaterialTheme.colorScheme.primary else Color.Transparent,
+            RoundedCornerShape(2.dp),
+          )
+      )
+      Icon(
+        Icons.Filled.ArrowDropDown,
+        contentDescription = null,
+        modifier = Modifier.padding(start = 5.dp).size(20.dp).rotate(if (expanded) 0f else -90f),
+        tint = accent,
+      )
+      Text(
+        name,
+        Modifier.padding(start = 2.dp).weight(1f),
+        color = accent,
+        style = MaterialTheme.typography.bodyLarge,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      Surface(
+        Modifier.padding(end = 12.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+      ) {
+        Text(
+          count.toString(),
+          Modifier.padding(horizontal = 7.dp, vertical = 1.dp),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+        )
+      }
+    }
+  }
+
+  @Composable
+  override fun ComponentBrowserTile(
+    model: UiBuilderCatalogTileModel,
+    thumbnail: @Composable () -> Unit,
+  ) {
+    Column(
+      Modifier.fillMaxWidth()
+        .clip(RoundedCornerShape(if (model.variant) 8.dp else 10.dp))
+        .background(
+          if (model.variant) MaterialTheme.colorScheme.surfaceContainerHigh
+          else MaterialTheme.colorScheme.surfaceVariant
+        )
+        .padding(6.dp)
+    ) {
+      Box(
+        Modifier.fillMaxWidth().alpha(if (model.unexportable) 0.45f else 1f),
+        contentAlignment = Alignment.Center,
+      ) {
+        thumbnail()
+      }
+      if (model.variant) {
+        Text(
+          model.title,
+          Modifier.alpha(if (model.unexportable) 0.45f else 1f),
+          style = MaterialTheme.typography.labelMedium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      } else {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            model.title,
+            Modifier.weight(1f).alpha(if (model.unexportable) 0.45f else 1f),
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+          if (model.unexportable) MaterialUnexportableBadge(model.title)
+          model.onTogglePinned?.let { onToggle ->
+            MaterialPinnedStar(model.title, model.pinned == true, onToggle)
+          }
+        }
+      }
+      if (model.variant) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          if (model.defaultVariant) {
+            Text(
+              "default",
+              Modifier.weight(1f),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelSmall,
+            )
+          } else {
+            Spacer(Modifier.weight(1f))
+          }
+          MaterialCatalogAddButton(model)
+        }
+      } else {
+        model.supporting?.let {
+          Text(
+            it,
+            color =
+              if (model.supportingIsError) MaterialTheme.colorScheme.error
+              else MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = if (model.supportingIsError) 2 else 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+          if (model.variantCount > 0 && model.onToggleVariants != null) {
+            TextButton(
+              onClick = model.onToggleVariants,
+              modifier =
+                Modifier.weight(1f).semantics {
+                  contentDescription =
+                    "${if (model.variantsExpanded) "Hide" else "Show"} ${model.title} variants"
+                },
+              contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+            ) {
+              Text(
+                if (model.variantsExpanded) "Hide variants" else "${model.variantCount} variants"
+              )
+            }
+          } else {
+            Spacer(Modifier.weight(1f))
+          }
+          MaterialCatalogAddButton(model)
+        }
+      }
+    }
+  }
+
+  @Composable
   override fun PopupMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
@@ -253,6 +549,50 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
         }
       }
     }
+  }
+}
+
+@Composable
+private fun MaterialPinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
+  Box(
+    Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).clickable(onClick = onToggle).semantics(
+      mergeDescendants = true
+    ) {
+      contentDescription = if (pinned) "Unpin $componentName" else "Pin $componentName"
+    },
+    contentAlignment = Alignment.Center,
+  ) {
+    Icon(
+      if (pinned) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+      contentDescription = null,
+      modifier = Modifier.size(16.dp),
+      tint = if (pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+    )
+  }
+}
+
+@Composable
+private fun MaterialUnexportableBadge(componentName: String) {
+  Icon(
+    Icons.Filled.CodeOff,
+    contentDescription =
+      "$componentName renders on the canvas, but the Compose export cannot write it yet",
+    modifier = Modifier.padding(end = 6.dp).size(16.dp),
+    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
+}
+
+@Composable
+private fun MaterialCatalogAddButton(model: UiBuilderCatalogTileModel) {
+  TextButton(
+    onClick = model.onAdd,
+    enabled = model.canAdd,
+    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+  ) {
+    Text(
+      "Add",
+      Modifier.semantics { contentDescription = model.addContentDescription },
+    )
   }
 }
 
