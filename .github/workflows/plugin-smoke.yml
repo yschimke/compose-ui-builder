@@ -1,0 +1,55 @@
+name: Installed plugin smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref whose plugin distribution is installed and tested
+        required: false
+        default: main
+        type: string
+  schedule:
+    - cron: "23 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  installed-plugin-smoke:
+    name: ${{ matrix.ide }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        ide: [intellij, android-studio]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            25
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - name: Install and open the plugin in ${{ matrix.ide }}
+        run: >-
+          xvfb-run --auto-servernum
+          ./gradlew --no-daemon
+          -Dui.builder.smoke.ide=${{ matrix.ide }}
+          :ui-builder-intellij-plugin:installedPluginSmoke
+      - name: Upload IDE logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: installed-plugin-smoke-${{ matrix.ide }}
+          path: |
+            ui-builder-intellij-plugin/build/reports/tests/installedPluginSmoke
+            out/ide-tests/tests/*/*/log
+          if-no-files-found: ignore
