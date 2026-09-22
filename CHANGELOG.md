@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.41.0](https://github.com/yschimke/compose-ui-builder/compare/v3.40.0...v3.41.0) (2026-09-22)
+
+
+### Features
+
+* **intellij:** follow agent edits to project designs ([#152](https://github.com/yschimke/compose-ui-builder/issues/152)) ([be572a0](https://github.com/yschimke/compose-ui-builder/commit/be572a08d71eb10c85324b0fcd82ee055f3872ae))
+
+
+### Bug Fixes
+
+* **intellij:** render Material 3 previews ([#155](https://github.com/yschimke/compose-ui-builder/issues/155)) ([453c2f9](https://github.com/yschimke/compose-ui-builder/commit/453c2f9488498cec0ef977699e2b0542e7677379))
+
 ## [3.40.0](https://github.com/yschimke/compose-ui-builder/compare/v3.39.0...v3.40.0) (2026-09-22)
 
 
