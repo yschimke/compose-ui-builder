@@ -73,3 +73,8 @@ tasks.named<Zip>("buildPlugin") {
   archiveBaseName.set("compose-ui-builder-intellij-plugin")
   archiveVersion.set(project.version.toString())
 }
+
+// `check` must validate the installed archive's descriptor, not only compile against bundled IDE
+// modules. That catches a misspelled or unavailable runtime module before a release ZIP is
+// uploaded.
+tasks.named("check") { dependsOn("verifyPluginStructure") }
