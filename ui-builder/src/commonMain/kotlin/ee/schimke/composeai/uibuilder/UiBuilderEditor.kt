@@ -554,6 +554,15 @@ fun UiBuilderEditor(
    * catalog whose canvas is only a stand-in has the native pane added for it below.
    */
   initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
+  /**
+   * The panes this host puts inside this Compose workspace.
+   *
+   * IntelliJ keeps the visual editor in an editor tab and puts Preview / Native in a tool window,
+   * so each surface names only the panes it owns. Browser and Desktop hosts keep all three.
+   */
+  availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
+  /** Whether an editor-only initial request gains its usual free browser Preview beside it. */
+  openDefaultPreview: Boolean = true,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   /**
    * What a read of the project's component library said about the components this design imported.
@@ -800,6 +809,7 @@ fun UiBuilderEditor(
    */
   canvasRenderer: UiBuilderCanvasRenderer? = null,
 ) {
+  require(availablePanes.isNotEmpty()) { "a UI Builder workspace must expose at least one pane" }
   val reducer =
     remember(catalog, catalogRecord, actorId, clientId, operationIdPrefix) {
       UiBuilderEditorReducer(catalog, actorId, clientId, operationIdPrefix, catalogRecord)
@@ -831,9 +841,15 @@ fun UiBuilderEditor(
             // is a stand-in. Widgets use the same policy; their preview additionally fans out over
             // the launcher host shapes. An explicit [initialPanes] from the host still wins.
             panes =
-              if (initialPanes == setOf(EditorPane.Editor)) {
-                setOf(EditorPane.Editor, EditorPane.Preview)
-              } else initialPanes,
+              (if (
+                  openDefaultPreview &&
+                    initialPanes == setOf(EditorPane.Editor) &&
+                    EditorPane.Preview in availablePanes
+                ) {
+                  setOf(EditorPane.Editor, EditorPane.Preview)
+                } else initialPanes)
+                .intersect(availablePanes)
+                .ifEmpty { setOf(availablePanes.first()) },
           )
       )
     }
@@ -1471,6 +1487,26 @@ fun UiBuilderEditor(
     remember(state.document, devicePresets, state.variantAxes) {
       state.document.variantPanes(devicePresets, state.variantAxes)
     }
+  // A dedicated Preview view has no authoring canvas beside it, so its first frame is the current
+  // design. In the combined workspace that frame would be a duplicate and the pane remains the
+  // comparison-only strip it has always been.
+  val previewPanes =
+    remember(state.document, variantPanes, availablePanes) {
+      if (EditorPane.Editor in availablePanes || state.document.wearWidgetScaffoldSize() != null) {
+        variantPanes
+      } else {
+        val settings = state.document.screenEnvironmentSettings()
+        listOf(
+          UiBuilderVariantPane(
+            id = "preview-current",
+            label = "Current · ${settings.widthDp}×${settings.heightDp}dp",
+            widthDp = settings.widthDp.toFloat(),
+            heightDp = settings.heightDp.toFloat(),
+            document = state.document,
+          )
+        ) + variantPanes
+      }
+    }
   // The read-only pane. The catalog decides whether this is the constrained canvas renderer or an
   // exported artifact played by a browser adapter. No catalog or platform id is interpreted here:
   // the typed capability is the whole switch, and an unknown adapter falls back to the canvas.
@@ -1484,7 +1520,7 @@ fun UiBuilderEditor(
     if (documentBackedPreview != null) {
       RemoteDocumentDesignPreviewPane(
         document = state.document,
-        variants = variantPanes,
+        variants = previewPanes,
         authoritativeGeneration = authoritativeGeneration,
         request = requireNotNull(onRequestDocumentPreview),
         modifier = modifier,
@@ -1492,7 +1528,7 @@ fun UiBuilderEditor(
     } else {
       DesignPreviewPane(
         document = state.document,
-        variants = variantPanes,
+        variants = previewPanes,
         modifier = modifier,
       )
     }
@@ -2033,6 +2069,10 @@ fun UiBuilderEditor(
     MaterialTheme(colorScheme = EditorColors) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxWidth < 840.dp
+        // A host may put rendered output in its own view (for example IntelliJ's Preview tool
+        // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
+        // stay with the visual editor instead of being duplicated around a read-only render.
+        val dedicatedOutput = EditorPane.Editor !in availablePanes
         Column(
           Modifier.fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -2047,79 +2087,93 @@ fun UiBuilderEditor(
               )
             }
         ) {
-          if (compact) {
-            MobileEditorToolbar(
-              state = state,
-              canDelete = reducer.canDeleteSelected(state),
-              canDuplicate = reducer.canDuplicateSelected(state),
-              canCopy = reducer.canCopySelected(state),
-              canCut = reducer.canCutSelected(state),
-              canPaste = reducer.canPaste(state),
-              wrapCandidates = reducer.wrapCandidates(state),
-              canUnwrap = reducer.canUnwrapSelected(state),
-              canUndo = reducer.canUndo(state),
-              canRedo = reducer.canRedo(state),
-              onNewDesign =
-                if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
-                  { showNewDesign = true }
-                } else null,
-              onBrowseDesigns = onBrowseDesigns,
-              onReconnect = onReconnect,
-              onHelp = onHelp,
-              onCopyAiPrompt = onCopyAiPrompt,
-              onNotice = ::say,
-              onTakeOffline = onTakeOffline,
-              onSyncToServer = onSyncToServer,
-              exportHost = exportHost,
-              onComponentPacks = onComponentPacks,
-              dispatch = ::dispatch,
-            )
-          } else {
-            EditorToolbar(
-              state = state,
-              canUndo = reducer.canUndo(state),
-              canRedo = reducer.canRedo(state),
-              collaborators = collaborators,
-              onNewDesign =
-                if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
-                  { showNewDesign = true }
-                } else null,
-              onBrowseDesigns = onBrowseDesigns,
-              onReconnect = onReconnect,
-              onHelp = onHelp,
-              onCopyAiPrompt = onCopyAiPrompt,
-              onNotice = ::say,
-              onTakeOffline = onTakeOffline,
-              onSyncToServer = onSyncToServer,
-              exportHost = exportHost,
-              onTidy = {
-                focusEditor()
-                val edits = reducer.tidyPlan(state).changedValues
-                if (edits == 0) {
-                  say("Every dp value is already on the 4dp grid")
-                } else {
-                  dispatch(UiBuilderEditorEvent.Tidy)
-                  say("Tidied $edits values to the 4dp grid")
-                }
-              },
-              onComponentPacks = onComponentPacks,
-              panes = state.panes,
-              previewSurfaces = catalog.previewSurfaces,
-              nativeAvailable = nativeAvailable,
-              dispatch = ::dispatch,
-            )
+          if (!dedicatedOutput) {
+            if (compact) {
+              MobileEditorToolbar(
+                state = state,
+                canDelete = reducer.canDeleteSelected(state),
+                canDuplicate = reducer.canDuplicateSelected(state),
+                canCopy = reducer.canCopySelected(state),
+                canCut = reducer.canCutSelected(state),
+                canPaste = reducer.canPaste(state),
+                wrapCandidates = reducer.wrapCandidates(state),
+                canUnwrap = reducer.canUnwrapSelected(state),
+                canUndo = reducer.canUndo(state),
+                canRedo = reducer.canRedo(state),
+                onNewDesign =
+                  if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
+                    { showNewDesign = true }
+                  } else null,
+                onBrowseDesigns = onBrowseDesigns,
+                onReconnect = onReconnect,
+                onHelp = onHelp,
+                onCopyAiPrompt = onCopyAiPrompt,
+                onNotice = ::say,
+                onTakeOffline = onTakeOffline,
+                onSyncToServer = onSyncToServer,
+                exportHost = exportHost,
+                onComponentPacks = onComponentPacks,
+                dispatch = ::dispatch,
+              )
+            } else {
+              EditorToolbar(
+                state = state,
+                canUndo = reducer.canUndo(state),
+                canRedo = reducer.canRedo(state),
+                collaborators = collaborators,
+                onNewDesign =
+                  if (newDesignCatalogs.isNotEmpty() && onCreateDesign != null) {
+                    { showNewDesign = true }
+                  } else null,
+                onBrowseDesigns = onBrowseDesigns,
+                onReconnect = onReconnect,
+                onHelp = onHelp,
+                onCopyAiPrompt = onCopyAiPrompt,
+                onNotice = ::say,
+                onTakeOffline = onTakeOffline,
+                onSyncToServer = onSyncToServer,
+                exportHost = exportHost,
+                onTidy = {
+                  focusEditor()
+                  val edits = reducer.tidyPlan(state).changedValues
+                  if (edits == 0) {
+                    say("Every dp value is already on the 4dp grid")
+                  } else {
+                    dispatch(UiBuilderEditorEvent.Tidy)
+                    say("Tidied $edits values to the 4dp grid")
+                  }
+                },
+                onComponentPacks = onComponentPacks,
+                panes = state.panes,
+                availablePanes = availablePanes,
+                previewSurfaces = catalog.previewSurfaces,
+                nativeAvailable = nativeAvailable,
+                dispatch = ::dispatch,
+              )
+            }
           }
           // Under the toolbar and over everything else, on both layouts: what a link asked for is
           // the first thing to know about this page, and a strip inside one of the docks would be
           // behind a panel that starts closed.
-          EditorUrlBanner(
-            revisionPin = revisionPin,
-            onGoToLatest = onGoToLatest,
-            openingNotice = openingNotice,
-            transientNotice = transientNotice,
-          )
+          if (!dedicatedOutput) {
+            EditorUrlBanner(
+              revisionPin = revisionPin,
+              onGoToLatest = onGoToLatest,
+              openingNotice = openingNotice,
+              transientNotice = transientNotice,
+            )
+          }
           Box(Modifier.fillMaxSize()) {
-            if (!compact) {
+            if (dedicatedOutput) {
+              Row(Modifier.fillMaxSize()) {
+                if (EditorPane.Preview in state.panes) {
+                  previewPane(Modifier.weight(1f).fillMaxHeight())
+                }
+                if (EditorPane.Native in state.panes && nativeAvailable) {
+                  nativePane(Modifier.weight(1f).fillMaxHeight())
+                }
+              }
+            } else if (!compact) {
               // Which dock is showing, derived rather than stored: the code pane and the inspector
               // are one slot, and two flags that could both say yes is a layout bug waiting.
               val dock =
@@ -3478,6 +3532,8 @@ private fun EditorToolbar(
   onComponentPacks: (() -> Unit)? = null,
   /** Which design panes are open — see [EditorPane]. */
   panes: Set<EditorPane> = setOf(EditorPane.Editor),
+  /** Which panes this host keeps inside this workspace rather than in another IDE view. */
+  availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
   /** What this design's catalog says each renderer's picture of it is worth. */
   previewSurfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
   /** Whether the host can compile and draw this design at all. */
@@ -3529,7 +3585,9 @@ private fun EditorToolbar(
       // Beside Code, because they are the two answers to "how do I get this out": the Kotlin the
       // design is, and the picture it draws. Absent where the host cannot render one.
       if (exportHost != null) ExportMenu(exportHost)
-      WorkspacePanesMenu(panes, previewSurfaces, nativeAvailable, dispatch)
+      if (availablePanes.size > 1) {
+        WorkspacePanesMenu(panes, availablePanes, previewSurfaces, nativeAvailable, dispatch)
+      }
       // Beside the panes menu, because they are the two "what am I looking at" choices: which panes
       // are open, and which host frame the design is drawn inside.
       state.document.wearWidgetScaffoldSize()?.let { size ->
@@ -3865,6 +3923,7 @@ internal fun UiBuilderDocument.wearWidgetScaffoldSize(): WearWidgetScaffoldSize?
 @Composable
 private fun WorkspacePanesMenu(
   panes: Set<EditorPane>,
+  availablePanes: Set<EditorPane>,
   /**
    * The catalog's own claims, so a pane that cannot tell the truth says so where it is chosen.
    *
@@ -3892,25 +3951,28 @@ private fun WorkspacePanesMenu(
       expanded = open,
       onDismissRequest = { open = false },
       entries =
-        EditorPane.entries.map { pane ->
-          val shown = pane in panes
-          val available = pane != EditorPane.Native || nativeAvailable
-          // Off it may not go while it is the only thing on screen; on it may not go where the host
-          // cannot draw it.
-          val enabled = available && !(shown && panes.size == 1)
-          UiBuilderMenuEntry.Action(
-            label = pane.title,
-            detail =
-              if (available) pane.supportingText(surfaces) else pane.unavailableText(surfaces),
-            selected = shown,
-            reserveIconSpace = true,
-            enabled = enabled,
-            onClick = {
-              open = false
-              dispatch(UiBuilderEditorEvent.TogglePane(pane))
-            },
-          )
-        },
+        EditorPane.entries
+          .filter { it in availablePanes }
+          .map { pane ->
+            val shown = pane in panes
+            val available = pane != EditorPane.Native || nativeAvailable
+            // Off it may not go while it is the only thing on screen; on it may not go where the
+            // host
+            // cannot draw it.
+            val enabled = available && !(shown && panes.size == 1)
+            UiBuilderMenuEntry.Action(
+              label = pane.title,
+              detail =
+                if (available) pane.supportingText(surfaces) else pane.unavailableText(surfaces),
+              selected = shown,
+              reserveIconSpace = true,
+              enabled = enabled,
+              onClick = {
+                open = false
+                dispatch(UiBuilderEditorEvent.TogglePane(pane))
+              },
+            )
+          },
     )
   }
 }

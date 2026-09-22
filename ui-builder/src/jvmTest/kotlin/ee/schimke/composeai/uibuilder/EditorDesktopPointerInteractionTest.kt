@@ -326,6 +326,55 @@ class EditorDesktopPointerInteractionTest {
     }
 
   @Test
+  fun `host can keep the visual editor in a view without an embedded preview`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialPanes = setOf(EditorPane.Editor),
+            availablePanes = setOf(EditorPane.Editor),
+            openDefaultPreview = false,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      runOnIdle { assertEquals(setOf(EditorPane.Editor), assertNotNull(latest).panes) }
+      onNodeWithContentDescription("Workspace panes (Editor)").assertDoesNotExist()
+    }
+
+  @Test
+  fun `host can keep preview output in a chrome-free view`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialPanes = setOf(EditorPane.Preview),
+            availablePanes = setOf(EditorPane.Preview, EditorPane.Native),
+            openDefaultPreview = false,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      runOnIdle { assertEquals(setOf(EditorPane.Preview), assertNotNull(latest).panes) }
+      onNodeWithContentDescription("Workspace panes (Preview)").assertDoesNotExist()
+      onNodeWithText("UI Builder").assertDoesNotExist()
+    }
+
+  @Test
   fun `host rendered screen pickers update the frame exports and comparison strip`() =
     runDesktopComposeUiTest(width = 1400, height = 900) {
       var latest: UiBuilderEditorState? = null

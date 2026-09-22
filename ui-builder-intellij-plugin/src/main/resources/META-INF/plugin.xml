@@ -4,7 +4,7 @@
   <vendor>Yuri Schimke</vendor>
 
   <description><![CDATA[
-    Embeds the native Compose UI Builder in an IntelliJ Platform tool window.
+    Embeds the native Compose UI Builder in IntelliJ editor and preview views.
   ]]></description>
 
   <depends>com.intellij.modules.platform</depends>
@@ -18,8 +18,13 @@
   </dependencies>
 
   <extensions defaultExtensionNs="com.intellij">
+    <projectService
+        serviceImplementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderProjectService" />
+    <fileEditorProvider
+        implementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderFileEditorProvider" />
     <toolWindow
         id="Compose UI Builder"
+        secondary="true"
         anchor="right"
         factoryClass="ee.schimke.composeai.uibuilder.intellij.UiBuilderToolWindowFactory" />
   </extensions>
