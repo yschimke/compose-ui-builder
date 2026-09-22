@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.40.0](https://github.com/yschimke/compose-ui-builder/compare/v3.39.0...v3.40.0) (2026-09-22)
+
+
+### Features
+
+* **intellij:** browse remote UI Builder designs ([#149](https://github.com/yschimke/compose-ui-builder/issues/149)) ([8b36549](https://github.com/yschimke/compose-ui-builder/commit/8b36549faf8e8ad92c088aa5b768ed849514d6f9))
+* **intellij:** move builder into editor window ([#145](https://github.com/yschimke/compose-ui-builder/issues/145)) ([db7f9e5](https://github.com/yschimke/compose-ui-builder/commit/db7f9e5324b1e09da7f431f768d48bc86cda41a1))
+* **intellij:** open checked-in UI Builder designs ([#148](https://github.com/yschimke/compose-ui-builder/issues/148)) ([027c361](https://github.com/yschimke/compose-ui-builder/commit/027c3618e72abc6597bd800877c72a67da626141))
+
+
+### Bug Fixes
+
+* **intellij:** keep preview paired with editor ([#147](https://github.com/yschimke/compose-ui-builder/issues/147)) ([12f053a](https://github.com/yschimke/compose-ui-builder/commit/12f053a00002d126c0257b6d1085c68e81f540f0))
+
 ## [3.39.0](https://github.com/yschimke/compose-ui-builder/compare/v3.38.0...v3.39.0) (2026-09-22)
 
 
