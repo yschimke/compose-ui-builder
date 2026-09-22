@@ -8453,25 +8453,7 @@ private fun PropertyControl(
  */
 @Composable
 private fun StateBindingRow(variable: String, onUnbind: () -> Unit) {
-  Row(
-    Modifier.fillMaxWidth().padding(top = 4.dp),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.SpaceBetween,
-  ) {
-    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-      Text(
-        "state · $variable",
-        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.labelMedium,
-      )
-    }
-    TextButton(
-      onClick = onUnbind,
-      modifier = Modifier.semantics { contentDescription = "Unbind $variable" },
-    ) {
-      Text("Unbind")
-    }
-  }
+  LocalUiBuilderChrome.current.InspectorBinding(variable, onUnbind)
 }
 
 /**
@@ -8494,23 +8476,25 @@ private fun StateBindMenu(
   var pending by remember(field.nodeId, field.name) { mutableStateOf<String?>(null) }
   var comparison by remember(field.nodeId, field.name) { mutableStateOf("") }
   Box {
-    TextButton(
-      onClick = { open = true },
-      modifier = Modifier.semantics { contentDescription = "Bind ${field.label} to state" },
-    ) {
-      Text("Bind to state", style = MaterialTheme.typography.labelMedium)
-    }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-      stateVariables.forEach { variable ->
-        DropdownMenuItem(
-          text = { Text(variable) },
-          onClick = {
+    LocalUiBuilderChrome.current.InspectorAction(
+      UiBuilderInspectorActionModel(
+        label = "Bind to state",
+        contentDescription = "Bind ${field.label} to state",
+        compactLabel = true,
+        onClick = { open = true },
+      )
+    )
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = open,
+      onDismissRequest = { open = false },
+      entries =
+        stateVariables.map { variable ->
+          UiBuilderMenuEntry.Action(variable) {
             open = false
             if (needsComparison(variable)) pending = variable else onBind(variable, null)
-          },
-        )
-      }
-    }
+          }
+        },
+    )
   }
   val variable = pending
   if (variable != null) {
@@ -8525,21 +8509,24 @@ private fun StateBindMenu(
         SearchField(
           comparison,
           placeholder = "Value to compare",
+          searchLabel = "${field.label} state comparison",
           onFocusChanged = onTextInputFocusChanged,
         ) {
           comparison = it
         }
       }
-      TextButton(
-        onClick = {
-          onBind(variable, comparison)
-          pending = null
-          comparison = ""
-        },
-        enabled = comparison.isNotBlank(),
-      ) {
-        Text("Bind")
-      }
+      LocalUiBuilderChrome.current.InspectorAction(
+        UiBuilderInspectorActionModel(
+          label = "Bind",
+          enabled = comparison.isNotBlank(),
+          primary = true,
+          onClick = {
+            onBind(variable, comparison)
+            pending = null
+            comparison = ""
+          },
+        )
+      )
     }
   }
 }
@@ -8589,48 +8576,30 @@ private fun DraftPropertyControl(
   // and five scrolls to reach a font size: on a text leaf it drew six of them, all identical, none
   // of them doing anything until something above it changed.
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-    BasicTextField(
-      value = value,
-      onValueChange = ::update,
-      modifier =
-        Modifier.weight(1f)
-          .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
-          .onPreviewKeyEvent { event ->
-            val submitChord =
-              event.type == KeyEventType.KeyDown &&
-                event.key in ENTER_KEYS &&
-                (!multiline || event.isCtrlPressed || event.isMetaPressed)
-            if (submitChord && dirty && valid) {
-              submit()
-              true
-            } else false
-          }
-          .semantics { contentDescription = "${field.label} property" }
-          .padding(top = 7.dp)
-          .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-          .padding(10.dp),
-      textStyle =
-        MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-      singleLine = !multiline,
-      keyboardOptions =
-        KeyboardOptions(imeAction = if (multiline) ImeAction.Default else ImeAction.Done),
-      keyboardActions = KeyboardActions(onDone = { if (dirty && valid) submit() }),
+    LocalUiBuilderChrome.current.InspectorTextField(
+      UiBuilderInspectorTextFieldModel(
+        value = value,
+        label = field.label,
+        multiline = multiline,
+        submitEnabled = dirty && valid,
+        modifier = Modifier.weight(1f),
+        onFocusChanged = onTextInputFocusChanged,
+        onValueChange = ::update,
+        onSubmit = { submit() },
+      )
     )
     if (dirty) {
-      TextButton(
-        onClick = { submit() },
-        enabled = valid && draft?.status != InspectorPropertyDraftStatus.PENDING,
-        modifier =
-          Modifier.padding(start = 4.dp, top = 7.dp).semantics {
-            // The name the accessibility tree and every script driving this editor already look
-            // for, even though the face is now one word: a control that renamed itself when it
-            // shrank would be a silent break rather than a smaller button.
-            contentDescription = "Apply ${field.label.lowercase()}"
-          },
-        contentPadding = PaddingValues(horizontal = 10.dp),
-      ) {
-        Text("Apply")
-      }
+      LocalUiBuilderChrome.current.InspectorAction(
+        UiBuilderInspectorActionModel(
+          label = "Apply",
+          contentDescription = "Apply ${field.label.lowercase()}",
+          enabled = valid && draft?.status != InspectorPropertyDraftStatus.PENDING,
+          primary = true,
+          horizontalPaddingDp = 10,
+          modifier = Modifier.padding(start = 4.dp, top = 7.dp),
+          onClick = { submit() },
+        )
+      )
     }
   }
   if (dirty) {
@@ -8659,19 +8628,20 @@ private fun DraftPropertyControl(
   if (showSteppers) {
     val bounds = field.numberBounds
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-      TextButton(
-        onClick = {
-          val current = value.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
-          val next =
-            (current - (bounds?.step ?: 1.0))
-              .coerceIn(bounds!!.minimum, bounds.maximum)
-              .editorNumber(bounds.integer)
-          submit(next)
-        },
-        contentPadding = PaddingValues(horizontal = 12.dp),
-      ) {
-        Text("−")
-      }
+      LocalUiBuilderChrome.current.InspectorAction(
+        UiBuilderInspectorActionModel(
+          label = "−",
+          horizontalPaddingDp = 12,
+          onClick = {
+            val current = value.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
+            val next =
+              (current - (bounds?.step ?: 1.0))
+                .coerceIn(bounds!!.minimum, bounds.maximum)
+                .editorNumber(bounds.integer)
+            submit(next)
+          },
+        )
+      )
       Text(
         bounds
           ?.let { "${it.minimum.editorNumber(it.integer)}…${it.maximum.editorNumber(it.integer)}" }
@@ -8681,28 +8651,30 @@ private fun DraftPropertyControl(
         style = MaterialTheme.typography.labelSmall,
         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
       )
-      TextButton(
-        onClick = {
-          val current = value.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
-          val next =
-            (current + (bounds?.step ?: 1.0))
-              .coerceIn(bounds!!.minimum, bounds.maximum)
-              .editorNumber(bounds.integer)
-          submit(next)
-        },
-        contentPadding = PaddingValues(horizontal = 12.dp),
-      ) {
-        Text("+")
-      }
+      LocalUiBuilderChrome.current.InspectorAction(
+        UiBuilderInspectorActionModel(
+          label = "+",
+          horizontalPaddingDp = 12,
+          onClick = {
+            val current = value.toDoubleOrNull() ?: bounds?.minimum ?: 0.0
+            val next =
+              (current + (bounds?.step ?: 1.0))
+                .coerceIn(bounds!!.minimum, bounds.maximum)
+                .editorNumber(bounds.integer)
+            submit(next)
+          },
+        )
+      )
     }
   }
   if (field.name == "text") {
-    TextButton(
-      onClick = { submit("Edited in Compose") },
-      contentPadding = PaddingValues(horizontal = 10.dp),
-    ) {
-      Text("Use sample text")
-    }
+    LocalUiBuilderChrome.current.InspectorAction(
+      UiBuilderInspectorActionModel(
+        label = "Use sample text",
+        horizontalPaddingDp = 10,
+        onClick = { submit("Edited in Compose") },
+      )
+    )
   }
 }
 
@@ -10151,24 +10123,27 @@ private fun ExportDevicePicker(
 private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> Unit) {
   var expanded by remember(field.nodeId, field.name) { mutableStateOf(false) }
   Box(Modifier.fillMaxWidth()) {
-    Button(
-      onClick = { expanded = true },
-      modifier =
-        Modifier.fillMaxWidth().semantics { contentDescription = "${field.label} property" },
-    ) {
-      Text(field.value.ifEmpty { "Choose…" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-      field.choices.forEach { choice ->
-        DropdownMenuItem(
-          text = { Text(choice) },
-          onClick = {
+    LocalUiBuilderChrome.current.InspectorAction(
+      UiBuilderInspectorActionModel(
+        label = field.value.ifEmpty { "Choose…" },
+        contentDescription = "${field.label} property",
+        primary = true,
+        filled = true,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { expanded = true },
+      )
+    )
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = expanded,
+      onDismissRequest = { expanded = false },
+      entries =
+        field.choices.map { choice ->
+          UiBuilderMenuEntry.Action(choice) {
             expanded = false
             commit(choice)
-          },
-        )
-      }
-    }
+          }
+        },
+    )
   }
 }
 

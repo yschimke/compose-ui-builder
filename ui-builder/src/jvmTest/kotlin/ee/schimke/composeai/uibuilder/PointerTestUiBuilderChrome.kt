@@ -47,6 +47,21 @@ internal object PointerTestUiBuilderChrome : UiBuilderChrome by MaterialUiBuilde
   }
 
   @Composable
+  override fun InspectorTextField(model: UiBuilderInspectorTextFieldModel) {
+    MaterialUiBuilderChrome.InspectorTextField(model.copy(modifier = model.modifier.padding(1.dp)))
+  }
+
+  @Composable
+  override fun InspectorAction(model: UiBuilderInspectorActionModel) {
+    MaterialUiBuilderChrome.InspectorAction(model.copy(modifier = model.modifier.padding(1.dp)))
+  }
+
+  @Composable
+  override fun InspectorBinding(variable: String, onUnbind: () -> Unit) {
+    Box(Modifier.padding(1.dp)) { MaterialUiBuilderChrome.InspectorBinding(variable, onUnbind) }
+  }
+
+  @Composable
   override fun ComponentBrowserTile(
     model: UiBuilderCatalogTileModel,
     thumbnail: @Composable () -> Unit,
