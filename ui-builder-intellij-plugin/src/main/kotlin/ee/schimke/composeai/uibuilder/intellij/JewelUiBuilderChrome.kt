@@ -610,9 +610,59 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
             selected = choice.selected
           }
         if (choice.selected) {
-          DefaultSlimButton(onClick = choice.onClick, modifier = modifier) { Text(choice.label) }
+          DefaultSlimButton(
+            onClick = choice.onClick,
+            enabled = choice.enabled,
+            modifier = modifier,
+          ) {
+            Text(choice.label)
+          }
         } else {
-          OutlinedSlimButton(onClick = choice.onClick, modifier = modifier) { Text(choice.label) }
+          OutlinedSlimButton(
+            onClick = choice.onClick,
+            enabled = choice.enabled,
+            modifier = modifier,
+          ) {
+            Text(choice.label)
+          }
+        }
+      }
+    }
+  }
+
+  @Composable
+  override fun InspectorToggleRow(
+    label: String,
+    supporting: String?,
+    choices: List<UiBuilderInspectorChoiceModel>,
+  ) {
+    Text(label, fontWeight = FontWeight.SemiBold)
+    if (supporting != null) Text(supporting, color = JewelTheme.globalColors.text.info)
+    Row(
+      Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+      horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+      choices.forEach { choice ->
+        val modifier = Modifier.semantics {
+          contentDescription = choice.contentDescription
+          selected = choice.selected
+        }
+        if (choice.selected) {
+          DefaultSlimButton(
+            onClick = choice.onClick,
+            enabled = choice.enabled,
+            modifier = modifier,
+          ) {
+            Text(choice.label)
+          }
+        } else {
+          OutlinedSlimButton(
+            onClick = choice.onClick,
+            enabled = choice.enabled,
+            modifier = modifier,
+          ) {
+            Text(choice.label)
+          }
         }
       }
     }
@@ -732,6 +782,14 @@ private fun MenuScope.jewelEntries(entries: List<UiBuilderMenuEntry>) {
   entries.forEach { entry ->
     when (entry) {
       UiBuilderMenuEntry.Divider -> separator()
+      is UiBuilderMenuEntry.Heading ->
+        passiveItem {
+          Text(
+            entry.label,
+            color = JewelTheme.globalColors.text.info,
+            fontWeight = FontWeight.SemiBold,
+          )
+        }
       is UiBuilderMenuEntry.Action ->
         if (entry.children.isEmpty()) {
           selectableItem(
@@ -759,7 +817,10 @@ private fun MenuScope.jewelEntries(entries: List<UiBuilderMenuEntry>) {
 @Composable
 private fun JewelMenuLabel(entry: UiBuilderMenuEntry.Action) {
   Column {
-    Text(entry.label)
+    Text(
+      entry.label,
+      fontWeight = if (entry.emphasized) FontWeight.SemiBold else FontWeight.Normal,
+    )
     entry.detail?.let { Text(it) }
   }
 }

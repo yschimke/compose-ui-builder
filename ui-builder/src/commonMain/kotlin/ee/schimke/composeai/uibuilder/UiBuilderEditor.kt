@@ -9863,77 +9863,58 @@ private fun DevicePresetPicker(
   // and then stops mattering. The design does not become that device, which is why a frame that
   // matches no preset reads as "Custom size" below rather than as the nearest phone.
   Text("Set frame from", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+  val shown = if (showAll) presets else presets.forPlatform(platform, listOfNotNull(selected?.id))
   Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp)) {
-    Button(
-      onClick = { expanded = true },
-      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Device preset" },
-    ) {
-      Text(
+    LocalUiBuilderChrome.current.InspectorAction(
+      UiBuilderInspectorActionModel(
         // A hand-typed frame is a legitimate state, not an error — name it rather than showing a
         // device the canvas is not actually at.
-        selected?.label ?: "Custom size",
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        label = selected?.label ?: "Custom size",
+        contentDescription = "Device preset",
+        primary = true,
+        filled = true,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { expanded = true },
       )
-    }
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-      // The host serves every family it can render — 40-odd presets across phones, foldables,
-      // tablets, watches, desktops, TVs, cars and headsets — because the geometry comes from the
-      // render lane and the render lane does not care what you are authoring. The menus do: a
-      // mobile design has no use for a watch frame, and scrolling past eight families to find two
-      // phones was the whole of the difficulty here. So the design's own platform decides what
-      // opens, and **Show all devices** reveals the rest.
-      //
-      // The frame the design is already on is never hidden, even when it is off-platform: a menu
-      // that cannot show you where you are is worse than a long one.
-      val shown =
-        if (showAll) presets else presets.forPlatform(platform, listOfNotNull(selected?.id))
-      shown.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
-        Text(
-          group,
-          Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp),
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.labelSmall,
-          fontWeight = FontWeight.Bold,
-        )
-        devices.forEach { preset ->
-          DropdownMenuItem(
-            text = {
-              Column {
-                Text(
-                  preset.label,
-                  fontWeight =
-                    if (preset.id == selected?.id) FontWeight.Bold else FontWeight.Normal,
+    )
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = expanded,
+      onDismissRequest = { expanded = false },
+      entries =
+        buildList {
+          // The host serves every family it can render — 40-odd presets across phones, foldables,
+          // tablets, watches, desktops, TVs, cars and headsets — because the geometry comes from
+          // the render lane and the render lane does not care what you are authoring. The menus do:
+          // the design's own platform decides what opens, and Show all devices reveals the rest.
+          // The frame already in use is never hidden, even when it is off-platform.
+          shown.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
+            add(UiBuilderMenuEntry.Heading(group))
+            devices.forEach { preset ->
+              add(
+                UiBuilderMenuEntry.Action(
+                  label = preset.label,
+                  detail = preset.summary,
+                  detailStyle = UiBuilderMenuDetailStyle.Body,
+                  emphasized = preset.id == selected?.id,
+                  onClick = {
+                    expanded = false
+                    onPick(preset)
+                  },
                 )
-                Text(
-                  preset.summary,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  style = MaterialTheme.typography.bodySmall,
-                )
+              )
+            }
+          }
+          if (!showAll && presets.size > shown.size) {
+            add(UiBuilderMenuEntry.Divider)
+            add(
+              UiBuilderMenuEntry.Action("Show all devices (${presets.size - shown.size} more)") {
+                // Stays open: revealing the rest is what happens just before making the choice.
+                showAll = true
               }
-            },
-            onClick = {
-              expanded = false
-              onPick(preset)
-            },
-          )
-        }
-      }
-      if (!showAll && presets.size > shown.size) {
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        DropdownMenuItem(
-          text = {
-            Text(
-              "Show all devices (${presets.size - shown.size} more)",
-              style = MaterialTheme.typography.labelLarge,
             )
-          },
-          // Stays open, unlike a device row: revealing the rest is not the choice, it is what you
-          // do just before making it.
-          onClick = { showAll = true },
-        )
-      }
-    }
+          }
+        },
+    )
   }
 }
 
@@ -9965,28 +9946,24 @@ private fun VariantAxisPicker(
   drawn: Boolean,
   onToggle: (EditorVariantAxis) -> Unit,
 ) {
-  Text("Also compare", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-  if (!drawn) {
-    Text(
-      "The comparison strip is drawn on the builder's own canvas. This design is being previewed " +
-        "on the host's renderer, which draws one frame.",
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-    )
-  }
-  Row(
-    Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp),
-    horizontalArrangement = Arrangement.spacedBy(6.dp),
-  ) {
-    EditorVariantAxis.entries.forEach { axis ->
-      FilterChip(
-        selected = axis in selected,
-        enabled = drawn,
-        onClick = { onToggle(axis) },
-        label = { Text(axis.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-      )
-    }
-  }
+  LocalUiBuilderChrome.current.InspectorToggleRow(
+    label = "Also compare",
+    supporting =
+      if (drawn) null
+      else
+        "The comparison strip is drawn on the builder's own canvas. This design is being " +
+          "previewed on the host's renderer, which draws one frame.",
+    choices =
+      EditorVariantAxis.entries.map { axis ->
+        UiBuilderInspectorChoiceModel(
+          label = axis.label,
+          contentDescription = "Compare ${axis.label}",
+          selected = axis in selected,
+          enabled = drawn,
+          onClick = { onToggle(axis) },
+        )
+      },
+  )
 }
 
 @Composable
@@ -10039,73 +10016,62 @@ private fun ExportDevicePicker(
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.labelSmall,
   )
+  val shown = if (showAll) presets else presets.forPlatform(platform, selected)
   Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp)) {
-    Button(
-      onClick = { expanded = true },
-      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Export devices" },
-    ) {
-      Text(
+    LocalUiBuilderChrome.current.InspectorAction(
+      UiBuilderInspectorActionModel(
         // Naming the devices while there are few enough to read beats a count: "Pixel 6, Pixel
         // Fold" is the answer, where "2 devices" is a prompt to go and look.
-        when {
-          selected.isEmpty() -> "This frame only"
-          selected.size <= 2 ->
-            selected.joinToString(", ") { id -> presets.firstOrNull { it.id == id }?.label ?: id }
-          else -> "${selected.size} devices"
-        },
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-    }
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-      // Same rule as the frame menu above, with this menu's own notion of "already chosen": a
-      // ticked device is never hidden, because a tick you cannot find to clear is worse than a
-      // long menu — and that is the state a design arriving from MCP naming a TV can be in.
-      val shown = if (showAll) presets else presets.forPlatform(platform, selected)
-      shown.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
-        Text(
-          group,
-          Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp),
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.labelSmall,
-          fontWeight = FontWeight.Bold,
-        )
-        devices.forEach { preset ->
-          val checked = preset.id in selected
-          DropdownMenuItem(
-            text = {
-              Column {
-                Text(
-                  preset.label,
-                  fontWeight = if (checked) FontWeight.Bold else FontWeight.Normal,
-                )
-                Text(
-                  preset.summary,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  style = MaterialTheme.typography.bodySmall,
-                )
-              }
-            },
-            leadingIcon = { Checkbox(checked = checked, onCheckedChange = null) },
-            // The menu stays open: picking a set one item at a time through a menu that closes
-            // after each is the interaction this control exists to avoid.
-            onClick = { onToggle(preset.id) },
-          )
-        }
-      }
-      if (!showAll && presets.size > shown.size) {
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        DropdownMenuItem(
-          text = {
-            Text(
-              "Show all devices (${presets.size - shown.size} more)",
-              style = MaterialTheme.typography.labelLarge,
-            )
+        label =
+          when {
+            selected.isEmpty() -> "This frame only"
+            selected.size <= 2 ->
+              selected.joinToString(", ") { id -> presets.firstOrNull { it.id == id }?.label ?: id }
+            else -> "${selected.size} devices"
           },
-          onClick = { showAll = true },
-        )
-      }
-    }
+        contentDescription = "Export devices",
+        primary = true,
+        filled = true,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { expanded = true },
+      )
+    )
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = expanded,
+      onDismissRequest = { expanded = false },
+      entries =
+        buildList {
+          // A ticked device is never hidden, because a tick you cannot find to clear is worse than
+          // a long menu — and that is the state a design arriving from MCP naming a TV can be in.
+          shown.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
+            add(UiBuilderMenuEntry.Heading(group))
+            devices.forEach { preset ->
+              val checked = preset.id in selected
+              add(
+                UiBuilderMenuEntry.Action(
+                  label = preset.label,
+                  detail = preset.summary,
+                  detailStyle = UiBuilderMenuDetailStyle.Body,
+                  selected = checked,
+                  selectionIndicator = UiBuilderMenuSelectionIndicator.Checkbox,
+                  emphasized = checked,
+                  // The menu stays open: picking a set one item at a time through a menu that
+                  // closes after each is the interaction this control exists to avoid.
+                  onClick = { onToggle(preset.id) },
+                )
+              )
+            }
+          }
+          if (!showAll && presets.size > shown.size) {
+            add(UiBuilderMenuEntry.Divider)
+            add(
+              UiBuilderMenuEntry.Action("Show all devices (${presets.size - shown.size} more)") {
+                showAll = true
+              }
+            )
+          }
+        },
+    )
   }
 }
 
