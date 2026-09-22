@@ -107,12 +107,12 @@ Open **View → Tool Windows → Compose UI Builder** in the sandbox. This is in
 proof of concept: it persists edits locally but does not yet discover the open project's composables
 or connect to the preview server's collaboration and native-render lanes.
 
-The plugin supplies Jewel chrome for the shared Insert/Layers navigator frame, headings, close
-action, search fields, component-browser controls and tile shells, editor and export menus,
-workspace choices, and layer/canvas context menus. The web and standalone desktop hosts continue
-to render those controls with Material 3. In every host the canvas and the content inside component
-thumbnails remain the same catalog-backed Compose render: Jewel changes the IDE controls around a
-design, not the design being authored.
+The plugin supplies Jewel chrome for the shared editor toolbar, panel rails, Insert/Layers navigator
+frame, headings, close action, search fields, component-browser controls and tile shells, editor and
+export menus, workspace choices, and layer/canvas context menus. The web and standalone desktop
+hosts continue to render those controls with Material 3. In every host the canvas and the content
+inside component thumbnails remain the same catalog-backed Compose render: Jewel changes the IDE
+controls around a design, not the design being authored.
 
 Repository releases include `compose-ui-builder-intellij-plugin-<version>.zip`. Install it with
 **Settings → Plugins → Install Plugin from Disk**, then restart the IDE and open the tool window.

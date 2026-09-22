@@ -58,55 +58,33 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.NoteAdd
-import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DragIndicator
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -145,7 +123,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -3278,7 +3255,7 @@ private fun MobileEditorToolbar(
 ) {
   var expanded by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
-  Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
+  LocalUiBuilderChrome.current.EditorToolbar(Modifier) {
     Row(
       Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 8.dp),
       verticalAlignment = Alignment.CenterVertically,
@@ -3521,10 +3498,10 @@ private fun EditorToolbar(
     ) {
       DocumentIdentity(state)
       Spacer(Modifier.width(10.dp))
-      ToolbarIconAction("Undo", "Ctrl/⌘+Z", Icons.AutoMirrored.Filled.Undo, canUndo) {
+      ToolbarIconAction("Undo", "Ctrl/⌘+Z", UiBuilderChromeIcon.Undo, canUndo) {
         dispatch(UiBuilderEditorEvent.Undo)
       }
-      ToolbarIconAction("Redo", "Ctrl/⌘+Shift+Z", Icons.AutoMirrored.Filled.Redo, canRedo) {
+      ToolbarIconAction("Redo", "Ctrl/⌘+Shift+Z", UiBuilderChromeIcon.Redo, canRedo) {
         dispatch(UiBuilderEditorEvent.Redo)
       }
       Spacer(Modifier.weight(1f))
@@ -3535,8 +3512,8 @@ private fun EditorToolbar(
         ToolbarToggleAction(
           label = if (state.reference.settings.visible) "Hide reference" else "Show reference",
           icon =
-            if (state.reference.settings.visible) Icons.Filled.Visibility
-            else Icons.Filled.VisibilityOff,
+            if (state.reference.settings.visible) UiBuilderChromeIcon.Show
+            else UiBuilderChromeIcon.Hide,
           checked = state.reference.settings.visible,
         ) {
           dispatch(UiBuilderEditorEvent.ToggleReference)
@@ -3544,7 +3521,7 @@ private fun EditorToolbar(
       }
       ToolbarToggleAction(
         label = if (state.codePaneVisible) "Code · hide" else "Code",
-        icon = Icons.Filled.Code,
+        icon = UiBuilderChromeIcon.Code,
         checked = state.codePaneVisible,
       ) {
         dispatch(UiBuilderEditorEvent.ToggleCodePane)
@@ -3564,15 +3541,15 @@ private fun EditorToolbar(
         Spacer(Modifier.width(6.dp))
       }
       if (onNewDesign != null) {
-        ToolbarIconAction("New design", "", Icons.AutoMirrored.Filled.NoteAdd, true, onNewDesign)
+        ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
       }
       if (onCopyAiPrompt != null) {
-        ToolbarIconAction("Copy OpenCode AI prompt", "", Icons.Filled.ContentCopy, true) {
+        ToolbarIconAction("Copy OpenCode AI prompt", "", UiBuilderChromeIcon.Copy, true) {
           scope.launch { onNotice(onCopyAiPrompt()) }
         }
       }
       Box {
-        ToolbarIconAction("More editor actions", "", Icons.Filled.MoreVert, true) {
+        ToolbarIconAction("More editor actions", "", UiBuilderChromeIcon.More, true) {
           overflowOpen = true
         }
         val menuEntries = buildList {
@@ -3697,7 +3674,7 @@ private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
       )
     }
     Box {
-      ToolbarIconAction("Export", "", Icons.Filled.IosShare, true) { open = true }
+      ToolbarIconAction("Export", "", UiBuilderChromeIcon.Export, true) { open = true }
       LocalUiBuilderChrome.current.PopupMenu(
         expanded = open,
         onDismissRequest = { open = false },
@@ -3791,43 +3768,13 @@ private const val EXPORT_STATUS_MILLIS = 4_000L
 private fun DocumentIdentity(state: UiBuilderEditorState, modifier: Modifier = Modifier) {
   val catalogSystemId =
     state.document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull.orEmpty()
-  Row(modifier.widthIn(max = 320.dp), verticalAlignment = Alignment.CenterVertically) {
-    Surface(
-      Modifier.size(28.dp),
-      shape = RoundedCornerShape(8.dp),
-      color = MaterialTheme.colorScheme.primary,
-    ) {
-      Box(contentAlignment = Alignment.Center) {
-        Icon(
-          Icons.Filled.Widgets,
-          contentDescription = null,
-          modifier = Modifier.size(16.dp),
-          tint = MaterialTheme.colorScheme.onPrimary,
-        )
-      }
-    }
-    // The design's title and the catalog it is pinned to, selectable: they are the two strings
-    // anyone naming this design elsewhere has to reproduce exactly.
-    SelectionContainer {
-      Column(Modifier.padding(start = 10.dp)) {
-        Text(
-          state.document.title,
-          style = MaterialTheme.typography.titleSmall,
-          fontWeight = FontWeight.Bold,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-          if (catalogSystemId.isEmpty()) "Compose UI Builder"
-          else "Compose UI Builder · $catalogSystemId",
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.labelSmall,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
-    }
-  }
+  LocalUiBuilderChrome.current.DocumentIdentity(
+    title = state.document.title,
+    supporting =
+      if (catalogSystemId.isEmpty()) "Compose UI Builder"
+      else "Compose UI Builder · $catalogSystemId",
+    modifier = modifier,
+  )
 }
 
 /**
@@ -4410,7 +4357,9 @@ private fun SelectionActionBar(
       // layer itself, in the tree or on the canvas; this is the same menu for anyone who reaches
       // for a button instead, and it is where the chords are written down.
       Box {
-        ToolbarIconAction("Selection actions", "", Icons.Filled.MoreVert, true) { menuOpen = true }
+        ToolbarIconAction("Selection actions", "", UiBuilderChromeIcon.More, true) {
+          menuOpen = true
+        }
         LocalUiBuilderChrome.current.PopupMenu(
           expanded = menuOpen,
           onDismissRequest = { menuOpen = false },
@@ -4691,53 +4640,25 @@ internal fun EditorPane.unavailableText(
 internal fun ToolbarIconAction(
   label: String,
   shortcut: String,
-  icon: ImageVector,
+  icon: UiBuilderChromeIcon,
   enabled: Boolean,
   onClick: () -> Unit,
 ) {
-  EditorTooltip(label, shortcut) {
-    IconButton(
-      onClick = onClick,
-      enabled = enabled,
-      modifier = Modifier.semantics { contentDescription = "$label ($shortcut)" },
-    ) {
-      Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-    }
-  }
+  LocalUiBuilderChrome.current.ToolbarAction(
+    UiBuilderToolbarActionModel(label, shortcut, icon, enabled, onClick)
+  )
 }
 
 /** [ToolbarIconAction] for a control that is on or off, and says which by staying lit. */
 @Composable
 private fun ToolbarToggleAction(
   label: String,
-  icon: ImageVector,
+  icon: UiBuilderChromeIcon,
   checked: Boolean,
   onClick: () -> Unit,
 ) {
-  EditorTooltip(label, "") {
-    FilledIconToggleButton(
-      checked = checked,
-      onCheckedChange = { onClick() },
-      modifier = Modifier.semantics { contentDescription = "$label ()" },
-    ) {
-      Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-    }
-  }
-}
-
-/**
- * The hover label an icon control needs to be as discoverable as the word it replaced.
- *
- * Not optional decoration: a toolbar of unlabelled glyphs is only usable by someone who already
- * knows the tool, and the whole point of moving to icons was to make room, not to make a puzzle.
- */
-@Composable
-private fun EditorTooltip(label: String, shortcut: String, content: @Composable () -> Unit) {
-  TooltipBox(
-    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-    tooltip = { PlainTooltip { Text(if (shortcut.isEmpty()) label else "$label · $shortcut") } },
-    state = rememberTooltipState(),
-    content = content,
+  LocalUiBuilderChrome.current.ToolbarToggle(
+    UiBuilderToolbarToggleModel(label, icon, checked, onClick)
   )
 }
 
@@ -5639,86 +5560,36 @@ private fun EditorDock.inspectorMode(): EditorInspectorMode? =
  */
 @Composable
 private fun EditorRail(items: List<EditorRailItem>, modifier: Modifier = Modifier) {
-  Surface(modifier.fillMaxHeight().width(52.dp), color = MaterialTheme.colorScheme.surface) {
-    Column(
-      Modifier.fillMaxHeight().padding(vertical = 8.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-      items.forEach { item ->
-        EditorTooltip(item.label, "") {
-          Surface(
-            Modifier.size(40.dp)
-              .semantics {
-                selected = item.selected
-                contentDescription =
-                  if (item.selected) "Close ${item.label.lowercase()} panel"
-                  else "Open ${item.label.lowercase()} panel"
-              }
-              .clickable(onClick = item.onClick),
-            shape = RoundedCornerShape(12.dp),
-            color =
-              if (item.selected) MaterialTheme.colorScheme.primary
-              else MaterialTheme.colorScheme.surface,
-          ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                item.icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint =
-                  if (item.selected) MaterialTheme.colorScheme.onPrimary
-                  else MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-              // A count rather than a dot: "three problems" and "one problem" are different
-              // enough decisions that the badge may as well say which.
-              if (item.badge > 0) {
-                Surface(
-                  Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 2.dp),
-                  shape = RoundedCornerShape(7.dp),
-                  color = MaterialTheme.colorScheme.error,
-                ) {
-                  Text(
-                    item.badge.toString(),
-                    Modifier.padding(horizontal = 4.dp),
-                    color = MaterialTheme.colorScheme.onError,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                  )
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+  LocalUiBuilderChrome.current.EditorRail(
+    items.map { UiBuilderRailItemModel(it.label, it.icon, it.selected, it.badge, it.onClick) },
+    modifier,
+  )
 }
 
 /** One switch on an [EditorRail]. */
 private data class EditorRailItem(
   val label: String,
-  val icon: ImageVector,
+  val icon: UiBuilderChromeIcon,
   val selected: Boolean,
   val badge: Int = 0,
   val onClick: () -> Unit,
 )
 
-private fun EditorDock.icon(): ImageVector =
+private fun EditorDock.icon(): UiBuilderChromeIcon =
   when (this) {
-    EditorDock.Properties -> Icons.Filled.Tune
-    EditorDock.Theme -> Icons.Filled.Palette
-    EditorDock.Screen -> Icons.Filled.PhoneAndroid
-    EditorDock.Issues -> Icons.Filled.ErrorOutline
-    EditorDock.Comments -> Icons.Filled.ChatBubbleOutline
-    EditorDock.History -> Icons.Filled.History
-    EditorDock.Code -> Icons.Filled.Code
+    EditorDock.Properties -> UiBuilderChromeIcon.Properties
+    EditorDock.Theme -> UiBuilderChromeIcon.Theme
+    EditorDock.Screen -> UiBuilderChromeIcon.Screen
+    EditorDock.Issues -> UiBuilderChromeIcon.Issues
+    EditorDock.Comments -> UiBuilderChromeIcon.Comments
+    EditorDock.History -> UiBuilderChromeIcon.History
+    EditorDock.Code -> UiBuilderChromeIcon.Code
   }
 
-private fun NavigatorTab.icon(): ImageVector =
+private fun NavigatorTab.icon(): UiBuilderChromeIcon =
   when (this) {
-    NavigatorTab.Insert -> Icons.Filled.Widgets
-    NavigatorTab.Layers -> Icons.Filled.AccountTree
+    NavigatorTab.Insert -> UiBuilderChromeIcon.Components
+    NavigatorTab.Layers -> UiBuilderChromeIcon.Layers
   }
 
 /**
@@ -6909,7 +6780,7 @@ private fun CanvasZoomControls(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-      ToolbarIconAction("Zoom out", "", Icons.Filled.Remove, scale > MIN_CANVAS_ZOOM) {
+      ToolbarIconAction("Zoom out", "", UiBuilderChromeIcon.Remove, scale > MIN_CANVAS_ZOOM) {
         onZoomChanged(canvasZoomStep(scale, zoomIn = false))
       }
       TextButton(
@@ -6918,10 +6789,10 @@ private fun CanvasZoomControls(
       ) {
         Text(canvasZoomLabel(scale, fitting), style = MaterialTheme.typography.labelLarge)
       }
-      ToolbarIconAction("Zoom in", "", Icons.Filled.Add, scale < MAX_CANVAS_ZOOM) {
+      ToolbarIconAction("Zoom in", "", UiBuilderChromeIcon.Add, scale < MAX_CANVAS_ZOOM) {
         onZoomChanged(canvasZoomStep(scale, zoomIn = true))
       }
-      ToolbarToggleAction("Fit to window", Icons.Filled.FitScreen, fitting) {
+      ToolbarToggleAction("Fit to window", UiBuilderChromeIcon.Fit, fitting) {
         onZoomChanged(if (fitting) scale else null)
       }
     }
@@ -8302,7 +8173,7 @@ private fun InspectorBody(
         ToolbarIconAction(
           label = if (addOpen) "Close add property" else "Add property",
           shortcut = "",
-          icon = if (addOpen) Icons.Filled.Close else Icons.Filled.Add,
+          icon = if (addOpen) UiBuilderChromeIcon.Close else UiBuilderChromeIcon.Add,
           enabled = true,
         ) {
           addingProperty = !addOpen

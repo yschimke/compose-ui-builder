@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -24,8 +26,12 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.UiBuilderCatalogTileModel
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
+import ee.schimke.composeai.uibuilder.UiBuilderChromeIcon
 import ee.schimke.composeai.uibuilder.UiBuilderMenuEntry
 import ee.schimke.composeai.uibuilder.UiBuilderMenuIcon
+import ee.schimke.composeai.uibuilder.UiBuilderRailItemModel
+import ee.schimke.composeai.uibuilder.UiBuilderToolbarActionModel
+import ee.schimke.composeai.uibuilder.UiBuilderToolbarToggleModel
 import org.jetbrains.jewel.foundation.ExperimentalJewelApi
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
@@ -34,11 +40,13 @@ import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.DefaultSlimButton
 import org.jetbrains.jewel.ui.component.Divider
 import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.IconActionButton
 import org.jetbrains.jewel.ui.component.MenuScope
 import org.jetbrains.jewel.ui.component.OutlinedSlimButton
 import org.jetbrains.jewel.ui.component.PopupMenu
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.TextField
+import org.jetbrains.jewel.ui.component.ToggleableIconActionButton
 import org.jetbrains.jewel.ui.component.separator
 import org.jetbrains.jewel.ui.icon.IconKey
 import org.jetbrains.jewel.ui.icons.AllIconsKeys
@@ -359,6 +367,101 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
   }
 
   @Composable
+  override fun EditorToolbar(modifier: Modifier, content: @Composable () -> Unit) {
+    Column(modifier.background(JewelTheme.globalColors.toolwindowBackground)) {
+      content()
+      Divider(orientation = Orientation.Horizontal)
+    }
+  }
+
+  @Composable
+  override fun DocumentIdentity(title: String, supporting: String, modifier: Modifier) {
+    Row(modifier.widthIn(max = 320.dp), verticalAlignment = Alignment.CenterVertically) {
+      Icon(
+        AllIconsKeys.Toolwindows.ToolWindowComponents,
+        contentDescription = null,
+        modifier = Modifier.size(20.dp),
+      )
+      SelectionContainer {
+        Column(Modifier.padding(start = 8.dp)) {
+          Text(
+            title,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+          Text(
+            supporting,
+            color = JewelTheme.globalColors.text.info,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
+      }
+    }
+  }
+
+  @Composable
+  override fun ToolbarAction(model: UiBuilderToolbarActionModel) {
+    IconActionButton(
+      key = model.icon.jewelIcon(),
+      contentDescription = model.contentDescription(),
+      onClick = model.onClick,
+      enabled = model.enabled,
+    )
+  }
+
+  @Composable
+  override fun ToolbarToggle(model: UiBuilderToolbarToggleModel) {
+    ToggleableIconActionButton(
+      key = model.icon.jewelIcon(),
+      contentDescription = "${model.label} ()",
+      value = model.checked,
+      extraHints = emptyArray(),
+      onValueChange = { model.onClick() },
+    )
+  }
+
+  @Composable
+  override fun EditorRail(items: List<UiBuilderRailItemModel>, modifier: Modifier) {
+    Column(
+      modifier
+        .fillMaxHeight()
+        .width(40.dp)
+        .background(JewelTheme.globalColors.toolwindowBackground)
+        .padding(vertical = 6.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+      items.forEach { item ->
+        Box {
+          ToggleableIconActionButton(
+            key = item.icon.jewelIcon(),
+            contentDescription =
+              if (item.selected) "Close ${item.label.lowercase()} panel"
+              else "Open ${item.label.lowercase()} panel",
+            value = item.selected,
+            extraHints = emptyArray(),
+            onValueChange = { item.onClick() },
+            modifier = Modifier.semantics { this.selected = item.selected },
+          )
+          if (item.badge > 0) {
+            Text(
+              item.badge.toString(),
+              Modifier.align(Alignment.TopEnd)
+                .clip(RoundedCornerShape(6.dp))
+                .background(JewelTheme.globalColors.text.error)
+                .padding(horizontal = 3.dp),
+              color = JewelTheme.globalColors.panelBackground,
+              fontWeight = FontWeight.SemiBold,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  @Composable
   override fun PopupMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
@@ -433,4 +536,31 @@ private fun UiBuilderMenuIcon.jewelIcon(): IconKey =
     UiBuilderMenuIcon.Paste -> AllIconsKeys.Actions.MenuPaste
     UiBuilderMenuIcon.Delete -> AllIconsKeys.Actions.DeleteTag
     UiBuilderMenuIcon.Wrap -> AllIconsKeys.Actions.GroupBy
+  }
+
+private fun UiBuilderToolbarActionModel.contentDescription(): String = "$label ($shortcut)"
+
+private fun UiBuilderChromeIcon.jewelIcon(): IconKey =
+  when (this) {
+    UiBuilderChromeIcon.Undo -> AllIconsKeys.Actions.Undo
+    UiBuilderChromeIcon.Redo -> AllIconsKeys.Actions.Redo
+    UiBuilderChromeIcon.Show,
+    UiBuilderChromeIcon.Hide -> AllIconsKeys.Actions.ToggleVisibility
+    UiBuilderChromeIcon.Code -> AllIconsKeys.Actions.ShowCode
+    UiBuilderChromeIcon.New -> AllIconsKeys.Actions.New
+    UiBuilderChromeIcon.Copy -> AllIconsKeys.Actions.Copy
+    UiBuilderChromeIcon.More -> AllIconsKeys.Actions.More
+    UiBuilderChromeIcon.Export -> AllIconsKeys.Actions.Upload
+    UiBuilderChromeIcon.Remove -> AllIconsKeys.General.Remove
+    UiBuilderChromeIcon.Add -> AllIconsKeys.General.Add
+    UiBuilderChromeIcon.Fit -> AllIconsKeys.General.FitContent
+    UiBuilderChromeIcon.Components -> AllIconsKeys.Toolwindows.ToolWindowComponents
+    UiBuilderChromeIcon.Layers -> AllIconsKeys.Toolwindows.ToolWindowStructure
+    UiBuilderChromeIcon.Properties -> AllIconsKeys.Actions.Properties
+    UiBuilderChromeIcon.Theme -> AllIconsKeys.Toolwindows.ToolWindowPalette
+    UiBuilderChromeIcon.Screen -> AllIconsKeys.Actions.Preview
+    UiBuilderChromeIcon.Issues -> AllIconsKeys.Toolwindows.Problems
+    UiBuilderChromeIcon.Comments -> AllIconsKeys.General.Balloon
+    UiBuilderChromeIcon.History -> AllIconsKeys.General.History
+    UiBuilderChromeIcon.Close -> AllIconsKeys.Actions.Close
   }

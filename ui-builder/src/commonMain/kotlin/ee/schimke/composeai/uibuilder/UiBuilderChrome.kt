@@ -5,36 +5,62 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CodeOff
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -50,6 +76,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -104,6 +131,21 @@ interface UiBuilderChrome {
     thumbnail: @Composable () -> Unit,
   )
 
+  /** The editor's top strip. Its contents remain shared editor behavior. */
+  @Composable fun EditorToolbar(modifier: Modifier, content: @Composable () -> Unit)
+
+  /** The design and catalog identity at the leading edge of the editor toolbar. */
+  @Composable fun DocumentIdentity(title: String, supporting: String, modifier: Modifier = Modifier)
+
+  /** One icon-only editor action, including its host-native tooltip. */
+  @Composable fun ToolbarAction(model: UiBuilderToolbarActionModel)
+
+  /** One on/off editor action, rendered as a selected control by the host. */
+  @Composable fun ToolbarToggle(model: UiBuilderToolbarToggleModel)
+
+  /** A vertical strip of panel switches flanking the shared canvas. */
+  @Composable fun EditorRail(items: List<UiBuilderRailItemModel>, modifier: Modifier = Modifier)
+
   /** A host-native popup over a semantic list shared by browser and IDE chrome. */
   @Composable
   fun PopupMenu(
@@ -112,6 +154,54 @@ interface UiBuilderChrome {
     entries: List<UiBuilderMenuEntry>,
     offset: DpOffset = DpOffset.Zero,
   )
+}
+
+data class UiBuilderToolbarActionModel(
+  val label: String,
+  val shortcut: String,
+  val icon: UiBuilderChromeIcon,
+  val enabled: Boolean,
+  val onClick: () -> Unit,
+)
+
+data class UiBuilderToolbarToggleModel(
+  val label: String,
+  val icon: UiBuilderChromeIcon,
+  val checked: Boolean,
+  val onClick: () -> Unit,
+)
+
+data class UiBuilderRailItemModel(
+  val label: String,
+  val icon: UiBuilderChromeIcon,
+  val selected: Boolean,
+  val badge: Int = 0,
+  val onClick: () -> Unit,
+)
+
+/** Toolkit-neutral names for controls that can be rendered by Material or the IntelliJ host. */
+enum class UiBuilderChromeIcon {
+  Undo,
+  Redo,
+  Show,
+  Hide,
+  Code,
+  New,
+  Copy,
+  More,
+  Export,
+  Remove,
+  Add,
+  Fit,
+  Components,
+  Layers,
+  Properties,
+  Theme,
+  Screen,
+  Issues,
+  Comments,
+  History,
+  Close,
 }
 
 /** The chrome around one shared, catalog-rendered component thumbnail. */
@@ -209,7 +299,15 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
         }
       }
       if (onClose != null) {
-        ToolbarIconAction("Close $title", "", Icons.Filled.Close, true, onClose)
+        ToolbarAction(
+          UiBuilderToolbarActionModel(
+            label = "Close $title",
+            shortcut = "",
+            icon = UiBuilderChromeIcon.Close,
+            enabled = true,
+            onClick = onClose,
+          )
+        )
       }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
@@ -535,6 +633,133 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
   }
 
   @Composable
+  override fun EditorToolbar(modifier: Modifier, content: @Composable () -> Unit) {
+    Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
+      content()
+    }
+  }
+
+  @Composable
+  override fun DocumentIdentity(title: String, supporting: String, modifier: Modifier) {
+    Row(modifier.widthIn(max = 320.dp), verticalAlignment = Alignment.CenterVertically) {
+      Surface(
+        Modifier.size(28.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.primary,
+      ) {
+        Box(contentAlignment = Alignment.Center) {
+          Icon(
+            Icons.Filled.Widgets,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onPrimary,
+          )
+        }
+      }
+      SelectionContainer {
+        Column(Modifier.padding(start = 10.dp)) {
+          Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+          Text(
+            supporting,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
+      }
+    }
+  }
+
+  @Composable
+  override fun ToolbarAction(model: UiBuilderToolbarActionModel) {
+    MaterialChromeTooltip(model.label, model.shortcut) {
+      IconButton(
+        onClick = model.onClick,
+        enabled = model.enabled,
+        modifier = Modifier.semantics { contentDescription = "${model.label} (${model.shortcut})" },
+      ) {
+        Icon(model.icon.materialIcon(), contentDescription = null, modifier = Modifier.size(20.dp))
+      }
+    }
+  }
+
+  @Composable
+  override fun ToolbarToggle(model: UiBuilderToolbarToggleModel) {
+    MaterialChromeTooltip(model.label, "") {
+      FilledIconToggleButton(
+        checked = model.checked,
+        onCheckedChange = { model.onClick() },
+        modifier = Modifier.semantics { contentDescription = "${model.label} ()" },
+      ) {
+        Icon(model.icon.materialIcon(), contentDescription = null, modifier = Modifier.size(20.dp))
+      }
+    }
+  }
+
+  @Composable
+  override fun EditorRail(items: List<UiBuilderRailItemModel>, modifier: Modifier) {
+    Surface(modifier.fillMaxHeight().width(52.dp), color = MaterialTheme.colorScheme.surface) {
+      Column(
+        Modifier.fillMaxHeight().padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        items.forEach { item ->
+          MaterialChromeTooltip(item.label, "") {
+            Surface(
+              Modifier.size(40.dp)
+                .semantics {
+                  selected = item.selected
+                  contentDescription =
+                    if (item.selected) "Close ${item.label.lowercase()} panel"
+                    else "Open ${item.label.lowercase()} panel"
+                }
+                .clickable(onClick = item.onClick),
+              shape = RoundedCornerShape(12.dp),
+              color =
+                if (item.selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surface,
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  item.icon.materialIcon(),
+                  contentDescription = null,
+                  modifier = Modifier.size(20.dp),
+                  tint =
+                    if (item.selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (item.badge > 0) {
+                  Surface(
+                    Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 2.dp),
+                    shape = RoundedCornerShape(7.dp),
+                    color = MaterialTheme.colorScheme.error,
+                  ) {
+                    Text(
+                      item.badge.toString(),
+                      Modifier.padding(horizontal = 4.dp),
+                      color = MaterialTheme.colorScheme.onError,
+                      style = MaterialTheme.typography.labelSmall,
+                      fontWeight = FontWeight.Bold,
+                    )
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @Composable
   override fun PopupMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
@@ -551,6 +776,46 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
     }
   }
 }
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun MaterialChromeTooltip(
+  label: String,
+  shortcut: String,
+  content: @Composable () -> Unit,
+) {
+  TooltipBox(
+    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+    tooltip = { PlainTooltip { Text(if (shortcut.isEmpty()) label else "$label · $shortcut") } },
+    state = rememberTooltipState(),
+    content = content,
+  )
+}
+
+private fun UiBuilderChromeIcon.materialIcon(): ImageVector =
+  when (this) {
+    UiBuilderChromeIcon.Undo -> Icons.AutoMirrored.Filled.Undo
+    UiBuilderChromeIcon.Redo -> Icons.AutoMirrored.Filled.Redo
+    UiBuilderChromeIcon.Show -> Icons.Filled.Visibility
+    UiBuilderChromeIcon.Hide -> Icons.Filled.VisibilityOff
+    UiBuilderChromeIcon.Code -> Icons.Filled.Code
+    UiBuilderChromeIcon.New -> Icons.AutoMirrored.Filled.NoteAdd
+    UiBuilderChromeIcon.Copy -> Icons.Filled.ContentCopy
+    UiBuilderChromeIcon.More -> Icons.Filled.MoreVert
+    UiBuilderChromeIcon.Export -> Icons.Filled.IosShare
+    UiBuilderChromeIcon.Remove -> Icons.Filled.Remove
+    UiBuilderChromeIcon.Add -> Icons.Filled.Add
+    UiBuilderChromeIcon.Fit -> Icons.Filled.FitScreen
+    UiBuilderChromeIcon.Components -> Icons.Filled.Widgets
+    UiBuilderChromeIcon.Layers -> Icons.Filled.AccountTree
+    UiBuilderChromeIcon.Properties -> Icons.Filled.Tune
+    UiBuilderChromeIcon.Theme -> Icons.Filled.Palette
+    UiBuilderChromeIcon.Screen -> Icons.Filled.PhoneAndroid
+    UiBuilderChromeIcon.Issues -> Icons.Filled.ErrorOutline
+    UiBuilderChromeIcon.Comments -> Icons.Filled.ChatBubbleOutline
+    UiBuilderChromeIcon.History -> Icons.Filled.History
+    UiBuilderChromeIcon.Close -> Icons.Filled.Close
+  }
 
 @Composable
 private fun MaterialPinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
