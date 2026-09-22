@@ -92,7 +92,6 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -434,6 +433,8 @@ private val LocalUiBuilderCanvasRenderer = compositionLocalOf<UiBuilderCanvasRen
 fun UiBuilderEditor(
   document: UiBuilderDocument,
   catalog: CapabilityCatalog,
+  /** Host chrome. The browser keeps Material; an IDE host may supply native controls. */
+  chrome: UiBuilderChrome = MaterialUiBuilderChrome,
   /**
    * The component record the host serving [catalog] generates its exports from, where it has one.
    *
@@ -2017,6 +2018,7 @@ fun UiBuilderEditor(
   // Provided once here rather than at each surface: the canvas, every palette thumbnail and the
   // preview frame all draw a pack component, and all of them should draw its placeholder.
   CompositionLocalProvider(
+    LocalUiBuilderChrome provides chrome,
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
     // From the catalog for the same reason as the two lines above: which adapter draws a component
@@ -4705,7 +4707,7 @@ internal fun EditorPane.unavailableText(
  * what the accessibility tree and every script that drives this editor look for.
  */
 @Composable
-private fun ToolbarIconAction(
+internal fun ToolbarIconAction(
   label: String,
   shortcut: String,
   icon: ImageVector,
@@ -5191,7 +5193,7 @@ private fun EditorNavigator(
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(NAVIGATOR_WIDTH).fillMaxHeight(),
 ) {
-  Surface(modifier, color = MaterialTheme.colorScheme.surface) {
+  LocalUiBuilderChrome.current.NavigatorSurface(modifier) {
     Column(Modifier.fillMaxSize()) {
       DockHeading(
         title =
@@ -5603,33 +5605,7 @@ private fun EmptyPanelNote(text: String) {
 /** A dock panel's title bar: what this panel is, and the way back to the whole canvas. */
 @Composable
 private fun DockHeading(title: String, onClose: (() -> Unit)?, supporting: String? = null) {
-  Row(
-    Modifier.fillMaxWidth().height(44.dp).padding(start = 14.dp, end = 6.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Column(Modifier.weight(1f)) {
-      Text(
-        title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-      if (supporting != null) {
-        Text(
-          supporting,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.labelSmall,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-      }
-    }
-    if (onClose != null) {
-      ToolbarIconAction("Close $title", "", Icons.Filled.Close, true, onClose)
-    }
-  }
-  HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+  LocalUiBuilderChrome.current.DockHeading(title, supporting, onClose)
 }
 
 /** The right-hand docks, in the order the rail lists them. */
@@ -6998,19 +6974,7 @@ private fun RemotePresenceOverlay(
 
 @Composable
 private fun PanelHeading(title: String, supporting: String) {
-  Row(
-    Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 14.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Column {
-      Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-      Text(
-        supporting,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
-  }
+  LocalUiBuilderChrome.current.PanelHeading(title, supporting)
 }
 
 @Composable
@@ -7022,39 +6986,13 @@ private fun SearchField(
   onFocusChanged: (Boolean) -> Unit,
   onValueChange: (String) -> Unit,
 ) {
-  Surface(
-    Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 12.dp, vertical = 5.dp),
-    shape = RoundedCornerShape(10.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant,
-  ) {
-    Row(
-      Modifier.padding(horizontal = 12.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-      Icon(Icons.Filled.Search, contentDescription = null, Modifier.size(18.dp))
-      Box(Modifier.weight(1f)) {
-        if (value.isEmpty()) {
-          Text(
-            placeholder,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-          )
-        }
-        BasicTextField(
-          value = value,
-          onValueChange = onValueChange,
-          modifier =
-            Modifier.fillMaxWidth()
-              .onFocusChanged { onFocusChanged(it.isFocused) }
-              .semantics { contentDescription = searchLabel },
-          textStyle =
-            MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-          singleLine = true,
-        )
-      }
-    }
-  }
+  LocalUiBuilderChrome.current.SearchField(
+    value = value,
+    placeholder = placeholder,
+    searchLabel = searchLabel,
+    onFocusChanged = onFocusChanged,
+    onValueChange = onValueChange,
+  )
 }
 
 /**
@@ -7066,15 +7004,7 @@ private fun SearchField(
  */
 @Composable
 private fun GroupHeading(group: String) {
-  Text(
-    humanizeSourceSlug(group).uppercase(),
-    Modifier.fillMaxWidth()
-      .background(Color(0xff202126))
-      .padding(horizontal = 14.dp, vertical = 5.dp),
-    color = MaterialTheme.colorScheme.primary,
-    style = MaterialTheme.typography.labelSmall,
-    fontWeight = FontWeight.Bold,
-  )
+  LocalUiBuilderChrome.current.GroupHeading(humanizeSourceSlug(group).uppercase())
 }
 
 /**
