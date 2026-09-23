@@ -25,6 +25,8 @@
         fieldName="INSTANCE"
         language="JSON"
         extensions="uid" />
+    <json.customStructureViewFactory
+        implementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderStructureViewFactory" />
     <projectService
         serviceImplementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderProjectService" />
     <fileEditorProvider

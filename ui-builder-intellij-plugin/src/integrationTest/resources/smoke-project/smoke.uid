@@ -1,0 +1,41 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "installed-plugin-smoke",
+  "title": "Installed plugin smoke",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 360,
+    "heightDp": 640,
+    "density": 1.0,
+    "theme": "light",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false
+  },
+  "stateVariables": {},
+  "roots": ["root"],
+  "nodes": {
+    "root": {
+      "id": "root",
+      "componentId": "m3/text",
+      "properties": {
+        "text": { "type": "string", "value": "Installed plugin smoke" }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    }
+  }
+}
