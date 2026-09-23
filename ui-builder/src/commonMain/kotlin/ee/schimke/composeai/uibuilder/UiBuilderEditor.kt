@@ -3896,6 +3896,22 @@ private fun WidgetHostShapeMenu(
 }
 
 /**
+ * The frame the editing canvas draws [this] design in, as width and height in dp.
+ *
+ * A Wear widget is framed by its host container in [hostShape], not by the environment. Widget
+ * designs are seeded with the phone fixture's environment — 1280x800dp — so framing by it drew a
+ * 216x124dp widget as a tile in the middle of an empty tablet, with "Fit" fitting the tablet. The
+ * host frame comes from the same table the preview panes beside the canvas are drawn at.
+ */
+internal fun UiBuilderDocument.canvasFrameDp(hostShape: WearWidgetHostShape): Pair<Float, Float> {
+  wearWidgetScaffoldSize()?.hostSpec(hostShape)?.let {
+    return it.frameWidthDp.toFloat() to it.frameHeightDp.toFloat()
+  }
+  return (environment["widthDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 1280f) to
+    (environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 800f)
+}
+
+/**
  * The widget container this design's root is, or null when it is not a widget design at all.
  *
  * Read from the root rather than from the catalog, because the frame follows the scaffold the
@@ -5749,10 +5765,7 @@ internal fun PinnedDesignCanvas(
   contentAlignment: Alignment = Alignment.TopStart,
   modifier: Modifier = Modifier,
 ) {
-  val sourceWidth =
-    document.environment["widthDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 1280f
-  val sourceHeight =
-    document.environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 800f
+  val (sourceWidth, sourceHeight) = document.canvasFrameDp(LocalWearWidgetHostShape.current)
   val density = LocalDensity.current
   // What one of the design's pixels is worth in the workspace's.
   //
