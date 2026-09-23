@@ -18,6 +18,7 @@ import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
+import ee.schimke.composeai.uibuilder.host.CatalogOverride
 import ee.schimke.composeai.uibuilder.host.DesignFiles
 import ee.schimke.composeai.uibuilder.host.OfflineCatalog
 import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSession
@@ -55,6 +56,7 @@ internal fun openDesktopSession(
   design: DesktopDesign,
   storageRoot: Path,
   remoteServer: String?,
+  catalogOverride: CatalogOverride? = null,
 ): UiBuilderSession =
   when (design) {
     is DesktopDesign.Scratch ->
@@ -63,10 +65,14 @@ internal fun openDesktopSession(
         catalogSystemId = design.catalog.systemId,
         remoteServer = remoteServer,
         templateId = design.template,
+        catalogOverride = catalogOverride,
       )
     is DesktopDesign.File ->
-      OfflineUiBuilderSession.projectDocument(DesignFiles.read(design.path), remoteServer) {
-        committed ->
+      OfflineUiBuilderSession.projectDocument(
+        DesignFiles.read(design.path),
+        remoteServer,
+        catalogOverride,
+      ) { committed ->
         DesignFiles.write(design.path, committed)
       }
   }
@@ -83,7 +89,9 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
   Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder — ${design.title}") {
     val opened =
       remember(design) {
-        runCatching { openDesktopSession(design, storageRoot, options.remoteServer) }
+        runCatching {
+          openDesktopSession(design, storageRoot, options.remoteServer, options.catalogOverride)
+        }
       }
     val session = opened.getOrNull()
     DisposableEffect(session) { onDispose { session?.close() } }
@@ -204,8 +212,8 @@ private fun showError(title: String, failure: Throwable) {
 }
 
 /**
- * `ui-builder-desktop [--catalog <id>] [--template <id>] [--server <origin>] [design.uid]`, in any
- * order.
+ * `ui-builder-desktop [--catalog <id>] [--catalog-file <capabilities.json>] [--template <id>]
+ * [--server <origin>] [design.uid]`, in any order.
  */
 internal data class DesktopLaunchOptions(
   val remoteServer: String?,
@@ -214,12 +222,17 @@ internal data class DesktopLaunchOptions(
   val designFile: Path? = null,
   /** The template that scratch workspace starts as, or null for the catalog's own starter. */
   val template: String? = null,
+  /** Capabilities read from `--catalog-file`, replacing the packaged catalog they name. */
+  val catalogOverride: CatalogOverride? = null,
 ) {
   companion object {
+    private val FLAGS = setOf("--catalog", "--catalog-file", "--template", "--server")
+
     private val USAGE =
       "usage: Compose UI Builder " +
         "[--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
-        "[--template <id>] [--server https://preview.coo.ee] [design.uid]"
+        "[--catalog-file <capabilities.json>] [--template <id>] " +
+        "[--server https://preview.coo.ee] [design.uid]"
 
     fun parse(args: Array<String>): DesktopLaunchOptions {
       val flags = mutableMapOf<String, String>()
@@ -228,7 +241,7 @@ internal data class DesktopLaunchOptions(
       while (index < args.size) {
         val arg = args[index]
         if (arg.startsWith("-")) {
-          require(arg in setOf("--catalog", "--template", "--server") && arg !in flags) { USAGE }
+          require(arg in FLAGS && arg !in flags) { USAGE }
           flags[arg] = requireNotNull(args.getOrNull(index + 1)) { USAGE }
           index += 2
         } else {
@@ -237,12 +250,22 @@ internal data class DesktopLaunchOptions(
           index++
         }
       }
-      val catalog =
+      val catalogOverride = flags["--catalog-file"]?.let { CatalogOverride.read(Path.of(it)) }
+      val named =
         flags["--catalog"]?.let { id ->
           requireNotNull(OfflineCatalog.entries.firstOrNull { it.systemId == id }) {
             "unknown catalog '$id'. $USAGE"
           }
-        } ?: OfflineCatalog.M3
+        }
+      // A catalog file names its own system id, which picks the scratch workspace when `--catalog`
+      // does not; naming both is fine only when they agree.
+      require(
+        named == null || catalogOverride == null || named.systemId == catalogOverride.systemId
+      ) {
+        "--catalog ${named?.systemId} and --catalog-file ${catalogOverride?.systemId} disagree"
+      }
+      val catalog =
+        named ?: catalogOverride?.let { OfflineCatalog.forSystem(it.systemId) } ?: OfflineCatalog.M3
       // Checked here rather than when the workspace is seeded, so a typo names the templates that
       // exist before a window opens — and so an existing workspace cannot hide it.
       val template =
@@ -259,6 +282,7 @@ internal data class DesktopLaunchOptions(
         catalog = catalog,
         designFile = file,
         template = template,
+        catalogOverride = catalogOverride,
       )
     }
   }

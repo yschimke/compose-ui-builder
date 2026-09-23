@@ -126,6 +126,7 @@ private constructor(
   private val designId: String,
   private val initialDocument: UiBuilderDocument?,
   private val templateId: String?,
+  catalogOverride: CatalogOverride?,
   private val onDocumentCommitted:
     suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
 ) : UiBuilderSession {
@@ -135,6 +136,8 @@ private constructor(
     catalogSystemId: String = OfflineCatalog.M3.systemId,
     remoteServer: String? = null,
     templateId: String? = null,
+    /** Capabilities read from disk; used when its system id is [catalogSystemId]. */
+    catalogOverride: CatalogOverride? = null,
   ) : this(
     storage = FileLocalDesignStorage(storagePath),
     catalogSystemId = catalogSystemId,
@@ -142,6 +145,7 @@ private constructor(
     designId = DESKTOP_DESIGN_ID,
     initialDocument = null,
     templateId = templateId,
+    catalogOverride = catalogOverride,
     onDocumentCommitted = {},
   )
 
@@ -150,6 +154,7 @@ private constructor(
     fun projectDocument(
       document: UiBuilderDocument,
       remoteServer: String? = null,
+      catalogOverride: CatalogOverride? = null,
       onDocumentCommitted:
         suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
     ): OfflineUiBuilderSession =
@@ -163,15 +168,20 @@ private constructor(
         designId = document.id,
         initialDocument = document,
         templateId = null,
+        catalogOverride = catalogOverride,
         onDocumentCommitted = onDocumentCommitted,
       )
   }
 
   internal val offlineCatalog = OfflineCatalog.forSystem(catalogSystemId)
-  private val catalogText = resourceText(offlineCatalog.capabilitiesResource)
+  private val catalogText =
+    catalogOverride?.takeIf { it.systemId == catalogSystemId }?.text
+      ?: resourceText(offlineCatalog.capabilitiesResource)
   override val catalog = CapabilityCatalogParser.parse(catalogText)
-  private val catalogCapability =
-    Json.decodeFromString(CatalogCapabilityV1.serializer(), catalogText)
+  private val catalogCapability = Json {
+    ignoreUnknownKeys = true
+  }
+    .decodeFromString(CatalogCapabilityV1.serializer(), catalogText)
   private val service =
     LocalUiBuilderService(
       store = LocalDesignStore(storage),
