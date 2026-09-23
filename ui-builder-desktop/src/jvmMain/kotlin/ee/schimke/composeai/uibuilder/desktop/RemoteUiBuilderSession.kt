@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.desktop
 
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import ee.schimke.composeai.uibuilder.DesignCommentDraft
 import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
@@ -32,6 +33,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.WebSocket
 import java.time.Duration
+import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.CompletionStage
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +56,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import org.jetbrains.skia.Image
 
 data class RemoteUiBuilderDesign(
   val designId: String,
@@ -145,7 +148,7 @@ internal constructor(
   override val actorId: String = connection.actorId
   override val clientId: String = "intellij-${UUID.randomUUID()}"
   override val operationIdPrefix: String = clientId
-  override val nativeRenderAvailable: Boolean = false
+  override val nativeRenderAvailable: Boolean = true
   override val commentsAvailable: Boolean = true
   private val commentClient = RemoteCommentClient(connection, designId)
   override val comments = commentClient.board
@@ -250,7 +253,8 @@ internal constructor(
   override suspend fun renderNative(
     document: UiBuilderDocument,
     hostShape: WearWidgetHostShape,
-  ): UiBuilderNativeRender? = null
+  ): UiBuilderNativeRender =
+    connection.serverHttp.renderNativeDesign(designId, document.revision.toLong(), hostShape)
 
   override fun close() {
     commentClient.close()
@@ -322,6 +326,38 @@ internal class RemoteServerHttp(val origin: URI) {
   suspend fun commentRequest(target: String, method: String, body: String): RemoteCommentResponse {
     val response = request(origin.resolve(target), method, body)
     return RemoteCommentResponse(response.statusCode(), response.body())
+  }
+
+  suspend fun renderNativeDesign(
+    designId: String,
+    revision: Long,
+    hostShape: WearWidgetHostShape,
+  ): UiBuilderNativeRender {
+    val response =
+      request(
+        origin.resolve("/api/ui-builder/v1/designs/$designId/native-preview?revision=$revision"),
+        "POST",
+        "{\"hostShape\":\"${hostShape.id}\"}",
+      )
+    if (response.statusCode() == 422) {
+      val refusal = json.decodeFromString(RemoteNativePreviewRefusal.serializer(), response.body())
+      return UiBuilderNativeRender(refusals = refusal.reasons)
+    }
+    if (response.statusCode() != 200) {
+      return UiBuilderNativeRender(
+        failure = "preview server answered HTTP ${response.statusCode()} while rendering"
+      )
+    }
+    val result = json.decodeFromString(RemoteNativePreviewResult.serializer(), response.body())
+    result.compileError?.let {
+      return UiBuilderNativeRender(failure = it)
+    }
+    val image = result.imageBase64 ?: return UiBuilderNativeRender()
+    return UiBuilderNativeRender(
+      image =
+        Image.makeFromEncoded(Base64.getDecoder().decode(image.substringAfterLast("base64,")))
+          .toComposeImageBitmap()
+    )
   }
 
   private suspend fun request(
@@ -413,6 +449,14 @@ private class TextWebSocketListener(private val onTextMessage: (String) -> Unit)
 }
 
 @Serializable private data class IdentityPayload(val actorId: String = "")
+
+@Serializable
+private data class RemoteNativePreviewResult(
+  val imageBase64: String? = null,
+  val compileError: String? = null,
+)
+
+@Serializable private data class RemoteNativePreviewRefusal(val reasons: List<String> = emptyList())
 
 @Serializable
 private data class RemoteDevicePollRequest(
