@@ -543,6 +543,12 @@ fun UiBuilderSurface(
     LocalCanvasAdapterRegistry provides canvasAdapterRegistry,
     LocalUiBuilderUnrolled provides effectiveUnrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
+    // The design's content colour, not the host's. `MaterialTheme` below sets none, so text with no
+    // colour of its own inherited whatever sat outside this surface: the editor chrome's
+    // light-on-dark on the canvas, and the platform default black inside a device pane's scene,
+    // where no local crosses. A Wear widget's label was white on one and black on the other — near
+    // invisible on the widget's dark fill.
+    LocalContentColor provides colorScheme.onBackground,
     *wearDevice,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
