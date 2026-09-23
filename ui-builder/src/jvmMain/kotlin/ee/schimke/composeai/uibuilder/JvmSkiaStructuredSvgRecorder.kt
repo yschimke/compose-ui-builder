@@ -413,17 +413,17 @@ private fun UiBuilderNode.stringProperty(name: String): String =
     ?.content
     .orEmpty()
 
-private fun UiBuilderDocument.environmentNumber(name: String): Float =
+internal fun UiBuilderDocument.environmentNumber(name: String): Float =
   requireNotNull(
     (environment[name] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toFloatOrNull()
   ) {
     "validated environment.$name is missing"
   }
 
-private fun UiBuilderDocument.environmentText(name: String): String =
+internal fun UiBuilderDocument.environmentText(name: String): String =
   (environment[name] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty()
 
-private fun UiBuilderDocument.fixedFrameNanos(): Long {
+internal fun UiBuilderDocument.fixedFrameNanos(): Long {
   // The pinned fixture is settled; a fixed non-zero frame avoids wall-clock output variance. The
   // ISO timestamp remains in export metadata even though ComposeScene consumes monotonic nanos.
   return 1_000_000_000L

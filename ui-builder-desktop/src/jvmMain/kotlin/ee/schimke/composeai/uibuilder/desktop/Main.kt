@@ -7,6 +7,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.application
 import ee.schimke.composeai.uibuilder.DesignCommentBoard
@@ -17,6 +18,7 @@ import ee.schimke.composeai.uibuilder.MaterialUiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.UiBuilderReducer
@@ -45,9 +47,13 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 private const val DESKTOP_DESIGN_ID = "desktop-workspace"
 private const val ACTOR_ID = "desktop-user"
@@ -157,7 +163,10 @@ private constructor(
     ): OfflineUiBuilderSession =
       OfflineUiBuilderSession(
         storage = InMemoryLocalDesignStorage(),
-        catalogSystemId = document.catalogPin.getValue("systemId").toString().trim('"'),
+        catalogSystemId =
+          requireNotNull(document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull) {
+            "design ${document.id} names no catalog systemId"
+          },
         remoteServer = remoteServer,
         designId = document.id,
         initialDocument = document,
@@ -202,8 +211,10 @@ private constructor(
     // the revision the previous one produced, otherwise quick edits conflict with their own store.
     scope.launch {
       for (submission in submissions) {
+        // An edit made while the design is still opening waits for it rather than being dropped:
+        // the channel is the queue, and the first snapshot is the revision it applies against.
         val baseRevision =
-          mutableSnapshot.value?.snapshot?.state?.document?.revision?.toInt() ?: continue
+          mutableSnapshot.filterNotNull().first().snapshot.state.document.revision.toInt()
         when (
           val result =
             service.execute(
@@ -292,6 +303,13 @@ fun OfflineUiBuilderSessionView(
   initialComponentsOpen: Boolean = false,
   initialLayersOpen: Boolean = false,
   initialInspectorOpen: Boolean = false,
+  /**
+   * How this host gets a design out. Defaults to rendering in-process and saving through a native
+   * dialog ([DesktopExportHost]); null hides the Export menu.
+   */
+  exportHost: ((document: () -> UiBuilderDocument?) -> UiBuilderExportHost)? = { document ->
+    DesktopExportHost(session.catalog, document)
+  },
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
@@ -302,8 +320,11 @@ fun OfflineUiBuilderSessionView(
       remember(current.snapshot.state.document.revision) {
         mutableStateOf(current.snapshot.state.document.toUiBuilderDocument())
       }
+    val latestDocument by rememberUpdatedState(previewDocument)
+    val export = remember(session, exportHost) { exportHost?.invoke { latestDocument } }
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
+      exportHost = export,
       catalog = session.catalog,
       chrome = chrome,
       actorId = session.actorId,
