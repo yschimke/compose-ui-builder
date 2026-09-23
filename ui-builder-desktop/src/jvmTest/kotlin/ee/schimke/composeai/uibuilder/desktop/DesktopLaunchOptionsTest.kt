@@ -121,4 +121,23 @@ class DesktopLaunchOptionsTest {
     )
     assertEquals("Wear widgets scratch", DesktopDesign.Scratch(OfflineCatalog.REMOTE_M3).title)
   }
+
+  @Test
+  fun `a catalog file picks its own catalog and must agree with --catalog`() {
+    val file = java.nio.file.Files.createTempFile("wear", ".json")
+    java.nio.file.Files.writeString(
+      file,
+      checkNotNull(javaClass.getResource("/wear-m3-capabilities-v1.json")).readText(),
+    )
+
+    val options = DesktopLaunchOptions.parse(arrayOf("--catalog-file", file.toString()))
+
+    assertEquals(OfflineCatalog.WEAR_M3, options.catalog)
+    assertEquals("wear-m3", options.catalogOverride?.systemId)
+    assertFailsWith<IllegalArgumentException> {
+      DesktopLaunchOptions.parse(
+        arrayOf("--catalog", "remote-m3", "--catalog-file", file.toString())
+      )
+    }
+  }
 }
