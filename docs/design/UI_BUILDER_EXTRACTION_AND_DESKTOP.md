@@ -1,10 +1,18 @@
 # Extracting the UI builder, and running it on the desktop
 
-**Status: proposal.** Nothing here is enforced yet, and nothing here overrides
-[`UI_BUILDER_PROJECT_BOUNDARY.md`](UI_BUILDER_PROJECT_BOUNDARY.md), which is normative and says the
-builder stays in this repository. This document answers the question that was asked next — *if we
-did extract it, and if we wanted it on the desktop, what actually has to be true* — and it answers
-three specific questions about the desktop: Wasm mode, JVM mode, and the Robolectric daemon.
+**Status: largely carried out.** Written in compose-preview-server as a proposal, before the split.
+The extraction it weighs has since happened — this repository *is* the extracted builder, and
+[`UI_BUILDER_PROJECT_BOUNDARY.md`](UI_BUILDER_PROJECT_BOUNDARY.md) now describes a repository
+boundary — so read the analysis below as the reasoning behind the current layout, and this table
+for where each stage stands (2026-09-23):
+
+| Stage (§8) | State |
+| --- | --- |
+| 1 — the JVM editor | `:ui-builder-desktop` ships: offline sessions over `LocalUiBuilderService`, a File menu that opens, saves and creates `.uid` designs, in-process SVG/PNG export (`DesktopExportHost`), and `.deb`/`.dmg`/`.msi` packages. The common composition root of §6.1 item 1 is not done: the Wasm entry point has been split into `LiveSessionApp.kt` and `VisualFixtureApp.kt`, but the shell is still `wasmJsMain`. Of the §6.1 host ports, export, storage and the HTTP transport exist on the desktop; reference images, the Material Symbols and runtime-manifest transports, and offline comments do not. |
+| 2, 3 — desktop and Android daemons | Not started. The desktop app's Native preview calls an attached server (`--server`). |
+| 4 — the fixture question | Open: [#63](https://github.com/yschimke/compose-ui-builder/issues/63). |
+| 5 — publish, then extract | Done: the seams publish from this repository, and the split happened. |
+| 6 — extract the render lane | Not started. |
 
 ## 0. The short answers
 
@@ -179,7 +187,8 @@ speculative:
 
 ### 6.1 What is actually missing
 
-1. **A composition root.** `Main.kt` (3,211 lines) is `wasmJsMain`. The app shell, the mode routing,
+1. **A composition root.** `Main.kt` (3,211 lines when this was written, 4,022 at its largest) is
+   `wasmJsMain`. The app shell, the mode routing,
    the host wiring and the fixture apps all live there, and none of it is browser-specific by
    nature — it is browser-specific by address. This is the single largest piece of work and it is a
    *move*, gated by the existing `jvmTest` suite, not a rewrite. Split it into a common
@@ -194,7 +203,7 @@ speculative:
    | `BrowserUiBuilderWebSocketTransport` | protocol update client | Ktor client WebSocket; unused offline |
    | `BrowserMaterialSymbolsTransport` | `MaterialSymbolsTransport` | HTTP + on-disk cache |
    | `BrowserCatalogRuntimeManifestTransport` | `CatalogRuntimeManifestTransport` | local file or HTTP |
-   | `BrowserExportHost` | export actions | native save dialog + `:ui-builder-runtime` in-process |
+   | `BrowserExportHost` | export actions | `DesktopExportHost` — exists: native save dialog, SVG and PNG rendered in-process |
    | `BrowserReferenceHost` | reference images | native open dialog + local store |
    | `BrowserCommentHost` | comments | server-only; degrade honestly when detached |
    | `BrowserNativeStream` | `UiBuilderNativeStream` | §7 |
