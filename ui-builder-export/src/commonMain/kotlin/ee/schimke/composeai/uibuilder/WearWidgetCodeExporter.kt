@@ -168,6 +168,7 @@ object WearWidgetCodeExporter {
             assets,
             bundled = bundled,
             components = components,
+            frameFillingRoot = contentIds.singleOrNull(),
           )
           .let { probe ->
             probe.background(root)
@@ -179,7 +180,14 @@ object WearWidgetCodeExporter {
       else 1
 
     val emitter =
-      RemoteContentEmitter(document, refusals, assets, bundled = bundled, components = components)
+      RemoteContentEmitter(
+        document,
+        refusals,
+        assets,
+        bundled = bundled,
+        components = components,
+        frameFillingRoot = contentIds.singleOrNull(),
+      )
     val background = emitter.background(root)
     val body =
       when (contentIds.size) {

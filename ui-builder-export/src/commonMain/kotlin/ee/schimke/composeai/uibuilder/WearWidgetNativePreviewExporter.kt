@@ -97,6 +97,7 @@ internal object WearWidgetNativePreviewExporter {
             assets,
             inlineContentImages = true,
             components = components,
+            frameFillingRoot = contentIds.singleOrNull(),
           )
           .let { probe ->
             probe.background(root)
@@ -114,6 +115,7 @@ internal object WearWidgetNativePreviewExporter {
         assets,
         inlineContentImages = true,
         components = components,
+        frameFillingRoot = contentIds.singleOrNull(),
       )
     val background = emitter.background(root)
     val body =

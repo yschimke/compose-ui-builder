@@ -170,7 +170,11 @@ class RemoteContentRecordFallbackTest {
         )
         .source
 
-    assertTrue("RemoteText(text = \"Next train\".rs)" in source, source)
+    // The widget's one body fills the frame, as the container lays it out on the canvas.
+    assertTrue(
+      "RemoteText(text = \"Next train\".rs, modifier = RemoteModifier.fillMaxSize())" in source,
+      source,
+    )
     assertTrue("import androidx.wear.compose.remote.material3.RemoteText" in source, source)
     assertTrue("import androidx.compose.remote.creation.compose.state.rs" in source, source)
   }

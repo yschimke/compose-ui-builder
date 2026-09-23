@@ -40,6 +40,38 @@ class WearWidgetCodeExporterTest {
     )
   }
 
+  /**
+   * The body fills the widget frame, as the container lays it out on the canvas.
+   *
+   * Host frames differ in size across watches, and the get-started guide makes
+   * `RemoteModifier.fillMaxSize()` on the root the one layout rule a widget must not skip. The
+   * canvas already hands the body `fillMaxSize` before its own chain, so a root the author left
+   * unsized drew filling the widget and exported wrapping its content.
+   */
+  @Test
+  fun `the widget body fills the frame whether or not the author said so`() {
+    val authored = weatherWidgetUiBuilderDocument("weather", pin, environment)
+    fun source(document: UiBuilderDocument) =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(document))
+        .source
+
+    // Said once, not twice, where the author already asked for it.
+    assertEquals(1, Regex("""fillMaxSize\(\)""").findAll(source(authored)).count())
+
+    val unsized =
+      authored.copy(
+        nodes =
+          authored.nodes +
+            ("weather-content" to
+              authored.nodes.getValue("weather-content").copy(modifiers = JsonArray(emptyList())))
+      )
+    val generated = source(unsized)
+    assertTrue("RemoteBox(modifier = RemoteModifier.fillMaxSize()," in generated, generated)
+    assertTrue("import androidx.compose.remote.creation.compose.modifier.fillMaxSize" in generated)
+    // Only the body: the column inside it keeps exactly the chain it was authored with.
+    assertEquals(1, Regex("""fillMaxSize\(\)""").findAll(generated).count(), generated)
+  }
+
   @Test
   fun `weather generates its literal colours and its column`() {
     val source =
