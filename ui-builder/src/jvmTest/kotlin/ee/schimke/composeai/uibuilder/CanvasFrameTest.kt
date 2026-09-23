@@ -31,4 +31,34 @@ class CanvasFrameTest {
 
     assertEquals(1280f to 800f, screen.canvasFrameDp(WearWidgetHostShape.Default))
   }
+
+  @Test
+  fun `a reference piece over a widget converts through the widget's frame`() {
+    // Density 1 so the pixels are the dp, and the frame is all that decides them.
+    val environment =
+      JsonObject(
+        mapOf(
+          "widthDp" to JsonPrimitive(1280),
+          "heightDp" to JsonPrimitive(800),
+          "density" to JsonPrimitive(1),
+        )
+      )
+    val weather = weatherWidgetUiBuilderDocument("weather", JsonObject(emptyMap()), environment)
+    // The piece covers the middle half of the frame, so its centre is the frame's centre.
+    val piece =
+      ReferencePiece(
+        id = "piece",
+        image = ReferenceImage(id = "img", name = "Mock", mediaType = "image/png", base64 = "AAAA"),
+        left = 0.25f,
+        top = 0.25f,
+        right = 0.75f,
+        bottom = 0.75f,
+      )
+
+    // The Rectangular Large host is 232x144, not the 1280x800 environment.
+    assertEquals(
+      116f to 72f,
+      weather.referencePieceCentrePx(piece, WearWidgetHostShape.Rectangular),
+    )
+  }
 }
