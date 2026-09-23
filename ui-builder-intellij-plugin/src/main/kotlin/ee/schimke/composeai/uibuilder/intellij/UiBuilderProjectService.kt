@@ -173,7 +173,7 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
       if (binding.writer.matches(file.modificationStamp)) return@invokeLater
       val document = readProjectDesign(file)
       if (document == null) {
-        binding.selection.reportStatus("external JSON is not a valid DesignDocumentV1")
+        binding.selection.reportStatus("external design source is not a valid DesignDocumentV1")
         return@invokeLater
       }
       val catalog = runCatching {
@@ -224,13 +224,22 @@ internal val OfflineCatalog.displayName: String
       OfflineCatalog.REMOTE_M3 -> "Wear widgets"
     }
 
-/** Recognizes a design by its declared document shape, not by where its JSON file is stored. */
+/** Recognizes a visual-editor design by its declared document schema and supported catalog. */
 internal fun isProjectDesign(file: VirtualFile): Boolean {
-  if (file.isDirectory || file.extension != "json") return false
+  if (!isUiBuilderDesignFile(file)) return false
   return readProjectDesign(file)?.let { document ->
     document.schema in supportedProjectDesignSchemas &&
       runCatching { OfflineCatalog.forSystem(document.catalogPin.systemId) }.isSuccess
   } == true
+}
+
+/**
+ * Identifies source files that belong to the UI Builder document family for JSON Schema support.
+ */
+internal fun isUiBuilderDesignFile(file: VirtualFile): Boolean {
+  if (file.isDirectory || file.extension !in supportedProjectDesignExtensions) return false
+  return file.extension == UI_BUILDER_DESIGN_EXTENSION ||
+    readProjectDesign(file)?.schema in supportedProjectDesignSchemas
 }
 
 /** The document declarations this offline v1 editor can safely load and write back. */
@@ -239,6 +248,9 @@ private val supportedProjectDesignSchemas =
     "compose-ui-builder-document/v1",
     "compose-ui-builder-document/v1-candidate",
   )
+
+private const val UI_BUILDER_DESIGN_EXTENSION = "uid"
+private val supportedProjectDesignExtensions = setOf("json", UI_BUILDER_DESIGN_EXTENSION)
 
 private fun readProjectDesign(file: VirtualFile): DesignDocumentV1? = runCatching {
   val text = file.inputStream.reader().use { it.readText() }
@@ -266,7 +278,7 @@ private class ProjectDesignWriter(private val file: VirtualFile) {
     val write = {
       WriteAction.run<RuntimeException> {
         check(!FileDocumentManager.getInstance().isFileModified(file)) {
-          "${file.name} has unsaved JSON changes; save or revert them and reopen the visual editor"
+          "${file.name} has unsaved source changes; save or revert them and reopen the visual editor"
         }
         check(file.modificationStamp == expectedModificationStamp) {
           "${file.name} changed outside the visual editor; reopen it before editing"
@@ -299,7 +311,7 @@ internal const val PREVIEW_CONTENT = "Preview"
 private fun projectAgentPrompt(file: VirtualFile): String =
   """Work on the active Compose UI Builder design stored at `${file.path}`.
 Read the `compose-ui-builder` skill first. This is a checked-in DesignDocumentV1, not a live server
-design. Read and edit that JSON file directly and preserve its schema, id and catalog pin. IntelliJ
+design. Read and edit that design source directly and preserve its schema, id and catalog pin. IntelliJ
 automatically adopts each valid saved version in the open visual editor and Preview."""
 
 private fun remoteAgentPrompt(

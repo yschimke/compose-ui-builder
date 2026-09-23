@@ -18,8 +18,7 @@ class RemoteRootSourceExportTest {
 
   private fun document() =
     json.decodeFromString<DesignDocumentV1>(
-      File("../docs/design/evidence/ui-builder-live-document-preview/sample.document.json")
-        .readText()
+      File("../docs/design/evidence/ui-builder-live-document-preview/sample.uid").readText()
     )
 
   @Test

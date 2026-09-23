@@ -152,7 +152,7 @@ class CanvasFillLayoutTest {
     val sample =
       File(
         System.getProperty("uiBuilderProjectDir"),
-        "../docs/design/evidence/ui-builder-document-exports/sample.document.json",
+        "../docs/design/evidence/ui-builder-document-exports/sample.uid",
       )
     val saved = json.decodeFromString<UiBuilderDocument>(sample.readText())
     return saved.copy(

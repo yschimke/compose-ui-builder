@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.compose-preview.dev/ui-builder/document/v1",
+  "title": "Compose UI Builder document",
+  "description": "A serializable Compose UI Builder DesignDocumentV1.",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "title",
+    "revision",
+    "catalogPin",
+    "environment",
+    "stateVariables",
+    "roots",
+    "nodes"
+  ],
+  "properties": {
+    "schema": {
+      "enum": [
+        "compose-ui-builder-document/v1",
+        "compose-ui-builder-document/v1-candidate"
+      ]
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "catalogPin": {
+      "type": "object",
+      "required": ["systemId"],
+      "properties": {
+        "systemId": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "environment": { "type": "object" },
+    "stateVariables": { "type": "object" },
+    "roots": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["id", "componentId"],
+        "properties": {
+          "id": { "type": "string" },
+          "componentId": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

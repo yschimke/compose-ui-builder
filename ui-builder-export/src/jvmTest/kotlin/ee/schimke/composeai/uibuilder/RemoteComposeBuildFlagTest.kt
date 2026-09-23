@@ -10,12 +10,12 @@ import kotlinx.serialization.json.*
 class RemoteComposeBuildFlagTest {
   private val root =
     generateSequence(File(".").absoluteFile) { it.parentFile }
-      .first { File(it, "experiments/remote-state-selection/bound-actions.document.json").isFile }
+      .first { File(it, "experiments/remote-state-selection/bound-actions.uid").isFile }
   private val document = Json {
     ignoreUnknownKeys = true
   }
     .decodeFromString<UiBuilderDocument>(
-      File(root, "experiments/remote-state-selection/bound-actions.document.json").readText()
+      File(root, "experiments/remote-state-selection/bound-actions.uid").readText()
     )
 
   @Test

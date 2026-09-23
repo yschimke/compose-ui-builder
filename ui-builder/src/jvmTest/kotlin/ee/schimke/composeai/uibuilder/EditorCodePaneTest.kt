@@ -63,7 +63,7 @@ class EditorCodePaneTest {
         java.io
           .File(
             System.getProperty("uiBuilderProjectDir"),
-            "../docs/design/evidence/ui-builder-live-document-preview/sample.document.json",
+            "../docs/design/evidence/ui-builder-live-document-preview/sample.uid",
           )
           .readText()
       )
@@ -94,7 +94,7 @@ class EditorCodePaneTest {
         java.io
           .File(
             System.getProperty("uiBuilderProjectDir"),
-            "../experiments/remote-state-selection/bound-actions.document.json",
+            "../experiments/remote-state-selection/bound-actions.uid",
           )
           .readText()
       )
