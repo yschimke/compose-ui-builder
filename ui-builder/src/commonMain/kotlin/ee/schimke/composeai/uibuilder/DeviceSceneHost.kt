@@ -92,6 +92,11 @@ internal fun DeviceSceneHost(
   layoutDirection: LayoutDirection = LayoutDirection.Ltr,
   /** Whether a wheel over this pane is delivered as rotary. Off for panes that are not a device. */
   rotary: Boolean = true,
+  /**
+   * What [content] draws — the design, for a device pane. A change asks the scene for a frame; see
+   * the pump below for why the lambda cannot say so itself.
+   */
+  contentKey: Any? = null,
   modifier: Modifier = Modifier,
   content: @Composable () -> Unit,
 ) {
@@ -108,11 +113,20 @@ internal fun DeviceSceneHost(
   DisposableEffect(holder) { onDispose { holder.close() } }
   // The pump asks for frames only while the scene has work: a design that has settled costs a draw,
   // and one that is animating (a spinner, a rotary fling) keeps its own frames.
+  //
+  // Restarted by an edit as well as by input. An edit invalidates the scene's own composition —
+  // a composable lambda is updated in place rather than replaced, so [content] keeps its identity
+  // and cannot key anything — but the scene only composes inside [DeviceScene.frame], and nothing
+  // else calls it. Keyed on input alone, the loop exited with the first settled frame, so every
+  // pane
+  // kept drawing the revision it opened on until a pointer happened to cross it: a widget's three
+  // host previews stayed empty while its canvas filled up. [contentKey] is the caller saying what
+  // the lambda draws, and one frame is always taken for it.
   var pump by remember(holder) { mutableIntStateOf(0) }
-  LaunchedEffect(holder, pump) {
-    while (holder.hasWork()) {
+  LaunchedEffect(holder, pump, contentKey) {
+    do {
       androidx.compose.runtime.withFrameNanos { holder.frame(it) }
-    }
+    } while (holder.hasWork())
   }
   Canvas(
     modifier
