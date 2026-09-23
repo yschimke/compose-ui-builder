@@ -114,9 +114,28 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
   abstract val record: org.gradle.api.file.RegularFileProperty
 
+  /** Merged in when set; `:ui-builder-export`'s Remote Material 3 record has no foundation half. */
   @get:org.gradle.api.tasks.InputFile
+  @get:org.gradle.api.tasks.Optional
   @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
   abstract val foundation: org.gradle.api.file.RegularFileProperty
+
+  /** The Kotlin `val` the JSON is written to, `internal` to the module that embeds it. */
+  @get:org.gradle.api.tasks.Input
+  abstract val constantName: org.gradle.api.provider.Property<String>
+
+  /** Where the JSON came from, for the generated file's header. */
+  @get:org.gradle.api.tasks.Input
+  abstract val sourceDescription: org.gradle.api.provider.Property<String>
+
+  init {
+    constantName.convention("EMBEDDED_COMPONENT_RECORD_JSON")
+    sourceDescription.convention(
+      "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json\n" +
+        "// merged with compose-foundation-components-v1.json beside it\n" +
+        "// by :ui-builder:embedComponentRecord"
+    )
+  }
 
   @get:org.gradle.api.tasks.OutputFile abstract val output: org.gradle.api.file.RegularFileProperty
 
@@ -136,6 +155,9 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
   private fun merged(): String {
     @Suppress("UNCHECKED_CAST")
     val base = groovy.json.JsonSlurper().parse(record.get().asFile) as MutableMap<String, Any?>
+    if (!foundation.isPresent) {
+      return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(base))
+    }
     @Suppress("UNCHECKED_CAST")
     val extra = groovy.json.JsonSlurper().parse(foundation.get().asFile) as Map<String, Any?>
     @Suppress("UNCHECKED_CAST") val components = base["components"] as List<Map<String, Any?>>
@@ -161,17 +183,13 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
       buildString {
         appendLine("package ee.schimke.composeai.uibuilder")
         appendLine()
-        appendLine(
-          "// Generated from docs/design/fixtures/ui-builder/m3-catalog-components-v1.json"
-        )
-        appendLine("// merged with compose-foundation-components-v1.json beside it")
-        appendLine("// by :ui-builder:embedComponentRecord. Do not edit.")
+        appendLine("// Generated from ${sourceDescription.get()}. Do not edit.")
         appendLine()
         // A raw string, with every `$` escaped: `typeFqn` values carry them (a nested classifier
         // is `Arrangement${'$'}Vertical` in a JVM name), and Kotlin would read them as template
         // interpolation. `val` rather than `const val` for the same reason — an escaped raw string
         // is not a compile-time constant.
-        appendLine("internal val EMBEDDED_COMPONENT_RECORD_JSON: String =")
+        appendLine("internal val ${constantName.get()}: String =")
         val escaped = json.trimEnd().replace("$", "\${'\$'}")
         appendLine("  \"\"\"" + escaped + "\"\"\"")
       }
