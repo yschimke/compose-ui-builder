@@ -293,7 +293,7 @@ not available: the wire shape is `CatalogCapabilityV1` in `compose-preview-contr
 here is a catalog that repository cannot read. The first pass answered that with a hardcoded table
 in `:ui-builder`; `UiBuilderPreviewSurfaces` answered the same question better, and the menu now
 follows it into `statusSemantics` under `componentMenu`, read back by
-[`ComponentMenu.from`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ComponentMenu.kt).
+[`ComponentMenu.from`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/ComponentMenu.kt).
 
 The difference is not tidiness. A table in `:ui-builder` can only describe catalogs whose component
 ids *this* repository knows, so `wear-m3` and `remote-m3` fell back to the role headings however

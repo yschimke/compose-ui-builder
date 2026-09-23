@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

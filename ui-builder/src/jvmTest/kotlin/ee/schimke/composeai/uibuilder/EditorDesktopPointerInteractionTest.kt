@@ -18,7 +18,17 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
+import ee.schimke.composeai.uibuilder.editor.EditorLayoutDirection
+import ee.schimke.composeai.uibuilder.editor.EditorPane
+import ee.schimke.composeai.uibuilder.editor.EditorScreenTheme
+import ee.schimke.composeai.uibuilder.editor.EditorVariantAxis
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

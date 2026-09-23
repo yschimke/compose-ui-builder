@@ -7,7 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.navigationevent.NavigationEventDispatcher
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
-import ee.schimke.composeai.uibuilder.LocalDeviceSceneRoot
+import ee.schimke.composeai.uibuilder.canvas.LocalDeviceSceneRoot
 
 /** Supplies the navigation-event owner Compose Desktop normally installs at an application root. */
 @Composable

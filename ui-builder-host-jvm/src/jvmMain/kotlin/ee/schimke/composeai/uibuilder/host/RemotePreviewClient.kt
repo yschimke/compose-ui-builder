@@ -2,8 +2,8 @@ package ee.schimke.composeai.uibuilder.host
 
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.toDesignDocumentV1
 import java.net.URI
 import java.net.http.HttpClient

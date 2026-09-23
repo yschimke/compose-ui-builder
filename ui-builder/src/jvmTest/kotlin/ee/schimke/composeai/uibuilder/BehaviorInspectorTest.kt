@@ -10,6 +10,11 @@ import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.inspector.EventActionsInspector
+import ee.schimke.composeai.uibuilder.inspector.LocalUiBuilderPageDestinations
+import ee.schimke.composeai.uibuilder.inspector.StateVariablesInspector
+import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import java.io.File
 import kotlin.test.*
 import kotlinx.serialization.json.*

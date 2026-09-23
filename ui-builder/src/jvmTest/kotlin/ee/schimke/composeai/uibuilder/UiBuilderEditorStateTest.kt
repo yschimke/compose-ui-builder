@@ -1,6 +1,24 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.canvas.uiBuilderStateWrite
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorClipboard
+import ee.schimke.composeai.uibuilder.editor.EditorComponentKind
+import ee.schimke.composeai.uibuilder.editor.EditorLayoutDirection
+import ee.schimke.composeai.uibuilder.editor.EditorMoveDirection
+import ee.schimke.composeai.uibuilder.editor.EditorPropertyControl
+import ee.schimke.composeai.uibuilder.editor.EditorScreenTheme
+import ee.schimke.composeai.uibuilder.editor.EditorSelectionMove
+import ee.schimke.composeai.uibuilder.editor.EditorStateAction
+import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.EditorThemeSettings
+import ee.schimke.composeai.uibuilder.editor.EditorTreeRow
+import ee.schimke.composeai.uibuilder.editor.ScreenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.THEME_PRIMARY
+import ee.schimke.composeai.uibuilder.editor.THEME_TYPE_SCALE
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcons
 import kotlin.test.Test
 import kotlin.test.assertEquals

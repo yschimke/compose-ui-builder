@@ -39,7 +39,7 @@ editing, including the parts a device would not show. The clearest case is a scr
 `LazyColumn` on a 914 dp phone shows you rows one to four; the author is working on rows nine to
 twelve as much as on the first four. So the canvas draws the **extent** — the frame's width, the
 content's full height, unrolled — and that is the surface edits land on
-([`CanvasExtentLayout`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/CanvasExtentLayout.kt)).
+([`CanvasExtentLayout`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/CanvasExtentLayout.kt)).
 It is not what the device shows. That is the point.
 
 The same licence covers everything else the canvas puts on top of the design: the selection overlay,
@@ -49,7 +49,7 @@ all of it is in the way of using the design.
 It covers one thing *inside* the design too, for the same reason. An adaptive scaffold on the canvas
 draws **every pane it declares, at every canvas width** — the full expanded, tablet experience —
 rather than collapsing the way the real component would
-([`UnfoldedSupportingPaneScaffold`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt)).
+([`UnfoldedSupportingPaneScaffold`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt)).
 A collapsed pane is not merely a smaller picture: it is a subtree that cannot be selected, dropped
 into or edited, and the width that would have collapsed it is the canvas's, which is a window nobody
 ships. This is the unrolled column again — show the author the thing they are authoring — and the
@@ -65,7 +65,7 @@ library the canvas cannot link, and the renderer keeps that rule with two differ
   `CompatibleHorizontalCarousel` over a `LazyRow`, because the real lazy carousel cannot expose all
   authored children in the unbounded editor extent. The node draws, and what it draws is a real
   component; Preview switches to `HorizontalUncontainedCarousel`;
-- a **named placeholder** ([`NativeOnlyPlaceholder`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt)),
+- a **named placeholder** ([`NativeOnlyPlaceholder`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt)),
   where it does not. The node says what it is, keeps its children so the tree is still navigable, and
   makes no claim about how it looks.
 
@@ -86,7 +86,7 @@ components** belong. It exists because rung 1 cannot answer two questions:
 
 - *Does it fit?* The preview composes each frame **bounded**, so a `LazyColumn` is lazy, scrolling is
   the design's own, and content past the frame's edge is content the device does not show
-  ([`ConstrainedFramePane`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderEditor.kt)).
+  ([`ConstrainedFramePane`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditor.kt)).
   A design that overflows here overflows on the device.
 - *Does it adapt?* This is the rung that earns the **multiple frames**: every device the design
   claims in `exportDevices`, plus the unstored axes (dark, RTL, large font). You build the UI once —

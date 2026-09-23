@@ -17,6 +17,14 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorPane
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeFrame
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeInput
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
+import ee.schimke.composeai.uibuilder.editor.nativePaneCaption
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

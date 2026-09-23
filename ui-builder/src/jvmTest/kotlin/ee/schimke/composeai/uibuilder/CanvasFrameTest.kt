@@ -1,5 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.canvasFrameDp
+import ee.schimke.composeai.uibuilder.editor.referencePieceCentrePx
+import ee.schimke.composeai.uibuilder.reference.ReferenceImage
+import ee.schimke.composeai.uibuilder.reference.ReferencePiece
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.JsonObject

@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderHttpTransport
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
 import ee.schimke.composeai.uibuilder.client.UiBuilderHttpRequest
@@ -37,6 +38,16 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderHttpResult
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
+import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasInspection
+import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasSurface
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeNodeBounds
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.local.CachedLocalText
 import ee.schimke.composeai.uibuilder.local.CachingLocalCatalogSource
 import ee.schimke.composeai.uibuilder.local.LocalCatalogSource

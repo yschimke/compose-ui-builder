@@ -5,7 +5,14 @@ import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
 import ee.schimke.composeai.rcplayer.protocol.RcHeader
 import ee.schimke.composeai.rcplayer.protocol.RcRemark
 import ee.schimke.composeai.rcplayer.protocol.RcVersion
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
+import ee.schimke.composeai.uibuilder.canvas.boardItemCount
+import ee.schimke.composeai.uibuilder.canvas.boardRootId
+import ee.schimke.composeai.uibuilder.canvas.isBoard
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorVariantAxis
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals

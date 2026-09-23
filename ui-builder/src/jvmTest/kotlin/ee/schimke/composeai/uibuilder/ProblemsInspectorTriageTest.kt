@@ -6,6 +6,14 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
+import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
+import ee.schimke.composeai.uibuilder.editor.EditorProblem
+import ee.schimke.composeai.uibuilder.editor.ProblemAudience
+import ee.schimke.composeai.uibuilder.editor.ProblemsInspector
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.problemBadgeCount
+import ee.schimke.composeai.uibuilder.editor.problemHeading
+import ee.schimke.composeai.uibuilder.editor.triageProblems
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

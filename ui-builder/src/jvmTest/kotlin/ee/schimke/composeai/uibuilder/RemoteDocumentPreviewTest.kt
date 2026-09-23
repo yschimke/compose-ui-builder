@@ -8,7 +8,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.rcplayer.compose.composeSupportReport
+import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorPane
+import ee.schimke.composeai.uibuilder.editor.EditorVariantAxis
+import ee.schimke.composeai.uibuilder.editor.RemoteDocumentDesignPreviewPane
+import ee.schimke.composeai.uibuilder.editor.RemoteDocumentPreviewPane
+import ee.schimke.composeai.uibuilder.editor.UiBuilderDocumentPreview
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
+import ee.schimke.composeai.uibuilder.editor.UiBuilderVariantPane
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import java.io.File

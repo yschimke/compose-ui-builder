@@ -6,7 +6,9 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue

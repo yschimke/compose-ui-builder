@@ -2,6 +2,10 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.svg.DocumentSvgExecutionBridge
+import ee.schimke.composeai.uibuilder.svg.JvmSkiaStructuredSvgRecorder
+import ee.schimke.composeai.uibuilder.svg.StructuredSvgRecordingRequest
+import ee.schimke.composeai.uibuilder.svg.inspectDocumentSvgExport
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream

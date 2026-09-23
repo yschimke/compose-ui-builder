@@ -4,6 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.overrides.previewOverrideString
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import kotlinx.serialization.json.Json

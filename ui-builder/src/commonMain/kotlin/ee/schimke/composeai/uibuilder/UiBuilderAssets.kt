@@ -5,6 +5,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.ImageBitmap
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
+import ee.schimke.composeai.uibuilder.canvas.LocalRemoteComposeDocuments
+import ee.schimke.composeai.uibuilder.reference.decodeReferenceBitmap
 import kotlin.io.encoding.Base64
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull

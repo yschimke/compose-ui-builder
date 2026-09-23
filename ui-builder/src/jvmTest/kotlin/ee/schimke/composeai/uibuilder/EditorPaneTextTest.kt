@@ -1,5 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.EditorPane
+import ee.schimke.composeai.uibuilder.editor.panesLabel
+import ee.schimke.composeai.uibuilder.editor.supportingText
+import ee.schimke.composeai.uibuilder.editor.unavailableText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals

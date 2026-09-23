@@ -29,7 +29,7 @@
       "keys": ["jetcaster.cover.android-developers-backstage", "jetcaster.cover.google-developers-podcast", "ui-builder.gate0.cover", "editor.placeholder"]
     },
     "componentMenu": {
-      "$comment": "How the UI builder shelves this catalog in its insert panel. Read by ComponentMenu.from; see ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ComponentMenu.kt. Section names are m3-catalog's own @file:CatalogGroup(section = ...) vocabulary.",
+      "$comment": "How the UI builder shelves this catalog in its insert panel. Read by ComponentMenu.from; see ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/ComponentMenu.kt. Section names are m3-catalog's own @file:CatalogGroup(section = ...) vocabulary.",
       "groupOrder": [
         "Scaffolds",
         "Layout",

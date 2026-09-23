@@ -1,0 +1,245 @@
+package ee.schimke.composeai.uibuilder.codegen
+
+import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.UiBuilderNode
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
+import ee.schimke.composeai.uibuilder.optionalString
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.floatOrNull
+
+internal data class ExportValidationIssue(
+  val code: String,
+  val message: String,
+  val nodeId: String? = null,
+  val componentId: String? = null,
+)
+
+/** Closed fail-closed validation shared by code and SVG projections. */
+internal fun validateDocumentForExport(
+  document: UiBuilderDocument,
+  catalog: CapabilityCatalog,
+): List<ExportValidationIssue> {
+  val issues = mutableListOf<ExportValidationIssue>()
+  CapabilityValidator(catalog).validate(document).issues.forEach { issue ->
+    issues +=
+      ExportValidationIssue(
+        code = issue.code.name,
+        message = issue.message,
+        nodeId = issue.nodeId,
+        componentId = issue.componentId,
+      )
+  }
+  issues += validateCatalogPin(document, catalog)
+  issues += validateEnvironment(document)
+  issues += validateGraph(document)
+  return issues.distinct()
+}
+
+private fun validateEnvironment(document: UiBuilderDocument): List<ExportValidationIssue> {
+  val issues = mutableListOf<ExportValidationIssue>()
+  if (document.environment.isEmpty()) {
+    issues +=
+      ExportValidationIssue(
+        code = "INVALID_EXPORT_ENVIRONMENT",
+        message = "environment pin must not be empty",
+      )
+    return issues
+  }
+  listOf("widthDp", "heightDp", "density").forEach { field ->
+    val value = (document.environment[field] as? JsonPrimitive)?.floatOrNull
+    if (value == null || !value.isFinite() || value <= 0f) {
+      issues +=
+        ExportValidationIssue(
+          code = "INVALID_EXPORT_ENVIRONMENT",
+          message = "environment.$field must be a finite number greater than zero",
+        )
+    }
+  }
+  val theme =
+    (document.environment["theme"] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
+  if (theme.isNullOrBlank()) {
+    issues +=
+      ExportValidationIssue(
+        code = "INVALID_EXPORT_ENVIRONMENT",
+        message = "environment.theme must be nonblank text",
+      )
+  }
+  return issues
+}
+
+private fun validateCatalogPin(
+  document: UiBuilderDocument,
+  catalog: CapabilityCatalog,
+): List<ExportValidationIssue> {
+  // Candidate manifests do not yet expose a separate digest field, so neither writer of a pin has
+  // a digest to write and both write a placeholder — and they do not write the SAME placeholder.
+  // This editor spells it as the catalog's own revision; the server spells it `candidate`
+  // (`CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST`). On a synthesised catalog the
+  // two agree by accident, because that catalog's revision IS `candidate` — which is why a rule
+  // that only ever matched one of them survived this long. On a published catalog the revision is
+  // a content hash, so every pin the server writes, for a design created five seconds ago as much
+  // as for one re-pinned across a source flip (#818), failed this check and took the Issues panel
+  // and both export lanes with it.
+  //
+  // So the digest is checked against either spelling until there is a real digest to check. The
+  // three fields that name the served catalog are unchanged and are what actually catches a
+  // document pinned to something else.
+  val expected =
+    mapOf(
+      "systemId" to catalog.benchmark.catalogSystemId,
+      "catalogRevision" to catalog.benchmark.catalogRevision,
+      "nativeRuntimeId" to catalog.benchmark.nativeRuntimeId,
+    )
+  val digests = setOf(catalog.benchmark.catalogRevision, CANDIDATE_CAPABILITY_DIGEST)
+  val actual =
+    document.catalogPin.mapValues { (_, value) ->
+      (value as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
+    }
+  val digestMismatch =
+    if (actual["capabilityDigest"] in digests) emptyList()
+    else
+      listOf(
+        ExportValidationIssue(
+          code = "CATALOG_PIN_MISMATCH",
+          message =
+            "catalogPin.capabilityDigest expected one of ${digests.sorted().joinToString(", ") { "'$it'" }}" +
+              " but was '${actual["capabilityDigest"] ?: "<missing>"}'",
+        )
+      )
+  val mismatches = expected.mapNotNull { (field, expectedValue) ->
+    val actualValue = actual[field]
+    if (actualValue == expectedValue) null
+    else
+      ExportValidationIssue(
+        code = "CATALOG_PIN_MISMATCH",
+        message =
+          "catalogPin.$field expected '$expectedValue' but was '${actualValue ?: "<missing>"}'",
+      )
+  }
+  // `capabilityDigest` is a field of the pin, checked above against either spelling rather than
+  // against one expected value — so it is named here too, or moving it out of [expected] would
+  // have turned every pin that carries it into an "unexpected field".
+  val unexpected =
+    (actual.keys - expected.keys - "capabilityDigest").sorted().map { field ->
+      ExportValidationIssue(
+        code = "CATALOG_PIN_MISMATCH",
+        message = "catalogPin contains unexpected field '$field'",
+      )
+    }
+  return digestMismatch + mismatches + unexpected
+}
+
+/**
+ * What a pin's `capabilityDigest` says when there is no digest to say.
+ *
+ * The server's own spelling of the same placeholder —
+ * `CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST` — repeated rather than imported:
+ * `:ui-builder` is reached as a distribution and never links the runtime that serves it
+ * (`docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`). Both disappear together the day a catalog
+ * manifest carries a real digest.
+ */
+private const val CANDIDATE_CAPABILITY_DIGEST = "candidate"
+
+/**
+ * Where each component's body starts, by component key.
+ *
+ * A body is an ordinary subtree in the ordinary `nodes` map — that is what lets every walk here
+ * treat it as one — reached from the component rather than from a slot, so it is named among the
+ * graph's entry points beside the document's own root.
+ */
+private fun UiBuilderDocument.componentRoots(): Map<String, String> =
+  components.entries
+    .sortedBy { it.key }
+    .mapNotNull { (key, value) ->
+      val root = (value as? JsonObject)?.optionalString("root") ?: return@mapNotNull null
+      if (root in nodes) key to root else null
+    }
+    .toMap()
+
+private fun validateGraph(document: UiBuilderDocument): List<ExportValidationIssue> {
+  val issues = mutableListOf<ExportValidationIssue>()
+  if (document.roots.size != 1) {
+    issues +=
+      ExportValidationIssue(
+        code = "ROOT_CARDINALITY",
+        message = "export requires exactly one root; found ${document.roots.size}",
+      )
+  }
+  document.roots.forEach { root ->
+    if (root !in document.nodes) {
+      issues += ExportValidationIssue("UNKNOWN_ROOT", "root references unknown node $root", root)
+    }
+  }
+
+  val references = linkedMapOf<String, MutableList<String>>()
+  document.nodes.values.sortedBy(UiBuilderNode::id).forEach { parent ->
+    parent.slots.entries
+      .sortedBy { it.key }
+      .forEach { (slot, children) ->
+        children.forEach { child ->
+          references.getOrPut(child) { mutableListOf() } += "${parent.id}.$slot"
+        }
+      }
+  }
+  document.roots.forEach { root -> references.getOrPut(root) { mutableListOf() } += "<root>" }
+  // Component roots are deliberately NOT counted here, though they are walked below.
+  //
+  // This map answers one question — is a node placed in the tree more than once — and a component
+  // root is not a placement: the body is drawn wherever the component is placed, and its
+  // declaration naming it is a claim of ownership rather than a second parent. Counting it made
+  // every document that declares a component a duplicate of itself, because a body has to be
+  // somewhere: a published library symbol names its own root in `roots` *and* in `components`, and
+  // a design authoring a component holds the body in a slot, so both collected two references for
+  // one node and neither could export.
+  //
+  // Reachability, the other reason the old comment gave for counting it, is not this map's job:
+  // the walk below visits `componentRoots()` as entry points and `UNREACHABLE_NODE` reads what it
+  // visited. So a body reached only through its declaration is still reachable.
+  references.entries
+    .sortedBy { it.key }
+    .forEach { (nodeId, parents) ->
+      if (parents.size > 1) {
+        issues +=
+          ExportValidationIssue(
+            code = "DUPLICATE_NODE_REFERENCE",
+            message = "node is referenced ${parents.size} times: ${parents.joinToString()}",
+            nodeId = nodeId,
+            componentId = document.nodes[nodeId]?.componentId,
+          )
+      }
+    }
+
+  val visited = mutableSetOf<String>()
+  val active = mutableSetOf<String>()
+  fun visit(nodeId: String) {
+    if (nodeId in active) {
+      issues +=
+        ExportValidationIssue(
+          code = "GRAPH_CYCLE",
+          message = "cycle reaches node $nodeId",
+          nodeId = nodeId,
+          componentId = document.nodes[nodeId]?.componentId,
+        )
+      return
+    }
+    if (!visited.add(nodeId)) return
+    val node = document.nodes[nodeId] ?: return
+    active += nodeId
+    node.slots.entries.sortedBy { it.key }.forEach { (_, children) -> children.forEach(::visit) }
+    active -= nodeId
+  }
+  document.roots.forEach(::visit)
+  document.componentRoots().values.forEach(::visit)
+  (document.nodes.keys - visited).sorted().forEach { nodeId ->
+    issues +=
+      ExportValidationIssue(
+        code = "UNREACHABLE_NODE",
+        message = "node is not reachable from the document root",
+        nodeId = nodeId,
+        componentId = document.nodes[nodeId]?.componentId,
+      )
+  }
+  return issues
+}

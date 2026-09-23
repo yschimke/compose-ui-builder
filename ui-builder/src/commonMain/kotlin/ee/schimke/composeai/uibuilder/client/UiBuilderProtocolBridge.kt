@@ -1,10 +1,10 @@
 package ee.schimke.composeai.uibuilder.client
 
 import ee.schimke.composeai.uibuilder.DesignOperation
-import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderNode
+import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1

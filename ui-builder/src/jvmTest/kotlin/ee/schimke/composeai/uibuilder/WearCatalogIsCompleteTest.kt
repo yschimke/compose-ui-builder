@@ -40,11 +40,12 @@ class WearCatalogIsCompleteTest {
       .readText()
 
   private val rendererSource =
-    java.io.File("src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt").let {
-      relative ->
-      // Run from the module directory under Gradle; fall back for a repository-root runner.
-      if (relative.isFile) relative else java.io.File("ui-builder/${relative.path}")
-    }
+    java.io
+      .File("src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt")
+      .let { relative ->
+        // Run from the module directory under Gradle; fall back for a repository-root runner.
+        if (relative.isFile) relative else java.io.File("ui-builder/${relative.path}")
+      }
 
   /**
    * The labels the renderer has a dispatch branch for: component ids and canvas adapter ids alike.

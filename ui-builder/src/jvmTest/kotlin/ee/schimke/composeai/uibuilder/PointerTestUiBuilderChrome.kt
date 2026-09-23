@@ -5,6 +5,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.editor.MaterialUiBuilderChrome
+import ee.schimke.composeai.uibuilder.editor.UiBuilderCatalogTileModel
+import ee.schimke.composeai.uibuilder.editor.UiBuilderChrome
+import ee.schimke.composeai.uibuilder.editor.UiBuilderInspectorActionModel
+import ee.schimke.composeai.uibuilder.editor.UiBuilderInspectorChoiceModel
+import ee.schimke.composeai.uibuilder.editor.UiBuilderInspectorPropertyModel
+import ee.schimke.composeai.uibuilder.editor.UiBuilderInspectorTextFieldModel
+import ee.schimke.composeai.uibuilder.editor.UiBuilderInspectorValueFieldModel
+import ee.schimke.composeai.uibuilder.editor.UiBuilderRailItemModel
+import ee.schimke.composeai.uibuilder.editor.UiBuilderToolbarActionModel
 
 /**
  * Proves pointer gestures survive an embedding host's tile wrapper, not only the default chrome.

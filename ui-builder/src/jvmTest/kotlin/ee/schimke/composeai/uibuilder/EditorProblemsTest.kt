@@ -1,6 +1,12 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
+import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
+import ee.schimke.composeai.uibuilder.codegen.validateDocumentForExport
+import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

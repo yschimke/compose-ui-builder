@@ -56,12 +56,12 @@ const lanes = [
     ],
     [
         "builder",
-        "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt",
+        "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt",
         "ProjectOwnedJetcasterArtwork",
     ],
     [
         "SVG",
-        "ui-builder/src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/JvmSkiaStructuredSvgRecorder.kt",
+        "ui-builder/src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/svg/JvmSkiaStructuredSvgRecorder.kt",
         "readProjectOwnedJetcasterArtwork",
     ],
     [

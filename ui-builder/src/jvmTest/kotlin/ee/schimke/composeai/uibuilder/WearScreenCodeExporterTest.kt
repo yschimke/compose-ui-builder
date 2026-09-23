@@ -6,6 +6,8 @@ import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.ComponentSlot
 import ee.schimke.composeai.discovery.ComponentSymbol
 import ee.schimke.composeai.discovery.TargetParameter
+import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test

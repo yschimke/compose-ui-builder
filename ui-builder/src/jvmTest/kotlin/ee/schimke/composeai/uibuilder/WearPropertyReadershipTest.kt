@@ -52,8 +52,8 @@ class WearPropertyReadershipTest {
   /** The sources that draw a Wear component on the canvas or write one into generated Kotlin. */
   private val laneSources =
     listOf(
-        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt",
-        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearCanvasComponents.kt",
+        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt",
+        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/WearCanvasComponents.kt",
       )
       .map { moduleFile("ui-builder", it) } +
       moduleFile(

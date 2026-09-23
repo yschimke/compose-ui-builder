@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.newDesignInitialValueValid
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

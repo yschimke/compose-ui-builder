@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderLayer
+import ee.schimke.composeai.uibuilder.canvas.uiBuilderLayers
+import ee.schimke.composeai.uibuilder.codegen.ComposeCodeExporter
 import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals

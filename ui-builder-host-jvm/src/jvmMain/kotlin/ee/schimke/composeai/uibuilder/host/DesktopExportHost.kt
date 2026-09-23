@@ -1,16 +1,16 @@
 package ee.schimke.composeai.uibuilder.host
 
-import ee.schimke.composeai.uibuilder.EditorExportFormat
-import ee.schimke.composeai.uibuilder.JvmDocumentRasterizer
-import ee.schimke.composeai.uibuilder.JvmSkiaStructuredSvgRecorder
-import ee.schimke.composeai.uibuilder.SavedDocumentRevisionPin
-import ee.schimke.composeai.uibuilder.SavedDocumentSvgExportJob
-import ee.schimke.composeai.uibuilder.SavedDocumentSvgExportResult
-import ee.schimke.composeai.uibuilder.StructuredSvgRecorderKind
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
-import ee.schimke.composeai.uibuilder.executeSavedDocumentSvgExport
+import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
+import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
+import ee.schimke.composeai.uibuilder.svg.JvmDocumentRasterizer
+import ee.schimke.composeai.uibuilder.svg.JvmSkiaStructuredSvgRecorder
+import ee.schimke.composeai.uibuilder.svg.SavedDocumentRevisionPin
+import ee.schimke.composeai.uibuilder.svg.SavedDocumentSvgExportJob
+import ee.schimke.composeai.uibuilder.svg.SavedDocumentSvgExportResult
+import ee.schimke.composeai.uibuilder.svg.StructuredSvgRecorderKind
+import ee.schimke.composeai.uibuilder.svg.executeSavedDocumentSvgExport
 import java.awt.FileDialog
 import java.awt.Frame
 import java.awt.Image

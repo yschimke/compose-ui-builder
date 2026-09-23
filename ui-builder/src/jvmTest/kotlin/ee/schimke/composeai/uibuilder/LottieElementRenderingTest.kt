@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test

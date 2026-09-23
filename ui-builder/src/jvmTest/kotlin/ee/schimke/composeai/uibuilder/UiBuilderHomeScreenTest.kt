@@ -1,6 +1,10 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.test.*
+import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

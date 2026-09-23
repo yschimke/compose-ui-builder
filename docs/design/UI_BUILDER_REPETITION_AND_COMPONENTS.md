@@ -30,9 +30,9 @@ The document is a flat map of nodes plus a slot-per-parent child list
 and three separate walks agree with it one-for-one:
 
 - the canvas — `RenderNode(document, nodeId, …)`, reporting `onBounds(node.id, …)` per node
-  ([`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt));
+  ([`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt));
 - the exporters — `emitNode(nodeId, …)` in
-  [`CapabilityComposeCodeExporter`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporter.kt),
+  [`CapabilityComposeCodeExporter`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/codegen/CapabilityComposeCodeExporter.kt),
   and `ScreenGenerator` fed by
   [`ScreenDocumentProjection`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/ScreenDocumentProjection.kt);
 - everything anchored to a node id: selection, the inspector, comments, `PlaygroundNodeBoundsService`,

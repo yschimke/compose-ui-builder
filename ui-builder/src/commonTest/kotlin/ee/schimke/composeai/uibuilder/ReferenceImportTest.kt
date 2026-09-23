@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.reference.MAX_REFERENCE_BYTES
+import ee.schimke.composeai.uibuilder.reference.referenceImportRefusal
+import ee.schimke.composeai.uibuilder.reference.referenceSvgRefusal
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

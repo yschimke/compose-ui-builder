@@ -11,6 +11,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderUnrolled
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonArray

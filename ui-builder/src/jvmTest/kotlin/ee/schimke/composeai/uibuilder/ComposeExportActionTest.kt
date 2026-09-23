@@ -1,6 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
+import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
