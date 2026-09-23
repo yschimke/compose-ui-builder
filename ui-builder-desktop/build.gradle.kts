@@ -34,9 +34,9 @@ kotlin {
 compose.desktop {
   application {
     mainClass = "ee.schimke.composeai.uibuilder.desktop.MainKt"
-    // `run` and the packaged runtime use this JDK rather than the one running Gradle: the classes
-    // are compiled for `uiBuilderJava`, and a Gradle on 17 otherwise launches them on 17 and fails
-    // with UnsupportedClassVersionError before the window opens.
+    // The classes are compiled for the `java-ui-builder` toolchain, so they have to be launched
+    // (by `run`) and bundled (by `packageDeb`) with it. Compose Desktop's default is the JVM
+    // running Gradle, which on a JDK 17 daemon fails every `run` with UnsupportedClassVersionError.
     javaHome =
       javaToolchains
         .launcherFor { languageVersion = uiBuilderJava }

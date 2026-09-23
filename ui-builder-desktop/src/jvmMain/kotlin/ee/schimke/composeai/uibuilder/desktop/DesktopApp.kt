@@ -40,9 +40,9 @@ sealed interface DesktopDesign {
 }
 
 /**
- * Opens [design] as a session. A scratch design lives in the app's own store under [storageRoot];
- * Material 3 keeps the root itself, where the single workspace always lived, so an existing one
- * still opens. A file design is read from disk and every accepted edit is written back to it.
+ * Opens [design] as a session. A scratch design lives in its catalog's workspace under
+ * [storageRoot] (see [designStorePath]); a file design is read from disk and every accepted edit is
+ * written back to it.
  */
 internal fun openDesktopSession(
   design: DesktopDesign,
@@ -52,9 +52,7 @@ internal fun openDesktopSession(
   when (design) {
     is DesktopDesign.Scratch ->
       OfflineUiBuilderSession(
-        storagePath =
-          if (design.catalog == OfflineCatalog.M3) storageRoot
-          else storageRoot.resolve(design.catalog.systemId),
+        storagePath = designStorePath(design.catalog, storageRoot),
         catalogSystemId = design.catalog.systemId,
         remoteServer = remoteServer,
       )
@@ -70,7 +68,7 @@ internal fun openDesktopSession(
 internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageRoot: Path) {
   var design by remember {
     mutableStateOf<DesktopDesign>(
-      options.designFile?.let { DesktopDesign.File(it) } ?: DesktopDesign.Scratch(OfflineCatalog.M3)
+      options.designFile?.let { DesktopDesign.File(it) } ?: DesktopDesign.Scratch(options.catalog)
     )
   }
   Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder — ${design.title}") {
@@ -180,32 +178,46 @@ private fun showError(title: String, failure: Throwable) {
   )
 }
 
-/** `ui-builder-desktop [--server <origin>] [design.uid]` */
-internal data class DesktopLaunchOptions(val remoteServer: String?, val designFile: Path?) {
+/** `ui-builder-desktop [--catalog <id>] [--server <origin>] [design.uid]`, in any order. */
+internal data class DesktopLaunchOptions(
+  val remoteServer: String?,
+  /** The scratch workspace to open when no [designFile] is named. */
+  val catalog: OfflineCatalog = OfflineCatalog.M3,
+  val designFile: Path? = null,
+) {
   companion object {
-    const val USAGE = "usage: Compose UI Builder [--server https://preview.coo.ee] [design.uid]"
+    private val USAGE =
+      "usage: Compose UI Builder " +
+        "[--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
+        "[--server https://preview.coo.ee] [design.uid]"
 
     fun parse(args: Array<String>): DesktopLaunchOptions {
-      var server: String? = null
+      val flags = mutableMapOf<String, String>()
       var file: Path? = null
       var index = 0
       while (index < args.size) {
         val arg = args[index]
-        when {
-          arg == "--server" -> {
-            require(index + 1 < args.size) { USAGE }
-            server = validatedServerOrigin(args[index + 1]).toString()
-            index++
-          }
-          arg.startsWith("-") -> throw IllegalArgumentException(USAGE)
-          else -> {
-            require(file == null) { USAGE }
-            file = Path.of(arg)
-          }
+        if (arg.startsWith("-")) {
+          require(arg in setOf("--catalog", "--server") && arg !in flags) { USAGE }
+          flags[arg] = requireNotNull(args.getOrNull(index + 1)) { USAGE }
+          index += 2
+        } else {
+          require(file == null) { USAGE }
+          file = Path.of(arg)
+          index++
         }
-        index++
       }
-      return DesktopLaunchOptions(server, file)
+      val catalog =
+        flags["--catalog"]?.let { id ->
+          requireNotNull(OfflineCatalog.entries.firstOrNull { it.systemId == id }) {
+            "unknown catalog '$id'. $USAGE"
+          }
+        } ?: OfflineCatalog.M3
+      return DesktopLaunchOptions(
+        remoteServer = flags["--server"]?.let { validatedServerOrigin(it).toString() },
+        catalog = catalog,
+        designFile = file,
+      )
     }
   }
 }

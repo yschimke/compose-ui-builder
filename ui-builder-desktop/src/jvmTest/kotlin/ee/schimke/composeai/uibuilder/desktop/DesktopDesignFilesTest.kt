@@ -86,14 +86,16 @@ class DesktopDesignFilesTest {
   }
 
   @Test
-  fun `launch options take a server and a design file in either order`() {
-    assertEquals(DesktopLaunchOptions(null, null), DesktopLaunchOptions.parse(emptyArray()))
+  fun `a design file combines with the flags in any order`() {
+    assertNull(DesktopLaunchOptions.parse(emptyArray()).designFile)
     assertEquals(
-      DesktopLaunchOptions("https://preview.example", Path.of("a.uid")),
+      DesktopLaunchOptions("https://preview.example", designFile = Path.of("a.uid")),
       DesktopLaunchOptions.parse(arrayOf("a.uid", "--server", "https://preview.example")),
     )
-    assertNull(DesktopLaunchOptions.parse(arrayOf("a.uid")).remoteServer)
-    assertFailsWith<IllegalArgumentException> { DesktopLaunchOptions.parse(arrayOf("--bogus")) }
+    assertEquals(
+      DesktopLaunchOptions(null, OfflineCatalog.WEAR_M3, Path.of("a.uid")),
+      DesktopLaunchOptions.parse(arrayOf("--catalog", "wear-m3", "a.uid")),
+    )
     assertFailsWith<IllegalArgumentException> {
       DesktopLaunchOptions.parse(arrayOf("a.uid", "b.uid"))
     }

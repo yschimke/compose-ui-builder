@@ -6707,6 +6707,7 @@ private fun ConstrainedFramePane(
       } else
         DeviceSceneHost(
           key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
+          contentKey = document,
           sizePx =
             IntSize(
               (widthDp * densityRatio).roundToInt(),

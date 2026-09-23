@@ -67,7 +67,18 @@ run:
 
 It opens the same editor directly on Skiko, with no server process or browser required. The initial
 workspace is the Jetcaster fixture and edits are stored under
-`~/.compose-preview/ui-builder-desktop`. This first desktop host intentionally has no server-backed
+`~/.compose-preview/ui-builder-desktop`.
+
+`--catalog` picks the packaged catalog to author against. To build a **Wear widget** — a Glance Wear
+widget body in Remote Compose, previewed in the Rectangular, Samsung and Pixel Watch host shapes and
+exported as a `GlanceWearWidget` — open `remote-m3`:
+
+```bash
+./gradlew :ui-builder-desktop:run --args='--catalog remote-m3'
+```
+
+`wear-m3` opens a Wear screen and `m3-catalog` (the default) a phone screen. Each catalog keeps its
+own workspace, in a subdirectory named after it. This first desktop host intentionally has no server-backed
 collaboration, comments, or native daemon preview; those remain capabilities of a connected host.
 
 Pass `--server https://preview.coo.ee` to make the native Preview pane compile through the public
@@ -76,6 +87,18 @@ host instead:
 ```bash
 ./gradlew :ui-builder-desktop:run --args='--server https://preview.coo.ee'
 ```
+
+The two flags combine: `--args='--catalog remote-m3 --server https://preview.coo.ee'`.
+
+To edit a checked-in design instead of a workspace, name the `.uid` (or DesignDocumentV1 `.json`)
+file; every accepted edit is written back to it, in the same shape the IntelliJ plugin writes:
+
+```bash
+./gradlew :ui-builder-desktop:run --args="$PWD/docs/design/fixtures/ui-builder/state-actions.uid"
+```
+
+The **File** menu does the same from inside the app: **New** opens a catalog's workspace, **Open…**
+loads a design file, and **Save As…** writes the current design to a file and keeps editing it there.
 
 The same mode works against a local UI-builder/Wasm host, for example
 `--server http://localhost:8080`; plain HTTP is accepted only on loopback. Remote hosts must use
