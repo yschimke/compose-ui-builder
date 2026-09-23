@@ -38,10 +38,12 @@ still answer for it.
 `:ui-builder-export`, `:ui-builder-web` and `:ui-builder-render-bundle`. Nothing here may depend on
 that repository, in any direction, for any reason.
 
-They are not on Maven Central yet, so the server resolves them through `includeBuild` against a
-checkout of this repository. That means **a change to a seam module can break the server's build
-without anything here going red.** Until the publishing lane and a version pin exist, a change to
-one of the four is a change to be landed with the server's build checked against it.
+They are released to Maven Central (the web archive as a GitHub release asset), and the server pins
+a release through the BOM. The CI job `server-against-checkout` builds compose-preview-server's
+`main` against this checkout (`-PcomposeUiBuilderDir`) and runs its `:server` and `:mcp` tests, so
+**a change to a seam module that breaks the server goes red here.** Don't make that job pass by
+weakening it: a deliberate seam break, like a package move, has to land together with the matching
+compose-preview-server change.
 
 ## Assets whose writer is in the other repository
 

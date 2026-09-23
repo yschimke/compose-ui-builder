@@ -83,6 +83,42 @@ jobs:
           :ui-builder-export:jvmTest :ui-builder:jvmTest :ui-builder-runtime:test
           :ui-builder:compileKotlinWasmJs
 
+  # compose-preview-server consumes the four seams from a pinned release, so a change here that
+  # breaks it would otherwise show up only when the server bumps the pin, one release later. This
+  # job builds the server's `main` against THIS checkout instead: `-PcomposeUiBuilderDir` makes the
+  # server include this build and substitute all four seams, the same switch its own
+  # remote-compose lane uses. The two checkouts are siblings because the server rejects a
+  # directory that is not a Gradle build, and nesting one repository inside the other would put a
+  # stray build under this one's root.
+  #
+  # A deliberate seam break, like a package move, turns this red by design. It lands together with
+  # the matching server change, not by weakening this job. See AGENTS.md, "The seams".
+  server-against-checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: compose-ui-builder
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: yschimke/compose-preview-server
+          path: compose-preview-server
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - working-directory: compose-preview-server
+        run: >-
+          ./gradlew -PcomposeUiBuilderDir=../compose-ui-builder
+          :server:test :mcp:test
+
   ui-builder-contract:
     runs-on: ubuntu-latest
     steps:

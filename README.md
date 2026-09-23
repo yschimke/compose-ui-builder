@@ -95,9 +95,13 @@ That matters here beyond convenience: the runtime and the export share the scree
 and a version skew between them does not fail resolution — it produces an export that differs
 between the browser and the service.
 
-**Nothing has been published yet.** The lane is configured and verified, but no release has gone
-out, so compose-preview-server still resolves these four by including a checkout of this repository
-as a composite build.
+compose-preview-server pins a release through the BOM (`composeai-ui-builder` in its version
+catalog). A pin only moves on a bump, so a seam change here would otherwise surface there one
+release late. CI closes that gap: the `server-against-checkout` job checks out
+compose-preview-server's `main` and runs its `:server` and `:mcp` tests against this checkout
+through `-PcomposeUiBuilderDir`, so a change that breaks the server's build or tests goes red on the
+pull request that makes it. A deliberate seam break, a re-package for example, lands together with
+the matching compose-preview-server change.
 
 ### Publishing a release
 
