@@ -65,8 +65,9 @@ fun main(args: Array<String>) = application {
     MaterialTheme {
       Surface(Modifier.fillMaxSize()) {
         OfflineUiBuilderApp(
-          storagePath = designStorePath(),
+          storagePath = designStorePath(options.catalog),
           sessionLabel = "Desktop offline · saved locally",
+          catalogSystemId = options.catalog.systemId,
           remoteServer = options.remoteServer,
         )
       }
@@ -390,17 +391,46 @@ private fun resourceText(name: String): String =
   checkNotNull(object {}.javaClass.getResource("/$name")) { "missing desktop resource $name" }
     .readText()
 
-private fun designStorePath(): Path =
-  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")
+/**
+ * Where [catalog]'s workspace is kept.
+ *
+ * One workspace per catalog, because the workspace is one design under a fixed id and a design is
+ * pinned to the catalog it was created in: opening a Material 3 workspace as a Wear widget would
+ * hand the widget catalog a document full of components it does not declare. Material 3 keeps the
+ * directory it has always had, so an existing workspace is still where its owner left it.
+ */
+internal fun designStorePath(catalog: OfflineCatalog): Path =
+  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop").let {
+    if (catalog == OfflineCatalog.M3) it else it.resolve(catalog.systemId)
+  }
 
-private data class DesktopLaunchOptions(val remoteServer: String?) {
+internal data class DesktopLaunchOptions(
+  val remoteServer: String?,
+  val catalog: OfflineCatalog = OfflineCatalog.M3,
+) {
   companion object {
+    private val USAGE =
+      "usage: Compose UI Builder [--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
+        "[--server https://preview.coo.ee]"
+
     fun parse(args: Array<String>): DesktopLaunchOptions {
-      if (args.isEmpty()) return DesktopLaunchOptions(null)
-      require(args.size == 2 && args[0] == "--server") {
-        "usage: Compose UI Builder [--server https://preview.coo.ee]"
+      require(args.size % 2 == 0) { USAGE }
+      val flags = args.toList().chunked(2).associate { (flag, value) -> flag to value }
+      require(
+        flags.size == args.size / 2 && flags.keys.all { it in setOf("--catalog", "--server") }
+      ) {
+        USAGE
       }
-      return DesktopLaunchOptions(validatedServerOrigin(args[1]).toString())
+      val catalog =
+        flags["--catalog"]?.let { id ->
+          requireNotNull(OfflineCatalog.entries.firstOrNull { it.systemId == id }) {
+            "unknown catalog '$id'. $USAGE"
+          }
+        } ?: OfflineCatalog.M3
+      return DesktopLaunchOptions(
+        remoteServer = flags["--server"]?.let { validatedServerOrigin(it).toString() },
+        catalog = catalog,
+      )
     }
   }
 }
