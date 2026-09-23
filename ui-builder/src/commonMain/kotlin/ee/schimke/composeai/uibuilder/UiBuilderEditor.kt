@@ -1704,14 +1704,13 @@ fun UiBuilderEditor(
    */
   fun promotionTargetFor(piece: ReferencePiece): ParentSlot? {
     val componentId = piece.componentId ?: return null
-    val environment = state.document.screenEnvironmentSettings()
-    val scale = environment.density.toFloat()
+    val (pointX, pointY) = state.document.referencePieceCentrePx(piece, state.wearWidgetHostShape)
     return reducer.promotionTarget(
       state = state,
       componentId = componentId,
       slots = canvasInspection?.slots.orEmpty(),
-      pointX = (piece.left + piece.right) / 2f * environment.widthDp * scale,
-      pointY = (piece.top + piece.bottom) / 2f * environment.heightDp * scale,
+      pointX = pointX,
+      pointY = pointY,
     )
   }
   // Cached the same way and for the same reason, and only while the pane is open: generating is a
@@ -3893,6 +3892,24 @@ private fun WidgetHostShapeMenu(
         },
     )
   }
+}
+
+/**
+ * Where a reference [piece]'s centre falls, in the render pixels the canvas inspection reports.
+ *
+ * A piece is placed in fractions of the frame the canvas draws, so it converts through that same
+ * frame — [canvasFrameDp], which for a Wear widget is its host container rather than the 1280x800dp
+ * environment widget designs carry. Converting through the environment put a piece laid over a
+ * widget's slot hundreds of dp outside it, and promoting it fell back to the current selection.
+ */
+internal fun UiBuilderDocument.referencePieceCentrePx(
+  piece: ReferencePiece,
+  hostShape: WearWidgetHostShape,
+): Pair<Float, Float> {
+  val (widthDp, heightDp) = canvasFrameDp(hostShape)
+  val scale = screenEnvironmentSettings().density.toFloat()
+  return (piece.left + piece.right) / 2f * widthDp * scale to
+    (piece.top + piece.bottom) / 2f * heightDp * scale
 }
 
 /**
