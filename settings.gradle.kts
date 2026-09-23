@@ -181,6 +181,10 @@ include(":ui-builder")
 // target, not a server seam: it can run the offline protocol without an HTTP host.
 include(":ui-builder-desktop")
 
+// The JVM hosting layer both native hosts share: sessions, packaged catalogs, design files,
+// in-process export. A library, so the IntelliJ plugin depends on it rather than on the desktop app.
+include(":ui-builder-host-jvm")
+
 // IntelliJ Platform proof-of-concept host. Like the desktop app, this consumes the editor's JVM
 // target inside this project; it is not one of the four artifacts compose-preview-server consumes.
 include(":ui-builder-intellij-plugin")

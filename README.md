@@ -19,7 +19,8 @@ for running it.
 | Module | Targets | What it is |
 | --- | --- | --- |
 | `:ui-builder` | `jvm`, `wasmJs` | the editor — canvas, palette, inspector, reducer, exporters, offline service |
-| `:ui-builder-desktop` | JVM desktop | native offline host for the editor; useful for testing and embedding |
+| `:ui-builder-desktop` | JVM desktop | native offline desktop app: the window, File menu and installers |
+| `:ui-builder-host-jvm` | JVM | the hosting layer the desktop app and the IntelliJ plugin share: sessions, catalogs, design files, export |
 | `:ui-builder-intellij-plugin` | IntelliJ Platform | proof-of-concept Jewel tool-window host for the native editor |
 | `:ui-builder-runtime` | JVM | the design service: state, catalog validation, revision-pinned export |
 | `:ui-builder-export` | `jvm`, `wasmJs` | design → screen-model projection |
@@ -61,11 +62,11 @@ A release goes out in two halves, because the four seams are not the same kind o
 the runtime, so its coordinate appears in the runtime's POM, and a POM naming an artifact nobody
 uploaded is what made `compose-preview-serve` unresolvable for six consecutive releases.
 
-**GitHub release assets — a Wasm ZIP, a Linux Desktop app, and an IntelliJ plugin.**
+**GitHub release assets — a Wasm ZIP, the Desktop app, and an IntelliJ plugin.**
 `compose-preview-ui-builder-web-<version>.zip` is the Wasm editor, which a host unpacks; nothing
 compiles against it or resolves it transitively. The release also carries
-`compose-ui-builder-desktop_<version>_amd64.deb`, the native offline Compose Desktop application,
-and `compose-ui-builder-intellij-plugin-<version>.zip`, which installs the offline editor as an
+the native offline Compose Desktop application as a Linux `.deb`, a macOS `.dmg` and a Windows
+`.msi` (unsigned), and `compose-ui-builder-intellij-plugin-<version>.zip`, which installs the offline editor as an
 IntelliJ tool window.
 The web bundle stays off Central because a 40 MB frontend distribution published there is permanent
 and serves no one. compose-preview-server reaches it through a group-fenced ivy repository over

@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder.desktop
+package ee.schimke.composeai.uibuilder.host
 
 import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.UiBuilderEditorEvent

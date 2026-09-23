@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder.desktop
+package ee.schimke.composeai.uibuilder.host
 
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
@@ -154,7 +154,8 @@ internal class RemotePreviewClient(
   }
 }
 
-internal fun validatedServerOrigin(server: String): URI {
+/** [server] as a bare https origin (http only on loopback), or a refusal naming the rule. */
+fun validatedServerOrigin(server: String): URI {
   val uri = URI(server.trimEnd('/'))
   val scheme = uri.scheme?.lowercase()
   require(

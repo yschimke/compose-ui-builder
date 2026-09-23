@@ -56,6 +56,23 @@ data class CapabilityCatalog(
   val componentMenu: ComponentMenu by lazy { ComponentMenu.from(statusSemantics) }
 
   /**
+   * Components this build keeps out of the insert panel although the catalog declares them.
+   *
+   * `RemoteContentEmitter` refuses a repetition unless the build enables Remote Compose authoring,
+   * so a widget palette offering one offered a design with no export. It stays a component of the
+   * catalog all the same: a design that already holds one — saved by an enabled build, or before
+   * this gate — still has to validate, open and take unrelated edits, and only the refusal at
+   * export says what the loop needs. A Compose screen's repetition is exported in every build.
+   */
+  val paletteHiddenComponentIds: Set<String> by lazy {
+    if (
+      !UiBuilderBuildFeatures.remoteCompose && platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE
+    ) {
+      setOf("layout/for-each")
+    } else emptySet()
+  }
+
+  /**
    * Which kind of screen this catalog authors — a phone, a watch, a Remote Compose widget.
    *
    * Read out of [statusSemantics] for the same reason [previewSurfaces] is. A catalog that says
@@ -298,9 +315,6 @@ data class SvgCapability(
   val notes: String? = null,
 )
 
-/** The repetition `RemoteContentEmitter` writes only with `-PuiBuilderRemoteCompose=true`. */
-private const val REMOTE_GATED_REPETITION_ID = "layout/for-each"
-
 object CapabilityCatalogParser {
   private val json = Json { ignoreUnknownKeys = true }
 
@@ -315,20 +329,12 @@ object CapabilityCatalogParser {
         else
           catalog.copy(
             components =
-              catalog.components
-                // `RemoteContentEmitter` refuses a repetition in this build, so a widget palette
-                // offering one is a palette whose every use ends in an export refusal. A Compose
-                // screen's repetition is unaffected: that exporter writes it in every build.
-                .filterNot {
-                  catalog.platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE &&
-                    it.componentId == REMOTE_GATED_REPETITION_ID
-                }
-                .map {
-                  it.copy(
-                    properties =
-                      it.properties.filterNot { property -> property.name == SHOW_BY_STATE }
-                  )
-                }
+              catalog.components.map {
+                it.copy(
+                  properties =
+                    it.properties.filterNot { property -> property.name == SHOW_BY_STATE }
+                )
+              }
           )
       }
       .also(::validateCatalogShape)
