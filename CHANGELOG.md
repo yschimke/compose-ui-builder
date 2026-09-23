@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.42.0](https://github.com/yschimke/compose-ui-builder/compare/v3.41.0...v3.42.0) (2026-09-23)
+
+
+### Features
+
+* **intellij:** add design structure view ([#161](https://github.com/yschimke/compose-ui-builder/issues/161)) ([76a714c](https://github.com/yschimke/compose-ui-builder/commit/76a714c7a8edc72a45e66117970c09e6d3418a52))
+* **intellij:** recognize uid design documents ([#158](https://github.com/yschimke/compose-ui-builder/issues/158)) ([1857413](https://github.com/yschimke/compose-ui-builder/commit/185741397596e20bc356583a07303891b3384219))
+* **intellij:** render remote designs natively ([#163](https://github.com/yschimke/compose-ui-builder/issues/163)) ([606abbf](https://github.com/yschimke/compose-ui-builder/commit/606abbf286bda9a90385ad48a9b9849b1bccfe78))
+* **intellij:** show remote design comments ([#162](https://github.com/yschimke/compose-ui-builder/issues/162)) ([05bc056](https://github.com/yschimke/compose-ui-builder/commit/05bc0562bf7e987204d4654587cbef10d0a0918a))
+* **ui-builder:** use shared server folders ([#159](https://github.com/yschimke/compose-ui-builder/issues/159)) ([7ceeba2](https://github.com/yschimke/compose-ui-builder/commit/7ceeba28bcbc6cfa128f5828bb1e9dded8203d16))
+
+
+### Bug Fixes
+
+* **intellij:** open designs with supporting views ([#156](https://github.com/yschimke/compose-ui-builder/issues/156)) ([43b74cc](https://github.com/yschimke/compose-ui-builder/commit/43b74cc81c877d9cbd5cf199cd6249011292dce5))
+
 ## [3.41.0](https://github.com/yschimke/compose-ui-builder/compare/v3.40.0...v3.41.0) (2026-09-22)
 
 
