@@ -93,6 +93,10 @@ class InstalledPluginSmokeTest {
         waitForIndicators(5.minutes)
         invokeAction("ActivateComposeUIBuilderToolWindow")
         waitForIndicators(2.minutes)
+        // The tool window no longer opens an editor by itself; open the Material 3 one through its
+        // registered action, which is what draws the editor on the IDE's own Compose.
+        invokeAction("ComposeUiBuilder.OpenM3Editor")
+        waitForIndicators(2.minutes)
       }
   }
 }
