@@ -34,6 +34,17 @@ kotlin {
 compose.desktop {
   application {
     mainClass = "ee.schimke.composeai.uibuilder.desktop.MainKt"
+    // `run` and the packaged runtime use this JDK rather than the one running Gradle: the classes
+    // are compiled for `uiBuilderJava`, and a Gradle on 17 otherwise launches them on 17 and fails
+    // with UnsupportedClassVersionError before the window opens.
+    javaHome =
+      javaToolchains
+        .launcherFor { languageVersion = uiBuilderJava }
+        .get()
+        .metadata
+        .installationPath
+        .asFile
+        .absolutePath
     nativeDistributions {
       targetFormats(TargetFormat.Deb)
       packageName = "compose-ui-builder-desktop"

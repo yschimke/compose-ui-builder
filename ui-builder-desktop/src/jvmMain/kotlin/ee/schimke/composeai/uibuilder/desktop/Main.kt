@@ -1,8 +1,5 @@
 package ee.schimke.composeai.uibuilder.desktop
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -11,8 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import ee.schimke.composeai.uibuilder.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.DesignCommentDraft
@@ -58,20 +53,16 @@ private const val DESKTOP_DESIGN_ID = "desktop-workspace"
 private const val ACTOR_ID = "desktop-user"
 private const val CLIENT_ID = "desktop-client"
 
-/** Launches the native, offline UI Builder desktop host. */
-fun main(args: Array<String>) = application {
-  val options = DesktopLaunchOptions.parse(args)
-  Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder") {
-    MaterialTheme {
-      Surface(Modifier.fillMaxSize()) {
-        OfflineUiBuilderApp(
-          storagePath = designStorePath(),
-          sessionLabel = "Desktop offline · saved locally",
-          remoteServer = options.remoteServer,
-        )
-      }
-    }
+/** Launches the native UI Builder desktop host; see [DesktopLaunchOptions] for arguments. */
+fun main(args: Array<String>) {
+  val options = runCatching {
+    DesktopLaunchOptions.parse(args)
   }
+    .getOrElse {
+      System.err.println(it.message)
+      kotlin.system.exitProcess(2)
+    }
+  application { DesktopApp(options, designStorePath()) }
 }
 
 /**
@@ -160,13 +151,14 @@ private constructor(
     /** Opens a published project document as the primary persisted artifact. */
     fun projectDocument(
       document: UiBuilderDocument,
+      remoteServer: String? = null,
       onDocumentCommitted:
         suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
     ): OfflineUiBuilderSession =
       OfflineUiBuilderSession(
         storage = InMemoryLocalDesignStorage(),
         catalogSystemId = document.catalogPin.getValue("systemId").toString().trim('"'),
-        remoteServer = null,
+        remoteServer = remoteServer,
         designId = document.id,
         initialDocument = document,
         onDocumentCommitted = onDocumentCommitted,
@@ -392,15 +384,3 @@ private fun resourceText(name: String): String =
 
 private fun designStorePath(): Path =
   Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")
-
-private data class DesktopLaunchOptions(val remoteServer: String?) {
-  companion object {
-    fun parse(args: Array<String>): DesktopLaunchOptions {
-      if (args.isEmpty()) return DesktopLaunchOptions(null)
-      require(args.size == 2 && args[0] == "--server") {
-        "usage: Compose UI Builder [--server https://preview.coo.ee]"
-      }
-      return DesktopLaunchOptions(validatedServerOrigin(args[1]).toString())
-    }
-  }
-}
