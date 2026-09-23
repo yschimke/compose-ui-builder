@@ -151,6 +151,7 @@ fun localDesignRecord(
     seedSequence = sequence,
     log = emptyList(),
     updatedAtEpochMillis = nowEpochMillis,
+    createdAtEpochMillis = nowEpochMillis,
   )
 
 /**

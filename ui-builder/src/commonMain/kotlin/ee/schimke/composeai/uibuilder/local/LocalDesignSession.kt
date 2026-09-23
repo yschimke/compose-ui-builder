@@ -6,6 +6,8 @@ import ee.schimke.composeai.uibuilder.CollaborationReducer
 import ee.schimke.composeai.uibuilder.CollaborationState
 import ee.schimke.composeai.uibuilder.CommandOutcome
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.toDesignDocumentV1
 
 /** The catalog-backed rules a locally stored design is admitted against, or none in a test. */
 data class LocalDesignValidators(
@@ -68,6 +70,22 @@ private constructor(
 
   val document: UiBuilderDocument
     get() = state.document
+
+  /**
+   * [document] as the protocol carries it, with the creation and last-change times this record
+   * holds — the fields the hosted service stamps, so a snapshot and its hash agree across both.
+   */
+  val protocolDocument: DesignDocumentV1
+    get() =
+      state.document
+        .toDesignDocumentV1()
+        .copy(
+          createdAtEpochMillis = record.createdAtEpochMillis,
+          updatedAtEpochMillis = record.updatedAtEpochMillis,
+        )
+
+  val updatedAtEpochMillis: Long
+    get() = record.updatedAtEpochMillis
 
   /**
    * The durable sequence the editor's update cursor is handed.

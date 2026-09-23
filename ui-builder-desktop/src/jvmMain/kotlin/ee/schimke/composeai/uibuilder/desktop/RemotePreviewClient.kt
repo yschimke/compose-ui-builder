@@ -5,7 +5,6 @@ import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.toDesignDocumentV1
-import java.awt.Desktop
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -14,15 +13,10 @@ import java.time.Duration
 import java.util.Base64
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import org.jetbrains.skia.Image
 
 /**
@@ -33,7 +27,10 @@ import org.jetbrains.skia.Image
  * it, then deletes it. Authentication is requested only on the first Preview action, through the
  * server's device-grant page; the token never appears in a command line, URL, or persisted file.
  */
-internal class RemotePreviewClient(server: String) {
+internal class RemotePreviewClient(
+  server: String,
+  private val presenter: ApprovalPresenter = SystemBrowserApprovalPresenter,
+) {
   private val base = validatedServerOrigin(server)
   private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build()
   private val json = Json { ignoreUnknownKeys = true }
@@ -58,53 +55,14 @@ internal class RemotePreviewClient(server: String) {
 
   private suspend fun authorizeIfNeeded() {
     if (token != null) return
-    val opened =
-      postJson(
-        "/agent-access/request",
-        """{"label":"Compose UI Builder Desktop","scope":"live","capabilities":["ui-builder-write","ui-builder-export"]}""",
-        authenticated = false,
+    token =
+      authorizeDevice(
+        origin = base,
+        label = "Compose UI Builder Desktop",
+        capabilities = listOf("ui-builder-write", "ui-builder-export"),
+        presenter = presenter,
+        post = { target, body -> request(target, "POST", body, authenticated = false) },
       )
-    require(opened.statusCode() in 200..299) {
-      "preview server cannot start authentication (HTTP ${opened.statusCode()})"
-    }
-    val response = json.parseToJsonElement(opened.body()).jsonObject
-    val approvalUrl = response.requiredString("approveUrl")
-    val requestId = response.requiredString("requestId")
-    val deviceSecret = response.requiredString("deviceSecret")
-    var retryAfterSeconds = response.requiredLong("pollIntervalSeconds")
-    Desktop.getDesktop().browse(URI(approvalUrl))
-    val deadline = System.nanoTime() + Duration.ofMinutes(10).toNanos()
-    while (System.nanoTime() < deadline) {
-      val remainingMillis = (deadline - System.nanoTime()).coerceAtLeast(0) / 1_000_000
-      val requestedMillis =
-        retryAfterSeconds.coerceAtLeast(1).let { seconds ->
-          if (seconds > Long.MAX_VALUE / 1_000) Long.MAX_VALUE else seconds * 1_000
-        }
-      delay(minOf(requestedMillis, remainingMillis))
-      if (System.nanoTime() >= deadline) break
-      val poll =
-        postJson(
-          sameOriginTarget(base, URI(response.requiredString("pollUrl"))),
-          json.encodeToString(DevicePollRequest(requestId, deviceSecret)),
-          authenticated = false,
-        )
-      require(poll.statusCode() in 200..299) { "preview server stopped the authentication request" }
-      val answer = json.parseToJsonElement(poll.body()).jsonObject
-      when (answer.requiredString("status")) {
-        "approved" -> {
-          token = answer.requiredString("token")
-          return
-        }
-        "pending" -> Unit
-        else ->
-          error(
-            "preview server declined authentication: ${answer["message"]?.jsonPrimitive?.contentOrNull}"
-          )
-      }
-      retryAfterSeconds =
-        answer["retryAfterSeconds"]?.jsonPrimitive?.longOrNull ?: retryAfterSeconds
-    }
-    error("preview server authentication timed out")
   }
 
   private fun create(id: String, document: UiBuilderDocument) {
@@ -162,9 +120,6 @@ internal class RemotePreviewClient(server: String) {
     authenticated: Boolean = true,
   ): HttpResponse<String> = request(path, "POST", body, authenticated = authenticated)
 
-  private fun postJson(target: URI, body: String, authenticated: Boolean): HttpResponse<String> =
-    request(target, "POST", body, authenticated = authenticated)
-
   private fun request(
     path: String,
     method: String,
@@ -197,14 +152,6 @@ internal class RemotePreviewClient(server: String) {
         .build()
     return http.send(request, HttpResponse.BodyHandlers.ofString())
   }
-
-  private fun kotlinx.serialization.json.JsonObject.requiredString(name: String): String =
-    get(name)?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
-      ?: error("preview server authentication response has no $name")
-
-  private fun kotlinx.serialization.json.JsonObject.requiredLong(name: String): Long =
-    get(name)?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
-      ?: error("preview server authentication response has no positive $name")
 }
 
 internal fun validatedServerOrigin(server: String): URI {
@@ -227,7 +174,7 @@ internal fun validatedServerOrigin(server: String): URI {
   return URI(scheme, null, uri.host, uri.port, null, null, null)
 }
 
-internal fun sameOriginTarget(origin: URI, target: URI): URI {
+internal fun sameOriginTarget(origin: URI, target: URI, what: String = "poll URL"): URI {
   val resolved = origin.resolve(target)
   fun URI.effectivePort(): Int =
     if (port >= 0) port
@@ -245,7 +192,7 @@ internal fun sameOriginTarget(origin: URI, target: URI): URI {
       resolved.host.equals(origin.host, ignoreCase = true) &&
       resolved.effectivePort() == origin.effectivePort()
   ) {
-    "preview server authentication poll URL must be same-origin"
+    "preview server authentication $what must be same-origin"
   }
   return resolved
 }
@@ -254,13 +201,6 @@ internal fun sameOriginTarget(origin: URI, target: URI): URI {
 private data class NativePreviewResult(
   val imageBase64: String? = null,
   val compileError: String? = null,
-)
-
-@Serializable
-private data class DevicePollRequest(
-  val requestId: String,
-  val deviceSecret: String,
-  val waitSeconds: Int = 30,
 )
 
 @Serializable private data class NativePreviewRefusal(val reasons: List<String> = emptyList())

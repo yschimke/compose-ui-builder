@@ -94,11 +94,30 @@ class DesktopLaunchOptionsTest {
 
     assertEquals(
       widgets.resolve("template-weather-widget"),
-      designStorePath(OfflineCatalog.REMOTE_M3, "weather-widget"),
+      designStorePath(OfflineCatalog.REMOTE_M3, template = "weather-widget"),
     )
     assertNotEquals(
-      designStorePath(OfflineCatalog.REMOTE_M3, "hello-widget"),
-      designStorePath(OfflineCatalog.REMOTE_M3, "weather-widget"),
+      designStorePath(OfflineCatalog.REMOTE_M3, template = "hello-widget"),
+      designStorePath(OfflineCatalog.REMOTE_M3, template = "weather-widget"),
     )
+  }
+
+  @Test
+  fun `a template and a design file are not asked for together`() {
+    assertFailsWith<IllegalArgumentException> {
+      DesktopLaunchOptions.parse(
+        arrayOf("--catalog", "remote-m3", "--template", "weather-widget", "a.uid")
+      )
+    }
+  }
+
+  @Test
+  fun `a template is named for people in the menu and the title`() {
+    assertEquals("Weather widget", templateLabel("weather-widget"))
+    assertEquals(
+      "Wear widgets Weather widget",
+      DesktopDesign.Scratch(OfflineCatalog.REMOTE_M3, "weather-widget").title,
+    )
+    assertEquals("Wear widgets scratch", DesktopDesign.Scratch(OfflineCatalog.REMOTE_M3).title)
   }
 }
