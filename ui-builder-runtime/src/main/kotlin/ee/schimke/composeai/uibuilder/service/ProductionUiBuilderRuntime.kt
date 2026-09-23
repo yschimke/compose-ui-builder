@@ -1488,17 +1488,6 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
         // gradient offers none, rather than eighteen that each end in a refusal.
         if (componentId == "shape/linear-gradient") emptyList()
         else modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
-      // The borrowed layouts are where a widget body continues below its first node, so their slots
-      // keep the rule the container's own `content` slot states. Left at the base catalog's
-      // `AnyContent`, a Column one level down accepted what the container refuses — a gradient
-      // brush, an embedded document, a second widget container — and the canvas drew each one
-      // before the generator refused it. `remote-compose/custom` is not among them: its content is
-      // the canvas stand-in for what the host renders under that name, never written into a widget.
-      if (componentId in REMOTE_BODY_CONTAINERS) {
-        it.slots = slots.map { slot ->
-          slot.newBuilder().also { it.acceptedTraits = listOf("RemoteAuthorable") }.build()
-        }
-      }
       // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
       // from a mobile component. The reviewed vocabulary does have an emitter branch (or
       // component-record fallback) and may enter a widget body.
@@ -1512,9 +1501,6 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
         }
     }
     .build()
-
-private val REMOTE_BODY_CONTAINERS =
-  setOf("layout/box", "layout/column", "layout/row", "layout/for-each")
 
 private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }

@@ -953,7 +953,11 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-m3/lottie"
+                "remote-compose/document",
+                "remote-m3/lottie",
+                "remote-m3/widget-container-large",
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
             "layout/column.children": [
                 "asset/image",
@@ -963,7 +967,11 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-m3/lottie"
+                "remote-compose/document",
+                "remote-m3/lottie",
+                "remote-m3/widget-container-large",
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
             "layout/for-each.template": [
                 "asset/image",
@@ -973,7 +981,9 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-m3/lottie"
+                "remote-compose/document",
+                "remote-m3/lottie",
+                "shape/linear-gradient"
             ],
             "layout/row.children": [
                 "asset/image",
@@ -983,7 +993,11 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-m3/lottie"
+                "remote-compose/document",
+                "remote-m3/lottie",
+                "remote-m3/widget-container-large",
+                "remote-m3/widget-container-small",
+                "shape/linear-gradient"
             ],
             "remote-compose/custom.content": [
                 "asset/image",
