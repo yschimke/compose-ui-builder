@@ -72,6 +72,45 @@ class WearWidgetCodeExporterTest {
     assertEquals(1, Regex("""fillMaxSize\(\)""").findAll(generated).count(), generated)
   }
 
+  /**
+   * A fill *later* in the chain is not the frame's fill: `size(48).fillMaxSize()` fills the 48dp.
+   * The canvas still applies the container's fill ahead of the chain, so the export has to as well.
+   */
+  @Test
+  fun `a fill after a size in the body's chain still gets the frame's fill ahead of it`() {
+    val authored = weatherWidgetUiBuilderDocument("weather", pin, environment)
+    val sized =
+      authored.copy(
+        nodes =
+          authored.nodes +
+            ("weather-content" to
+              authored.nodes
+                .getValue("weather-content")
+                .copy(
+                  modifiers =
+                    JsonArray(
+                      listOf(
+                        JsonObject(
+                          mapOf(
+                            "type" to JsonPrimitive("size"),
+                            "widthDp" to JsonPrimitive(48),
+                            "heightDp" to JsonPrimitive(48),
+                          )
+                        ),
+                        JsonObject(mapOf("type" to JsonPrimitive("fillMaxSize"))),
+                      )
+                    )
+                ))
+      )
+    val generated =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(sized)).source
+
+    assertTrue(
+      "RemoteModifier.fillMaxSize().size(48.rdp, 48.rdp).fillMaxSize()" in generated,
+      generated,
+    )
+  }
+
   @Test
   fun `weather generates its literal colours and its column`() {
     val source =
