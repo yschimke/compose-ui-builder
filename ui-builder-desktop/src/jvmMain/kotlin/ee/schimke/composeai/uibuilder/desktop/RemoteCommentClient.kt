@@ -166,7 +166,8 @@ private class CommentSocketListener(
 
 private fun String.toBoardOrNull(): DesignCommentBoard? = runCatching {
   commentJson.decodeFromString(CommentBoardWire.serializer(), this).toBoard()
-}.getOrNull()
+}
+  .getOrNull()
 
 private fun RemoteCommentResponse.refusalOrNull(what: String): String? =
   if (status in 200..299) null
