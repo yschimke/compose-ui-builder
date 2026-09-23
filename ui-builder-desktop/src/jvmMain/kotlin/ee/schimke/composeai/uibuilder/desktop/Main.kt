@@ -65,10 +65,11 @@ fun main(args: Array<String>) = application {
     MaterialTheme {
       Surface(Modifier.fillMaxSize()) {
         OfflineUiBuilderApp(
-          storagePath = designStorePath(options.catalog),
+          storagePath = designStorePath(options.catalog, options.template),
           sessionLabel = "Desktop offline · saved locally",
           catalogSystemId = options.catalog.systemId,
           remoteServer = options.remoteServer,
+          templateId = options.template,
         )
       }
     }
@@ -87,14 +88,16 @@ fun OfflineUiBuilderApp(
   sessionLabel: String,
   catalogSystemId: String = OfflineCatalog.M3.systemId,
   remoteServer: String? = null,
+  /** What a workspace that does not exist yet starts as; null for the catalog's own starter. */
+  templateId: String? = null,
   chrome: UiBuilderChrome = MaterialUiBuilderChrome,
   initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
   availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
   openDefaultPreview: Boolean = true,
 ) {
   val session =
-    remember(storagePath, catalogSystemId, remoteServer) {
-      OfflineUiBuilderSession(storagePath, catalogSystemId, remoteServer)
+    remember(storagePath, catalogSystemId, remoteServer, templateId) {
+      OfflineUiBuilderSession(storagePath, catalogSystemId, remoteServer, templateId)
     }
   DisposableEffect(session) { onDispose { session.close() } }
   OfflineUiBuilderSessionView(
@@ -140,6 +143,7 @@ private constructor(
   remoteServer: String?,
   private val designId: String,
   private val initialDocument: UiBuilderDocument?,
+  private val templateId: String?,
   private val onDocumentCommitted:
     suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
 ) : UiBuilderSession {
@@ -148,12 +152,14 @@ private constructor(
     storagePath: Path,
     catalogSystemId: String = OfflineCatalog.M3.systemId,
     remoteServer: String? = null,
+    templateId: String? = null,
   ) : this(
     storage = FileLocalDesignStorage(storagePath),
     catalogSystemId = catalogSystemId,
     remoteServer = remoteServer,
     designId = DESKTOP_DESIGN_ID,
     initialDocument = null,
+    templateId = templateId,
     onDocumentCommitted = {},
   )
 
@@ -170,6 +176,7 @@ private constructor(
         remoteServer = null,
         designId = document.id,
         initialDocument = document,
+        templateId = null,
         onDocumentCommitted = onDocumentCommitted,
       )
   }
@@ -252,6 +259,7 @@ private constructor(
               designId = designId,
               catalogRevision = catalog.benchmark.catalogRevision,
               nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
+              templateId = templateId,
             )
         when (val created = service.create(seed)) {
           is SnapshotResponseV1 -> mutableSnapshot.value = created
@@ -351,24 +359,33 @@ private fun fixtureDocument(): UiBuilderDocument =
 public enum class OfflineCatalog(
   val systemId: String,
   val capabilitiesResource: String,
-  private val templateId: String,
+  /** What a new workspace in this catalog starts as when no template is asked for. */
+  val defaultTemplateId: String,
 ) {
   M3("m3-catalog", "m3-catalog-capabilities-v1.json", UiBuilderNewDesignSeed.DEFAULT_TEMPLATE),
   WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE),
   REMOTE_M3("remote-m3", "remote-m3-capabilities-v1.json", "wear-widget-small");
 
+  /** Every template [seed] accepts, from the same seed the web host's New design form offers. */
+  val templateIds: Set<String>
+    get() = UiBuilderNewDesignSeed.templateIds(systemId)
+
   fun seed(
     designId: String,
     catalogRevision: String,
     nativeRuntimeId: String,
+    templateId: String? = null,
   ): UiBuilderDocument =
-    if (this == M3) {
+    if (this == M3 && (templateId == null || templateId == defaultTemplateId)) {
       fixtureDocument().copy(id = designId, title = "Desktop workspace")
     } else {
       UiBuilderNewDesignSeed.document(
         designId = designId,
         catalogSystemId = systemId,
-        templateId = templateId,
+        templateId =
+          (templateId ?: defaultTemplateId).also {
+            require(it in templateIds) { "catalog '$systemId' has no template '$it'" }
+          },
         catalogRevision = catalogRevision,
         nativeRuntimeId = nativeRuntimeId,
         fixture =
@@ -399,25 +416,32 @@ private fun resourceText(name: String): String =
  * hand the widget catalog a document full of components it does not declare. Material 3 keeps the
  * directory it has always had, so an existing workspace is still where its owner left it.
  */
-internal fun designStorePath(catalog: OfflineCatalog): Path =
-  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop").let {
-    if (catalog == OfflineCatalog.M3) it else it.resolve(catalog.systemId)
-  }
+internal fun designStorePath(catalog: OfflineCatalog, template: String? = null): Path =
+  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")
+    .let { if (catalog == OfflineCatalog.M3) it else it.resolve(catalog.systemId) }
+    // A named template is a workspace of its own for the same reason a catalog is: the workspace
+    // is one design, so asking for the Weather sample must not open last week's blank widget —
+    // and reopening the sample returns to the edits made to it.
+    .let { if (template == null) it else it.resolve("template-$template") }
 
 internal data class DesktopLaunchOptions(
   val remoteServer: String?,
   val catalog: OfflineCatalog = OfflineCatalog.M3,
+  /** The template a new workspace starts as, or null for the catalog's own starter. */
+  val template: String? = null,
 ) {
   companion object {
     private val USAGE =
-      "usage: Compose UI Builder [--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
-        "[--server https://preview.coo.ee]"
+      "usage: Compose UI Builder " +
+        "[--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
+        "[--template <id>] [--server https://preview.coo.ee]"
 
     fun parse(args: Array<String>): DesktopLaunchOptions {
       require(args.size % 2 == 0) { USAGE }
       val flags = args.toList().chunked(2).associate { (flag, value) -> flag to value }
       require(
-        flags.size == args.size / 2 && flags.keys.all { it in setOf("--catalog", "--server") }
+        flags.size == args.size / 2 &&
+          flags.keys.all { it in setOf("--catalog", "--template", "--server") }
       ) {
         USAGE
       }
@@ -427,9 +451,19 @@ internal data class DesktopLaunchOptions(
             "unknown catalog '$id'. $USAGE"
           }
         } ?: OfflineCatalog.M3
+      // Checked here rather than when the workspace is seeded, so a typo names the templates that
+      // exist before a window opens — and so an existing workspace cannot hide it.
+      val template =
+        flags["--template"]?.also { id ->
+          require(id in catalog.templateIds) {
+            "catalog '${catalog.systemId}' has no template '$id'; it has " +
+              catalog.templateIds.sorted().joinToString()
+          }
+        }
       return DesktopLaunchOptions(
         remoteServer = flags["--server"]?.let { validatedServerOrigin(it).toString() },
         catalog = catalog,
+        template = template,
       )
     }
   }

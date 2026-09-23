@@ -67,4 +67,38 @@ class DesktopLaunchOptionsTest {
       designStorePath(OfflineCatalog.REMOTE_M3),
     )
   }
+
+  @Test
+  fun `a widget sample opens by its template id`() {
+    val options =
+      DesktopLaunchOptions.parse(arrayOf("--catalog", "remote-m3", "--template", "weather-widget"))
+
+    assertEquals(OfflineCatalog.REMOTE_M3, options.catalog)
+    assertEquals("weather-widget", options.template)
+  }
+
+  @Test
+  fun `a template the catalog does not have is refused with the ones it does`() {
+    val refused =
+      assertFailsWith<IllegalArgumentException> {
+        // A widget template asked of the phone catalog, which is the easy mistake to make.
+        DesktopLaunchOptions.parse(arrayOf("--template", "weather-widget"))
+      }
+
+    assertEquals(true, refused.message?.contains("jetcaster"), refused.message)
+  }
+
+  @Test
+  fun `a named template keeps a workspace of its own`() {
+    val widgets = designStorePath(OfflineCatalog.REMOTE_M3)
+
+    assertEquals(
+      widgets.resolve("template-weather-widget"),
+      designStorePath(OfflineCatalog.REMOTE_M3, "weather-widget"),
+    )
+    assertNotEquals(
+      designStorePath(OfflineCatalog.REMOTE_M3, "hello-widget"),
+      designStorePath(OfflineCatalog.REMOTE_M3, "weather-widget"),
+    )
+  }
 }
