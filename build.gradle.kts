@@ -3,6 +3,9 @@ import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask
 
 plugins {
   base
+  // Task types for this build's scripts (the Material icon generators, `:ui-builder`'s fixture
+  // tasks); see `BuildTasksPlugin`.
+  id("composeai.build-tasks")
   alias(libs.plugins.kotlin.jvm) apply false
   alias(libs.plugins.kotlin.serialization) apply false
   alias(libs.plugins.kotlin.multiplatform) apply false

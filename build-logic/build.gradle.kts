@@ -17,6 +17,10 @@ gradlePlugin {
       id = "composeai.maven-publishing"
       implementationClass = "ee.schimke.composeai.buildlogic.ComposeAiMavenPublishingPlugin"
     }
+    register("composeAiBuildTasks") {
+      id = "composeai.build-tasks"
+      implementationClass = "ee.schimke.composeai.buildlogic.BuildTasksPlugin"
+    }
     register("composeAiPlatformPublishing") {
       id = "composeai.maven-publishing-platform"
       implementationClass = "ee.schimke.composeai.buildlogic.ComposeAiPlatformPublishingPlugin"
