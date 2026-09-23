@@ -9570,34 +9570,22 @@ private fun DesignPreviewPane(
         // watches where two would fit and hid the third. Where two or more fit, the frames wrap
         // instead: the same scale, the same comparison, all of them visible.
         //
-        // One frame per row keeps the old behaviour exactly, scrolling horizontally, because a
-        // single phone-width frame that does not fit has nothing to wrap to.
+        // The preview surface always scrolls vertically. In a compact pane `perRow` is one, so
+        // device previews stack rather than disappearing off the right edge behind a horizontal
+        // scroll. Wider panes retain the side-by-side comparison grid.
         val gap = 16.dp
         val perRow = ((maxWidth + gap) / ((widest * scale).dp + gap)).toInt().coerceAtLeast(1)
-        // Centred, so a row that fits sits in the middle of the pane rather than in its top-left
-        // corner. Scrolling still works when it does not fit: `Arrangement.Center` only decides
-        // where the slack goes, and a row wider than the pane has none.
-        if (perRow >= 2) {
-          Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-          ) {
-            FlowRow(
-              Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
-              verticalArrangement = Arrangement.spacedBy(gap),
-              maxItemsInEachRow = perRow,
-            ) {
-              panes.forEach { pane ->
-                key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
-              }
-            }
-          }
-        } else {
-          Row(
-            Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
+        // Centred, so a row that fits sits in the middle of the pane rather than in its top-left.
+        // `FlowRow` remains a one-column grid when the pane is narrow.
+        Column(
+          Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+          horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+          FlowRow(
+            Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(gap, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(gap),
+            maxItemsInEachRow = perRow,
           ) {
             panes.forEach { pane ->
               key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
@@ -9773,7 +9761,7 @@ private fun ScreenEnvironmentInspector(
         width = applied.widthDp.toString()
         height = applied.heightDp.toString()
         density = applied.density.toString()
-        validationError = applied.validationError()
+        validationError = document.screenEnvironmentValidationError(applied)
         if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(applied))
       },
     )
@@ -9885,7 +9873,7 @@ private fun ScreenEnvironmentInspector(
             theme = theme,
             layoutDirection = layoutDirection,
           )
-        validationError = parsed.validationError()
+        validationError = document.screenEnvironmentValidationError(parsed)
         if (validationError == null) dispatch(UiBuilderEditorEvent.UpdateEnvironment(parsed))
       },
     )
