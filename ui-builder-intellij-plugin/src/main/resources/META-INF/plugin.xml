@@ -8,6 +8,7 @@
   ]]></description>
 
   <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.json</depends>
   <!--
     addComposeTab is compiled from the bundled Jewel bridge, but a bundledModule Gradle dependency
     only supplies the compile classpath. Declaring the runtime module here makes the bridge (and its
@@ -18,6 +19,12 @@
   </dependencies>
 
   <extensions defaultExtensionNs="com.intellij">
+    <fileType
+        name="Compose UI Builder Design"
+        implementationClass="ee.schimke.composeai.uibuilder.intellij.UiBuilderDesignFileType"
+        fieldName="INSTANCE"
+        language="JSON"
+        extensions="uid" />
     <projectService
         serviceImplementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderProjectService" />
     <fileEditorProvider
@@ -29,5 +36,9 @@
         secondary="true"
         anchor="right"
         factoryClass="ee.schimke.composeai.uibuilder.intellij.UiBuilderToolWindowFactory" />
+  </extensions>
+  <extensions defaultExtensionNs="JavaScript">
+    <JsonSchema.ProviderFactory
+        implementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderDesignSchemaProviderFactory" />
   </extensions>
 </idea-plugin>

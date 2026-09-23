@@ -25,7 +25,7 @@ class EditorBuildFeatureFlagTest {
         ignoreUnknownKeys = true
       }
         .decodeFromString<UiBuilderDocument>(
-          File(root, "experiments/remote-state-selection/bound-actions.document.json").readText()
+          File(root, "experiments/remote-state-selection/bound-actions.uid").readText()
         )
       assertEquals(
         UiBuilderBuildFeatures.remoteCompose,

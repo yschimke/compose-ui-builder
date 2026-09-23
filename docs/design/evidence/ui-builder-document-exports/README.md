@@ -6,7 +6,7 @@ with the export menu closed; `menu.png` shows the real menu with JSON and Remote
 These are Chrome screenshots, not recreated controls.
 
 The sample was created through `POST /api/ui-builder/v1/requests`, using the Remote catalog's actual
-capability pin. Its semantic hierarchy is in `sample.document.json`: a Box bound to integer `page`,
+capability pin. Its semantic hierarchy is in `sample.uid`: a Box bound to integer `page`,
 with two case children and a fallback. No flat operation nodes were added to the authoring tree.
 
 The browser clicked **Download Remote document (.rc)** and saved `remote-export-proof.rc`. The test

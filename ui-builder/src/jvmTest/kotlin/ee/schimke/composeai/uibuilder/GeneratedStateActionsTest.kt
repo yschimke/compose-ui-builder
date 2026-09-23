@@ -24,7 +24,7 @@ class GeneratedStateActionsTest {
     runDesktopComposeUiTest {
       val document =
         Json.decodeFromString<DesignDocumentV1>(
-            checkNotNull(javaClass.getResource("/state-actions.document.json")).readText()
+            checkNotNull(javaClass.getResource("/state-actions.uid")).readText()
           )
           .toUiBuilderDocument()
       setContent { UiBuilderSurface(document) }

@@ -65,7 +65,7 @@ class ScopedComposeProjectionTest {
     Json.decodeFromString<DesignDocumentV1>(
       File(
           root,
-          "docs/design/evidence/ui-builder-repetition-export/repetition-initial.document.json",
+          "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid",
         )
         .readText()
     )

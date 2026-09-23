@@ -18,7 +18,7 @@ class RemoteScopedSourceExportTest {
       .first {
         File(
             it,
-            "docs/design/evidence/ui-builder-repetition-export/repetition-initial.document.json",
+            "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid",
           )
           .isFile
       }
@@ -29,7 +29,7 @@ class RemoteScopedSourceExportTest {
     .decodeFromString<UiBuilderDocument>(
       File(
           root,
-          "docs/design/evidence/ui-builder-repetition-export/repetition-initial.document.json",
+          "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid",
         )
         .readText()
     )
@@ -100,7 +100,7 @@ class RemoteScopedSourceExportTest {
     ignoreUnknownKeys = true
   }
     .decodeFromString<UiBuilderDocument>(
-      File(root, "experiments/remote-state-selection/bound-actions.document.json").readText()
+      File(root, "experiments/remote-state-selection/bound-actions.uid").readText()
     )
 
   @Test

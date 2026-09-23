@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCUMENT = ROOT / "docs/design/evidence/ui-builder-repetition-export/repetition-initial.document.json"
+DOCUMENT = ROOT / "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid"
 
 
 def generate(document, remote):

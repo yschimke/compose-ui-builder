@@ -12,7 +12,7 @@ compilation or player-support diagnostics. It does not replace refused operation
 
 ## Browser and MCP proof
 
-`sample.document.json` is the semantic design; `sample.json` and `sample.rc` are its actual server
+`sample.uid` is the semantic design; `sample.json` and `sample.rc` are its actual server
 exports. The `sample-density-2` files are a separate actual export at density 2, used to verify
 displayed size and transformed click coordinates. The three empty Box children have different backgrounds and click actions that select
 the next state. The cases match 10 and 20; 30 takes the fallback.

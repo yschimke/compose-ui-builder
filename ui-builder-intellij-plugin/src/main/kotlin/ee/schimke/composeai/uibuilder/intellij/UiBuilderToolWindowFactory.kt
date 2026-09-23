@@ -154,7 +154,8 @@ private class OpenProjectDesignAction(private val project: Project) :
       }
     val file =
       FileChooser.chooseFile(
-        FileChooserDescriptorFactory.createSingleFileDescriptor("json")
+        FileChooserDescriptorFactory.createSingleFileDescriptor()
+          .withExtensionFilter("UI Builder designs", "uid", "json")
           .withTitle("Open UI Builder Design"),
         project,
         root,
@@ -162,7 +163,7 @@ private class OpenProjectDesignAction(private val project: Project) :
     if (!isProjectDesign(file)) {
       Messages.showErrorDialog(
         project,
-        "Choose a supported DesignDocumentV1 JSON file.",
+        "Choose a supported UI Builder .uid or DesignDocumentV1 JSON file.",
         "Not a UI Builder Design",
       )
       return
