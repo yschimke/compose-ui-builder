@@ -1764,7 +1764,7 @@ private fun CollaborationState.restoreNode(nodeId: String): CollaborationState {
   val tombstone = tombstones[nodeId]
   if (tombstone == null) {
     if (isDeleted(nodeId)) fail(RejectionCode.DELETED_NODE, "$nodeId is part of a deleted subtree")
-    fail(RejectionCode.UNKNOWN_NODE, "no tombstone exists for $nodeId")
+    fail(RejectionCode.UNKNOWN_NODE, "no tombstone exists for $nodeId", nodeId)
   }
   val collisions = tombstone.nodes.keys.intersect(document.nodes.keys)
   if (collisions.isNotEmpty()) {
@@ -2137,7 +2137,7 @@ private fun CollaborationState.liveNode(nodeId: String): UiBuilderNode {
     return it
   }
   if (isDeleted(nodeId)) fail(RejectionCode.DELETED_NODE, "$nodeId is deleted")
-  fail(RejectionCode.UNKNOWN_NODE, "unknown node: $nodeId")
+  fail(RejectionCode.UNKNOWN_NODE, "unknown node: $nodeId", nodeId)
 }
 
 private fun CollaborationState.isDeleted(nodeId: String): Boolean =
@@ -2242,7 +2242,7 @@ private fun CollaborationState.rebuildLocation(parent: ParentSlot?): Collaborati
   if (parent == null) return copy(document = document.copy(roots = children))
   val parentNode =
     document.nodes[parent.nodeId]
-      ?: fail(RejectionCode.UNKNOWN_NODE, "unknown parent: ${parent.nodeId}")
+      ?: fail(RejectionCode.UNKNOWN_NODE, "unknown parent: ${parent.nodeId}", parent.nodeId)
   val changedParent = parentNode.copy(slots = parentNode.slots + (parent.slot to children))
   return copy(document = document.copy(nodes = document.nodes + (parent.nodeId to changedParent)))
 }
@@ -2381,7 +2381,8 @@ private fun UiBuilderDocument.descendants(rootId: String): Set<String> {
   val found = linkedSetOf<String>()
   fun visit(nodeId: String) {
     if (!found.add(nodeId)) fail(RejectionCode.CYCLE, "cycle or duplicate child at $nodeId")
-    val node = nodes[nodeId] ?: fail(RejectionCode.UNKNOWN_NODE, "unknown child node: $nodeId")
+    val node =
+      nodes[nodeId] ?: fail(RejectionCode.UNKNOWN_NODE, "unknown child node: $nodeId", nodeId)
     node.slots.values.flatten().forEach(::visit)
   }
   visit(rootId)
@@ -2437,7 +2438,11 @@ private fun UiBuilderDocument.attachRestored(
   }
   val parent =
     nodes[location.parent.nodeId]
-      ?: fail(RejectionCode.UNKNOWN_NODE, "unknown parent: ${location.parent.nodeId}")
+      ?: fail(
+        RejectionCode.UNKNOWN_NODE,
+        "unknown parent: ${location.parent.nodeId}",
+        location.parent.nodeId,
+      )
   val changedChildren =
     parent.slots[location.parent.slot]?.toMutableList()
       ?: fail(
@@ -2479,7 +2484,11 @@ private fun UiBuilderDocument.detach(nodeId: String, location: NodeLocation): Ui
   if (location.parent == null) return copy(roots = roots - nodeId)
   val parent =
     nodes[location.parent.nodeId]
-      ?: fail(RejectionCode.UNKNOWN_NODE, "unknown parent: ${location.parent.nodeId}")
+      ?: fail(
+        RejectionCode.UNKNOWN_NODE,
+        "unknown parent: ${location.parent.nodeId}",
+        location.parent.nodeId,
+      )
   val children = parent.slots[location.parent.slot].orEmpty()
   if (nodeId !in children) fail(RejectionCode.INVALID_LOCATION, "$nodeId is not in the named slot")
   val changed = parent.copy(slots = parent.slots + (location.parent.slot to (children - nodeId)))
@@ -2494,7 +2503,11 @@ private fun UiBuilderDocument.attach(nodeId: String, location: NodeLocation): Ui
   }
   val parent =
     nodes[location.parent.nodeId]
-      ?: fail(RejectionCode.UNKNOWN_NODE, "unknown parent: ${location.parent.nodeId}")
+      ?: fail(
+        RejectionCode.UNKNOWN_NODE,
+        "unknown parent: ${location.parent.nodeId}",
+        location.parent.nodeId,
+      )
   if (location.parent.slot.isBlank()) fail(RejectionCode.INVALID_LOCATION, "slot must be non-empty")
   val changedChildren =
     parent.slots[location.parent.slot]?.toMutableList()

@@ -1,8 +1,5 @@
 package ee.schimke.composeai.uibuilder.desktop
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -10,9 +7,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import ee.schimke.composeai.uibuilder.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.DesignCommentDraft
@@ -22,6 +18,7 @@ import ee.schimke.composeai.uibuilder.MaterialUiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.UiBuilderReducer
@@ -50,30 +47,28 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 private const val DESKTOP_DESIGN_ID = "desktop-workspace"
 private const val ACTOR_ID = "desktop-user"
 private const val CLIENT_ID = "desktop-client"
 
-/** Launches the native, offline UI Builder desktop host. */
-fun main(args: Array<String>) = application {
-  val options = DesktopLaunchOptions.parse(args)
-  Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder") {
-    MaterialTheme {
-      Surface(Modifier.fillMaxSize()) {
-        OfflineUiBuilderApp(
-          storagePath = designStorePath(options.catalog, options.template),
-          sessionLabel = "Desktop offline · saved locally",
-          catalogSystemId = options.catalog.systemId,
-          remoteServer = options.remoteServer,
-          templateId = options.template,
-        )
-      }
-    }
+/** Launches the native UI Builder desktop host; see [DesktopLaunchOptions] for arguments. */
+fun main(args: Array<String>) {
+  val options = runCatching {
+    DesktopLaunchOptions.parse(args)
   }
+    .getOrElse {
+      System.err.println(it.message)
+      kotlin.system.exitProcess(2)
+    }
+  application { DesktopApp(options, designStoreRoot()) }
 }
 
 /**
@@ -167,13 +162,17 @@ private constructor(
     /** Opens a published project document as the primary persisted artifact. */
     fun projectDocument(
       document: UiBuilderDocument,
+      remoteServer: String? = null,
       onDocumentCommitted:
         suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
     ): OfflineUiBuilderSession =
       OfflineUiBuilderSession(
         storage = InMemoryLocalDesignStorage(),
-        catalogSystemId = document.catalogPin.getValue("systemId").toString().trim('"'),
-        remoteServer = null,
+        catalogSystemId =
+          requireNotNull(document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull) {
+            "design ${document.id} names no catalog systemId"
+          },
+        remoteServer = remoteServer,
         designId = document.id,
         initialDocument = document,
         templateId = null,
@@ -218,8 +217,10 @@ private constructor(
     // the revision the previous one produced, otherwise quick edits conflict with their own store.
     scope.launch {
       for (submission in submissions) {
+        // An edit made while the design is still opening waits for it rather than being dropped:
+        // the channel is the queue, and the first snapshot is the revision it applies against.
         val baseRevision =
-          mutableSnapshot.value?.snapshot?.state?.document?.revision?.toInt() ?: continue
+          mutableSnapshot.filterNotNull().first().snapshot.state.document.revision.toInt()
         when (
           val result =
             service.execute(
@@ -309,6 +310,13 @@ fun OfflineUiBuilderSessionView(
   initialComponentsOpen: Boolean = false,
   initialLayersOpen: Boolean = false,
   initialInspectorOpen: Boolean = false,
+  /**
+   * How this host gets a design out. Defaults to rendering in-process and saving through a native
+   * dialog ([DesktopExportHost]); null hides the Export menu.
+   */
+  exportHost: ((document: () -> UiBuilderDocument?) -> UiBuilderExportHost)? = { document ->
+    DesktopExportHost(session.catalog, document)
+  },
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
@@ -319,8 +327,11 @@ fun OfflineUiBuilderSessionView(
       remember(current.snapshot.state.document.revision) {
         mutableStateOf(current.snapshot.state.document.toUiBuilderDocument())
       }
+    val latestDocument by rememberUpdatedState(previewDocument)
+    val export = remember(session, exportHost) { exportHost?.invoke { latestDocument } }
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
+      exportHost = export,
       catalog = session.catalog,
       chrome = chrome,
       actorId = session.actorId,
@@ -408,6 +419,10 @@ private fun resourceText(name: String): String =
   checkNotNull(object {}.javaClass.getResource("/$name")) { "missing desktop resource $name" }
     .readText()
 
+/** The desktop app's own store; each catalog's scratch workspace lives under it. */
+internal fun designStoreRoot(): Path =
+  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")
+
 /**
  * Where [catalog]'s workspace is kept.
  *
@@ -416,55 +431,13 @@ private fun resourceText(name: String): String =
  * hand the widget catalog a document full of components it does not declare. Material 3 keeps the
  * directory it has always had, so an existing workspace is still where its owner left it.
  */
-internal fun designStorePath(catalog: OfflineCatalog, template: String? = null): Path =
-  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")
-    .let { if (catalog == OfflineCatalog.M3) it else it.resolve(catalog.systemId) }
+internal fun designStorePath(
+  catalog: OfflineCatalog,
+  root: Path = designStoreRoot(),
+  template: String? = null,
+): Path =
+  (if (catalog == OfflineCatalog.M3) root else root.resolve(catalog.systemId))
     // A named template is a workspace of its own for the same reason a catalog is: the workspace
     // is one design, so asking for the Weather sample must not open last week's blank widget —
     // and reopening the sample returns to the edits made to it.
     .let { if (template == null) it else it.resolve("template-$template") }
-
-internal data class DesktopLaunchOptions(
-  val remoteServer: String?,
-  val catalog: OfflineCatalog = OfflineCatalog.M3,
-  /** The template a new workspace starts as, or null for the catalog's own starter. */
-  val template: String? = null,
-) {
-  companion object {
-    private val USAGE =
-      "usage: Compose UI Builder " +
-        "[--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
-        "[--template <id>] [--server https://preview.coo.ee]"
-
-    fun parse(args: Array<String>): DesktopLaunchOptions {
-      require(args.size % 2 == 0) { USAGE }
-      val flags = args.toList().chunked(2).associate { (flag, value) -> flag to value }
-      require(
-        flags.size == args.size / 2 &&
-          flags.keys.all { it in setOf("--catalog", "--template", "--server") }
-      ) {
-        USAGE
-      }
-      val catalog =
-        flags["--catalog"]?.let { id ->
-          requireNotNull(OfflineCatalog.entries.firstOrNull { it.systemId == id }) {
-            "unknown catalog '$id'. $USAGE"
-          }
-        } ?: OfflineCatalog.M3
-      // Checked here rather than when the workspace is seeded, so a typo names the templates that
-      // exist before a window opens — and so an existing workspace cannot hide it.
-      val template =
-        flags["--template"]?.also { id ->
-          require(id in catalog.templateIds) {
-            "catalog '${catalog.systemId}' has no template '$id'; it has " +
-              catalog.templateIds.sorted().joinToString()
-          }
-        }
-      return DesktopLaunchOptions(
-        remoteServer = flags["--server"]?.let { validatedServerOrigin(it).toString() },
-        catalog = catalog,
-        template = template,
-      )
-    }
-  }
-}

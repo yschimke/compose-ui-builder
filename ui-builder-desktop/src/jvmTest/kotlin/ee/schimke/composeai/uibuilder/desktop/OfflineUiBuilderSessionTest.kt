@@ -54,6 +54,40 @@ class OfflineUiBuilderSessionTest {
   }
 
   @Test
+  fun `an edit submitted while the design is still opening is applied, not dropped`() =
+    runBlocking {
+      val seed =
+        OfflineUiBuilderSession(Files.createTempDirectory("ui-builder-early-seed")).use { session ->
+          withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+            .snapshot
+            .state
+            .document
+            .toUiBuilderDocument()
+        }
+      val committed =
+        CompletableDeferred<ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1>()
+      OfflineUiBuilderSession.projectDocument(seed) { committed.complete(it) }
+        .use { session ->
+          val reducer = UiBuilderEditorReducer(session.catalog, "early-test", "early-test")
+          val initial = reducer.initial(seed)
+          val settings = seed.screenEnvironmentSettings()
+          val edited =
+            reducer.reduce(
+              initial,
+              UiBuilderEditorEvent.UpdateEnvironment(settings.copy(widthDp = settings.widthDp + 3)),
+            )
+
+          // Submitted before anything has awaited the first snapshot.
+          session.submit(
+            assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited))
+          )
+
+          val saved = withTimeout(10.seconds) { committed.await() }.toUiBuilderDocument()
+          assertEquals(settings.widthDp + 3, saved.screenEnvironmentSettings().widthDp)
+        }
+    }
+
+  @Test
   fun `editor submissions are persisted in order and broadcast to every view`() = runBlocking {
     val storage = Files.createTempDirectory("ui-builder-session-test")
     OfflineUiBuilderSession(storage).use { session ->

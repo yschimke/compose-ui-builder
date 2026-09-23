@@ -77,8 +77,9 @@ exported as a `GlanceWearWidget` — open `remote-m3`:
 ./gradlew :ui-builder-desktop:run --args='--catalog remote-m3'
 ```
 
-`--template` starts from one of the catalog's templates instead of its default starter — for
-`remote-m3`, the worked samples from the WearWidget sample as well as the two empty host sizes:
+`--template` (or **File → New from template**) starts from one of the catalog's templates instead
+of its default starter — for `remote-m3`, the worked samples from the WearWidget sample as well as
+the two empty host sizes:
 
 ```bash
 ./gradlew :ui-builder-desktop:run --args='--catalog remote-m3 --template weather-widget'
@@ -103,6 +104,16 @@ host instead:
 ```
 
 The two flags combine: `--args='--catalog remote-m3 --server https://preview.coo.ee'`.
+
+To edit a checked-in design instead of a workspace, name the `.uid` (or DesignDocumentV1 `.json`)
+file; every accepted edit is written back to it, in the same shape the IntelliJ plugin writes:
+
+```bash
+./gradlew :ui-builder-desktop:run --args="$PWD/docs/design/fixtures/ui-builder/state-actions.uid"
+```
+
+The **File** menu does the same from inside the app: **New** opens a catalog's workspace, **Open…**
+loads a design file, and **Save As…** writes the current design to a file and keeps editing it there.
 
 The same mode works against a local UI-builder/Wasm host, for example
 `--server http://localhost:8080`; plain HTTP is accepted only on loopback. Remote hosts must use
