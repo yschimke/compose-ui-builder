@@ -1468,6 +1468,54 @@ internal val REMOTE_M3_MODIFIERS =
     "zIndex",
   )
 
+/**
+ * A borrowed component, narrowed to what `RemoteContentEmitter` can write into a widget body.
+ *
+ * One function because two derivations apply it — [remoteM3Catalog] and the `remote-compose`
+ * curation in [composeFoundationCatalog] — and `ComposeFoundationFaithfulnessTest` holds them equal
+ * field for field. Every clause here moves a refusal from export time to the moment the author
+ * acts, which is the only moment they can do anything about it.
+ */
+internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabilityV1 =
+  newBuilder()
+    .also {
+      // The palette used to offer 28 modifiers on a widget node while the generator wrote three, so
+      // `size`, `background` and `weight` were authorable, drawable, and unexportable
+      // (yschimke/compose-preview-server#508).
+      it.modifierCapabilities =
+        // A brush can only sit in the container's background slot, and `WearWidgetBrush` has no
+        // geometry to hang a modifier on — the generator refuses every one it finds there. So the
+        // gradient offers none, rather than eighteen that each end in a refusal.
+        if (componentId == "shape/linear-gradient") emptyList()
+        else modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+      // The borrowed layouts are where a widget body continues below its first node, so their slots
+      // keep the rule the container's own `content` slot states. Left at the base catalog's
+      // `AnyContent`, a Column one level down accepted what the container refuses — a gradient
+      // brush, an embedded document, a second widget container — and the canvas drew each one
+      // before the generator refused it. `remote-compose/custom` is not among them: its content is
+      // the canvas stand-in for what the host renders under that name, never written into a widget.
+      if (componentId in REMOTE_BODY_CONTAINERS) {
+        it.slots = slots.map { slot ->
+          slot.newBuilder().also { it.acceptedTraits = listOf("RemoteAuthorable") }.build()
+        }
+      }
+      // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
+      // from a mobile component. The reviewed vocabulary does have an emitter branch (or
+      // component-record fallback) and may enter a widget body.
+      it.traits =
+        (traits - "RemoteAuthorable").let { traits ->
+          if (componentId !in setOf("remote-compose/document", "shape/linear-gradient")) {
+            traits + "RemoteAuthorable"
+          } else {
+            traits
+          }
+        }
+    }
+    .build()
+
+private val REMOTE_BODY_CONTAINERS =
+  setOf("layout/box", "layout/column", "layout/row", "layout/for-each")
+
 private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }
   val box = components.getValue("layout/box")
@@ -1581,28 +1629,6 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "shape/linear-gradient",
       "asset/image",
     )
-  // Every borrowed component is narrowed to the modifiers the generator can write. The two lists
-  // used to be independent — the palette offered 28 on a widget node and `RemoteContentEmitter`
-  // wrote three — so `size`, `background` and `weight` were authorable, drawable, and unexportable
-  // (yschimke/compose-preview-server#508). Narrowing here moves the refusal to the moment the
-  // modifier is added, which is the only moment an author can act on it.
-  fun ComponentCapabilityV1.narrowed(): ComponentCapabilityV1 =
-    newBuilder()
-      .also {
-        it.modifierCapabilities = modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
-        // `RemoteAuthorable` is a capability of this catalog's Remote Compose emitter, not a
-        // property inherited from a mobile component. The reviewed vocabulary does have an emitter
-        // branch (or component-record fallback) and may enter a widget body.
-        it.traits =
-          (traits - "RemoteAuthorable").let { traits ->
-            if (componentId !in setOf("remote-compose/document", "shape/linear-gradient")) {
-              traits + "RemoteAuthorable"
-            } else {
-              traits
-            }
-          }
-      }
-      .build()
   return base
     .newBuilder()
     .also {
@@ -1634,7 +1660,13 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
           widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
           widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
           lottie(components.getValue("asset/image"), supportedWasm, blockedSvg),
-        ) + authoringIds.map { components.getValue(it).narrowed() }
+        ) +
+          authoringIds.map {
+            // Narrowed to what the generator can write; the published-catalog foundation applies
+            // the
+            // same function.
+            components.getValue(it).narrowedForRemoteAuthoring()
+          }
     }
     .build()
 }
