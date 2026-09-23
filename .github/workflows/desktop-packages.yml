@@ -1,0 +1,80 @@
+name: Desktop packages
+
+# The native installers for macOS and Windows. Linux's `.deb` is built by the release job itself.
+#
+# Two ways in. A pull request that touches the desktop app or this file builds both, so a packaging
+# break shows up before a release rather than as a missing asset after it. The release workflow
+# calls it with the tag, and then the packages are also attached to that release.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ui-builder-desktop/**
+      - .github/workflows/desktop-packages.yml
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag (vX.Y.Z) to build and attach the packages to
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            extension: dmg
+          - os: windows-latest
+            extension: msi
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - name: Package for ${{ matrix.os }}
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            tag="${{ inputs.tag }}"
+            export UI_BUILDER_DESKTOP_VERSION="${tag#v}"
+          fi
+          ./gradlew :ui-builder-desktop:packageDistributionForCurrentOS
+      - name: Find the package
+        id: package
+        shell: bash
+        run: |
+          package=$(find ui-builder-desktop/build/compose/binaries -type f -name '*.${{ matrix.extension }}' -print -quit)
+          if [ -z "$package" ]; then
+            echo "::error::packageDistributionForCurrentOS produced no .${{ matrix.extension }}"
+            exit 1
+          fi
+          echo "path=$package" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compose-ui-builder-desktop-${{ matrix.extension }}
+          path: ${{ steps.package.outputs.path }}
+      - name: Attach to the release
+        if: ${{ inputs.tag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "${{ inputs.tag }}" "${{ steps.package.outputs.path }}" --clobber

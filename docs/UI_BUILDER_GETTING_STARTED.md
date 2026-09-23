@@ -124,9 +124,10 @@ default browser. Approve the requested write and export capabilities there; the 
 keeps the returned token only in memory. The local workspace is uploaded as a temporary private
 design for the render, then removed after the frame returns.
 
-Linux releases also include a `compose-ui-builder-desktop_<version>_amd64.deb` installer. Install it
-with your distribution's package installer, then launch **Compose UI Builder** from the desktop
-environment.
+Releases also carry installers: `compose-ui-builder-desktop_<version>_amd64.deb` for Linux, a
+`.dmg` for macOS and an `.msi` for Windows. Install the one for your platform, then launch
+**Compose UI Builder** from the desktop environment. The macOS and Windows packages are not yet
+signed, so the first launch asks you to confirm an app from an unidentified developer.
 
 ### As an IntelliJ Platform plugin (proof of concept)
 
