@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder.desktop
+package ee.schimke.composeai.uibuilder.host
 
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import ee.schimke.composeai.uibuilder.DesignCommentDraft
