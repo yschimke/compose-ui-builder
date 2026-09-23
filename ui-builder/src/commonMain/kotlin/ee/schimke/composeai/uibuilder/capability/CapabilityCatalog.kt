@@ -71,6 +71,13 @@ data class CapabilityCatalog(
       setOf("layout/for-each")
     } else emptySet()
   }
+  /**
+   * The components the insert panel lists: every one this catalog declares, less
+   * [paletteHiddenComponentIds].
+   */
+  val paletteComponents: List<ComponentCapability> by lazy {
+    components.filterNot { it.componentId in paletteHiddenComponentIds }
+  }
 
   /**
    * Which kind of screen this catalog authors — a phone, a watch, a Remote Compose widget.
