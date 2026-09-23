@@ -1,0 +1,56 @@
+{
+  "schema": "compose-ui-builder-figma-snapshot/v1",
+  "source": { "fileKey": "fixtureFileKey0000000000", "nodeId": "10:1" },
+  "root": {
+    "id": "10:1", "type": "FRAME", "name": "Checkout", "width": 412, "height": 915,
+    "layout": { "mode": "VERTICAL", "itemSpacing": 16,
+                "padding": { "left": 24, "top": 24, "right": 24, "bottom": 24 },
+                "primaryAxisAlign": "MIN", "counterAxisAlign": "MIN" },
+    "sizing": { "horizontal": "FIXED", "vertical": "FIXED" },
+    "fill": { "color": "#FFFEF7FF", "variable": "Schemes/Surface" },
+    "children": [
+      { "id": "10:2", "type": "TEXT", "name": "Title", "width": 364, "height": 36,
+        "sizing": { "horizontal": "FILL", "vertical": "HUG" },
+        "text": { "characters": "Checkout", "style": "M3/headline/medium", "fontSize": 28, "fontWeight": 400 },
+        "fill": { "color": "#FF1D1B20", "variable": "Schemes/On Surface" } },
+      { "id": "10:3", "type": "FRAME", "name": "Line item", "width": 364, "height": 24,
+        "layout": { "mode": "HORIZONTAL", "itemSpacing": 8, "primaryAxisAlign": "SPACE_BETWEEN", "counterAxisAlign": "CENTER" },
+        "sizing": { "horizontal": "FILL", "vertical": "HUG" },
+        "children": [
+          { "id": "10:4", "type": "TEXT", "name": "Label", "width": 80, "height": 24,
+            "sizing": { "horizontal": "HUG", "vertical": "HUG" },
+            "text": { "characters": "Subtotal", "style": "M3/body/large" } },
+          { "id": "10:5", "type": "TEXT", "name": "Amount", "width": 60, "height": 24,
+            "sizing": { "horizontal": "HUG", "vertical": "HUG" },
+            "text": { "characters": "$42.00", "fontSize": 16, "fontWeight": 600, "textAlign": "RIGHT" } }
+        ] },
+      { "id": "10:6", "type": "INSTANCE", "name": "Divider", "width": 364, "height": 1,
+        "sizing": { "horizontal": "FILL", "vertical": "FIXED" },
+        "instance": { "componentSet": "Divider", "component": "Divider" } },
+      { "id": "10:7", "type": "FRAME", "name": "Options", "width": 364, "height": 48,
+        "layout": { "mode": "HORIZONTAL", "itemSpacing": 12, "counterAxisAlign": "CENTER" },
+        "sizing": { "horizontal": "FILL", "vertical": "HUG" },
+        "children": [
+          { "id": "10:8", "type": "INSTANCE", "name": "Checkbox", "width": 48, "height": 48,
+            "instance": { "componentSet": "Checkboxes", "component": "Type=Selected, State=Enabled",
+                          "properties": { "Type": "Selected", "State": "Enabled", "Show focus indicator": false } } },
+          { "id": "10:9", "type": "TEXT", "name": "Gift", "width": 200, "height": 24,
+            "sizing": { "horizontal": "FILL", "vertical": "HUG" },
+            "text": { "characters": "This is a gift", "style": "M3/body/large" } }
+        ] },
+      { "id": "10:10", "type": "RECTANGLE", "name": "Promo", "width": 364, "height": 120,
+        "sizing": { "horizontal": "FILL", "vertical": "FIXED" }, "cornerRadius": 16,
+        "fill": { "color": "#FFF3EDF7", "variable": "Schemes/Surface Container Low" } },
+      { "id": "10:11", "type": "VECTOR", "name": "Logo", "width": 48, "height": 48 },
+      { "id": "10:12", "type": "INSTANCE", "name": "Rating", "width": 120, "height": 24,
+        "instance": { "componentSet": "Rating bar", "component": "Stars=4" } },
+      { "id": "10:13", "type": "INSTANCE", "name": "Pay", "width": 364, "height": 40,
+        "sizing": { "horizontal": "FILL", "vertical": "FIXED" },
+        "instance": { "componentSet": "Button", "component": "Type=Round, Size=Small, State=Enabled",
+                      "properties": { "Type": "Round", "Size": "Small", "State": "Enabled",
+                                      "Label text": "Pay $42.00", "Show icon": false } } },
+      { "id": "10:14", "type": "INSTANCE", "name": "Later", "width": 120, "height": 40, "visible": false,
+        "instance": { "componentSet": "Button", "component": "Type=Round", "properties": { "Label text": "Later" } } }
+    ]
+  }
+}
