@@ -1026,10 +1026,18 @@ private fun LiveSessionApp(
   // watch face) and the home screen's list of everything, which is not catalog-scoped because the
   // question there is "what was I working on", not "what can this screen link to".
   var homeDesigns by remember { mutableStateOf(emptyList<UiBuilderHomeDesign>()) }
-  // Folders organize this browser's library, not the design content. Moving a file therefore does
-  // not change its revision or its export, and a newly created design starts at the top level.
+  // A live host owns shared folders beside its design state. Browser storage remains the fallback
+  // for an older host and for offline/local work; neither form changes a document revision.
   var homeFolders by remember { mutableStateOf(readHomeFolders()) }
+  var serverFoldersAvailable by remember { mutableStateOf(false) }
+  val homeFolderHost = remember { BrowserHomeFolderHost() }
   LaunchedEffect(http, config.catalogSystemId) {
+    runCatching { homeFolderHost.load() }
+      .getOrNull()
+      ?.let {
+        homeFolders = it
+        serverFoldersAvailable = true
+      }
     val result = http.execute(ListDesignsRequestV1(cursor = null, limit = 200))
     val listed =
       ((result as? UiBuilderHttpResult.Response)?.response as? DesignsResponseV1)?.designs.orEmpty()
@@ -1765,13 +1773,26 @@ private fun LiveSessionApp(
       onMoveDesign =
         if (localSession == null) {
           { designId, folder ->
-            homeFolders =
-              homeFolders.toMutableMap().apply {
-                if (folder == null) remove(designId) else put(designId, folder)
+            if (serverFoldersAvailable) {
+              scope.launch {
+                runCatching { homeFolderHost.move(designId, folder) }
+                  .getOrNull()
+                  ?.let { stored ->
+                    homeFolders = stored
+                    homeDesigns = homeDesigns.map { design ->
+                      design.copy(folder = stored[design.designId])
+                    }
+                  }
               }
-            writeHomeFolders(homeFolders)
-            homeDesigns = homeDesigns.map {
-              if (it.designId == designId) it.copy(folder = folder) else it
+            } else {
+              homeFolders =
+                homeFolders.toMutableMap().apply {
+                  if (folder == null) remove(designId) else put(designId, folder)
+                }
+              writeHomeFolders(homeFolders)
+              homeDesigns = homeDesigns.map {
+                if (it.designId == designId) it.copy(folder = folder) else it
+              }
             }
           }
         } else null,
