@@ -14,11 +14,11 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.LightVirtualFile
-import ee.schimke.composeai.uibuilder.desktop.OfflineCatalog
-import ee.schimke.composeai.uibuilder.desktop.OfflineUiBuilderSession
-import ee.schimke.composeai.uibuilder.desktop.RemoteUiBuilderConnection
-import ee.schimke.composeai.uibuilder.desktop.RemoteUiBuilderDesign
-import ee.schimke.composeai.uibuilder.desktop.UiBuilderSession
+import ee.schimke.composeai.uibuilder.host.OfflineCatalog
+import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSession
+import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderConnection
+import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderDesign
+import ee.schimke.composeai.uibuilder.host.UiBuilderSession
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.toUiBuilderDocument
 import java.nio.file.Path

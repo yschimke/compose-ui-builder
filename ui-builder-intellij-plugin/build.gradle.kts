@@ -45,7 +45,7 @@ repositories {
 }
 
 dependencies {
-  implementation(project(":ui-builder-desktop")) {
+  implementation(project(":ui-builder-host-jvm")) {
     // Jewel and the IDE own these classes. Shipping the desktop host's copies creates two Compose
     // runtimes and two native Skiko loaders in one process; keep only libraries above that layer.
     exclude(group = "androidx.compose.runtime")

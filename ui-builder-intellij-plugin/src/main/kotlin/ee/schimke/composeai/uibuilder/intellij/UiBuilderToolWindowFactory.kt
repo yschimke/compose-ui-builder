@@ -17,9 +17,9 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import ee.schimke.composeai.uibuilder.EditorPane
-import ee.schimke.composeai.uibuilder.desktop.OfflineCatalog
-import ee.schimke.composeai.uibuilder.desktop.OfflineUiBuilderSessionView
-import ee.schimke.composeai.uibuilder.desktop.RemoteUiBuilderConnection
+import ee.schimke.composeai.uibuilder.host.OfflineCatalog
+import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSessionView
+import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderConnection
 import java.awt.datatransfer.StringSelection
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.jewel.bridge.addComposeTab

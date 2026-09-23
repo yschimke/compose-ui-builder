@@ -12,7 +12,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import ee.schimke.composeai.uibuilder.EditorPane
-import ee.schimke.composeai.uibuilder.desktop.OfflineUiBuilderSessionView
+import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSessionView
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 import javax.swing.JComponent

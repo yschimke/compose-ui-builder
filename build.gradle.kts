@@ -91,6 +91,7 @@ tasks.named("check") {
   dependsOn(
     ":ui-builder:check",
     ":ui-builder-desktop:check",
+    ":ui-builder-host-jvm:check",
     ":ui-builder-intellij-plugin:check",
     ":ui-builder-artwork:check",
     ":ui-builder-export:check",

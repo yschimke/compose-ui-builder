@@ -18,6 +18,12 @@ import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
+import ee.schimke.composeai.uibuilder.host.DesignFiles
+import ee.schimke.composeai.uibuilder.host.OfflineCatalog
+import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSession
+import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSessionView
+import ee.schimke.composeai.uibuilder.host.UiBuilderSession
+import ee.schimke.composeai.uibuilder.host.validatedServerOrigin
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
