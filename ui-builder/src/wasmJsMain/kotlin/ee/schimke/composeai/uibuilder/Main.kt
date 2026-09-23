@@ -616,7 +616,7 @@ private fun updateCatalogRuntimeSurface(
         return response.json();
       }).then((loaded) => {
         if (controller.disposed) return;
-        if (loaded.schema !== 'compose-ui-builder-runtime/v1' ||
+        if (!['compose-ui-builder-runtime/v1', 'compose-ui-builder-runtime/v2'].includes(loaded.schema) ||
             loaded.runtimeId !== runtimeId || ![1, 2].includes(loaded.protocolVersion) ||
             typeof loaded.entrypoint !== 'string' ||
             !/^[A-Za-z0-9._/-]+$/.test(loaded.entrypoint) ||
@@ -673,7 +673,7 @@ private fun mountSandboxRenderer(runtimeId: String, documentJson: String): Unit 
       });
       if (!response.ok) throw new Error('runtime manifest HTTP ' + response.status);
       const manifest = await response.json();
-       if (manifest.schema !== 'compose-ui-builder-runtime/v1' ||
+       if (!['compose-ui-builder-runtime/v1', 'compose-ui-builder-runtime/v2'].includes(manifest.schema) ||
            manifest.runtimeId !== runtimeId || ![1, 2].includes(manifest.protocolVersion) ||
           typeof manifest.entrypoint !== 'string' ||
           !/^[A-Za-z0-9._/-]+$/.test(manifest.entrypoint) ||
