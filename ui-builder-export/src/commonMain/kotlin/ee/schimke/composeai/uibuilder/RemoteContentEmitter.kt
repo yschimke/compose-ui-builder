@@ -2335,11 +2335,14 @@ internal class RemoteContentEmitter(
           modifierCall("clickable($it)")
         }
       } else null
-    // Before [leading], because the container applies it before anything the node derives.
+    // Before [leading], because the container applies it before anything the node derives. Left
+    // out only where the chain already *starts* with it, the one position where saying it again
+    // changes nothing: a fill later in the chain — `size(48.dp).fillMaxSize()` — fills the 48dp,
+    // and without the frame's own fill ahead of it the widget would wrap to that size.
     val frame =
       if (
         id == frameFillingRoot &&
-          modifiers.none { (it as? JsonObject)?.get("type")?.stringValue() == "fillMaxSize" }
+          (modifiers.firstOrNull() as? JsonObject)?.get("type")?.stringValue() != "fillMaxSize"
       ) {
         listOf(modifierCall("fillMaxSize()"))
       } else emptyList()
