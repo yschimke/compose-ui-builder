@@ -1,8 +1,5 @@
 package ee.schimke.composeai.uibuilder.desktop
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -12,8 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import ee.schimke.composeai.uibuilder.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.DesignCommentDraft
@@ -64,21 +59,16 @@ private const val DESKTOP_DESIGN_ID = "desktop-workspace"
 private const val ACTOR_ID = "desktop-user"
 private const val CLIENT_ID = "desktop-client"
 
-/** Launches the native, offline UI Builder desktop host. */
-fun main(args: Array<String>) = application {
-  val options = DesktopLaunchOptions.parse(args)
-  Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder") {
-    MaterialTheme {
-      Surface(Modifier.fillMaxSize()) {
-        OfflineUiBuilderApp(
-          storagePath = designStorePath(options.catalog),
-          sessionLabel = "Desktop offline · saved locally",
-          catalogSystemId = options.catalog.systemId,
-          remoteServer = options.remoteServer,
-        )
-      }
-    }
+/** Launches the native UI Builder desktop host; see [DesktopLaunchOptions] for arguments. */
+fun main(args: Array<String>) {
+  val options = runCatching {
+    DesktopLaunchOptions.parse(args)
   }
+    .getOrElse {
+      System.err.println(it.message)
+      kotlin.system.exitProcess(2)
+    }
+  application { DesktopApp(options, designStoreRoot()) }
 }
 
 /**
@@ -167,6 +157,7 @@ private constructor(
     /** Opens a published project document as the primary persisted artifact. */
     fun projectDocument(
       document: UiBuilderDocument,
+      remoteServer: String? = null,
       onDocumentCommitted:
         suspend (ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1) -> Unit,
     ): OfflineUiBuilderSession =
@@ -176,7 +167,7 @@ private constructor(
           requireNotNull(document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull) {
             "design ${document.id} names no catalog systemId"
           },
-        remoteServer = null,
+        remoteServer = remoteServer,
         designId = document.id,
         initialDocument = document,
         onDocumentCommitted = onDocumentCommitted,
@@ -412,6 +403,10 @@ private fun resourceText(name: String): String =
   checkNotNull(object {}.javaClass.getResource("/$name")) { "missing desktop resource $name" }
     .readText()
 
+/** The desktop app's own store; each catalog's scratch workspace lives under it. */
+internal fun designStoreRoot(): Path =
+  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop")
+
 /**
  * Where [catalog]'s workspace is kept.
  *
@@ -420,38 +415,5 @@ private fun resourceText(name: String): String =
  * hand the widget catalog a document full of components it does not declare. Material 3 keeps the
  * directory it has always had, so an existing workspace is still where its owner left it.
  */
-internal fun designStorePath(catalog: OfflineCatalog): Path =
-  Path.of(System.getProperty("user.home"), ".compose-preview", "ui-builder-desktop").let {
-    if (catalog == OfflineCatalog.M3) it else it.resolve(catalog.systemId)
-  }
-
-internal data class DesktopLaunchOptions(
-  val remoteServer: String?,
-  val catalog: OfflineCatalog = OfflineCatalog.M3,
-) {
-  companion object {
-    private val USAGE =
-      "usage: Compose UI Builder [--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
-        "[--server https://preview.coo.ee]"
-
-    fun parse(args: Array<String>): DesktopLaunchOptions {
-      require(args.size % 2 == 0) { USAGE }
-      val flags = args.toList().chunked(2).associate { (flag, value) -> flag to value }
-      require(
-        flags.size == args.size / 2 && flags.keys.all { it in setOf("--catalog", "--server") }
-      ) {
-        USAGE
-      }
-      val catalog =
-        flags["--catalog"]?.let { id ->
-          requireNotNull(OfflineCatalog.entries.firstOrNull { it.systemId == id }) {
-            "unknown catalog '$id'. $USAGE"
-          }
-        } ?: OfflineCatalog.M3
-      return DesktopLaunchOptions(
-        remoteServer = flags["--server"]?.let { validatedServerOrigin(it).toString() },
-        catalog = catalog,
-      )
-    }
-  }
-}
+internal fun designStorePath(catalog: OfflineCatalog, root: Path = designStoreRoot()): Path =
+  if (catalog == OfflineCatalog.M3) root else root.resolve(catalog.systemId)
