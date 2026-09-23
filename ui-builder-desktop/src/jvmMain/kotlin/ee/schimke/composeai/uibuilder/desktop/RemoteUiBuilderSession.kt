@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.desktop
 
+import ee.schimke.composeai.uibuilder.DesignCommentDraft
 import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
@@ -145,6 +146,10 @@ internal constructor(
   override val clientId: String = "intellij-${UUID.randomUUID()}"
   override val operationIdPrefix: String = clientId
   override val nativeRenderAvailable: Boolean = false
+  override val commentsAvailable: Boolean = true
+  private val commentClient = RemoteCommentClient(connection, designId)
+  override val comments = commentClient.board
+  override val commentStatus = commentClient.status
 
   init {
     require(Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,63}").matches(designId)) {
@@ -164,6 +169,14 @@ internal constructor(
 
   override fun submit(submission: EditorSubmission) {
     submissions.trySend(submission)
+  }
+
+  override fun postComment(draft: DesignCommentDraft) {
+    commentClient.post(draft)
+  }
+
+  override fun resolveCommentThread(threadId: String, resolved: Boolean) {
+    commentClient.resolve(threadId, resolved)
   }
 
   private suspend fun consumeSubmissions() {
@@ -240,6 +253,7 @@ internal constructor(
   ): UiBuilderNativeRender? = null
 
   override fun close() {
+    commentClient.close()
     updates?.close()
     submissions.close()
     scope.cancel()
@@ -303,6 +317,11 @@ internal class RemoteServerHttp(val origin: URI) {
   suspend fun protocolPost(request: UiBuilderHttpRequest): UiBuilderHttpResponse {
     val response = request(origin.resolve(request.endpoint), "POST", request.body)
     return UiBuilderHttpResponse(response.statusCode(), response.body())
+  }
+
+  suspend fun commentRequest(target: String, method: String, body: String): RemoteCommentResponse {
+    val response = request(origin.resolve(target), method, body)
+    return RemoteCommentResponse(response.statusCode(), response.body())
   }
 
   private suspend fun request(

@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import ee.schimke.composeai.uibuilder.DesignCommentBoard
+import ee.schimke.composeai.uibuilder.DesignCommentDraft
 import ee.schimke.composeai.uibuilder.EditorPane
 import ee.schimke.composeai.uibuilder.EditorSubmission
 import ee.schimke.composeai.uibuilder.MaterialUiBuilderChrome
@@ -113,8 +115,15 @@ interface UiBuilderSession : AutoCloseable {
   val clientId: String
   val operationIdPrefix: String
   val nativeRenderAvailable: Boolean
+  val commentsAvailable: Boolean
+  val comments: StateFlow<DesignCommentBoard>
+  val commentStatus: StateFlow<String?>
 
   fun submit(submission: EditorSubmission)
+
+  fun postComment(draft: DesignCommentDraft)
+
+  fun resolveCommentThread(threadId: String, resolved: Boolean)
 
   suspend fun renderNative(
     document: UiBuilderDocument,
@@ -186,6 +195,14 @@ private constructor(
   override val clientId: String = CLIENT_ID
   override val operationIdPrefix: String = CLIENT_ID
   override val nativeRenderAvailable: Boolean = remotePreview != null
+  override val commentsAvailable: Boolean = false
+  private val mutableComments = MutableStateFlow(DesignCommentBoard())
+  override val comments = mutableComments.asStateFlow()
+  private val mutableCommentStatus =
+    MutableStateFlow<String?>(
+      "Comments are available when this design is opened from a preview server."
+    )
+  override val commentStatus = mutableCommentStatus.asStateFlow()
 
   init {
     scope.launch { openOrCreate() }
@@ -214,6 +231,10 @@ private constructor(
   override fun submit(submission: EditorSubmission) {
     submissions.trySend(submission)
   }
+
+  override fun postComment(draft: DesignCommentDraft) = Unit
+
+  override fun resolveCommentThread(threadId: String, resolved: Boolean) = Unit
 
   override suspend fun renderNative(
     document: UiBuilderDocument,
@@ -282,6 +303,8 @@ fun OfflineUiBuilderSessionView(
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
+  val comments by session.comments.collectAsState()
+  val commentStatus by session.commentStatus.collectAsState()
   snapshot?.let { current ->
     var previewDocument by
       remember(current.snapshot.state.document.revision) {
@@ -307,6 +330,11 @@ fun OfflineUiBuilderSessionView(
         } else null,
       onStateChanged = { state -> previewDocument = state.collaboration.document },
       onSubmission = session::submit,
+      comments = comments,
+      onPostComment = if (session.commentsAvailable) session::postComment else null,
+      onResolveCommentThread =
+        if (session.commentsAvailable) session::resolveCommentThread else null,
+      commentStatus = commentStatus,
     )
   }
   failure?.let { Text(it) }
