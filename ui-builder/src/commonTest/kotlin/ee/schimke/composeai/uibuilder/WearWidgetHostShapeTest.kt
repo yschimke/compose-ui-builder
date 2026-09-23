@@ -3,7 +3,10 @@ package ee.schimke.composeai.uibuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The host container table, pinned against what `androidx.glance.wear:wear-tooling-preview` ships.
@@ -16,6 +19,40 @@ import kotlin.test.assertTrue
  * provider re-read, not a number nudged until a render looked right.
  */
 class WearWidgetHostShapeTest {
+
+  @Test
+  fun `widget host dimensions remain valid when selecting export devices`() {
+    val environment =
+      JsonObject(
+        mapOf(
+          "widthDp" to JsonPrimitive(216),
+          "heightDp" to JsonPrimitive(124),
+          "density" to JsonPrimitive(2.0),
+          "fontScale" to JsonPrimitive(1.0),
+          "locale" to JsonPrimitive("en-US"),
+          "theme" to JsonPrimitive("dark"),
+          "layoutDirection" to JsonPrimitive("ltr"),
+        )
+      )
+    val widget =
+      wearWidgetUiBuilderDocument(
+        designId = "widget",
+        catalogPin = JsonObject(emptyMap()),
+        environment = environment,
+        size = WearWidgetScaffoldSize.Large,
+      )
+
+    assertNull(widget.screenEnvironmentValidationError(widget.screenEnvironmentSettings()))
+
+    val screen =
+      widget.copy(
+        nodes = widget.nodes.mapValues { (_, node) -> node.copy(componentId = "m3/text") }
+      )
+    assertEquals(
+      "Height must be between 180 and 3840 dp.",
+      screen.screenEnvironmentValidationError(screen.screenEnvironmentSettings()),
+    )
+  }
 
   @Test
   fun `the squircle spec is the published 240dp-screen footprint`() {

@@ -426,12 +426,23 @@ private const val MIN_SCREEN_DP = 180
 
 private const val MAX_SCREEN_DP = 3840
 
-fun ScreenEnvironmentSettings.validationError(): String? =
+/**
+ * A widget's frame is launcher-owned, not a screen. The published small widget host is only 216 ×
+ * 76dp, so applying a screen floor to it makes unrelated environment writes (including the
+ * export-device picker) impossible. The runtime's document validation likewise requires only
+ * positive dimensions.
+ */
+fun UiBuilderDocument.screenEnvironmentValidationError(
+  settings: ScreenEnvironmentSettings
+): String? =
+  settings.validationError(minimumDp = if (wearWidgetScaffoldSize() == null) MIN_SCREEN_DP else 1)
+
+fun ScreenEnvironmentSettings.validationError(minimumDp: Int = MIN_SCREEN_DP): String? =
   when {
-    widthDp !in MIN_SCREEN_DP..MAX_SCREEN_DP ->
-      "Width must be between $MIN_SCREEN_DP and $MAX_SCREEN_DP dp."
-    heightDp !in MIN_SCREEN_DP..MAX_SCREEN_DP ->
-      "Height must be between $MIN_SCREEN_DP and $MAX_SCREEN_DP dp."
+    widthDp !in minimumDp..MAX_SCREEN_DP ->
+      "Width must be between $minimumDp and $MAX_SCREEN_DP dp."
+    heightDp !in minimumDp..MAX_SCREEN_DP ->
+      "Height must be between $minimumDp and $MAX_SCREEN_DP dp."
     !density.isFinite() || density !in 0.5..4.0 -> "Density must be between 0.5 and 4.0."
     !fontScale.isFinite() || fontScale !in 0.5..3.0 -> "Font scale must be between 0.5 and 3.0."
     locale.length !in 2..64 || !Regex("[A-Za-z]{2,8}([_-][A-Za-z0-9]{1,8})*").matches(locale) ->
@@ -4488,7 +4499,7 @@ class UiBuilderEditorReducer(
     state: UiBuilderEditorState,
     settings: ScreenEnvironmentSettings,
   ): UiBuilderEditorState {
-    settings.validationError()?.let { message ->
+    state.document.screenEnvironmentValidationError(settings)?.let { message ->
       return state.rejected(
         state.operationSequence + 1,
         RejectionCode.INVALID_DOCUMENT,
