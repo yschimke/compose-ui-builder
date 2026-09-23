@@ -44,7 +44,7 @@ class InstalledPluginSmokeTest {
   }
 
   @Test
-  fun `installed plugin opens its tool window`() {
+  fun `installed plugin opens a uid design and its tool window`() {
     when (System.getProperty("ui.builder.smoke.ide", "all")) {
       "intellij" ->
         smoke(IdeInfo.IdeaUltimate, buildNumber = "262.10968.63", name = "intellij-idea")

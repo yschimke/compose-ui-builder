@@ -89,6 +89,7 @@ dependencies {
     bundledModule("intellij.libraries.compose.foundation.desktop")
     bundledModule("intellij.libraries.skiko")
     bundledPlugin("com.intellij.modules.json")
+    bundledModule("intellij.json.structureView")
     testFramework(TestFrameworkType.Starter, configurationName = "integrationTestImplementation")
   }
 }

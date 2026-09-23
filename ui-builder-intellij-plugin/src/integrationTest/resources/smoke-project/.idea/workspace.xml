@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <!-- Opening this fixture exercises file-type detection, the visual editor, and its Structure View. -->
+  <component name="FileEditorManager">
+    <leaf>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/smoke.uid">
+          <provider selected="true" editor-type-id="compose-ui-builder-project-design-editor">
+            <state />
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+</project>
