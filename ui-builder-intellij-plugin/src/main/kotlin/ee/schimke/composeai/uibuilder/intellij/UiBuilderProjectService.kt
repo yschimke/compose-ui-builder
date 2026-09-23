@@ -14,6 +14,7 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.util.Alarm
 import ee.schimke.composeai.uibuilder.desktop.OfflineCatalog
 import ee.schimke.composeai.uibuilder.desktop.OfflineUiBuilderSession
 import ee.schimke.composeai.uibuilder.desktop.RemoteUiBuilderConnection
@@ -114,7 +115,10 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
     val document =
       requireNotNull(readProjectDesign(file)) { "${file.path} is not a UI Builder design" }
     val catalog = OfflineCatalog.forSystem(document.catalogPin.systemId)
-    val writer = ProjectDesignWriter(file)
+    val writer =
+      ProjectDesignWriter(file, this) { failure ->
+        projectSessions[file.url]?.selection?.reportStatus(failure?.let { "not saved: $it" })
+      }
     val selection =
       UiBuilderSessionSelection(
         initialSession =
@@ -181,6 +185,7 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
    */
   fun release(selection: UiBuilderSessionSelection) {
     if (--selection.openEditors > 0) return
+    projectSessions.values.filter { it.selection === selection }.forEach { it.writer.flush() }
     catalogSessions.values.remove(selection)
     projectSessions.values.removeIf { it.selection === selection }
     remoteSessions.entries
@@ -215,6 +220,9 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
         binding.selection.reportStatus("external JSON names a catalog this plugin cannot open")
         return@invokeLater
       }
+      // The file on disk is now the design. An edit still waiting to be written was made against
+      // the version it replaced, and writing it would silently undo the external change.
+      binding.writer.discardPending()
       binding.writer.adopt(file.modificationStamp)
       val replacement =
         OfflineUiBuilderSession.projectDocument(document.toUiBuilderDocument()) { committed ->
@@ -226,6 +234,7 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
   }
 
   override fun dispose() {
+    projectSessions.values.forEach { binding -> runCatching { binding.writer.flush() } }
     (catalogSessions.values + projectSessions.values.map { it.selection } + remoteSessions.values)
       .map { it.currentSession }
       .distinct()
@@ -330,8 +339,28 @@ private fun readProjectDesign(file: VirtualFile): DesignDocumentV1? = runCatchin
 }
   .getOrNull()
 
-private class ProjectDesignWriter(private val file: VirtualFile) {
+/**
+ * Writes a project design back to its file, coalescing a burst of edits into one write.
+ *
+ * The session commits one document per accepted operation, and dragging a slider or typing into a
+ * text property is dozens of those a second. Each used to be a synchronous write action on the EDT
+ * — a VFS event, a document reload and a VCS status change per keystroke. Now the latest committed
+ * document waits [WRITE_DELAY_MS] and only the last one is written; closing the editor or the
+ * project flushes whatever is pending, so nothing accepted is lost.
+ *
+ * The write can still be refused — unsaved source edits, or a file changed outside the editor — and
+ * because it no longer happens inside the session's commit, the answer goes to [onResult] (null for
+ * a successful write) rather than out of the session as an exception.
+ */
+private class ProjectDesignWriter(
+  private val file: VirtualFile,
+  parent: Disposable,
+  private val onResult: (failure: String?) -> Unit,
+) {
   private var expectedModificationStamp = file.modificationStamp
+  private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, parent)
+  @Volatile private var pending: DesignDocumentV1? = null
+
   @Volatile
   var isWriting: Boolean = false
     private set
@@ -342,29 +371,50 @@ private class ProjectDesignWriter(private val file: VirtualFile) {
     expectedModificationStamp = modificationStamp
   }
 
+  /** Schedules [document] to be written; a later call before the write replaces it. */
   fun write(document: DesignDocumentV1) {
+    pending = document
+    alarm.cancelAllRequests()
+    alarm.addRequest(::flush, WRITE_DELAY_MS)
+  }
+
+  /** Drops a scheduled write without writing it. */
+  fun discardPending() {
+    alarm.cancelAllRequests()
+    pending = null
+  }
+
+  /** Writes the pending document now, on the EDT. Nothing pending is a no-op. */
+  fun flush() {
+    alarm.cancelAllRequests()
+    val document = pending ?: return
+    pending = null
     val bytes = projectDesignJson.encodeToString(document).encodeToByteArray()
-    val write = {
-      WriteAction.run<RuntimeException> {
-        check(!FileDocumentManager.getInstance().isFileModified(file)) {
-          "${file.name} has unsaved source changes; save or revert them and reopen the visual editor"
-        }
-        check(file.modificationStamp == expectedModificationStamp) {
-          "${file.name} changed outside the visual editor; reopen it before editing"
-        }
-        file.setBinaryContent(bytes)
-        expectedModificationStamp = file.modificationStamp
-      }
-    }
-    val application = ApplicationManager.getApplication()
     isWriting = true
-    try {
-      if (application.isDispatchThread) write() else application.invokeAndWait(write)
-    } finally {
-      isWriting = false
-    }
+    val failure =
+      try {
+        WriteAction.run<RuntimeException> {
+          check(!FileDocumentManager.getInstance().isFileModified(file)) {
+            "${file.name} has unsaved source changes; save or revert them and reopen the visual " +
+              "editor"
+          }
+          check(file.modificationStamp == expectedModificationStamp) {
+            "${file.name} changed outside the visual editor; reopen it before editing"
+          }
+          file.setBinaryContent(bytes)
+          expectedModificationStamp = file.modificationStamp
+        }
+        null
+      } catch (refused: Exception) {
+        refused.message ?: refused::class.simpleName
+      } finally {
+        isWriting = false
+      }
+    onResult(failure)
   }
 }
+
+private const val WRITE_DELAY_MS = 300
 
 private val projectDesignJson = Json {
   classDiscriminator = "type"
