@@ -1,6 +1,7 @@
-// The convention plugins (`composeai.maven-publishing`, `composeai.maven-publishing-platform`).
-// An included build rather than `buildSrc`: `buildSrc` is rebuilt for every invocation of any
-// task, and this one already carries `buildSrc` for the Material icon generators.
+// The convention plugins (`composeai.maven-publishing`, `composeai.maven-publishing-platform`) and
+// the build's own task types (`composeai.build-tasks`). An included build rather than `buildSrc`:
+// `buildSrc` is rebuilt for every invocation of any task, and a change to it invalidates every
+// build script.
 pluginManagement {
   includeBuild("build-logic")
 
