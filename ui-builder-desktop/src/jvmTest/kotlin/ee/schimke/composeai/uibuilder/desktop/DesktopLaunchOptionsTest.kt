@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.desktop
 
+import ee.schimke.composeai.uibuilder.host.OfflineCatalog
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

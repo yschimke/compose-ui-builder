@@ -33,6 +33,12 @@
         implementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderFileEditorProvider" />
     <fileEditorProvider
         implementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderProjectFileEditorProvider" />
+    <notificationGroup id="Compose UI Builder" displayType="BALLOON" />
+    <applicationConfigurable
+        parentId="tools"
+        id="compose.ui.builder"
+        displayName="Compose UI Builder"
+        instance="ee.schimke.composeai.uibuilder.intellij.UiBuilderConfigurable" />
     <toolWindow
         id="Compose UI Builder"
         secondary="true"

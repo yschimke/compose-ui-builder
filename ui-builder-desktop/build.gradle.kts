@@ -17,12 +17,9 @@ kotlin {
   jvm()
 
   sourceSets {
-    getByName("jvmMain") {
-      resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
-    }
     jvmMain.dependencies {
-      // OfflineUiBuilderApp exposes UiBuilderChrome so embedding hosts can supply native chrome.
-      api(project(":ui-builder"))
+      // Sessions, catalogs, files and export; this module is the window and the File menu.
+      implementation(project(":ui-builder-host-jvm"))
       @Suppress("DEPRECATION") implementation(compose.material3)
       @Suppress("DEPRECATION") implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutines.core)

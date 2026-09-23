@@ -19,7 +19,8 @@ for running it.
 | Module | Targets | What it is |
 | --- | --- | --- |
 | `:ui-builder` | `jvm`, `wasmJs` | the editor — canvas, palette, inspector, reducer, exporters, offline service |
-| `:ui-builder-desktop` | JVM desktop | native offline host for the editor; useful for testing and embedding |
+| `:ui-builder-desktop` | JVM desktop | native offline desktop app: the window, File menu and installers |
+| `:ui-builder-host-jvm` | JVM | the hosting layer the desktop app and the IntelliJ plugin share: sessions, catalogs, design files, export |
 | `:ui-builder-intellij-plugin` | IntelliJ Platform | proof-of-concept Jewel tool-window host for the native editor |
 | `:ui-builder-runtime` | JVM | the design service: state, catalog validation, revision-pinned export |
 | `:ui-builder-export` | `jvm`, `wasmJs` | design → screen-model projection |

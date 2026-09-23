@@ -1307,7 +1307,7 @@ fun UiBuilderEditor(
         selectionMenu = selectionMenu,
         catalogSystemId = catalog.benchmark.catalogSystemId,
         catalogRows = reducer.catalogRows(state),
-        totalCatalogComponents = catalog.components.size,
+        totalCatalogComponents = catalog.components.size - catalog.paletteHiddenComponentIds.size,
         pinnedComponents = reducer.pinnedComponents(state),
         packs = catalog.componentPacks,
         onManagePacks = onComponentPacks,
