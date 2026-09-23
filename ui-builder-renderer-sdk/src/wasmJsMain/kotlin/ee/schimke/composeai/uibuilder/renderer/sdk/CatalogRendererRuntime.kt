@@ -3,7 +3,7 @@
   kotlin.js.ExperimentalWasmJsInterop::class,
 )
 
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
+import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 
 private var latestSnapshot: UiBuilderInspectionSnapshot? = null

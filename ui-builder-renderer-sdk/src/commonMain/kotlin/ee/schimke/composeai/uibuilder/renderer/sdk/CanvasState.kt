@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject

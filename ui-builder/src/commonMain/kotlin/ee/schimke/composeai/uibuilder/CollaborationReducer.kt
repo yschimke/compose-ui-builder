@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityIssueCode
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
+import ee.schimke.composeai.uibuilder.renderer.sdk.uiBuilderModifier
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray

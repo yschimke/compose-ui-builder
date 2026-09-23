@@ -2,6 +2,10 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.geometry.Rect
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSlotInspection
+import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
+import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

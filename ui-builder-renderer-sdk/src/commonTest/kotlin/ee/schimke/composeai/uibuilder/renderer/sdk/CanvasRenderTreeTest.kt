@@ -1,5 +1,7 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
