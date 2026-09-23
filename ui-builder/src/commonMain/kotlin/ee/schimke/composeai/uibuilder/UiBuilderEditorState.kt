@@ -2381,8 +2381,7 @@ class UiBuilderEditorReducer(
     val needle = state.catalogQuery.trim().lowercase()
     val filtering = needle.isNotEmpty()
     val items =
-      catalog.components
-        .filterNot { it.componentId in catalog.paletteHiddenComponentIds }
+      catalog.paletteComponents
         .map { it.editorCatalogItem() }
         // A pack that is off is not on the palette, and not found by search either: the shelf is
         // the whole point of the switch, and a search that surfaced what the switch hides would

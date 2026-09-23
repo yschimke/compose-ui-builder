@@ -1300,7 +1300,9 @@ fun UiBuilderEditor(
         selectionMenu = selectionMenu,
         catalogSystemId = catalog.benchmark.catalogSystemId,
         catalogRows = reducer.catalogRows(state),
-        totalCatalogComponents = catalog.components.size - catalog.paletteHiddenComponentIds.size,
+        // The rows the palette lists. Subtracting the hidden set's size miscounted a catalog that
+        // does not declare a hidden id, since hiding it removed nothing.
+        totalCatalogComponents = catalog.paletteComponents.size,
         pinnedComponents = reducer.pinnedComponents(state),
         packs = catalog.componentPacks,
         onManagePacks = onComponentPacks,
