@@ -28,4 +28,30 @@ class OfflineCatalogTest {
       assertTrue(document.nodes.isNotEmpty(), "${offlineCatalog.systemId} starter must be editable")
     }
   }
+
+  @Test
+  fun `every template a catalog offers seeds a design in that catalog`() {
+    OfflineCatalog.entries.forEach { offlineCatalog ->
+      val catalog =
+        CapabilityCatalogParser.parse(
+          checkNotNull(javaClass.getResource("/${offlineCatalog.capabilitiesResource}")).readText()
+        )
+      offlineCatalog.templateIds.forEach { template ->
+        val document =
+          offlineCatalog.seed(
+            designId = "$template-workspace",
+            catalogRevision = catalog.benchmark.catalogRevision,
+            nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
+            templateId = template,
+          )
+
+        assertEquals(
+          offlineCatalog.systemId,
+          document.catalogPin["systemId"]?.toString()?.trim('"'),
+          "${offlineCatalog.systemId}/$template",
+        )
+        assertTrue(document.nodes.isNotEmpty(), "${offlineCatalog.systemId}/$template is empty")
+      }
+    }
+  }
 }

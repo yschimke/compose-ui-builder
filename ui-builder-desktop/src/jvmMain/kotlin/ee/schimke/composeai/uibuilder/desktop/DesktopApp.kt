@@ -28,9 +28,10 @@ import javax.swing.JOptionPane
 sealed interface DesktopDesign {
   val title: String
 
-  data class Scratch(val catalog: OfflineCatalog) : DesktopDesign {
+  /** [template] names what a new workspace starts as; null for the catalog's own starter. */
+  data class Scratch(val catalog: OfflineCatalog, val template: String? = null) : DesktopDesign {
     override val title: String
-      get() = "${catalog.displayName} scratch"
+      get() = "${catalog.displayName} ${template?.let(::templateLabel) ?: "scratch"}"
   }
 
   data class File(val path: Path) : DesktopDesign {
@@ -52,9 +53,10 @@ internal fun openDesktopSession(
   when (design) {
     is DesktopDesign.Scratch ->
       OfflineUiBuilderSession(
-        storagePath = designStorePath(design.catalog, storageRoot),
+        storagePath = designStorePath(design.catalog, storageRoot, design.template),
         catalogSystemId = design.catalog.systemId,
         remoteServer = remoteServer,
+        templateId = design.template,
       )
     is DesktopDesign.File ->
       OfflineUiBuilderSession.projectDocument(DesignFiles.read(design.path), remoteServer) {
@@ -68,7 +70,8 @@ internal fun openDesktopSession(
 internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageRoot: Path) {
   var design by remember {
     mutableStateOf<DesktopDesign>(
-      options.designFile?.let { DesktopDesign.File(it) } ?: DesktopDesign.Scratch(options.catalog)
+      options.designFile?.let { DesktopDesign.File(it) }
+        ?: DesktopDesign.Scratch(options.catalog, options.template)
     )
   }
   Window(onCloseRequest = ::exitApplication, title = "Compose UI Builder — ${design.title}") {
@@ -86,7 +89,7 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
       }
     }
     DesktopMenuBar(
-      onNew = { design = DesktopDesign.Scratch(it) },
+      onNew = { catalog, template -> design = DesktopDesign.Scratch(catalog, template) },
       onOpen = {
         chooseDesignFile(window, FileDialog.LOAD)?.let { design = DesktopDesign.File(it) }
       },
@@ -121,7 +124,7 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
 
 @Composable
 private fun FrameWindowScope.DesktopMenuBar(
-  onNew: (OfflineCatalog) -> Unit,
+  onNew: (OfflineCatalog, String?) -> Unit,
   onOpen: () -> Unit,
   onSaveAs: () -> Unit,
   onQuit: () -> Unit,
@@ -129,7 +132,19 @@ private fun FrameWindowScope.DesktopMenuBar(
   MenuBar {
     Menu("File", mnemonic = 'F') {
       OfflineCatalog.entries.forEach { catalog ->
-        Item("New ${catalog.displayName} design", onClick = { onNew(catalog) })
+        Item("New ${catalog.displayName} design", onClick = { onNew(catalog, null) })
+      }
+      // Every other template the web host's New design form offers — the worked Hello and Weather
+      // widget samples among them — each opening a workspace of its own.
+      Menu("New from template") {
+        OfflineCatalog.entries.forEach { catalog ->
+          (catalog.templateIds - catalog.defaultTemplateId).sorted().forEach { template ->
+            Item(
+              "${catalog.displayName} · ${templateLabel(template)}",
+              onClick = { onNew(catalog, template) },
+            )
+          }
+        }
       }
       Separator()
       Item("Open…", onClick = onOpen, shortcut = KeyShortcut(Key.O, ctrl = true))
@@ -143,6 +158,10 @@ private fun FrameWindowScope.DesktopMenuBar(
     }
   }
 }
+
+/** How the menu and title name a template: `weather-widget` is "Weather widget". */
+internal fun templateLabel(template: String): String =
+  template.replace('-', ' ').replaceFirstChar { it.uppercaseChar() }
 
 /** How the menu names a catalog. */
 internal val OfflineCatalog.displayName: String
@@ -178,18 +197,23 @@ private fun showError(title: String, failure: Throwable) {
   )
 }
 
-/** `ui-builder-desktop [--catalog <id>] [--server <origin>] [design.uid]`, in any order. */
+/**
+ * `ui-builder-desktop [--catalog <id>] [--template <id>] [--server <origin>] [design.uid]`, in any
+ * order.
+ */
 internal data class DesktopLaunchOptions(
   val remoteServer: String?,
   /** The scratch workspace to open when no [designFile] is named. */
   val catalog: OfflineCatalog = OfflineCatalog.M3,
   val designFile: Path? = null,
+  /** The template that scratch workspace starts as, or null for the catalog's own starter. */
+  val template: String? = null,
 ) {
   companion object {
     private val USAGE =
       "usage: Compose UI Builder " +
         "[--catalog ${OfflineCatalog.entries.joinToString("|") { it.systemId }}] " +
-        "[--server https://preview.coo.ee] [design.uid]"
+        "[--template <id>] [--server https://preview.coo.ee] [design.uid]"
 
     fun parse(args: Array<String>): DesktopLaunchOptions {
       val flags = mutableMapOf<String, String>()
@@ -198,7 +222,7 @@ internal data class DesktopLaunchOptions(
       while (index < args.size) {
         val arg = args[index]
         if (arg.startsWith("-")) {
-          require(arg in setOf("--catalog", "--server") && arg !in flags) { USAGE }
+          require(arg in setOf("--catalog", "--template", "--server") && arg !in flags) { USAGE }
           flags[arg] = requireNotNull(args.getOrNull(index + 1)) { USAGE }
           index += 2
         } else {
@@ -213,10 +237,22 @@ internal data class DesktopLaunchOptions(
             "unknown catalog '$id'. $USAGE"
           }
         } ?: OfflineCatalog.M3
+      // Checked here rather than when the workspace is seeded, so a typo names the templates that
+      // exist before a window opens — and so an existing workspace cannot hide it.
+      val template =
+        flags["--template"]?.also { id ->
+          require(id in catalog.templateIds) {
+            "catalog '${catalog.systemId}' has no template '$id'; it has " +
+              catalog.templateIds.sorted().joinToString()
+          }
+        }
+      // A template seeds a scratch workspace, so naming a design file as well asks for two things.
+      require(template == null || file == null) { "--template opens a new design, not $file" }
       return DesktopLaunchOptions(
         remoteServer = flags["--server"]?.let { validatedServerOrigin(it).toString() },
         catalog = catalog,
         designFile = file,
+        template = template,
       )
     }
   }

@@ -77,8 +77,23 @@ exported as a `GlanceWearWidget` — open `remote-m3`:
 ./gradlew :ui-builder-desktop:run --args='--catalog remote-m3'
 ```
 
+`--template` (or **File → New from template**) starts from one of the catalog's templates instead
+of its default starter — for `remote-m3`, the worked samples from the WearWidget sample as well as
+the two empty host sizes:
+
+```bash
+./gradlew :ui-builder-desktop:run --args='--catalog remote-m3 --template weather-widget'
+```
+
+| Catalog | Templates |
+| --- | --- |
+| `remote-m3` | `wear-widget-small` (default), `wear-widget-large`, `hello-widget`, `weather-widget` |
+| `wear-m3` | `wear-list` (default), `wear-screen` |
+| `m3-catalog` | `jetcaster` (default), `blank` |
+
 `wear-m3` opens a Wear screen and `m3-catalog` (the default) a phone screen. Each catalog keeps its
-own workspace, in a subdirectory named after it. This first desktop host intentionally has no server-backed
+own workspace, in a subdirectory named after it, and a named template keeps one of its own beneath
+that — so reopening a sample returns to the edits made to it. This first desktop host intentionally has no server-backed
 collaboration, comments, or native daemon preview; those remain capabilities of a connected host.
 
 Pass `--server https://preview.coo.ee` to make the native Preview pane compile through the public
