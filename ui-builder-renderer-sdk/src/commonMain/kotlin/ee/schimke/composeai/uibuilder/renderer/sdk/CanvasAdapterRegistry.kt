@@ -1,9 +1,10 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextLayoutResult
+import ee.schimke.composeai.uibuilder.UiBuilderNode
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull

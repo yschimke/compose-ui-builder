@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.renderer.sdk.isUiBuilderTextComponent
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

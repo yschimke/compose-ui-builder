@@ -5,6 +5,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
+import ee.schimke.composeai.uibuilder.renderer.sdk.canvasAdapterRegistry
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject

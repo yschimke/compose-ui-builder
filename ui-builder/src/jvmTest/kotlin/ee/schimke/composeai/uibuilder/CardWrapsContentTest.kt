@@ -4,6 +4,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

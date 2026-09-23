@@ -11,6 +11,10 @@ import ee.schimke.composeai.uibuilder.capability.accepts
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSlotInspection
+import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
+import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt

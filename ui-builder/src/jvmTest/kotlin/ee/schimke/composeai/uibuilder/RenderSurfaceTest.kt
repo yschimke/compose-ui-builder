@@ -5,6 +5,7 @@ import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.JsonArray

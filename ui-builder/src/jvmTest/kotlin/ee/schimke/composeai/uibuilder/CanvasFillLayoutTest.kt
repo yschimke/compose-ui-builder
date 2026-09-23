@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.Density
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import java.io.File
 import kotlin.math.abs
 import kotlin.test.Test

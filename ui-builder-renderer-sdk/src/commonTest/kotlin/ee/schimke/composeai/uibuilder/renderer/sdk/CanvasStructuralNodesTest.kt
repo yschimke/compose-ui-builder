@@ -1,5 +1,7 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

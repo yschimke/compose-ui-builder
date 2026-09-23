@@ -7,6 +7,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertTrue

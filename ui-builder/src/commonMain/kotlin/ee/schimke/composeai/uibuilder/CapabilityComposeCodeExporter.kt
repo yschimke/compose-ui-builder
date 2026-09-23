@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcon
+import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull

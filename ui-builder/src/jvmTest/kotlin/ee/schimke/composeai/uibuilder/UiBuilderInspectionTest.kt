@@ -1,5 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
+import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
+import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

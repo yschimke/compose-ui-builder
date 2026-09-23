@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
 data class UiBuilderSemanticActionEntry(
   val enabled: Boolean = true,

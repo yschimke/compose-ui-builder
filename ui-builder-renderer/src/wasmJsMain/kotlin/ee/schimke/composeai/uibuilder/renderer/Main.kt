@@ -1,8 +1,8 @@
 package ee.schimke.composeai.uibuilder.renderer
 
-import ee.schimke.composeai.uibuilder.UiBuilderSemanticActionController
 import ee.schimke.composeai.uibuilder.UiBuilderSurface
-import ee.schimke.composeai.uibuilder.startCatalogRenderer
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSemanticActionController
+import ee.schimke.composeai.uibuilder.renderer.sdk.startCatalogRenderer
 
 fun main() {
   val actionController = UiBuilderSemanticActionController()

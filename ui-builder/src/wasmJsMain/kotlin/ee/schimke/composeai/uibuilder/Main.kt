@@ -115,6 +115,11 @@ import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
+import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
+import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.io.encoding.Base64

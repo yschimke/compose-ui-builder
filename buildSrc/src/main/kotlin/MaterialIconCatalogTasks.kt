@@ -204,7 +204,7 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
     val entries = inventory.readInventory()
     val directory = outputDirectory.get().asFile
     directory.deleteRecursively()
-    val packageDirectory = directory.resolve("ee/schimke/composeai/uibuilder")
+    val packageDirectory = directory.resolve("ee/schimke/composeai/uibuilder/renderer/sdk")
     packageDirectory.mkdirs()
     val groups = entries.groupBy { it.expression.substringBeforeLast('.') }
     val groupNames = mutableListOf<String>()
@@ -217,7 +217,7 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
           buildString {
             appendLine("@file:Suppress(\"DEPRECATION\")")
             appendLine()
-            appendLine("package ee.schimke.composeai.uibuilder")
+            appendLine("package ee.schimke.composeai.uibuilder.renderer.sdk")
             appendLine()
             appendLine("import androidx.compose.material.icons.Icons")
             icons.map(MaterialIconEntry::importName).distinct().sorted().forEach {
@@ -281,7 +281,7 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
       .resolve("GeneratedGoogleMaterialIcons.kt")
       .writeText(
         buildString {
-          appendLine("package ee.schimke.composeai.uibuilder")
+          appendLine("package ee.schimke.composeai.uibuilder.renderer.sdk")
           appendLine()
           appendLine("// Generated from the shipped material-icons-extended artifact. Do not edit.")
           appendLine(

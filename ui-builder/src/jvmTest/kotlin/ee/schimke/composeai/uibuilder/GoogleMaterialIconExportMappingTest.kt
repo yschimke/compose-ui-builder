@@ -1,6 +1,10 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.ScreenDocumentProjection
+import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcon
+import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcons
+import ee.schimke.composeai.uibuilder.renderer.sdk.SelectableGoogleMaterialIcons
+import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

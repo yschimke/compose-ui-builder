@@ -1,7 +1,9 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import ee.schimke.composeai.uibuilder.UiBuilderInstancePath
+import ee.schimke.composeai.uibuilder.UiBuilderNode
 import kotlinx.serialization.json.JsonObject
 
 /** Compatibility continuation used only while an upstream renderer still owns legacy adapters. */

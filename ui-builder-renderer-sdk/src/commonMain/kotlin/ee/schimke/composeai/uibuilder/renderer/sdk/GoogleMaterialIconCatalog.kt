@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
