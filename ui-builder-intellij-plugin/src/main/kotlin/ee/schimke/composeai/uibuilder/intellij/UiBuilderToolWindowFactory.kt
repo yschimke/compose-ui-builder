@@ -1,8 +1,13 @@
 package ee.schimke.composeai.uibuilder.intellij
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.intellij.ide.util.PropertiesComponent
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileChooser.FileChooser
@@ -23,6 +28,7 @@ import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderConnection
 import java.awt.datatransfer.StringSelection
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.jewel.bridge.addComposeTab
+import org.jetbrains.jewel.ui.component.Text
 
 /** IntelliJ Platform edge for the otherwise platform-independent offline editor host. */
 class UiBuilderToolWindowFactory : ToolWindowFactory {
@@ -31,7 +37,15 @@ class UiBuilderToolWindowFactory : ToolWindowFactory {
     toolWindow.addComposeTab(PREVIEW_CONTENT) {
       ProvideUiBuilderNavigationEventDispatcher {
         val selection by service.activeSession.collectAsState()
-        selection?.let { active ->
+        val active = selection
+        if (active == null) {
+          // Opening the tool window used to open a Material 3 scratch editor as a side effect. It
+          // now says what it previews and where designs come from, and opens nothing by itself.
+          Text(
+            "Open a .uid design, or choose Tools › Compose UI Builder, to preview it here.",
+            modifier = Modifier.padding(16.dp),
+          )
+        } else {
           val session by active.session.collectAsState()
           val status by active.status.collectAsState()
           OfflineUiBuilderSessionView(
@@ -48,20 +62,42 @@ class UiBuilderToolWindowFactory : ToolWindowFactory {
       }
     }
     service.attachPreviewToolWindow(toolWindow)
-    toolWindow.setTitleActions(
-      listOf(
-        OpenProjectDesignAction(project),
-        OpenRemoteDesignAction(project),
-        CopyAgentPromptAction(project),
-      ) + OfflineCatalog.entries.map { catalog -> OpenUiBuilderEditorAction(project, catalog) }
-    )
-    service.openEditor(OfflineCatalog.M3)
+    val actions = ActionManager.getInstance()
+    toolWindow.setTitleActions(TITLE_ACTION_IDS.mapNotNull(actions::getAction))
   }
 }
 
-private class OpenRemoteDesignAction(private val project: Project) :
-  AnAction("Browse server designs") {
-  override fun actionPerformed(event: AnActionEvent) {
+/** The tool window's title bar offers the same registered actions as Tools › Compose UI Builder. */
+private val TITLE_ACTION_IDS =
+  listOf(
+    "ComposeUiBuilder.OpenProjectDesign",
+    "ComposeUiBuilder.BrowseServerDesigns",
+    "ComposeUiBuilder.CopyAgentPrompt",
+    "ComposeUiBuilder.OpenM3Editor",
+    "ComposeUiBuilder.OpenWearM3Editor",
+    "ComposeUiBuilder.OpenWearWidgetEditor",
+  )
+
+/**
+ * Actions registered in `plugin.xml` are created by the platform with no arguments, so each reads
+ * its project from the event, and is disabled where there is none.
+ */
+internal abstract class UiBuilderProjectAction : AnAction() {
+  override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+  override fun update(event: AnActionEvent) {
+    event.presentation.isEnabled = event.project != null
+  }
+
+  final override fun actionPerformed(event: AnActionEvent) {
+    perform(event.project ?: return)
+  }
+
+  abstract fun perform(project: Project)
+}
+
+internal class OpenRemoteDesignAction : UiBuilderProjectAction() {
+  override fun perform(project: Project) {
     val properties = PropertiesComponent.getInstance(project)
     val previous = properties.getValue(REMOTE_SERVER_PROPERTY, "https://preview.coo.ee")
     val server =
@@ -132,9 +168,8 @@ private class OpenRemoteDesignAction(private val project: Project) :
   }
 }
 
-private class CopyAgentPromptAction(private val project: Project) :
-  AnAction("Copy active design for an agent") {
-  override fun actionPerformed(event: AnActionEvent) {
+internal class CopyAgentPromptAction : UiBuilderProjectAction() {
+  override fun perform(project: Project) {
     val active = project.getService(UiBuilderProjectService::class.java).activeSession.value
     if (active == null) {
       Messages.showInfoMessage(project, "Open a UI Builder design first.", "UI Builder")
@@ -145,9 +180,8 @@ private class CopyAgentPromptAction(private val project: Project) :
   }
 }
 
-private class OpenProjectDesignAction(private val project: Project) :
-  AnAction("Open checked-in design") {
-  override fun actionPerformed(event: AnActionEvent) {
+internal class OpenProjectDesignAction : UiBuilderProjectAction() {
+  override fun perform(project: Project) {
     val root =
       project.basePath?.let { path ->
         LocalFileSystem.getInstance().findFileByPath("$path/ui-builder/designs")
@@ -172,13 +206,17 @@ private class OpenProjectDesignAction(private val project: Project) :
   }
 }
 
-private class OpenUiBuilderEditorAction(
-  private val project: Project,
-  private val catalog: OfflineCatalog,
-) : AnAction("Open ${catalog.displayName} editor") {
-  override fun actionPerformed(event: AnActionEvent) {
+internal abstract class OpenUiBuilderEditorAction(private val catalog: OfflineCatalog) :
+  UiBuilderProjectAction() {
+  override fun perform(project: Project) {
     project.getService(UiBuilderProjectService::class.java).openEditor(catalog)
   }
 }
+
+internal class OpenM3EditorAction : OpenUiBuilderEditorAction(OfflineCatalog.M3)
+
+internal class OpenWearM3EditorAction : OpenUiBuilderEditorAction(OfflineCatalog.WEAR_M3)
+
+internal class OpenWearWidgetEditorAction : OpenUiBuilderEditorAction(OfflineCatalog.REMOTE_M3)
 
 private const val REMOTE_SERVER_PROPERTY = "compose.ui.builder.remote.server"

@@ -39,6 +39,33 @@
         anchor="right"
         factoryClass="ee.schimke.composeai.uibuilder.intellij.UiBuilderToolWindowFactory" />
   </extensions>
+  <actions>
+    <group id="ComposeUiBuilder.Tools" text="Compose UI Builder" popup="true">
+      <add-to-group group-id="ToolsMenu" anchor="last" />
+      <action id="ComposeUiBuilder.OpenProjectDesign"
+          class="ee.schimke.composeai.uibuilder.intellij.OpenProjectDesignAction"
+          text="Open Checked-In Design…"
+          description="Open a .uid or DesignDocumentV1 JSON design in the visual editor" />
+      <action id="ComposeUiBuilder.BrowseServerDesigns"
+          class="ee.schimke.composeai.uibuilder.intellij.OpenRemoteDesignAction"
+          text="Browse Server Designs…"
+          description="Connect to a Compose preview server and open one of its designs live" />
+      <action id="ComposeUiBuilder.CopyAgentPrompt"
+          class="ee.schimke.composeai.uibuilder.intellij.CopyAgentPromptAction"
+          text="Copy Active Design for an Agent"
+          description="Copy instructions that point a coding agent at the active design" />
+      <separator />
+      <action id="ComposeUiBuilder.OpenM3Editor"
+          class="ee.schimke.composeai.uibuilder.intellij.OpenM3EditorAction"
+          text="Open Material 3 Scratch Editor" />
+      <action id="ComposeUiBuilder.OpenWearM3Editor"
+          class="ee.schimke.composeai.uibuilder.intellij.OpenWearM3EditorAction"
+          text="Open Wear M3 Scratch Editor" />
+      <action id="ComposeUiBuilder.OpenWearWidgetEditor"
+          class="ee.schimke.composeai.uibuilder.intellij.OpenWearWidgetEditorAction"
+          text="Open Wear Widgets Scratch Editor" />
+    </group>
+  </actions>
   <extensions defaultExtensionNs="JavaScript">
     <JsonSchema.ProviderFactory
         implementation="ee.schimke.composeai.uibuilder.intellij.UiBuilderDesignSchemaProviderFactory" />
