@@ -267,7 +267,9 @@ is already there.
 rather than a list: each design is a card led by its own render — the SVG that
 `/api/ui-builder/v1/designs/<id>/export.svg` already serves, so the picture follows the design — with
 its id, catalog, revision and when it was last touched underneath, newest first. A filter box
-narrows the grid by name, id or catalog.
+narrows the grid by name, id, catalog or folder. Folders on a live host are shared server metadata:
+every collaborator sees the same organization, moving a design requires write access, and the move
+does not advance the design revision. Offline/local designs keep their folders in that browser.
 
 Everything a design can have done to it from outside the editor is on its card:
 
@@ -276,6 +278,7 @@ Everything a design can have done to it from outside the editor is on its card:
   design it was copied from is untouched. This is the same `POST /ui-builder/designs/copy` the home
   screen's **Start from this** uses.
 - **Share** it, which is the design's own access page.
+- **Move** it into a shared folder, or clear the field to return it to the top level.
 - **Delete** it, behind a disclosure that says what is about to be lost. Owner-only, and it is the
   service that says so — a grantee cannot delete somebody else's work however wide its grant. The
   design's history, comments, reference overlay and links record go with it. `POST
