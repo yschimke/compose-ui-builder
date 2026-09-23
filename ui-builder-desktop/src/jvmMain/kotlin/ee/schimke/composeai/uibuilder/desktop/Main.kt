@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
@@ -22,6 +23,7 @@ import ee.schimke.composeai.uibuilder.MaterialUiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.UiBuilderReducer
@@ -300,6 +302,13 @@ fun OfflineUiBuilderSessionView(
   initialComponentsOpen: Boolean = false,
   initialLayersOpen: Boolean = false,
   initialInspectorOpen: Boolean = false,
+  /**
+   * How this host gets a design out. Defaults to rendering in-process and saving through a native
+   * dialog ([DesktopExportHost]); null hides the Export menu.
+   */
+  exportHost: ((document: () -> UiBuilderDocument?) -> UiBuilderExportHost)? = { document ->
+    DesktopExportHost(session.catalog, document)
+  },
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
@@ -310,8 +319,11 @@ fun OfflineUiBuilderSessionView(
       remember(current.snapshot.state.document.revision) {
         mutableStateOf(current.snapshot.state.document.toUiBuilderDocument())
       }
+    val latestDocument by rememberUpdatedState(previewDocument)
+    val export = remember(session, exportHost) { exportHost?.invoke { latestDocument } }
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
+      exportHost = export,
       catalog = session.catalog,
       chrome = chrome,
       actorId = session.actorId,
