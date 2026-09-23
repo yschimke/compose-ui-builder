@@ -7,6 +7,7 @@ import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -43,6 +44,9 @@ internal class UiBuilderSessionSelection(
 
   private val mutableStatus = MutableStateFlow<String?>(null)
   val status = mutableStatus.asStateFlow()
+
+  /** Visual editors currently showing this session; the Preview view borrows it and is not one. */
+  internal var openEditors: Int = 0
 
   fun replaceSession(replacement: UiBuilderSession, replacementCatalog: OfflineCatalog = catalog) {
     val previous = mutableSession.value
@@ -162,6 +166,33 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
     }
   }
 
+  /** Called on the EDT when a visual editor starts showing [selection]. */
+  fun retain(selection: UiBuilderSessionSelection) {
+    selection.openEditors++
+  }
+
+  /**
+   * Called on the EDT when a visual editor stops showing [selection].
+   *
+   * The last editor to close a design closes its session, so a closed tab stops holding a remote
+   * socket or a project-file writer until the project closes. Reopening builds a fresh session from
+   * the same source: a catalog scratch design from its local store, a project design from its file,
+   * a remote design from the server.
+   */
+  fun release(selection: UiBuilderSessionSelection) {
+    if (--selection.openEditors > 0) return
+    catalogSessions.values.remove(selection)
+    projectSessions.values.removeIf { it.selection === selection }
+    remoteSessions.entries
+      .filter { it.value === selection }
+      .forEach { (key, _) ->
+        remoteSessions.remove(key)
+        remoteFiles.remove(key)
+      }
+    if (mutableActiveSession.value === selection) mutableActiveSession.value = null
+    selection.currentSession.close()
+  }
+
   private fun projectFileChanged(file: VirtualFile) {
     val binding = projectSessions[file.url] ?: return
     if (binding.writer.isWriting || binding.writer.matches(file.modificationStamp)) return
@@ -224,23 +255,61 @@ internal val OfflineCatalog.displayName: String
       OfflineCatalog.REMOTE_M3 -> "Wear widgets"
     }
 
-/** Recognizes a visual-editor design by its declared document schema and supported catalog. */
+/**
+ * Recognizes a visual-editor design by its declared document schema and supported catalog.
+ *
+ * Only files that pass [isUiBuilderDesignFile]'s header check are decoded, and each decode is
+ * cached against the file's modification stamp, so an ordinary JSON file never pays for a parse and
+ * a design pays once per saved version however often IntelliJ asks.
+ */
 internal fun isProjectDesign(file: VirtualFile): Boolean {
   if (!isUiBuilderDesignFile(file)) return false
-  return readProjectDesign(file)?.let { document ->
-    document.schema in supportedProjectDesignSchemas &&
-      runCatching { OfflineCatalog.forSystem(document.catalogPin.systemId) }.isSuccess
+  return cachedByStamp(file, projectDesignKey) { candidate ->
+    readProjectDesign(candidate)?.let { document ->
+      document.schema in supportedProjectDesignSchemas &&
+        OfflineCatalog.entries.any { it.systemId == document.catalogPin.systemId }
+    }
   } == true
 }
 
 /**
  * Identifies source files that belong to the UI Builder document family for JSON Schema support.
+ *
+ * A `.uid` file is one by extension. A `.json` file is one when the first
+ * [DESIGN_HEADER_SNIFF_BYTES] declare a UI Builder schema; nothing past that window is read.
  */
 internal fun isUiBuilderDesignFile(file: VirtualFile): Boolean {
   if (file.isDirectory || file.extension !in supportedProjectDesignExtensions) return false
   return file.extension == UI_BUILDER_DESIGN_EXTENSION ||
-    readProjectDesign(file)?.schema in supportedProjectDesignSchemas
+    cachedByStamp(file, designSchemaKey, ::readDesignSchema) in supportedProjectDesignSchemas
 }
+
+private class StampedValue<T : Any>(val modificationStamp: Long, val value: T?)
+
+private val designSchemaKey = Key.create<StampedValue<String>>("uiBuilder.schema")
+
+/** The verdict only, not the document: a decoded design is not worth holding on every file. */
+private val projectDesignKey = Key.create<StampedValue<Boolean>>("uiBuilder.isProjectDesign")
+
+private fun <T : Any> cachedByStamp(
+  file: VirtualFile,
+  key: Key<StampedValue<T>>,
+  read: (VirtualFile) -> T?,
+): T? {
+  val stamp = file.modificationStamp
+  file.getUserData(key)?.let { cached ->
+    if (cached.modificationStamp == stamp) return cached.value
+  }
+  return read(file).also { file.putUserData(key, StampedValue(stamp, it)) }
+}
+
+private fun readDesignSchema(file: VirtualFile): String? = runCatching {
+  file.inputStream.use { input ->
+    String(input.readNBytes(DESIGN_HEADER_SNIFF_BYTES), Charsets.UTF_8)
+  }
+}
+  .getOrNull()
+  ?.let(::sniffDesignSchema)
 
 /** The document declarations this offline v1 editor can safely load and write back. */
 private val supportedProjectDesignSchemas =

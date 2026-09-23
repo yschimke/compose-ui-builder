@@ -69,6 +69,7 @@ dependencies {
     exclude(group = "org.jetbrains.compose.runtime")
     exclude(group = "org.jetbrains.compose.ui")
   }
+  testImplementation(kotlin("test"))
   add("integrationTestImplementation", "org.junit.jupiter:junit-jupiter:5.11.4")
   add("integrationTestImplementation", "org.kodein.di:kodein-di-jvm:7.26.1")
   // Starter calls TeamCityReporter even under NoCIServer, but its published Gradle metadata omits
@@ -100,7 +101,12 @@ intellijPlatform {
     version = project.version.toString()
     ideaVersion {
       sinceBuild = "262"
-      untilBuild = provider { null }
+      // Pinned to the platform line the plugin is built and smoke-tested against. The ZIP carries
+      // no Compose or Skiko of its own (see the excludes above): the editor, compiled against this
+      // repository's Compose Multiplatform, runs on whatever Compose the IDE bundles. An open-ended
+      // range would let a future IDE with a binary-incompatible Compose install it anyway. Widen
+      // this when `installedPluginSmoke` has passed against the next line.
+      untilBuild = "262.*"
     }
   }
 }
@@ -134,6 +140,8 @@ intellijPlatformTesting.testIdeUi.register("installedPluginSmoke") {
     )
   }
 }
+
+tasks.named<Test>("test") { useJUnitPlatform() }
 
 // `check` must validate the installed archive's descriptor, not only compile against bundled IDE
 // modules. That catches a misspelled or unavailable runtime module before a release ZIP is
