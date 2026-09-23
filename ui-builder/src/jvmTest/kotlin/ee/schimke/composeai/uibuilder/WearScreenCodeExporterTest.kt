@@ -8,6 +8,11 @@ import ee.schimke.composeai.discovery.ComponentSymbol
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
+import ee.schimke.composeai.uibuilder.export.helloWidgetUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test

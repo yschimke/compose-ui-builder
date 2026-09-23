@@ -14,7 +14,7 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.MultiMeasureLayout
 import androidx.compose.ui.unit.Constraints
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 internal data class CanvasExtentInputs(
   val document: UiBuilderDocument,

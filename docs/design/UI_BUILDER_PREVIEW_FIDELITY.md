@@ -120,7 +120,7 @@ on purpose.
 Material 3 links; `androidx.wear.compose:compose-material3` is an Android AAR and never will. On a
 catalog like `wear-m3`, rung 2 **cannot** be real, and the honest move is for the catalog to say so
 rather than for the pane to imply otherwise — which is exactly what
-[`UiBuilderPreviewSurfaces`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderPreviewSurfaces.kt)'s
+[`UiBuilderPreviewSurfaces`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderPreviewSurfaces.kt)'s
 `wasm` claim is for. Where it reads `APPROXIMATE`, rungs 1 and 2 collapse into each other and rung 3
 is the only honest picture. That does not make Native the default: the approximate browser view is
 still the direct editing surface and the free place to compare variants; the catalog's surface claim

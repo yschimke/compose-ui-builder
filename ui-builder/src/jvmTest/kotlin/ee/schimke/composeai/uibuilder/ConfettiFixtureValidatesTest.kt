@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

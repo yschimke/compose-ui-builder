@@ -5,6 +5,9 @@ import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

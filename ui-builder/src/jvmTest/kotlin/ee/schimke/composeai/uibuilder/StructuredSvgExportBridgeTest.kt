@@ -10,6 +10,8 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderExportRasterAssets
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.svg.JvmSkiaStructuredSvgRecorder
 import ee.schimke.composeai.uibuilder.svg.JvmStructuredSvgRasterAssets
 import ee.schimke.composeai.uibuilder.svg.SAME_RUNTIME_DETERMINISM_SCOPE

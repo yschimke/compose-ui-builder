@@ -1,14 +1,14 @@
 package ee.schimke.composeai.uibuilder.svg
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.SvgCapability
 import ee.schimke.composeai.uibuilder.codegen.DocumentExportProvenance
 import ee.schimke.composeai.uibuilder.codegen.exportProvenance
 import ee.schimke.composeai.uibuilder.codegen.validateDocumentForExport
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.optionalString
 import ee.schimke.composeai.uibuilder.hasRasterBytesOffline
-import ee.schimke.composeai.uibuilder.optionalString
 import ee.schimke.composeai.uibuilder.resolveAsset
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

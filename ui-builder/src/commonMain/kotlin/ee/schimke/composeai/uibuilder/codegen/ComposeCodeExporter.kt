@@ -1,8 +1,8 @@
 package ee.schimke.composeai.uibuilder.codegen
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 
 /**
  * Deterministic, deliberately conservative exporter for the first supported native screen slice.

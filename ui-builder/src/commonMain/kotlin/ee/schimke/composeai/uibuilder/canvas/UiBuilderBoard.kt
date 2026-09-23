@@ -1,7 +1,7 @@
 package ee.schimke.composeai.uibuilder.canvas
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

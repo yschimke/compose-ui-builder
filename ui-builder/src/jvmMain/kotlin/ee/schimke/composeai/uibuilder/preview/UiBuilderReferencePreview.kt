@@ -2,10 +2,10 @@ package ee.schimke.composeai.uibuilder.preview
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.reference.ReferenceDiffMode
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import ee.schimke.composeai.uibuilder.reference.ReferenceMark

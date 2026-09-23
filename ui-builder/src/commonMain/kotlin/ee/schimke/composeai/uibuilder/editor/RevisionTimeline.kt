@@ -1,9 +1,9 @@
 package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.CollaborationState
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.documentsBackTo
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.reconstructableFromRevision
 
 /**

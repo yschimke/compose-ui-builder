@@ -3,6 +3,9 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
+import ee.schimke.composeai.uibuilder.export.RecordFreeExport
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.canonicalJson
 import java.io.File
 import java.security.MessageDigest
 import kotlin.math.roundToInt

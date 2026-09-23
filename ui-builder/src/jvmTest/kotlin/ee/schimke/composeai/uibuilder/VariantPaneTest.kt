@@ -21,6 +21,13 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderVariantPane
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.variantPanes
 import ee.schimke.composeai.uibuilder.editor.wearWidgetPreviewPanes
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

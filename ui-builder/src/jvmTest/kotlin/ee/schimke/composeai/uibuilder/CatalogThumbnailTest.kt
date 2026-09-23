@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.editor.EditorCatalogVariant
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.thumbnailContentTransform
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlin.test.Test
 import kotlin.test.assertEquals

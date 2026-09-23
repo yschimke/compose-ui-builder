@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.helloWidgetUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject

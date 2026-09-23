@@ -5,6 +5,11 @@ import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.InlineRemoteContentExporter
+import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
+import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

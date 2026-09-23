@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.panesLabel
 import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.editor.unavailableText
+import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals

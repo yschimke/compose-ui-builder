@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.exportMenuEntries
 import ee.schimke.composeai.uibuilder.editor.perform
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

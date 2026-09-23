@@ -3,9 +3,9 @@ package ee.schimke.composeai.uibuilder.local
 import ee.schimke.composeai.uibuilder.DesignCommand
 import ee.schimke.composeai.uibuilder.DesignOperation
 import ee.schimke.composeai.uibuilder.ParentSlot
-import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

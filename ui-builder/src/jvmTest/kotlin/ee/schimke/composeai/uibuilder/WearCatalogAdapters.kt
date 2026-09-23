@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
  * The canvas adapters the Wear catalog declares, for a test that composes the surface itself.

@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderBreadcrumbEntry
 import ee.schimke.composeai.uibuilder.editor.UiBuilderDropAxis
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSlotInspection
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom

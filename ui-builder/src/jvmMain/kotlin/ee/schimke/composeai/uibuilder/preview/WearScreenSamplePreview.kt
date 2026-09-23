@@ -17,8 +17,8 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import ee.schimke.composeai.uibuilder.frameGeometry
-import ee.schimke.composeai.uibuilder.wearScreenUiBuilderDocument
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject

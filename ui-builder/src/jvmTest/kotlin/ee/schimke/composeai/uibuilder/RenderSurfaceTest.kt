@@ -4,6 +4,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot

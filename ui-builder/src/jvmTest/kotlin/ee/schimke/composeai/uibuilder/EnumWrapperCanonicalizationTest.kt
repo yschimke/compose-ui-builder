@@ -7,6 +7,8 @@ import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.WasmAdapterStatus
 import ee.schimke.composeai.uibuilder.capability.WasmCapability
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

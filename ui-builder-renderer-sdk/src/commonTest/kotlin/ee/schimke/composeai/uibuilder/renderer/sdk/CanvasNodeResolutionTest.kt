@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
-import ee.schimke.composeai.uibuilder.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.JsonObject

@@ -11,6 +11,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
 import ee.schimke.composeai.uibuilder.inspector.EventActionsInspector
 import ee.schimke.composeai.uibuilder.inspector.LocalUiBuilderPageDestinations
 import ee.schimke.composeai.uibuilder.inspector.StateVariablesInspector

@@ -48,6 +48,14 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.supportingText
+import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
+import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.WearWidgetSample
 import ee.schimke.composeai.uibuilder.local.CachedLocalText
 import ee.schimke.composeai.uibuilder.local.CachingLocalCatalogSource
 import ee.schimke.composeai.uibuilder.local.LocalCatalogSource

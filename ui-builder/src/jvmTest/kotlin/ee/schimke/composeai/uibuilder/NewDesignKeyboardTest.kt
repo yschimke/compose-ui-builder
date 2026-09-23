@@ -9,6 +9,8 @@ import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
+import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.NewDesignStateType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.JsonPrimitive

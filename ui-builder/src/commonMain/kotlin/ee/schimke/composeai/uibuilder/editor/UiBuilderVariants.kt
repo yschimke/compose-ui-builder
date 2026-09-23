@@ -1,11 +1,11 @@
 package ee.schimke.composeai.uibuilder.editor
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.WearWidgetHostShape
-import ee.schimke.composeai.uibuilder.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
-import ee.schimke.composeai.uibuilder.hostSpec
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
+import ee.schimke.composeai.uibuilder.export.hostSpec
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 

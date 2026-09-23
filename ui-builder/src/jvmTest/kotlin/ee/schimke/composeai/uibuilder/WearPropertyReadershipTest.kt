@@ -58,7 +58,7 @@ class WearPropertyReadershipTest {
       .map { moduleFile("ui-builder", it) } +
       moduleFile(
         "ui-builder-export",
-        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearScreenCodeExporter.kt",
+        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenCodeExporter.kt",
       )
 
   @Test

@@ -2,6 +2,9 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.editor.canvasFrameDp
 import ee.schimke.composeai.uibuilder.editor.referencePieceCentrePx
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.weatherWidgetUiBuilderDocument
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
 import kotlin.test.Test

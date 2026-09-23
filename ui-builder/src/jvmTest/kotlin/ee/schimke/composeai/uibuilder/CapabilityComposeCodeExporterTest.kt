@@ -7,6 +7,9 @@ import ee.schimke.composeai.uibuilder.codegen.ComposeAssetBinding
 import ee.schimke.composeai.uibuilder.codegen.ComposeAssetRenderer
 import ee.schimke.composeai.uibuilder.codegen.ComposeCodeExporter
 import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.svg.DocumentSvgExecutionBridge
 import ee.schimke.composeai.uibuilder.svg.inspectDocumentSvgExport
 import kotlin.test.Test

@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO

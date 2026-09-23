@@ -7,6 +7,11 @@ import ee.schimke.composeai.uibuilder.codegen.validateDocumentForExport
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.weatherWidgetUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

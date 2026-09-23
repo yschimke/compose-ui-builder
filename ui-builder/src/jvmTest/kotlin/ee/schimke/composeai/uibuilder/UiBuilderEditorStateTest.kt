@@ -19,6 +19,11 @@ import ee.schimke.composeai.uibuilder.editor.THEME_TYPE_SCALE
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.NewDesignStateType
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
 import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcons
 import kotlin.test.Test
 import kotlin.test.assertEquals

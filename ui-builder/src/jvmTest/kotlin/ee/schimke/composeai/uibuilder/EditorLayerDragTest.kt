@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorLayerRow
 import ee.schimke.composeai.uibuilder.editor.EditorMoveDirection
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

@@ -11,6 +11,8 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.svg.DocumentSvgExecutionBridge
 import ee.schimke.composeai.uibuilder.svg.inspectDocumentSvgExport
 import kotlin.test.Test

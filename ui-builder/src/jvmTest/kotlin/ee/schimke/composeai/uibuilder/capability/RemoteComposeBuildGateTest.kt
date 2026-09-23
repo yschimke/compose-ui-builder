@@ -1,9 +1,9 @@
 package ee.schimke.composeai.uibuilder.capability
 
-import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
-import ee.schimke.composeai.uibuilder.UiBuilderNode
-import ee.schimke.composeai.uibuilder.WearWidgetScaffoldSize
-import ee.schimke.composeai.uibuilder.wearWidgetUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
+import ee.schimke.composeai.uibuilder.export.wearWidgetUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -1,7 +1,7 @@
 package ee.schimke.composeai.uibuilder.editor
 
-import ee.schimke.composeai.uibuilder.UiBuilderPreviewSurfaces
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
+import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull

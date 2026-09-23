@@ -1,7 +1,7 @@
 package ee.schimke.composeai.uibuilder.reference
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.io.encoding.Base64
 
 /**

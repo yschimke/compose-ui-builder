@@ -1,7 +1,7 @@
 package ee.schimke.composeai.uibuilder.svg
 
-import ee.schimke.composeai.uibuilder.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject

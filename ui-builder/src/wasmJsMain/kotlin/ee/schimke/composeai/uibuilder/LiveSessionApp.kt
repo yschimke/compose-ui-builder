@@ -60,6 +60,15 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
+import ee.schimke.composeai.uibuilder.export.NewDesignNames
+import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
+import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
+import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import ee.schimke.composeai.uibuilder.local.LocalDesignSyncBack
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderHttpTransport

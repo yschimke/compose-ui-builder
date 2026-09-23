@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderUnrolled
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonArray

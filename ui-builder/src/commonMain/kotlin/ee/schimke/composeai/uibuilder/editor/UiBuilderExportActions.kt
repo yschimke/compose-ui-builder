@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.editor
 
-import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 
 /**
  * Getting a design *out* of the builder, in the words the catalog viewer already uses.

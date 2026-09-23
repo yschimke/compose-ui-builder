@@ -10,6 +10,8 @@ import ee.schimke.composeai.uibuilder.editor.displayValue
 import ee.schimke.composeai.uibuilder.editor.revisionDiff
 import ee.schimke.composeai.uibuilder.editor.revisionTimeline
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

@@ -25,6 +25,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
 import ee.schimke.composeai.uibuilder.editor.nativePaneCaption
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

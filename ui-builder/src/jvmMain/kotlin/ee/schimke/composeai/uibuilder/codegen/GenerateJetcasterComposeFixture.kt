@@ -1,10 +1,10 @@
 package ee.schimke.composeai.uibuilder.codegen
 
-import ee.schimke.composeai.uibuilder.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.PROJECT_OWNED_ARTWORK_ADAPTER_ID
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import java.io.File
 import java.security.MessageDigest
 import kotlinx.serialization.json.Json

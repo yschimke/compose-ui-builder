@@ -13,6 +13,15 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
+import ee.schimke.composeai.uibuilder.export.StateSelection
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.selectionLiteral
+import ee.schimke.composeai.uibuilder.export.stateSelection
+import ee.schimke.composeai.uibuilder.export.stateSelectionIssue
 import ee.schimke.composeai.uibuilder.inspector.StateSelectionInspector
 import java.io.File
 import kotlin.test.*

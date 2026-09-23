@@ -1,9 +1,9 @@
 package ee.schimke.composeai.uibuilder.canvas
 
-import ee.schimke.composeai.uibuilder.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.editor.EditorLayoutDirection
 import ee.schimke.composeai.uibuilder.editor.EditorScreenTheme
 import ee.schimke.composeai.uibuilder.editor.ScreenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 
 /**
  * One frame the Screen inspector can drop onto the canvas — a phone, a foldable, a tablet, a watch.

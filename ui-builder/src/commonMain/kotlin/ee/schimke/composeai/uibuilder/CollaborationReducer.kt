@@ -3,6 +3,9 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.capability.CapabilityIssueCode
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.editor.behaviorIssue
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.canonicalJson
 import ee.schimke.composeai.uibuilder.renderer.sdk.uiBuilderModifier
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

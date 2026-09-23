@@ -1,6 +1,11 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.editor.newDesignInitialValueValid
+import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.NewDesignStateType
+import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.decodeNewDesignStates
+import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

@@ -1,8 +1,8 @@
 package ee.schimke.composeai.uibuilder.editor
 
-import ee.schimke.composeai.uibuilder.KOTLIN_HARD_KEYWORDS
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.exportedStateIdentifier
+import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.exportedStateIdentifier
 import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import kotlinx.serialization.json.*

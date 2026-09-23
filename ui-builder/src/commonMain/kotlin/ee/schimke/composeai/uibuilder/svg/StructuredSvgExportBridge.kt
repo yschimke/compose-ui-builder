@@ -1,10 +1,10 @@
 package ee.schimke.composeai.uibuilder.svg
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.canonicalDocument
-import ee.schimke.composeai.uibuilder.canonicalJson
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.codegen.DocumentExportProvenance
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.canonicalJson
 import ee.schimke.composeai.uibuilder.sha256Hex
 
 enum class StructuredSvgRecorderKind {

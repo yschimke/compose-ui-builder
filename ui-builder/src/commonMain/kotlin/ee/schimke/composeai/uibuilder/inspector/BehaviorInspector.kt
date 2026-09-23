@@ -8,16 +8,16 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import ee.schimke.composeai.uibuilder.NEW_DESIGN_STATE_NAME
-import ee.schimke.composeai.uibuilder.SHOW_BY_STATE
-import ee.schimke.composeai.uibuilder.StateSelection
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderNode
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorStateAction
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
-import ee.schimke.composeai.uibuilder.stateSelection
-import ee.schimke.composeai.uibuilder.stateSelectionIssue
+import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_STATE_NAME
+import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
+import ee.schimke.composeai.uibuilder.export.StateSelection
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.stateSelection
+import ee.schimke.composeai.uibuilder.export.stateSelectionIssue
 import kotlinx.serialization.json.*
 
 private enum class StateEditorKind(val label: String, val wire: String) {

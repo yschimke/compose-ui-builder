@@ -1,9 +1,9 @@
 package ee.schimke.composeai.uibuilder.host
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.svg.JvmDocumentRasterizer
 import ee.schimke.composeai.uibuilder.svg.JvmSkiaStructuredSvgRecorder
 import ee.schimke.composeai.uibuilder.svg.SavedDocumentRevisionPin

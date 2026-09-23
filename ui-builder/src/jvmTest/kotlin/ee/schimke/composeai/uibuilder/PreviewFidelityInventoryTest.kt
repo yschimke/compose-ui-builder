@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderRenderStrategy
 import ee.schimke.composeai.uibuilder.canvas.uiBuilderRenderStrategy
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

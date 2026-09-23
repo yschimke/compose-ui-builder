@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
+import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
