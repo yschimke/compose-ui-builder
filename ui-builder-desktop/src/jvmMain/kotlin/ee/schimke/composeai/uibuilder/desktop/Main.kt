@@ -50,9 +50,13 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 private const val DESKTOP_DESIGN_ID = "desktop-workspace"
 private const val ACTOR_ID = "desktop-user"
@@ -166,7 +170,10 @@ private constructor(
     ): OfflineUiBuilderSession =
       OfflineUiBuilderSession(
         storage = InMemoryLocalDesignStorage(),
-        catalogSystemId = document.catalogPin.getValue("systemId").toString().trim('"'),
+        catalogSystemId =
+          requireNotNull(document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull) {
+            "design ${document.id} names no catalog systemId"
+          },
         remoteServer = null,
         designId = document.id,
         initialDocument = document,
@@ -211,8 +218,10 @@ private constructor(
     // the revision the previous one produced, otherwise quick edits conflict with their own store.
     scope.launch {
       for (submission in submissions) {
+        // An edit made while the design is still opening waits for it rather than being dropped:
+        // the channel is the queue, and the first snapshot is the revision it applies against.
         val baseRevision =
-          mutableSnapshot.value?.snapshot?.state?.document?.revision?.toInt() ?: continue
+          mutableSnapshot.filterNotNull().first().snapshot.state.document.revision.toInt()
         when (
           val result =
             service.execute(

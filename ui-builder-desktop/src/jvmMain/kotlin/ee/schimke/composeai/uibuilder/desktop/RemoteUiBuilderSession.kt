@@ -26,7 +26,6 @@ import ee.schimke.composeai.uibuilder.protocol.ListDesignsRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
-import java.awt.Desktop
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -41,9 +40,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -51,11 +51,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import org.jetbrains.skia.Image
 
 data class RemoteUiBuilderDesign(
@@ -114,10 +109,13 @@ private constructor(
     )
 
   companion object {
-    suspend fun connect(server: String): RemoteUiBuilderConnection {
+    suspend fun connect(
+      server: String,
+      presenter: ApprovalPresenter = SystemBrowserApprovalPresenter,
+    ): RemoteUiBuilderConnection {
       val origin = validatedServerOrigin(server)
       val serverHttp = RemoteServerHttp(origin)
-      val token = serverHttp.authorize()
+      val token = serverHttp.authorize(presenter)
       serverHttp.token = token
       return RemoteUiBuilderConnection(origin, serverHttp.identity(), token, serverHttp)
     }
@@ -184,8 +182,9 @@ internal constructor(
 
   private suspend fun consumeSubmissions() {
     for (submission in submissions) {
+      // Waits for the first snapshot instead of dropping an edit made while the design opens.
       val baseRevision =
-        mutableSnapshot.value?.snapshot?.state?.document?.revision?.toInt() ?: continue
+        mutableSnapshot.filterNotNull().first().snapshot.state.document.revision.toInt()
       when (
         val result =
           protocol.execute(
@@ -269,46 +268,14 @@ internal class RemoteServerHttp(val origin: URI) {
   val json: Json = Json { ignoreUnknownKeys = true }
   var token: String? = null
 
-  suspend fun authorize(): String {
-    val opened =
-      request(
-        target = origin.resolve("/agent-access/request"),
-        method = "POST",
-        body =
-          """{"label":"Compose UI Builder IntelliJ","scope":"live","capabilities":["ui-builder-read","ui-builder-write","ui-builder-export"]}""",
-        authenticated = false,
-      )
-    require(opened.statusCode() in 200..299) {
-      "server cannot start UI Builder authentication (HTTP ${opened.statusCode()})"
-    }
-    val response = json.parseToJsonElement(opened.body()).jsonObject
-    val approvalUrl = response.requiredString("approveUrl")
-    if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI(approvalUrl))
-    val requestId = response.requiredString("requestId")
-    val deviceSecret = response.requiredString("deviceSecret")
-    var retryAfterSeconds = response.requiredLong("pollIntervalSeconds")
-    val deadline = System.nanoTime() + Duration.ofMinutes(10).toNanos()
-    while (System.nanoTime() < deadline) {
-      delay(retryAfterSeconds.coerceAtLeast(1) * 1_000)
-      val poll =
-        request(
-          target = sameOriginTarget(origin, URI(response.requiredString("pollUrl"))),
-          method = "POST",
-          body = json.encodeToString(RemoteDevicePollRequest(requestId, deviceSecret)),
-          authenticated = false,
-        )
-      require(poll.statusCode() in 200..299) { "server stopped the authentication request" }
-      val answer = json.parseToJsonElement(poll.body()).jsonObject
-      when (answer.requiredString("status")) {
-        "approved" -> return answer.requiredString("token")
-        "pending" -> Unit
-        else -> error("server declined UI Builder authentication")
-      }
-      retryAfterSeconds =
-        answer["retryAfterSeconds"]?.jsonPrimitive?.longOrNull ?: retryAfterSeconds
-    }
-    error("UI Builder authentication timed out")
-  }
+  suspend fun authorize(presenter: ApprovalPresenter): String =
+    authorizeDevice(
+      origin = origin,
+      label = "Compose UI Builder IntelliJ",
+      capabilities = listOf("ui-builder-read", "ui-builder-write", "ui-builder-export"),
+      presenter = presenter,
+      post = { target, body -> request(target, "POST", body, authenticated = false) },
+    )
 
   suspend fun identity(): String {
     val response = request(origin.resolve("/api/ui-builder/v1/identity"), "GET", "")
@@ -382,14 +349,6 @@ internal class RemoteServerHttp(val origin: URI) {
         else HttpRequest.BodyPublishers.ofString(body)
       http.send(builder.method(method, publisher).build(), HttpResponse.BodyHandlers.ofString())
     }
-
-  private fun JsonObject.requiredString(name: String): String =
-    get(name)?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
-      ?: error("authentication response has no $name")
-
-  private fun JsonObject.requiredLong(name: String): Long =
-    get(name)?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
-      ?: error("authentication response has no positive $name")
 }
 
 private class JavaUiBuilderWebSocketTransport(
@@ -457,10 +416,3 @@ private data class RemoteNativePreviewResult(
 )
 
 @Serializable private data class RemoteNativePreviewRefusal(val reasons: List<String> = emptyList())
-
-@Serializable
-private data class RemoteDevicePollRequest(
-  val requestId: String,
-  val deviceSecret: String,
-  val waitSeconds: Int = 30,
-)
