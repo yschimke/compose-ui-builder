@@ -320,7 +320,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "RemoteAuthorable"
+                        "AnyContent"
                     ],
                     "cardinality": {
                         "max": null,
@@ -450,7 +450,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "RemoteAuthorable"
+                        "AnyContent"
                     ],
                     "cardinality": {
                         "max": null,
@@ -556,7 +556,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "RemoteAuthorable"
+                        "AnyContent"
                     ],
                     "cardinality": {
                         "max": null,
@@ -635,7 +635,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "RemoteAuthorable"
+                        "AnyContent"
                     ],
                     "cardinality": {
                         "max": 1,
