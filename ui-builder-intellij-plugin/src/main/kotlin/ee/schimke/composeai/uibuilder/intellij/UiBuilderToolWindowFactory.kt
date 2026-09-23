@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.intellij.ide.util.PropertiesComponent
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -99,7 +100,7 @@ internal abstract class UiBuilderProjectAction : AnAction() {
 internal class OpenRemoteDesignAction : UiBuilderProjectAction() {
   override fun perform(project: Project) {
     val properties = PropertiesComponent.getInstance(project)
-    val previous = properties.getValue(REMOTE_SERVER_PROPERTY, "https://preview.coo.ee")
+    val previous = properties.getValue(REMOTE_SERVER_PROPERTY) ?: UiBuilderSettings.defaultServer
     val server =
       Messages.showInputDialog(
           project,
@@ -129,15 +130,16 @@ internal class OpenRemoteDesignAction : UiBuilderProjectAction() {
     }
     val (connection, designs) =
       result.getOrElse { failure ->
-        Messages.showErrorDialog(
+        notifyUiBuilder(
           project,
-          failure.message ?: "Could not connect to the UI Builder server.",
-          "UI Builder Connection Failed",
+          "Could not connect to $server: " +
+            (failure.message ?: "the UI Builder server did not answer."),
+          NotificationType.ERROR,
         )
         return
       }
     if (designs.isEmpty()) {
-      Messages.showInfoMessage(project, "This account can open no designs.", "UI Builder")
+      notifyUiBuilder(project, "Your account on $server can open no designs.")
       return
     }
     val labels = designs.map { design ->
@@ -159,10 +161,10 @@ internal class OpenRemoteDesignAction : UiBuilderProjectAction() {
         .openRemoteDesign(connection, designs[selected])
     }
       .onFailure { failure ->
-        Messages.showErrorDialog(
+        notifyUiBuilder(
           project,
-          failure.message ?: "The selected catalog is not packaged with this plugin.",
-          "Cannot Open UI Builder Design",
+          failure.message ?: "The selected design's catalog is not packaged with this plugin.",
+          NotificationType.ERROR,
         )
       }
   }
@@ -172,11 +174,11 @@ internal class CopyAgentPromptAction : UiBuilderProjectAction() {
   override fun perform(project: Project) {
     val active = project.getService(UiBuilderProjectService::class.java).activeSession.value
     if (active == null) {
-      Messages.showInfoMessage(project, "Open a UI Builder design first.", "UI Builder")
+      notifyUiBuilder(project, "Open a UI Builder design first.", NotificationType.WARNING)
       return
     }
     CopyPasteManager.getInstance().setContents(StringSelection(active.agentPrompt))
-    Messages.showInfoMessage(project, "Agent instructions copied to the clipboard.", "UI Builder")
+    notifyUiBuilder(project, "Agent instructions for ${active.title} copied to the clipboard.")
   }
 }
 
@@ -195,10 +197,11 @@ internal class OpenProjectDesignAction : UiBuilderProjectAction() {
         root,
       ) ?: return
     if (!isProjectDesign(file)) {
-      Messages.showErrorDialog(
+      notifyUiBuilder(
         project,
-        "Choose a supported UI Builder .uid or DesignDocumentV1 JSON file.",
-        "Not a UI Builder Design",
+        "${file.name} is not a UI Builder design this plugin can open: choose a .uid or " +
+          "DesignDocumentV1 JSON file.",
+        NotificationType.ERROR,
       )
       return
     }
