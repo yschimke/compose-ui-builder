@@ -63,4 +63,17 @@ class RemoteComposeBuildGateTest {
 
   private fun catalog(path: String): CapabilityCatalog =
     CapabilityCatalogParser.parse(checkNotNull(javaClass.getResource(path)).readText())
+
+  @Test
+  fun `the palette lists what the catalog declares, less only what it hides`() {
+    // A widget catalog that never declared a repetition: hiding one removes nothing.
+    val withoutLoop =
+      remote.copy(components = remote.components.filterNot { it.componentId == "layout/for-each" })
+
+    assertEquals(withoutLoop.components, withoutLoop.paletteComponents)
+    assertEquals(
+      remote.components.size - if (UiBuilderBuildFeatures.remoteCompose) 0 else 1,
+      remote.paletteComponents.size,
+    )
+  }
 }
