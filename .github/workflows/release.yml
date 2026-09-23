@@ -45,8 +45,9 @@ concurrency:
 #     naming an artifact nobody uploaded is what made compose-preview-serve unresolvable for six
 #     consecutive releases.
 #
-#   - THREE GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor; a
-#     Linux `.deb` for the native Desktop host; and `compose-ui-builder-intellij-plugin-<v>.zip`,
+#   - GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor; the
+#     native Desktop host as a Linux `.deb` (built here) and a macOS `.dmg` and Windows `.msi`
+#     (built by `desktop-packages.yml`); and `compose-ui-builder-intellij-plugin-<v>.zip`,
 #     the installable IntelliJ plugin. Nothing compiles against them. compose-preview-server
 #     resolves the web archive through a group-fenced ivy repository over this release, which keeps
 #     it a normal versioned dependency without putting a 40 MB frontend distribution on Central
@@ -243,9 +244,20 @@ jobs:
             gh release create "$tag" "$archive" "$desktop_package" "$intellij_plugin" --title "$tag" --generate-notes --draft
           fi
 
-  finish-release:
+  # The macOS and Windows installers, attached to the same draft release. Needed by
+  # `finish-release`, so a release never goes public with half its desktop packages.
+  desktop-packages:
     needs: [release-please, publish]
-    if: ${{ !cancelled() && needs.publish.result == 'success' }}
+    if: ${{ needs.publish.result == 'success' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/desktop-packages.yml
+    with:
+      tag: ${{ needs.release-please.outputs.publish_tag }}
+
+  finish-release:
+    needs: [release-please, publish, desktop-packages]
+    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.desktop-packages.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

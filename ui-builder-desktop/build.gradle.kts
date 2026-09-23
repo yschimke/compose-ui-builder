@@ -46,9 +46,28 @@ compose.desktop {
         .asFile
         .absolutePath
     nativeDistributions {
-      targetFormats(TargetFormat.Deb)
+      // `packageDistributionForCurrentOS` builds the one format for the machine it runs on, so each
+      // release runner (Linux, macOS, Windows) contributes its own. Unsigned: signing and
+      // notarization need certificates this repository does not hold yet.
+      targetFormats(TargetFormat.Deb, TargetFormat.Dmg, TargetFormat.Msi)
       packageName = "compose-ui-builder-desktop"
-      packageVersion = providers.environmentVariable("UI_BUILDER_DESKTOP_VERSION").orNull ?: "0.0.0"
+      // The release passes its tag. Anything else packages as the last released version, because
+      // the platform installers refuse the alternatives: a DMG needs a MAJOR above 0, an MSI takes
+      // no pre-release suffix, so neither `0.0.0` nor a `-SNAPSHOT` can be packaged at all.
+      packageVersion =
+        providers.environmentVariable("UI_BUILDER_DESKTOP_VERSION").orNull
+          ?: Regex(""""\.":\s*"([^"]+)"""")
+            .find(rootDir.resolve(".release-please-manifest.json").readText())!!
+            .groupValues[1]
+      description = "Offline visual editor for Compose Multiplatform screens and Wear widgets"
+      vendor = "Yuri Schimke"
+      macOS { bundleID = "ee.schimke.composeai.uibuilder.desktop" }
+      windows {
+        menu = true
+        shortcut = true
+        // Fixed, so a newer MSI upgrades an installed one instead of installing beside it.
+        upgradeUuid = "5b8f5f0e-3d0a-4c8e-9a47-7f2d1e6c9b31"
+      }
     }
   }
 }
