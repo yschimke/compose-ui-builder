@@ -30,7 +30,7 @@ class RemoteDocumentPreviewTest {
     )
 
   private fun document(stem: String = "sample") =
-    json.decodeFromString<UiBuilderDocument>(File(directory, "$stem.document.json").readText())
+    json.decodeFromString<UiBuilderDocument>(File(directory, "$stem.uid").readText())
 
   private fun ready(revision: Int = 0, stem: String = "sample") =
     UiBuilderDocumentPreview.Ready(
