@@ -7,6 +7,7 @@ import ee.schimke.composeai.uibuilder.ConflictCode
 import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
+import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.protocol.AcceptedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -34,7 +35,6 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRequestV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderResponseV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
-import ee.schimke.composeai.uibuilder.sha256Hex
 import ee.schimke.composeai.uibuilder.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.toUiBuilderDocument
 import kotlinx.serialization.json.Json
@@ -129,7 +129,17 @@ class LocalUiBuilderService(
       SnapshotResponseV1(
         ServiceSnapshotV1(
           designId = document.id,
-          state = DesignStateV1(lastSequence = 0, document = document.toDesignDocumentV1()),
+          state =
+            DesignStateV1(
+              lastSequence = 0,
+              document =
+                document
+                  .toDesignDocumentV1()
+                  .copy(
+                    createdAtEpochMillis = record.createdAtEpochMillis,
+                    updatedAtEpochMillis = record.updatedAtEpochMillis,
+                  ),
+            ),
           catalog = catalogFor(catalogSystemId) ?: return catalogUnavailable(catalogSystemId),
           retainedFromSequence = 0,
         )
@@ -157,7 +167,7 @@ class LocalUiBuilderService(
         state =
           DesignStateV1(
             lastSequence = session.sequence,
-            document = session.document.toDesignDocumentV1(),
+            document = session.protocolDocument,
           ),
         catalog = catalog,
         // Everything this browser holds is retained: the log is the design, and there is no window
@@ -188,7 +198,9 @@ class LocalUiBuilderService(
             operationId = request.submission.operationId(),
             committedRevision = outcome.committedRevision.toLong(),
             sequence = result.sequence,
-            documentHash = sha256Hex(outcome.canonicalDocument),
+            // The hash of the document a snapshot would carry, computed as the hosted service and
+            // the editor's delta check compute it — not the reducer's internal canonical form.
+            documentHash = session.protocolDocument.canonicalDocumentHash(),
             idempotentReplay = outcome.idempotentReplay,
             conflicts =
               outcome.conflicts.map {
@@ -203,7 +215,7 @@ class LocalUiBuilderService(
                   overwrittenRevision = it.overwrittenRevision.toLong(),
                 )
               },
-            documentUpdatedAtEpochMillis = null,
+            documentUpdatedAtEpochMillis = session.updatedAtEpochMillis,
           )
         is CommandOutcome.Rejected ->
           RejectedOutcomeV1(

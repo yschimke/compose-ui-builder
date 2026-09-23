@@ -304,6 +304,14 @@ kotlin {
       @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class) @Suppress("DEPRECATION")
       implementation(compose.uiTest)
       implementation(compose.desktop.currentOs)
+      // The hosted service, for `ServiceConformanceTest`: the editor's in-page service and the
+      // runtime's answer the same v1 requests, and only a test that can see both can hold them to
+      // the same answers. Test-only, so the editor's own classpath stays service-free. The render
+      // bundle is excluded because it is built FROM this module's previews, and nothing here
+      // renders through it.
+      implementation(project(":ui-builder-runtime")) {
+        exclude(group = "ee.schimke.composeai", module = "ui-builder-render-bundle")
+      }
     }
     getByName("jvmMain").dependencies {
       // Feasibility spike only: the saved-document bridge executes ComposeScene against SVGCanvas.

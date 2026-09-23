@@ -39,6 +39,11 @@ data class LocalDesignRecordV1(
   val log: List<LocalSubmissionRecordV1> = emptyList(),
   val updatedAtEpochMillis: Long = 0,
   /**
+   * When this browser created the design, stamped into every snapshot the way the hosted service
+   * stamps its own. Null for a record written before this field existed.
+   */
+  val createdAtEpochMillis: Long? = null,
+  /**
    * Where this design was taken from, when it was taken offline rather than created here.
    *
    * Null for a design this browser made, and that is not a missing field — a design with no
