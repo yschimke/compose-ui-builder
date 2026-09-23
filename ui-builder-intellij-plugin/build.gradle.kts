@@ -70,6 +70,10 @@ dependencies {
     exclude(group = "org.jetbrains.compose.ui")
   }
   testImplementation(kotlin("test"))
+  // The Compose compiler plugin runs on every source set and refuses one without the runtime.
+  testCompileOnly(
+    "org.jetbrains.compose.runtime:runtime:${libs.versions.compose.multiplatform.get()}"
+  )
   add("integrationTestImplementation", "org.junit.jupiter:junit-jupiter:5.11.4")
   add("integrationTestImplementation", "org.kodein.di:kodein-di-jvm:7.26.1")
   // Starter calls TeamCityReporter even under NoCIServer, but its published Gradle metadata omits
