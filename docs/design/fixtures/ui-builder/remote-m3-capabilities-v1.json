@@ -320,7 +320,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": null,
@@ -450,7 +450,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": null,
@@ -556,7 +556,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": null,
@@ -635,7 +635,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": 1,
@@ -1060,26 +1060,7 @@
             },
             "componentId": "shape/linear-gradient",
             "displayName": "Linear gradient layer",
-            "modifierCapabilities": [
-                "size",
-                "fillMaxSize",
-                "fillMaxWidth",
-                "clip",
-                "alpha",
-                "offset",
-                "rotate",
-                "scale",
-                "zIndex",
-                "width",
-                "height",
-                "widthIn",
-                "heightIn",
-                "fillMaxHeight",
-                "align",
-                "alignHorizontal",
-                "alignVertical",
-                "weight"
-            ],
+            "modifierCapabilities": [],
             "properties": [
                 {
                     "allowedValues": [],
