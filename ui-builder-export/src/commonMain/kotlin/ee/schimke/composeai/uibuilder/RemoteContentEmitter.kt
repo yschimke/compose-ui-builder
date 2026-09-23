@@ -161,6 +161,16 @@ internal class RemoteContentEmitter(
    * nothing gets exactly the behaviour it had.
    */
   private val components: Map<String, ComponentRecord> = emptyMap(),
+  /**
+   * The node the widget container lays out to fill its frame, or null outside a widget.
+   *
+   * The container hands its one body `fillMaxSize` before that node's own chain, so the canvas
+   * always draws the root filling the widget. The generated widget has to say so as well: host
+   * frames differ in size across watches, and a root left to wrap its content sits in the corner of
+   * the larger ones — which is why the get-started guide calls `RemoteModifier.fillMaxSize()` on
+   * the root the one layout rule a widget must not skip.
+   */
+  private val frameFillingRoot: String? = null,
 ) {
   /** True once a colour or type token has been written, which only reads inside a theme. */
   var usesTheme: Boolean = false
@@ -2325,8 +2335,19 @@ internal class RemoteContentEmitter(
           modifierCall("clickable($it)")
         }
       } else null
+    // Before [leading], because the container applies it before anything the node derives.
+    val frame =
+      if (
+        id == frameFillingRoot &&
+          modifiers.none { (it as? JsonObject)?.get("type")?.stringValue() == "fillMaxSize" }
+      ) {
+        listOf(modifierCall("fillMaxSize()"))
+      } else emptyList()
     val parts =
-      leading + modifiers.flatMap { element -> modifierCalls(element) } + listOfNotNull(click)
+      frame +
+        leading +
+        modifiers.flatMap { element -> modifierCalls(element) } +
+        listOfNotNull(click)
     if (parts.isEmpty()) return null
     usesModifier = true
     val single = parts.joinToString(".", prefix = "RemoteModifier.")
