@@ -60,7 +60,8 @@ private class UiBuilderFileEditor(
   private val selection: UiBuilderSessionSelection,
 ) : UserDataHolderBase(), FileEditor {
   private val changes = PropertyChangeSupport(this)
-  private val projectService = project.getService(UiBuilderProjectService::class.java)
+  private val projectService =
+    project.getService(UiBuilderProjectService::class.java).also { it.retain(selection) }
   private val component = JewelComposePanel {
     ProvideUiBuilderNavigationEventDispatcher {
       val session by selection.session.collectAsState()
@@ -116,5 +117,7 @@ private class UiBuilderFileEditor(
 
   override fun getFile(): VirtualFile = file
 
-  override fun dispose() = Unit
+  override fun dispose() {
+    projectService.release(selection)
+  }
 }
