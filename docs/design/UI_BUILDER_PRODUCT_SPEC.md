@@ -504,6 +504,10 @@ A single full-screen PNG wrapped in SVG is not success. Supported text and compo
 remain identifiable/editable, external URLs must be removed, fonts/assets must be embedded or
 resolved deterministically, and any raster fallback must be named in export metadata.
 
+The SVG gate is about the picture Figma receives. Structure — Figma components, auto layout, and a
+round trip that comes back as the same nodes — is a separate lane over the plugin API, planned in
+[`UI_BUILDER_FIGMA_INTEGRATION.md`](UI_BUILDER_FIGMA_INTEGRATION.md).
+
 The native Wasm catalog is therefore executable to the exporter through compatible generated
 source and a version-addressed preview artifact, not by having `:render-host` call the Wasm-only
 `:native-catalog-m3` implementation. The catalog capability digest, design revision, generated
