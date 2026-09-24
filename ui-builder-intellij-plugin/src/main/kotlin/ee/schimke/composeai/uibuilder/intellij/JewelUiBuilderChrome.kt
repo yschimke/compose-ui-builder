@@ -302,7 +302,7 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
             model.title,
             Modifier.weight(1f).alpha(if (model.unexportable) 0.45f else 1f),
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
           if (model.unexportable) {
@@ -363,7 +363,7 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
                 },
             ) {
               Text(
-                if (model.variantsExpanded) "Hide variants" else "${model.variantCount} variants",
+                if (model.variantsExpanded) "Hide" else "${model.variantCount} variants",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
               )
@@ -401,7 +401,7 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
           Text(
             title,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
           Text(

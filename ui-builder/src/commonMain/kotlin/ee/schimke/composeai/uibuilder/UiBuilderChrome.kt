@@ -671,33 +671,38 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
         )
         .padding(6.dp)
     ) {
-      Box(
-        Modifier.fillMaxWidth().alpha(if (model.unexportable) 0.45f else 1f),
-        contentAlignment = Alignment.Center,
-      ) {
-        thumbnail()
+      Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(Modifier.alpha(if (model.unexportable) 0.45f else 1f)) { thumbnail() }
+        // On the picture's corner rather than in the title row, where it cost a 28dp column out of
+        // a ~116dp tile and cut "Supporting pane" to "Suppor…". Drawn after the thumbnail so it
+        // wins the hit test over the thumbnail's drag grip.
+        model.onTogglePinned?.let { onToggle ->
+          Box(Modifier.align(Alignment.TopEnd)) {
+            MaterialPinnedStar(model.title, model.pinned == true, onToggle)
+          }
+        }
       }
+      Spacer(Modifier.height(4.dp))
       if (model.variant) {
         Text(
           model.title,
           Modifier.alpha(if (model.unexportable) 0.45f else 1f),
           style = MaterialTheme.typography.labelMedium,
-          maxLines = 1,
+          maxLines = 2,
           overflow = TextOverflow.Ellipsis,
         )
       } else {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
           Text(
             model.title,
             Modifier.weight(1f).alpha(if (model.unexportable) 0.45f else 1f),
             style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
+            // Two lines: a component's name is what the tile is for, and "Adaptive lazy vertical
+            // grid" is a real name.
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
           if (model.unexportable) MaterialUnexportableBadge(model.title)
-          model.onTogglePinned?.let { onToggle ->
-            MaterialPinnedStar(model.title, model.pinned == true, onToggle)
-          }
         }
       }
       if (model.variant) {
@@ -737,8 +742,14 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
                 },
               contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
             ) {
+              // One line, always: "Hide variants" beside Add in a two-column grid wrapped to a
+              // column of letters. The semantics above keep the whole sentence.
               Text(
-                if (model.variantsExpanded) "Hide variants" else "${model.variantCount} variants"
+                if (model.variantsExpanded) "Hide" else "${model.variantCount} variants",
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelMedium,
               )
             }
           } else {
@@ -1256,11 +1267,14 @@ private val INSPECTOR_ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)
 @Composable
 private fun MaterialPinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
   Box(
-    Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).clickable(onClick = onToggle).semantics(
-      mergeDescendants = true
-    ) {
-      contentDescription = if (pinned) "Unpin $componentName" else "Pin $componentName"
-    },
+    Modifier.size(28.dp)
+      .clip(RoundedCornerShape(6.dp))
+      // Sits on the component's picture, so it carries its own ground to stay legible over one.
+      .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f))
+      .clickable(onClick = onToggle)
+      .semantics(mergeDescendants = true) {
+        contentDescription = if (pinned) "Unpin $componentName" else "Pin $componentName"
+      },
     contentAlignment = Alignment.Center,
   ) {
     Icon(
