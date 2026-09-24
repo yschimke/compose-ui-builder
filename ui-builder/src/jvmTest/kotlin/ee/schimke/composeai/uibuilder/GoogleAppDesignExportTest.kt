@@ -39,7 +39,7 @@ class GoogleAppDesignExportTest {
     )
 
   @Test
-  fun `every Google app design without a pane scaffold exports as Kotlin`() {
+  fun `every Google app design exports as Kotlin`() {
     val failures = EXPORTABLE.mapNotNull { designId ->
       when (val outcome = export(designId)) {
         is ScreenExportGate.Outcome.Emitted -> {
@@ -58,36 +58,14 @@ class GoogleAppDesignExportTest {
     assertEquals(emptyList(), failures, failures.joinToString("\n"))
   }
 
-  /**
-   * Gmail and Calendar refuse for one reason, and it is the generator's rather than theirs.
-   *
-   * `SupportingPaneScaffold` takes a directive and a value that are computed from the window, and
-   * the value is `calculateThreePaneScaffoldValue(directive.maxHorizontalPartitions)` — a member
-   * read off an expression, which `ScreenGenerator` has no form for yet: it imports every chain
-   * link, and a class member cannot be imported. Everything else about the two designs exports.
-   *
-   * Asserted rather than skipped, like `SeedTemplateCatalogReadinessTest`'s Jetcaster case: the day
-   * the generator learns member reads, this fails, and the two designs move up into [EXPORTABLE].
-   */
-  @Test
-  fun `the pane scaffold designs refuse only for the generator's member read`() {
-    PANE_SCAFFOLD_DESIGNS.forEach { designId ->
-      val reasons =
-        assertIs<ScreenExportGate.Outcome.Refused>(
-            export(designId),
-            "$designId exported: move it into EXPORTABLE and delete this test",
-          )
-          .reasons
-      assertTrue(
-        reasons.all { "maxHorizontalPartitions" in it },
-        "$designId refused for something other than the member read:\n" +
-          reasons.joinToString("\n") { "  - $it" },
-      )
-    }
-  }
-
   private companion object {
-    val EXPORTABLE = listOf("google-photos-tablet", "google-keep-tablet", "google-play-tablet")
-    val PANE_SCAFFOLD_DESIGNS = listOf("google-gmail-tablet", "google-calendar-tablet")
+    val EXPORTABLE =
+      listOf(
+        "google-gmail-tablet",
+        "google-calendar-tablet",
+        "google-photos-tablet",
+        "google-keep-tablet",
+        "google-play-tablet",
+      )
   }
 }

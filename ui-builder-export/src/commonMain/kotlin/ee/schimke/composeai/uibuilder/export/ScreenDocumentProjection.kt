@@ -1425,9 +1425,9 @@ object ScreenDocumentProjection {
      *
      * `layoutMode` is spent rather than written: `adaptive`, `twoPane` and `expandedTwoPane` all
      * mean "what the directive decides" on the canvas, which is what the computation above is.
-     * `singlePane` caps the directive at one partition, which needs `PaneScaffoldDirective.copy` —
-     * a member this vocabulary cannot call — so it is refused by name, as are a hidden pane and a
-     * pane spacing, for the same reason. Each pane's preferred width is not an argument at all; it
+     * `singlePane` caps the directive at one partition and a pane spacing sets its spacer, both
+     * through `PaneScaffoldDirective.copy`, which this projection does not write yet; they are
+     * refused by name, as is a hidden pane, which needs a hand-built `ThreePaneScaffoldValue`. Each pane's preferred width is not an argument at all; it
      * is `Modifier.preferredWidth` on the pane's content, which [paneWidthLink] hands down.
      */
     private fun supportingPanes(
@@ -1444,8 +1444,8 @@ object ScreenDocumentProjection {
       if (mode == "singlePane") {
         refuse(
           "$where.`$PANE_LAYOUT_MODE` is `singlePane`, which caps the scaffold directive at one " +
-            "partition through `PaneScaffoldDirective.copy` — a member call this vocabulary has " +
-            "no form for; leave it `adaptive` to export the library's own answer"
+            "partition through `PaneScaffoldDirective.copy`, which this export does not write " +
+            "yet; leave it `adaptive` to export the library's own answer"
         )
       }
       for (flag in listOf(MAIN_PANE_VISIBLE, SUPPORTING_PANE_VISIBLE)) {
@@ -1460,8 +1460,8 @@ object ScreenDocumentProjection {
       if (PANE_SPACING_DP in node.properties) {
         refuse(
           "$where.`$PANE_SPACING_DP` sets the directive's `horizontalPartitionSpacerSize` through " +
-            "`PaneScaffoldDirective.copy` — a member call this vocabulary has no form for; leave " +
-            "it unset for Material's own 24dp spacer"
+            "`PaneScaffoldDirective.copy`, which this export does not write yet; leave it unset " +
+            "for Material's own 24dp spacer"
         )
       }
       val directive =
@@ -1486,9 +1486,12 @@ object ScreenDocumentProjection {
                 receiver = directive,
                 links =
                   listOf(
+                    // A member of the directive, not an importable extension: the generator
+                    // declares the directive as a typed local and reads the count off it.
                     ChainLink(
                       "$ADAPTIVE_LAYOUT.PaneScaffoldDirective.maxHorizontalPartitions",
                       property = true,
+                      member = true,
                     )
                   ),
                 typeFqn = "kotlin.Int",
