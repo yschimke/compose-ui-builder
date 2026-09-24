@@ -895,104 +895,6 @@
       }
     },
     {
-      "operationId": "insert-play-tab-2",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-tabs",
-        "slot": "tabs"
-      },
-      "node": {
-        "id": "play-tab-2",
-        "componentId": "m3/tab",
-        "properties": {
-          "selected": {
-            "type": "bool",
-            "value": false
-          }
-        }
-      },
-      "afterNodeId": "play-tab-1"
-    },
-    {
-      "operationId": "insert-play-tab-2-label",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-tab-2",
-        "slot": "text"
-      },
-      "node": {
-        "id": "play-tab-2-label",
-        "componentId": "m3/text",
-        "properties": {
-          "text": {
-            "type": "string",
-            "value": "Children"
-          },
-          "style": {
-            "type": "enum",
-            "value": "titleSmall"
-          },
-          "maxLines": {
-            "type": "int",
-            "value": 1
-          },
-          "overflow": {
-            "type": "enum",
-            "value": "ellipsis"
-          }
-        }
-      }
-    },
-    {
-      "operationId": "insert-play-tab-3",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-tabs",
-        "slot": "tabs"
-      },
-      "node": {
-        "id": "play-tab-3",
-        "componentId": "m3/tab",
-        "properties": {
-          "selected": {
-            "type": "bool",
-            "value": false
-          }
-        }
-      },
-      "afterNodeId": "play-tab-2"
-    },
-    {
-      "operationId": "insert-play-tab-3-label",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-tab-3",
-        "slot": "text"
-      },
-      "node": {
-        "id": "play-tab-3-label",
-        "componentId": "m3/text",
-        "properties": {
-          "text": {
-            "type": "string",
-            "value": "Premium"
-          },
-          "style": {
-            "type": "enum",
-            "value": "titleSmall"
-          },
-          "maxLines": {
-            "type": "int",
-            "value": 1
-          },
-          "overflow": {
-            "type": "enum",
-            "value": "ellipsis"
-          }
-        }
-      }
-    },
-    {
       "operationId": "insert-play-tab-4",
       "type": "insertNode",
       "parent": {
@@ -1009,7 +911,7 @@
           }
         }
       },
-      "afterNodeId": "play-tab-3"
+      "afterNodeId": "play-tab-1"
     },
     {
       "operationId": "insert-play-tab-4-label",
@@ -1024,7 +926,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Categories"
+            "value": "Kids"
           },
           "style": {
             "type": "enum",
@@ -2533,7 +2435,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 16.0
+            "value": 12.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -2546,9 +2448,9 @@
           },
           {
             "type": "padding",
-            "startDp": 20,
+            "startDp": 16,
             "topDp": 8,
-            "endDp": 20,
+            "endDp": 16,
             "bottomDp": 8
           }
         ]
@@ -2581,7 +2483,7 @@
         "modifiers": [
           {
             "type": "width",
-            "widthDp": 24
+            "widthDp": 20
           }
         ]
       }
@@ -2599,12 +2501,12 @@
         "modifiers": [
           {
             "type": "size",
-            "widthDp": 56,
-            "heightDp": 56
+            "widthDp": 48,
+            "heightDp": 48
           },
           {
             "type": "clip",
-            "shape": "14"
+            "shape": "12"
           }
         ]
       },
@@ -2842,7 +2744,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 16.0
+            "value": 12.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -2855,9 +2757,9 @@
           },
           {
             "type": "padding",
-            "startDp": 20,
+            "startDp": 16,
             "topDp": 8,
-            "endDp": 20,
+            "endDp": 16,
             "bottomDp": 8
           }
         ]
@@ -2891,7 +2793,7 @@
         "modifiers": [
           {
             "type": "width",
-            "widthDp": 24
+            "widthDp": 20
           }
         ]
       }
@@ -2909,12 +2811,12 @@
         "modifiers": [
           {
             "type": "size",
-            "widthDp": 56,
-            "heightDp": 56
+            "widthDp": 48,
+            "heightDp": 48
           },
           {
             "type": "clip",
-            "shape": "14"
+            "shape": "12"
           }
         ]
       },
@@ -3152,7 +3054,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 16.0
+            "value": 12.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -3165,9 +3067,9 @@
           },
           {
             "type": "padding",
-            "startDp": 20,
+            "startDp": 16,
             "topDp": 8,
-            "endDp": 20,
+            "endDp": 16,
             "bottomDp": 8
           }
         ]
@@ -3201,7 +3103,7 @@
         "modifiers": [
           {
             "type": "width",
-            "widthDp": 24
+            "widthDp": 20
           }
         ]
       }
@@ -3219,12 +3121,12 @@
         "modifiers": [
           {
             "type": "size",
-            "widthDp": 56,
-            "heightDp": 56
+            "widthDp": 48,
+            "heightDp": 48
           },
           {
             "type": "clip",
-            "shape": "14"
+            "shape": "12"
           }
         ]
       },
@@ -3462,7 +3364,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 16.0
+            "value": 12.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -3475,9 +3377,9 @@
           },
           {
             "type": "padding",
-            "startDp": 20,
+            "startDp": 16,
             "topDp": 8,
-            "endDp": 20,
+            "endDp": 16,
             "bottomDp": 8
           }
         ]
@@ -3511,7 +3413,7 @@
         "modifiers": [
           {
             "type": "width",
-            "widthDp": 24
+            "widthDp": 20
           }
         ]
       }
@@ -3529,12 +3431,12 @@
         "modifiers": [
           {
             "type": "size",
-            "widthDp": 56,
-            "heightDp": 56
+            "widthDp": 48,
+            "heightDp": 48
           },
           {
             "type": "clip",
-            "shape": "14"
+            "shape": "12"
           }
         ]
       },
@@ -3772,7 +3674,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 16.0
+            "value": 12.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -3785,9 +3687,9 @@
           },
           {
             "type": "padding",
-            "startDp": 20,
+            "startDp": 16,
             "topDp": 8,
-            "endDp": 20,
+            "endDp": 16,
             "bottomDp": 8
           }
         ]
@@ -3821,7 +3723,7 @@
         "modifiers": [
           {
             "type": "width",
-            "widthDp": 24
+            "widthDp": 20
           }
         ]
       }
@@ -3839,12 +3741,12 @@
         "modifiers": [
           {
             "type": "size",
-            "widthDp": 56,
-            "heightDp": 56
+            "widthDp": 48,
+            "heightDp": 48
           },
           {
             "type": "clip",
-            "shape": "14"
+            "shape": "12"
           }
         ]
       },
@@ -4082,7 +3984,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 16.0
+            "value": 12.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -4095,9 +3997,9 @@
           },
           {
             "type": "padding",
-            "startDp": 20,
+            "startDp": 16,
             "topDp": 8,
-            "endDp": 20,
+            "endDp": 16,
             "bottomDp": 8
           }
         ]
@@ -4131,7 +4033,7 @@
         "modifiers": [
           {
             "type": "width",
-            "widthDp": 24
+            "widthDp": 20
           }
         ]
       }
@@ -4149,12 +4051,12 @@
         "modifiers": [
           {
             "type": "size",
-            "widthDp": 56,
-            "heightDp": 56
+            "widthDp": 48,
+            "heightDp": 48
           },
           {
             "type": "clip",
-            "shape": "14"
+            "shape": "12"
           }
         ]
       },
@@ -4380,5 +4282,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "858b949c0293a1354a198c443a8e45b8f44a83fb43a392423af6bcefb4b96ec2"
+  "expectedDocumentHash": "9c21c0a6605bed792196437cd51f4e07ddb14ccd51d9b3840d2ac26f4b229943"
 }
