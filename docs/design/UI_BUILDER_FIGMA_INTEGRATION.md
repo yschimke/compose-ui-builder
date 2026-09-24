@@ -59,8 +59,23 @@ Two facts from that table decide the design:
 
 ## Three contracts
 
-All three are JSON, versioned, and owned by this repository, because they describe *this* editor's
-tree. The plugin and any agent read and write them; neither side links against the other.
+All three are JSON and versioned. The plugin and any agent read and write them; neither side links
+against the other.
+
+**Ownership moves at v1.** While the shapes are still settling, this repository owns them, so a
+change is one pull request here rather than a `compose-preview-contracts` release plus a pin bump in
+every consumer. They move to `compose-preview-contracts`, as versioned JSON Schemas, when they reach
+v1. That happens when the first route outside this repository accepts or returns one: a
+compose-preview-server host route or MCP tool that imports a snapshot or serves a scene. From then on
+they are cross-repository wire formats. design-parity's TypeScript checks its payloads against the
+published schema instead of a hand-copied type, and the server reads them without depending on
+`:ui-builder`.
+
+- **Snapshot and scene** move at that point: each is a single message crossing a repository
+  boundary.
+- **The map** moves only if something outside this repository has to read it. It describes a
+  catalog rather than a message, and it is pinned to the catalog's system id and revision, so until
+  then it stays next to the catalog it maps.
 
 ### `compose-ui-builder-figma-snapshot/v1` — a Figma frame, as read
 
@@ -291,7 +306,9 @@ editor's tree and the contracts that describe it; design-parity owns Figma.
 
 | Piece | Repository | Module |
 | --- | --- | --- |
-| Snapshot, map and scene contracts; importer, scene exporter, round-trip reconcile | compose-ui-builder | `:ui-builder` `commonMain`, package `figma` |
+| Snapshot, map and scene contracts (until v1; see [Three contracts](#three-contracts)) | compose-ui-builder | `:ui-builder` `commonMain`, package `figma` |
+| Snapshot and scene contracts at v1, as JSON Schemas | compose-preview-contracts | follow-up, with the first server route |
+| Importer, scene exporter, round-trip reconcile | compose-ui-builder | `:ui-builder` `commonMain`, package `figma` |
 | Seed map for `m3-catalog` | compose-ui-builder | `docs/design/fixtures/ui-builder/` |
 | Reading a selection into a snapshot; building a scene; stamping | design-parity | `packages/figma-plugin` (`src/uiBuilder*.ts`, pure, tested against the fake Figma) |
 | Host routes / MCP tools that accept a snapshot and return operations | compose-preview-server | `:server`, `:mcp` (follow-up; until then the importer runs from tests and a command-line tool) |
@@ -316,7 +333,8 @@ Later, independent of each other:
 
 - traceable SVG (layer names on the fragments that carry a node id);
 - a map generated from Code Connect and the catalog's published Figma references;
-- server routes and MCP tools so a browser session can import without the desktop host;
+- server routes and MCP tools so a browser session can import without the desktop host, which is
+  also when the snapshot and scene contracts move to `compose-preview-contracts` at v1;
 - `Code Connect` for Compose generated from the catalog record, so Figma's own Dev Mode and MCP show
   the catalog call for an instance.
 
