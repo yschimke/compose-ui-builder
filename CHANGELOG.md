@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.47.0](https://github.com/yschimke/compose-ui-builder/compare/v3.46.0...v3.47.0) (2026-09-24)
+
+
+### Features
+
+* **ui-builder:** group the home screen's recent designs by folder ([#223](https://github.com/yschimke/compose-ui-builder/issues/223)) ([922780c](https://github.com/yschimke/compose-ui-builder/commit/922780c4e12c55affe629630842c3ab5a0ed62cf))
+
+
+### Bug Fixes
+
+* **ui-builder:** tell a catalog runtime which widget host shape each pane is ([#225](https://github.com/yschimke/compose-ui-builder/issues/225)) ([61e6837](https://github.com/yschimke/compose-ui-builder/commit/61e68372962cb04bc2c50c386516c3eb66e51708))
+
 ## [3.46.0](https://github.com/yschimke/compose-ui-builder/compare/v3.45.0...v3.46.0) (2026-09-24)
 
 
