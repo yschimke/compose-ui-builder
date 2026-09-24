@@ -66,6 +66,12 @@ class FigmaSnapshotImporter(
   private val catalog: CapabilityCatalog,
   private val map: FigmaComponentMap,
 ) {
+  init {
+    require(map.catalog == catalog.benchmark.catalogSystemId) {
+      "map is for ${map.catalog}, catalog is ${catalog.benchmark.catalogSystemId}"
+    }
+  }
+
   fun import(
     snapshot: FigmaSnapshot,
     designId: String,
@@ -83,6 +89,13 @@ class FigmaSnapshotImporter(
     private val diagnostics = mutableListOf<FigmaImportDiagnostic>()
     private val figmaIds = linkedMapOf<String, String>()
     private val usedIds = mutableSetOf<String>()
+
+    /**
+     * The export this frame came from, read off its root. A stamp from anywhere else — a subtree
+     * pasted in from another design, or from another export of this one — is not this design's
+     * identity, and trusting it would land a new layer on an unrelated node of the same id.
+     */
+    private val origin = snapshot.root.stamp?.let { it.designId to it.revision }
 
     fun run(): FigmaImportResult {
       operations += buildJsonObject {
@@ -242,13 +255,32 @@ class FigmaSnapshotImporter(
         }
         propertyValue(component, name, translated, node, id)?.let { properties[name] = it }
       }
+      val label =
+        rule.text?.let { textRule ->
+          textRule.from?.let { instance.property(it)?.content }
+            ?: node.firstText()?.text?.characters
+        }
+      // The instance's own children are not walked, so a slot the catalog requires is filled by the
+      // label or not at all. A component that would fail validation is not placed.
+      val unfilled =
+        component.slots.filter { slot ->
+          slot.cardinality.min > 0 && !(slot.name == rule.text?.slot && label != null)
+        }
+      if (unfilled.isNotEmpty()) {
+        diagnostics +=
+          diagnostic(
+            FigmaImportDiagnostic.UNMAPPED_INSTANCE,
+            node,
+            id,
+            "the map places ${rule.componentId}, whose required " +
+              "${unfilled.joinToString { it.name }} the instance cannot fill",
+          )
+        return box(node, id, parent, after, placement)
+      }
       val modifiers = placementModifiers(node, placement, intrinsic = true)
       insert(node, id, rule.componentId, properties, modifiers, parent, after)
 
       rule.text?.let { textRule ->
-        val label =
-          textRule.from?.let { instance.property(it)?.content }
-            ?: node.firstText()?.text?.characters
         if (label != null) {
           val labelId = uniqueId("$id-label")
           figmaIds[labelId] = node.id
@@ -550,15 +582,23 @@ class FigmaSnapshotImporter(
       return wrap(checkNotNull(capability), value)
     }
 
+    /** The catalog the nodes were checked against, exactly as its export validation expects. */
     private fun catalogPin(): JsonObject = buildJsonObject {
-      put("systemId", map.catalog)
-      put("catalogRevision", "candidate")
-      put("capabilityDigest", "candidate")
-      put("nativeRuntimeId", "candidate")
+      put("systemId", catalog.benchmark.catalogSystemId)
+      put("catalogRevision", catalog.benchmark.catalogRevision)
+      put("capabilityDigest", catalog.benchmark.catalogRevision)
+      put("nativeRuntimeId", catalog.benchmark.nativeRuntimeId)
     }
 
-    private fun idFor(node: FigmaSnapshotNode): String =
-      uniqueId(node.stamp?.nodeId ?: figmaNodeId(node.id))
+    /**
+     * A stamp from this export keeps its builder id — once. A designer's duplicate carries the same
+     * stamp, and the second node to claim it is new, so it takes its Figma id like any other.
+     */
+    private fun idFor(node: FigmaSnapshotNode): String {
+      val stamp = node.stamp?.takeIf { (it.designId to it.revision) == origin }
+      if (stamp != null && usedIds.add(stamp.nodeId)) return stamp.nodeId
+      return uniqueId(figmaNodeId(node.id))
+    }
 
     private fun uniqueId(base: String): String {
       var candidate = base
@@ -586,7 +626,8 @@ class FigmaSnapshotImporter(
     const val CHILDREN_SLOT: String = "children"
 
     private val CONTAINER_TYPES = setOf("FRAME", "GROUP", "COMPONENT", "COMPONENT_SET", "SECTION")
-    private val SHAPE_TYPES = setOf("RECTANGLE", "ELLIPSE")
+    /** An ellipse has no shape the catalog can draw, so it is a placeholder, not a square. */
+    private val SHAPE_TYPES = setOf("RECTANGLE")
 
     /** The builder id a Figma node takes when it carries no stamp: stable across re-imports. */
     fun figmaNodeId(figmaId: String): String =

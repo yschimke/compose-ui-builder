@@ -89,82 +89,6 @@
       }
     },
     {
-      "componentSet": "Icon button - standard",
-      "componentId": "m3/icon-button",
-      "constants": {
-        "variant": "standard"
-      },
-      "properties": {
-        "enabled": {
-          "from": "State",
-          "values": {
-            "Enabled": true,
-            "Disabled": false,
-            "Hovered": true,
-            "Focused": true,
-            "Pressed": true
-          }
-        }
-      }
-    },
-    {
-      "componentSet": "Icon button - filled",
-      "componentId": "m3/icon-button",
-      "constants": {
-        "variant": "filled"
-      },
-      "properties": {
-        "enabled": {
-          "from": "State",
-          "values": {
-            "Enabled": true,
-            "Disabled": false,
-            "Hovered": true,
-            "Focused": true,
-            "Pressed": true
-          }
-        }
-      }
-    },
-    {
-      "componentSet": "Icon button - tonal",
-      "componentId": "m3/icon-button",
-      "constants": {
-        "variant": "tonal"
-      },
-      "properties": {
-        "enabled": {
-          "from": "State",
-          "values": {
-            "Enabled": true,
-            "Disabled": false,
-            "Hovered": true,
-            "Focused": true,
-            "Pressed": true
-          }
-        }
-      }
-    },
-    {
-      "componentSet": "Icon button - outlined",
-      "componentId": "m3/icon-button",
-      "constants": {
-        "variant": "outlined"
-      },
-      "properties": {
-        "enabled": {
-          "from": "State",
-          "values": {
-            "Enabled": true,
-            "Disabled": false,
-            "Hovered": true,
-            "Focused": true,
-            "Pressed": true
-          }
-        }
-      }
-    },
-    {
       "componentSet": "Checkboxes",
       "componentId": "m3/checkbox",
       "properties": {
@@ -210,33 +134,6 @@
             "Pressed": true
           }
         }
-      }
-    },
-    {
-      "componentSet": "Cards",
-      "when": {
-        "Style": "Outlined"
-      },
-      "componentId": "m3/card",
-      "constants": {
-        "variant": "outlined"
-      }
-    },
-    {
-      "componentSet": "Cards",
-      "when": {
-        "Style": "Elevated"
-      },
-      "componentId": "m3/card",
-      "constants": {
-        "variant": "elevated"
-      }
-    },
-    {
-      "componentSet": "Cards",
-      "componentId": "m3/card",
-      "constants": {
-        "variant": "filled"
       }
     },
     {

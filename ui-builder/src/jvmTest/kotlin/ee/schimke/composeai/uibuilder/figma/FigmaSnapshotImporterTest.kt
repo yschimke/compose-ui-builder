@@ -154,6 +154,90 @@ class FigmaSnapshotImporterTest {
   }
 
   @Test
+  fun `the design is pinned to the catalog it was checked against`() {
+    val pin = document.catalogPin
+    assertEquals(catalog.benchmark.catalogSystemId, pin.string("systemId"))
+    assertEquals(catalog.benchmark.catalogRevision, pin.string("catalogRevision"))
+    assertEquals(catalog.benchmark.nativeRuntimeId, pin.string("nativeRuntimeId"))
+    assertTrue(
+      runCatching { FigmaSnapshotImporter(catalog, map.copy(catalog = "wear-m3")) }.isFailure,
+      "a map for another catalog is refused",
+    )
+  }
+
+  @Test
+  fun `a mapped instance that cannot fill a required slot is a placeholder`() {
+    val bare =
+      FigmaSnapshotNode(
+        id = "30:1",
+        type = "FRAME",
+        name = "Bare",
+        layout = FigmaAutoLayout(mode = FigmaAutoLayout.VERTICAL),
+        children =
+          listOf(
+            FigmaSnapshotNode(
+              id = "30:2",
+              type = "INSTANCE",
+              name = "Button",
+              width = 100.0,
+              height = 40.0,
+              instance = FigmaInstance(componentSet = "Button", component = "State=Enabled"),
+            )
+          ),
+      )
+    val imported = FigmaSnapshotImporter(catalog, map).import(FigmaSnapshot(root = bare), "bare")
+    val document = UiBuilderReducer.replay(imported.operations).document
+    assertEquals("layout/box", document.nodes.getValue("figma-30-2").componentId)
+    assertEquals(emptyList(), CapabilityValidator(catalog).validate(document).issues)
+    assertTrue(imported.diagnostics.single { it.figmaNodeId == "30:2" }.message.contains("content"))
+  }
+
+  @Test
+  fun `an ellipse is a placeholder rather than a square`() {
+    val ellipse =
+      snapshot.root.copy(
+        children =
+          listOf(
+            FigmaSnapshotNode(
+              id = "31:1",
+              type = "ELLIPSE",
+              width = 40.0,
+              height = 40.0,
+              fill = FigmaPaint(color = "#FF6750A4"),
+            )
+          )
+      )
+    val imported = FigmaSnapshotImporter(catalog, map).import(FigmaSnapshot(root = ellipse), "e")
+    assertEquals(
+      FigmaImportDiagnostic.UNSUPPORTED_NODE,
+      imported.diagnostics.single { it.figmaNodeId == "31:1" }.code,
+    )
+  }
+
+  @Test
+  fun `a duplicated or foreign stamp does not take over an exported node's identity`() {
+    val stamp = FigmaStamp(designId = "checkout", nodeId = "title", revision = 7)
+    val text = snapshot.root.children.first()
+    val root =
+      snapshot.root.copy(
+        stamp = FigmaStamp(designId = "checkout", nodeId = "screen", revision = 7),
+        children =
+          listOf(
+            text.copy(stamp = stamp),
+            text.copy(id = "10:90", stamp = stamp),
+            text.copy(id = "10:91", stamp = stamp.copy(designId = "elsewhere", nodeId = "screen")),
+          ),
+      )
+    val imported =
+      FigmaSnapshotImporter(catalog, map).import(FigmaSnapshot(root = root), "checkout")
+    val document = UiBuilderReducer.replay(imported.operations).document
+    assertEquals(
+      listOf("title", "figma-10-90", "figma-10-91"),
+      document.nodes.getValue("screen").slots["children"],
+    )
+  }
+
+  @Test
   fun `the import is deterministic`() {
     val again = FigmaSnapshotImporter(catalog, map).import(snapshot, designId = "checkout")
     assertEquals(result.operations, again.operations)
@@ -163,6 +247,8 @@ class FigmaSnapshotImporterTest {
 
   private fun JsonObject.value(name: String): String? =
     (this[name] as? JsonObject)?.get("value")?.jsonPrimitive?.content
+
+  private fun JsonObject.string(name: String): String? = this[name]?.jsonPrimitive?.content
 
   private fun resource(path: String): String =
     checkNotNull(javaClass.getResource(path)) { "missing resource $path" }.readText()
