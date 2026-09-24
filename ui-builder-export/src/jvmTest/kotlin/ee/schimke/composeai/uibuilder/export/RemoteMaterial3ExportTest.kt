@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.export
 
 import java.io.File
 import kotlin.test.Test

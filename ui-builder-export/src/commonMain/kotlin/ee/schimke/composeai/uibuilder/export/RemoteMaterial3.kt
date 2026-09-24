@@ -1,7 +1,8 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.uibuilder.EMBEDDED_REMOTE_M3_RECORD_JSON
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
