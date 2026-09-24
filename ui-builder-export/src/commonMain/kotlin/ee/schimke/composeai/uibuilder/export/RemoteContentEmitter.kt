@@ -67,7 +67,8 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
  * The other half of the same drift: `asset/image` was in the `remote-m3` palette, the canvas drew
  * it, and the generator sent it to the catch-all `else` branch, so a widget with album art in it
  * refused to export with the same sentence an unknown component gets. A `remote-m3` catalog may
- * only offer ids in here, which the `:server` test asserts.
+ * only offer ids in here, which the `:server` test asserts, and
+ * `RemoteContentVocabularyTest` checks every entry here has a record or a case.
  */
 public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
   setOf(
@@ -83,7 +84,11 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     "remote-compose/document",
     REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
     REMOTE_COMPOSE_INLINE_COMPONENT_ID,
-  )
+  ) +
+    // The Remote Material 3 components, written from their embedded record in every lane. The
+    // palette offers them (#207), so they have to be here or the `:server` parity test fails on
+    // every one of them.
+    RemoteMaterial3.components.map { it.componentId }
 
 /**
  * Which widget file a [RemoteContentEmitter] body is being written into, which decides its imports.
