@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.unopenableDesignGuidance
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 import kotlin.test.Test
 import kotlin.test.assertEquals

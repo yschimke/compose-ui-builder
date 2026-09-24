@@ -6,6 +6,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeFrame
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeInput
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeLive
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeStream
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.serialization.json.Json

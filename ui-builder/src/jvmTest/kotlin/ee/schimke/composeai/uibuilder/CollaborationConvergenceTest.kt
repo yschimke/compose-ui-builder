@@ -9,6 +9,8 @@ import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.SlotCardinality
 import ee.schimke.composeai.uibuilder.capability.WasmAdapterStatus
 import ee.schimke.composeai.uibuilder.capability.WasmCapability
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

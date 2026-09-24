@@ -1,5 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeAssetLoader
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeDescriptor
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeLoadResult
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeManifestResponse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

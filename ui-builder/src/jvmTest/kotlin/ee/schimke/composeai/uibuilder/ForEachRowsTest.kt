@@ -6,7 +6,15 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
+import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.svg.DocumentSvgExecutionBridge
+import ee.schimke.composeai.uibuilder.svg.inspectDocumentSvgExport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

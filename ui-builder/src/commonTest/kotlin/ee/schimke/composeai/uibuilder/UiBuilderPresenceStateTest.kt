@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_EXPIRY_MILLIS
+import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
+import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.protocol.PresenceLeaveV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceUpsertV1
 import ee.schimke.composeai.uibuilder.protocol.PresenceV1

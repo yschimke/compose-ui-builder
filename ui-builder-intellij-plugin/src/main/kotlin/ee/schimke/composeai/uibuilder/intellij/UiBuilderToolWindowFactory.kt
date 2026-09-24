@@ -22,7 +22,7 @@ import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import ee.schimke.composeai.uibuilder.EditorPane
+import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.host.OfflineCatalog
 import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSessionView
 import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderConnection

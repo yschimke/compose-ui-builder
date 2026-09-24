@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.local
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.json.Json
 
 /** One line of the "designs in this browser" list, read without replaying the design's log. */

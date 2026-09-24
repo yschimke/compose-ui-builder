@@ -44,14 +44,14 @@ layer.
 - **Component…** composes one catalog component through the *same renderer that draws the document*
   — same catalog defaults, same theme, same density — captures it to a graphics layer, trims the
   transparent margins, and places the result as a piece.
-  ([`ReferenceComponentCapture`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ReferenceComponentCapture.kt).)
+  ([`ReferenceComponentCapture`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceComponentCapture.kt).)
 
 The specimen is built by running the editor's *own insertion path* on a throwaway one-box document,
 rather than by assembling nodes by hand. That is load-bearing: a picture of something the editor
 could not actually insert would be a lie the operator only discovers when they try to build it.
 
 **Reference → design: build it, and no agent is needed for the case that matters.**
-[`PromoteReferencePiece`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderEditorState.kt)
+[`PromoteReferencePiece`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditorState.kt)
 turns a captured piece into the real component:
 
 1. The piece names a catalog component — [`ReferencePiece.componentId`], recorded at capture.
@@ -149,7 +149,7 @@ per frame and names it. Those rectangles are what a Compose layout is worth comp
 this card the right width" is answered by the box, where the fill and the type it is painted with
 only get in the way of asking.
 
-[`extractSvgLayoutBoxes`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/ReferenceLayoutBoxes.kt)
+[`extractSvgLayoutBoxes`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceLayoutBoxes.kt)
 reuses `parseStrictSvg` rather than adding a second XML reader, and answers in fractions of the
 SVG's viewport so the drawing code needs nothing from the parse. Rotation and skew are **dropped
 rather than approximated**: a rotated card's bounding box is not the card, and a guide that lies is

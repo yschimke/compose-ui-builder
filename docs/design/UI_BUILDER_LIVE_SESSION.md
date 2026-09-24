@@ -35,7 +35,7 @@ optional `state`; the answer is `303 See Other` to the design's permalink. An or
 which matters: the browser submits it and follows the redirect itself, so the URL left in the
 address bar and in history is the design's, and reloading it re-opens rather than re-creates. 303
 rather than 302 because the method that follows must be `GET`. The server seeds the document —
-[`UiBuilderNewDesignSeed`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderNewDesignSeed.kt),
+[`UiBuilderNewDesignSeed`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderNewDesignSeed.kt),
 shared with the browser so a template means one thing on both sides — pinned to the catalog
 revision this server actually serves. It is refused unless the request is same-origin
 (`Sec-Fetch-Site`, else `Origin` against `Host`): a form `POST` is the one shape a hostile page can

@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

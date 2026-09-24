@@ -8,6 +8,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
+import ee.schimke.composeai.uibuilder.canvas.DeviceSceneHost
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

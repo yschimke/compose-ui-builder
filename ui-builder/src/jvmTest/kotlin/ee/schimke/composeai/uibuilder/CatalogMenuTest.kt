@@ -1,6 +1,14 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.ComponentMenu
+import ee.schimke.composeai.uibuilder.editor.EditorCatalogRow
+import ee.schimke.composeai.uibuilder.editor.EditorComponentKind
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.editor.menuVariantValues
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

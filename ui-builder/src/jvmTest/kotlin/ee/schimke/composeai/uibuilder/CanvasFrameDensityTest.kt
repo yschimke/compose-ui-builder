@@ -7,6 +7,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.unit.Density
+import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
+import ee.schimke.composeai.uibuilder.editor.PinnedDesignCanvas
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
+import ee.schimke.composeai.uibuilder.export.wearWidgetUiBuilderDocument
+import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import kotlin.math.abs
 import kotlin.test.Test

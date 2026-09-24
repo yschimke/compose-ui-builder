@@ -1,8 +1,8 @@
 package ee.schimke.composeai.uibuilder.host
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
-import ee.schimke.composeai.uibuilder.toUiBuilderDocument
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
