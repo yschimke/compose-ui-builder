@@ -30,4 +30,59 @@ class UiBuilderDesignSnifferTest {
 
     assertEquals("compose-ui-builder-document/v1-candidate", sniffDesignSchema(head))
   }
+
+  @Test
+  fun findsASchemaDeclaredPastTheHeadWindow() {
+    // Key order means nothing in JSON: a valid design may carry its `schema` after 4 KiB of nodes.
+    val late =
+      "{ \"nodes\": \"" +
+        "x".repeat(DESIGN_HEADER_SNIFF_BYTES * 3) +
+        "\", " +
+        "\"schema\": \"compose-ui-builder-document/v1\" }"
+
+    assertNull(sniffDesignSchema(late.take(DESIGN_HEADER_SNIFF_BYTES)))
+    assertEquals(
+      "compose-ui-builder-document/v1",
+      scanForDesignSchema(late.byteInputStream()),
+    )
+  }
+
+  @Test
+  fun findsADeclarationSplitAcrossReadChunks() {
+    // Placed to straddle the scanner's 64 KiB chunk boundary.
+    val padding = "y".repeat(64 * 1024 - 10)
+    val text = "{ \"a\": \"$padding\", \"schema\": \"compose-ui-builder-document/v1\" }"
+
+    assertEquals("compose-ui-builder-document/v1", scanForDesignSchema(text.byteInputStream()))
+  }
+
+  @Test
+  fun anUnrelatedSchemaKeyDoesNotClaimAFile() {
+    val text = "{ \"schema\": \"https://json.schemastore.org/package\", \"name\": \"app\" }"
+
+    assertNull(scanForDesignSchema(text.byteInputStream()))
+  }
+
+  @Test
+  fun theScanStopsAtItsLimit() {
+    val text = "z".repeat(1024) + "\"schema\": \"compose-ui-builder-document/v1\""
+
+    assertNull(scanForDesignSchema(text.byteInputStream(), limit = 512))
+  }
+
+  @Test
+  fun aNestedSchemaNearTheHeadDoesNotHideTheRootOneLater() {
+    val text =
+      "{ \"assets\": { \"schema\": \"https://example.com/asset\" }, \"nodes\": \"" +
+        "n".repeat(DESIGN_HEADER_SNIFF_BYTES) +
+        "\", \"schema\": \"compose-ui-builder-document/v1\" }"
+
+    // The head alone reports the unrelated value, which is why the caller only trusts a UI
+    // Builder one there and scans on otherwise.
+    assertEquals(
+      "https://example.com/asset",
+      sniffDesignSchema(text.take(DESIGN_HEADER_SNIFF_BYTES)),
+    )
+    assertEquals("compose-ui-builder-document/v1", scanForDesignSchema(text.byteInputStream()))
+  }
 }

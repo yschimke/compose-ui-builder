@@ -119,11 +119,12 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
       ProjectDesignWriter(file, this) { failure ->
         projectSessions[file.url]?.selection?.reportStatus(failure?.let { "not saved: $it" })
       }
+    val generation = writer.generation
     val selection =
       UiBuilderSessionSelection(
         initialSession =
           OfflineUiBuilderSession.projectDocument(document.toUiBuilderDocument()) { committed ->
-            writer.write(committed)
+            writer.write(committed, generation)
           },
         title = document.title.ifBlank { document.id },
         initialCatalog = catalog,
@@ -185,7 +186,7 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
    */
   fun release(selection: UiBuilderSessionSelection) {
     if (--selection.openEditors > 0) return
-    projectSessions.values.filter { it.selection === selection }.forEach { it.writer.flush() }
+    val writers = projectSessions.values.filter { it.selection === selection }.map { it.writer }
     catalogSessions.values.remove(selection)
     projectSessions.values.removeIf { it.selection === selection }
     remoteSessions.entries
@@ -195,7 +196,11 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
         remoteFiles.remove(key)
       }
     if (mutableActiveSession.value === selection) mutableActiveSession.value = null
+    // Close first, then flush: closing lets the edits still queued in the session commit, and
+    // those commits land in the writer, which the flush then writes. Flushing first wrote only
+    // what had already been committed and left the last edits scheduled on a closed design.
     selection.currentSession.close()
+    writers.forEach(ProjectDesignWriter::flush)
   }
 
   private fun projectFileChanged(file: VirtualFile) {
@@ -205,6 +210,9 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
     binding.reloadScheduled = true
     ApplicationManager.getApplication().invokeLater {
       binding.reloadScheduled = false
+      // Released while this waited: the last editor closed, and a session built now would belong
+      // to nothing — never shown, and never closed.
+      if (projectSessions[file.url] !== binding) return@invokeLater
       if (project.isDisposed || !file.isValid) return@invokeLater
       if (binding.writer.matches(file.modificationStamp)) return@invokeLater
       val document = readProjectDesign(file)
@@ -224,9 +232,10 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
       // the version it replaced, and writing it would silently undo the external change.
       binding.writer.discardPending()
       binding.writer.adopt(file.modificationStamp)
+      val generation = binding.writer.generation
       val replacement =
         OfflineUiBuilderSession.projectDocument(document.toUiBuilderDocument()) { committed ->
-          binding.writer.write(committed)
+          binding.writer.write(committed, generation)
         }
       binding.selection.reportStatus(null)
       binding.selection.replaceSession(replacement, catalog)
@@ -234,11 +243,12 @@ internal class UiBuilderProjectService(private val project: Project) : Disposabl
   }
 
   override fun dispose() {
-    projectSessions.values.forEach { binding -> runCatching { binding.writer.flush() } }
+    // The same order as [release]: sessions commit what they still hold, then writers write it.
     (catalogSessions.values + projectSessions.values.map { it.selection } + remoteSessions.values)
       .map { it.currentSession }
       .distinct()
       .forEach(UiBuilderSession::close)
+    projectSessions.values.forEach { binding -> runCatching { binding.writer.flush() } }
     catalogSessions.clear()
     projectSessions.clear()
     remoteSessions.clear()
@@ -284,8 +294,9 @@ internal fun isProjectDesign(file: VirtualFile): Boolean {
 /**
  * Identifies source files that belong to the UI Builder document family for JSON Schema support.
  *
- * A `.uid` file is one by extension. A `.json` file is one when the first
- * [DESIGN_HEADER_SNIFF_BYTES] declare a UI Builder schema; nothing past that window is read.
+ * A `.uid` file is one by extension. A `.json` file is one when it declares a UI Builder schema:
+ * the first [DESIGN_HEADER_SNIFF_BYTES] answer for every file this editor writes, and a longer file
+ * whose head does not is scanned on (see [scanForDesignSchema]). Cached per stamp.
  */
 internal fun isUiBuilderDesignFile(file: VirtualFile): Boolean {
   if (file.isDirectory || file.extension !in supportedProjectDesignExtensions) return false
@@ -314,11 +325,19 @@ private fun <T : Any> cachedByStamp(
 
 private fun readDesignSchema(file: VirtualFile): String? = runCatching {
   file.inputStream.use { input ->
-    String(input.readNBytes(DESIGN_HEADER_SNIFF_BYTES), Charsets.UTF_8)
+    val head = input.readNBytes(DESIGN_HEADER_SNIFF_BYTES)
+    // Only a UI Builder value settles it: a nested or extension `schema` key near the head says
+    // nothing about the root's, which may still come later.
+    sniffDesignSchema(String(head, Charsets.UTF_8))?.takeIf { it in supportedProjectDesignSchemas }
+      // Inconclusive head on a longer file: its `schema` may simply come later.
+      ?: if (head.size == DESIGN_HEADER_SNIFF_BYTES) {
+        file.inputStream.use { scanForDesignSchema(it) }
+      } else {
+        null
+      }
   }
 }
   .getOrNull()
-  ?.let(::sniffDesignSchema)
 
 /** The document declarations this offline v1 editor can safely load and write back. */
 private val supportedProjectDesignSchemas =
@@ -359,7 +378,19 @@ private class ProjectDesignWriter(
 ) {
   private var expectedModificationStamp = file.modificationStamp
   private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, parent)
-  @Volatile private var pending: DesignDocumentV1? = null
+  private val lock = Any()
+  private var pending: DesignDocumentV1? = null
+
+  /**
+   * Which session's commits this writer accepts. Commits arrive on a session's coroutine while
+   * [discardPending] runs on the EDT, and closing a replaced session does not stop a callback
+   * already running — so each session writes through the generation it was created for, and
+   * [discardPending] moves the writer on, after which the old session's late commits are ignored
+   * rather than landing over the external change they were made before.
+   */
+  @Volatile
+  var generation: Int = 0
+    private set
 
   @Volatile
   var isWriting: Boolean = false
@@ -371,24 +402,34 @@ private class ProjectDesignWriter(
     expectedModificationStamp = modificationStamp
   }
 
-  /** Schedules [document] to be written; a later call before the write replaces it. */
-  fun write(document: DesignDocumentV1) {
-    pending = document
+  /**
+   * Schedules [document], committed by a session created for [fromGeneration], to be written; a
+   * later call before the write replaces it. A commit from an earlier generation is dropped.
+   */
+  fun write(document: DesignDocumentV1, fromGeneration: Int) {
+    synchronized(lock) {
+      if (fromGeneration != generation) return
+      pending = document
+    }
     alarm.cancelAllRequests()
     alarm.addRequest(::flush, WRITE_DELAY_MS)
   }
 
-  /** Drops a scheduled write without writing it. */
+  /** Drops a scheduled write, and every later commit from the sessions created before now. */
   fun discardPending() {
     alarm.cancelAllRequests()
-    pending = null
+    synchronized(lock) {
+      generation++
+      pending = null
+    }
   }
 
   /** Writes the pending document now, on the EDT. Nothing pending is a no-op. */
   fun flush() {
     alarm.cancelAllRequests()
-    val document = pending ?: return
-    pending = null
+    // Taken and cleared together: a commit landing between a read and a separate clear would
+    // be erased, with nothing left scheduled to write it.
+    val document = synchronized(lock) { pending.also { pending = null } } ?: return
     val bytes = projectDesignJson.encodeToString(document).encodeToByteArray()
     isWriting = true
     val failure =
