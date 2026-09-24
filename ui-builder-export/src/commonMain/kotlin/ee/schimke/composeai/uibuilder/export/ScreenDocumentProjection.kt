@@ -7,10 +7,6 @@ import ee.schimke.composeai.discovery.ScreenNode
 import ee.schimke.composeai.discovery.ScreenState
 import ee.schimke.composeai.discovery.ScreenValue
 import ee.schimke.composeai.discovery.SlotItem
-import ee.schimke.composeai.uibuilder.SHOW_BY_STATE
-import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
-import ee.schimke.composeai.uibuilder.cardContentFill
-import ee.schimke.composeai.uibuilder.exportedStateIdentifier
 import ee.schimke.composeai.uibuilder.protocol.AdaptiveGridValueV1
 import ee.schimke.composeai.uibuilder.protocol.AlignHorizontalModifierV1
 import ee.schimke.composeai.uibuilder.protocol.AlignModifierV1
@@ -75,9 +71,6 @@ import ee.schimke.composeai.uibuilder.protocol.WidthInModifierV1
 import ee.schimke.composeai.uibuilder.protocol.WidthModifierV1
 import ee.schimke.composeai.uibuilder.protocol.WrapContentSizeModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ZIndexModifierV1
-import ee.schimke.composeai.uibuilder.stateSelection
-import ee.schimke.composeai.uibuilder.stateSelectionIssue
-import ee.schimke.composeai.uibuilder.toUiBuilderNode
 import kotlinx.serialization.json.*
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull

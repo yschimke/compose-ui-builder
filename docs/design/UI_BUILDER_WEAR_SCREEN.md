@@ -22,7 +22,7 @@ scaffold on export is not a loss, it is the correct output.
 | Canvas fidelity | Exact | An approximation, stated as one |
 
 So `wear-m3/screen-scaffold` is faked only in the **drawing**. The generated Kotlin calls the real
-`ScreenScaffold`, and [`WearScreenCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearScreenCodeExporter.kt)
+`ScreenScaffold`, and [`WearScreenCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenCodeExporter.kt)
 is a second generator rather than a flag on the widget one because "erase the stand-in" and "emit
 the stand-in" are different jobs that happen to share a shape.
 
@@ -55,12 +55,12 @@ Because the frame is the host's, the shape is **editor state and not document st
 takes no revision, submits no operation and reaches nothing an export writes. A design saved while
 the rectangular frame is showing reopens exactly as it was, and the generated file previews every
 shape regardless of which one was last viewed
-([`WearWidgetCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearWidgetCodeExporter.kt)
+([`WearWidgetCodeExporter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearWidgetCodeExporter.kt)
 emits one `@Preview` per shape). What switching buys a designer is the answer to "does this survive
 the other frame" — a layout that just fits the squircle can clip in the rectangular box.
 
 Both surfaces read one table,
-[`hostSpec`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/WearWidgetHostShape.kt),
+[`hostSpec`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearWidgetHostShape.kt),
 and that is the point of it existing. Hard-coding 200×60 and 200×108 at the canvas dispatch with
 the padding and radius as two private constants, while the native lane keeps its own copy of the
 same four numbers, makes two copies of one spec — and two ways for the picture and the render
@@ -226,7 +226,7 @@ your screen*. Nothing was mislabelled; the label was just never asked to be true
 
 The catalog now says which renderer may make that claim. `wear-m3`'s `statusSemantics` carries a
 `previewSurfaces` block, read by
-[`UiBuilderPreviewSurfaces`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderPreviewSurfaces.kt):
+[`UiBuilderPreviewSurfaces`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderPreviewSurfaces.kt):
 
 | Surface | Fidelity | Because |
 | --- | --- | --- |

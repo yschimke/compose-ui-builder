@@ -228,7 +228,7 @@ class LocalDesignSyncBackTest {
    * content.
    */
   private class FakeServer(
-    forkDocument: ee.schimke.composeai.uibuilder.UiBuilderDocument,
+    forkDocument: ee.schimke.composeai.uibuilder.export.UiBuilderDocument,
     private val forkRetained: Boolean = true,
     private val conflicts: List<CommandConflictV1> = emptyList(),
     private val idempotent: Boolean = false,

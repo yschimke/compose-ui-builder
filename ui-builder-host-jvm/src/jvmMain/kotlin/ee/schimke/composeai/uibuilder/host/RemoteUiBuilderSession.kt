@@ -1,11 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import ee.schimke.composeai.uibuilder.DesignCommentDraft
-import ee.schimke.composeai.uibuilder.EditorSubmission
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderNativeRender
-import ee.schimke.composeai.uibuilder.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
@@ -20,6 +15,11 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolUpdateClient
 import ee.schimke.composeai.uibuilder.client.UiBuilderWebSocketRequest
 import ee.schimke.composeai.uibuilder.client.UiBuilderWebSocketTransport
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
+import ee.schimke.composeai.uibuilder.editor.DesignCommentDraft
+import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.DesignsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.ListDesignsRequestV1

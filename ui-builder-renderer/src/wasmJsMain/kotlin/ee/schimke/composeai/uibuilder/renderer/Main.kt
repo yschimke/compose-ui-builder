@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.renderer
 
-import ee.schimke.composeai.uibuilder.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSemanticActionController
 import ee.schimke.composeai.uibuilder.renderer.sdk.startCatalogRenderer
 

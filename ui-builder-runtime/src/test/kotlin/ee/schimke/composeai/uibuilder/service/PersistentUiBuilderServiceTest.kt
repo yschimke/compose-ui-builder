@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
-import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.io.Closeable
 import java.nio.file.Files

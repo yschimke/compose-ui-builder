@@ -7,6 +7,7 @@ import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.discovery.ComponentSlot
 import ee.schimke.composeai.discovery.ComponentSymbol
 import ee.schimke.composeai.discovery.TargetParameter
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import kotlinx.serialization.json.JsonArray

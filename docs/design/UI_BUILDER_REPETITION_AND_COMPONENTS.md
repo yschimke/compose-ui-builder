@@ -26,13 +26,13 @@ person and kept is a real defect rather than a cosmetic one.
 ## The constraint all three run into
 
 The document is a flat map of nodes plus a slot-per-parent child list
-([`UiBuilderDocument`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderDocument.kt)),
+([`UiBuilderDocument`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderDocument.kt)),
 and three separate walks agree with it one-for-one:
 
 - the canvas — `RenderNode(document, nodeId, …)`, reporting `onBounds(node.id, …)` per node
-  ([`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderRenderer.kt));
+  ([`UiBuilderRenderer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt));
 - the exporters — `emitNode(nodeId, …)` in
-  [`CapabilityComposeCodeExporter`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/CapabilityComposeCodeExporter.kt),
+  [`CapabilityComposeCodeExporter`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/codegen/CapabilityComposeCodeExporter.kt),
   and `ScreenGenerator` fed by
   [`ScreenDocumentProjection`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/ScreenDocumentProjection.kt);
 - everything anchored to a node id: selection, the inspector, comments, `PlaygroundNodeBoundsService`,
@@ -44,7 +44,7 @@ component whose body is defined once — needs an **instance path** (`cell#3`, `
 wherever a bare node id is used today. That is the real cost of both, it is the same cost twice, and
 it is worth paying once rather than half-paying it in two places.
 
-[`UiBuilderInstancePath`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderInstancePath.kt)
+[`UiBuilderInstancePath`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderInstancePath.kt)
 is that identity, and the canvas measures against it now. A path is deliberately no longer than it
 has to be: with no repeat above a box the path **is** the node id, so every key written today is
 character-for-character the one that was written before, and the chain — `row#2/cell#4/label` —

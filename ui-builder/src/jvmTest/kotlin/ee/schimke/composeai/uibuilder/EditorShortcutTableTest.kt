@@ -1,6 +1,14 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.input.key.Key
+import ee.schimke.composeai.uibuilder.editor.EDITOR_GESTURES
+import ee.schimke.composeai.uibuilder.editor.EDITOR_SHORTCUTS
+import ee.schimke.composeai.uibuilder.editor.EditorChord
+import ee.schimke.composeai.uibuilder.editor.EditorMoveDirection
+import ee.schimke.composeai.uibuilder.editor.EditorPane
+import ee.schimke.composeai.uibuilder.editor.EditorSelectionMove
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.editorShortcutFor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

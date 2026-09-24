@@ -431,7 +431,11 @@ val remoteComposeAuthoring = providers.gradleProperty("uiBuilderRemoteCompose").
 // `generateMcpBuildFeatures` stayed behind with `:mcp`, which is the server's module. The flag is
 // still one compile-time choice; it is now made in two builds, and a release pairs them.
 listOf(
-  Triple("generateUiBuilderBuildFeatures", "ee.schimke.composeai.uibuilder", "UiBuilderBuildFeatures"),
+  Triple(
+    "generateUiBuilderBuildFeatures",
+    "ee.schimke.composeai.uibuilder.export",
+    "UiBuilderBuildFeatures",
+  ),
 ).forEach { (taskName, packageName, objectName) ->
   tasks.register(taskName) {
     val enabled = remoteComposeAuthoring

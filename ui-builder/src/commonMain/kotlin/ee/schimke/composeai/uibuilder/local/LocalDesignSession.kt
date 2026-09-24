@@ -5,9 +5,9 @@ import ee.schimke.composeai.uibuilder.CollaborationPropertyValidator
 import ee.schimke.composeai.uibuilder.CollaborationReducer
 import ee.schimke.composeai.uibuilder.CollaborationState
 import ee.schimke.composeai.uibuilder.CommandOutcome
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
-import ee.schimke.composeai.uibuilder.toDesignDocumentV1
 
 /** The catalog-backed rules a locally stored design is admitted against, or none in a test. */
 data class LocalDesignValidators(

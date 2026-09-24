@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
-import ee.schimke.composeai.uibuilder.EditorExportFormat
+import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import java.awt.Image
 import java.nio.file.Files
 import javax.imageio.ImageIO

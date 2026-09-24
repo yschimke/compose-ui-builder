@@ -2,8 +2,8 @@
 
 package ee.schimke.composeai.uibuilder.client
 
-import ee.schimke.composeai.uibuilder.CatalogRuntimeManifestResponse
-import ee.schimke.composeai.uibuilder.CatalogRuntimeManifestTransport
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeManifestResponse
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeManifestTransport
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine

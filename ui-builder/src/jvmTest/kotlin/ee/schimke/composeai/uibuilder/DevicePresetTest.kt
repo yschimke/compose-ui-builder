@@ -1,6 +1,21 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
+import ee.schimke.composeai.uibuilder.canvas.forPlatform
+import ee.schimke.composeai.uibuilder.canvas.matchingDevicePreset
+import ee.schimke.composeai.uibuilder.canvas.withDevicePreset
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorLayoutDirection
+import ee.schimke.composeai.uibuilder.editor.EditorScreenTheme
+import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.ScreenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.validationError
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
