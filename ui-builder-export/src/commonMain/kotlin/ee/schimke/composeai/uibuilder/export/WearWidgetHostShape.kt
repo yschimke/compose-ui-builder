@@ -73,6 +73,17 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
     /** The shape [id] names, or [Default] for an unknown or absent one. */
     fun fromId(id: String?): WearWidgetHostShape =
       entries.firstOrNull { it.id == id?.trim()?.lowercase() } ?: Default
+
+    /**
+     * The `environment` key naming the host shape a surface is drawn in, as a shape's [id].
+     *
+     * A catalog runtime is sent a document and a surface size, and nothing else about the pane it
+     * fills, so without this every pane of a pinned-runtime widget was framed as [Default]: the
+     * Samsung stadium and the Pixel Watch rounded rectangle drew the same frame, and whatever of
+     * the pane that frame left uncovered drew the runtime's own background. The editor sets it on
+     * the copy of the document each surface is sent; it is never stored.
+     */
+    const val ENVIRONMENT_KEY: String = "wearWidgetHostShape"
   }
 }
 
