@@ -134,12 +134,12 @@ class FigmaRoundTripTest {
     val command = checkNotNull(fromFigma("edited").command)
     assertEquals(
       listOf(
-        "deleteNode figma-10-6",
         "insertNode figma-4-16",
         "moveNode figma-10-10",
         "setProperty figma-10-2 text",
         "setProperty figma-10-3 horizontalSpacingDp",
         "setProperty figma-10-13-label text",
+        "deleteNode figma-10-6",
       ),
       command.operations.map { it.describe() },
     )
@@ -245,6 +245,78 @@ class FigmaRoundTripTest {
     val outcome = assertIs<CommandOutcome.Accepted>(second.outcome)
     assertTrue(outcome.conflicts.any { it.nodeId == "figma-10-2" }, outcome.toString())
     assertEquals("Your order", second.state.document.text("figma-10-2"))
+  }
+
+  @Test
+  fun `a child moved out of a container a designer then deleted survives`() {
+    val gift = scene.root.children.single { it.id == "figma-10-7" }.children.last()
+    val edited =
+      scene.root.copy(children = scene.root.children.filterNot { it.id == "figma-10-7" } + gift)
+    val command = checkNotNull(reconcile(FigmaSnapshot(root = edited)).command)
+    assertEquals(
+      // Filling a Row's width is a weight; filling the Column's is fillMaxWidth.
+      listOf("moveNode figma-10-9", "setModifiers figma-10-9", "deleteNode figma-10-7"),
+      command.operations.map { it.describe() },
+    )
+    val document = apply(base, command).document
+    assertTrue("figma-10-7" !in document.nodes)
+    assertEquals(
+      "figma-10-9",
+      document.nodes.getValue("figma-10-1").slots.getValue("children").last(),
+    )
+  }
+
+  @Test
+  fun `deletions against a design that has moved on are held back for the current revision`() {
+    val concurrent =
+      DesignCommand(
+        designId = base.id,
+        operationId = "browser-edit",
+        actorId = "someone",
+        clientId = "browser",
+        baseRevision = base.revision,
+        operations =
+          listOf(
+            DesignOperation.SetProperty(
+              "figma-10-5",
+              "text",
+              buildJsonObject {
+                put("type", "string")
+                put("value", "$40.00")
+              },
+            )
+          ),
+      )
+    val moved =
+      CollaborationReducer.apply(CollaborationState(base), concurrent, properties, documents)
+    val current = moved.state.document
+    val edited =
+      scene.root
+        .edit("figma-10-2") { it.copy(text = it.text!!.copy(characters = "Your order")) }
+        .let { root -> root.copy(children = root.children.filterNot { it.id == "figma-10-6" }) }
+    val result =
+      roundTrip.reconcile(current, scene, FigmaSnapshot(root = edited), "figma", "plugin", "rt")
+    val command = checkNotNull(result.command)
+    assertTrue(command.operations.none { it is DesignOperation.DeleteNode })
+    assertEquals(listOf("deleteNode figma-10-6"), result.deletions.map { it.describe() })
+
+    val edits = CollaborationReducer.apply(moved.state, command, properties, documents)
+    assertIs<CommandOutcome.Accepted>(edits.outcome, edits.outcome.toString())
+    val deletions =
+      checkNotNull(
+        result.deletionCommand(
+          current.id,
+          edits.state.document.revision,
+          "figma",
+          "plugin",
+          "rt-deletions",
+        )
+      )
+    val done = CollaborationReducer.apply(edits.state, deletions, properties, documents)
+    assertIs<CommandOutcome.Accepted>(done.outcome, done.outcome.toString())
+    assertTrue("figma-10-6" !in done.state.document.nodes)
+    assertEquals("Your order", done.state.document.text("figma-10-2"))
+    assertEquals("$40.00", done.state.document.text("figma-10-5"))
   }
 
   @Test

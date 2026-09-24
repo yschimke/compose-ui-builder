@@ -19,11 +19,30 @@ import kotlinx.serialization.json.doubleOrNull
  *
  * [command] is null when nothing changed. [diagnostics] are the import's, for the parts of the
  * frame a designer added that the map cannot name.
+ *
+ * [deletions] are the layers a designer removed, held back from [command] when the design has moved
+ * on since the export: the reducer refuses a stale delete outright, and would reject the edits with
+ * it. They are submitted afterwards, at whatever revision the design is then at — see
+ * [deletionCommand] — once the host has shown them, because deleting on the strength of an old
+ * picture of the design is the one edit that is not merged.
  */
 data class FigmaRoundTripResult(
   val command: DesignCommand?,
   val diagnostics: List<FigmaImportDiagnostic>,
-)
+  val deletions: List<DesignOperation.DeleteNode> = emptyList(),
+) {
+  /** The held-back deletions as a command at [currentRevision], or null when there are none. */
+  fun deletionCommand(
+    designId: String,
+    currentRevision: Int,
+    actorId: String,
+    clientId: String,
+    operationId: String,
+  ): DesignCommand? =
+    deletions
+      .takeIf { it.isNotEmpty() }
+      ?.let { DesignCommand(designId, operationId, actorId, clientId, currentRevision, it) }
+}
 
 /**
  * Figma edits → a [DesignCommand] at the revision the scene was exported from. See
@@ -71,11 +90,14 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
     val beforeParents = before.parents()
     val afterParents = after.parents()
 
-    // Deletes first, deepest last removed with their subtree by the reducer: only the topmost.
-    before.nodes.keys
-      .filter { it !in after.nodes && it in base.nodes }
-      .filter { id -> beforeParents[id]?.first?.let { it in after.nodes } != false }
-      .forEach { operations += DesignOperation.DeleteNode(it) }
+    // Only the topmost removed node: the reducer takes its subtree with it. Applied last, so a
+    // child
+    // a designer moved out of a container before deleting it is out before the container goes.
+    val deletes =
+      before.nodes.keys
+        .filter { it !in after.nodes && it in base.nodes }
+        .filter { id -> beforeParents[id]?.first?.let { it in after.nodes } != false }
+        .map { DesignOperation.DeleteNode(it) }
 
     // Which nodes kept their place: per parent slot, the longest run of siblings both sides list in
     // the same order. Only the rest moved — so dragging one card to the end is one move, not one
@@ -138,11 +160,19 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
         operations +=
           DesignOperation.SetModifiers(
             received.id,
-            mergeModifiers(current.modifiers, receivedModifiers.map { it as JsonObject }),
+            mergeModifiers(
+              current.modifiers,
+              receivedModifiers.map { it as JsonObject },
+              // Figma has no padding on a frame without auto layout, so a Box keeps its own.
+              if (current.componentId == "layout/box") FIGMA_MODIFIERS - "padding"
+              else FIGMA_MODIFIERS,
+            ),
           )
       }
     }
 
+    val stale = base.revision != scene.revision
+    if (!stale) operations += deletes
     val command =
       operations
         .takeIf { it.isNotEmpty() }
@@ -156,7 +186,7 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
             operations = it,
           )
         }
-    return FigmaRoundTripResult(command, diagnostics)
+    return FigmaRoundTripResult(command, diagnostics, if (stale) deletes else emptyList())
   }
 
   private companion object {
@@ -181,12 +211,16 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
      * the first of them was — Compose reads a chain in order, so what Figma cannot express keeps
      * its position relative to the rest.
      */
-    fun mergeModifiers(current: JsonArray, received: List<JsonObject>): JsonArray {
+    fun mergeModifiers(
+      current: JsonArray,
+      received: List<JsonObject>,
+      expressible: Set<String>,
+    ): JsonArray {
       val merged = mutableListOf<JsonObject>()
       var placed = false
       current.forEach { element ->
         val modifier = element as? JsonObject ?: return@forEach
-        if (modifier.type() in FIGMA_MODIFIERS) {
+        if (modifier.type() in expressible) {
           if (!placed) {
             merged += received
             placed = true

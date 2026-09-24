@@ -76,6 +76,11 @@ object FigmaTool {
           )
         result.diagnostics.forEach { println("${it.code} ${it.figmaNodeId}: ${it.message}") }
         println("${result.command?.operations?.size ?: 0} operations")
+        result.deletions.forEach {
+          println(
+            "held back (the design moved on; submit at its current revision): delete ${it.nodeId}"
+          )
+        }
       }
       else -> error("usage: figmaTool import|export|reconcile …")
     }
