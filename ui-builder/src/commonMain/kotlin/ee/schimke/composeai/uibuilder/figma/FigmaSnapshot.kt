@@ -139,9 +139,21 @@ data class FigmaInstance(
 /**
  * The identity a node exported by this editor carries back, read from shared plugin data under
  * [NAMESPACE].
+ *
+ * [componentId] and [slot] say what the node was and which slot of its parent it sat in, so a frame
+ * standing in for a component Figma has no counterpart for is still recognisable. [labelNodeId] is
+ * the `m3/text` child a kit instance's label property stood for: the label is a property in Figma
+ * and a node in the builder, and the round trip has to land an edit to it on that node.
  */
 @Serializable
-data class FigmaStamp(val designId: String, val nodeId: String, val revision: Int) {
+data class FigmaStamp(
+  val designId: String,
+  val nodeId: String,
+  val revision: Int,
+  val componentId: String? = null,
+  val slot: String? = null,
+  val labelNodeId: String? = null,
+) {
   companion object {
     const val NAMESPACE: String = "composeUiBuilder"
   }

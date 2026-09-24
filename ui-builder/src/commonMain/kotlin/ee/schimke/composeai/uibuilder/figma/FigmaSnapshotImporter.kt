@@ -282,7 +282,7 @@ class FigmaSnapshotImporter(
 
       rule.text?.let { textRule ->
         if (label != null) {
-          val labelId = uniqueId("$id-label")
+          val labelId = uniqueId(node.stamp?.labelNodeId ?: "$id-label")
           figmaIds[labelId] = node.id
           operations +=
             insertOperation(

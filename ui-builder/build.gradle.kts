@@ -260,6 +260,30 @@ tasks.register<JavaExec>("generateJetcasterSvgFixture") {
   outputs.file(layout.buildDirectory.file("figma-gate/jetcaster-discover.svg"))
 }
 
+tasks.register<JavaExec>("exportFigmaScene") {
+  description =
+    "Export a design's operation log as a compose-ui-builder-figma-scene/v1, sized from its " +
+      "measured layout (-PuiBuilderDesign=<operations.json>)."
+  group = "code generation"
+  dependsOn("jvmMainClasses")
+  classpath(
+    layout.buildDirectory.dir("classes/kotlin/jvm/main"),
+    layout.buildDirectory.dir("processedResources/jvm/main"),
+    configurations.getByName("jvmRuntimeClasspath"),
+  )
+  mainClass.set("ee.schimke.composeai.uibuilder.figma.ExportFigmaScene")
+  javaLauncher.set(uiBuilderLauncher)
+  val output = layout.buildDirectory.file("figma-scene/scene.json")
+  args(
+    providers
+      .gradleProperty("uiBuilderDesign")
+      .map { rootProject.file(it).absolutePath }
+      .getOrElse(""),
+    output.get().asFile.absolutePath,
+  )
+  outputs.file(output)
+}
+
 val generatedJetcasterCheckFile =
   layout.buildDirectory.file("generated/ui-builder-check/JetcasterDiscoverExpanded.kt")
 
