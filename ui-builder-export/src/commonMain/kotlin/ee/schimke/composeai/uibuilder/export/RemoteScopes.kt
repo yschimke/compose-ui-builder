@@ -65,8 +65,7 @@ public class RemoteScopes private constructor(private val remoteNodeIds: Set<Str
      * emitter, the canvas and the export gate all reach it holding a document alone.
      */
     public val REMOTE_HOST_COMPONENT_IDS: Set<String> =
-      WearWidgetScaffoldSize.entries.map { it.componentId }.toSet() +
-        REMOTE_COMPOSE_INLINE_COMPONENT_ID
+      WEAR_WIDGET_CONTAINER_IDS + REMOTE_COMPOSE_INLINE_COMPONENT_ID
 
     /**
      * Resolve [document]'s scopes. A cycle is walked once and left to the export gate to report.

@@ -36,7 +36,7 @@ object UiBuilderNewDesignSeed {
   fun templateIds(catalogSystemId: String): Set<String> =
     when (catalogSystemId) {
       "remote-m3" ->
-        setOf("wear-widget-small", "wear-widget-large") +
+        setOf("wear-widget-small", "wear-widget-large", AdaptiveWearWidget.TEMPLATE_ID) +
           WearWidgetSample.entries.map(WearWidgetSample::templateId)
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       else -> setOf("blank", DEFAULT_TEMPLATE)
@@ -93,6 +93,12 @@ object UiBuilderNewDesignSeed {
           designId = designId,
           catalogPin = catalogPin,
           environment = wearScreenEnvironment(environment),
+        )
+      catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
+        AdaptiveWearWidget.newDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = environment,
         )
       catalogSystemId == "remote-m3" ->
         wearWidgetUiBuilderDocument(

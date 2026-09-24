@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
@@ -54,25 +55,44 @@ data class UiBuilderVariantPane(
   val wearWidgetHostShape: WearWidgetHostShape? = null,
 )
 
-/** The three launcher hosts a Wear widget export generates previews for. */
+/**
+ * The three launcher hosts a Wear widget export generates previews for.
+ *
+ * An adaptive widget previews at both sizes regardless of [size]: each pane draws the design it
+ * resolves to at that size (`AdaptiveWearWidget.resolve`), which is the same design its export
+ * writes into that size's branch, so a pane shows exactly what that container will get.
+ */
 internal fun UiBuilderDocument.wearWidgetPreviewPanes(
   size: WearWidgetScaffoldSize
+): List<UiBuilderVariantPane> {
+  if (!AdaptiveWearWidget.isAdaptive(this)) return wearWidgetPreviewPanes(size, this, null)
+  // Small first: it is the size the template has adapted, so it is what a designer checks.
+  return listOf(WearWidgetScaffoldSize.Small, WearWidgetScaffoldSize.Large).flatMap {
+    wearWidgetPreviewPanes(it, AdaptiveWearWidget.resolve(this, it), it)
+  }
+}
+
+private fun wearWidgetPreviewPanes(
+  size: WearWidgetScaffoldSize,
+  document: UiBuilderDocument,
+  adaptiveSize: WearWidgetScaffoldSize?,
 ): List<UiBuilderVariantPane> =
   WearWidgetHostShape.entries.map { shape ->
     val spec = size.hostSpec(shape)
+    val host =
+      // Named for the watches that draw each frame: Samsung's launcher gives a widget fully
+      // rounded ends, and the Pixel Watch a rounded rectangle.
+      when (shape) {
+        WearWidgetHostShape.Round -> "Samsung"
+        WearWidgetHostShape.Squircle -> "Pixel Watch"
+        WearWidgetHostShape.Rectangular -> "Rectangular"
+      }
     UiBuilderVariantPane(
-      id = "preview-widget-${shape.id}",
-      label =
-        // Named for the watches that draw each frame: Samsung's launcher gives a widget fully
-        // rounded ends, and the Pixel Watch a rounded rectangle.
-        when (shape) {
-          WearWidgetHostShape.Round -> "Samsung"
-          WearWidgetHostShape.Squircle -> "Pixel Watch"
-          WearWidgetHostShape.Rectangular -> "Rectangular"
-        },
+      id = "preview-widget-${shape.id}" + adaptiveSize?.let { "-${it.name.lowercase()}" }.orEmpty(),
+      label = adaptiveSize?.let { "$host · ${it.name}" } ?: host,
       widthDp = spec.frameWidthDp.toFloat(),
       heightDp = spec.frameHeightDp.toFloat(),
-      document = this,
+      document = document,
       wearWidgetHostShape = shape,
     )
   }

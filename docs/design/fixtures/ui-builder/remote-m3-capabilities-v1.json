@@ -185,6 +185,126 @@
         },
         {
             "code": null,
+            "componentId": "remote-m3/widget-container-adaptive",
+            "displayName": "Wear widget · Adaptive (experimental)",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "background",
+                    "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalPaddingDp",
+                    "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalPaddingDp",
+                    "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "cornerRadiusDp",
+                    "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it.",
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawLayer",
+                        "ImageContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "background",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "headline",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "supporting",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "action",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "The copied Wear widget host geometry has not yet passed structured SVG parity.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent",
+                "WearWidgetHost",
+                "RemoteContentHost"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Experimental. Edited at Large, where every slot shows; the preview draws the resolved Small and Large widgets in each host shape, and the export branches on WearWidgetParams.containerType.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/lottie",
             "displayName": "Lottie animation",
             "modifierCapabilities": [

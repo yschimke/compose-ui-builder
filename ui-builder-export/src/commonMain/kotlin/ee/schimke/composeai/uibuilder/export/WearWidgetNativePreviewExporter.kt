@@ -69,12 +69,16 @@ internal object WearWidgetNativePreviewExporter {
    *   two surfaces worth refusing outright.
    */
   fun export(
-    document: UiBuilderDocument,
+    authored: UiBuilderDocument,
     packageName: String,
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
     shape: WearWidgetHostShape = WearWidgetHostShape.Default,
     components: Map<String, ComponentRecord> = emptyMap(),
+    adaptiveSize: WearWidgetScaffoldSize = WearWidgetScaffoldSize.Large,
   ): Result {
+    // A render is one container, so an adaptive design renders as the fixed design it becomes at
+    // [adaptiveSize] — Large by default, the size the canvas edits at because it shows every slot.
+    val document = AdaptiveWearWidget.resolve(authored, adaptiveSize)
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
     val size =

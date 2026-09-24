@@ -97,9 +97,7 @@ object RecordFreeExport {
    * then refuses.
    */
   val CATALOG_SYSTEM_IDS: Set<String> =
-    (WearWidgetScaffoldSize.entries.map { it.componentId } + WearScreenCodeExporter.SCAFFOLD).mapTo(
-      mutableSetOf()
-    ) {
+    (WEAR_WIDGET_CONTAINER_IDS + WearScreenCodeExporter.SCAFFOLD).mapTo(mutableSetOf()) {
       it.substringBefore('/')
     }
 
@@ -117,8 +115,7 @@ object RecordFreeExport {
    * the root.
    */
   val ROOT_ONLY_COMPONENT_IDS: Set<String> =
-    (WearWidgetScaffoldSize.entries.map { it.componentId } + WearScreenCodeExporter.SCAFFOLD)
-      .toSet()
+    (WEAR_WIDGET_CONTAINER_IDS + WearScreenCodeExporter.SCAFFOLD).toSet()
 
   /**
    * The Kotlin [document] generates on its own, or null when it is an ordinary screen the record
@@ -262,7 +259,7 @@ object RecordFreeExport {
    */
   fun isWearWidget(document: DesignDocumentV1): Boolean {
     val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return false
-    return WearWidgetScaffoldSize.entries.any { it.componentId == root.componentId }
+    return root.componentId in WEAR_WIDGET_CONTAINER_IDS
   }
 
   /**
@@ -353,7 +350,7 @@ object RecordFreeExport {
   /** Whether [document]'s single root is one the emitters above accept. */
   private fun DesignDocumentV1.isRecordFree(): Boolean {
     val root = roots.singleOrNull()?.let(nodes::get) ?: return false
-    return WearWidgetScaffoldSize.entries.any { it.componentId == root.componentId } ||
+    return root.componentId in WEAR_WIDGET_CONTAINER_IDS ||
       root.componentId == WearScreenCodeExporter.SCAFFOLD
   }
 
@@ -373,7 +370,7 @@ object RecordFreeExport {
 /** Whether this design is a Wear widget, which generates through a different emitter entirely. */
 fun UiBuilderDocument.isWearWidget(): Boolean {
   val root = roots.singleOrNull()?.let(nodes::get) ?: return false
-  return WearWidgetScaffoldSize.entries.any { it.componentId == root.componentId }
+  return root.componentId in WEAR_WIDGET_CONTAINER_IDS
 }
 
 /** A design whose root is the Wear screen scaffold, which [WearScreenCodeExporter] writes. */

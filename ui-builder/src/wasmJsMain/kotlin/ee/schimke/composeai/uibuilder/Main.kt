@@ -48,6 +48,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.supportingText
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -1401,6 +1402,13 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               id = "wear-widget-large",
               label = "Large widget",
               supportingText = "216×124dp host with a single content slot.",
+            ),
+            UiBuilderNewDesignTemplate(
+              id = AdaptiveWearWidget.TEMPLATE_ID,
+              label = "Adaptive widget (experimental)",
+              supportingText =
+                "Headline, supporting and action slots, laid out for both sizes: Small drops " +
+                  "the supporting line.",
             ),
           ) +
             // The two worked samples, after the empty scaffolds rather than before them: a blank

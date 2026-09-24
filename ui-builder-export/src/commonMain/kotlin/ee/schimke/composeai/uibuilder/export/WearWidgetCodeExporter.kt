@@ -96,6 +96,13 @@ object WearWidgetCodeExporter {
         )
     }
 
+  /** One container size's body, and the emitter that wrote it. */
+  private class Variant(
+    val emitter: RemoteContentEmitter,
+    val background: RemoteContentEmitter.Background,
+    val body: List<String>,
+  )
+
   private sealed interface Outcome {
     data class Generated(
       val name: String,
@@ -125,11 +132,19 @@ object WearWidgetCodeExporter {
   ): Outcome {
     val rootId = document.roots.singleOrNull() ?: return refuse("a widget design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
-    val size =
-      WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == root.componentId }
-        ?: return refuse(
-          "the root is `${root.componentId}`, not a Wear widget container — this generator writes " +
-            "widgets, and a screen belongs to the Compose exporter"
+    // An adaptive widget is written once per container size, from the fixed-container design it
+    // resolves to at each (`AdaptiveWearWidget.resolve`), so every body below is one this generator
+    // already knows how to write. Large first: it is the size whose slots are all present.
+    val adaptive = root.componentId == AdaptiveWearWidget.COMPONENT_ID
+    val sizes =
+      if (adaptive) listOf(WearWidgetScaffoldSize.Large, WearWidgetScaffoldSize.Small)
+      else
+        listOf(
+          WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == root.componentId }
+            ?: return refuse(
+              "the root is `${root.componentId}`, not a Wear widget container — this generator " +
+                "writes widgets, and a screen belongs to the Compose exporter"
+            )
         )
 
     val refusals = mutableListOf<String>()
@@ -154,58 +169,71 @@ object WearWidgetCodeExporter {
           "the Round provider this generator does not select yet"
     }
 
-    val contentIds = root.slots["content"].orEmpty()
+    val resolved = sizes.map { AdaptiveWearWidget.resolve(document, it) }
     // How deep the body sits, which the emitter needs *before* it writes a line: it wraps a call at
     // its own column budget, and a theme wrapper moves every line of the body one level right. The
     // wrapper is only wanted once a colour or type token has been written, though, which is
     // something an emitter learns by emitting — so a throwaway pass asks the question and its
-    // refusals are dropped, the real emitter below being the one that reports them.
-    val depth =
-      if (
-        RemoteContentEmitter(
-            document,
-            mutableListOf(),
-            assets,
-            bundled = bundled,
-            components = components,
-            frameFillingRoot = contentIds.singleOrNull(),
-          )
-          .let { probe ->
-            probe.background(root)
-            contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
-            probe.usesTheme
-          }
-      )
-        2
-      else 1
-
-    val emitter =
+    // refusals are dropped, the real emitter below being the one that reports them. One wrapper
+    // covers every size's branch, so any size wanting it is enough.
+    val usesTheme = resolved.any { sized ->
+      val sizedRoot = sized.nodes.getValue(rootId)
+      val contentIds = sizedRoot.slots["content"].orEmpty()
       RemoteContentEmitter(
-        document,
-        refusals,
-        assets,
-        bundled = bundled,
-        components = components,
-        frameFillingRoot = contentIds.singleOrNull(),
-      )
-    val background = emitter.background(root)
-    val body =
-      when (contentIds.size) {
-        0 -> listOf(emitter.emptyBox(depth))
-        1 -> emitter.emit(contentIds.single(), depth = depth)
-        else -> {
-          refusals += "the widget container holds one body; this design has ${contentIds.size}"
-          emptyList()
+          sized,
+          mutableListOf(),
+          assets,
+          bundled = bundled,
+          components = components,
+          frameFillingRoot = contentIds.singleOrNull(),
+        )
+        .let { probe ->
+          probe.background(sizedRoot)
+          contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
+          probe.usesTheme
         }
-      }
-    emitter.validateFunctionNames(
-      "${document.widgetIdentifier()}Content",
-      document.widgetIdentifier(),
-    )
+    }
+    // An adaptive body sits inside its `if (large)` branch, one level further in.
+    val depth = (if (usesTheme) 2 else 1) + (if (adaptive) 1 else 0)
+
+    val variants = resolved.map { sized ->
+      val sizedRoot = sized.nodes.getValue(rootId)
+      val contentIds = sizedRoot.slots["content"].orEmpty()
+      val emitter =
+        RemoteContentEmitter(
+          sized,
+          refusals,
+          assets,
+          bundled = bundled,
+          components = components,
+          frameFillingRoot = contentIds.singleOrNull(),
+        )
+      val background = emitter.background(sizedRoot)
+      val body =
+        when (contentIds.size) {
+          0 -> listOf(emitter.emptyBox(depth))
+          1 -> emitter.emit(contentIds.single(), depth = depth)
+          else -> {
+            refusals += "the widget container holds one body; this design has ${contentIds.size}"
+            emptyList()
+          }
+        }
+      emitter.validateFunctionNames(
+        "${document.widgetIdentifier()}Content",
+        document.widgetIdentifier(),
+      )
+      Variant(emitter, background, body)
+    }
+    // The background is the container's and does not change with its size, so the first variant's
+    // is the widget's; every other file-level fact is the union of what the sizes wrote.
+    val emitter = variants.first().emitter
+    val emitters = variants.map(Variant::emitter)
+    val background = variants.first().background
     if (refusals.isNotEmpty()) return Outcome.Refused(refusals.distinct())
 
     val name = document.widgetIdentifier()
-    val parameters = emitter.imageParameters
+    val parameters = emitters.flatMap { it.imageParameters }.distinctBy { it.identifier }
+    val previews = sizes.flatMap { size -> size.previewShapes.map { size to it } }
     val source = buildString {
       appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
       appendLine("@file:Suppress(\"RestrictedApi\")")
@@ -214,19 +242,39 @@ object WearWidgetCodeExporter {
         appendLine("package $packageName")
         appendLine()
       }
-      emitter
-        .imports(WidgetSourceShape.Exported(size.previewShapes.map { it.paramsProviderFor(size) }))
+      val shape =
+        WidgetSourceShape.Exported(previews.map { (size, it) -> it.paramsProviderFor(size) })
+      (emitters.flatMap { it.imports(shape) } +
+          listOfNotNull("androidx.glance.wear.core.ContainerInfo".takeIf { adaptive }))
+        .distinct()
+        .sorted()
         .forEach { appendLine("import $it") }
       appendLine()
       appendLine("@RemoteComposable")
       appendLine("@Composable")
-      appendLine("fun ${name}Content(${parameterList(parameters)}) {")
+      val signature =
+        listOfNotNull(
+          "large: Boolean".takeIf { adaptive },
+          parameterList(parameters).ifEmpty { null },
+        )
+      appendLine("fun ${name}Content(${signature.joinToString()}) {")
       // The design's state, before anything that writes it. A `valueChange` action names a REMOTE
       // mutable, so the variables an action touched have to be declared here — and only those,
       // because a widget that declares a variable nothing reads is an operation the player
       // carries for nothing.
-      emitter.stateLocals().forEach { appendLine("$INDENT$it") }
-      if (emitter.usesTheme) {
+      emitters.flatMap { it.stateLocals() }.distinct().forEach { appendLine("$INDENT$it") }
+      val body =
+        if (!adaptive) variants.single().body
+        else {
+          // The one question an adaptive widget asks its host: which container it was given.
+          val pad = INDENT.repeat(depth - 1)
+          listOf("${pad}if (large) {") +
+            variants[0].body +
+            listOf("$pad} else {") +
+            variants[1].body +
+            listOf("$pad}")
+        }
+      if (usesTheme) {
         appendLine("${INDENT}RemoteMaterialTheme {")
         body.forEach(::appendLine)
         appendLine("$INDENT}")
@@ -249,7 +297,12 @@ object WearWidgetCodeExporter {
       }
       background.locals.forEach { appendLine("$INDENT$INDENT$it") }
       documentReturn(background).forEach(::appendLine)
-      appendLine("$INDENT$INDENT${INDENT}${name}Content(${argumentList(parameters)})")
+      val arguments =
+        listOfNotNull(
+          "large = params.containerType == ContainerInfo.CONTAINER_TYPE_LARGE".takeIf { adaptive },
+          argumentList(parameters).ifEmpty { null },
+        )
+      appendLine("$INDENT$INDENT${INDENT}${name}Content(${arguments.joinToString()})")
       appendLine("$INDENT$INDENT}")
       appendLine("$INDENT}")
       appendLine("}")
@@ -259,11 +312,14 @@ object WearWidgetCodeExporter {
       // against — and a scaffold does not need both to show what it looks like. The largest is
       // picked by width rather than by position, so the choice does not rest on the order a
       // provider happens to yield.
-      size.previewShapes.forEach { shape ->
+      //
+      // An adaptive widget previews at both sizes, since the point of it is what each one shows.
+      previews.forEach { (size, shape) ->
+        val label = if (adaptive) "${shape.label} ${size.name}" else shape.label
         appendLine()
-        appendLine("@Preview(name = \"${shape.label} Preview\")")
+        appendLine("@Preview(name = \"$label Preview\")")
         appendLine("@Composable")
-        appendLine("fun $name${shape.label}Preview() =")
+        appendLine("fun $name${label.replace(" ", "")}Preview() =")
         appendLine("${INDENT}WearWidgetPreview(")
         appendLine("$INDENT$INDENT$name(),")
         appendLine("$INDENT$INDENT${shape.paramsProviderFor(size)}().values.maxBy { it.widthDp },")
@@ -272,23 +328,26 @@ object WearWidgetCodeExporter {
       // The inlined pictures sit below the preview for the same reason the declarations do:
       // a base64 PNG is thousands of columns, and a reader who has to scroll past it to reach
       // the widget has been handed a worse file than one who can stop reading at the preview.
-      inlineBitmapDeclarations(emitter.inlineBitmaps).forEach {
+      inlineBitmapDeclarations(emitters.flatMap { it.inlineBitmaps }.distinct()).forEach {
         appendLine()
         appendLine(it)
       }
       // The bundle lane's one declaration, and it is four lines: the archive holds the bytes, so
       // all the file needs is the way in to them.
-      bundledBitmapReader(emitter.usesBundledBitmap)?.let {
+      bundledBitmapReader(emitters.any { it.usesBundledBitmap })?.let {
         appendLine()
         appendLine(it)
       }
       // Last in the file, and deliberately: a Lottie animation is a few thousand columns of
       // minified JSON, and a reader who has to scroll past it to reach the widget has been
       // handed a worse file than one who can stop reading at the preview.
-      emitter.declarations.forEach {
-        appendLine()
-        appendLine(it)
-      }
+      emitters
+        .flatMap { it.declarations }
+        .distinct()
+        .forEach {
+          appendLine()
+          appendLine(it)
+        }
     }
     return Outcome.Generated(
       name = name,

@@ -416,6 +416,7 @@ class ProductionUiBuilderRuntimeTest {
       listOf(
         "remote-m3/widget-container-small",
         "remote-m3/widget-container-large",
+        "remote-m3/widget-container-adaptive",
         "remote-m3/lottie",
         "layout/box",
         "layout/column",

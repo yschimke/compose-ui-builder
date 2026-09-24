@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.capability
 
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_DP_PROPERTIES
 import ee.schimke.composeai.uibuilder.editor.ComponentMenu
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
@@ -534,7 +535,11 @@ object CapabilityCatalogParser {
    * object initialises.
    */
   private val WEAR_WIDGET_CONTAINER_IDS =
-    listOf("remote-m3/widget-container-small", "remote-m3/widget-container-large")
+    listOf(
+      "remote-m3/widget-container-small",
+      "remote-m3/widget-container-large",
+      AdaptiveWearWidget.COMPONENT_ID,
+    )
 
   private val EDITOR_OVERRIDES =
     mapOf(
