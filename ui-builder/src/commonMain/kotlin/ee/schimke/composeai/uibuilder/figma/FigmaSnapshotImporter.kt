@@ -289,9 +289,10 @@ class FigmaSnapshotImporter(
             )
         }
         text.fontSize?.let { properties["fontSizeSp"] = float(it) }
-      }
-      text.fontWeight?.let { weight ->
-        fontWeight(weight)?.let { properties["fontWeight"] = enum(it) }
+        // A mapped style carries its own size and weight, and Figma reports both either way.
+        text.fontWeight?.let { weight ->
+          fontWeight(weight)?.let { properties["fontWeight"] = enum(it) }
+        }
       }
       if (text.italic) properties["fontStyle"] = enum("italic")
       when (text.textAlign) {
