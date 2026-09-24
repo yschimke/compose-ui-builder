@@ -24,6 +24,14 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class StarterContentTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
+
+  /** The widget catalog, whose Remote Material 3 seeds are checked against it rather than M3. */
+  private val remoteCatalog =
+    CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
+
+  private fun catalogFor(componentId: String) =
+    if (componentId.startsWith("remote-m3/")) remoteCatalog else catalog
+
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
     UiBuilderReducer.replay(
@@ -58,23 +66,57 @@ class StarterContentTest {
     StarterContent.componentIds
       .filterNot { it.startsWith("wear-m3/") }
       .forEach { componentId ->
+        val seeded = catalogFor(componentId)
         val component =
-          assertNotNull(catalog.componentsById[componentId], "$componentId is not in the catalog")
+          assertNotNull(seeded.componentsById[componentId], "$componentId is not in the catalog")
         StarterContent.forComponent(componentId).forEach { (slotName, children) ->
           val slot =
             assertNotNull(
               component.slotsByName[slotName],
               "$componentId does not declare slot $slotName",
             )
-          assertCheckedSeed(component, slot, children)
+          assertCheckedSeed(component, slot, children, seeded)
         }
       }
+  }
+
+  /**
+   * The values a Remote Material 3 component is inserted with name properties it declares.
+   *
+   * These are required values — `checked`, `progress` — whose absence is an export refusal, so a
+   * seed naming a property the component does not declare is a component arriving refused.
+   */
+  @Test
+  fun `every Remote Material 3 property seed names a declared property`() {
+    val offered = RemoteMaterial3.components.map { it.componentId }
+    StarterContent.componentIds
+      .filter { it.startsWith("remote-m3/") }
+      .forEach { assertTrue(it in offered, "$it is seeded and not offered") }
+    offered.forEach { componentId ->
+      val component =
+        assertNotNull(remoteCatalog.componentsById[componentId], "$componentId is not offered")
+      StarterContent.propertiesFor(componentId).keys.forEach { name ->
+        assertNotNull(
+          component.propertiesByName[name],
+          "$componentId does not declare property $name",
+        )
+      }
+      component.properties
+        .filter { it.required }
+        .forEach { property ->
+          assertTrue(
+            property.name in StarterContent.propertiesFor(componentId),
+            "$componentId arrives without its required ${property.name}",
+          )
+        }
+    }
   }
 
   private fun assertCheckedSeed(
     parent: ComponentCapability,
     slot: SlotCapability,
     children: List<StarterNode>,
+    catalog: ee.schimke.composeai.uibuilder.capability.CapabilityCatalog = this.catalog,
   ) {
     val where = "${parent.componentId}.${slot.name}"
     assertTrue(
@@ -114,7 +156,7 @@ class StarterContentTest {
             capability.slotsByName[childSlotName],
             "${child.componentId} does not declare slot $childSlotName",
           )
-        assertCheckedSeed(capability, childSlot, grandchildren)
+        assertCheckedSeed(capability, childSlot, grandchildren, catalog)
       }
     }
   }

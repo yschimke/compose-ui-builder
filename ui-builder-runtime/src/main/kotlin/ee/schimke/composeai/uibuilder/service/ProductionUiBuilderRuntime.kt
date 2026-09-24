@@ -2,7 +2,9 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.RemoteDocumentExportSupport
+import ee.schimke.composeai.uibuilder.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.STATE_SELECTION_CONTAINER
 import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
@@ -1502,6 +1504,155 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
     }
     .build()
 
+/**
+ * `remote-m3`'s palette shelves: the Lottie element under Content, then each Remote Material 3
+ * component under the shelf the published catalog files it on.
+ *
+ * Folded over the whole status semantics rather than the menu alone, because [withMenuEntry] reads
+ * the menu out of the semantics it is given and returns the menu: handed a menu, it finds none and
+ * drops every shelf the base catalog already declared.
+ *
+ * The published-catalog foundation's `remote-compose` curation builds its menu with this too, so a
+ * shelf the foundation injects into a published catalog lands where it lands here.
+ */
+internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
+  RemoteMaterial3.components
+    .fold(
+      JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+    ) { semantics, component ->
+      JsonObject(
+        semantics +
+          ("componentMenu" to
+            semantics.withMenuEntry(
+              component.componentId,
+              component.group,
+              REMOTE_MATERIAL_3_SHELVES,
+            ))
+      )
+    }
+    .getValue("componentMenu") as JsonObject
+
+/**
+ * The published catalog's shelf order, so the Remote Material 3 shelves land after this catalog's
+ * own and in the order wear-m3-catalog files them.
+ */
+private val REMOTE_MATERIAL_3_SHELVES =
+  listOf(
+    "Content",
+    "Containment",
+    "Buttons",
+    "Selection buttons",
+    "Edge-hugging buttons",
+    "Sliders",
+    "Steppers",
+    "Communication",
+  )
+
+/**
+ * `androidx.wear.compose.remote.material3` on the widget palette: every component in
+ * [RemoteMaterial3], its properties and slots read off its own signature in the embedded record.
+ *
+ * - **Properties** are the parameters `RemoteContentEmitter`'s record fallback can write: Remote
+ *   and Kotlin scalars and colours. A required one — `checked`, `progress`, `value` — is required
+ *   here too, and `StarterContent` seeds it, so a component arrives exporting. The rest (colours
+ *   objects, shapes, padding) keep their library defaults.
+ * - **Slots** are its `@Composable` parameters under their own names, which is what the record
+ *   fallback fills them from. They take what a widget body takes, and none is required: an empty
+ *   required slot is written as an empty lambda, which is what an unfilled one means.
+ * - **The canvas** draws each with the Wear Material 3 adapter the published catalog names, through
+ *   its mapping, so a widget shows a Wear button rather than a placeholder.
+ * - **Actions** (`onClick`, `onCheckedChange`) are not properties. Unbound, they are written as
+ *   `lambdaAction {}`, which is what an action nobody has wired yet is.
+ */
+private fun remoteMaterial3Components(
+  template: ComponentCapabilityV1,
+  bodySlot: SlotCapabilityV1,
+  supportedWasm: WasmCapabilityV1,
+  blockedSvg: SvgCapabilityV1?,
+): List<ComponentCapabilityV1> =
+  RemoteMaterial3.components.mapNotNull { component ->
+    val record = RemoteMaterial3.records[component.componentId] ?: return@mapNotNull null
+    val slotParameters = record.parameters.filter { it.composableSlot }
+    template
+      .newBuilder()
+      .also {
+        it.componentId = component.componentId
+        it.displayName = component.displayName
+        it.role = if (slotParameters.isEmpty()) "Leaf" else "Container"
+        it.traits = listOf("RemoteContent", "RemoteAuthorable")
+        it.slots = slotParameters.map { parameter ->
+          bodySlot
+            .newBuilder()
+            .also { slot ->
+              slot.name = parameter.name
+              slot.cardinality =
+                bodySlot.cardinality
+                  .newBuilder()
+                  .also { cardinality ->
+                    cardinality.min = 0
+                    cardinality.max = null
+                  }
+                  .build()
+            }
+            .build()
+        }
+        it.properties =
+          record.parameters.mapNotNull { parameter ->
+            remoteMaterial3Property(record.symbol.name, parameter)
+          }
+        it.modifierCapabilities =
+          template.modifierCapabilities.filter { name -> name in REMOTE_M3_MODIFIERS }
+        it.wasm =
+          supportedWasm
+            .newBuilder()
+            .also { wasm ->
+              wasm.canvas = component.canvas
+              wasm.canvasMapping = component.canvasMapping
+              wasm.notes =
+                "Drawn with Wear Material 3's `${component.canvas}`, the adapter the published " +
+                  "catalog names; the widget plays `${record.symbol.name}` itself."
+            }
+            .build()
+        it.code = null
+        it.svg =
+          blockedSvg
+            ?.newBuilder()
+            ?.also { svg ->
+              svg.notes = "Remote Material 3 inside a widget body has no structured SVG answer."
+            }
+            ?.build()
+      }
+      .build()
+  }
+
+/** One parameter of a Remote Material 3 component as a property, or null for one it cannot be. */
+private fun remoteMaterial3Property(
+  symbol: String,
+  parameter: TargetParameter,
+): PropertyCapabilityV1? {
+  if (parameter.composableSlot || parameter.name == "modifier") return null
+  fun types(vararg names: String) = JsonArray(names.map(::JsonPrimitive))
+  val type =
+    when (parameter.typeFqn) {
+      "androidx.compose.remote.creation.compose.state.RemoteString" -> types("string", "object")
+      "androidx.compose.remote.creation.compose.state.RemoteBoolean" -> types("boolean", "object")
+      "androidx.compose.remote.creation.compose.state.RemoteFloat" -> types("number", "object")
+      "androidx.compose.remote.creation.compose.state.RemoteColor" -> JsonPrimitive("string")
+      "androidx.compose.remote.creation.compose.state.RemoteTextUnit" -> JsonPrimitive("number")
+      "kotlin.String" -> JsonPrimitive("string")
+      "kotlin.Boolean" -> JsonPrimitive("boolean")
+      "kotlin.Int" -> JsonPrimitive("integer")
+      "kotlin.Float" -> JsonPrimitive("number")
+      else -> return null
+    }
+  return PropertyCapabilityV1.Builder(parameter.name, type)
+    .also {
+      it.required = !parameter.hasDefault && !parameter.nullable
+      it.notes = "`$symbol`'s `${parameter.name}: ${parameter.type}`."
+    }
+    .build()
+}
+
 private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }
   val box = components.getValue("layout/box")
@@ -1622,7 +1773,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         JsonObject(
           base.statusSemantics +
             (CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive("remote-compose")) +
-            ("componentMenu" to base.statusSemantics.withMenuEntry("remote-m3/lottie", "Content")) +
+            ("componentMenu" to remoteM3ComponentMenu(base.statusSemantics)) +
             ("previewSurfaces" to
               buildJsonObject {
                 putJsonObject("native") {
@@ -1652,7 +1803,8 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             // the
             // same function.
             components.getValue(it).narrowedForRemoteAuthoring()
-          }
+          } +
+          remoteMaterial3Components(box, contentSlot, supportedWasm, blockedSvg)
     }
     .build()
 }

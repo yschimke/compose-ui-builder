@@ -156,6 +156,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.LocalContentColor as WearLocalContentColor
 import androidx.wear.compose.material3.ScreenStage
 import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text as WearText
@@ -675,6 +676,14 @@ private fun RenderNode(
     fun slot(name: String) = this.slot(name)
     val renderChild = this.renderChild
     val child: @Composable (String, Modifier) -> Unit = { id, next -> Child(id, next) }
+    // A Wear container sets Wear's content colour — `onPrimary` inside a filled button — and a
+    // child drawn with Material 3's `Text` reads Material 3's, which the surface pins to the
+    // design's `onBackground`. Without this bridge a widget button's label was light on light.
+    val wearChild: @Composable (String, Modifier) -> Unit = { id, next ->
+      CompositionLocalProvider(LocalContentColor provides WearLocalContentColor.current) {
+        Child(id, next)
+      }
+    }
 
     when (adapterId) {
       // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
@@ -746,12 +755,12 @@ private fun RenderNode(
           modifier = measured,
           label = {
             if (slot("label").isEmpty()) Text(node.string("label"))
-            else slot("label").forEach { child(it, Modifier) }
+            else slot("label").forEach { wearChild(it, Modifier) }
           },
           secondaryLabel =
             when {
               slot("secondaryLabel").isNotEmpty() -> ({
-                  slot("secondaryLabel").forEach { child(it, Modifier) }
+                  slot("secondaryLabel").forEach { wearChild(it, Modifier) }
                 })
               node.string("secondaryLabel").isNotEmpty() -> ({
                   Text(node.string("secondaryLabel"))
@@ -776,12 +785,12 @@ private fun RenderNode(
           modifier = measured,
           label = {
             if (slot("label").isEmpty()) Text(node.string("label"))
-            else slot("label").forEach { child(it, Modifier) }
+            else slot("label").forEach { wearChild(it, Modifier) }
           },
           secondaryLabel =
             when {
               slot("secondaryLabel").isNotEmpty() -> ({
-                  slot("secondaryLabel").forEach { child(it, Modifier) }
+                  slot("secondaryLabel").forEach { wearChild(it, Modifier) }
                 })
               node.string("secondaryLabel").isNotEmpty() -> ({
                   Text(node.string("secondaryLabel"))
@@ -796,12 +805,12 @@ private fun RenderNode(
           modifier = measured,
           label = {
             if (slot("label").isEmpty()) Text(node.string("label"))
-            else slot("label").forEach { child(it, Modifier) }
+            else slot("label").forEach { wearChild(it, Modifier) }
           },
           secondaryLabel =
             when {
               slot("secondaryLabel").isNotEmpty() -> ({
-                  slot("secondaryLabel").forEach { child(it, Modifier) }
+                  slot("secondaryLabel").forEach { wearChild(it, Modifier) }
                 })
               node.string("secondaryLabel").isNotEmpty() -> ({
                   Text(node.string("secondaryLabel"))
@@ -818,7 +827,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
         ) {
-          slot("content").forEach { child(it, Modifier) }
+          slot("content").forEach { wearChild(it, Modifier) }
         }
       "wear-m3/progress-indicator" ->
         WearCanvasProgressIndicator(
@@ -839,7 +848,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
         ) {
-          slot("content").forEach { child(it, Modifier) }
+          slot("content").forEach { wearChild(it, Modifier) }
         }
       "wear-m3/button-group" -> {
         val children = slot("children")
@@ -853,7 +862,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
         ) {
-          slot("content").forEach { child(it, Modifier) }
+          slot("content").forEach { wearChild(it, Modifier) }
         }
       "wear-m3/text-button" ->
         WearCanvasTextButton(
@@ -861,7 +870,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
         ) {
-          slot("content").forEach { child(it, Modifier) }
+          slot("content").forEach { wearChild(it, Modifier) }
         }
       // Routed to the canvas's own icon drawer rather than to Wear's `Icon`. An icon is a tinted
       // vector at a size on both platforms — Wear publishes no shape of its own here — and
@@ -908,11 +917,11 @@ private fun RenderNode(
         )
       "wear-m3/card" ->
         WearCanvasCard(node.string("variant"), measured) {
-          slot("content").forEach { child(it, Modifier) }
+          slot("content").forEach { wearChild(it, Modifier) }
         }
       "wear-m3/button" ->
         WearCanvasButton(node.string("variant"), node.bool("enabled", true), measured) {
-          slot("content").forEach { child(it, Modifier) }
+          slot("content").forEach { wearChild(it, Modifier) }
         }
       // The dialogs. Drawn only when the document says they are showing: `visible` is the flag the
       // generated screen hangs them on, and a canvas that drew every dialog at once would describe

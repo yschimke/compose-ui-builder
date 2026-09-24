@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.RemoteMaterial3
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -108,7 +109,7 @@ class WearWidgetContainerCatalogTest {
         "m3/text",
         "remote-compose/custom",
         "remote-m3/lottie",
-      ),
+      ) + RemoteMaterial3.components.map { it.componentId },
       accepted,
     )
     assertTrue("m3/surface" !in accepted)

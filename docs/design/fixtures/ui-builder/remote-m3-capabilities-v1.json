@@ -1191,6 +1191,2415 @@
                 "platformSupported": true,
                 "unrolled": null
             }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-app-card",
+            "displayName": "App card",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteAppCard`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "appName",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "title",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "appImage",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "time",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/card",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "app"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {
+                        "content": "title"
+                    }
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/card`, the adapter the published catalog names; the widget plays `RemoteAppCard` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-button-group",
+            "displayName": "Button group",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/button-group",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {
+                        "children": "content"
+                    }
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/button-group`, the adapter the published catalog names; the widget plays `RemoteButtonGroup` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-circular-progress-indicator",
+            "displayName": "Circular progress indicator",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "progress",
+                    "notes": "`RemoteCircularProgressIndicator`'s `progress: RemoteFloat`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteCircularProgressIndicator`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startAngle",
+                    "notes": "`RemoteCircularProgressIndicator`'s `startAngle: RemoteFloat`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "endAngle",
+                    "notes": "`RemoteCircularProgressIndicator`'s `endAngle: RemoteFloat`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/progress-indicator",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "circular"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/progress-indicator`, the adapter the published catalog names; the widget plays `RemoteCircularProgressIndicator` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-linear-progress-indicator",
+            "displayName": "Linear progress indicator",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "progress",
+                    "notes": "`RemoteLinearProgressIndicator`'s `progress: RemoteFloat`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteLinearProgressIndicator`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/progress-indicator",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "linear"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/progress-indicator`, the adapter the published catalog names; the widget plays `RemoteLinearProgressIndicator` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-curved-progress-indicator",
+            "displayName": "Curved progress indicator",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "progress",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `progress: RemoteFloat`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startAngle",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `startAngle: RemoteFloat`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "sweepAngle",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `sweepAngle: RemoteFloat`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "gapAngleDegrees",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `gapAngleDegrees: RemoteFloat`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "dotFadeOutFraction",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `dotFadeOutFraction: RemoteFloat`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "dotCollapsible",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `dotCollapsible: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "reverseDirection",
+                    "notes": "`RemoteCurvedProgressIndicator`'s `reverseDirection: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/progress-indicator",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "arc"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/progress-indicator`, the adapter the published catalog names; the widget plays `RemoteCurvedProgressIndicator` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-button",
+            "displayName": "Button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/button",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "filled"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/button`, the adapter the published catalog names; the widget plays `RemoteButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-compact-button",
+            "displayName": "Compact button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteCompactButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteCompactButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "icon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/button",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "filled"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {
+                        "content": "label"
+                    }
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/button`, the adapter the published catalog names; the widget plays `RemoteCompactButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-card",
+            "displayName": "Card",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteCard`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/card",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "filled"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/card`, the adapter the published catalog names; the widget plays `RemoteCard` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-outlined-card",
+            "displayName": "Outlined card",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteOutlinedCard`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteOutlinedCard`'s `borderColor: RemoteColor`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/card",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "outlined"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/card`, the adapter the published catalog names; the widget plays `RemoteOutlinedCard` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-checkbox-button",
+            "displayName": "Checkbox button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "checked",
+                    "notes": "`RemoteCheckboxButton`'s `checked: RemoteBoolean`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteCheckboxButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteCheckboxButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "icon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/checkbox-button",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/checkbox-button`, the adapter the published catalog names; the widget plays `RemoteCheckboxButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-switch-button",
+            "displayName": "Switch button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "checked",
+                    "notes": "`RemoteSwitchButton`'s `checked: RemoteBoolean`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteSwitchButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteSwitchButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "icon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/switch-button",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/switch-button`, the adapter the published catalog names; the widget plays `RemoteSwitchButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-radio-button",
+            "displayName": "Radio button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "selected",
+                    "notes": "`RemoteRadioButton`'s `selected: RemoteBoolean`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteRadioButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteRadioButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "icon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/radio-button",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/radio-button`, the adapter the published catalog names; the widget plays `RemoteRadioButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-split-checkbox-button",
+            "displayName": "Split checkbox button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "checked",
+                    "notes": "`RemoteSplitCheckboxButton`'s `checked: RemoteBoolean`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "object"
+                    ],
+                    "name": "toggleContentDescription",
+                    "notes": "`RemoteSplitCheckboxButton`'s `toggleContentDescription: RemoteString?`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteSplitCheckboxButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/checkbox-button",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/checkbox-button`, the adapter the published catalog names; the widget plays `RemoteSplitCheckboxButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-split-switch-button",
+            "displayName": "Split switch button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "checked",
+                    "notes": "`RemoteSplitSwitchButton`'s `checked: RemoteBoolean`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "object"
+                    ],
+                    "name": "toggleContentDescription",
+                    "notes": "`RemoteSplitSwitchButton`'s `toggleContentDescription: RemoteString?`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteSplitSwitchButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/switch-button",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/switch-button`, the adapter the published catalog names; the widget plays `RemoteSplitSwitchButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-split-radio-button",
+            "displayName": "Split radio button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "selected",
+                    "notes": "`RemoteSplitRadioButton`'s `selected: RemoteBoolean`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "object"
+                    ],
+                    "name": "selectionContentDescription",
+                    "notes": "`RemoteSplitRadioButton`'s `selectionContentDescription: RemoteString?`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteSplitRadioButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/radio-button",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/radio-button`, the adapter the published catalog names; the widget plays `RemoteSplitRadioButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-slider",
+            "displayName": "Slider",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "value",
+                    "notes": "`RemoteSlider`'s `value: RemoteFloat`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "steps",
+                    "notes": "`RemoteSlider`'s `steps: Int`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteSlider`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "segmented",
+                    "notes": "`RemoteSlider`'s `segmented: Boolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "decreaseIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "increaseIcon",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/slider",
+                "canvasMapping": {
+                    "defaults": {
+                        "valueFrom": {
+                            "type": "float",
+                            "value": 0.0
+                        },
+                        "valueTo": {
+                            "type": "float",
+                            "value": 1.0
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/slider`, the adapter the published catalog names; the widget plays `RemoteSlider` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-stepper",
+            "displayName": "Stepper",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "value",
+                    "notes": "`RemoteStepper`'s `value: RemoteFloat`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "steps",
+                    "notes": "`RemoteStepper`'s `steps: Int`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteStepper`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "decreaseIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "increaseIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/stepper",
+                "canvasMapping": {
+                    "defaults": {
+                        "valueFrom": {
+                            "type": "float",
+                            "value": 0.0
+                        },
+                        "valueTo": {
+                            "type": "float",
+                            "value": 1.0
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/stepper`, the adapter the published catalog names; the widget plays `RemoteStepper` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-edge-button",
+            "displayName": "Edge button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteEdgeButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteEdgeButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/edge-button",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {
+                        "size": "buttonSize"
+                    },
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/edge-button`, the adapter the published catalog names; the widget plays `RemoteEdgeButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-icon-button",
+            "displayName": "Icon button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteIconButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteIconButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/icon-button",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "filled"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/icon-button`, the adapter the published catalog names; the widget plays `RemoteIconButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-text-button",
+            "displayName": "Text button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteTextButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteTextButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/text-button",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "standard"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/text-button`, the adapter the published catalog names; the widget plays `RemoteTextButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-title-card",
+            "displayName": "Title card",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteTitleCard`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "title",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "time",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "subtitle",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/card",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "title"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {
+                        "content": "title"
+                    }
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/card`, the adapter the published catalog names; the widget plays `RemoteTitleCard` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
         }
     ],
     "exportCapabilities": {
@@ -1367,6 +3776,69 @@
                 "remote-m3/lottie": {
                     "group": "Content"
                 },
+                "remote-m3/remote-app-card": {
+                    "group": "Containment"
+                },
+                "remote-m3/remote-button": {
+                    "group": "Buttons"
+                },
+                "remote-m3/remote-button-group": {
+                    "group": "Buttons"
+                },
+                "remote-m3/remote-card": {
+                    "group": "Containment"
+                },
+                "remote-m3/remote-checkbox-button": {
+                    "group": "Selection buttons"
+                },
+                "remote-m3/remote-circular-progress-indicator": {
+                    "group": "Communication"
+                },
+                "remote-m3/remote-compact-button": {
+                    "group": "Buttons"
+                },
+                "remote-m3/remote-curved-progress-indicator": {
+                    "group": "Communication"
+                },
+                "remote-m3/remote-edge-button": {
+                    "group": "Edge-hugging buttons"
+                },
+                "remote-m3/remote-icon-button": {
+                    "group": "Buttons"
+                },
+                "remote-m3/remote-linear-progress-indicator": {
+                    "group": "Communication"
+                },
+                "remote-m3/remote-outlined-card": {
+                    "group": "Containment"
+                },
+                "remote-m3/remote-radio-button": {
+                    "group": "Selection buttons"
+                },
+                "remote-m3/remote-slider": {
+                    "group": "Sliders"
+                },
+                "remote-m3/remote-split-checkbox-button": {
+                    "group": "Selection buttons"
+                },
+                "remote-m3/remote-split-radio-button": {
+                    "group": "Selection buttons"
+                },
+                "remote-m3/remote-split-switch-button": {
+                    "group": "Selection buttons"
+                },
+                "remote-m3/remote-stepper": {
+                    "group": "Steppers"
+                },
+                "remote-m3/remote-switch-button": {
+                    "group": "Selection buttons"
+                },
+                "remote-m3/remote-text-button": {
+                    "group": "Buttons"
+                },
+                "remote-m3/remote-title-card": {
+                    "group": "Containment"
+                },
                 "shape/colour-dot": {
                     "group": "Styles"
                 },
@@ -1385,6 +3857,11 @@
                 "Selection",
                 "Text inputs",
                 "Containment",
+                "Buttons",
+                "Selection buttons",
+                "Edge-hugging buttons",
+                "Sliders",
+                "Steppers",
                 "Communication",
                 "Content",
                 "Styles",

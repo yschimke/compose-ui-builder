@@ -89,6 +89,26 @@ internal object StarterContent {
   fun propertiesFor(componentId: String): Map<String, JsonObject> =
     PROPERTY_TABLE[componentId].orEmpty()
 
+  /**
+   * Remote Material 3's required values, seeded for the reasons Wear's are — and because here a
+   * missing one is also a refusal: `RemoteCheckboxButton(checked = …)` has no default, so a
+   * checkbox dropped without one is a widget that does not export.
+   */
+  private val REMOTE_MATERIAL_3_PROPERTIES: Map<String, Map<String, JsonObject>> =
+    mapOf(
+      "remote-m3/remote-checkbox-button" to mapOf("checked" to starterBool(true)),
+      "remote-m3/remote-split-checkbox-button" to mapOf("checked" to starterBool(true)),
+      "remote-m3/remote-switch-button" to mapOf("checked" to starterBool(true)),
+      "remote-m3/remote-split-switch-button" to mapOf("checked" to starterBool(true)),
+      "remote-m3/remote-radio-button" to mapOf("selected" to starterBool(true)),
+      "remote-m3/remote-split-radio-button" to mapOf("selected" to starterBool(true)),
+      "remote-m3/remote-circular-progress-indicator" to mapOf("progress" to starterFraction(0.6)),
+      "remote-m3/remote-linear-progress-indicator" to mapOf("progress" to starterFraction(0.6)),
+      "remote-m3/remote-curved-progress-indicator" to mapOf("progress" to starterFraction(0.6)),
+      "remote-m3/remote-slider" to mapOf("value" to starterFraction(0.5)),
+      "remote-m3/remote-stepper" to mapOf("value" to starterFraction(0.5)),
+    )
+
   private val PROPERTY_TABLE: Map<String, Map<String, JsonObject>> =
     mapOf(
       "shape/colour-dot" to
@@ -136,7 +156,7 @@ internal object StarterContent {
       WearScreenCodeExporter.CONFIRMATION_DIALOG to
         mapOf("text" to starterLiteral("string", "Done"), "visible" to starterBool(true)),
       WearScreenCodeExporter.OPEN_ON_PHONE_DIALOG to mapOf("visible" to starterBool(true)),
-    )
+    ) + REMOTE_MATERIAL_3_PROPERTIES
 
   private val TABLE: Map<String, Map<String, List<StarterNode>>> =
     mapOf(
@@ -165,6 +185,35 @@ internal object StarterContent {
             )
         ),
       WearScreenCodeExporter.EDGE_BUTTON to mapOf("content" to listOf(wearText("Done"))),
+      // Remote Material 3, labelled for the reason its Wear counterparts are: a button with no
+      // label is a pill and a card with no content is an empty rounded rectangle. The label is
+      // `m3/text`, which is what this palette's Text is and what exports as `RemoteText`.
+      "remote-m3/remote-button" to mapOf("content" to listOf(remoteText("Button"))),
+      "remote-m3/remote-compact-button" to mapOf("label" to listOf(remoteText("Compact"))),
+      "remote-m3/remote-edge-button" to mapOf("content" to listOf(remoteText("Done"))),
+      "remote-m3/remote-text-button" to mapOf("content" to listOf(remoteText("OK"))),
+      "remote-m3/remote-icon-button" to mapOf("content" to listOf(remoteText("+"))),
+      "remote-m3/remote-button-group" to
+        mapOf(
+          "content" to
+            listOf(StarterNode("remote-m3/remote-button"), StarterNode("remote-m3/remote-button"))
+        ),
+      "remote-m3/remote-card" to mapOf("content" to listOf(remoteText("Card"))),
+      "remote-m3/remote-outlined-card" to mapOf("content" to listOf(remoteText("Card"))),
+      "remote-m3/remote-title-card" to
+        mapOf("title" to listOf(remoteText("Title")), "content" to listOf(remoteText("Card"))),
+      "remote-m3/remote-app-card" to
+        mapOf(
+          "appName" to listOf(remoteText("App")),
+          "title" to listOf(remoteText("Title")),
+          "content" to listOf(remoteText("Card")),
+        ),
+      "remote-m3/remote-checkbox-button" to mapOf("label" to listOf(remoteText("Checkbox"))),
+      "remote-m3/remote-split-checkbox-button" to mapOf("label" to listOf(remoteText("Checkbox"))),
+      "remote-m3/remote-switch-button" to mapOf("label" to listOf(remoteText("Switch"))),
+      "remote-m3/remote-split-switch-button" to mapOf("label" to listOf(remoteText("Switch"))),
+      "remote-m3/remote-radio-button" to mapOf("label" to listOf(remoteText("Option"))),
+      "remote-m3/remote-split-radio-button" to mapOf("label" to listOf(remoteText("Option"))),
       "m3/filter-chip" to mapOf("label" to listOf(text("Filter", "labelLarge"))),
       "m3/center-aligned-top-app-bar" to mapOf("title" to listOf(text("Title", "titleLarge"))),
       // A label and a placeholder, which is the field Material's own samples draw. An empty text
@@ -314,6 +363,13 @@ private fun icon(iconKey: String, contentDescription: String): StarterNode =
 private fun wearText(value: String): StarterNode =
   StarterNode(
     componentId = WearScreenCodeExporter.TEXT,
+    properties = mapOf("text" to starterLiteral("string", value)),
+  )
+
+/** A widget body's text: `m3/text`, which a Remote catalog writes as `RemoteText`. */
+private fun remoteText(value: String): StarterNode =
+  StarterNode(
+    componentId = "m3/text",
     properties = mapOf("text" to starterLiteral("string", value)),
   )
 
