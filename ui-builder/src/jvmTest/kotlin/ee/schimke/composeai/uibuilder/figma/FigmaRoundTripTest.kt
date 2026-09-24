@@ -110,6 +110,70 @@ class FigmaRoundTripTest {
     assertEquals(emptyList(), CapabilityValidator(catalog).validate(document).issues)
   }
 
+  /**
+   * The same scene built in a real Figma file by the design-parity plugin, read back untouched and
+   * after a designer's edits. What Figma adds on its own — a size for every styled text, black for
+   * unfilled text, a fixed size for every frame without auto layout — must not read as an edit.
+   */
+  @Test
+  fun `a frame read back from real Figma changes nothing until a designer edits it`() {
+    val built = FigmaScene.parse(resource("/figma/checkout-scene-v1.json"))
+    assertEquals(base.id to base.revision, built.designId to built.revision)
+    fun fromFigma(name: String) =
+      roundTrip.reconcile(
+        base,
+        built,
+        FigmaSnapshot.parse(resource("/figma/checkout-figma-$name-v1.json")),
+        "figma",
+        "plugin",
+        "figma-$name",
+      )
+
+    assertNull(fromFigma("untouched").command)
+
+    val command = checkNotNull(fromFigma("edited").command)
+    assertEquals(
+      listOf(
+        "deleteNode figma-10-6",
+        "insertNode figma-4-16",
+        "moveNode figma-10-10",
+        "setProperty figma-10-2 text",
+        "setProperty figma-10-3 horizontalSpacingDp",
+        "setProperty figma-10-13-label text",
+      ),
+      command.operations.map { it.describe() },
+    )
+    val document = apply(base, command).document
+    assertEquals("Your order", document.text("figma-10-2"))
+    assertEquals("Pay now", document.text("figma-10-13-label"))
+    assertEquals("Prices include tax", document.text("figma-4-16"))
+    assertEquals(
+      listOf(
+        "figma-10-2",
+        "figma-4-16",
+        "figma-10-3",
+        "figma-10-7",
+        "figma-10-11",
+        "figma-10-12",
+        "figma-10-13",
+        "figma-10-10",
+      ),
+      document.nodes.getValue("figma-10-1").slots.getValue("children"),
+    )
+    assertEquals(emptyList(), CapabilityValidator(catalog).validate(document).issues)
+  }
+
+  private fun DesignOperation.describe(): String =
+    when (this) {
+      is DesignOperation.DeleteNode -> "deleteNode $nodeId"
+      is DesignOperation.InsertNode -> "insertNode ${node.id}"
+      is DesignOperation.MoveNode -> "moveNode $nodeId"
+      is DesignOperation.SetProperty -> "setProperty $nodeId $property"
+      is DesignOperation.RemoveNodeProperty -> "removeNodeProperty $nodeId $property"
+      is DesignOperation.SetModifiers -> "setModifiers $nodeId"
+      else -> toString()
+    }
+
   @Test
   fun `a modifier Figma cannot express keeps its place in the chain`() {
     val root = base.nodes.getValue("figma-10-1")

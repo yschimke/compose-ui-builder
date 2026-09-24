@@ -284,6 +284,23 @@ tasks.register<JavaExec>("exportFigmaScene") {
   outputs.file(output)
 }
 
+tasks.register<JavaExec>("figmaTool") {
+  description =
+    "Import a Figma snapshot, export a Figma scene, or reconcile Figma edits into a command " +
+      "(-PfigmaArgs=\"import|export|reconcile …\")."
+  group = "code generation"
+  dependsOn("jvmMainClasses")
+  classpath(
+    layout.buildDirectory.dir("classes/kotlin/jvm/main"),
+    layout.buildDirectory.dir("processedResources/jvm/main"),
+    configurations.getByName("jvmRuntimeClasspath"),
+  )
+  mainClass.set("ee.schimke.composeai.uibuilder.figma.FigmaTool")
+  javaLauncher.set(uiBuilderLauncher)
+  workingDir = rootProject.projectDir
+  args(providers.gradleProperty("figmaArgs").getOrElse("").split(" ").filter { it.isNotBlank() })
+}
+
 val generatedJetcasterCheckFile =
   layout.buildDirectory.file("generated/ui-builder-check/JetcasterDiscoverExpanded.kt")
 

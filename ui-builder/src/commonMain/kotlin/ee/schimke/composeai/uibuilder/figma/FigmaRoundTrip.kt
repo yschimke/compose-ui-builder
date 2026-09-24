@@ -77,6 +77,11 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
       .filter { id -> beforeParents[id]?.first?.let { it in after.nodes } != false }
       .forEach { operations += DesignOperation.DeleteNode(it) }
 
+    // Which nodes kept their place: per parent slot, the longest run of siblings both sides list in
+    // the same order. Only the rest moved — so dragging one card to the end is one move, not one
+    // for every sibling it passed.
+    val stayed = stayedInOrder(before, after, beforeParents, afterParents)
+
     // Inserts and moves in the order the received tree lists its nodes, so a parent exists before
     // its children arrive and a sibling before the one placed after it.
     after.preorder().forEach { id ->
@@ -93,12 +98,7 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
         return@forEach
       }
       if (id !in base.nodes) return@forEach
-      val kept = before.nodes.keys intersect after.nodes.keys
-      if (
-        beforeParents[id] != afterParents[id] ||
-          previousKept(before, beforeParents[id], id, kept) !=
-            previousKept(after, afterParents[id], id, kept)
-      ) {
+      if (beforeParents[id] != afterParents[id] || id !in stayed) {
         if (parent != null) operations += DesignOperation.MoveNode(id, parent, afterNodeId)
       }
     }
@@ -238,16 +238,47 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
       return order
     }
 
-    /** The sibling before [id] among the nodes both sides have: an insert beside it is no move. */
-    fun previousKept(
-      document: UiBuilderDocument,
-      parent: Pair<String, String>?,
-      id: String,
-      kept: Set<String>,
-    ): String? {
-      val (parentId, slot) = parent ?: return null
-      val siblings = document.nodes[parentId]?.slots?.get(slot).orEmpty().filter { it in kept }
-      return siblings.getOrNull(siblings.indexOf(id) - 1)
+    fun stayedInOrder(
+      before: UiBuilderDocument,
+      after: UiBuilderDocument,
+      beforeParents: Map<String, Pair<String, String>>,
+      afterParents: Map<String, Pair<String, String>>,
+    ): Set<String> =
+      after.nodes.values
+        .flatMap { parent ->
+          parent.slots.flatMap { (slot, ids) ->
+            val here = parent.id to slot
+            val received = ids.filter { beforeParents[it] == here && afterParents[it] == here }
+            val sent = before.nodes[parent.id]?.slots?.get(slot).orEmpty().filter { it in received }
+            longestCommonSubsequence(sent, received)
+          }
+        }
+        .toSet()
+
+    fun longestCommonSubsequence(a: List<String>, b: List<String>): List<String> {
+      val lengths = Array(a.size + 1) { IntArray(b.size + 1) }
+      for (i in a.indices.reversed()) {
+        for (j in b.indices.reversed()) {
+          lengths[i][j] =
+            if (a[i] == b[j]) lengths[i + 1][j + 1] + 1
+            else maxOf(lengths[i + 1][j], lengths[i][j + 1])
+        }
+      }
+      val common = mutableListOf<String>()
+      var i = 0
+      var j = 0
+      while (i < a.size && j < b.size) {
+        when {
+          a[i] == b[j] -> {
+            common += a[i]
+            i++
+            j++
+          }
+          lengths[i + 1][j] >= lengths[i][j + 1] -> i++
+          else -> j++
+        }
+      }
+      return common
     }
 
     fun previousSibling(document: UiBuilderDocument, parentId: String, slot: String, id: String) =
