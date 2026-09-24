@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
+import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -17,12 +18,17 @@ import kotlinx.coroutines.launch
  * once the stream is back. A disconnect reported while a recovery is running runs one more after
  * it, so a socket that dies straight after reopening is not left dead.
  *
+ * Only an [IOException] — the server could not be reached — is retried. Anything else is the server
+ * answering, with a design that is gone, access that was revoked or a catalog it can no longer
+ * serve; asking again will not change that, so recovery stops and hands it to [onFailed].
+ *
  * Cancelling [scope] — the session closing — stops the retries; nothing outlives it.
  */
 internal class UpdateStreamReconnector(
   scope: CoroutineScope,
   private val reopen: suspend () -> Unit,
   private val onStatus: (String?) -> Unit,
+  private val onFailed: (Exception) -> Unit,
   private val sleep: suspend (Duration) -> Unit = { delay(it) },
 ) {
   private val disconnects = Channel<Unit>(Channel.CONFLATED)
@@ -49,8 +55,12 @@ internal class UpdateStreamReconnector(
         return
       } catch (cancelled: CancellationException) {
         throw cancelled
-      } catch (_: Exception) {
+      } catch (_: IOException) {
         attempt++
+      } catch (failure: Exception) {
+        onStatus(null)
+        onFailed(failure)
+        return
       }
     }
   }

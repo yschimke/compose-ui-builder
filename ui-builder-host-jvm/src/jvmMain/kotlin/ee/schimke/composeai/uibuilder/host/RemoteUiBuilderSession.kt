@@ -151,6 +151,9 @@ internal constructor(
         updatesMutex.withLock { updates?.reconnect() ?: openUpdates() }
       },
       onStatus = ::reportConnection,
+      onFailed = { failure ->
+        mutableFailure.value = failure.message ?: "remote UI Builder connection failed"
+      },
     )
   @Volatile private var connectionStatus: String? = null
 

@@ -52,6 +52,19 @@ class UpdateStreamReconnectorTest {
   }
 
   @Test
+  fun `a server refusal stops recovery and reports why`() = runBlocking {
+    val harness =
+      Harness(this, failures = 1, failure = { IllegalStateException("design was deleted") })
+    harness.reconnector.onDisconnected()
+    harness.settle()
+
+    assertEquals(1, harness.reopens)
+    assertEquals(listOf("design was deleted"), harness.failed.map { it.message })
+    assertNull(harness.statuses.last())
+    harness.scope.cancel()
+  }
+
+  @Test
   fun `a burst of close and error callbacks costs one recovery`() = runBlocking {
     val harness = Harness(this, failures = 0)
     repeat(3) { harness.reconnector.onDisconnected() }
@@ -88,11 +101,13 @@ class UpdateStreamReconnectorTest {
   private class Harness(
     parent: CoroutineScope,
     private var failures: Int,
+    private val failure: () -> Exception = { IOException("connection refused") },
     private val afterReopen: () -> Unit = {},
   ) {
     val scope = CoroutineScope(parent.coroutineContext + Job(parent.coroutineContext[Job]))
     val waits = mutableListOf<Duration>()
     val statuses = mutableListOf<String?>()
+    val failed = mutableListOf<Exception>()
     var reopens = 0
 
     val reconnector =
@@ -100,10 +115,11 @@ class UpdateStreamReconnectorTest {
         scope,
         reopen = {
           reopens++
-          if (failures-- > 0) throw IOException("connection refused")
+          if (failures-- > 0) throw failure()
           afterReopen()
         },
         onStatus = statuses::add,
+        onFailed = failed::add,
         sleep = {
           waits += it
           yield()
