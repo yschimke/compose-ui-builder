@@ -1,0 +1,198 @@
+{
+  "schema": "compose-ui-builder-figma-map/v1",
+  "catalog": "m3-catalog",
+  "components": [
+    {
+      "componentSet": "Extended FAB",
+      "componentId": "m3/button",
+      "constants": {
+        "style": "fab"
+      },
+      "text": {
+        "slot": "content",
+        "from": "Label text"
+      }
+    },
+    {
+      "componentSet": "Button",
+      "when": {
+        "Style": "Filled tonal"
+      },
+      "componentId": "m3/button",
+      "constants": {
+        "style": "filledTonal"
+      },
+      "properties": {
+        "enabled": {
+          "from": "State",
+          "values": {
+            "Enabled": true,
+            "Disabled": false,
+            "Hovered": true,
+            "Focused": true,
+            "Pressed": true
+          }
+        }
+      },
+      "text": {
+        "slot": "content",
+        "from": "Label text"
+      }
+    },
+    {
+      "componentSet": "Button",
+      "when": {
+        "Style": "Text"
+      },
+      "componentId": "m3/button",
+      "constants": {
+        "style": "text"
+      },
+      "properties": {
+        "enabled": {
+          "from": "State",
+          "values": {
+            "Enabled": true,
+            "Disabled": false,
+            "Hovered": true,
+            "Focused": true,
+            "Pressed": true
+          }
+        }
+      },
+      "text": {
+        "slot": "content",
+        "from": "Label text"
+      }
+    },
+    {
+      "componentSet": "Button",
+      "componentId": "m3/button",
+      "constants": {
+        "style": "filled"
+      },
+      "properties": {
+        "enabled": {
+          "from": "State",
+          "values": {
+            "Enabled": true,
+            "Disabled": false,
+            "Hovered": true,
+            "Focused": true,
+            "Pressed": true
+          }
+        }
+      },
+      "text": {
+        "slot": "content",
+        "from": "Label text"
+      }
+    },
+    {
+      "componentSet": "Checkboxes",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "from": "Type",
+          "values": {
+            "Selected": true,
+            "Unselected": false,
+            "Error selected": true,
+            "Error unselected": false
+          }
+        },
+        "enabled": {
+          "from": "State",
+          "values": {
+            "Enabled": true,
+            "Disabled": false,
+            "Hovered": true,
+            "Focused": true,
+            "Pressed": true
+          }
+        }
+      }
+    },
+    {
+      "componentSet": "Switch",
+      "componentId": "m3/switch",
+      "properties": {
+        "checked": {
+          "from": "Selected",
+          "values": {
+            "True": true,
+            "False": false
+          }
+        },
+        "enabled": {
+          "from": "State",
+          "values": {
+            "Enabled": true,
+            "Disabled": false,
+            "Hovered": true,
+            "Focused": true,
+            "Pressed": true
+          }
+        }
+      }
+    },
+    {
+      "componentSet": "Divider",
+      "componentId": "m3/horizontal-divider"
+    }
+  ],
+  "colorVariables": {
+    "Schemes/Background": "background",
+    "M3/sys/light/background": "background",
+    "Schemes/Surface": "surface",
+    "M3/sys/light/surface": "surface",
+    "Schemes/Surface Container": "surfaceContainer",
+    "M3/sys/light/surface-container": "surfaceContainer",
+    "Schemes/Surface Container Low": "surfaceContainerLow",
+    "M3/sys/light/surface-container-low": "surfaceContainerLow",
+    "Schemes/Surface Container High": "surfaceContainerHigh",
+    "M3/sys/light/surface-container-high": "surfaceContainerHigh",
+    "Schemes/Surface Container Highest": "surfaceContainerHighest",
+    "M3/sys/light/surface-container-highest": "surfaceContainerHighest",
+    "Schemes/Primary": "primary",
+    "M3/sys/light/primary": "primary",
+    "Schemes/On Primary": "onPrimary",
+    "M3/sys/light/on-primary": "onPrimary",
+    "Schemes/Tertiary": "tertiary",
+    "M3/sys/light/tertiary": "tertiary",
+    "Schemes/On Tertiary": "onTertiary",
+    "M3/sys/light/on-tertiary": "onTertiary",
+    "Schemes/On Surface": "onSurface",
+    "M3/sys/light/on-surface": "onSurface",
+    "Schemes/On Surface Variant": "onSurfaceVariant",
+    "M3/sys/light/on-surface-variant": "onSurfaceVariant",
+    "Schemes/Outline Variant": "outlineVariant",
+    "M3/sys/light/outline-variant": "outlineVariant"
+  },
+  "textStyles": {
+    "M3/display/large": "displayLarge",
+    "Static/Display Large": "displayLarge",
+    "M3/display/medium": "displayMedium",
+    "Static/Display Medium": "displayMedium",
+    "M3/display/small": "displaySmall",
+    "Static/Display Small": "displaySmall",
+    "M3/headline/large": "headlineLarge",
+    "Static/Headline Large": "headlineLarge",
+    "M3/headline/medium": "headlineMedium",
+    "Static/Headline Medium": "headlineMedium",
+    "M3/headline/small": "headlineSmall",
+    "Static/Headline Small": "headlineSmall",
+    "M3/title/large": "titleLarge",
+    "Static/Title Large": "titleLarge",
+    "M3/title/medium": "titleMedium",
+    "Static/Title Medium": "titleMedium",
+    "M3/title/small": "titleSmall",
+    "Static/Title Small": "titleSmall",
+    "M3/body/large": "bodyLarge",
+    "Static/Body Large": "bodyLarge",
+    "M3/body/medium": "bodyMedium",
+    "Static/Body Medium": "bodyMedium",
+    "M3/body/small": "bodySmall",
+    "Static/Body Small": "bodySmall"
+  }
+}
