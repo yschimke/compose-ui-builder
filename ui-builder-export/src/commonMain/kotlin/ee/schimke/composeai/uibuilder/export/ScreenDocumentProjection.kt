@@ -123,6 +123,8 @@ private val SLOT_PARAMETERS: Map<String, Map<String, String>> =
         "supporting" to "supportingContent",
         "trailing" to "trailingContent",
       ),
+    // What shows once the bar expands is `SearchBar`'s trailing `content` lambda.
+    "m3/search-bar" to mapOf("expandedContent" to "content"),
   )
 
 private fun parameterForSlot(componentId: String, slot: String): String =
@@ -459,6 +461,16 @@ object ScreenDocumentProjection {
     }
 
     private val visiting = mutableSetOf<String>()
+
+    /**
+     * `preferredWidth` links a pane scaffold hands to the node in each pane, keyed by that node.
+     *
+     * The width is authored on the scaffold (`mainPanePreferredWidthDp`) and applied by the pane's
+     * content (`Modifier.preferredWidth` is `PaneScaffoldScope`'s, parent data the scaffold's
+     * measure policy reads), so it crosses from one node to the other here — set when the
+     * scaffold's slots are visited, spent when the child's own modifier chain is built.
+     */
+    private val paneWidths = mutableMapOf<String, ChainLink>()
 
     private class BoundField(
       val name: String,
@@ -847,6 +859,11 @@ object ScreenDocumentProjection {
           slots =
             node.slots.entries.associate { (slot, children) ->
               val childScope = slotScope(node.componentId, variant, slot)
+              if (node.componentId == SUPPORTING_PANE_SCAFFOLD) {
+                paneWidthLink(node, slot)?.let { link ->
+                  children.forEach { paneWidths[it] = link }
+                }
+              }
               parameterForSlot(node.componentId, slot) to
                 if (node.componentId == CARD_CATALOG_ID && slot == CARD_CONTENT_SLOT)
                   listOf(cardContentBox(node, children))
@@ -1189,7 +1206,7 @@ object ScreenDocumentProjection {
             roles
               .mapNotNull { role ->
                 colour(node.properties.getValue(role), "node `${node.id}`.`$role`")?.let {
-                  role to it
+                  (bundle.factoryNames[role] ?: role) to it
                 }
               }
               .toMap()
@@ -1241,6 +1258,9 @@ object ScreenDocumentProjection {
         }
       }
       if (node.componentId == COLOUR_DOT) spent += colourDot(node, fromProperties)
+      if (node.componentId == LINEAR_GRADIENT) spent += linearGradient(node, fromProperties)
+      if (node.componentId == SUPPORTING_PANE_SCAFFOLD) spent += supportingPanes(node, arguments)
+      paneWidths.remove(node.id)?.let { fromProperties += it }
       return spent
     }
 
@@ -1390,6 +1410,187 @@ object ScreenDocumentProjection {
           ChainLink("androidx.compose.foundation.background", named = mapOf("color" to fill))
       }
       return setOf(DIAMETER_DP, DOT_COLOR)
+    }
+
+    /**
+     * `SupportingPaneScaffold`'s two computed arguments, and the properties they spent.
+     *
+     * The scaffold takes a `PaneScaffoldDirective` and a `ThreePaneScaffoldValue`, and neither is a
+     * value a design holds: both are computed from the window. So the export writes the
+     * computation, exactly as an app does and exactly as the canvas does for a constrained frame —
+     * `calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())`, and the library's own
+     * `calculateThreePaneScaffoldValue` over that directive's partition count. How many panes show
+     * is therefore `androidx.compose.material3.adaptive`'s answer in the exported file too, which
+     * is the property the samples exist to demonstrate.
+     *
+     * `layoutMode` is spent rather than written: `adaptive`, `twoPane` and `expandedTwoPane` all
+     * mean "what the directive decides" on the canvas, which is what the computation above is.
+     * `singlePane` caps the directive at one partition, which needs `PaneScaffoldDirective.copy` —
+     * a member this vocabulary cannot call — so it is refused by name, as are a hidden pane and a
+     * pane spacing, for the same reason. Each pane's preferred width is not an argument at all; it
+     * is `Modifier.preferredWidth` on the pane's content, which [paneWidthLink] hands down.
+     */
+    private fun supportingPanes(
+      node: DesignNodeV1,
+      arguments: MutableMap<String, ScreenValue>,
+    ): Set<String> {
+      val where = "node `${node.id}`"
+      val mode =
+        when (val value = node.properties[PANE_LAYOUT_MODE]) {
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          else -> null
+        }
+      if (mode == "singlePane") {
+        refuse(
+          "$where.`$PANE_LAYOUT_MODE` is `singlePane`, which caps the scaffold directive at one " +
+            "partition through `PaneScaffoldDirective.copy` — a member call this vocabulary has " +
+            "no form for; leave it `adaptive` to export the library's own answer"
+        )
+      }
+      for (flag in listOf(MAIN_PANE_VISIBLE, SUPPORTING_PANE_VISIBLE)) {
+        val visible = (node.properties[flag] as? BooleanValueV1)?.value ?: true
+        if (!visible) {
+          refuse(
+            "$where.`$flag` hides a pane, which means building a `ThreePaneScaffoldValue` by " +
+              "hand rather than computing it; show both panes to export the adaptive one"
+          )
+        }
+      }
+      if (PANE_SPACING_DP in node.properties) {
+        refuse(
+          "$where.`$PANE_SPACING_DP` sets the directive's `horizontalPartitionSpacerSize` through " +
+            "`PaneScaffoldDirective.copy` — a member call this vocabulary has no form for; leave " +
+            "it unset for Material's own 24dp spacer"
+        )
+      }
+      val directive =
+        ScreenValue.Construct(
+          callableFqn = "$ADAPTIVE_LAYOUT.calculatePaneScaffoldDirective",
+          positional =
+            listOf(
+              ScreenValue.Construct(
+                callableFqn = "$ADAPTIVE.currentWindowAdaptiveInfo",
+                typeFqn = "$ADAPTIVE.WindowAdaptiveInfo",
+              )
+            ),
+          typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
+        )
+      arguments["directive"] = directive
+      arguments["value"] =
+        ScreenValue.Construct(
+          callableFqn = "$ADAPTIVE_LAYOUT.calculateThreePaneScaffoldValue",
+          positional =
+            listOf(
+              ScreenValue.Chain(
+                receiver = directive,
+                links =
+                  listOf(
+                    ChainLink(
+                      "$ADAPTIVE_LAYOUT.PaneScaffoldDirective.maxHorizontalPartitions",
+                      property = true,
+                    )
+                  ),
+                typeFqn = "kotlin.Int",
+              )
+            ),
+          typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldValue",
+        )
+      return setOf(
+        PANE_LAYOUT_MODE,
+        MAIN_PANE_VISIBLE,
+        SUPPORTING_PANE_VISIBLE,
+        PANE_SPACING_DP,
+        MAIN_PANE_WIDTH_DP,
+        SUPPORTING_PANE_WIDTH_DP,
+      )
+    }
+
+    /** `Modifier.preferredWidth(…)` for the content of one pane slot, or null where none is set. */
+    private fun paneWidthLink(node: DesignNodeV1, slot: String): ChainLink? {
+      val property =
+        when (slot) {
+          "mainPane" -> MAIN_PANE_WIDTH_DP
+          "supportingPane" -> SUPPORTING_PANE_WIDTH_DP
+          else -> return null
+        }
+      val number =
+        when (val value = node.properties[property]) {
+          null -> return null
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else ->
+            return refuse(
+              "node `${node.id}`.`$property` is a pane width in dp, which needs a number"
+            )
+        }
+      val width =
+        dp(number)
+          ?: return refuse("node `${node.id}`.`$property` is $number, which does not survive `Dp`")
+      return ChainLink(
+        "$THREE_PANE_SCOPE.preferredWidth",
+        positional = listOf(width),
+        receiverScopeFqn = THREE_PANE_SCOPE,
+      )
+    }
+
+    /**
+     * A linear gradient's one modifier link — `background(brush = Brush.…Gradient(listOf(a, b)))` —
+     * and the three properties it spent.
+     *
+     * `shape/linear-gradient` is a `Box` painted with a brush and nothing else, which is exactly
+     * what the canvas draws, so like [colourDot] it exports through `Box`'s record by alias and its
+     * identity is the link appended here. `direction` picks the brush factory and the order of the
+     * two colours by the canvas's own table — `leftToRight`/`horizontal` and `rightToLeft` are
+     * horizontal, `bottomToTop` is vertical reversed, and everything else, unset included, is
+     * vertical — so a direction the canvas reads as vertical is never exported as anything else.
+     */
+    private fun linearGradient(
+      node: DesignNodeV1,
+      fromProperties: MutableList<ChainLink>,
+    ): Set<String> {
+      val where = "node `${node.id}`"
+      fun end(property: String): ScreenValue? =
+        when (val value = node.properties[property]) {
+          null ->
+            refuse("$where sets no `$property`, and a gradient is nothing but its two colours")
+          is StringValueV1 -> color(value.value, "$where.`$property`")
+          else -> colour(value, "$where.`$property`")
+        }
+      val start = end(GRADIENT_START)
+      val finish = end(GRADIENT_END)
+      val direction =
+        when (val value = node.properties[GRADIENT_DIRECTION]) {
+          is EnumValueV1 -> value.value
+          is StringValueV1 -> value.value
+          else -> null
+        }
+      if (start != null && finish != null) {
+        val (factory, colours) =
+          when (direction) {
+            "leftToRight",
+            "horizontal" -> "horizontalGradient" to listOf(start, finish)
+            "rightToLeft" -> "horizontalGradient" to listOf(finish, start)
+            "bottomToTop" -> "verticalGradient" to listOf(finish, start)
+            else -> "verticalGradient" to listOf(start, finish)
+          }
+        val brush =
+          ScreenValue.Construct(
+            callableFqn = "$BRUSH.$factory",
+            positional =
+              listOf(
+                ScreenValue.Construct(
+                  callableFqn = "kotlin.collections.listOf",
+                  positional = colours,
+                  typeFqn = "kotlin.collections.List",
+                )
+              ),
+            typeFqn = BRUSH,
+          )
+        fromProperties +=
+          ChainLink("androidx.compose.foundation.background", named = mapOf("brush" to brush))
+      }
+      return setOf(GRADIENT_START, GRADIENT_END, GRADIENT_DIRECTION)
     }
 
     /**
@@ -2056,6 +2257,19 @@ object ScreenDocumentProjection {
     ): ScreenValue? {
       val where = "node `${node.id}`.`$property`"
       if (target.kind == TargetKind.RENAME) return value(value, node, property)
+      if (target.kind == TargetKind.INT) {
+        // The wire's numbers are floats unless a writer said `int`, and a palette insert or an
+        // older document says `0.0` for an index. A whole float is that index; a fractional one is
+        // not an index at all.
+        return when (value) {
+          is IntegerValueV1 -> ScreenValue.Whole(value.value)
+          is DecimalValueV1 ->
+            if (value.value % 1.0 == 0.0 && kotlin.math.abs(value.value) <= Int.MAX_VALUE)
+              ScreenValue.Whole(value.value.toLong())
+            else refuse("$where is ${value.value}, and an index is a whole number")
+          else -> value(value, node, property)
+        }
+      }
       if (target.kind == TargetKind.ASSET_PAINTER) {
         // The one argument no `ScreenValue` can carry: the picture is bytes in the design's asset
         // store, and the host convention for a bundled resource — `R.drawable` here, `Res.drawable`
@@ -2745,6 +2959,8 @@ object ScreenDocumentProjection {
     SPACED_BY_HORIZONTAL,
     /** A number the parameter takes as a `Float` — a slider's `value`. */
     FLOAT,
+    /** A whole number the parameter takes as an `Int` — a tab row's selected index. */
+    INT,
     /** A theme shape role named as text — `large`. */
     SHAPE_TOKEN,
     /** A container colour Material 3 takes as a `CardColors` bundle. */
@@ -2804,6 +3020,17 @@ object ScreenDocumentProjection {
           "containerColor" to ParameterTarget("colors", TargetKind.CARD_COLORS),
           "elevationDp" to ParameterTarget("elevation", TargetKind.CARD_ELEVATION),
         ),
+      "m3/filter-chip" to mapOf("shape" to ParameterTarget("shape", TargetKind.SHAPE_TOKEN)),
+      "m3/horizontal-divider" to
+        mapOf("thicknessDp" to ParameterTarget("thickness", TargetKind.DP)),
+      "m3/search-bar" to
+        mapOf(
+          "shapeDp" to ParameterTarget("shape", TargetKind.ROUNDED_CORNER_SHAPE),
+          "tonalElevationDp" to ParameterTarget("tonalElevation", TargetKind.DP),
+        ),
+      // The field's text is `query`. A literal is a field that only shows it; a state read is
+      // refused elsewhere while stateful authoring is off, exactly as any other state read is.
+      "m3/search-input-field" to mapOf("value" to ParameterTarget("query", TargetKind.RENAME)),
       "m3/icon" to
         mapOf(
           "iconKey" to ParameterTarget("imageVector", TargetKind.RENAME),
@@ -2815,7 +3042,7 @@ object ScreenDocumentProjection {
       // published `m3/primary-tab-row` refused with "`PrimaryTabRow` has no parameter
       // `selectedIndex`" — the property is right and the two exporters disagreed about it.
       "m3/primary-tab-row" to
-        mapOf("selectedIndex" to ParameterTarget("selectedTabIndex", TargetKind.RENAME)),
+        mapOf("selectedIndex" to ParameterTarget("selectedTabIndex", TargetKind.INT)),
       "asset/image" to mapOf("assetKey" to ParameterTarget("painter", TargetKind.ASSET_PAINTER)),
       // Three of the four styles; `fab` overrides this in `COMPONENT_VARIANTS` because it takes a
       // bare `Color` on a different parameter.
@@ -3133,7 +3360,10 @@ object ScreenDocumentProjection {
    * app bar carries two — `containerColor` and `scrolledContainerColor` — and they are the same
    * `colors` argument, so they have to be read together or the second overwrites the first.
    *
-   * @property roles the catalog properties, which are also the factory's parameter names.
+   * @property roles the catalog properties, which are also the factory's parameter names unless
+   *   [factoryNames] says otherwise.
+   * @property factoryNames the factory parameter a role fills, where the two are spelled apart — a
+   *   floating toolbar's `containerColor` is `toolbarContainerColor` to its factory.
    */
   private class ColorBundle(
     val parameter: String,
@@ -3141,6 +3371,7 @@ object ScreenDocumentProjection {
     val typeFqn: String,
     val roles: List<String>,
     val optIns: List<String>,
+    val factoryNames: Map<String, String> = emptyMap(),
   )
 
   private val COLOR_BUNDLES: Map<String, ColorBundle> =
@@ -3152,7 +3383,17 @@ object ScreenDocumentProjection {
           typeFqn = "androidx.compose.material3.TopAppBarColors",
           roles = listOf("containerColor", "scrolledContainerColor"),
           optIns = listOf(EXPERIMENTAL_MATERIAL3),
-        )
+        ),
+      "m3/horizontal-floating-toolbar" to
+        ColorBundle(
+          parameter = "colors",
+          factoryFqn =
+            "androidx.compose.material3.FloatingToolbarDefaults.standardFloatingToolbarColors",
+          typeFqn = "androidx.compose.material3.FloatingToolbarColors",
+          roles = listOf("containerColor"),
+          optIns = listOf(EXPERIMENTAL_MATERIAL3_EXPRESSIVE),
+          factoryNames = mapOf("containerColor" to "toolbarContainerColor"),
+        ),
     )
 
   /**
@@ -3235,6 +3476,8 @@ object ScreenDocumentProjection {
 
   private const val ARRANGEMENT = "androidx.compose.foundation.layout.Arrangement"
   private const val EXPERIMENTAL_MATERIAL3 = "androidx.compose.material3.ExperimentalMaterial3Api"
+  private const val EXPERIMENTAL_MATERIAL3_EXPRESSIVE =
+    "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
   private const val TOP_APP_BAR = "m3/center-aligned-top-app-bar"
   private const val TOP_APP_BAR_DEFAULTS = "androidx.compose.material3.TopAppBarDefaults"
   private const val LIST_ITEM = "m3/list-item"
@@ -3247,6 +3490,22 @@ object ScreenDocumentProjection {
   private const val COLOUR_DOT = "shape/colour-dot"
   private const val DIAMETER_DP = "diameterDp"
   private const val DOT_COLOR = "color"
+
+  private const val SUPPORTING_PANE_SCAFFOLD = "layout/supporting-pane-scaffold"
+  private const val PANE_LAYOUT_MODE = "layoutMode"
+  private const val MAIN_PANE_VISIBLE = "mainPaneVisible"
+  private const val SUPPORTING_PANE_VISIBLE = "supportingPaneVisible"
+  private const val PANE_SPACING_DP = "paneSpacingDp"
+  private const val MAIN_PANE_WIDTH_DP = "mainPanePreferredWidthDp"
+  private const val SUPPORTING_PANE_WIDTH_DP = "supportingPanePreferredWidthDp"
+  private const val ADAPTIVE = "androidx.compose.material3.adaptive"
+  private const val ADAPTIVE_LAYOUT = "androidx.compose.material3.adaptive.layout"
+  private const val THREE_PANE_SCOPE = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldPaneScope"
+  private const val LINEAR_GRADIENT = "shape/linear-gradient"
+  private const val GRADIENT_START = "startColor"
+  private const val GRADIENT_END = "endColor"
+  private const val GRADIENT_DIRECTION = "direction"
+  private const val BRUSH = "androidx.compose.ui.graphics.Brush"
 
   /** What the canvas draws when a dot sets no diameter, and so what the export writes. */
   private const val DEFAULT_DOT_DIAMETER = 8.0
@@ -3580,11 +3839,20 @@ object ScreenDocumentProjection {
       // no slot at all — nothing ever fills this, and the claim exists so the drift check that
       // compares this table with the record stays exact.
       COLOUR_DOT to mapOf("content" to BOX_SCOPE),
+      // The same claim for the same reason: a linear gradient is `Box` by alias too (see
+      // `linearGradient`), and the catalog gives it no slot either.
+      LINEAR_GRADIENT to mapOf("content" to BOX_SCOPE),
       // `Card`'s own slot, which the record attests as a `ColumnScope` — and what sits in it is
       // the one `layout/box` `cardContentBox` emits, never a design's node. A card's children are
       // composed inside that box, under `BoxScope`, which is why this row is not what they get.
       "m3/card" to mapOf("content" to COLUMN_SCOPE),
       "m3/button" to mapOf("content" to ROW_SCOPE),
+      "m3/horizontal-floating-toolbar" to mapOf("content" to ROW_SCOPE),
+      SUPPORTING_PANE_SCAFFOLD to
+        mapOf("mainPane" to THREE_PANE_SCOPE, "supportingPane" to THREE_PANE_SCOPE),
+      // Keyed by the parameter, like the colour dot's: the catalog's slot is `expandedContent`, and
+      // SLOT_PARAMETERS renames it to `content` before anything reads this.
+      "m3/search-bar" to mapOf("content" to COLUMN_SCOPE),
     )
 
   private const val ICONS_PACKAGE = "androidx.compose.material.icons"
@@ -3616,18 +3884,15 @@ object ScreenDocumentProjection {
    * spells three components as one id about a property where that is simply untrue
    * ([compose-preview-server#394](https://github.com/yschimke/compose-preview-server/issues/394)).
    *
-   * The two remaining are not even the same kind of wrong as each other — one names a **mode** of a
-   * single adaptive component and the other names **which** carousel to call — which is why the
-   * reason is authored per entry rather than shared. A refusal an operator cannot act on is worth
-   * about as much as no refusal, and one that describes a different component is worth less.
+   * The one remaining names **which** carousel to call, which is why the reason is authored per
+   * entry rather than shared. A refusal an operator cannot act on is worth about as much as no
+   * refusal, and one that describes a different component is worth less.
    *
-   * `layoutMode` stays refused **here** even though the renderer and
-   * `CapabilityComposeCodeExporter` now call the real `SupportingPaneScaffold` and map the property
-   * onto a `PaneScaffoldDirective`. That mapping is a computation at the call site, and this
-   * projection emits a property by writing its value as an argument to a recorded member: there is
-   * no member for it to be an argument of. A hand-written emitter can compute; a record cannot —
-   * and `layout/supporting-pane-scaffold` has no record here for the separate reason that its panes
-   * are not plain composable slots.
+   * `layout/supporting-pane-scaffold`'s `layoutMode` used to sit here too, as a mode of one
+   * adaptive component with no member to be an argument of. It left when the scaffold's directive
+   * and value became computations this projection writes (`supportingPanes`): every mode but
+   * `singlePane` means "what the directive decides", so it is spent there, and `singlePane` is
+   * refused there with its own reason.
    *
    * [COMPONENT_VARIANTS] is where "picks a component" became expressible, and an id that goes
    * through it leaves this table — `m3/card`, `m3/button`, `m3/text-field` and
@@ -3637,13 +3902,9 @@ object ScreenDocumentProjection {
    */
   private val VARIANT_PROPERTIES: Map<Pair<String, String>, String> =
     mapOf(
-      ("layout/supporting-pane-scaffold" to "layoutMode") to
-        "names a layout mode of one adaptive component rather than a value: " +
-          "`SupportingPaneScaffold` decides how many panes to show from a scaffold directive and " +
-          "the window it is measured in, so there is no parameter for a mode to be written to",
       ("layout/horizontal-carousel" to "kind") to
         "names which carousel function to call rather than an argument to one, and no record " +
           "selects a carousel yet: its `items` is a `CarouselScope` DSL, which is a slot shape " +
-          "this projection cannot emit",
+          "this projection cannot emit"
     )
 }

@@ -33,15 +33,7 @@
           "id:pixel_7"
         ]
       },
-      "stateVariables": {
-        "mailQuery": {
-          "type": "value",
-          "valueType": "string",
-          "initialValue": "",
-          "nullable": false,
-          "persistence": "preview"
-        }
-      }
+      "stateVariables": {}
     },
     {
       "operationId": "insert-root",
@@ -793,10 +785,6 @@
             "type": "float",
             "value": 760.0
           },
-          "paneSpacingDp": {
-            "type": "float",
-            "value": 12.0
-          },
           "mainPaneVisible": {
             "type": "bool",
             "value": true
@@ -880,12 +868,8 @@
         "componentId": "m3/search-input-field",
         "properties": {
           "value": {
-            "type": "state",
-            "variable": "mailQuery"
-          },
-          "readOnly": {
-            "type": "bool",
-            "value": true
+            "type": "string",
+            "value": ""
           }
         },
         "modifiers": [
@@ -913,6 +897,14 @@
           "style": {
             "type": "enum",
             "value": "bodyLarge"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -987,9 +979,13 @@
       },
       "node": {
         "id": "mail-chips",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
+            "type": "float",
+            "value": 8.0
+          },
+          "verticalSpacingDp": {
             "type": "float",
             "value": 8.0
           }
@@ -4093,10 +4089,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "Star"
           }
         }
       },
@@ -4138,10 +4130,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "Reply"
           }
         }
       },
@@ -4183,10 +4171,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "More options"
           }
         }
       },
@@ -4533,10 +4517,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "Download"
           }
         }
       },
@@ -4799,5 +4779,5 @@
       "afterNodeId": "icon-83"
     }
   ],
-  "expectedDocumentHash": "d690be38dc720174bc8d1608bb896e6a24ff926460bd8a3241399c24e0c80266"
+  "expectedDocumentHash": "aa95c3665d1f8e39546e1c57e99178690b8b489ed0f0625b07e13e0f2f39b7b7"
 }

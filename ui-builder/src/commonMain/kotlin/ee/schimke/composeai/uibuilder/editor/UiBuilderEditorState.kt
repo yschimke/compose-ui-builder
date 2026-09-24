@@ -5766,13 +5766,18 @@ private fun PropertyCapability.defaultEncodedValue(
     "hour" -> literal("float", JsonPrimitive(DEFAULT_PICKED_HOUR))
     "minute" -> literal("float", JsonPrimitive(DEFAULT_PICKED_MINUTE))
     "is24Hour" -> literal("bool", JsonPrimitive(true))
+    // A property that takes text as well as a state read starts as text: a literal draws and
+    // exports as it is, where a read of a variable the design does not declare does neither.
     "value" ->
-      JsonObject(
-        mapOf(
-          "type" to JsonPrimitive("state"),
-          "variable" to JsonPrimitive(document.stateVariables.keys.firstOrNull() ?: "value"),
+      if ("string" in typeNames()) literal("string", JsonPrimitive(""))
+      else
+        JsonObject(
+          mapOf(
+            "type" to JsonPrimitive("state"),
+            "variable" to JsonPrimitive(document.stateVariables.keys.firstOrNull() ?: "value"),
+          )
         )
-      )
+    "selectedIndex" -> literal("int", JsonPrimitive(0))
     "startColor" -> literal("color", JsonPrimitive("#00000000"))
     "endColor" -> literal("color", JsonPrimitive("#FF000000"))
     else -> JsonPrimitive("").asLiteral(this)

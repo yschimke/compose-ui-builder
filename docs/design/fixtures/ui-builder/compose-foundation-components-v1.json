@@ -185,7 +185,8 @@
       "canonicalId": "compose-foundation/androidx.compose.foundation.layout.BoxKt.Box",
       "componentIds": [
         "layout/box",
-        "shape/colour-dot"
+        "shape/colour-dot",
+        "shape/linear-gradient"
       ],
       "symbol": {
         "jvmOwner": "androidx.compose.foundation.layout.BoxKt",
@@ -566,6 +567,77 @@
         ]
       },
       "signatureKnown": true
+    },
+    {
+      "canonicalId": "compose-foundation/androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldKt.SupportingPaneScaffold",
+      "componentIds": [
+        "layout/supporting-pane-scaffold"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldKt",
+        "callable": "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold",
+        "name": "SupportingPaneScaffold",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "directive",
+          "type": "PaneScaffoldDirective",
+          "hasDefault": false,
+          "typeFqn": "androidx.compose.material3.adaptive.layout.PaneScaffoldDirective"
+        },
+        {
+          "name": "value",
+          "type": "ThreePaneScaffoldValue",
+          "hasDefault": false,
+          "typeFqn": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue"
+        },
+        {
+          "name": "mainPane",
+          "type": "@Composable ThreePaneScaffoldPaneScope.() -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "supportingPane",
+          "type": "@Composable ThreePaneScaffoldPaneScope.() -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        }
+      ],
+      "slots": [
+        {
+          "name": "mainPane",
+          "required": true,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "supportingPane",
+          "required": true,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        }
+      ],
+      "code": {
+        "call": "SupportingPaneScaffold(directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()), value = calculateThreePaneScaffoldValue(1), mainPane = {}, supportingPane = {})",
+        "imports": [
+          "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi"
+      ]
     }
   ]
 }

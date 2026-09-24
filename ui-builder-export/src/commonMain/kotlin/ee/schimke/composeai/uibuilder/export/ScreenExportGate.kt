@@ -31,8 +31,10 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 object ScreenExportGate {
 
   /** The packages a generated screen may name. Narrow on purpose; widening is a reviewed act. */
-  // Bound layout spacing uses kotlin.math.max to preserve the canvas's nonnegative gap rule.
-  val EXPRESSION_PACKAGES: Set<String> = setOf("androidx.compose", "kotlin.math")
+  // Bound layout spacing uses kotlin.math.max to preserve the canvas's nonnegative gap rule, and a
+  // gradient's brush takes its colours as a `List`, which `kotlin.collections.listOf` builds.
+  val EXPRESSION_PACKAGES: Set<String> =
+    setOf("androidx.compose", "kotlin.math", "kotlin.collections")
 
   /** The package a generated screen is emitted into. */
   const val PACKAGE_NAME: String = "generated.uibuilder"

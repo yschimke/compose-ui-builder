@@ -97,9 +97,9 @@ down the lines like a column (`verticalArrangement`, `verticalSpacingDp`), plus 
 both export lanes write it, and the generated file carries the `ExperimentalLayoutApi` opt-in only
 when it actually wrote one.
 
-The five samples do not use it yet — they are authored against the vocabulary they were built with,
-and swapping a `layout/row` for a `layout/flow-row` in each is an edit to five designs rather than a
-change to the builder.
+The samples use it now: Gmail's and Photos' filter chips and Keep's note labels are
+`layout/flow-row`s, so at 411 dp "Attachments" wraps onto its own line instead of breaking one
+letter per line.
 
 ### 4. No staggered grid
 
@@ -135,7 +135,7 @@ allowed values, so an unknown token validates, exports and commits; `UiBuilderNo
 resolves it to the component default. The first version of the Gmail rail asked for
 `secondaryContainer`, passed every gate, and drew no pill at all.
 
-### 8. Several M3 components export as stand-ins, not the real thing
+### 8. Several M3 components export as stand-ins, not the real thing — **search bar fixed**
 
 The generated source is honest about this but a reader has to notice. `m3/search-bar` exports as
 `BuilderSearchBar` — a `Surface` with a `BasicTextField` — not `androidx.compose.material3.SearchBar`.
@@ -143,6 +143,17 @@ The same goes for the carousel (a `Row`, not `HorizontalUncontainedCarousel`), t
 dialog and the floating toolbar. For a screen whose point is "these are the real composables", the
 search bar is a conspicuous one to approximate, and it is the component four of these five screens
 open with.
+
+The record lane — `ScreenDocumentProjection` and `ScreenGenerator`, which is what the server's
+Compose export and the native render compile — now writes `androidx.compose.material3.SearchBar`
+and `SearchBarDefaults.InputField` from authored component records, `HorizontalFloatingToolbar`
+with `FloatingToolbarDefaults.standardFloatingToolbarColors`, and `PrimaryTabRow`/`Tab`. The
+`BuilderSearchBar` and `BuilderHorizontalFloatingToolbar` stand-ins remain in
+`CapabilityComposeCodeExporter` only, because that exporter compiles against the builder's own
+material3, where the floating toolbar is not public. Play's "Recommended for you" strip is a
+`layout/lazy-row` rather than a carousel: `HorizontalUncontainedCarousel` takes an index-keyed
+`content` lambda that a design of five authored cards has no shape for, and a horizontally scrolling
+row is what that strip is in the real app.
 
 ### 9. Silently unemitted properties
 
@@ -155,14 +166,40 @@ The export warns, which is good, but the warnings name things a design will reas
 | `layout/box.contentAlignment` | ignored entirely — alignment comes from the *child's* `alignment` |
 | `m3/search-input-field.readOnly` | an editable field where the design said otherwise |
 
-`layout/box.contentAlignment` is the one to fix first: it is a property the catalog advertises, the
-inspector offers, and neither the renderer nor the exporter reads.
+`layout/box.contentAlignment` is **fixed**: the canvas and `CapabilityComposeCodeExporter` read it
+now, as the record lane already did, with a child's own `alignment` still winning. It was why every
+sample's hand-rolled rail drew its icon in the top-left corner of the 56 × 32 dp indicator — four of
+the five samples also never set it, and now do.
 
-### 10. A literal cannot go in a search field
+### 10. A literal cannot go in a search field — **fixed**
 
 `m3/search-input-field.value` must be an object, so a screen that only wants to *show* a query has
 to declare a state variable for it. Every one of these five designs carries a `*Query` state variable
 that nothing reads.
+
+`m3/search-input-field.value` is declared `["object", "string"]` now (m3-catalog's policy and the
+frozen fixtures together), and the canvas and both exporters read a literal as the text the field
+shows. The five samples dropped their unused `*Query` variables, which is also what lets them
+export: a build without stateful authoring refuses any design holding a state read.
+
+## Exporting the samples as Kotlin
+
+`GoogleAppDesignExportTest` runs every sample through `ScreenExportGate`, the gate the server's
+export and the editor's Code pane share. `DesignFixturesTest` never could have caught this: it
+exports through `CapabilityComposeCodeExporter`, which has a hand-written emitter for every id.
+
+| design | export | what it took |
+| --- | --- | --- |
+| Photos | ✅ | the gradient lowered to `Box(Modifier.background(Brush.…Gradient(listOf(…))))`; `kotlin.collections` joined the generator's expression packages for `listOf` |
+| Keep | ✅ | `Text.textDecoration` and `FilterChip.shape` on the record; the duplicate `contentDescription` on each icon button removed (its `Icon` already carries it) |
+| Play | ✅ | `PrimaryTabRow` with a literal index; the carousel became a lazy row |
+| Gmail, Calendar | ❌, one reason | `SupportingPaneScaffold` is written as `calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())` and `calculateThreePaneScaffoldValue(…)`, with each pane's width as `Modifier.preferredWidth`. The value needs `directive.maxHorizontalPartitions`, a member read off an expression, and `ScreenGenerator` has no form for one yet |
+
+Calendar's "Up next" items were `m3/list-item`s with a `startAccentColor` bar, which only a draw
+lambda can express; they are a coloured dot beside two lines now, which is also how the app marks
+an event's calendar. Both pane scaffolds dropped their 12 dp `paneSpacingDp` for Material's own
+24 dp partition spacer — `PaneScaffoldDirective.copy` is the same member-call gap, and 24 dp is the
+spacing the adaptive guidance specifies.
 
 ## Where each gap belongs
 

@@ -33,15 +33,7 @@
           "id:pixel_7"
         ]
       },
-      "stateVariables": {
-        "keepQuery": {
-          "type": "value",
-          "valueType": "string",
-          "initialValue": "",
-          "nullable": false,
-          "persistence": "preview"
-        }
-      }
+      "stateVariables": {}
     },
     {
       "operationId": "insert-root",
@@ -174,7 +166,13 @@
             },
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -289,7 +287,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -404,7 +408,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -519,7 +529,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -634,7 +650,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -764,8 +786,8 @@
         "componentId": "m3/search-input-field",
         "properties": {
           "value": {
-            "type": "state",
-            "variable": "keepQuery"
+            "type": "string",
+            "value": ""
           }
         },
         "modifiers": [
@@ -793,6 +815,14 @@
           "style": {
             "type": "enum",
             "value": "bodyLarge"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -1042,10 +1072,34 @@
       }
     },
     {
-      "operationId": "insert-keep-note-shopping-item-0",
+      "operationId": "insert-keep-note-shopping-items",
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-note-shopping-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-shopping-items",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-shopping-title"
+    },
+    {
+      "operationId": "insert-keep-note-shopping-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-shopping-items",
         "slot": "children"
       },
       "node": {
@@ -1054,7 +1108,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -1066,8 +1120,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": "keep-note-shopping-title"
+      }
     },
     {
       "operationId": "insert-keep-note-shopping-item-0-box",
@@ -1132,7 +1185,7 @@
       "operationId": "insert-keep-note-shopping-item-1",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-shopping-body",
+        "nodeId": "keep-note-shopping-items",
         "slot": "children"
       },
       "node": {
@@ -1141,7 +1194,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -1219,7 +1272,7 @@
       "operationId": "insert-keep-note-shopping-item-2",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-shopping-body",
+        "nodeId": "keep-note-shopping-items",
         "slot": "children"
       },
       "node": {
@@ -1228,7 +1281,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -1306,7 +1359,7 @@
       "operationId": "insert-keep-note-shopping-item-3",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-shopping-body",
+        "nodeId": "keep-note-shopping-items",
         "slot": "children"
       },
       "node": {
@@ -1315,7 +1368,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -1398,15 +1451,15 @@
       },
       "node": {
         "id": "keep-note-shopping-labels",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 6.0
           },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
           }
         },
         "modifiers": [
@@ -1422,7 +1475,7 @@
           }
         ]
       },
-      "afterNodeId": "keep-note-shopping-item-3"
+      "afterNodeId": "keep-note-shopping-items"
     },
     {
       "operationId": "insert-keep-note-shopping-label-groceries",
@@ -1600,15 +1653,15 @@
       },
       "node": {
         "id": "keep-note-adaptive-labels",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 6.0
           },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
           }
         },
         "modifiers": [
@@ -1812,10 +1865,34 @@
       }
     },
     {
-      "operationId": "insert-keep-note-talk-item-0",
+      "operationId": "insert-keep-note-talk-items",
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-note-talk-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-talk-items",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-talk-title"
+    },
+    {
+      "operationId": "insert-keep-note-talk-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-talk-items",
         "slot": "children"
       },
       "node": {
@@ -1824,7 +1901,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -1836,8 +1913,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": "keep-note-talk-title"
+      }
     },
     {
       "operationId": "insert-keep-note-talk-item-0-box",
@@ -1902,7 +1978,7 @@
       "operationId": "insert-keep-note-talk-item-1",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-talk-body",
+        "nodeId": "keep-note-talk-items",
         "slot": "children"
       },
       "node": {
@@ -1911,7 +1987,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -1989,7 +2065,7 @@
       "operationId": "insert-keep-note-talk-item-2",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-talk-body",
+        "nodeId": "keep-note-talk-items",
         "slot": "children"
       },
       "node": {
@@ -1998,7 +2074,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -2076,7 +2152,7 @@
       "operationId": "insert-keep-note-talk-item-3",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-talk-body",
+        "nodeId": "keep-note-talk-items",
         "slot": "children"
       },
       "node": {
@@ -2085,7 +2161,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -2168,15 +2244,15 @@
       },
       "node": {
         "id": "keep-note-talk-labels",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 6.0
           },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
           }
         },
         "modifiers": [
@@ -2192,7 +2268,7 @@
           }
         ]
       },
-      "afterNodeId": "keep-note-talk-item-3"
+      "afterNodeId": "keep-note-talk-items"
     },
     {
       "operationId": "insert-keep-note-talk-label-talks",
@@ -2493,15 +2569,15 @@
       },
       "node": {
         "id": "keep-note-trip-labels",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 6.0
           },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
           }
         },
         "modifiers": [
@@ -2660,10 +2736,34 @@
       }
     },
     {
-      "operationId": "insert-keep-note-icons-item-0",
+      "operationId": "insert-keep-note-icons-items",
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-note-icons-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-icons-items",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 0.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-icons-title"
+    },
+    {
+      "operationId": "insert-keep-note-icons-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-icons-items",
         "slot": "children"
       },
       "node": {
@@ -2672,7 +2772,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -2684,8 +2784,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": "keep-note-icons-title"
+      }
     },
     {
       "operationId": "insert-keep-note-icons-item-0-box",
@@ -2750,7 +2849,7 @@
       "operationId": "insert-keep-note-icons-item-1",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-icons-body",
+        "nodeId": "keep-note-icons-items",
         "slot": "children"
       },
       "node": {
@@ -2759,7 +2858,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -2837,7 +2936,7 @@
       "operationId": "insert-keep-note-icons-item-2",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-icons-body",
+        "nodeId": "keep-note-icons-items",
         "slot": "children"
       },
       "node": {
@@ -2846,7 +2945,7 @@
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
-            "value": 10.0
+            "value": 2.0
           },
           "verticalAlignment": {
             "type": "enum",
@@ -2929,15 +3028,15 @@
       },
       "node": {
         "id": "keep-note-icons-labels",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 6.0
           },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
           }
         },
         "modifiers": [
@@ -2953,7 +3052,7 @@
           }
         ]
       },
-      "afterNodeId": "keep-note-icons-item-2"
+      "afterNodeId": "keep-note-icons-items"
     },
     {
       "operationId": "insert-keep-note-icons-label-work",
@@ -3096,10 +3195,34 @@
       }
     },
     {
-      "operationId": "insert-keep-note-books-item-0",
+      "operationId": "insert-keep-note-books-items",
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-note-books-body",
+        "slot": "children"
+      },
+      "node": {
+        "id": "keep-note-books-items",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "keep-note-books-title"
+    },
+    {
+      "operationId": "insert-keep-note-books-item-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "keep-note-books-items",
         "slot": "children"
       },
       "node": {
@@ -3120,8 +3243,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": "keep-note-books-title"
+      }
     },
     {
       "operationId": "insert-keep-note-books-item-0-dot",
@@ -3190,7 +3312,7 @@
       "operationId": "insert-keep-note-books-item-1",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-note-books-body",
+        "nodeId": "keep-note-books-items",
         "slot": "children"
       },
       "node": {
@@ -3409,15 +3531,15 @@
       },
       "node": {
         "id": "keep-note-ideas-labels",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 6.0
           },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 6.0
           }
         },
         "modifiers": [
@@ -3532,10 +3654,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "New list"
           }
         }
       }
@@ -3576,10 +3694,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "New drawing"
           }
         }
       },
@@ -3621,10 +3735,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "New recording"
           }
         }
       },
@@ -3666,10 +3776,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "New note with image"
           }
         }
       },
@@ -3711,10 +3817,6 @@
           "variant": {
             "type": "enum",
             "value": "filled"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "New note"
           }
         }
       },
@@ -3743,5 +3845,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "fb7dbeb4c988dc0c1b1df880706860373f6fdaa5b174d093323b5f042d8a4603"
+  "expectedDocumentHash": "4dc45503fa49640aa3af02e3f453356bf5ffd2d5cb71c1badbd18568bfe308a1"
 }

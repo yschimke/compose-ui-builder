@@ -1172,7 +1172,7 @@ private fun RenderNode(
         }
       }
       "layout/box" ->
-        Box(measured) {
+        Box(measured, contentAlignment = alignmentFor(node.boxContentAlignment())) {
           val children =
             if (UiBuilderBuildFeatures.remoteCompose && SHOW_BY_STATE in node.properties)
               listOfNotNull(node.stateSelection()?.selectedNode(state, document.stateVariables))
@@ -1183,7 +1183,11 @@ private fun RenderNode(
               if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
             child(
               id,
-              parentSizing.align(alignmentFor(item.boxAlignment())).zIndex(item.float("zIndex")),
+              // A child that names no alignment of its own takes the box's `contentAlignment`,
+              // exactly as `Box(contentAlignment = …)` does in the exported source.
+              parentSizing
+                .then(item.boxAlignment()?.let { Modifier.align(alignmentFor(it)) } ?: Modifier)
+                .zIndex(item.float("zIndex")),
             )
           }
         }
@@ -1393,7 +1397,9 @@ private fun RenderNode(
       }
       "m3/search-input-field" -> {
         val variable = node.obj("value")["variable"]?.jsonPrimitive?.contentOrNull
-        val value = variable?.let(state::get).orEmpty()
+        // A literal query is a field that only shows text — the spelling a design can export
+        // without stateful authoring — so it draws that text rather than an empty field.
+        val value = if (variable != null) state[variable].orEmpty() else node.string("value")
         val onValueChange: (String) -> Unit = { if (variable != null) host.setState(variable, it) }
         if (
           uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
@@ -1507,7 +1513,10 @@ private fun RenderNode(
                 if (item.hasModifier("matchParentSize")) Modifier.matchParentSize() else Modifier
               child(
                 id,
-                parentSizing.align(alignmentFor(item.boxAlignment())).zIndex(item.float("zIndex")),
+                // Unaligned, a child sits where the card's content box puts it: top-start.
+                parentSizing
+                  .then(item.boxAlignment()?.let { Modifier.align(alignmentFor(it)) } ?: Modifier)
+                  .zIndex(item.float("zIndex")),
               )
             }
           }
@@ -3266,11 +3275,19 @@ private fun UnsupportedComponentDiagnostic(componentId: String, modifier: Modifi
  * before the vocabulary existed carry, and they keep rendering. Modifier first, so a design that
  * has both says what its chain says — the chain is the thing an author can see and reorder.
  */
-private fun UiBuilderNode.boxAlignment(): String =
+private fun UiBuilderNode.boxAlignment(): String? =
   modifierPlans().filterIsInstance<UiBuilderModifierPlan.Align>().firstOrNull()?.alignment
-    // A spelling neither form resolves stays where the box has always put an unaligned child.
+    // A spelling neither form resolves is no alignment at all, so the box's own applies.
     ?: string("alignment").takeIf(::isResolvableAlignment)
-    ?: "topStart"
+
+/**
+ * Where a `layout/box` puts a child that says nothing about it: `Box(contentAlignment = …)`.
+ *
+ * Unset, or a spelling that does not resolve, is Compose's own default, `TopStart` — where the box
+ * has always put an unaligned child — so a design that never touched the property draws as before.
+ */
+private fun UiBuilderNode.boxContentAlignment(): String =
+  string("contentAlignment").takeIf(::isResolvableAlignment) ?: "topStart"
 
 /** What a `Row` or `Column` child asks of its cross axis, or null for the parent's own default. */
 private fun UiBuilderNode.crossAxisAlignment(): String? =

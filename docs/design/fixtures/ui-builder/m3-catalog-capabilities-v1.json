@@ -644,7 +644,7 @@
         { "name": "trailingIcon", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Container", "Leaf"], "acceptedTraits": ["IconContent", "Action"] }
       ],
       "properties": [
-        { "name": "value", "jsonType": "object", "required": true },
+        { "name": "value", "jsonType": ["object", "string"], "required": true },
         { "name": "enabled", "jsonType": "boolean", "required": false },
         { "name": "readOnly", "jsonType": "boolean", "required": false },
         { "name": "onQueryChangeAction", "jsonType": ["object", "null"], "required": false },

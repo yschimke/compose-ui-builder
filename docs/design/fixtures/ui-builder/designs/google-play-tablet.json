@@ -33,22 +33,7 @@
           "id:pixel_7"
         ]
       },
-      "stateVariables": {
-        "playQuery": {
-          "type": "value",
-          "valueType": "string",
-          "initialValue": "",
-          "nullable": false,
-          "persistence": "preview"
-        },
-        "playTab": {
-          "type": "value",
-          "valueType": "int",
-          "initialValue": 0,
-          "nullable": false,
-          "persistence": "preview"
-        }
-      }
+      "stateVariables": {}
     },
     {
       "operationId": "insert-root",
@@ -181,7 +166,13 @@
             },
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -296,7 +287,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -411,7 +408,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -526,7 +529,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -650,8 +659,8 @@
         "componentId": "m3/search-input-field",
         "properties": {
           "value": {
-            "type": "state",
-            "variable": "playQuery"
+            "type": "string",
+            "value": ""
           }
         },
         "modifiers": [
@@ -679,6 +688,14 @@
           "style": {
             "type": "enum",
             "value": "bodyLarge"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -769,8 +786,8 @@
         "componentId": "m3/primary-tab-row",
         "properties": {
           "selectedIndex": {
-            "type": "state",
-            "variable": "playTab"
+            "type": "int",
+            "value": 0
           }
         },
         "modifiers": [
@@ -816,6 +833,14 @@
           "style": {
             "type": "enum",
             "value": "titleSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -857,6 +882,14 @@
           "style": {
             "type": "enum",
             "value": "titleSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -898,6 +931,14 @@
           "style": {
             "type": "enum",
             "value": "titleSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -939,6 +980,14 @@
           "style": {
             "type": "enum",
             "value": "titleSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -980,6 +1029,14 @@
           "style": {
             "type": "enum",
             "value": "titleSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -1029,23 +1086,18 @@
       },
       "node": {
         "id": "play-carousel",
-        "componentId": "layout/horizontal-carousel",
+        "componentId": "layout/lazy-row",
         "properties": {
-          "kind": {
-            "type": "enum",
-            "value": "uncontained"
-          },
-          "itemWidthDp": {
-            "type": "float",
-            "value": 220.0
-          },
-          "itemSpacingDp": {
+          "horizontalSpacingDp": {
             "type": "float",
             "value": 12.0
           },
-          "contentPaddingStartDp": {
-            "type": "float",
-            "value": 20.0
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 20,
+            "topDp": 0,
+            "endDp": 20,
+            "bottomDp": 0
           },
           "scrollStateKey": {
             "type": "string",
@@ -1285,6 +1337,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -1546,6 +1606,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -1807,6 +1875,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -2068,6 +2144,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -2329,6 +2413,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -2653,6 +2745,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -2955,6 +3055,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -3257,6 +3365,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -3559,6 +3675,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -3861,6 +3985,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -4163,6 +4295,14 @@
           "color": {
             "type": "colorToken",
             "value": "onSurfaceVariant"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -4240,5 +4380,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "e3bce830fd0f9f54cd681426fe5a12a43fc19a605ed9391dbd0252718ecdd5af"
+  "expectedDocumentHash": "858b949c0293a1354a198c443a8e45b8f44a83fb43a392423af6bcefb4b96ec2"
 }

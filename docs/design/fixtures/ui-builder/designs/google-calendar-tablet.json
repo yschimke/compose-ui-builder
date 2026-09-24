@@ -166,7 +166,13 @@
             },
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -281,7 +287,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -396,7 +408,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -511,7 +529,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -601,10 +625,6 @@
           "supportingPanePreferredWidthDp": {
             "type": "float",
             "value": 380.0
-          },
-          "paneSpacingDp": {
-            "type": "float",
-            "value": 12.0
           }
         },
         "modifiers": [
@@ -754,6 +774,14 @@
           "fontWeight": {
             "type": "enum",
             "value": "medium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         },
         "modifiers": [
@@ -778,10 +806,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "Search"
           }
         }
       },
@@ -823,10 +847,6 @@
           "variant": {
             "type": "enum",
             "value": "standard"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "Refresh"
           }
         }
       },
@@ -868,10 +888,6 @@
           "variant": {
             "type": "enum",
             "value": "filled"
-          },
-          "contentDescription": {
-            "type": "string",
-            "value": "Create"
           }
         }
       },
@@ -5410,11 +5426,15 @@
       },
       "node": {
         "id": "cal-next-review",
-        "componentId": "m3/list-item",
+        "componentId": "layout/row",
         "properties": {
-          "startAccentColor": {
-            "type": "color",
-            "value": "#FF1A73E8"
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 12.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
           }
         },
         "modifiers": [
@@ -5426,11 +5446,58 @@
       "afterNodeId": "cal-next-title"
     },
     {
-      "operationId": "insert-cal-next-review-headline",
+      "operationId": "insert-cal-next-review-dot",
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-next-review",
-        "slot": "headline"
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-review-dot",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "color": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "diameterDp": {
+            "type": "float",
+            "value": 10.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-review-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-review",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-review-text",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "cal-next-review-dot"
+    },
+    {
+      "operationId": "insert-cal-next-review-headline",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-review-text",
+        "slot": "children"
       },
       "node": {
         "id": "cal-next-review-headline",
@@ -5459,8 +5526,8 @@
       "operationId": "insert-cal-next-review-detail",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-next-review",
-        "slot": "supporting"
+        "nodeId": "cal-next-review-text",
+        "slot": "children"
       },
       "node": {
         "id": "cal-next-review-detail",
@@ -5479,7 +5546,8 @@
             "value": "onSurfaceVariant"
           }
         }
-      }
+      },
+      "afterNodeId": "cal-next-review-headline"
     },
     {
       "operationId": "insert-cal-next-audit",
@@ -5490,11 +5558,15 @@
       },
       "node": {
         "id": "cal-next-audit",
-        "componentId": "m3/list-item",
+        "componentId": "layout/row",
         "properties": {
-          "startAccentColor": {
-            "type": "color",
-            "value": "#FF0F9D58"
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 12.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
           }
         },
         "modifiers": [
@@ -5506,11 +5578,58 @@
       "afterNodeId": "cal-next-review"
     },
     {
-      "operationId": "insert-cal-next-audit-headline",
+      "operationId": "insert-cal-next-audit-dot",
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-next-audit",
-        "slot": "headline"
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-audit-dot",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "color": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "diameterDp": {
+            "type": "float",
+            "value": 10.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-audit-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-audit",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-audit-text",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "cal-next-audit-dot"
+    },
+    {
+      "operationId": "insert-cal-next-audit-headline",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-audit-text",
+        "slot": "children"
       },
       "node": {
         "id": "cal-next-audit-headline",
@@ -5539,8 +5658,8 @@
       "operationId": "insert-cal-next-audit-detail",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-next-audit",
-        "slot": "supporting"
+        "nodeId": "cal-next-audit-text",
+        "slot": "children"
       },
       "node": {
         "id": "cal-next-audit-detail",
@@ -5559,7 +5678,8 @@
             "value": "onSurfaceVariant"
           }
         }
-      }
+      },
+      "afterNodeId": "cal-next-audit-headline"
     },
     {
       "operationId": "insert-cal-next-spike",
@@ -5570,11 +5690,15 @@
       },
       "node": {
         "id": "cal-next-spike",
-        "componentId": "m3/list-item",
+        "componentId": "layout/row",
         "properties": {
-          "startAccentColor": {
-            "type": "color",
-            "value": "#FF9334E6"
+          "horizontalSpacingDp": {
+            "type": "float",
+            "value": 12.0
+          },
+          "verticalAlignment": {
+            "type": "enum",
+            "value": "center"
           }
         },
         "modifiers": [
@@ -5586,11 +5710,58 @@
       "afterNodeId": "cal-next-audit"
     },
     {
-      "operationId": "insert-cal-next-spike-headline",
+      "operationId": "insert-cal-next-spike-dot",
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-next-spike",
-        "slot": "headline"
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-spike-dot",
+        "componentId": "shape/colour-dot",
+        "properties": {
+          "color": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "diameterDp": {
+            "type": "float",
+            "value": 10.0
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-cal-next-spike-text",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-spike",
+        "slot": "children"
+      },
+      "node": {
+        "id": "cal-next-spike-text",
+        "componentId": "layout/column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 2.0
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 1
+          }
+        ]
+      },
+      "afterNodeId": "cal-next-spike-dot"
+    },
+    {
+      "operationId": "insert-cal-next-spike-headline",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "cal-next-spike-text",
+        "slot": "children"
       },
       "node": {
         "id": "cal-next-spike-headline",
@@ -5619,8 +5790,8 @@
       "operationId": "insert-cal-next-spike-detail",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-next-spike",
-        "slot": "supporting"
+        "nodeId": "cal-next-spike-text",
+        "slot": "children"
       },
       "node": {
         "id": "cal-next-spike-detail",
@@ -5639,8 +5810,9 @@
             "value": "onSurfaceVariant"
           }
         }
-      }
+      },
+      "afterNodeId": "cal-next-spike-headline"
     }
   ],
-  "expectedDocumentHash": "279e98079d3eb953a1a9dd6b4caa40fada2e6f649ea591d3733b56384c14c708"
+  "expectedDocumentHash": "e1af4687eb9c98e3abda04631ae4de3b6249120e549c0d47a2e3af92b9735574"
 }
