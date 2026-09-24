@@ -144,6 +144,22 @@ class DesktopDesignFilesTest {
   }
 
   @Test
+  fun `a save by another process right after this one is not adopted as this editor's own`() {
+    val path = Files.createTempDirectory("ui-builder-files").resolve("design.uid")
+    DesignFiles.write(path, seed.toDesignDocumentV1())
+    val guard = ee.schimke.composeai.uibuilder.host.DesignFileGuard(path)
+
+    guard.write(seed.toDesignDocumentV1().copy(title = "Ours"))
+    // Another writer lands after ours; the next write here must see it as a change.
+    DesignFiles.write(path, seed.toDesignDocumentV1().copy(title = "Theirs"))
+
+    assertFailsWith<IllegalStateException> {
+      guard.write(seed.toDesignDocumentV1().copy(title = "Ours again"))
+    }
+    assertEquals("Theirs", DesignFiles.read(path).title)
+  }
+
+  @Test
   fun `a design file combines with the flags in any order`() {
     assertNull(DesktopLaunchOptions.parse(emptyArray()).designFile)
     assertEquals(
