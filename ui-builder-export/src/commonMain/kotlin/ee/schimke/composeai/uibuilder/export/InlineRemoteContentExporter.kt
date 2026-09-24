@@ -151,7 +151,7 @@ public object InlineRemoteContentExporter {
     val emitter = RemoteContentEmitter(document, refusals, assets = assets, components = components)
     val body =
       if (contentIds.isEmpty() && emptyBox) {
-        listOf("${INDENT.repeat(depth)}RemoteBox(modifier = RemoteModifier.fillMaxSize())")
+        listOf(emitter.emptyBox(depth))
       } else contentIds.flatMap { emitter.emit(it, depth = depth) }
     emitter.validateFunctionNames(name)
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
