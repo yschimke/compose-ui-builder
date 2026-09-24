@@ -27,6 +27,18 @@ class RemoteMaterial3ExportTest {
   }
 
   @Test
+  fun `every component is in the generator's vocabulary`() {
+    // compose-preview-server's parity test holds the remote-m3 palette to this set, and the palette
+    // offers every one of these.
+    assertEquals(
+      emptyList(),
+      RemoteMaterial3.components
+        .map { it.componentId }
+        .filterNot { it in REMOTE_CONTENT_COMPONENT_IDS },
+    )
+  }
+
+  @Test
   fun `every component exports as its own call once its required values are set`() {
     RemoteMaterial3.components.forEach { component ->
       val source = emitted(UiBuilderNode("body", component.componentId, properties = starters))

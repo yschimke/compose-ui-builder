@@ -68,8 +68,11 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
  * it, and the generator sent it to the catch-all `else` branch, so a widget with album art in it
  * refused to export with the same sentence an unknown component gets. A `remote-m3` catalog may
  * only offer ids in here, which the `:server` test asserts.
+ *
+ * Every [RemoteMaterial3] component is in here too: the emitter writes each from its embedded
+ * record in every lane, so the palette offering one is not the drift this set exists to catch.
  */
-public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
+public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> by lazy {
   setOf(
     "asset/image",
     "layout/box",
@@ -83,7 +86,8 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     "remote-compose/document",
     REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
     REMOTE_COMPOSE_INLINE_COMPONENT_ID,
-  )
+  ) + RemoteMaterial3.records.keys
+}
 
 /**
  * Which widget file a [RemoteContentEmitter] body is being written into, which decides its imports.
