@@ -74,7 +74,7 @@ dependencyResolutionManagement {
 
     // ── The CMP Wear port, GROUP-FENCED ─────────────────────────────────────────────────────────
     // `ee.schimke.wearcmp:*` — Wear Compose Material 3 / Foundation compiled for Compose
-    // Multiplatform, published from `yschimke/wear-m3-catalog`'s `wear-compose-cmp-maven` branch.
+    // Multiplatform, published from the `wear-compose-cmp-maven` branch of `yschimke/wear-m3-catalog-out`.
     // It publishes `jvm` and `wasmJs` variants, which are exactly `:ui-builder`'s two targets, and
     // it is what lets the canvas draw Wear components instead of renaming three of them to
     // Material 3 lookalikes. See `docs/design/UI_BUILDER_WEAR_SCREEN.md`.
@@ -83,7 +83,7 @@ dependencyResolutionManagement {
     // can never satisfy a request for an `androidx.*` or `ee.schimke.composeai` artifact by
     // accident. The device-preview lane is unaffected: it renders through the native
     // `wear-m3-catalog` bundle against the genuine AndroidX AARs, and the port never reaches it.
-    maven("https://raw.githubusercontent.com/yschimke/wear-m3-catalog/wear-compose-cmp-maven/") {
+    maven("https://raw.githubusercontent.com/yschimke/wear-m3-catalog-out/wear-compose-cmp-maven/") {
       name = "wearComposeCmpPort"
       content { includeGroup("ee.schimke.wearcmp") }
     }
