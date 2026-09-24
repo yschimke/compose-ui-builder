@@ -1425,10 +1425,13 @@ object ScreenDocumentProjection {
      *
      * `layoutMode` is spent rather than written: `adaptive`, `twoPane` and `expandedTwoPane` all
      * mean "what the directive decides" on the canvas, which is what the computation above is.
-     * `singlePane` caps the directive at one partition and a pane spacing sets its spacer, both
-     * through `PaneScaffoldDirective.copy`, which this projection does not write yet; they are
-     * refused by name, as is a hidden pane, which needs a hand-built `ThreePaneScaffoldValue`. Each pane's preferred width is not an argument at all; it
-     * is `Modifier.preferredWidth` on the pane's content, which [paneWidthLink] hands down.
+     * `singlePane` caps the directive at one partition and a pane spacing sets its spacer, exactly
+     * as the canvas adjusts its own directive: one `directive.copy(maxHorizontalPartitions = 1,
+     * horizontalPartitionSpacerSize = …)`, a [ChainLink.member] call, whose result is then both the
+     * `directive` argument and the receiver the value reads its partition count from. A hidden pane
+     * is still refused by name: it means building a `ThreePaneScaffoldValue` by hand. Each pane's
+     * preferred width is not an argument at all; it is `Modifier.preferredWidth` on the pane's
+     * content, which [paneWidthLink] hands down.
      */
     private fun supportingPanes(
       node: DesignNodeV1,
@@ -1441,13 +1444,8 @@ object ScreenDocumentProjection {
           is StringValueV1 -> value.value
           else -> null
         }
-      if (mode == "singlePane") {
-        refuse(
-          "$where.`$PANE_LAYOUT_MODE` is `singlePane`, which caps the scaffold directive at one " +
-            "partition through `PaneScaffoldDirective.copy`, which this export does not write " +
-            "yet; leave it `adaptive` to export the library's own answer"
-        )
-      }
+      val adjustments = mutableMapOf<String, ScreenValue>()
+      if (mode == "singlePane") adjustments["maxHorizontalPartitions"] = ScreenValue.Whole(1)
       for (flag in listOf(MAIN_PANE_VISIBLE, SUPPORTING_PANE_VISIBLE)) {
         val visible = (node.properties[flag] as? BooleanValueV1)?.value ?: true
         if (!visible) {
@@ -1457,14 +1455,18 @@ object ScreenDocumentProjection {
           )
         }
       }
-      if (PANE_SPACING_DP in node.properties) {
-        refuse(
-          "$where.`$PANE_SPACING_DP` sets the directive's `horizontalPartitionSpacerSize` through " +
-            "`PaneScaffoldDirective.copy`, which this export does not write yet; leave it unset " +
-            "for Material's own 24dp spacer"
-        )
+      val spacing =
+        when (val value = node.properties[PANE_SPACING_DP]) {
+          null -> null
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else -> refuse("$where.`$PANE_SPACING_DP` is a spacing in dp, which needs a number")
+        }
+      if (spacing != null) {
+        dp(spacing)?.let { adjustments["horizontalPartitionSpacerSize"] = it }
+          ?: refuse("$where.`$PANE_SPACING_DP` is $spacing, which does not survive `Dp`")
       }
-      val directive =
+      val computed =
         ScreenValue.Construct(
           callableFqn = "$ADAPTIVE_LAYOUT.calculatePaneScaffoldDirective",
           positional =
@@ -1476,6 +1478,21 @@ object ScreenDocumentProjection {
             ),
           typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
         )
+      val directive =
+        if (adjustments.isEmpty()) computed
+        else
+          ScreenValue.Chain(
+            receiver = computed,
+            links =
+              listOf(
+                ChainLink(
+                  "$ADAPTIVE_LAYOUT.PaneScaffoldDirective.copy",
+                  named = adjustments,
+                  member = true,
+                )
+              ),
+            typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
+          )
       arguments["directive"] = directive
       arguments["value"] =
         ScreenValue.Construct(

@@ -198,8 +198,8 @@ exports through `CapabilityComposeCodeExporter`, which has a hand-written emitte
 Calendar's "Up next" items were `m3/list-item`s with a `startAccentColor` bar, which only a draw
 lambda can express; they are a coloured dot beside two lines now, which is also how the app marks
 an event's calendar. Both pane scaffolds dropped their 12 dp `paneSpacingDp` for Material's own
-24 dp partition spacer — the projection does not write `PaneScaffoldDirective.copy` yet, and 24 dp
-is the spacing the adaptive guidance specifies.
+24 dp partition spacer — 24 dp is the spacing the adaptive guidance specifies. A spacing, and
+`singlePane`, now export too, as one `PaneScaffoldDirective.copy(…)` member call.
 
 ## Where each gap belongs
 

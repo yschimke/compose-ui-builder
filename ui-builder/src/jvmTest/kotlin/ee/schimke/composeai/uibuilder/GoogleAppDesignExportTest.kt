@@ -4,6 +4,8 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.preview.designFixtureDocument
+import ee.schimke.composeai.uibuilder.protocol.DecimalValueV1
+import ee.schimke.composeai.uibuilder.protocol.EnumValueV1
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,6 +58,46 @@ class GoogleAppDesignExportTest {
     }
 
     assertEquals(emptyList(), failures, failures.joinToString("\n"))
+  }
+
+  /**
+   * `singlePane` and a pane spacing adjust the computed directive the way the canvas does: one
+   * `copy(…)` member call, whose result is both the `directive` argument and the receiver the value
+   * reads its partition count from. The generator holds each receiver in a typed local, so the
+   * adjusted directive is the thing the scaffold and its value agree on.
+   */
+  @Test
+  fun `singlePane and a pane spacing export through the directive's copy`() {
+    val document = designFixtureDocument("google-gmail-tablet").toProtocolDocument()
+    val scaffold =
+      document.nodes.values.single { it.componentId == "layout/supporting-pane-scaffold" }
+    val adjusted =
+      document.copy(
+        nodes =
+          document.nodes +
+            (scaffold.id to
+              scaffold.copy(
+                properties =
+                  scaffold.properties +
+                    mapOf(
+                      "layoutMode" to EnumValueV1("singlePane"),
+                      "paneSpacingDp" to DecimalValueV1(12.0),
+                    )
+              ))
+      )
+    val outcome = ScreenExportGate.export(adjusted, catalog.exportRecord(embeddedComponentRecord()))
+    val source =
+      assertIs<ScreenExportGate.Outcome.Emitted>(
+          outcome,
+          (outcome as? ScreenExportGate.Outcome.Refused)?.reasons?.joinToString("\n").orEmpty(),
+        )
+        .source
+    assertTrue(
+      ".copy(maxHorizontalPartitions = 1, horizontalPartitionSpacerSize = 12.dp)" in source,
+      source,
+    )
+    // One computation of the window's directive, however many places read it.
+    assertEquals(1, source.split("calculatePaneScaffoldDirective(").size - 1, source)
   }
 
   private companion object {
