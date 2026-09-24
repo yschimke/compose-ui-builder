@@ -4057,6 +4057,21 @@ internal fun UiBuilderDocument.canvasFrameDp(hostShape: WearWidgetHostShape): Pa
  * Read from the root rather than from the catalog, because the frame follows the scaffold the
  * design was created with and nothing else can change it.
  */
+/**
+ * This design as a catalog runtime surface drawn in [shape] is sent it: the shape named in its
+ * environment under [WearWidgetHostShape.ENVIRONMENT_KEY], so the runtime frames the widget the way
+ * the pane does. Anything that is not a Wear widget is sent unchanged.
+ */
+internal fun UiBuilderDocument.withWearWidgetHostShape(
+  shape: WearWidgetHostShape
+): UiBuilderDocument =
+  if (wearWidgetScaffoldSize() == null) this
+  else
+    copy(
+      environment =
+        JsonObject(environment + (WearWidgetHostShape.ENVIRONMENT_KEY to JsonPrimitive(shape.id)))
+    )
+
 internal fun UiBuilderDocument.wearWidgetScaffoldSize(): WearWidgetScaffoldSize? {
   val rootId = roots.singleOrNull() ?: return null
   val componentId = nodes[rootId]?.componentId ?: return null
@@ -6229,7 +6244,7 @@ internal fun PinnedDesignCanvas(
                     )
                   ) {
                     canvasRenderer(
-                      document,
+                      document.withWearWidgetHostShape(LocalWearWidgetHostShape.current),
                       UiBuilderCanvasSurface(
                         sourceWidth,
                         expandedHeightDp,
@@ -6718,7 +6733,7 @@ private fun DragLivePreviewGhost(
         )
       } else {
         renderer(
-          document,
+          document.withWearWidgetHostShape(LocalWearWidgetHostShape.current),
           UiBuilderCanvasSurface(
             widthDp,
             heightDp,
@@ -6854,7 +6869,7 @@ private fun ConstrainedFramePane(
       // canvas beside it uses.
       if (renderer != null) {
         renderer(
-          document,
+          document.withWearWidgetHostShape(wearWidgetHostShape ?: ambientWidgetHostShape),
           UiBuilderCanvasSurface(
             widthDp,
             heightDp,
