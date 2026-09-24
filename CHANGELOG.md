@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.46.0](https://github.com/yschimke/compose-ui-builder/compare/v3.45.0...v3.46.0) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ui-builder-export:** import the RemoteBox an empty widget's native preview draws ([#220](https://github.com/yschimke/compose-ui-builder/issues/220)) ([cdf00ab](https://github.com/yschimke/compose-ui-builder/commit/cdf00ab6c0bbab74bd3b2cd1c803c6860c43324e))
+* **ui-builder:** let the runtime canvas show through the editor frame ([#221](https://github.com/yschimke/compose-ui-builder/issues/221)) ([47f7740](https://github.com/yschimke/compose-ui-builder/commit/47f774056d8e63aa3519be1afeec7f9fc95b21d4))
+
 ## [3.45.0](https://github.com/yschimke/compose-ui-builder/compare/v3.44.0...v3.45.0) (2026-09-24)
 
 
