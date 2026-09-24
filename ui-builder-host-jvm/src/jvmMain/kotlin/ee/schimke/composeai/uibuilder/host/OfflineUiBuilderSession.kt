@@ -54,6 +54,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -178,17 +180,18 @@ private constructor(
   }
 
   internal val offlineCatalog = OfflineCatalog.forSystem(catalogSystemId)
+  private val appliedOverride = catalogOverride?.takeIf { it.systemId == catalogSystemId }
   private val catalogText =
-    catalogOverride?.takeIf { it.systemId == catalogSystemId }?.text
-      ?: resourceText(offlineCatalog.capabilitiesResource)
+    appliedOverride?.text ?: resourceText(offlineCatalog.capabilitiesResource)
   override val catalog = CapabilityCatalogParser.parse(catalogText)
+  private val store = LocalDesignStore(storage)
   private val catalogCapability = Json {
     ignoreUnknownKeys = true
   }
     .decodeFromString(CatalogCapabilityV1.serializer(), catalogText)
   private val service =
     LocalUiBuilderService(
-      store = LocalDesignStore(storage),
+      store = store,
       catalogs = { listOf(catalogCapability) },
       clock = System::currentTimeMillis,
     )
@@ -254,11 +257,30 @@ private constructor(
   ): UiBuilderNativeRender? = remotePreview?.render(document, hostShape)
 
   private suspend fun openOrCreate() {
+    // A catalog read from disk is usually a regeneration of the packaged one, with a new revision.
+    // A design pinned to the old revision would then fail every export on CATALOG_PIN_MISMATCH
+    // while being edited against the new capabilities — so the design follows the catalog it is
+    // being authored against, as a stored record and as a project document alike.
+    if (appliedOverride != null) {
+      // A store that cannot be rewritten (read-only, full) still opens the design, at its old pin,
+      // and says why exports may refuse it, rather than leaving the editor blank.
+      runCatching {
+        store.read(designId)?.let { record ->
+          val repinned = record.seed.pinnedTo(catalog)
+          if (repinned != record.seed) store.write(record.copy(seed = repinned))
+        }
+      }
+        .onFailure {
+          mutableFailure.value =
+            "could not re-pin the design to ${catalog.benchmark.catalogRevision}: " +
+              (it.message ?: it::class.simpleName)
+        }
+    }
     when (val open = service.execute(OpenDesignRequestV1(designId))) {
       is SnapshotResponseV1 -> mutableSnapshot.value = open
       is ErrorResponseV1 -> {
         val seed =
-          initialDocument
+          initialDocument?.let { if (appliedOverride != null) it.pinnedTo(catalog) else it }
             ?: offlineCatalog.seed(
               designId = designId,
               catalogRevision = catalog.benchmark.catalogRevision,
@@ -312,6 +334,26 @@ private constructor(
 
 /** How long [OfflineUiBuilderSession.close] waits for queued edits to be persisted. */
 private val CLOSE_DRAIN_TIMEOUT = 2.seconds
+
+/**
+ * This document pinned to [catalog]'s revision and runtime. A capability digest written as the old
+ * revision follows it; the `candidate` placeholder, which every revision accepts, is left alone.
+ */
+internal fun UiBuilderDocument.pinnedTo(catalog: CapabilityCatalog): UiBuilderDocument {
+  val benchmark = catalog.benchmark
+  val previousRevision = catalogPin["catalogRevision"]?.jsonPrimitive?.contentOrNull
+  val pin =
+    catalogPin.toMutableMap().apply {
+      put("systemId", JsonPrimitive(benchmark.catalogSystemId))
+      put("catalogRevision", JsonPrimitive(benchmark.catalogRevision))
+      put("nativeRuntimeId", JsonPrimitive(benchmark.nativeRuntimeId))
+      val digest = get("capabilityDigest")?.jsonPrimitive?.contentOrNull
+      if (digest != null && digest == previousRevision) {
+        put("capabilityDigest", JsonPrimitive(benchmark.catalogRevision))
+      }
+    }
+  return if (pin == catalogPin) this else copy(catalogPin = JsonObject(pin))
+}
 
 /** Displays one view of a shared [UiBuilderSession]. */
 @Composable

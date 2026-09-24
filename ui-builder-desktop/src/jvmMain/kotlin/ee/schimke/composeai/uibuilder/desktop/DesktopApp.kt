@@ -19,6 +19,7 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import ee.schimke.composeai.uibuilder.host.CatalogOverride
+import ee.schimke.composeai.uibuilder.host.DesignFileGuard
 import ee.schimke.composeai.uibuilder.host.DesignFiles
 import ee.schimke.composeai.uibuilder.host.OfflineCatalog
 import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSession
@@ -50,7 +51,7 @@ sealed interface DesktopDesign {
 /**
  * Opens [design] as a session. A scratch design lives in its catalog's workspace under
  * [storageRoot] (see [designStorePath]); a file design is read from disk and every accepted edit is
- * written back to it.
+ * written back to it, unless the file changed underneath it (see [DesignFileGuard]).
  */
 internal fun openDesktopSession(
   design: DesktopDesign,
@@ -67,14 +68,17 @@ internal fun openDesktopSession(
         templateId = design.template,
         catalogOverride = catalogOverride,
       )
-    is DesktopDesign.File ->
+    is DesktopDesign.File -> {
+      // Taken before the read, so a change landing between the two is refused rather than lost.
+      val guard = DesignFileGuard(design.path)
       OfflineUiBuilderSession.projectDocument(
         DesignFiles.read(design.path),
         remoteServer,
         catalogOverride,
       ) { committed ->
-        DesignFiles.write(design.path, committed)
+        guard.write(committed)
       }
+    }
   }
 
 /** The desktop application: one window, a File menu, and the design it currently edits. */

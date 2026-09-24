@@ -1,11 +1,19 @@
 package ee.schimke.composeai.uibuilder.host
 
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 class CatalogOverrideTest {
   private val packaged =
@@ -60,4 +68,33 @@ class CatalogOverrideTest {
 
   private fun write(text: String): Path =
     Files.createTempFile("capabilities", ".json").also { Files.writeString(it, text) }
+
+  @Test
+  fun `a stored design follows a regenerated catalog's revision instead of failing its pin`() =
+    runBlocking {
+      val workspace = Files.createTempDirectory("override-repin")
+      // Created against the packaged catalog, so pinned to its revision.
+      OfflineUiBuilderSession(workspace, catalogSystemId = "wear-m3").use { session ->
+        withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+      }
+      val regenerated =
+        CatalogOverride.read(
+          write(packaged.replace("\"wear-screen-scaffold-v1\"", "\"wear-screen-scaffold-v2\""))
+        )
+
+      OfflineUiBuilderSession(workspace, catalogSystemId = "wear-m3", catalogOverride = regenerated)
+        .use { session ->
+          val pin =
+            withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+              .snapshot
+              .state
+              .document
+              .toUiBuilderDocument()
+              .catalogPin
+          assertEquals(
+            "wear-screen-scaffold-v2",
+            pin["catalogRevision"]?.jsonPrimitive?.contentOrNull,
+          )
+        }
+    }
 }

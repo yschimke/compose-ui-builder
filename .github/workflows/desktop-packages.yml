@@ -10,6 +10,8 @@ on:
     branches: [main]
     paths:
       - ui-builder-desktop/**
+      # The app is packaged from this module too; a change here changes the installers.
+      - ui-builder-host-jvm/**
       - .github/workflows/desktop-packages.yml
   # A manual run on a branch builds both packages without a pull request or a release.
   workflow_dispatch:
@@ -32,8 +34,10 @@ jobs:
         include:
           - os: macos-latest
             extension: dmg
+            format: Dmg
           - os: windows-latest
             extension: msi
+            format: Msi
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
@@ -45,16 +49,33 @@ jobs:
           # checkout fails before anything is built.
           ref: ${{ inputs.tag || github.event.pull_request.head.sha || github.ref }}
           persist-credentials: false
+      # Recovering a tag cut before this OS had an installer: that tag's build script cannot make
+      # one, and failing here would hold `finish-release` back for an asset the release never
+      # had. Only a release tag is let off: a pull request or a manual run builds the current
+      # script, which must package, so there the missing format is still a failure below.
+      - name: Does this build package for ${{ matrix.os }}?
+        id: support
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.tag }}" ] && ! grep -q 'TargetFormat.${{ matrix.format }}' ui-builder-desktop/build.gradle.kts; then
+            echo "::notice::${{ inputs.tag }} predates the .${{ matrix.extension }} installer; nothing to build on ${{ matrix.os }}"
+            echo "supported=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "supported=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        if: ${{ steps.support.outputs.supported == 'true' }}
         with:
           distribution: temurin
           java-version: |
             21
             17
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        if: ${{ steps.support.outputs.supported == 'true' }}
         with:
           cache-provider: basic
       - name: Package for ${{ matrix.os }}
+        if: ${{ steps.support.outputs.supported == 'true' }}
         shell: bash
         run: |
           if [ -n "${{ inputs.tag }}" ]; then
@@ -63,6 +84,7 @@ jobs:
           fi
           ./gradlew :ui-builder-desktop:packageDistributionForCurrentOS
       - name: Find the package
+        if: ${{ steps.support.outputs.supported == 'true' }}
         id: package
         shell: bash
         run: |
@@ -73,11 +95,12 @@ jobs:
           fi
           echo "path=$package" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ steps.support.outputs.supported == 'true' }}
         with:
           name: compose-ui-builder-desktop-${{ matrix.extension }}
           path: ${{ steps.package.outputs.path }}
       - name: Attach to the release
-        if: ${{ inputs.tag != '' }}
+        if: ${{ steps.support.outputs.supported == 'true' && inputs.tag != '' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
