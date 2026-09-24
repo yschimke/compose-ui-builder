@@ -63,9 +63,11 @@ internal fun UiBuilderDocument.wearWidgetPreviewPanes(
     UiBuilderVariantPane(
       id = "preview-widget-${shape.id}",
       label =
+        // Named for the watches that draw each frame: Samsung's launcher gives a widget fully
+        // rounded ends, and the Pixel Watch a rounded rectangle.
         when (shape) {
-          WearWidgetHostShape.Round -> "Pixel Watch"
-          WearWidgetHostShape.Squircle -> "Samsung"
+          WearWidgetHostShape.Round -> "Samsung"
+          WearWidgetHostShape.Squircle -> "Pixel Watch"
           WearWidgetHostShape.Rectangular -> "Rectangular"
         },
       widthDp = spec.frameWidthDp.toFloat(),
