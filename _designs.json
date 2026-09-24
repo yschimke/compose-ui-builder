@@ -1,0 +1,25 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "google-calendar-tablet",
+      "refused": "nent rather than a value: `SupportingPaneScaffold` decides how many panes to show from a scaffold directive and the window it is measured in, so there is no parameter for a mode to be written to design render --local: nothing was written. design --local: work dir /tmp/design-local487660926529640945 "
+    },
+    {
+      "id": "google-gmail-tablet",
+      "refused": "nt rather than a value: `SupportingPaneScaffold` decides how many panes to show from a scaffold directive and the window it is measured in, so there is no parameter for a mode to be written to design render --local: nothing was written. design --local: work dir /tmp/design-local14707384307259075395 "
+    },
+    {
+      "id": "google-keep-tablet",
+      "refused": "fixtures/ui-builder/m3-catalog-components-v1.json   UNPROVEN_CALL_SITE: `InputField` has no parameter `value`   UNPROVEN_CALL_SITE: `HorizontalFloatingToolbar` has no parameter `containerColor` design render --local: nothing was written. design --local: work dir /tmp/design-local4122564268647869014 "
+    },
+    {
+      "id": "google-photos-tablet",
+      "refused": "y's values to Kotlin members   UNEXPRESSIBLE_DOCUMENT: node `photos-tile-11-fill`.`direction` is the enum value `leftToRight`, and nothing maps this catalog property's values to Kotlin members design render --local: nothing was written. design --local: work dir /tmp/design-local11295544980514600952 "
+    },
+    {
+      "id": "google-play-tablet",
+      "refused": "values to Kotlin members   UNEXPRESSIBLE_DOCUMENT: node `play-app-verse-icon-fill`.`direction` is the enum value `leftToRight`, and nothing maps this catalog property's values to Kotlin members design render --local: nothing was written. design --local: work dir /tmp/design-local4841318968096663766 "
+    }
+  ]
+}
