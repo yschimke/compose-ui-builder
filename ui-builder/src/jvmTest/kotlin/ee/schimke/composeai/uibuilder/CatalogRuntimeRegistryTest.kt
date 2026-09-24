@@ -1,5 +1,12 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeCoordinateMapper
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeDescriptor
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeLifecycle
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeRegistry
+import ee.schimke.composeai.uibuilder.canvas.CatalogRuntimeResolution
+import ee.schimke.composeai.uibuilder.canvas.RuntimePoint
+import ee.schimke.composeai.uibuilder.canvas.RuntimeRect
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

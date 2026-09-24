@@ -1,7 +1,7 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererInspectionGenerationV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererInspectionV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererNodeInspectionV1

@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
-import ee.schimke.composeai.uibuilder.RemoteMaterial3
+import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

@@ -1,10 +1,10 @@
 package ee.schimke.composeai.uibuilder.host
 
-import ee.schimke.composeai.uibuilder.EditorSubmission
-import ee.schimke.composeai.uibuilder.UiBuilderEditorEvent
-import ee.schimke.composeai.uibuilder.UiBuilderEditorReducer
-import ee.schimke.composeai.uibuilder.screenEnvironmentSettings
-import ee.schimke.composeai.uibuilder.toUiBuilderDocument
+import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals

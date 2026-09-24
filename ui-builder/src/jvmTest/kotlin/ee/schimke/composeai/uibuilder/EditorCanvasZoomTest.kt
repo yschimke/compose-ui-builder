@@ -1,5 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.MAX_CANVAS_ZOOM
+import ee.schimke.composeai.uibuilder.editor.MIN_CANVAS_ZOOM
+import ee.schimke.composeai.uibuilder.editor.canvasZoomLabel
+import ee.schimke.composeai.uibuilder.editor.canvasZoomStep
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.DesignOperation
 import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.RedoCommand
 import ee.schimke.composeai.uibuilder.UndoCommand
+import ee.schimke.composeai.uibuilder.export.toUiBuilderNode
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
@@ -37,7 +38,6 @@ import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
-import ee.schimke.composeai.uibuilder.toUiBuilderNode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive

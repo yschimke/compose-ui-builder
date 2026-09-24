@@ -11,6 +11,8 @@ on:
     paths:
       - ui-builder-desktop/**
       - .github/workflows/desktop-packages.yml
+  # A manual run on a branch builds both packages without a pull request or a release.
+  workflow_dispatch:
   workflow_call:
     inputs:
       tag:
@@ -38,7 +40,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          # The PR's head commit, not `refs/pull/N/merge`: macOS runners can queue for longer
+          # than a pull request stays open, and once it merges that ref is gone and the
+          # checkout fails before anything is built.
+          ref: ${{ inputs.tag || github.event.pull_request.head.sha || github.ref }}
           persist-credentials: false
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:

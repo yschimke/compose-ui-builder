@@ -3,6 +3,8 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import dev.snipme.highlights.model.SyntaxThemes
+import ee.schimke.composeai.uibuilder.codegen.codeColor
+import ee.schimke.composeai.uibuilder.codegen.highlightKotlin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

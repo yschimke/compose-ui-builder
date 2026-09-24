@@ -75,7 +75,7 @@ needing no authored policy — extra components beside a hand-authored catalog, 
 Every exclusion is logged at startup with its reason, so a shelf shorter than the record is
 explained rather than discovered.
 
-The id is spelled by one function, [`UiBuilderComponentPack.componentId`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderComponentPacks.kt),
+The id is spelled by one function, [`UiBuilderComponentPack.componentId`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderComponentPacks.kt),
 used on both sides: the runtime writes it onto the capability and the export writes it back onto
 the record as a catalog alias ([`ComponentRecordPacks.aliasedRecord`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/main/kotlin/ee/schimke/composeai/cli/serve/ComponentRecordPacks.kt)),
 so the palette and the generator cannot disagree about what `confetti-mobile/session-card` is.

@@ -8,6 +8,16 @@ import ee.schimke.composeai.uibuilder.protocol.ExportDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.ExportEncodingV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import ee.schimke.composeai.uibuilder.protocol.ExportResponseV1
+import ee.schimke.composeai.uibuilder.reference.ReferenceDiffMode
+import ee.schimke.composeai.uibuilder.reference.ReferenceImage
+import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
+import ee.schimke.composeai.uibuilder.reference.ReferenceMark
+import ee.schimke.composeai.uibuilder.reference.ReferenceMarkupKind
+import ee.schimke.composeai.uibuilder.reference.ReferenceOverlaySettings
+import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
+import ee.schimke.composeai.uibuilder.reference.ReferencePiece
+import ee.schimke.composeai.uibuilder.reference.RestoredReference
+import ee.schimke.composeai.uibuilder.reference.referenceImportRefusal
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.JsString

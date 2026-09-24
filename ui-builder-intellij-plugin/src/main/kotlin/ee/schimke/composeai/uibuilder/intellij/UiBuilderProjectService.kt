@@ -15,13 +15,13 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.Alarm
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.host.OfflineCatalog
 import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSession
 import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderConnection
 import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderDesign
 import ee.schimke.composeai.uibuilder.host.UiBuilderSession
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
-import ee.schimke.composeai.uibuilder.toUiBuilderDocument
 import java.nio.file.Path
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

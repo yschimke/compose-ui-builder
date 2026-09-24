@@ -233,7 +233,7 @@ tasks.register<JavaExec>("generateJetcasterComposeFixture") {
     layout.buildDirectory.dir("processedResources/jvm/main"),
     configurations.getByName("jvmRuntimeClasspath"),
   )
-  mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterComposeFixture")
+  mainClass.set("ee.schimke.composeai.uibuilder.codegen.GenerateJetcasterComposeFixture")
   javaLauncher.set(uiBuilderLauncher)
   args(
     rootProject.layout.projectDirectory
@@ -254,7 +254,7 @@ tasks.register<JavaExec>("generateJetcasterSvgFixture") {
     layout.buildDirectory.dir("processedResources/jvm/main"),
     configurations.getByName("jvmRuntimeClasspath"),
   )
-  mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterSvgFixture")
+  mainClass.set("ee.schimke.composeai.uibuilder.svg.GenerateJetcasterSvgFixture")
   javaLauncher.set(uiBuilderLauncher)
   args(layout.buildDirectory.file("figma-gate/jetcaster-discover.svg").get().asFile.absolutePath)
   outputs.file(layout.buildDirectory.file("figma-gate/jetcaster-discover.svg"))
@@ -273,7 +273,7 @@ val generateJetcasterComposeFixtureForCheck =
       layout.buildDirectory.dir("processedResources/jvm/main"),
       configurations.getByName("jvmRuntimeClasspath"),
     )
-    mainClass.set("ee.schimke.composeai.uibuilder.GenerateJetcasterComposeFixture")
+    mainClass.set("ee.schimke.composeai.uibuilder.codegen.GenerateJetcasterComposeFixture")
     javaLauncher.set(uiBuilderLauncher)
     args(generatedJetcasterCheckFile.get().asFile.absolutePath)
     outputs.file(generatedJetcasterCheckFile)

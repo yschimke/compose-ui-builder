@@ -4,6 +4,9 @@ import ee.schimke.composeai.discovery.ComponentOrigin
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.ComponentSymbol
 import ee.schimke.composeai.discovery.TargetParameter
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WearWidgetCodeExporter
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertTrue

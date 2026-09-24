@@ -3,6 +3,12 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.client.browserUiBuilderWebSocketUrl
+import ee.schimke.composeai.uibuilder.editor.DesignComment
+import ee.schimke.composeai.uibuilder.editor.DesignCommentAnchor
+import ee.schimke.composeai.uibuilder.editor.DesignCommentAuthorKind
+import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
+import ee.schimke.composeai.uibuilder.editor.DesignCommentDraft
+import ee.schimke.composeai.uibuilder.editor.DesignCommentThread
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.JsAny

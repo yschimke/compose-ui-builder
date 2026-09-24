@@ -219,7 +219,7 @@ than quietly sending the page's `?token=` somewhere it does not belong.
 
 A `remote-compose/inline` node says *everything below me is `@RemoteComposable`*. Its `content` slot
 takes one child and accepts only the `RemoteAuthorable` trait — the ids
-[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteContentEmitter.kt)
+[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/RemoteContentEmitter.kt)
 can actually write, which is `layout/box`, `layout/column`, `layout/row`, `m3/surface`, `m3/text`
 and the custom component below.
 
@@ -229,7 +229,7 @@ the identical node inside a mobile screen becomes `androidx.compose.foundation.l
 component does not change; where it sits does. Slot acceptance cannot say that — it decides from the
 two components alone, and every generic container accepts `AnyContent` — so the scope is resolved
 from the ancestry instead, once, in
-[`RemoteScopes`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteScopes.kt),
+[`RemoteScopes`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/RemoteScopes.kt),
 and the canvas, the export gate and the emitter all read it from there.
 
 ### Custom components, and the way back out
@@ -275,7 +275,7 @@ screen generator said, so a design holding remote content is never answered with
 ### The palette and the emitter are one vocabulary, checked as two
 
 A `remote-m3` design is authorable in whatever the catalog declares and exportable in whatever
-[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteContentEmitter.kt)
+[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/RemoteContentEmitter.kt)
 can write, and for a while those were two independent lists. The catalog borrowed each component's
 modifiers from `m3-catalog` — 28 of them on a widget node — the canvas drew all 28, and the emitter
 wrote three. `size`, `background`, `weight` and `align` were the ones an ordinary widget needs, so a
@@ -508,7 +508,7 @@ does not cross that boundary; nothing does. Everything a widget body is written 
 remote APIs — `remote-creation-compose` (`RemoteColumn`, `RemoteRow`, `RemoteBox`, `RemoteModifier`,
 `.rs` / `.rdp` / `.rsp`), `remote-foundation`, and `remote-material3` (`RemoteText`,
 `RemoteMaterialTheme`) — which is what
-[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteContentEmitter.kt)
+[`RemoteContentEmitter`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/RemoteContentEmitter.kt)
 imports, and all it imports.
 
 So the "borrow foundation, rename the Material" split is not available to this catalog. The ids it

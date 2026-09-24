@@ -16,21 +16,21 @@ for running it.
 
 ## The modules
 
-| Module | Targets | What it is |
-| --- | --- | --- |
-| `:ui-builder` | `jvm`, `wasmJs` | the editor — canvas, palette, inspector, reducer, exporters, offline service |
-| `:ui-builder-desktop` | JVM desktop | native offline desktop app: the window, File menu and installers |
-| `:ui-builder-host-jvm` | JVM | the hosting layer the desktop app and the IntelliJ plugin share: sessions, catalogs, design files, export |
-| `:ui-builder-intellij-plugin` | IntelliJ Platform | proof-of-concept Jewel tool-window host for the native editor |
-| `:ui-builder-runtime` | JVM | the design service: state, catalog validation, revision-pinned export |
-| `:ui-builder-export` | `jvm`, `wasmJs` | design → screen-model projection |
-| `:ui-builder-renderer` | `wasmJs` | the sandboxed renderer-only runtime |
-| `:ui-builder-renderer-sdk` | `jvm`, `wasmJs` | catalog-facing renderer protocol, inspection model and sandbox host |
-| `:ui-builder-web` | — | packages the editor's Wasm output as an immutable archive |
-| `:ui-builder-render-bundle` | — | packages the editor's JVM previews as the polyglot render bundle |
-| `:ui-builder-artwork` | `jvm`, `wasmJs` | offline artwork bindings |
-| `:ui-builder-reference-jetcaster` | `wasmJs` | reference-fidelity fixture |
-| `:ui-builder-generated-jetcaster` | — | generated-fidelity fixture |
+| Module | Targets | Package | What it is |
+| --- | --- | --- | --- |
+| `:ui-builder` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder` (model, entry points) and `.editor`, `.canvas`, `.inspector`, `.codegen`, `.svg`, `.reference`, `.preview`, `.capability`, `.client`, `.icons`, `.local` | the editor — canvas, palette, inspector, reducer, exporters, offline service |
+| `:ui-builder-desktop` | JVM desktop | `ee.schimke.composeai.uibuilder.desktop` | native offline desktop app: the window, File menu and installers |
+| `:ui-builder-host-jvm` | JVM | `ee.schimke.composeai.uibuilder.host` | the hosting layer the desktop app and the IntelliJ plugin share: sessions, catalogs, design files, export |
+| `:ui-builder-intellij-plugin` | IntelliJ Platform | `ee.schimke.composeai.uibuilder.intellij` | proof-of-concept Jewel tool-window host for the native editor |
+| `:ui-builder-runtime` | JVM | `ee.schimke.composeai.uibuilder.service` | the design service: state, catalog validation, revision-pinned export |
+| `:ui-builder-export` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.export` | design → screen-model projection |
+| `:ui-builder-renderer` | `wasmJs` | `ee.schimke.composeai.uibuilder.renderer` | the sandboxed renderer-only runtime |
+| `:ui-builder-renderer-sdk` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.renderer.sdk` | catalog-facing renderer protocol, inspection model and sandbox host |
+| `:ui-builder-web` | — | — | packages the editor's Wasm output as an immutable archive |
+| `:ui-builder-render-bundle` | — | — | packages the editor's JVM previews as the polyglot render bundle |
+| `:ui-builder-artwork` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.artwork` | offline artwork bindings |
+| `:ui-builder-reference-jetcaster` | `wasmJs` | `ee.schimke.composeai.uibuilderreference.jetcaster` | reference-fidelity fixture |
+| `:ui-builder-generated-jetcaster` | — | `generated.uibuilder` | generated-fidelity fixture |
 
 ## Building
 
@@ -102,7 +102,8 @@ release late. CI closes that gap: the `server-against-checkout` job checks out
 compose-preview-server's `main` and runs its `:server` and `:mcp` tests against this checkout
 through `-PcomposeUiBuilderDir`, so a change that breaks the server's build or tests goes red on the
 pull request that makes it. A deliberate seam break, a re-package for example, lands together with
-the matching compose-preview-server change.
+the matching compose-preview-server change: push it to a server branch named like this pull
+request's branch and the job builds that branch instead of `main`.
 
 ### Publishing a release
 
