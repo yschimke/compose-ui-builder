@@ -90,6 +90,10 @@ class FigmaSceneExporterTest {
       scene.diagnostics.joinToString("\n"),
     )
     assertEquals(scene, FigmaScene.parse(scene.encode()), "the scene survives its own encoding")
+    assertTrue(
+      scene.encode().startsWith("{\"schema\":\"${FigmaScene.SCHEMA}\""),
+      "the schema is written, so a plugin can check it",
+    )
 
     val back =
       UiBuilderReducer.replay(importer.import(scene.asSnapshot(), gmail.id).operations).document

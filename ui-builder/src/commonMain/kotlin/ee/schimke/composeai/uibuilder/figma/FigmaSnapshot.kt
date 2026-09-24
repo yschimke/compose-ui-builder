@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.figma
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,9 +16,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * written by hand for a test, by the design-parity plugin, or by an agent through the Figma MCP all
  * parse. See `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md`.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class FigmaSnapshot(
-  val schema: String = SCHEMA,
+  @EncodeDefault(EncodeDefault.Mode.ALWAYS) val schema: String = SCHEMA,
   val source: FigmaSnapshotSource = FigmaSnapshotSource(),
   val root: FigmaSnapshotNode,
 ) {

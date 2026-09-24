@@ -3,6 +3,8 @@ package ee.schimke.composeai.uibuilder.figma
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.optionalString
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -19,9 +21,11 @@ import kotlinx.serialization.json.jsonPrimitive
  * read back, and export followed by import is checkable without Figma in the loop. See
  * `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md` § Export.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class FigmaScene(
-  val schema: String = SCHEMA,
+  /** Always written: a reader in another language checks it before anything else. */
+  @EncodeDefault(EncodeDefault.Mode.ALWAYS) val schema: String = SCHEMA,
   val designId: String,
   val revision: Int,
   val catalog: String,
