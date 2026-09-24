@@ -1,6 +1,6 @@
 # The UI builder and Figma, Stitch and Claude Design
 
-**Status: plan, with the first three slices built (2026-09).** What a good integration between this
+**Status: import, scene export and round trip built in `:ui-builder` (2026-09); the plugin half lives in design-parity.** What a good integration between this
 editor and the design tools people already use looks like, why copying SVG back and forth is not it,
 and the order the pieces land in. It reuses what already exists — this repository's SVG export and
 reference overlay, and `yschimke/design-parity`'s Figma adapter, kit index and Figma plugin — rather
@@ -235,6 +235,37 @@ Two rules keep this safe:
   owns the source of truth; `code-led` applies Figma edits as proposals the operator accepts,
   `design-led` applies them. The reconcile produces the command either way; the host decides whether
   to submit it.
+
+## Verified in a real Figma file
+
+The checkout fixture has been through the whole loop in Figma, and the files it produced are committed
+so the loop stays pinned without Figma in CI:
+
+1. `./gradlew :ui-builder:figmaTool -PfigmaArgs="export <operations.json> <scene.json>"` wrote
+   [`figma/checkout-scene-v1.json`](fixtures/ui-builder/figma/checkout-scene-v1.json).
+2. design-parity's plugin module (`buildUiBuilderScene`) built it in a scratch file through the Figma
+   MCP's `use_figma`. With no kit in the file, the Button, Checkbox and Divider were built as stand-ins,
+   and every colour variable and text style bound.
+3. `readUiBuilderSnapshot` read it back untouched
+   ([`checkout-figma-untouched-v1.json`](fixtures/ui-builder/figma/checkout-figma-untouched-v1.json)),
+   and again after a designer's edits
+   ([`checkout-figma-edited-v1.json`](fixtures/ui-builder/figma/checkout-figma-edited-v1.json)).
+   The edits were: retitle, relabel the Pay button, widen a row, delete the divider, move the promo
+   to the end, and add a footnote.
+4. `figmaTool reconcile` turned the untouched frame into no command. It turned the edited frame into
+   six operations at revision 14: one delete, one insert, one move and three property writes.
+   `FigmaRoundTripTest` asserts exactly that.
+
+![The checkout frame in Figma after the designer's edits](evidence/figma/checkout-figma-edited.png)
+
+Figma disagreed with the fake API in two places, and both are now handled:
+
+- **Text colour.** Unfilled text reads back as black, so the plugin records which fills it defaulted.
+- **Styled text.** Every text layer reports a size and weight even when it uses a style, so a mapped
+  style owns its layer's typography.
+
+A third issue, a move of one card reading as a move of every sibling it passed, is why moves are
+computed from the longest run of siblings still in order.
 
 ## Stitch and Claude Design
 
