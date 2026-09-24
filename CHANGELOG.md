@@ -1,5 +1,44 @@
 # Changelog
 
+## [3.43.0](https://github.com/yschimke/compose-ui-builder/compare/v3.42.0...v3.43.0) (2026-09-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* give each seam module its own package root ([#201](https://github.com/yschimke/compose-ui-builder/issues/201))
+* **renderer-sdk:** own package for the renderer SDK; CI builds the server against this checkout ([#183](https://github.com/yschimke/compose-ui-builder/issues/183))
+
+### Features
+
+* **desktop:** author against a capability catalog read from disk ([#199](https://github.com/yschimke/compose-ui-builder/issues/199)) ([1ed1c4a](https://github.com/yschimke/compose-ui-builder/commit/1ed1c4aca062165fb4bccee5f7393482d81f3084))
+* **desktop:** export SVG and PNG from the desktop and IntelliJ hosts ([#173](https://github.com/yschimke/compose-ui-builder/issues/173)) ([84ba4dd](https://github.com/yschimke/compose-ui-builder/commit/84ba4dd91308980fc487165007304adb1425810a))
+* **desktop:** open, save and create design files from a File menu ([#174](https://github.com/yschimke/compose-ui-builder/issues/174)) ([80087f5](https://github.com/yschimke/compose-ui-builder/commit/80087f5953e2cc12113ac1896033763c55b14729))
+* **desktop:** package the desktop app for macOS and Windows ([#186](https://github.com/yschimke/compose-ui-builder/issues/186)) ([122e2bd](https://github.com/yschimke/compose-ui-builder/commit/122e2bd932aca8c267d74a5119e261d85f1b8c69))
+* **intellij:** notify instead of interrupting, and a settings page for the server ([#197](https://github.com/yschimke/compose-ui-builder/issues/197)) ([5aa3709](https://github.com/yschimke/compose-ui-builder/commit/5aa37098632496a6a8be9cc6f7b546145b4c2cb8))
+* **intellij:** register the plugin's actions and stop opening an editor on first show ([#184](https://github.com/yschimke/compose-ui-builder/issues/184)) ([bfd0609](https://github.com/yschimke/compose-ui-builder/commit/bfd0609b10ee749ed3e792261e4665864994362f))
+* **ui-builder-desktop:** open a catalog template from the command line ([#178](https://github.com/yschimke/compose-ui-builder/issues/178)) ([0e89a0e](https://github.com/yschimke/compose-ui-builder/commit/0e89a0ea294a7bebd74c245bb44e7aec305903f6))
+
+
+### Bug Fixes
+
+* **desktop:** queue early edits, share one device-grant flow, surface headless approval ([#172](https://github.com/yschimke/compose-ui-builder/issues/172)) ([5fa430b](https://github.com/yschimke/compose-ui-builder/commit/5fa430ba919545f73732efb0efe276332ea6e03b))
+* **intellij:** coalesce project-design writes instead of writing per edit ([#187](https://github.com/yschimke/compose-ui-builder/issues/187)) ([a329d0a](https://github.com/yschimke/compose-ui-builder/commit/a329d0abdbf614eaa56fe8506519d2110f18d9f9))
+* **intellij:** sniff design files, close sessions with their editors, pin untilBuild ([#171](https://github.com/yschimke/compose-ui-builder/issues/171)) ([6aafa6e](https://github.com/yschimke/compose-ui-builder/commit/6aafa6ea9b1a6e7ccc2ff4916a1218c28a001405))
+* **ui-builder-export:** make the exported widget body fill its frame ([#177](https://github.com/yschimke/compose-ui-builder/issues/177)) ([4f2f411](https://github.com/yschimke/compose-ui-builder/commit/4f2f4116aab732e899633142f77e358e41a76adc))
+* **ui-builder:** allow Wear widget device selection ([#166](https://github.com/yschimke/compose-ui-builder/issues/166)) ([b50f16e](https://github.com/yschimke/compose-ui-builder/commit/b50f16e2baa227230088c094fdd772ccd77e8796))
+* **ui-builder:** count the palette from the rows it lists ([#198](https://github.com/yschimke/compose-ui-builder/issues/198)) ([c502c9e](https://github.com/yschimke/compose-ui-builder/commit/c502c9e1651ca9650c5b37a17d0b4bf621fc2342))
+* **ui-builder:** draw uncoloured text in the design's colour, not the host's ([#181](https://github.com/yschimke/compose-ui-builder/issues/181)) ([8244564](https://github.com/yschimke/compose-ui-builder/commit/824456431beb9ea20bcba24f1a3484270271e379))
+* **ui-builder:** frame a Wear widget by its host container on the canvas ([#179](https://github.com/yschimke/compose-ui-builder/issues/179)) ([90f0cdd](https://github.com/yschimke/compose-ui-builder/commit/90f0cdd13dffc438f767bf38a1798426773d4485))
+* **ui-builder:** hide For each from the palette, keep it in the catalog; lead the root fill ([#189](https://github.com/yschimke/compose-ui-builder/issues/189)) ([5736681](https://github.com/yschimke/compose-ui-builder/commit/5736681b992e800782a55521e42bf2257b07e590))
+* **ui-builder:** keep published Remote components placeable; gate For each ([#175](https://github.com/yschimke/compose-ui-builder/issues/175)) ([38bfa7b](https://github.com/yschimke/compose-ui-builder/commit/38bfa7b9751ca82a0e34ca72f4acccde61a27c4f))
+* **ui-builder:** make Wear widget authoring work end to end on desktop ([#167](https://github.com/yschimke/compose-ui-builder/issues/167)) ([5f05880](https://github.com/yschimke/compose-ui-builder/commit/5f05880d25cd1b5f41cf6a1281f1a673474b862c))
+
+
+### Code Refactoring
+
+* give each seam module its own package root ([#201](https://github.com/yschimke/compose-ui-builder/issues/201)) ([7e65a60](https://github.com/yschimke/compose-ui-builder/commit/7e65a60abc7592f6d7ea4c65e0a7414fb928e3dc)), closes [#168](https://github.com/yschimke/compose-ui-builder/issues/168)
+* **renderer-sdk:** own package for the renderer SDK; CI builds the server against this checkout ([#183](https://github.com/yschimke/compose-ui-builder/issues/183)) ([228410e](https://github.com/yschimke/compose-ui-builder/commit/228410edb51f11edc51ad26cf0ca2412873b3f66)), closes [#169](https://github.com/yschimke/compose-ui-builder/issues/169)
+
 ## [3.42.0](https://github.com/yschimke/compose-ui-builder/compare/v3.41.0...v3.42.0) (2026-09-23)
 
 
