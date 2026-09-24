@@ -264,6 +264,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import ee.schimke.composeai.uibuilder.uploadedAssets
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -7164,6 +7165,7 @@ private fun CatalogComponentTile(
   ) {
     CatalogThumbnail(
       document = thumbnail,
+      componentId = item.componentId,
       dragKey = item.componentId,
       label = item.displayName,
       size = DpSize(104.dp, 72.dp),
@@ -7204,6 +7206,7 @@ private fun CatalogVariantTile(
   ) {
     CatalogThumbnail(
       document = thumbnail,
+      componentId = variant.componentId,
       dragKey = "${variant.componentId}#${variant.value}",
       label = qualified,
       size = DpSize(96.dp, 64.dp),
@@ -7234,6 +7237,7 @@ private fun CatalogVariantTile(
 @Composable
 private fun CatalogThumbnail(
   document: UiBuilderDocument?,
+  componentId: String,
   dragKey: String,
   label: String,
   size: DpSize,
@@ -7250,11 +7254,15 @@ private fun CatalogThumbnail(
   val renderer = LocalUiBuilderCanvasRenderer.current
   val fallbackScale = size.width.value / PREVIEW_FRAME_WIDTH_DP
   var contentBounds by remember(document.id) { mutableStateOf<UiBuilderPixelBounds?>(null) }
+  // Measured, and nothing in it has a size: an empty Box, Column or Row lays out at 0x0, so its
+  // picture was a blank tile indistinguishable from one that failed to draw.
+  var drewNothing by remember(document.id) { mutableStateOf(false) }
   val transform =
     thumbnailContentTransform(
       contentBounds = contentBounds,
       tileSize = with(density) { Size(size.width.toPx(), size.height.toPx()) },
       fallbackScale = fallbackScale,
+      margin = with(density) { THUMBNAIL_MARGIN.toPx() },
     )
   Box(
     Modifier.size(size)
@@ -7263,7 +7271,12 @@ private fun CatalogThumbnail(
     contentAlignment = Alignment.TopStart,
   ) {
     Box(
-      Modifier.requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
+      // Pinned to the tile's top start before it is sized. A `requiredSize` larger than its
+      // constraints is centred by default, which put the frame's origin at (-36, -28) in a 104x72
+      // tile while the transform below assumes (0, 0): every thumbnail drew shifted up and left, so
+      // a Button read as "utton" with its top cut off.
+      Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
+        .requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
         .graphicsLayer {
           // Top-start is intentional. The inspection snapshot below is in post-transform root
           // pixels; a fixed origin lets it recover the component's source-frame bounds without
@@ -7282,7 +7295,13 @@ private fun CatalogThumbnail(
     ) {
       val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
         val next = thumbnailContentBounds(snapshot, transform.scale)
-        if (next != contentBounds) contentBounds = next
+        // Measured under the transform these bounds produce, so each pass reads them back a
+        // fraction of a pixel off and would re-transform forever. Only a real change moves it.
+        if (!sameThumbnailBounds(next, contentBounds)) contentBounds = next
+        val empty =
+          next == null &&
+            snapshot.nodes.any { it.nodeId == PREVIEW_FRAME_CELL_ID && it.bounds != null }
+        if (empty != drewNothing) drewNothing = empty
       }
       if (renderer == null) {
         UiBuilderSurface(
@@ -7306,6 +7325,9 @@ private fun CatalogThumbnail(
         )
       }
     }
+    if (drewNothing) {
+      EmptyContainerSchematic(emptyContainerSchematic(componentId), Modifier.matchParentSize())
+    }
     // The gesture sits ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is
     // a real Switch and would eat the press that was meant to start a drag; a later sibling wins
     // the hit test, so the whole tile drags however interactive the thing inside it happens to be.
@@ -7314,6 +7336,100 @@ private fun CatalogThumbnail(
         contentDescription = "Drag $label"
       }
     )
+  }
+}
+
+/** Whether two measurements of a thumbnail's content differ by less than half a source pixel. */
+internal fun sameThumbnailBounds(a: UiBuilderPixelBounds?, b: UiBuilderPixelBounds?): Boolean {
+  if (a == null || b == null) return a == b
+  return abs(a.x - b.x) < 0.5f &&
+    abs(a.y - b.y) < 0.5f &&
+    abs(a.width - b.width) < 0.5f &&
+    abs(a.height - b.height) < 0.5f
+}
+
+/** Space a thumbnail keeps between its component and the tile's edge. */
+private val THUMBNAIL_MARGIN = 6.dp
+
+/** How an empty container's thumbnail sketches the children it would arrange. */
+internal enum class ContainerSchematic {
+  /** Children one above another: a column, a list. */
+  Stacked,
+  /** Children side by side: a row, a flow row. */
+  SideBySide,
+  /** Children in cells: a grid. */
+  Grid,
+  /** Children layered in one place, or a region with no arrangement of its own: a box, a pane. */
+  Layered,
+}
+
+/**
+ * Which sketch an empty container draws, read from its id because that is the one thing every
+ * catalog's layout components share. Checked in this order so `flow-column` is a column and
+ * `lazy-grid` a grid rather than whichever word came first.
+ */
+internal fun emptyContainerSchematic(componentId: String): ContainerSchematic {
+  val name = componentId.substringAfterLast('/').lowercase()
+  return when {
+    "grid" in name -> ContainerSchematic.Grid
+    "column" in name || "list" in name -> ContainerSchematic.Stacked
+    "row" in name -> ContainerSchematic.SideBySide
+    else -> ContainerSchematic.Layered
+  }
+}
+
+/**
+ * A container with nothing in it, drawn as the arrangement it would give its children.
+ *
+ * A dashed outline for the container and solid blocks for placeholder children, in the outline
+ * colour so it reads as a diagram and never as a rendered component.
+ */
+@Composable
+private fun EmptyContainerSchematic(schematic: ContainerSchematic, modifier: Modifier) {
+  val outline = MaterialTheme.colorScheme.outline
+  val block = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+  Canvas(modifier.padding(THUMBNAIL_MARGIN + 4.dp).clearAndSetSemantics {}) {
+    val stroke = 1.dp.toPx()
+    val radius = CornerRadius(3.dp.toPx())
+    drawRoundRect(
+      color = outline,
+      cornerRadius = radius,
+      style =
+        Stroke(
+          width = stroke,
+          pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())),
+        ),
+    )
+    val gap = 3.dp.toPx()
+    val inner = Rect(Offset(gap * 2, gap * 2), Size(size.width - gap * 4, size.height - gap * 4))
+    fun cell(x: Float, y: Float, w: Float, h: Float) =
+      drawRoundRect(block, Offset(x, y), Size(w.coerceAtLeast(1f), h.coerceAtLeast(1f)), radius)
+    when (schematic) {
+      ContainerSchematic.Stacked -> {
+        val h = (inner.height - gap * 2) / 3
+        repeat(3) { cell(inner.left, inner.top + it * (h + gap), inner.width, h) }
+      }
+      ContainerSchematic.SideBySide -> {
+        val w = (inner.width - gap * 2) / 3
+        repeat(3) { cell(inner.left + it * (w + gap), inner.top, w, inner.height) }
+      }
+      ContainerSchematic.Grid -> {
+        val w = (inner.width - gap) / 2
+        val h = (inner.height - gap) / 2
+        repeat(4) {
+          cell(inner.left + (it % 2) * (w + gap), inner.top + (it / 2) * (h + gap), w, h)
+        }
+      }
+      ContainerSchematic.Layered -> {
+        cell(inner.left, inner.top, inner.width * 0.62f, inner.height * 0.62f)
+        cell(
+          inner.left + inner.width * 0.38f,
+          inner.top + inner.height * 0.38f,
+          inner.width * 0.62f,
+          inner.height * 0.62f,
+        )
+      }
+    }
   }
 }
 
@@ -7328,6 +7444,12 @@ internal fun thumbnailContentTransform(
   contentBounds: UiBuilderPixelBounds?,
   tileSize: Size,
   fallbackScale: Float,
+  /**
+   * Kept clear on every side, in tile pixels. Without it a component wider than the tile was scaled
+   * to touch both edges, and a pill-shaped Button or a FAB read as the tile's own shape rather than
+   * a thing sitting in it.
+   */
+  margin: Float = 0f,
 ): ThumbnailContentTransform {
   if (
     contentBounds == null ||
@@ -7340,8 +7462,9 @@ internal fun thumbnailContentTransform(
   }
   // A 24dp icon is useful at roughly twice its authored size; beyond that it stops reading as the
   // component and starts reading as a clipped pixel crop.
-  val scale =
-    minOf(tileSize.width / contentBounds.width, tileSize.height / contentBounds.height, 2f)
+  val usableWidth = (tileSize.width - 2 * margin).coerceAtLeast(1f)
+  val usableHeight = (tileSize.height - 2 * margin).coerceAtLeast(1f)
+  val scale = minOf(usableWidth / contentBounds.width, usableHeight / contentBounds.height, 2f)
   val horizontalInset = (tileSize.width - contentBounds.width * scale) / 2f
   val verticalInset = (tileSize.height - contentBounds.height * scale) / 2f
   return ThumbnailContentTransform(

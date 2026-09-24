@@ -3,8 +3,11 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.geometry.Size
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
+import ee.schimke.composeai.uibuilder.editor.ContainerSchematic
 import ee.schimke.composeai.uibuilder.editor.EditorCatalogVariant
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.emptyContainerSchematic
+import ee.schimke.composeai.uibuilder.editor.sameThumbnailBounds
 import ee.schimke.composeai.uibuilder.editor.thumbnailContentTransform
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
@@ -123,6 +126,43 @@ class CatalogThumbnailTest {
 
     assertEquals(.25f, transform.scale)
     assertEquals(androidx.compose.ui.geometry.Offset.Zero, transform.translation)
+  }
+
+  @Test
+  fun `a margin keeps a wide component off the tile's edges`() {
+    val transform =
+      thumbnailContentTransform(
+        contentBounds = UiBuilderPixelBounds(x = 40f, y = 40f, width = 96f, height = 48f),
+        tileSize = Size(104f, 72f),
+        fallbackScale = .5f,
+        margin = 6f,
+      )
+
+    // 92px of usable width over a 96px button: it fits inside the margin rather than touching
+    // both sides of the tile, and stays centred.
+    assertEquals(92f / 96f, transform.scale)
+    assertEquals(6f, 40f * transform.scale + transform.translation.x, 0.001f)
+  }
+
+  @Test
+  fun `bounds read back a fraction of a pixel off are the same bounds`() {
+    val measured = UiBuilderPixelBounds(x = 40f, y = 40f, width = 96f, height = 48f)
+
+    assertTrue(sameThumbnailBounds(measured, measured.copy(x = 39.98f, width = 96.01f)))
+    assertTrue(!sameThumbnailBounds(measured, measured.copy(y = 42f)))
+    assertTrue(!sameThumbnailBounds(measured, null))
+    assertTrue(sameThumbnailBounds(null, null))
+  }
+
+  @Test
+  fun `an empty container sketches the arrangement its name promises`() {
+    assertEquals(ContainerSchematic.Stacked, emptyContainerSchematic("layout/column"))
+    assertEquals(ContainerSchematic.Stacked, emptyContainerSchematic("layout/flow-column"))
+    assertEquals(ContainerSchematic.SideBySide, emptyContainerSchematic("layout/row"))
+    assertEquals(ContainerSchematic.SideBySide, emptyContainerSchematic("layout/flow-row"))
+    assertEquals(ContainerSchematic.Grid, emptyContainerSchematic("layout/lazy-grid"))
+    assertEquals(ContainerSchematic.Layered, emptyContainerSchematic("layout/box"))
+    assertEquals(ContainerSchematic.Layered, emptyContainerSchematic("layout/supporting-pane"))
   }
 
   private fun literalValue(encoded: kotlinx.serialization.json.JsonElement): String? =
