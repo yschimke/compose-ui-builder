@@ -28,7 +28,7 @@ confirms one selected frame at platform fidelity after the free preview has comp
 
 Wear widgets follow the same rule. Their editor uses the largest rectangular host so every widget
 node remains direct and selectable. Their Preview shows the three launcher hosts — **Pixel Watch**
-(round), **Samsung** (squircle), and **Rectangular** — while Native renders only the selected host.
+(squircle), **Samsung** (round), and **Rectangular** — while Native renders only the selected host.
 
 ## 1. The visual editor is the one that is allowed to lie
 
