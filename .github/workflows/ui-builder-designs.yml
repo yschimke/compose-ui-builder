@@ -40,9 +40,10 @@ jobs:
       pull-requests: write
     uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@main
     with:
-      # m3-catalog's own bundle, off its delivery branch in the m3-catalog-out output repository. Every design in this directory is a
-      # Material 3 design; a Wear one would need `wear-m3`'s bundle and its own call of this
-      # workflow, because a design only compiles against its own catalog's bundle.
+      # m3-catalog's own bundle, off its delivery branch in the m3-catalog-out output repository.
+      # Every design in this directory is a Material 3 design; a Wear one would need `wear-m3`'s
+      # bundle and its own call of this workflow, because a design only compiles against its own
+      # catalog's bundle.
       catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog-out/design-artifacts/m3-catalog/bundle/bundle.png
       # The record the generator proves each call site against. `m3-catalog` is record-driven, so
       # without this every `m3/*` node is refused as an unproven component.
