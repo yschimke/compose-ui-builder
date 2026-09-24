@@ -212,7 +212,7 @@ pane and one shared outcome.
 
 Wear widgets use the same split, with host shape in place of phone/device presets. The Visual editor
 uses one broad rectangular host, so no child disappears behind a launcher shape while it is being
-edited. The Preview mirrors the saved document in Pixel Watch (round), Samsung (squircle), and
+edited. The Preview mirrors the saved document in Pixel Watch (squircle), Samsung (round), and
 Rectangular hosts. Native renders one selected host at a time; it is a fidelity confirmation, not a
 second multi-variant editor.
 
