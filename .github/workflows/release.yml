@@ -229,6 +229,10 @@ jobs:
           tag="${{ needs.release-please.outputs.publish_tag }}"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
           intellij_plugin="ui-builder-intellij-plugin/build/distributions/compose-ui-builder-intellij-plugin-${PLUGIN_VERSION}.zip"
+          # The digest an instance pins beside the version (compose-preview-server#1035), published
+          # so an operator copies it rather than re-hashing a download. `sha256sum` format, with
+          # the bare file name, so `sha256sum -c` works beside the zip.
+          (cd "$(dirname "$archive")" && sha256sum "$(basename "$archive")" > "$(basename "$archive").sha256")
           desktop_package=$(find ui-builder-desktop/build/compose/binaries -type f -name '*.deb' -print -quit)
           if [ -z "$desktop_package" ]; then
             echo "::error::the Desktop package task produced no .deb"
@@ -239,9 +243,9 @@ jobs:
           # release whose draft was deleted - because `gh release upload` cannot create a Release
           # and would otherwise fail AFTER the Central publish had gone out.
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$archive" "$desktop_package" "$intellij_plugin" --clobber
+            gh release upload "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" --clobber
           else
-            gh release create "$tag" "$archive" "$desktop_package" "$intellij_plugin" --title "$tag" --generate-notes --draft
+            gh release create "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" --title "$tag" --generate-notes --draft
           fi
 
   # The macOS and Windows installers, attached to the same draft release. Needed by
