@@ -1,6 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
-import ee.schimke.composeai.uibuilder.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

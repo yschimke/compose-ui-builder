@@ -4,10 +4,12 @@ import ee.schimke.composeai.uibuilder.CapabilityDocumentWriteValidator
 import ee.schimke.composeai.uibuilder.CapabilityPropertyWriteValidator
 import ee.schimke.composeai.uibuilder.CommandOutcome
 import ee.schimke.composeai.uibuilder.ConflictCode
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.AcceptedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -35,8 +37,6 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRequestV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderResponseV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
-import ee.schimke.composeai.uibuilder.toDesignDocumentV1
-import ee.schimke.composeai.uibuilder.toUiBuilderDocument
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

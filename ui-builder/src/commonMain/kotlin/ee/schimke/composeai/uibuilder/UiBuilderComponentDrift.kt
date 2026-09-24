@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.editor.EditorProblem
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive

@@ -43,7 +43,10 @@ a release through the BOM. The CI job `server-against-checkout` builds compose-p
 `main` against this checkout (`-PcomposeUiBuilderDir`) and runs its `:server` and `:mcp` tests, so
 **a change to a seam module that breaks the server goes red here.** Don't make that job pass by
 weakening it: a deliberate seam break, like a package move, has to land together with the matching
-compose-preview-server change.
+compose-preview-server change. Push that change to a compose-preview-server branch named exactly
+like this pull request's branch and the job builds it instead of the server's `main`. The server
+branch then merges with the release that carries the break, bumping its pin in the same commit.
+Until it does, the job is red on `main` here, so cut that release promptly.
 
 ## Assets whose writer is in the other repository
 

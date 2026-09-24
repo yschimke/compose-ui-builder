@@ -127,7 +127,9 @@ jobs:
   # stray build under this one's root.
   #
   # A deliberate seam break, like a package move, turns this red by design. It lands together with
-  # the matching server change, not by weakening this job. See AGENTS.md, "The seams".
+  # the matching server change, not by weakening this job: push that change to a compose-preview-
+  # server branch with the SAME NAME as this pull request's branch, and this job builds that branch
+  # instead of `main`. See AGENTS.md, "The seams".
   server-against-checkout:
     runs-on: ubuntu-latest
     steps:
@@ -135,9 +137,24 @@ jobs:
         with:
           path: compose-ui-builder
           persist-credentials: false
+      # The head ref goes through the environment, never into the script text, so a branch name
+      # cannot inject shell.
+      - name: Pick the compose-preview-server branch
+        id: server-ref
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          ref=main
+          if [ -n "$HEAD_REF" ] && git ls-remote --exit-code --heads \
+              https://github.com/yschimke/compose-preview-server.git "refs/heads/$HEAD_REF" >/dev/null; then
+            ref="$HEAD_REF"
+          fi
+          echo "Building compose-preview-server at $ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: yschimke/compose-preview-server
+          ref: ${{ steps.server-ref.outputs.ref }}
           path: compose-preview-server
           persist-credentials: false
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1

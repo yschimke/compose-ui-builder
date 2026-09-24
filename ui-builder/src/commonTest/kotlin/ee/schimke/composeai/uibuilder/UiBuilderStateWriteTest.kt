@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.canvas.uiBuilderStateEquals
+import ee.schimke.composeai.uibuilder.canvas.uiBuilderStateWrite
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

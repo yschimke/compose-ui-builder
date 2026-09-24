@@ -2,8 +2,8 @@ package ee.schimke.composeai.uibuilder.local
 
 import ee.schimke.composeai.uibuilder.DesignCommand
 import ee.schimke.composeai.uibuilder.RedoCommand
-import ee.schimke.composeai.uibuilder.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.UndoCommand
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

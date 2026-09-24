@@ -2,7 +2,7 @@ package ee.schimke.composeai.uibuilder.client
 
 import ee.schimke.composeai.uibuilder.DesignCommand
 import ee.schimke.composeai.uibuilder.DesignOperation
-import ee.schimke.composeai.uibuilder.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.CreateDesignRequestV1

@@ -1,11 +1,11 @@
 package ee.schimke.composeai.uibuilder.host
 
-import ee.schimke.composeai.uibuilder.DesignComment
-import ee.schimke.composeai.uibuilder.DesignCommentAnchor
-import ee.schimke.composeai.uibuilder.DesignCommentAuthorKind
-import ee.schimke.composeai.uibuilder.DesignCommentBoard
-import ee.schimke.composeai.uibuilder.DesignCommentDraft
-import ee.schimke.composeai.uibuilder.DesignCommentThread
+import ee.schimke.composeai.uibuilder.editor.DesignComment
+import ee.schimke.composeai.uibuilder.editor.DesignCommentAnchor
+import ee.schimke.composeai.uibuilder.editor.DesignCommentAuthorKind
+import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
+import ee.schimke.composeai.uibuilder.editor.DesignCommentDraft
+import ee.schimke.composeai.uibuilder.editor.DesignCommentThread
 import java.net.URI
 import java.net.http.WebSocket
 import java.util.concurrent.CompletionStage

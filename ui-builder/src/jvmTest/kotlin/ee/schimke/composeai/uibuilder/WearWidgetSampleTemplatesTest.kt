@@ -2,6 +2,12 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
+import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.WearWidgetSample
+import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
+import ee.schimke.composeai.uibuilder.export.helloWidgetUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.wearWidgetUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.weatherWidgetUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

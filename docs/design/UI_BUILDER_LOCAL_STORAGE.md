@@ -185,7 +185,7 @@ and a design opened in it is safe.** A cold start still needs the server to hand
 The server route is the New design form — a real `POST` whose `303` the browser follows, so the
 design's permalink is what lands in history. A local design has nowhere to POST, so the page seeds
 the document itself with the same shared
-[`UiBuilderNewDesignSeed`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UiBuilderNewDesignSeed.kt)
+[`UiBuilderNewDesignSeed`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderNewDesignSeed.kt)
 the server uses, writes it to this browser, rewrites the URL and re-enters the editor. One seed
 definition, two places to put the result — a template means the same thing in both modes.
 

@@ -4,7 +4,10 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
+import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
