@@ -83,8 +83,11 @@ object AdaptiveWearWidget {
     val rootId = document.roots.singleOrNull() ?: return document
     val root = document.nodes[rootId]?.takeIf { it.componentId == COMPONENT_ID } ?: return document
     val visible = visibleSlots(size)
-    val layoutId = "$rootId-${size.name.lowercase()}"
-    val textId = "$layoutId-text"
+    // Allocated against the ids already in use: a document written through the protocol may hold
+    // any id, and a synthesized node that took an authored one would overwrite it — and could
+    // point the resolved graph back at its own parent.
+    val layoutId = document.freshId("$rootId-${size.name.lowercase()}")
+    val textId = document.freshId("$layoutId-text", taken = setOf(layoutId))
     val large = size == WearWidgetScaffoldSize.Large
     val text =
       UiBuilderNode(
@@ -201,6 +204,12 @@ object AdaptiveWearWidget {
 
   /** The new-design template id. */
   const val TEMPLATE_ID: String = "wear-widget-adaptive"
+
+  /** [base], or `base-2`, `base-3`… — the first that no node and nothing in [taken] uses. */
+  private fun UiBuilderDocument.freshId(base: String, taken: Set<String> = emptySet()): String =
+    generateSequence(1) { it + 1 }
+      .map { if (it == 1) base else "$base-$it" }
+      .first { it !in nodes && it !in taken }
 
   private fun UiBuilderDocument.subtree(id: String): List<String> =
     listOf(id) + nodes[id]?.slots?.values.orEmpty().flatten().flatMap { subtree(it) }

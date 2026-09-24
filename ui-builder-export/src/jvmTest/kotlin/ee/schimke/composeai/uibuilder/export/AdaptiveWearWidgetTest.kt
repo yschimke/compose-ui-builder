@@ -52,6 +52,44 @@ class AdaptiveWearWidgetTest {
   }
 
   @Test
+  fun `a synthesized node never takes an id the design already uses`() {
+    // Headline and supporting nodes named exactly what resolution would otherwise synthesize.
+    val taken = listOf("wear-widget-adaptive-large", "wear-widget-adaptive-large-text")
+    val renamed =
+      adaptive.copy(
+        nodes =
+          adaptive.nodes.mapValues { (id, node) ->
+            when (id) {
+              "wear-widget-adaptive" ->
+                node.copy(
+                  slots =
+                    node.slots +
+                      mapOf(
+                        AdaptiveWearWidget.HEADLINE to listOf(taken[0]),
+                        AdaptiveWearWidget.SUPPORTING to listOf(taken[1]),
+                      )
+                )
+              else -> node
+            }
+          } - "adaptive-headline" - "adaptive-supporting" +
+            (taken[0] to adaptive.nodes.getValue("adaptive-headline").copy(id = taken[0])) +
+            (taken[1] to adaptive.nodes.getValue("adaptive-supporting").copy(id = taken[1]))
+      )
+
+    val large = AdaptiveWearWidget.resolve(renamed, WearWidgetScaffoldSize.Large)
+
+    taken.forEach { assertEquals("m3/text", large.nodes.getValue(it).componentId, it) }
+    val layout =
+      large.nodes.getValue(
+        large.nodes.getValue("wear-widget-adaptive").slots.getValue("content").single()
+      )
+    val text = large.nodes.getValue(layout.slots.getValue("children").first())
+    assertEquals("layout/column", text.componentId)
+    assertEquals(taken, text.slots["children"])
+    assertTrue(layout.id !in taken && text.id !in taken, "${layout.id}, ${text.id}")
+  }
+
+  @Test
   fun `a fixed-container design resolves to itself`() {
     val small =
       wearWidgetUiBuilderDocument(
