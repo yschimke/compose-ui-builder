@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.44.0](https://github.com/yschimke/compose-ui-builder/compare/v3.43.0...v3.44.0) (2026-09-24)
+
+
+### Features
+
+* **ui-builder-export:** write Remote Material 3 components from an embedded record ([#202](https://github.com/yschimke/compose-ui-builder/issues/202)) ([54d6d56](https://github.com/yschimke/compose-ui-builder/commit/54d6d561e6366d359f4058dfd728f87607615852))
+* **ui-builder-runtime:** offer Remote Material 3 components on the widget palette ([#207](https://github.com/yschimke/compose-ui-builder/issues/207)) ([85efc62](https://github.com/yschimke/compose-ui-builder/commit/85efc6202e6844eb12fd9455217ea2cd2b7091ec))
+
+
+### Bug Fixes
+
+* close review findings in the desktop host, local store and packaging CI ([#210](https://github.com/yschimke/compose-ui-builder/issues/210)) ([2a51134](https://github.com/yschimke/compose-ui-builder/commit/2a51134af6ff58e9e2bbdd166af3570c461a7206))
+* **intellij:** close write and session-lifecycle races in the project design writer ([#211](https://github.com/yschimke/compose-ui-builder/issues/211)) ([58fabb4](https://github.com/yschimke/compose-ui-builder/commit/58fabb419b7bf8a29368ee4c5af567256a11434b))
+* **ui-builder:** draw component catalog tiles so each component reads clearly ([#208](https://github.com/yschimke/compose-ui-builder/issues/208)) ([7110a64](https://github.com/yschimke/compose-ui-builder/commit/7110a6445b2c0fc8632155888ef5678787174c79))
+
 ## [3.43.0](https://github.com/yschimke/compose-ui-builder/compare/v3.42.0...v3.43.0) (2026-09-24)
 
 
