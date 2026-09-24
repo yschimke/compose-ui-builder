@@ -27,7 +27,8 @@ instead of eight milliseconds. So:
    exported from, and turns the difference into `SetProperty` / `MoveNode` / `DeleteNode` /
    `InsertNode` operations submitted **at that base revision** through
    [`CollaborationReducer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/CollaborationReducer.kt).
-   Conflicts are the reducer's ordinary per-property conflicts.
+   Conflicts are the reducer's ordinary per-property conflicts. Deletions, which the reducer only
+   accepts at the current revision, travel as a second command the host confirms.
 
 Stitch and Claude Design produce no component tree with stable identity, so they enter through the
 reference overlay and an agent, and through Figma when they can paste into it.
@@ -129,7 +130,7 @@ nodes; this maps *kit instances* to catalog nodes with properties.
   imported fill is `colorToken: surface`, not a hex that stops following the theme.
 
 The seed map for `m3-catalog` lives beside the capability file,
-[`fixtures/ui-builder/m3-catalog-figma-map-v1.json`](fixtures/ui-builder/m3-catalog-figma-map-v1.json).
+`fixtures/ui-builder/m3-catalog-figma-map-v1.json`.
 Its names follow the Material 3 Design Kit; a project with its own kit commits its own map. When a
 catalog publishes its Figma references (the `reference = "figma:…"` proposal in
 [`UI_BUILDER_CATALOG_CONTRACT.md`](UI_BUILDER_CATALOG_CONTRACT.md)) the map can be generated from
@@ -171,7 +172,10 @@ applied at import. What the importer never does is pick a catalog component the 
 the reducer refuses to guess which component an unprovenanced piece is, and so does this.
 
 Node ids come from the stamp when there is one (so a round trip keeps them) and otherwise from the
-Figma id (`figma-12-40`), which is stable across re-imports of the same frame. Siblings are chained
+Figma id (`figma-12-40`), which is stable across re-imports of the same frame. A stamp is trusted
+only when it is from the same export as the frame's root and is the first to claim its id: a
+designer who duplicates a node copies its stamp, and a subtree pasted from another design brings
+someone else's, and both are new nodes. Siblings are chained
 through `afterNodeId`, because the candidate reducer prepends when it is absent.
 
 The output is an operation log in the existing `compose-ui-builder-operations/v1-candidate` shape,
@@ -199,20 +203,27 @@ a small follow-up in `StructuredSvgExportBridge`, not a dependency of anything h
 
 ## Round trip
 
-`FigmaRoundTrip.reconcile(base, snapshot, map)` takes the document at the revision the scene was
-exported from and a snapshot of the same frame read later:
+`FigmaRoundTrip.reconcile(base, scene, snapshot, …)` takes the design as it is now, the scene Figma
+was given, and the same frame read back later:
 
 1. Import the snapshot as above. Stamped nodes keep their builder ids; new Figma nodes get
    `figma-…` ids.
 2. Compare the two trees node by node:
    - present in both → a `SetProperty` for each mapped property whose value changed, a
      `RemoveNodeProperty` for one that disappeared, and a `SetModifiers` when the modifier list
-     differs;
+     differs; a node that reads back as a different component is reported, not swapped, because no
+     operation changes a node's component;
    - a different parent or position → `MoveNode`;
    - only in the snapshot → `InsertNode`;
    - only in the base → `DeleteNode`.
-3. Emit one `DesignCommand` at `baseRevision` = the stamped revision. The reducer applies it against
-   whatever the design has become since, with its ordinary per-property conflict notices.
+3. Emit the edits as one `DesignCommand` at `baseRevision` = the stamped revision. The reducer
+   applies it against whatever the design has become since, with its ordinary per-property conflict
+   notices. Moves come before deletes, so a child a designer rescued from a deleted container is out
+   of it before the container goes.
+4. Emit the deletes as a second command. The reducer refuses a stale delete outright — deleting on
+   the strength of an old picture of the design is the one edit it will not merge — so when the
+   design has moved on since the export, the deletions are authored at the current revision instead,
+   a separate command the host shows before submitting. When nothing has moved on, both fit in one.
 
 Two rules keep this safe:
 
@@ -252,7 +263,7 @@ editor's tree and the contracts that describe it; design-parity owns Figma.
 | Snapshot, map and scene contracts; importer, scene exporter, round-trip reconcile | compose-ui-builder | `:ui-builder` `commonMain`, package `figma` |
 | Seed map for `m3-catalog` | compose-ui-builder | `docs/design/fixtures/ui-builder/` |
 | Reading a selection into a snapshot; building a scene; stamping | design-parity | `packages/figma-plugin` (`src/uiBuilder*.ts`, pure, tested against the fake Figma) |
-| Host routes / MCP tools that accept a snapshot and return operations | compose-preview-server | `:server`, `:mcp` (follow-up; the importer is callable today from the desktop host and from tests) |
+| Host routes / MCP tools that accept a snapshot and return operations | compose-preview-server | `:server`, `:mcp` (follow-up; until then the importer runs from tests and a command-line tool) |
 
 `:ui-builder-export` is not touched: it is a seam compose-preview-server compiles against, and
 nothing here needs to change what it publishes.
