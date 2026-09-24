@@ -35,7 +35,7 @@ fun ProductionUiBuilderPreview() {
   ProductionUiBuilderSurface(decodeProductionRendererDocument(source))
 }
 
-/** The document drawn with the pinned catalog's canvas vocabulary, as a production export sees it. */
+/** The document drawn with its pinned catalog's canvas vocabulary, as a production export is. */
 @Composable
 internal fun ProductionUiBuilderSurface(document: UiBuilderDocument) {
   val catalog = productionPreviewCatalog(document)
