@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.48.0](https://github.com/yschimke/compose-ui-builder/compare/v3.47.0...v3.48.0) (2026-09-24)
+
+
+### Features
+
+* **ui-builder-web:** ship a version and server-API manifest with the editor archive ([#228](https://github.com/yschimke/compose-ui-builder/issues/228)) ([5599203](https://github.com/yschimke/compose-ui-builder/commit/55992032c5476d3f134fd4454aa3c1aa2f7f1d86))
+
+
+### Bug Fixes
+
+* **ui-builder:** make the Google app samples lay out and export correctly ([#230](https://github.com/yschimke/compose-ui-builder/issues/230)) ([91589af](https://github.com/yschimke/compose-ui-builder/commit/91589aff356eb62ec2f563ad3e7e1d950f56101c))
+* **ui-builder:** show remote-m3 widgets on the canvas and in PNG exports ([#232](https://github.com/yschimke/compose-ui-builder/issues/232)) ([6212bb8](https://github.com/yschimke/compose-ui-builder/commit/6212bb8f2f15299ce023211d11a43ddb3c29da9b))
+
 ## [3.47.0](https://github.com/yschimke/compose-ui-builder/compare/v3.46.0...v3.47.0) (2026-09-24)
 
 
