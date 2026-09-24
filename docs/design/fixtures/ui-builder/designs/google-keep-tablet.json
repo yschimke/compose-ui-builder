@@ -32,7 +32,8 @@
           "id:pixel_fold",
           "id:pixel_7"
         ]
-      }
+      },
+      "stateVariables": {}
     },
     {
       "operationId": "insert-root",
@@ -1119,8 +1120,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-keep-note-shopping-item-0-box",
@@ -1913,8 +1913,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-keep-note-talk-item-0-box",
@@ -2785,8 +2784,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-keep-note-icons-item-0-box",
@@ -3245,8 +3243,7 @@
             "type": "fillMaxWidth"
           }
         ]
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-keep-note-books-item-0-dot",

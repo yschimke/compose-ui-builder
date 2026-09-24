@@ -32,7 +32,8 @@
           "id:pixel_fold",
           "id:pixel_7"
         ]
-      }
+      },
+      "stateVariables": {}
     },
     {
       "operationId": "insert-root",

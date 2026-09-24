@@ -5465,8 +5465,7 @@
             "value": 10.0
           }
         }
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-cal-next-review-text",
@@ -5521,8 +5520,7 @@
             "value": "ellipsis"
           }
         }
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-cal-next-review-detail",
@@ -5599,8 +5597,7 @@
             "value": 10.0
           }
         }
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-cal-next-audit-text",
@@ -5655,8 +5652,7 @@
             "value": "ellipsis"
           }
         }
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-cal-next-audit-detail",
@@ -5733,8 +5729,7 @@
             "value": 10.0
           }
         }
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-cal-next-spike-text",
@@ -5789,8 +5784,7 @@
             "value": "ellipsis"
           }
         }
-      },
-      "afterNodeId": null
+      }
     },
     {
       "operationId": "insert-cal-next-spike-detail",
