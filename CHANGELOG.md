@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.45.0](https://github.com/yschimke/compose-ui-builder/compare/v3.44.0...v3.45.0) (2026-09-24)
+
+
+### Features
+
+* **ui-builder:** experimental adaptive Wear widget container ([#219](https://github.com/yschimke/compose-ui-builder/issues/219)) ([c89ff70](https://github.com/yschimke/compose-ui-builder/commit/c89ff70bbec39133cb6045519920e5bf67ce123b))
+* **ui-builder:** export a design as a stamped Figma scene ([#205](https://github.com/yschimke/compose-ui-builder/issues/205)) ([370ec42](https://github.com/yschimke/compose-ui-builder/commit/370ec4285e8838798a4572368a5bd46026850f65))
+* **ui-builder:** import a Figma frame snapshot as a design operation log ([#204](https://github.com/yschimke/compose-ui-builder/issues/204)) ([e5ee8ac](https://github.com/yschimke/compose-ui-builder/commit/e5ee8ac9e19204a4ec84a475a94f351115660e05))
+* **ui-builder:** turn Figma edits to an exported frame into a design command ([#206](https://github.com/yschimke/compose-ui-builder/issues/206)) ([394c391](https://github.com/yschimke/compose-ui-builder/commit/394c39142a15601d1f20831727910b61cf4896fd))
+
+
+### Bug Fixes
+
+* **ui-builder-export:** let the remote-m3 vocabulary name the Remote Material 3 components ([#214](https://github.com/yschimke/compose-ui-builder/issues/214)) ([1f3686e](https://github.com/yschimke/compose-ui-builder/commit/1f3686ef32759ecf968eb529941718c860241076))
+* **ui-builder:** name the stadium host Samsung and the rounded rectangle Pixel Watch ([#213](https://github.com/yschimke/compose-ui-builder/issues/213)) ([e32a116](https://github.com/yschimke/compose-ui-builder/commit/e32a1162b5a241f42c57729e9b41e9c46d63389c))
+
 ## [3.44.0](https://github.com/yschimke/compose-ui-builder/compare/v3.43.0...v3.44.0) (2026-09-24)
 
 
