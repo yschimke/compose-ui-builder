@@ -160,7 +160,7 @@ internal class RemoteContentEmitter(
    * a component with a hand-written case here never reaches the record, and a caller that passes
    * nothing gets exactly the behaviour it had.
    */
-  private val components: Map<String, ComponentRecord> = emptyMap(),
+  components: Map<String, ComponentRecord> = emptyMap(),
   /**
    * The node the widget container lays out to fill its frame, or null outside a widget.
    *
@@ -172,6 +172,16 @@ internal class RemoteContentEmitter(
    */
   private val frameFillingRoot: String? = null,
 ) {
+  /**
+   * The caller's record over the Remote Material 3 components this build embeds.
+   *
+   * The caller's wins: a host serving a catalog's own record speaks for that catalog. Beneath it,
+   * `RemoteButton` and the rest are written from [RemoteMaterial3.records] in every lane — the
+   * editor's code pane, the export and the native preview — so a widget built from the built-in
+   * palette exports without a host having to supply the record it was built from.
+   */
+  private val components: Map<String, ComponentRecord> = RemoteMaterial3.records + components
+
   /** True once a colour or type token has been written, which only reads inside a theme. */
   var usesTheme: Boolean = false
     private set
