@@ -149,6 +149,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
@@ -3243,55 +3244,70 @@ private fun ExistingDesignsPanel(
         )
       } else {
         // The most recent handful, not the lot: this is a way back into today's work, and the
-        // full index — with its previews, its sharing and its delete — is one press away.
-        designs.take(HOME_DESIGN_LIMIT).forEach { design ->
-          Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        // full index — with its previews, its sharing and its delete — is one press away. Filed
+        // designs sit under their folder, as they do in that index; until anything is filed the
+        // list stays flat, because a "No folder" heading over everything says nothing.
+        val recent = designs.take(HOME_DESIGN_LIMIT)
+        val grouped = recent.any { it.folder != null }
+        val folders = designs.mapNotNull { it.folder }.distinct().sorted()
+        homeDesignFolders(recent).forEach { (folder, group) ->
+          if (grouped) {
             Text(
-              design.title.ifBlank { design.designId },
-              style = MaterialTheme.typography.bodyLarge,
+              folder ?: "No folder",
+              style = MaterialTheme.typography.titleSmall,
+              modifier = Modifier.semantics { heading() },
             )
-            Text(
-              listOf(design.designId, design.catalogSystemId, design.updatedLabel)
-                .filter { it.isNotBlank() }
-                .joinToString(" · "),
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (design.folder != null) {
+          }
+          group.forEach { design ->
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
               Text(
-                "Folder · ${design.folder}",
+                design.title.ifBlank { design.designId },
+                style = MaterialTheme.typography.bodyLarge,
+              )
+              Text(
+                listOf(design.designId, design.catalogSystemId, design.updatedLabel)
+                  .filter { it.isNotBlank() }
+                  .joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-              if (onOpenDesign != null) {
-                TextButton(
-                  onClick = { onOpenDesign(design.designId) },
-                  modifier = Modifier.semantics { contentDescription = "Open ${design.designId}" },
-                ) {
-                  Text("Open")
-                }
-              }
-              if (onCopyDesign != null) {
-                TextButton(
-                  onClick = { onCopyDesign(design.designId) },
-                  modifier =
-                    Modifier.semantics { contentDescription = "Start from ${design.designId}" },
-                ) {
-                  Text("Start from this")
-                }
-              }
-              if (onMoveDesign != null) {
-                FolderMoveMenu(
-                  design = design,
-                  folders = designs.mapNotNull { it.folder }.distinct().sorted(),
-                  onMove = onMoveDesign,
+              if (design.folder != null && !grouped) {
+                Text(
+                  "Folder · ${design.folder}",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
               }
+              Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (onOpenDesign != null) {
+                  TextButton(
+                    onClick = { onOpenDesign(design.designId) },
+                    modifier =
+                      Modifier.semantics { contentDescription = "Open ${design.designId}" },
+                  ) {
+                    Text("Open")
+                  }
+                }
+                if (onCopyDesign != null) {
+                  TextButton(
+                    onClick = { onCopyDesign(design.designId) },
+                    modifier =
+                      Modifier.semantics { contentDescription = "Start from ${design.designId}" },
+                  ) {
+                    Text("Start from this")
+                  }
+                }
+                if (onMoveDesign != null) {
+                  FolderMoveMenu(
+                    design = design,
+                    folders = folders,
+                    onMove = onMoveDesign,
+                  )
+                }
+              }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
           }
-          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
       }
       if (onBrowseDesigns != null) {
@@ -3373,6 +3389,21 @@ private fun FolderMoveMenu(
 
 /** How many designs the home screen lists before deferring to the full index. */
 private const val HOME_DESIGN_LIMIT = 6
+
+/**
+ * [designs] under their folders: folders in name order, ignoring case, and the unfiled last. Within
+ * a folder the designs keep the order they came in, which is newest first.
+ */
+internal fun homeDesignFolders(
+  designs: List<UiBuilderHomeDesign>
+): List<Pair<String?, List<UiBuilderHomeDesign>>> =
+  designs
+    .groupBy { it.folder }
+    .toList()
+    .sortedWith(
+      compareBy<Pair<String?, List<UiBuilderHomeDesign>>> { it.first == null }
+        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.first.orEmpty() }
+    )
 
 @Composable
 private fun MobileEditorToolbar(

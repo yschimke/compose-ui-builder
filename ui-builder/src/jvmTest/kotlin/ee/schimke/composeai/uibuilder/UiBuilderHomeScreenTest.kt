@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
+import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -107,6 +108,52 @@ class UiBuilderHomeScreenTest {
     assertEquals("morning-player" to "Music", moved)
   }
 
+  @Test
+  fun `filed designs are listed under their folder, unfiled last`() = runComposeUiTest {
+    val filed =
+      listOf(
+        UiBuilderHomeDesign("loose-sketch", "Loose sketch", "m3-catalog"),
+        UiBuilderHomeDesign("watch-face", "Watch face", "m3-catalog", folder = "wear"),
+        UiBuilderHomeDesign("tile-draft", "Tile draft", "m3-catalog", folder = "Tiles"),
+      )
+    setContent {
+      UiBuilderNewDesignScreen(
+        catalogs = catalogs,
+        initialCatalogSystemId = "m3-catalog",
+        designs = filed,
+        onOpenDesign = {},
+        onCreate = { _, _, _, _ -> },
+      )
+    }
+
+    val headings =
+      onAllNodes(isHeading()).fetchSemanticsNodes().map {
+        it.config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString()
+      }
+    assertEquals(listOf("Tiles", "wear", "No folder"), headings.filter { it in FOLDER_HEADINGS })
+    // The heading says the folder, so the row no longer repeats it.
+    onNodeWithText("Folder · wear").assertDoesNotExist()
+    assertEquals(
+      listOf("tile-draft", "watch-face", "loose-sketch"),
+      homeDesignFolders(filed).flatMap { (_, group) -> group.map { it.designId } },
+    )
+  }
+
+  @Test
+  fun `nothing filed stays one list with no folder headings`() = runComposeUiTest {
+    setContent {
+      UiBuilderNewDesignScreen(
+        catalogs = catalogs,
+        initialCatalogSystemId = "m3-catalog",
+        designs = designs,
+        onOpenDesign = {},
+        onCreate = { _, _, _, _ -> },
+      )
+    }
+
+    onNodeWithText("No folder").assertDoesNotExist()
+  }
+
   /**
    * Creating still works, and still says what it was asked for.
    *
@@ -149,3 +196,5 @@ class UiBuilderHomeScreenTest {
     onNodeWithText("Open a file").assertDoesNotExist()
   }
 }
+
+private val FOLDER_HEADINGS = setOf("Tiles", "wear", "No folder")
