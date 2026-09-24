@@ -17,6 +17,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderExportStructuredIcons
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.figma.FigmaBounds
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderNodeInspection
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
@@ -202,6 +203,22 @@ object JvmSkiaStructuredSvgRecorder : StructuredSvgSceneRecorder {
       bytes.decodeToString().canonicalizeSkiaResourceIds()
     } finally {
       output.close()
+    }
+  }
+
+  /**
+   * Every node's measured box in dp, relative to the design's root: the layout a Figma scene takes
+   * its sizes from when the document itself does not state them.
+   */
+  fun measuredBoundsDp(document: UiBuilderDocument): Map<String, FigmaBounds> {
+    val density = document.environmentNumber("density").toDouble()
+    return measureLayout(document).nodeBounds.mapValues { (_, bounds) ->
+      FigmaBounds(
+        x = bounds.x / density,
+        y = bounds.y / density,
+        width = bounds.width / density,
+        height = bounds.height / density,
+      )
     }
   }
 

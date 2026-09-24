@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.figma
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,9 +16,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * written by hand for a test, by the design-parity plugin, or by an agent through the Figma MCP all
  * parse. See `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md`.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class FigmaSnapshot(
-  val schema: String = SCHEMA,
+  @EncodeDefault(EncodeDefault.Mode.ALWAYS) val schema: String = SCHEMA,
   val source: FigmaSnapshotSource = FigmaSnapshotSource(),
   val root: FigmaSnapshotNode,
 ) {
@@ -139,9 +142,21 @@ data class FigmaInstance(
 /**
  * The identity a node exported by this editor carries back, read from shared plugin data under
  * [NAMESPACE].
+ *
+ * [componentId] and [slot] say what the node was and which slot of its parent it sat in, so a frame
+ * standing in for a component Figma has no counterpart for is still recognisable. [labelNodeId] is
+ * the `m3/text` child a kit instance's label property stood for: the label is a property in Figma
+ * and a node in the builder, and the round trip has to land an edit to it on that node.
  */
 @Serializable
-data class FigmaStamp(val designId: String, val nodeId: String, val revision: Int) {
+data class FigmaStamp(
+  val designId: String,
+  val nodeId: String,
+  val revision: Int,
+  val componentId: String? = null,
+  val slot: String? = null,
+  val labelNodeId: String? = null,
+) {
   companion object {
     const val NAMESPACE: String = "composeUiBuilder"
   }
