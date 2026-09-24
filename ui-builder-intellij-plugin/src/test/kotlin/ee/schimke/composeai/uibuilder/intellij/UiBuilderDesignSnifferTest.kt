@@ -69,4 +69,20 @@ class UiBuilderDesignSnifferTest {
 
     assertNull(scanForDesignSchema(text.byteInputStream(), limit = 512))
   }
+
+  @Test
+  fun aNestedSchemaNearTheHeadDoesNotHideTheRootOneLater() {
+    val text =
+      "{ \"assets\": { \"schema\": \"https://example.com/asset\" }, \"nodes\": \"" +
+        "n".repeat(DESIGN_HEADER_SNIFF_BYTES) +
+        "\", \"schema\": \"compose-ui-builder-document/v1\" }"
+
+    // The head alone reports the unrelated value, which is why the caller only trusts a UI
+    // Builder one there and scans on otherwise.
+    assertEquals(
+      "https://example.com/asset",
+      sniffDesignSchema(text.take(DESIGN_HEADER_SNIFF_BYTES)),
+    )
+    assertEquals("compose-ui-builder-document/v1", scanForDesignSchema(text.byteInputStream()))
+  }
 }

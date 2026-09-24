@@ -326,7 +326,9 @@ private fun <T : Any> cachedByStamp(
 private fun readDesignSchema(file: VirtualFile): String? = runCatching {
   file.inputStream.use { input ->
     val head = input.readNBytes(DESIGN_HEADER_SNIFF_BYTES)
-    sniffDesignSchema(String(head, Charsets.UTF_8))
+    // Only a UI Builder value settles it: a nested or extension `schema` key near the head says
+    // nothing about the root's, which may still come later.
+    sniffDesignSchema(String(head, Charsets.UTF_8))?.takeIf { it in supportedProjectDesignSchemas }
       // Inconclusive head on a longer file: its `schema` may simply come later.
       ?: if (head.size == DESIGN_HEADER_SNIFF_BYTES) {
         file.inputStream.use { scanForDesignSchema(it) }

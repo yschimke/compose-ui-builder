@@ -38,8 +38,10 @@ import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import java.nio.file.Path
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -49,6 +51,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -208,11 +212,13 @@ private constructor(
     )
   override val commentStatus = mutableCommentStatus.asStateFlow()
 
+  private val worker: Job
+
   init {
     scope.launch { openOrCreate() }
     // One protocol command at a time, just like the browser session. The next submission must use
     // the revision the previous one produced, otherwise quick edits conflict with their own store.
-    scope.launch {
+    worker = scope.launch {
       for (submission in submissions) {
         // An edit made while the design is still opening waits for it rather than being dropped:
         // the channel is the queue, and the first snapshot is the revision it applies against.
@@ -289,11 +295,23 @@ private constructor(
     }
   }
 
+  /**
+   * Stops taking edits, lets the ones already queued land, then stops.
+   *
+   * An edit is queued the moment it is made and persisted when the worker reaches it, so closing
+   * straight after an edit — New, Open, closing the last IDE editor — used to cancel the worker
+   * with the edit still in the queue. Draining is bounded: a design that never opened has nothing
+   * to apply its queue to, and must not hold the caller forever.
+   */
   override fun close() {
     submissions.close()
+    runBlocking { withTimeoutOrNull(CLOSE_DRAIN_TIMEOUT) { worker.join() } }
     scope.cancel()
   }
 }
+
+/** How long [OfflineUiBuilderSession.close] waits for queued edits to be persisted. */
+private val CLOSE_DRAIN_TIMEOUT = 2.seconds
 
 /** Displays one view of a shared [UiBuilderSession]. */
 @Composable
