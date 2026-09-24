@@ -27,6 +27,25 @@ plugins {
 
 base { archivesName.set("compose-preview-" + project.name) }
 
+// The Remote Material 3 component record, embedded as a constant for the reason
+// `:ui-builder:embedComponentRecord` gives: resource loading differs between the JVM and wasmJs. It
+// is what writes a `remote-m3/remote-button` in a widget body as a `RemoteButton` call, and what
+// the built-in `remote-m3` catalog reads each component's parameters off. See `RemoteMaterial3`.
+val embedRemoteMaterial3Record =
+  tasks.register<EmbedComponentRecord>("embedRemoteMaterial3Record") {
+    record.set(rootProject.file("docs/design/fixtures/ui-builder/remote-m3-record-v1.json"))
+    constantName.set("EMBEDDED_REMOTE_M3_RECORD_JSON")
+    sourceDescription.set(
+      "docs/design/fixtures/ui-builder/remote-m3-record-v1.json\n" +
+        "// by :ui-builder-export:embedRemoteMaterial3Record"
+    )
+    output.set(
+      layout.buildDirectory.file(
+        "generated/remoteMaterial3Record/ee/schimke/composeai/uibuilder/EmbeddedRemoteMaterial3Record.kt"
+      )
+    )
+  }
+
 ktfmt { googleStyle() }
 
 kotlin {
@@ -44,6 +63,11 @@ kotlin {
     commonMain {
       kotlin.srcDir(rootProject.tasks.named("generateMaterialIconExportSource"))
       kotlin.srcDir(rootProject.tasks.named("generateUiBuilderBuildFeatures"))
+      kotlin.srcDir(
+        embedRemoteMaterial3Record.map {
+          layout.buildDirectory.dir("generated/remoteMaterial3Record")
+        }
+      )
     }
     commonMain.dependencies {
       // Both coordinates carry no version of their own; these platforms supply them (see the
