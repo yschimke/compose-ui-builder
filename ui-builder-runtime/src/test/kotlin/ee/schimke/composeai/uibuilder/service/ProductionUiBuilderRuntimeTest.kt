@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -425,7 +426,7 @@ class ProductionUiBuilderRuntimeTest {
         "remote-compose/custom",
         "shape/linear-gradient",
         "asset/image",
-      ),
+      ) + RemoteMaterial3.components.map { it.componentId },
       remoteCatalog.components.map { it.componentId },
     )
     assertEquals(

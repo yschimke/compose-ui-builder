@@ -153,7 +153,7 @@ private val FOUNDATION_CURATIONS =
           ),
         // The same narrowing `remoteM3Catalog` applies, from the one place it is written.
         curate = { component -> component.narrowedForRemoteAuthoring() },
-        menu = { base -> base.statusSemantics.componentMenuObject() },
+        menu = { base -> remoteM3ComponentMenu(base.statusSemantics) },
       ),
   )
 
