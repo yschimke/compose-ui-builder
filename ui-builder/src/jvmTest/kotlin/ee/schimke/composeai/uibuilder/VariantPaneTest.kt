@@ -21,12 +21,14 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderVariantPane
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.variantPanes
 import ee.schimke.composeai.uibuilder.editor.wearWidgetPreviewPanes
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -118,6 +120,36 @@ class VariantPaneTest {
       ),
       panes.map { it.wearWidgetHostShape },
     )
+  }
+
+  @Test
+  fun `an adaptive widget previews its resolved design at both sizes in every host`() {
+    val adaptive =
+      AdaptiveWearWidget.newDocument("adaptive", JsonObject(emptyMap()), JsonObject(emptyMap()))
+
+    val panes = adaptive.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Large)
+
+    assertEquals(
+      listOf(
+        "Rectangular · Small",
+        "Pixel Watch · Small",
+        "Samsung · Small",
+        "Rectangular · Large",
+        "Pixel Watch · Large",
+        "Samsung · Large",
+      ),
+      panes.map { it.label },
+    )
+    assertEquals(panes.size, panes.map { it.id }.toSet().size, "pane ids collide")
+    panes.forEach { pane ->
+      val size =
+        if (pane.label.endsWith("Small")) WearWidgetScaffoldSize.Small
+        else WearWidgetScaffoldSize.Large
+      assertEquals(AdaptiveWearWidget.resolve(adaptive, size), pane.document, pane.label)
+      val spec = size.hostSpec(assertNotNull(pane.wearWidgetHostShape))
+      assertEquals(spec.frameWidthDp.toFloat(), pane.widthDp, pane.label)
+      assertEquals(spec.frameHeightDp.toFloat(), pane.heightDp, pane.label)
+    }
   }
 
   /**

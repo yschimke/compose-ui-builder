@@ -186,6 +186,7 @@ import ee.schimke.composeai.uibuilder.editor.THEME_PRIMARY
 import ee.schimke.composeai.uibuilder.editor.THEME_SURFACE
 import ee.schimke.composeai.uibuilder.editor.THEME_TYPE_SCALE
 import ee.schimke.composeai.uibuilder.editor.supportingText
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
@@ -741,6 +742,34 @@ private fun RenderNode(
           slot("content").forEach { child(it, Modifier.fillMaxSize()) }
         }
       }
+      // **Experimental.** The adaptive widget, edited at Large because Large is the size where
+      // every
+      // slot shows. This is `AdaptiveWearWidget.resolve`'s Large arrangement drawn over the
+      // authored slots rather than over the resolved design, so each node the designer placed stays
+      // the node they select; the preview panes beside it draw the resolved design at both sizes.
+      AdaptiveWearWidget.COMPONENT_ID ->
+        WearWidgetContainerScaffold(
+          node = node,
+          modifier = measured,
+          spec = WearWidgetScaffoldSize.Large.hostSpec(LocalWearWidgetHostShape.current),
+          brushes = { next -> slot(AdaptiveWearWidget.BACKGROUND).forEach { child(it, next) } },
+          hasBrushes = slot(AdaptiveWearWidget.BACKGROUND).isNotEmpty(),
+        ) {
+          Column(
+            Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(AdaptiveWearWidget.ACTION_SPACING_DP.dp),
+          ) {
+            Column(
+              Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(AdaptiveWearWidget.TEXT_SPACING_DP.dp),
+            ) {
+              (slot(AdaptiveWearWidget.HEADLINE) + slot(AdaptiveWearWidget.SUPPORTING)).forEach {
+                child(it, Modifier)
+              }
+            }
+            slot(AdaptiveWearWidget.ACTION).forEach { child(it, Modifier) }
+          }
+        }
       // The Wear screen. Unlike the widget container above, this stand-in is EMITTED rather than
       // erased: `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter`
       // names

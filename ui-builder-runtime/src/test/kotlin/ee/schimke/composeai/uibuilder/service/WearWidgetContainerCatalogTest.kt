@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,7 +22,13 @@ class WearWidgetContainerCatalogTest {
       .single { it.benchmark.catalogSystemId == "remote-m3" }
 
   private val containers =
-    catalog.components.filter { it.componentId.startsWith("remote-m3/widget-container-") }
+    catalog.components.filter {
+      it.componentId.startsWith("remote-m3/widget-container-") &&
+        it.componentId != AdaptiveWearWidget.COMPONENT_ID
+    }
+
+  private val adaptive =
+    catalog.components.single { it.componentId == AdaptiveWearWidget.COMPONENT_ID }
 
   @Test
   fun `both containers declare WearWidgetContainer's four parameters`() {
@@ -80,6 +87,23 @@ class WearWidgetContainerCatalogTest {
       brushes.forEach { brush ->
         assertTrue(slotAccepts(background, brush), "${brush.componentId} into background")
       }
+    }
+  }
+
+  @Test
+  fun `the adaptive container takes the same parameters and one slot per adaptive role`() {
+    assertEquals(containers.first().properties, adaptive.properties)
+    assertEquals(containers.first().role, adaptive.role)
+    assertEquals(containers.first().traits, adaptive.traits)
+    assertEquals(
+      listOf("background") + AdaptiveWearWidget.CONTENT_SLOTS,
+      adaptive.slots.map { it.name },
+    )
+    AdaptiveWearWidget.CONTENT_SLOTS.forEach { name ->
+      val slot = adaptive.slots.single { it.name == name }
+      // Any number of nodes, and only what the Remote Compose emitter can write.
+      assertEquals(null, slot.cardinality.max, name)
+      assertEquals(listOf("RemoteAuthorable"), slot.acceptedTraits, name)
     }
   }
 

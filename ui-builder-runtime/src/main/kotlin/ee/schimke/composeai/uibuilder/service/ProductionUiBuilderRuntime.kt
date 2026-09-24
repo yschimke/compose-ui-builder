@@ -3,6 +3,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.TargetParameter
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
@@ -1737,6 +1738,33 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             ?.build()
       }
       .build()
+  // **Experimental.** One widget for both container sizes (`AdaptiveWearWidget`). The body is
+  // three named slots rather than one, because the template decides where each goes: a Small
+  // widget keeps the headline and the action and drops the supporting line. Each takes any number
+  // of Remote Compose nodes, stacked in order.
+  fun contentSlotNamed(name: String) =
+    contentSlot
+      .newBuilder()
+      .also {
+        it.name = name
+        it.cardinality = contentSlot.cardinality.newBuilder().also { it.max = null }.build()
+      }
+      .build()
+  val adaptiveWidget =
+    widget(AdaptiveWearWidget.COMPONENT_ID, "Wear widget · ${AdaptiveWearWidget.LABEL}")
+      .newBuilder()
+      .also {
+        it.slots = listOf(backgroundSlot) + AdaptiveWearWidget.CONTENT_SLOTS.map(::contentSlotNamed)
+        it.wasm =
+          supportedWasm
+            .newBuilder()
+            .also {
+              it.notes =
+                "Experimental. Edited at Large, where every slot shows; the preview draws the resolved Small and Large widgets in each host shape, and the export branches on WearWidgetParams.containerType."
+            }
+            .build()
+      }
+      .build()
   // The reviewed `remote-m3` subset. The last two are brushes, and they are here because the
   // background slot above declares `DrawLayer` and `ImageContent` and nothing else in this list
   // carries either — a slot narrowed to traits no component in its own catalog has is a slot no
@@ -1796,6 +1824,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         listOf(
           widget("remote-m3/widget-container-small", "Wear widget · Small (216×76dp)"),
           widget("remote-m3/widget-container-large", "Wear widget · Large (216×124dp)"),
+          adaptiveWidget,
           lottie(components.getValue("asset/image"), supportedWasm, blockedSvg),
         ) +
           authoringIds.map {

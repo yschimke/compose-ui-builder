@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.capability.accepts
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -117,10 +118,24 @@ class StarterContentTest {
   }
 
   @Test
+  fun `the adaptive widget is seeded into every slot it declares`() {
+    val component = assertNotNull(remoteCatalog.componentsById[AdaptiveWearWidget.COMPONENT_ID])
+    val seeded = StarterContent.forComponent(AdaptiveWearWidget.COMPONENT_ID)
+    assertEquals(AdaptiveWearWidget.CONTENT_SLOTS.toSet(), seeded.keys)
+    seeded.forEach { (slotName, children) ->
+      val slot = assertNotNull(component.slots.singleOrNull { it.name == slotName }, slotName)
+      children.forEach { child ->
+        val childComponent = assertNotNull(remoteCatalog.componentsById[child.componentId])
+        assertTrue(slot.accepts(childComponent), "$slotName refuses ${child.componentId}")
+      }
+    }
+  }
+
+  @Test
   fun `every Remote Material 3 property seed names a declared property`() {
     val offered = RemoteMaterial3.components.map { it.componentId }
     StarterContent.componentIds
-      .filter { it.startsWith("remote-m3/") }
+      .filter { it.startsWith("remote-m3/remote-") }
       .forEach { assertTrue(it in offered, "$it is seeded and not offered") }
     offered.forEach { componentId ->
       val component =

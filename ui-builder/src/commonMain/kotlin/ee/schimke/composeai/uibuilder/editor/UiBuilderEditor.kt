@@ -208,6 +208,7 @@ import ee.schimke.composeai.uibuilder.codegen.rememberCodePaneSyntaxTheme
 import ee.schimke.composeai.uibuilder.componentDriftProblems
 import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.designUrlPath
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_STATE_NAME
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
@@ -4028,6 +4029,9 @@ internal fun UiBuilderDocument.canvasFrameDp(hostShape: WearWidgetHostShape): Pa
 internal fun UiBuilderDocument.wearWidgetScaffoldSize(): WearWidgetScaffoldSize? {
   val rootId = roots.singleOrNull() ?: return null
   val componentId = nodes[rootId]?.componentId ?: return null
+  // An adaptive widget is edited at Large, the size where every slot shows. Its preview panes draw
+  // it at both sizes (`wearWidgetPreviewPanes`).
+  if (componentId == AdaptiveWearWidget.COMPONENT_ID) return WearWidgetScaffoldSize.Large
   return WearWidgetScaffoldSize.entries.firstOrNull { it.componentId == componentId }
 }
 

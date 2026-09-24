@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -189,6 +190,20 @@ internal object StarterContent {
       // Remote Material 3, labelled for the reason its Wear counterparts are: a button with no
       // label is a pill and a card with no content is an empty rounded rectangle. The label is
       // `m3/text`, which is what this palette's Text is and what exports as `RemoteText`.
+      // The adaptive widget arrives with each role filled, so both preview sizes have something to
+      // show: the Small panes keep the headline and the button and drop the supporting line.
+      AdaptiveWearWidget.COMPONENT_ID to
+        mapOf(
+          AdaptiveWearWidget.HEADLINE to listOf(remoteText("Headline")),
+          AdaptiveWearWidget.SUPPORTING to listOf(remoteText("Supporting text")),
+          AdaptiveWearWidget.ACTION to
+            listOf(
+              StarterNode(
+                "remote-m3/remote-button",
+                slots = mapOf("content" to listOf(remoteText("Open"))),
+              )
+            ),
+        ),
       "remote-m3/remote-button" to mapOf("content" to listOf(remoteText("Button"))),
       "remote-m3/remote-compact-button" to mapOf("label" to listOf(remoteText("Compact"))),
       "remote-m3/remote-edge-button" to mapOf("content" to listOf(remoteText("Done"))),
