@@ -67,8 +67,8 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
  * The other half of the same drift: `asset/image` was in the `remote-m3` palette, the canvas drew
  * it, and the generator sent it to the catch-all `else` branch, so a widget with album art in it
  * refused to export with the same sentence an unknown component gets. A `remote-m3` catalog may
- * only offer ids in here, which the `:server` test asserts, and
- * `RemoteContentVocabularyTest` checks every entry here has a record or a case.
+ * only offer ids in here, which the `:server` test asserts, and `RemoteContentVocabularyTest`
+ * checks every entry here has a record or a case.
  */
 public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
   setOf(
