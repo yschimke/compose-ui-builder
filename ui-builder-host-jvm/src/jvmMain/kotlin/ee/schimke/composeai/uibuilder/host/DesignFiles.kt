@@ -64,3 +64,27 @@ object DesignFiles {
     prettyPrintIndent = "  "
   }
 }
+
+/**
+ * Writes one design file back only while it still holds what this editor last read or wrote.
+ *
+ * A checked-in `.uid` is also edited by agents, other editors and `git checkout`. Writing the
+ * in-memory document over such a change would erase it without a trace, so a write against a file
+ * that has moved on is refused instead, and the editor says so; reopening the file picks the change
+ * up.
+ */
+class DesignFileGuard(private val path: Path) {
+  private var known: String? = current()
+
+  /** Writes [document] unless [path] changed since it was last read or written here. */
+  @Synchronized
+  fun write(document: DesignDocumentV1) {
+    check(current() == known) {
+      "${path.fileName} changed on disk since it was opened; reopen it to pick up that change"
+    }
+    DesignFiles.write(path, document)
+    known = current()
+  }
+
+  private fun current(): String? = if (Files.exists(path)) Files.readString(path) else null
+}

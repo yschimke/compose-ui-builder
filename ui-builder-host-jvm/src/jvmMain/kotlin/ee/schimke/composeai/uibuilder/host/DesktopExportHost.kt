@@ -98,7 +98,8 @@ class DesktopExportHost(
       runCatching {
         when (format) {
           EditorExportFormat.Svg -> renderSvg(current)
-          EditorExportFormat.Png -> Rendered.Bytes(JvmDocumentRasterizer.renderPng(current))
+          EditorExportFormat.Png ->
+            Rendered.Bytes(JvmDocumentRasterizer.renderPng(current, catalog))
           else -> Rendered.Refused("${format.label} export needs a preview server")
         }
       }

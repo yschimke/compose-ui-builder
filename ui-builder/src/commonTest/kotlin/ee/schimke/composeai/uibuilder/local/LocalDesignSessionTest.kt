@@ -115,6 +115,10 @@ class LocalDesignSessionTest {
     assertTrue("first" in stored.seed.nodes)
     assertEquals(1, stored.seedSequence)
     assertEquals(1, open(stored).sequence)
+    // Compaction drops history, not identity: the design keeps the time it was created (0 here),
+    // rather than reading as created at the moment its log was cut.
+    assertEquals(0L, stored.createdAtEpochMillis)
+    assertEquals(1_700_000_000_000, stored.updatedAtEpochMillis)
   }
 
   @Test

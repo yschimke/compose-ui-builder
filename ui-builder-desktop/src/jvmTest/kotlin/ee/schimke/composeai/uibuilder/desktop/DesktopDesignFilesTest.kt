@@ -15,6 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
@@ -84,6 +85,61 @@ class DesktopDesignFilesTest {
         settings.heightDp + 2,
         DesignFiles.read(path).screenEnvironmentSettings().heightDp,
       )
+    }
+  }
+
+  /** Opens [path], waits for it, and submits one edit that grows the screen by 2dp. */
+  private suspend fun editHeight(
+    session: ee.schimke.composeai.uibuilder.host.UiBuilderSession
+  ): Int {
+    val document =
+      withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+        .snapshot
+        .state
+        .document
+        .toUiBuilderDocument()
+    val reducer = UiBuilderEditorReducer(session.catalog, "file-test", "file-test")
+    val initial = reducer.initial(document)
+    val settings = document.screenEnvironmentSettings()
+    val edited =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.UpdateEnvironment(settings.copy(heightDp = settings.heightDp + 2)),
+      )
+    session.submit(assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited)))
+    return settings.heightDp + 2
+  }
+
+  @Test
+  fun `an edit made just before the design is closed still reaches the file`() = runBlocking {
+    val path = Files.createTempDirectory("ui-builder-files").resolve("design.uid")
+    DesignFiles.write(path, seed.toDesignDocumentV1())
+
+    // New or Open right after an edit closes the session with that edit still queued.
+    val expected =
+      openDesktopSession(DesktopDesign.File(path), path.parent, remoteServer = null).use {
+        editHeight(it)
+      }
+
+    assertEquals(expected, DesignFiles.read(path).screenEnvironmentSettings().heightDp)
+  }
+
+  @Test
+  fun `an edit never overwrites a file changed on disk since it was opened`() = runBlocking {
+    val path = Files.createTempDirectory("ui-builder-files").resolve("design.uid")
+    DesignFiles.write(path, seed.toDesignDocumentV1())
+
+    openDesktopSession(DesktopDesign.File(path), path.parent, remoteServer = null).use { session ->
+      withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+      // An agent or `git checkout` rewrites the file while it is open.
+      val external = seed.toDesignDocumentV1().copy(title = "Changed elsewhere")
+      DesignFiles.write(path, external)
+
+      editHeight(session)
+
+      val failure = withTimeout(10.seconds) { session.failure.filterNotNull().first() }
+      assertTrue("changed on disk" in failure, failure)
+      assertEquals("Changed elsewhere", DesignFiles.read(path).title)
     }
   }
 
