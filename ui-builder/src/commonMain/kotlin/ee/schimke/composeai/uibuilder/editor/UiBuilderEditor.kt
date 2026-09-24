@@ -6034,7 +6034,13 @@ internal fun PinnedDesignCanvas(
                   scaleX = drawScale
                   scaleY = drawScale
                   transformOrigin = TransformOrigin(0f, 0f)
-                  compositingStrategy = CompositingStrategy.Offscreen
+                  // A runtime renderer's pixels are in a DOM layer under the editor, reached
+                  // through a `BlendMode.Clear` hole it punches in this frame. An offscreen layer
+                  // would take that hole into its own buffer and composite the buffer back over
+                  // the workspace, so the design never showed through: the frame drew blank.
+                  compositingStrategy =
+                    if (canvasRenderer == null) CompositingStrategy.Offscreen
+                    else CompositingStrategy.Auto
                 }
                 .onGloballyPositioned {
                   frameBounds = it.boundsInRoot()
