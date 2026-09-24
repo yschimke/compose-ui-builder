@@ -31,12 +31,48 @@ version =
       "$major.$minor.${patch + 1}-SNAPSHOT"
     }
 
+// The editor <-> server HTTP API this editor speaks. compose-preview-server serves a pinned editor
+// only when its `ServeUiBuilderEditor.SUPPORTED_SERVER_API` contains this number, which is what
+// lets an instance pin an editor release without a server release (compose-preview-server#1035).
+// Bump it only for a change to the routes the editor calls that an older server cannot answer, and
+// land the server's support for the new number first.
+val serverApiVersion = 1
+
+abstract class WriteUiBuilderWebManifest : DefaultTask() {
+  @get:Input abstract val editorVersion: Property<String>
+
+  @get:Input abstract val serverApi: Property<Int>
+
+  @get:OutputFile abstract val manifestFile: RegularFileProperty
+
+  @TaskAction
+  fun write() {
+    manifestFile
+      .get()
+      .asFile
+      .writeText(
+        """{"schema":"compose-ui-builder-web/v1","version":"${editorVersion.get()}",""" +
+          """"serverApi":${serverApi.get()}}""" +
+          "\n"
+      )
+  }
+}
+
+val webManifest =
+  tasks.register<WriteUiBuilderWebManifest>("webManifest") {
+    description = "Write the editor's version and server-API contract into the archive root."
+    editorVersion.set(project.version.toString())
+    serverApi.set(serverApiVersion)
+    manifestFile.set(layout.buildDirectory.file("web-manifest/ui-builder-web.json"))
+  }
+
 val webArchive =
   tasks.register<Zip>("webArchive") {
     description = "Package the standalone UI-builder Wasm application as an immutable archive."
     group = "distribution"
     dependsOn(project(":ui-builder").tasks.named("wasmFrontendDist"))
     from(project(":ui-builder").layout.buildDirectory.dir("wasmDist"))
+    from(webManifest)
     archiveBaseName.set("compose-preview-" + project.name)
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
@@ -87,6 +123,7 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           "m3-catalog-capabilities-v1.json",
           "jetcaster-discover-operations-v1.json",
           "fonts/fonts.json",
+          "ui-builder-web.json",
         )
       val missing = required - names.toSet()
       check(missing.isEmpty()) { "UI-builder web archive is missing: ${missing.sorted()}" }
