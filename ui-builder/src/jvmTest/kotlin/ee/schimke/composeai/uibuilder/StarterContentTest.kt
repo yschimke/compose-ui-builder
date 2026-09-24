@@ -95,6 +95,28 @@ class StarterContentTest {
    * seed naming a property the component does not declare is a component arriving refused.
    */
   @Test
+  fun `every Remote Material 3 number has an editor with finite bounds`() {
+    RemoteMaterial3.components.forEach { entry ->
+      val component = assertNotNull(remoteCatalog.componentsById[entry.componentId])
+      component.properties
+        .filter { property ->
+          val types =
+            (property.jsonType as? kotlinx.serialization.json.JsonArray)?.map {
+              it.jsonPrimitive.content
+            } ?: listOf(property.jsonType.jsonPrimitive.content)
+          "number" in types || "integer" in types
+        }
+        .forEach { property ->
+          val editor = property.editor
+          val where = "${entry.componentId}.${property.name}"
+          assertNotNull(editor?.minimum, "$where has no minimum, so the inspector cannot edit it")
+          assertNotNull(editor.maximum, "$where has no maximum, so the inspector cannot edit it")
+          assertTrue(editor.minimum!! < editor.maximum!!, "$where has an empty range")
+        }
+    }
+  }
+
+  @Test
   fun `every Remote Material 3 property seed names a declared property`() {
     val offered = RemoteMaterial3.components.map { it.componentId }
     StarterContent.componentIds

@@ -470,6 +470,40 @@ object CapabilityCatalogParser {
    */
   private const val MAXIMUM_AUTHORED_VALUE = 1_000_000.0
 
+  /**
+   * The Remote Material 3 numbers, which no type rule can bound.
+   *
+   * They are declared `["number", "object"]` — a literal or a state read — and none is a `…Dp`, so
+   * without these a widget's slider, stepper and progress indicators arrived with their one value
+   * `Unsupported`: stuck at the starter value and unbindable. Ranges follow the Material ones
+   * above: a fraction is 0..1, an angle a turn either way, a slider's value the design's units.
+   */
+  private val REMOTE_MATERIAL_3_NUMBER_EDITORS =
+    listOf(
+        "remote-m3/remote-circular-progress-indicator",
+        "remote-m3/remote-linear-progress-indicator",
+        "remote-m3/remote-curved-progress-indicator",
+      )
+      .map { (it to "progress") to numberEditor(0.0, 1.0, 0.05) } +
+      listOf("remote-m3/remote-slider", "remote-m3/remote-stepper").flatMap {
+        listOf(
+          (it to "value") to numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 0.1),
+          (it to "steps") to numberEditor(0.0, 100.0, 1.0),
+        )
+      } +
+      listOf(
+        ("remote-m3/remote-circular-progress-indicator" to "startAngle") to angleEditor(),
+        ("remote-m3/remote-circular-progress-indicator" to "endAngle") to angleEditor(),
+        ("remote-m3/remote-curved-progress-indicator" to "startAngle") to angleEditor(),
+        ("remote-m3/remote-curved-progress-indicator" to "sweepAngle") to angleEditor(),
+        ("remote-m3/remote-curved-progress-indicator" to "gapAngleDegrees") to
+          numberEditor(0.0, 360.0, 1.0),
+        ("remote-m3/remote-curved-progress-indicator" to "dotFadeOutFraction") to
+          numberEditor(0.0, 1.0, 0.05),
+      )
+
+  private fun angleEditor() = numberEditor(-360.0, 360.0, 1.0)
+
   private val MATERIAL_COLOR_TOKENS =
     listOf(
       "background",
@@ -547,7 +581,9 @@ object CapabilityCatalogParser {
       ("m3/primary-tab-row" to "selectedIndex") to numberEditor(0.0, 32.0, 1.0),
       ("m3/time-picker" to "hour") to numberEditor(0.0, 23.0, 1.0),
       ("m3/time-picker" to "minute") to numberEditor(0.0, 59.0, 1.0),
-    ) + WEAR_WIDGET_CONTAINER_IDS.flatMap(::widgetContainerEditors)
+    ) +
+      WEAR_WIDGET_CONTAINER_IDS.flatMap(::widgetContainerEditors) +
+      REMOTE_MATERIAL_3_NUMBER_EDITORS
 
   /**
    * Editors for the four container parameters, none of which the type rules can supply.
