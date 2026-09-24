@@ -148,7 +148,8 @@ class FigmaSceneExporter(private val map: FigmaComponentMap) {
           itemSpacing =
             properties.number(if (horizontal) "horizontalSpacingDp" else "verticalSpacingDp")
               ?: 0.0,
-          padding = node.padding(),
+          // A frame without auto layout has no padding in Figma; its children carry it.
+          padding = if (mode == FigmaAutoLayout.NONE) FigmaPadding() else node.padding(),
           primaryAxisAlign =
             primaryAlign(
               properties.enumValue(
@@ -315,10 +316,19 @@ class FigmaSceneExporter(private val map: FigmaComponentMap) {
         node.modifier("fillMaxHeight") != null ||
           node.modifier("fillMaxSize") != null ||
           (weighted && parentMode == FigmaAutoLayout.VERTICAL)
+      // Where the node sits in its parent frame: measured when there is a layout, since an offset
+      // is only a delta from wherever the parent's alignment put the node. Without one, the offset
+      // plus the Box's padding — Figma has no padding on a frame without auto layout, so the
+      // padding travels in the child's position instead.
       val offset = node.modifier("offset")
+      val inset = parent?.takeIf { it.componentId == "layout/box" }?.padding() ?: FigmaPadding()
       return copy(
-        x = offset?.number("xDp") ?: measured?.let { it.x - (parentBounds?.x ?: 0.0) } ?: 0.0,
-        y = offset?.number("yDp") ?: measured?.let { it.y - (parentBounds?.y ?: 0.0) } ?: 0.0,
+        x =
+          measured?.let { it.x - (parentBounds?.x ?: 0.0) }
+            ?: ((offset?.number("xDp") ?: 0.0) + inset.left),
+        y =
+          measured?.let { it.y - (parentBounds?.y ?: 0.0) }
+            ?: ((offset?.number("yDp") ?: 0.0) + inset.top),
         width = width ?: measured?.width ?: 0.0,
         height = height ?: measured?.height ?: 0.0,
         sizing =

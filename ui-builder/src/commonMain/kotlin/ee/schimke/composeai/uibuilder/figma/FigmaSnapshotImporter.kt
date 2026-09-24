@@ -196,7 +196,8 @@ class FigmaSnapshotImporter(
         addAll(placementModifiers(node, placement, intrinsic = false))
         background(node)?.let(::add)
         border(node)?.let(::add)
-        if (!layout.padding.isZero) add(padding(layout.padding))
+        // Figma lays out a frame without auto layout by its children's positions alone.
+        if (componentId != "layout/box" && !layout.padding.isZero) add(padding(layout.padding))
       }
       insert(node, id, componentId, properties, modifiers, parent, after)
       if (componentId == "layout/box" && node.children.isNotEmpty()) {
