@@ -651,6 +651,14 @@ internal fun wearTextStyle(style: String): TextStyle =
     "bodyLarge" -> MaterialTheme.typography.bodyLarge
     "bodyMedium" -> MaterialTheme.typography.bodyMedium
     "bodySmall" -> MaterialTheme.typography.bodySmall
+    "bodyExtraSmall" -> MaterialTheme.typography.bodyExtraSmall
+    // The numeral roles `RemoteText` offers for a widget's figures — a time, a count, a distance.
+    // Without them a numeral fell through to the ambient body style and drew at a quarter its size.
+    "numeralExtraLarge" -> MaterialTheme.typography.numeralExtraLarge
+    "numeralLarge" -> MaterialTheme.typography.numeralLarge
+    "numeralMedium" -> MaterialTheme.typography.numeralMedium
+    "numeralSmall" -> MaterialTheme.typography.numeralSmall
+    "numeralExtraSmall" -> MaterialTheme.typography.numeralExtraSmall
     "labelLarge" -> MaterialTheme.typography.labelLarge
     "labelMedium" -> MaterialTheme.typography.labelMedium
     "labelSmall" -> MaterialTheme.typography.labelSmall
