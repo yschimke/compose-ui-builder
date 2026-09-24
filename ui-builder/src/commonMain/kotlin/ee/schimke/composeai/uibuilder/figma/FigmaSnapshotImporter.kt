@@ -39,6 +39,8 @@ data class FigmaImportDiagnostic(
     const val DROPPED_PROPERTY: String = "dropped-property"
     const val DROPPED_MODIFIER: String = "dropped-modifier"
     const val HIDDEN: String = "hidden"
+    /** A round trip found a node that reads back as a different component. */
+    const val COMPONENT_SWAPPED: String = "component-swapped"
   }
 }
 

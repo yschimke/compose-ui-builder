@@ -1,6 +1,6 @@
 # The UI builder and Figma, Stitch and Claude Design
 
-**Status: plan, with the first three slices built (2026-09).** What a good integration between this
+**Status: import, scene export and round trip built in `:ui-builder` (2026-09); the plugin half lives in design-parity.** What a good integration between this
 editor and the design tools people already use looks like, why copying SVG back and forth is not it,
 and the order the pieces land in. It reuses what already exists — this repository's SVG export and
 reference overlay, and `yschimke/design-parity`'s Figma adapter, kit index and Figma plugin — rather
