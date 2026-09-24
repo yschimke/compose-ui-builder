@@ -91,11 +91,11 @@ class SeedTemplateCatalogReadinessTest {
    * is named above rather than waived.
    *
    * The template is the Jetcaster reference design, drawn to exercise the canvas rather than
-   * written to be exported: it holds an adaptive `SupportingPaneScaffold` layout mode, a carousel
-   * whose `items` is a `CarouselScope` DSL, grid spans belonging to the wrapper around a node, and
-   * `selected` properties comparing a state variable. None of those is a component the export has
-   * not been shown — they are values this vocabulary has no Kotlin for, so no component record,
-   * however complete, makes this document export.
+   * written to be exported: it holds an adaptive `SupportingPaneScaffold` with a pane spacing, a
+   * carousel whose `items` is a `CarouselScope` DSL, grid spans belonging to the wrapper around a
+   * node, and `selected` properties comparing a state variable. None of those is a component the
+   * export has not been shown — they are values this vocabulary has no Kotlin for, so no component
+   * record, however complete, makes this document export.
    *
    * Asserted rather than skipped because the interesting change is the one that makes it pass: a
    * template that starts exporting is a template a catalog repository can carry, and this test
@@ -114,9 +114,12 @@ class SeedTemplateCatalogReadinessTest {
         .reasons
 
     // The projection's own refusals, the ones no record can answer.
+    // The pane scaffold's refusal. It used to be `layoutMode` itself; the directive and value are
+    // computations the projection now writes, and what is left is what that computation cannot
+    // spell yet — `PaneScaffoldDirective.copy` for this template's authored pane spacing.
     assertTrue(
-      reasons.any { it.contains("layoutMode") },
-      "no adaptive layout-mode refusal: ${reasons.joinToString("; ")}",
+      reasons.any { it.contains("PaneScaffoldDirective") },
+      "no adaptive pane-scaffold refusal: ${reasons.joinToString("; ")}",
     )
     assertTrue(
       reasons.any { it.contains("CarouselScope") },

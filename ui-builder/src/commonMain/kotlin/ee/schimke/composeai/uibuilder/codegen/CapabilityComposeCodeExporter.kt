@@ -698,7 +698,8 @@ private class ComposeEmitter(
     when (node.componentId) {
       "layout/supporting-pane-scaffold" -> emitSupportingPane(node, bodyLevel)
       "layout/scaffold" -> emitScaffold(node, bodyLevel)
-      "layout/box" -> emitSimpleContainer(node, bodyLevel, "Box", "children")
+      "layout/box" ->
+        emitSimpleContainer(node, bodyLevel, "Box", "children", node.boxContentAlignmentArgument())
       "layout/column" -> emitColumn(node, bodyLevel)
       "layout/row" -> emitRow(node, bodyLevel)
       "layout/flow-row" -> emitFlowRow(node, bodyLevel)
@@ -1132,10 +1133,17 @@ private class ComposeEmitter(
   }
 
   private fun emitSearchInput(node: UiBuilderNode, level: Int) {
-    val variable = node.obj("value").optionalString("variable")?.identifier() ?: "searchQuery"
+    val value = node.obj("value")
     line(level, "SearchBarDefaults.InputField(")
-    line(level + 1, "query = $variable,")
-    line(level + 1, "onQueryChange = { $variable = it },")
+    if (value.optionalString("type") == "state") {
+      val name = value.optionalString("variable")?.identifier() ?: "searchQuery"
+      line(level + 1, "query = $name,")
+      line(level + 1, "onQueryChange = { $name = it },")
+    } else {
+      // A literal query: the field shows it, and typing has nowhere to go.
+      line(level + 1, "query = \"${node.string("value").escape()}\",")
+      line(level + 1, "onQueryChange = {},")
+    }
     line(level + 1, "onSearch = {},")
     line(level + 1, "expanded = false,")
     line(level + 1, "onExpandedChange = {},")
@@ -2003,6 +2011,30 @@ private fun JsonObject.modifierColorExpression(): String =
 
 /** The two scoped modifiers that replace the `alignment` property, whichever axis they name. */
 private val SCOPED_ALIGNMENT_MODIFIERS = setOf("align", "alignHorizontal", "alignVertical")
+
+/**
+ * `contentAlignment = …` for a `layout/box`, or null for Compose's own `TopStart`.
+ *
+ * Omitted at the default, and for a spelling that does not resolve, so a design that never touched
+ * the property generates byte-identical Kotlin — the same rule the canvas applies when it draws it.
+ */
+private fun UiBuilderNode.boxContentAlignmentArgument(): String? =
+  string("contentAlignment")
+    .takeIf { it in BOX_CONTENT_ALIGNMENTS && it != "topStart" }
+    ?.let { "contentAlignment = ${alignmentExpression(it)}" }
+
+private val BOX_CONTENT_ALIGNMENTS =
+  setOf(
+    "topStart",
+    "topCenter",
+    "topEnd",
+    "centerStart",
+    "center",
+    "centerEnd",
+    "bottomStart",
+    "bottomCenter",
+    "bottomEnd",
+  )
 
 private fun UiBuilderNode.modifierTypes(): Set<String> =
   modifiers.mapNotNull { (it as? JsonObject)?.optionalString("type") }.toSet()
@@ -3341,7 +3373,7 @@ internal val COMPOSE_EMITTED_DP_PROPERTIES: Set<String> by lazy {
 private val HANDLED_FIELDS =
   mapOf(
     "asset/image" to HandledFields(setOf("assetKey", "contentDescription", "contentScale")),
-    "layout/box" to HandledFields(slots = setOf("children")),
+    "layout/box" to HandledFields(setOf("contentAlignment"), setOf("children")),
     "layout/column" to
       HandledFields(
         setOf(

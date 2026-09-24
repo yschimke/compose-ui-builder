@@ -32,15 +32,6 @@
           "id:pixel_fold",
           "id:pixel_7"
         ]
-      },
-      "stateVariables": {
-        "photoQuery": {
-          "type": "value",
-          "valueType": "string",
-          "initialValue": "",
-          "nullable": false,
-          "persistence": "preview"
-        }
       }
     },
     {
@@ -174,7 +165,13 @@
             },
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -289,7 +286,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -404,7 +407,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -519,7 +528,13 @@
             "type": "clip",
             "shape": "16"
           }
-        ]
+        ],
+        "properties": {
+          "contentAlignment": {
+            "type": "string",
+            "value": "center"
+          }
+        }
       }
     },
     {
@@ -643,8 +658,8 @@
         "componentId": "m3/search-input-field",
         "properties": {
           "value": {
-            "type": "state",
-            "variable": "photoQuery"
+            "type": "string",
+            "value": ""
           }
         },
         "modifiers": [
@@ -672,6 +687,14 @@
           "style": {
             "type": "enum",
             "value": "bodyLarge"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
           }
         }
       }
@@ -756,15 +779,15 @@
       },
       "node": {
         "id": "photos-chips",
-        "componentId": "layout/row",
+        "componentId": "layout/flow-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 8.0
           },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 8.0
           }
         },
         "modifiers": [
@@ -1144,7 +1167,7 @@
         "properties": {
           "columns": {
             "type": "adaptiveGrid",
-            "minimumCellWidthDp": 190.0
+            "minimumCellWidthDp": 90.0
           },
           "horizontalSpacingDp": {
             "type": "float",
@@ -1954,5 +1977,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "785934085e9bf527c4e46c7433373352ce9bd2ba8f972094c9d9999762f81b37"
+  "expectedDocumentHash": "4d45073a6ed94ca21a7cf09e6a8c4aa77623b393eb36c7023f71aabab2165baa"
 }

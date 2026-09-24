@@ -350,12 +350,23 @@ class GeneratedDocumentTest {
           .flatMap { it.jsonObject["componentIds"]?.jsonArray.orEmpty() }
           .map { it.jsonPrimitive.content }
       }
-      .toSet()
+      .toSet() - AWAITING_GENERATOR
   }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 
   private companion object {
+    /**
+     * Recorded components whose call site the generator cannot write yet, so a document holding one
+     * is expected to refuse rather than to generate.
+     *
+     * `SupportingPaneScaffold`'s value is `calculateThreePaneScaffoldValue` over the directive's
+     * `maxHorizontalPartitions` — a member read off an expression, which `ScreenGenerator` has no
+     * form for. The record is here so everything else in a pane-scaffold design is judged; the day
+     * the generator reads members, this set empties and the scaffold is held to the ordinary rule.
+     */
+    val AWAITING_GENERATOR = setOf("layout/supporting-pane-scaffold")
+
     /** The two files `embedComponentRecord` merges; see [recordedComponentIds]. */
     val RECORD_FILES =
       listOf("m3-catalog-components-v1.json", "compose-foundation-components-v1.json")

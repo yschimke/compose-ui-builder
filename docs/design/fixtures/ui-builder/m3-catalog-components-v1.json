@@ -110,6 +110,13 @@
           "typeFqn": "androidx.compose.ui.text.font.FontWeight"
         },
         {
+          "name": "textDecoration",
+          "type": "TextDecoration?",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.text.style.TextDecoration",
+          "nullable": true
+        },
+        {
           "name": "textAlign",
           "type": "TextAlign",
           "hasDefault": true,
@@ -1037,10 +1044,17 @@
           "typeFqn": "kotlin.Boolean"
         },
         {
+          "name": "shape",
+          "type": "Shape",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Shape"
+        },
+        {
           "name": "leadingIcon",
-          "type": "@Composable () -> Unit",
-          "hasDefault": false,
-          "composableSlot": true
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
         }
       ],
       "slots": [
@@ -1564,6 +1578,400 @@
         "call": "Slider(value = 0f, onValueChange = {})",
         "imports": [
           "androidx.compose.material3.Slider"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.SearchBarKt.SearchBar",
+      "componentIds": [
+        "m3/search-bar"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.SearchBarKt",
+        "callable": "androidx.compose.material3.SearchBar",
+        "name": "SearchBar",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "inputField",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        },
+        {
+          "name": "expanded",
+          "type": "Boolean",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "onExpandedChange",
+          "type": "(Boolean) -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function1"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "shape",
+          "type": "Shape",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Shape"
+        },
+        {
+          "name": "tonalElevation",
+          "type": "Dp",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.unit.Dp"
+        },
+        {
+          "name": "shadowElevation",
+          "type": "Dp",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.unit.Dp"
+        },
+        {
+          "name": "content",
+          "type": "@Composable ColumnScope.() -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "inputField",
+          "required": true
+        },
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.ColumnScope"
+        }
+      ],
+      "code": {
+        "call": "SearchBar(inputField = {}, expanded = false, onExpandedChange = {}) {}",
+        "imports": [
+          "androidx.compose.material3.SearchBar"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.ExperimentalMaterial3Api"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.ExperimentalMaterial3Api"
+      ]
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.SearchBarDefaults.InputField",
+      "componentIds": [
+        "m3/search-input-field"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.SearchBarDefaults",
+        "callable": "androidx.compose.material3.SearchBarDefaults.InputField",
+        "name": "InputField",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "query",
+          "type": "String",
+          "hasDefault": false,
+          "typeFqn": "kotlin.String"
+        },
+        {
+          "name": "onQueryChange",
+          "type": "(String) -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function1"
+        },
+        {
+          "name": "onSearch",
+          "type": "(String) -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function1"
+        },
+        {
+          "name": "expanded",
+          "type": "Boolean",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "onExpandedChange",
+          "type": "(Boolean) -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function1"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "placeholder",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "leadingIcon",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "trailingIcon",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "placeholder",
+          "required": false
+        },
+        {
+          "name": "leadingIcon",
+          "required": false
+        },
+        {
+          "name": "trailingIcon",
+          "required": false
+        }
+      ],
+      "code": {
+        "call": "SearchBarDefaults.InputField(query = \"\", onQueryChange = {}, onSearch = {}, expanded = false, onExpandedChange = {})",
+        "imports": [
+          "androidx.compose.material3.SearchBarDefaults"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.ExperimentalMaterial3Api"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.ExperimentalMaterial3Api"
+      ]
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.FloatingToolbarKt.HorizontalFloatingToolbar",
+      "componentIds": [
+        "m3/horizontal-floating-toolbar"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.FloatingToolbarKt",
+        "callable": "androidx.compose.material3.HorizontalFloatingToolbar",
+        "name": "HorizontalFloatingToolbar",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "expanded",
+          "type": "Boolean",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "colors",
+          "type": "FloatingToolbarColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.FloatingToolbarColors"
+        },
+        {
+          "name": "contentPadding",
+          "type": "PaddingValues",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.PaddingValues"
+        },
+        {
+          "name": "shape",
+          "type": "Shape",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Shape"
+        },
+        {
+          "name": "content",
+          "type": "@Composable RowScope.() -> Unit",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.foundation.layout.RowScope"
+        }
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "required": true,
+          "receiverScope": "androidx.compose.foundation.layout.RowScope"
+        }
+      ],
+      "code": {
+        "call": "HorizontalFloatingToolbar(expanded = true) {}",
+        "imports": [
+          "androidx.compose.material3.HorizontalFloatingToolbar"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
+      ]
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.TabRowKt.PrimaryTabRow",
+      "componentIds": [
+        "m3/primary-tab-row"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TabRowKt",
+        "callable": "androidx.compose.material3.PrimaryTabRow",
+        "name": "PrimaryTabRow",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "selectedTabIndex",
+          "type": "Int",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Int"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "containerColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "contentColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "tabs",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "tabs",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "PrimaryTabRow(selectedTabIndex = 0) {}",
+        "imports": [
+          "androidx.compose.material3.PrimaryTabRow"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.ExperimentalMaterial3Api"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.ExperimentalMaterial3Api"
+      ]
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.TabKt.Tab",
+      "componentIds": [
+        "m3/tab"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TabKt",
+        "callable": "androidx.compose.material3.Tab",
+        "name": "Tab",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "selected",
+          "type": "Boolean",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "text",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "icon",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "text",
+          "required": false
+        },
+        {
+          "name": "icon",
+          "required": false
+        }
+      ],
+      "code": {
+        "call": "Tab(selected = false, onClick = {})",
+        "imports": [
+          "androidx.compose.material3.Tab"
         ]
       },
       "signatureKnown": true

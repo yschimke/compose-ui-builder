@@ -1297,21 +1297,20 @@ class UiBuilderEditorStateTest {
   }
 
   @Test
-  fun `a property that must be a state read refuses to be unbound`() {
-    // `m3/search-input-field.value` is declared `object`: a literal is not valid there at all, so
-    // the binding is not something to undo. The refusal comes from the catalog, not from a rule
-    // this reducer invented.
+  fun `a search field's query unbinds to text`() {
+    // `m3/search-input-field.value` is declared ["object", "string"]: a state read, or the text the
+    // field shows. It used to be `object` alone, which made a field that only shows a query need a
+    // state variable nothing reads — and made the design unexportable while stateful authoring is
+    // off. Unbinding is now the way to a literal, and the catalog is still what decides that.
     val unbound =
       reducer.reduce(
         reducer.initial(document, "search-input"),
         UiBuilderEditorEvent.UnbindProperty("search-input", "value"),
       )
 
-    assertIs<CommandOutcome.Rejected>(unbound.lastOutcome)
-    assertEquals(
-      document.nodes.getValue("search-input").properties["value"],
-      unbound.document.nodes.getValue("search-input").properties["value"],
-    )
+    assertIs<CommandOutcome.Accepted>(unbound.lastOutcome)
+    val value = unbound.document.nodes.getValue("search-input").properties.getValue("value")
+    assertEquals("string", value.jsonObject["type"]?.jsonPrimitive?.content)
   }
 
   @Test
