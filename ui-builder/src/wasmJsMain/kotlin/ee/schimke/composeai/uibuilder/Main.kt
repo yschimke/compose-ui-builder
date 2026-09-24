@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
@@ -223,6 +224,9 @@ internal fun CatalogRuntimeCanvas(
     remember(document) { inspectionJson.encodeToString(UiBuilderDocument.serializer(), document) }
   var lastInspection by remember(surfaceId) { mutableStateOf("") }
   var coordinates by remember(surfaceId) { mutableStateOf<LayoutCoordinates?>(null) }
+  // Compose's window coordinates are canvas pixels and the host `div` is placed in CSS pixels. On
+  // a display whose `devicePixelRatio` is not 1 the two differ by exactly this density.
+  val pixelsPerCssPixel = LocalDensity.current.density
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
     while (lastInspection.isEmpty()) {
@@ -250,7 +254,12 @@ internal fun CatalogRuntimeCanvas(
   SideEffect {
     mountCatalogRuntimeSurface(surfaceId)
     coordinates?.let { nextCoordinates ->
-      positionCatalogRuntimeSurface(surfaceId, nextCoordinates, surface.positionVersion)
+      positionCatalogRuntimeSurface(
+        surfaceId,
+        nextCoordinates,
+        pixelsPerCssPixel,
+        surface.positionVersion,
+      )
     }
     updateCatalogRuntimeSurface(
       surfaceId = surfaceId,
@@ -274,16 +283,32 @@ internal fun CatalogRuntimeCanvas(
       }
       .onGloballyPositioned { nextCoordinates ->
         coordinates = nextCoordinates
-        positionCatalogRuntimeSurface(surfaceId, nextCoordinates, surface.positionVersion)
+        positionCatalogRuntimeSurface(
+          surfaceId,
+          nextCoordinates,
+          pixelsPerCssPixel,
+          surface.positionVersion,
+        )
       }
   )
 }
 
+/**
+ * Places the runtime's host `div` under the hole [CatalogRuntimeCanvas] punches in the canvas.
+ *
+ * The bounds Compose reports are canvas pixels, and the `div` is positioned in CSS pixels, so every
+ * edge is divided by [pixelsPerCssPixel] on the way out. Written through unconverted, the host
+ * landed at twice its offset and twice its size on a `devicePixelRatio` 2 display: the hole showed
+ * the page's white body and the design appeared shifted down and right of it, further the more the
+ * canvas was zoomed.
+ */
 private fun positionCatalogRuntimeSurface(
   surfaceId: String,
   coordinates: LayoutCoordinates,
+  pixelsPerCssPixel: Float,
   positionVersion: Int,
 ) {
+  val scale = pixelsPerCssPixel.takeIf { it > 0f } ?: 1f
   val visible = coordinates.boundsInWindow()
   val corners =
     listOf(
@@ -303,14 +328,14 @@ private fun positionCatalogRuntimeSurface(
     )
   positionCatalogRuntimeSurface(
     surfaceId,
-    full.left,
-    full.top,
-    full.width,
-    full.height,
-    visible.left,
-    visible.top,
-    visible.right,
-    visible.bottom,
+    full.left / scale,
+    full.top / scale,
+    full.width / scale,
+    full.height / scale,
+    visible.left / scale,
+    visible.top / scale,
+    visible.right / scale,
+    visible.bottom / scale,
     positionVersion,
   )
 }
