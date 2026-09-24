@@ -105,7 +105,7 @@ class VariantPaneTest {
 
     val panes = widget.wearWidgetPreviewPanes(WearWidgetScaffoldSize.Large)
 
-    assertEquals(listOf("Rectangular", "Samsung", "Pixel Watch"), panes.map { it.label })
+    assertEquals(listOf("Rectangular", "Pixel Watch", "Samsung"), panes.map { it.label })
     assertEquals(
       listOf(232f to 144f, 216f to 124f, 230f to 168f),
       panes.map { it.widthDp to it.heightDp },
