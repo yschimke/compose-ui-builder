@@ -59,8 +59,7 @@ class EmptyRemoteBodyImportsTest {
         .let { it.copy(nodes = it.nodes + ("inline" to inline)) }
     val result = InlineRemoteContentExporter.export(document, "inline")
     val source = assertIs<InlineRemoteContentExporter.Result.Emitted>(result, "$result").source
-    if ("RemoteBox(" in source) {
-      required.forEach { assertTrue(it in source, "missing `$it`:\n$source") }
-    }
+    assertTrue("RemoteBox(modifier = RemoteModifier.fillMaxSize())" in source, source)
+    required.forEach { assertTrue(it in source, "missing `$it`:\n$source") }
   }
 }
