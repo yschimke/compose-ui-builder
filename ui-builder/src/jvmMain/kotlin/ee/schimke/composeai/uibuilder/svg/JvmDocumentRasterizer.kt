@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.svg
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.graphics.asComposeCanvas
@@ -8,8 +9,19 @@ import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapterMappings
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.canvasAdapterIds
+import ee.schimke.composeai.uibuilder.canvasAdapterMappings
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.frameGeometry
+import ee.schimke.composeai.uibuilder.nativeOnlyComponentIds
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.skia.EncodedImageFormat
@@ -25,8 +37,14 @@ import org.jetbrains.skia.Surface
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 object JvmDocumentRasterizer {
-  /** The document's screen at its own size, density and font scale, PNG-encoded. */
-  fun renderPng(document: UiBuilderDocument): ByteArray {
+  /**
+   * The document's screen at its own size, density and font scale, PNG-encoded.
+   *
+   * [catalog] is what the editor's canvas is drawn with. A scene inherits no composition locals, so
+   * without it a Wear or Remote Compose design would rasterize as the default catalog — another
+   * platform, another frame — and the PNG would not be the design on screen.
+   */
+  fun renderPng(document: UiBuilderDocument, catalog: CapabilityCatalog? = null): ByteArray {
     val density = document.environmentNumber("density")
     val widthPx = (document.environmentNumber("widthDp") * density).roundToInt()
     val heightPx = (document.environmentNumber("heightDp") * density).roundToInt()
@@ -45,7 +63,23 @@ object JvmDocumentRasterizer {
         size = IntSize(widthPx, heightPx),
       )
     return try {
-      scene.setContent { UiBuilderSurface(document = document, editorOverlay = false) }
+      scene.setContent {
+        if (catalog == null) {
+          UiBuilderSurface(document = document, editorOverlay = false)
+        } else {
+          // The catalog-derived half of what the editor provides around its canvas.
+          CompositionLocalProvider(
+            LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
+            LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
+            LocalUiBuilderCanvasAdapters provides catalog.canvasAdapterIds,
+            LocalUiBuilderCanvasAdapterMappings provides catalog.canvasAdapterMappings,
+            LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
+            LocalUiBuilderCatalogPlatform provides catalog.platform.wireValue,
+          ) {
+            UiBuilderSurface(document = document, editorOverlay = false)
+          }
+        }
+      }
       recomposer.performFrame(document.fixedFrameNanos())
       scene.measureAndLayout()
       scene.draw(surface.canvas.asComposeCanvas())

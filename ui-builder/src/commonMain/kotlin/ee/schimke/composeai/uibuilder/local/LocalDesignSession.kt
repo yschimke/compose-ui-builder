@@ -174,11 +174,13 @@ private constructor(
    */
   private fun compacted(): LocalDesignRecordV1 =
     localDesignRecord(
-      document = state.document,
-      catalogSystemId = catalogSystemId,
-      sequence = sequence,
-      nowEpochMillis = clock(),
-    )
+        document = state.document,
+        catalogSystemId = catalogSystemId,
+        sequence = sequence,
+        nowEpochMillis = clock(),
+      )
+      // A compaction drops history, not identity: the design was created when it was created.
+      .copy(createdAtEpochMillis = record.createdAtEpochMillis)
 
   companion object {
     /**
