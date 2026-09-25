@@ -230,6 +230,20 @@ sealed interface UiBuilderEditorEvent {
   data class ToggleModifier(val nodeId: String, val type: String) : UiBuilderEditorEvent
 
   /**
+   * Size a node: each axis to hug its content, fill its parent, or a fixed number of dp, and a null
+   * axis left as it is.
+   *
+   * What a resize handle, a double-click on one and the size chips all send. Both axes in one event
+   * so a corner drag is one edit and one undo step. The reducer rewrites only the modifiers that
+   * decide each axis — see `resizedModifierChain` — so a padding or a clip survives it.
+   */
+  data class ResizeNode(
+    val nodeId: String,
+    val width: EditorSizing? = null,
+    val height: EditorSizing? = null,
+  ) : UiBuilderEditorEvent
+
+  /**
    * Give one number inside one modifier a new value.
    *
    * The whole chain is rewritten, because that is the only shape the wire has; everything else on

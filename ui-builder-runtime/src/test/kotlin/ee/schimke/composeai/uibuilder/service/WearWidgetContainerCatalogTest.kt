@@ -127,7 +127,11 @@ class WearWidgetContainerCatalogTest {
       setOf(
         "asset/image",
         "layout/box",
+        "layout/collapsible-column",
+        "layout/collapsible-row",
         "layout/column",
+        "layout/fit-box",
+        "layout/flow-row",
         "layout/for-each",
         "layout/row",
         "m3/text",
@@ -138,6 +142,32 @@ class WearWidgetContainerCatalogTest {
     )
     assertTrue("m3/surface" !in accepted)
     assertTrue("shape/linear-gradient" !in accepted)
+  }
+
+  /**
+   * The Remote-only layouts accept only what the Remote emitter can write inside them, and every
+   * Remote Material component can carry the Remote-only modifiers — a shared element on a button is
+   * the ordinary case, and a priority on one inside a collapsible row.
+   */
+  @Test
+  fun `remote-only layouts accept remote content and material components take the remote modifiers`() {
+    val byId = catalog.components.associateBy { it.componentId }
+    listOf(
+        "layout/fit-box",
+        "layout/flow-row",
+        "layout/collapsible-column",
+        "layout/collapsible-row",
+      )
+      .forEach { id ->
+        byId.getValue(id).slots.forEach { slot ->
+          assertEquals(listOf("RemoteAuthorable"), slot.acceptedTraits, "$id.${slot.name}")
+        }
+      }
+    RemoteMaterial3.components.forEach { component ->
+      val modifiers = byId.getValue(component.componentId).modifierCapabilities
+      assertTrue("sharedElement" in modifiers, component.componentId)
+      assertTrue("collapsiblePriority" in modifiers, component.componentId)
+    }
   }
 
   private companion object {

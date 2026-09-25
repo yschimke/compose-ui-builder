@@ -4,6 +4,8 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.preview.designFixtureDocument
+import ee.schimke.composeai.uibuilder.protocol.DecimalValueV1
+import ee.schimke.composeai.uibuilder.protocol.EnumValueV1
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,7 +41,7 @@ class GoogleAppDesignExportTest {
     )
 
   @Test
-  fun `every Google app design without a pane scaffold exports as Kotlin`() {
+  fun `every Google app design exports as Kotlin`() {
     val failures = EXPORTABLE.mapNotNull { designId ->
       when (val outcome = export(designId)) {
         is ScreenExportGate.Outcome.Emitted -> {
@@ -59,35 +61,53 @@ class GoogleAppDesignExportTest {
   }
 
   /**
-   * Gmail and Calendar refuse for one reason, and it is the generator's rather than theirs.
-   *
-   * `SupportingPaneScaffold` takes a directive and a value that are computed from the window, and
-   * the value is `calculateThreePaneScaffoldValue(directive.maxHorizontalPartitions)` — a member
-   * read off an expression, which `ScreenGenerator` has no form for yet: it imports every chain
-   * link, and a class member cannot be imported. Everything else about the two designs exports.
-   *
-   * Asserted rather than skipped, like `SeedTemplateCatalogReadinessTest`'s Jetcaster case: the day
-   * the generator learns member reads, this fails, and the two designs move up into [EXPORTABLE].
+   * `singlePane` and a pane spacing adjust the computed directive the way the canvas does: one
+   * `copy(…)` member call, whose result is both the `directive` argument and the receiver the value
+   * reads its partition count from. The generator holds each receiver in a typed local, so the
+   * adjusted directive is the thing the scaffold and its value agree on.
    */
   @Test
-  fun `the pane scaffold designs refuse only for the generator's member read`() {
-    PANE_SCAFFOLD_DESIGNS.forEach { designId ->
-      val reasons =
-        assertIs<ScreenExportGate.Outcome.Refused>(
-            export(designId),
-            "$designId exported: move it into EXPORTABLE and delete this test",
-          )
-          .reasons
-      assertTrue(
-        reasons.all { "maxHorizontalPartitions" in it },
-        "$designId refused for something other than the member read:\n" +
-          reasons.joinToString("\n") { "  - $it" },
+  fun `singlePane and a pane spacing export through the directive's copy`() {
+    val document = designFixtureDocument("google-gmail-tablet").toProtocolDocument()
+    val scaffold =
+      document.nodes.values.single { it.componentId == "layout/supporting-pane-scaffold" }
+    val adjusted =
+      document.copy(
+        nodes =
+          document.nodes +
+            (scaffold.id to
+              scaffold.copy(
+                properties =
+                  scaffold.properties +
+                    mapOf(
+                      "layoutMode" to EnumValueV1("singlePane"),
+                      "paneSpacingDp" to DecimalValueV1(12.0),
+                    )
+              ))
       )
-    }
+    val outcome = ScreenExportGate.export(adjusted, catalog.exportRecord(embeddedComponentRecord()))
+    val source =
+      assertIs<ScreenExportGate.Outcome.Emitted>(
+          outcome,
+          (outcome as? ScreenExportGate.Outcome.Refused)?.reasons?.joinToString("\n").orEmpty(),
+        )
+        .source
+    assertTrue(
+      ".copy(maxHorizontalPartitions = 1, horizontalPartitionSpacerSize = 12.dp)" in source,
+      source,
+    )
+    // One computation of the window's directive, however many places read it.
+    assertEquals(1, source.split("calculatePaneScaffoldDirective(").size - 1, source)
   }
 
   private companion object {
-    val EXPORTABLE = listOf("google-photos-tablet", "google-keep-tablet", "google-play-tablet")
-    val PANE_SCAFFOLD_DESIGNS = listOf("google-gmail-tablet", "google-calendar-tablet")
+    val EXPORTABLE =
+      listOf(
+        "google-gmail-tablet",
+        "google-calendar-tablet",
+        "google-photos-tablet",
+        "google-keep-tablet",
+        "google-play-tablet",
+      )
   }
 }

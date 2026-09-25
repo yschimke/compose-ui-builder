@@ -11,7 +11,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +54,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -61,8 +62,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -73,7 +74,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -82,6 +85,9 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
@@ -89,6 +95,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -118,6 +125,9 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The two questions the left panel answers: what can I add, and what is already here.
@@ -663,8 +673,40 @@ internal fun EditorRail(items: List<EditorRailItem>, modifier: Modifier = Modifi
   )
 }
 
+/** [EditorRail] in the editor, or the same switches published to a host's own chrome. */
+@Composable
+internal fun HostOrOwnRail(
+  hostChrome: UiBuilderHostChrome?,
+  group: String,
+  items: List<EditorRailItem>,
+  modifier: Modifier = Modifier,
+) {
+  if (hostChrome == null) {
+    EditorRail(items, modifier)
+  } else {
+    PublishHostChrome(
+      hostChrome,
+      group,
+      items.map {
+        HostChromeEntry(
+          UiBuilderHostAction(
+            id = it.id,
+            label = it.label,
+            group = group,
+            icon = it.icon.name,
+            checked = it.selected,
+            badge = it.badge,
+          ),
+          it.onClick,
+        )
+      },
+    )
+  }
+}
+
 /** One switch on an [EditorRail]. */
 internal data class EditorRailItem(
+  val id: String,
   val label: String,
   val icon: UiBuilderChromeIcon,
   val selected: Boolean,
@@ -816,33 +858,35 @@ private fun CatalogComponentTile(
   onTogglePinned: () -> Unit,
 ) {
   val unexportable = item.exportsToCompose == false
-  LocalUiBuilderChrome.current.ComponentBrowserTile(
-    model =
-      UiBuilderCatalogTileModel(
-        title = item.displayName,
-        supporting = refusal ?: item.componentId,
-        supportingIsError = refusal != null,
-        unexportable = unexportable,
-        pinned = pinned,
-        variantCount = item.variants.size,
-        variantsExpanded = expanded,
-        canAdd = canAdd,
-        addContentDescription =
-          if (refusal == null) "Add ${item.displayName}" else "Add ${item.displayName} — $refusal",
-        onAdd = onAdd,
-        onTogglePinned = onTogglePinned,
-        onToggleVariants = onToggleVariants,
+  CatalogDragTile(dragKey = item.componentId, onDrag = onDrag, onDrop = onDrop) {
+    LocalUiBuilderChrome.current.ComponentBrowserTile(
+      model =
+        UiBuilderCatalogTileModel(
+          title = item.displayName,
+          // The id is what the Layers panel and the export call it, which is not what somebody
+          // choosing a component is looking for; only a refusal earns the line under the name.
+          supporting = refusal,
+          supportingIsError = refusal != null,
+          unexportable = unexportable,
+          pinned = pinned,
+          variantCount = item.variants.size,
+          variantsExpanded = expanded,
+          canAdd = canAdd,
+          addContentDescription =
+            if (refusal == null) "Add ${item.displayName}"
+            else "Add ${item.displayName} — $refusal",
+          onAdd = onAdd,
+          onTogglePinned = onTogglePinned,
+          onToggleVariants = onToggleVariants,
+        )
+    ) {
+      CatalogThumbnail(
+        document = thumbnail,
+        componentId = item.componentId,
+        label = item.displayName,
+        size = DpSize(104.dp, 72.dp),
       )
-  ) {
-    CatalogThumbnail(
-      document = thumbnail,
-      componentId = item.componentId,
-      dragKey = item.componentId,
-      label = item.displayName,
-      size = DpSize(104.dp, 72.dp),
-      onDrag = onDrag,
-      onDrop = onDrop,
-    )
+    }
   }
 }
 
@@ -861,29 +905,69 @@ private fun CatalogVariantTile(
   val label = variant.label
   val qualified = "$label $componentName"
   val unexportable = variant.exportsToCompose == false
-  LocalUiBuilderChrome.current.ComponentBrowserTile(
-    model =
-      UiBuilderCatalogTileModel(
-        title = label,
-        supporting = null,
-        variant = true,
-        defaultVariant = variant.default,
-        unexportable = unexportable,
-        canAdd = canAdd,
-        addContentDescription =
-          if (refusal == null) "Add $qualified" else "Add $qualified — $refusal",
-        onAdd = onAdd,
-      )
+  CatalogDragTile(
+    dragKey = "${variant.componentId}#${variant.value}",
+    onDrag = onDrag,
+    onDrop = onDrop,
   ) {
-    CatalogThumbnail(
-      document = thumbnail,
-      componentId = variant.componentId,
-      dragKey = "${variant.componentId}#${variant.value}",
-      label = qualified,
-      size = DpSize(96.dp, 64.dp),
-      onDrag = onDrag,
-      onDrop = onDrop,
-    )
+    LocalUiBuilderChrome.current.ComponentBrowserTile(
+      model =
+        UiBuilderCatalogTileModel(
+          title = label,
+          supporting = null,
+          variant = true,
+          defaultVariant = variant.default,
+          unexportable = unexportable,
+          canAdd = canAdd,
+          addContentDescription =
+            if (refusal == null) "Add $qualified" else "Add $qualified — $refusal",
+          onAdd = onAdd,
+        )
+    ) {
+      CatalogThumbnail(
+        document = thumbnail,
+        componentId = variant.componentId,
+        label = qualified,
+        size = DpSize(96.dp, 64.dp),
+      )
+    }
+  }
+}
+
+/**
+ * A palette tile that is its own grip: press anywhere on it — the picture, the name, the space
+ * around them — and drag.
+ *
+ * It used to be only the picture, which on a tile that has stopped framing its picture is a target
+ * nobody can see the edge of. The tile's buttons still win their own presses: they are children,
+ * and a press that becomes a drag is taken from them only once it has moved past the slop.
+ *
+ * While the tile is being carried it stays where it was, faded: the thing in the air is the
+ * component, and the tile left behind says where it came from.
+ */
+@Composable
+private fun CatalogDragTile(
+  dragKey: String,
+  onDrag: (Offset?) -> Unit,
+  onDrop: (Offset) -> Unit,
+  content: @Composable () -> Unit,
+) {
+  var carried by remember(dragKey) { mutableStateOf(false) }
+  Box(
+    Modifier.catalogDrag(
+        dragKey = dragKey,
+        onDrag = { position ->
+          carried = position != null
+          onDrag(position)
+        },
+        onDrop = { position ->
+          carried = false
+          onDrop(position)
+        },
+      )
+      .graphicsLayer { alpha = if (carried) 0.35f else 1f }
+  ) {
+    content()
   }
 }
 
@@ -902,110 +986,144 @@ private fun CatalogVariantTile(
  * `graphicsLayer` rather than `scale`, so the shrink is a draw-time transform over a subtree that
  * laid itself out at a sensible size.
  *
- * It is also the **grip**: you drag the picture of the thing you are placing, which is both more
- * obvious than a dot-grid handle and how the row affords two things in the width of one.
+ * **Unframed.** It used to sit in a filled, rounded tile, which made every component a small
+ * picture *of* a component — a Button inside a grey card is a thumbnail, not a button. Now only the
+ * component's own box is drawn, clipped to it with a few dp of room for its shadow, straight onto
+ * the panel, in the panel's own light or dark: the list reads as the parts themselves laid out on a
+ * shelf. Never magnified past its own size for the same reason — a 24dp icon blown up to fill the
+ * cell stops looking like the icon it is.
+ *
+ * The drag is its tile's — see [CatalogDragTile] — so the picture only has to stop the component
+ * inside it from answering presses of its own.
  */
 @Composable
 private fun CatalogThumbnail(
   document: UiBuilderDocument?,
   componentId: String,
-  dragKey: String,
   label: String,
   size: DpSize,
-  onDrag: (Offset?) -> Unit,
-  onDrop: (Offset) -> Unit,
 ) {
   // A component the frame could not hold keeps the handle it always had. A picture that could not
   // be drawn is better absent than faked.
   if (document == null) {
-    CatalogDragHandle(dragKey, label, onDrag, onDrop)
+    CatalogDragHandle(label)
     return
   }
   val density = LocalDensity.current
   val renderer = LocalUiBuilderCanvasRenderer.current
+  // The panel's brightness, not the catalog's pinned dark: a component drawn in the opposite
+  // theme to the list it sits on is a dark block on a light panel — a frame by another name.
+  val panelDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+  val themed =
+    remember(document, panelDark) {
+      document.copy(
+        environment =
+          JsonObject(
+            document.environment + ("theme" to JsonPrimitive(if (panelDark) "dark" else "light"))
+          )
+      )
+    }
   val fallbackScale = size.width.value / PREVIEW_FRAME_WIDTH_DP
   var contentBounds by remember(document.id) { mutableStateOf<UiBuilderPixelBounds?>(null) }
   // Measured, and nothing in it has a size: an empty Box, Column or Row lays out at 0x0, so its
   // picture was a blank tile indistinguishable from one that failed to draw.
   var drewNothing by remember(document.id) { mutableStateOf(false) }
+  val tileSize = with(density) { Size(size.width.toPx(), size.height.toPx()) }
   val transform =
     thumbnailContentTransform(
       contentBounds = contentBounds,
-      tileSize = with(density) { Size(size.width.toPx(), size.height.toPx()) },
+      tileSize = tileSize,
       fallbackScale = fallbackScale,
       margin = with(density) { THUMBNAIL_MARGIN.toPx() },
+      maxScale = 1f,
     )
-  Box(
-    Modifier.size(size)
-      .clip(RoundedCornerShape(4.dp))
-      .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-    contentAlignment = Alignment.TopStart,
-  ) {
+  // The component's own box in the tile, plus room for a shadow: what is kept of the frame.
+  val shadowRoom = with(density) { THUMBNAIL_SHADOW_ROOM.toPx() }
+  val visible = contentBounds?.let { bounds ->
+    Rect(
+      left = bounds.x * transform.scale + transform.translation.x - shadowRoom,
+      top = bounds.y * transform.scale + transform.translation.y - shadowRoom,
+      right = bounds.right * transform.scale + transform.translation.x + shadowRoom,
+      bottom = bounds.bottom * transform.scale + transform.translation.y + shadowRoom,
+    )
+  }
+  Box(Modifier.size(size), contentAlignment = Alignment.TopStart) {
     Box(
-      // Pinned to the tile's top start before it is sized. A `requiredSize` larger than its
-      // constraints is centred by default, which put the frame's origin at (-36, -28) in a 104x72
-      // tile while the transform below assumes (0, 0): every thumbnail drew shifted up and left, so
-      // a Button read as "utton" with its top cut off.
-      Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
-        .requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
-        .graphicsLayer {
-          // Top-start is intentional. The inspection snapshot below is in post-transform root
-          // pixels; a fixed origin lets it recover the component's source-frame bounds without
-          // guessing how Compose centred a 176dp child in a 44dp tile.
-          transformOrigin = TransformOrigin(0f, 0f)
-          scaleX = transform.scale
-          scaleY = transform.scale
-          translationX = transform.translation.x
-          translationY = transform.translation.y
+      Modifier.matchParentSize().drawWithContent {
+        // Nothing until the component has been measured once: the frame around it is not the
+        // component, and one frame of it is the framed tile this replaced.
+        val keep = visible ?: return@drawWithContent
+        clipRect(keep.left, keep.top, keep.right, keep.bottom) {
+          this@drawWithContent.drawContent()
         }
-        // A picture of a Switch is not a Switch. Without this the row would publish every semantics
-        // node inside the thumbnail — so a screen reader would read a palette row as a switch it
-        // could toggle, and `getByRole("button", …)` would match forty pictures of buttons that are
-        // not on the canvas. The row's own name is set on the overlay below.
-        .clearAndSetSemantics {}
-    ) {
-      val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
-        val next = thumbnailContentBounds(snapshot, transform.scale)
-        // Measured under the transform these bounds produce, so each pass reads them back a
-        // fraction of a pixel off and would re-transform forever. Only a real change moves it.
-        if (!sameThumbnailBounds(next, contentBounds)) contentBounds = next
-        val empty =
-          next == null &&
-            snapshot.nodes.any { it.nodeId == PREVIEW_FRAME_CELL_ID && it.bounds != null }
-        if (empty != drewNothing) drewNothing = empty
       }
-      if (renderer == null) {
-        UiBuilderSurface(
-          document = document,
-          editorOverlay = false,
-          onInspectionSnapshot = inspection,
-        )
-      } else {
-        renderer(
-          document,
-          UiBuilderCanvasSurface(
-            PREVIEW_FRAME_WIDTH_DP.toFloat(),
-            PREVIEW_FRAME_HEIGHT_DP.toFloat(),
-            document.renderDensity(density).density,
-            UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
-          ),
-          null,
-          false,
-          {},
-          { snapshots -> inspection(snapshots.editor) },
-        )
+    ) {
+      Box(
+        // Pinned to the tile's top start before it is sized. A `requiredSize` larger than its
+        // constraints is centred by default, which put the frame's origin at (-36, -28) in a
+        // 104x72 tile while the transform below assumes (0, 0): every thumbnail drew shifted up
+        // and left, so a Button read as "utton" with its top cut off.
+        Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
+          .requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
+          .graphicsLayer {
+            // Top-start is intentional. The inspection snapshot below is in post-transform root
+            // pixels; a fixed origin lets it recover the component's source-frame bounds without
+            // guessing how Compose centred a 176dp child in a 44dp tile.
+            transformOrigin = TransformOrigin(0f, 0f)
+            scaleX = transform.scale
+            scaleY = transform.scale
+            translationX = transform.translation.x
+            translationY = transform.translation.y
+          }
+          // A picture of a Switch is not a Switch. Without this the row would publish every
+          // semantics node inside the thumbnail — so a screen reader would read a palette row as a
+          // switch it could toggle, and `getByRole("button", …)` would match forty pictures of
+          // buttons that are not on the canvas. The row's own name is set on the overlay below.
+          .clearAndSetSemantics {}
+      ) {
+        val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
+          val next = thumbnailContentBounds(snapshot, transform.scale)
+          // Measured under the transform these bounds produce, so each pass reads them back a
+          // fraction of a pixel off and would re-transform forever. Only a real change moves it.
+          if (!sameThumbnailBounds(next, contentBounds)) contentBounds = next
+          val empty =
+            next == null &&
+              snapshot.nodes.any { it.nodeId == PREVIEW_FRAME_CELL_ID && it.bounds != null }
+          if (empty != drewNothing) drewNothing = empty
+        }
+        if (renderer == null) {
+          UiBuilderSurface(
+            document = themed,
+            editorOverlay = false,
+            onInspectionSnapshot = inspection,
+          )
+        } else {
+          renderer(
+            themed,
+            UiBuilderCanvasSurface(
+              PREVIEW_FRAME_WIDTH_DP.toFloat(),
+              PREVIEW_FRAME_HEIGHT_DP.toFloat(),
+              themed.renderDensity(density).density,
+              UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
+            ),
+            null,
+            false,
+            {},
+            { snapshots -> inspection(snapshots.editor) },
+          )
+        }
       }
     }
     if (drewNothing) {
       EmptyContainerSchematic(emptyContainerSchematic(componentId), Modifier.matchParentSize())
     }
-    // The gesture sits ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is
-    // a real Switch and would eat the press that was meant to start a drag; a later sibling wins
-    // the hit test, so the whole tile drags however interactive the thing inside it happens to be.
+    // ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is a real Switch
+    // and would take the press meant for the tile; a later sibling wins the hit test, so this
+    // sees every press first, consumes none of them, and the tile's drag gets them all.
     Box(
-      Modifier.matchParentSize().catalogDrag(dragKey, onDrag, onDrop).semantics {
-        contentDescription = "Drag $label"
-      }
+      Modifier.matchParentSize()
+        .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
+        .semantics { contentDescription = "Drag $label" }
     )
   }
 }
@@ -1021,6 +1139,12 @@ internal fun sameThumbnailBounds(a: UiBuilderPixelBounds?, b: UiBuilderPixelBoun
 
 /** Space a thumbnail keeps between its component and the tile's edge. */
 private val THUMBNAIL_MARGIN = 6.dp
+
+/**
+ * How far past its own box a thumbnail's component is still drawn: enough for an elevated button's
+ * shadow to read as a shadow, not enough for the frame around it to read as a tile.
+ */
+private val THUMBNAIL_SHADOW_ROOM = 4.dp
 
 /** How an empty container's thumbnail sketches the children it would arrange. */
 internal enum class ContainerSchematic {
@@ -1121,6 +1245,8 @@ internal fun thumbnailContentTransform(
    * a thing sitting in it.
    */
   margin: Float = 0f,
+  /** The largest magnification allowed — see [CatalogThumbnail] for why the palette uses 1. */
+  maxScale: Float = 2f,
 ): ThumbnailContentTransform {
   if (
     contentBounds == null ||
@@ -1135,7 +1261,8 @@ internal fun thumbnailContentTransform(
   // component and starts reading as a clipped pixel crop.
   val usableWidth = (tileSize.width - 2 * margin).coerceAtLeast(1f)
   val usableHeight = (tileSize.height - 2 * margin).coerceAtLeast(1f)
-  val scale = minOf(usableWidth / contentBounds.width, usableHeight / contentBounds.height, 2f)
+  val scale =
+    minOf(usableWidth / contentBounds.width, usableHeight / contentBounds.height, maxScale)
   val horizontalInset = (tileSize.width - contentBounds.width * scale) / 2f
   val verticalInset = (tileSize.height - contentBounds.height * scale) / 2f
   return ThumbnailContentTransform(
@@ -1176,19 +1303,15 @@ internal fun thumbnailContentBounds(
 }
 
 /**
- * The grip a palette row is dragged onto the canvas by, where it has no picture to drag instead.
+ * What a palette tile shows where it has no picture: a grip, so the tile still says it can be
+ * dragged. The gesture is the tile's, like every other tile's.
  */
 @Composable
-private fun CatalogDragHandle(
-  dragKey: String,
-  label: String,
-  onDrag: (Offset?) -> Unit,
-  onDrop: (Offset) -> Unit,
-) {
+private fun CatalogDragHandle(label: String) {
   Icon(
     Icons.Filled.DragIndicator,
     contentDescription = "Drag $label",
-    modifier = Modifier.size(18.dp).catalogDrag(dragKey, onDrag, onDrop),
+    modifier = Modifier.size(18.dp),
     tint = MaterialTheme.colorScheme.onSurfaceVariant,
   )
 }
@@ -1197,49 +1320,87 @@ private fun CatalogDragHandle(
  * The drag a palette row starts: report where the pointer is, and on release either drop there or
  * withdraw.
  *
- * A modifier rather than a composable, because two different things carry this gesture — the
- * thumbnail and the fallback handle — and two copies of nine lines of drag bookkeeping is two
- * chances for a drop threshold to drift apart.
+ * A modifier rather than a composable, because two different things carry this gesture — a catalog
+ * tile and a Remote Compose row — and two copies of the drag bookkeeping is two chances for a drop
+ * threshold to drift apart.
  *
- * The origin is captured from layout rather than taken from the drag's own coordinates: the events
- * arrive local to this element, and the canvas needs them in the root's space to hit-test a slot.
+ * **A mouse and a finger are asked different questions.** A mouse press that moves is a drag in any
+ * direction, because a wheel scrolls the list. A finger that moves *up or down* is scrolling the
+ * list — the palette is a grid of tiles edge to edge, and a grip that took every vertical swipe
+ * left nowhere to scroll it from. So a touch picks the component up when it moves *sideways*,
+ * towards the canvas, or when it is held still for a long press and then moved anywhere, which is
+ * how a phone lets you pick up an icon on a home screen; a vertical swipe is left to the list.
+ *
+ * The origin is the element's *unclipped* position in the root, not its clipped bounds: a tile half
+ * scrolled out of the top of the grid has a visible box whose top is the grid's, and adding a
+ * pointer offset to that put every drop from a half-visible tile that far below the pointer.
  */
 private fun Modifier.catalogDrag(
   dragKey: String,
   onDrag: (Offset?) -> Unit,
   onDrop: (Offset) -> Unit,
 ): Modifier = composed {
-  var dragDistance by remember { mutableFloatStateOf(0f) }
   var dragOrigin by remember { mutableStateOf(Offset.Zero) }
-  var lastPosition by remember { mutableStateOf(Offset.Zero) }
   val currentOnDrag = rememberUpdatedState(onDrag)
   val currentOnDrop = rememberUpdatedState(onDrop)
-  Modifier.onGloballyPositioned { dragOrigin = it.boundsInRoot().topLeft }
+  Modifier.onGloballyPositioned { dragOrigin = it.positionInRoot() }
     .pointerInput(dragKey) {
-      detectDragGestures(
-        onDragStart = {
-          dragDistance = 0f
-          lastPosition = dragOrigin + it
-          currentOnDrag.value(lastPosition)
-        },
-        onDragEnd = {
-          // Below the threshold it was a press, not a drag, so the insert is withdrawn rather
-          // than landed wherever the pointer happened to rest.
-          if (dragDistance > 8f) currentOnDrop.value(lastPosition) else currentOnDrag.value(null)
-          dragDistance = 0f
-        },
-        onDragCancel = {
-          dragDistance = 0f
-          currentOnDrag.value(null)
-        },
-        onDrag = { change, amount ->
-          change.consume()
-          dragDistance += amount.getDistance()
-          lastPosition = dragOrigin + change.position
-          currentOnDrag.value(lastPosition)
-        },
-      )
+      awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val start = awaitCatalogPickUp(down, viewConfiguration.longPressTimeoutMillis)
+        if (start == null) return@awaitEachGesture
+        var lastPosition = dragOrigin + start.position
+        var travelled = 0f
+        currentOnDrag.value(lastPosition)
+        val landed =
+          try {
+            drag(start.id) { change ->
+              change.consume()
+              travelled += (change.position - change.previousPosition).getDistance()
+              lastPosition = dragOrigin + change.position
+              currentOnDrag.value(lastPosition)
+            }
+          } catch (cancelled: CancellationException) {
+            currentOnDrag.value(null)
+            throw cancelled
+          }
+        // Below the threshold it was a press, not a drag, so the insert is withdrawn rather than
+        // landed wherever the pointer happened to rest — on a phone that is on top of the canvas.
+        if (landed && travelled > CATALOG_DROP_THRESHOLD_PX) currentOnDrop.value(lastPosition)
+        else currentOnDrag.value(null)
+      }
     }
+}
+
+/** How far a carried component has to travel before its release is a drop. */
+private const val CATALOG_DROP_THRESHOLD_PX = 8f
+
+/**
+ * Wait for [down] to become a pick-up, per [catalogDrag]'s rules, and return the change it started
+ * on — or null when the press became something else: a tap, a scroll, or nothing.
+ */
+private suspend fun AwaitPointerEventScope.awaitCatalogPickUp(
+  down: PointerInputChange,
+  longPressMillis: Long,
+): PointerInputChange? {
+  if (down.type != PointerType.Touch) {
+    // A mouse or a stylus: the first move past the slop, any direction.
+    return awaitTouchSlopOrCancellation(down.id) { change, _ -> change.consume() }
+  }
+  var sideways: PointerInputChange? = null
+  val held =
+    withTimeoutOrNull(longPressMillis) {
+      // Sideways is accepted; up or down is left unconsumed, so the list takes it and this ends.
+      sideways =
+        awaitTouchSlopOrCancellation(down.id) { change, overSlop ->
+          if (abs(overSlop.x) >= abs(overSlop.y)) change.consume()
+        }
+      false
+    } ?: true
+  if (!held) return sideways
+  // Held without moving: picked up where the finger is, and carried from the next move on.
+  val current = currentEvent.changes.firstOrNull { it.id == down.id } ?: down
+  return if (current.pressed) current else null
 }
 
 /**
@@ -1362,7 +1523,9 @@ private fun SlotRow(
       .height(26.dp)
       .then(
         if (accent != null) Modifier.background(accent.copy(alpha = 0.22f))
-        else if (isCatalogTarget) Modifier.background(Color(0xff26304a)) else Modifier
+        else if (isCatalogTarget)
+          Modifier.background(LocalUiBuilderEditorPalette.current.dropTarget)
+        else Modifier
       )
       .padding(start = (8 + row.indent * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
@@ -1422,8 +1585,8 @@ private fun LayerRow(
   val density = LocalDensity.current
   val background =
     when {
-      dragged -> Color(0xff3b4468)
-      selected -> Color(0xff30385a)
+      dragged -> LocalUiBuilderEditorPalette.current.layerDragged
+      selected -> LocalUiBuilderEditorPalette.current.layerSelected
       else -> Color.Transparent
     }
   val marker = landing?.markerColor()

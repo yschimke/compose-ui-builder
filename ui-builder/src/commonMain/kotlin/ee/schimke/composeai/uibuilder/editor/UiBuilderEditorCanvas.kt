@@ -193,6 +193,13 @@ internal fun PinnedDesignCanvas(
    * follow. Positioned here, because only the canvas knows where the selected node is drawn.
    */
   hoverEditor: (@Composable () -> Unit)?,
+  /**
+   * How the selected node is sized, for its resize handles, or null where it gets none — see
+   * [UiBuilderEditorReducer.sizing].
+   */
+  sizing: EditorNodeSizing? = null,
+  /** A handle released or double-clicked: the node and the new sizing of each axis it touched. */
+  onResize: (String, EditorSizing?, EditorSizing?) -> Unit = { _, _, _ -> },
   /** The scale the design is drawn at, or null to frame it in whatever room the workspace has. */
   zoom: Float?,
   onZoomChanged: (Float?) -> Unit,
@@ -405,10 +412,38 @@ internal fun PinnedDesignCanvas(
                         frameOrigin.y + position.y * drawScale,
                       )
                     },
-                    // The design already reports every node's box; the smallest containing one is
-                    // the deepest node under the point — the same answer the tap and the context
-                    // menu give, so a drag picks up exactly what a click would have selected.
+                    // Inside the selection, the selection: having chosen the card is how somebody
+                    // says "move the card", and picking up the text under the pointer instead made
+                    // a container impossible to drag by anything but its padding.
+                    insideSelection = { point ->
+                      selectedNodeId != null &&
+                        inspection
+                          ?.nodes
+                          ?.firstOrNull { it.nodeId == selectedNodeId }
+                          ?.bounds
+                          ?.let {
+                            point.x >= it.x &&
+                              point.x <= it.right &&
+                              point.y >= it.y &&
+                              point.y <= it.bottom
+                          } == true
+                    },
+                    // Otherwise the design already reports every node's box; the smallest
+                    // containing one is the deepest node under the point — the same answer the tap
+                    // and the context menu give, so a drag picks up what a click would select.
                     hitTest = { point ->
+                      val selected = selectedNodeId?.let { id ->
+                        inspection?.nodes?.firstOrNull { it.nodeId == id }?.bounds
+                      }
+                      if (
+                        selected != null &&
+                          point.x >= selected.x &&
+                          point.x <= selected.right &&
+                          point.y >= selected.y &&
+                          point.y <= selected.bottom
+                      ) {
+                        return@canvasNodeDrag selectedNodeId
+                      }
                       inspection
                         ?.nodes
                         .orEmpty()
@@ -611,11 +646,18 @@ internal fun PinnedDesignCanvas(
     val selectedBounds = selectedNodeId?.let { id ->
       inspection?.nodes?.firstOrNull { it.nodeId == id }?.bounds
     }
+    // A handle in hand hides the hover editor for the reason a drag does: it answers the previous
+    // question while the pointer is asking the next one.
+    var resizing by remember(document.id) { mutableStateOf(false) }
     // Not while a drag is in the air: the tight editor follows the *selection*, and a drag is a
     // question about the target — a panel of the selected node's fields floating over the canvas
     // is answering the previous question while the pointer asks the next one.
     if (
-      hoverEditor != null && showSelectionOverlay && selectedBounds != null && dragPosition == null
+      hoverEditor != null &&
+        showSelectionOverlay &&
+        selectedBounds != null &&
+        dragPosition == null &&
+        !resizing
     ) {
       val left = (selectedBounds.x - workspaceBounds.left).coerceAtLeast(0f)
       val below = selectedBounds.y + selectedBounds.height - workspaceBounds.top + 8f
@@ -636,6 +678,30 @@ internal fun PinnedDesignCanvas(
       ) {
         hoverEditor()
       }
+    }
+    if (
+      sizing != null &&
+        sizing.nodeId == selectedNodeId &&
+        showSelectionOverlay &&
+        selectedBounds != null &&
+        dragPosition == null
+    ) {
+      val parentBounds =
+        document.location(sizing.nodeId)?.nodeId?.let { parentId ->
+          inspection?.nodes?.firstOrNull { it.nodeId == parentId }?.bounds
+        }
+      ResizeHandles(
+        sizing = sizing,
+        bounds = selectedBounds,
+        parentBounds = parentBounds,
+        origin = workspaceBounds.topLeft,
+        // A design dp is `scale` workspace dp — see [drawScale] — and the root counts in the
+        // workspace's pixels.
+        pxPerDp = density.density * scale,
+        onResizing = { resizing = it },
+        onResize = { width, height -> onResize(sizing.nodeId, width, height) },
+        modifier = Modifier.matchParentSize().clipToBounds(),
+      )
     }
     if (dragPosition != null) {
       // The ghost follows the pointer wherever it goes. Vanishing over an illegal region would

@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -61,12 +62,14 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
@@ -196,6 +199,9 @@ internal enum class MobileEditorPanel {
   Properties,
   Code,
 }
+
+/** See `UiBuilderEditor`'s `selectionRequest`. [serial] distinguishes two requests for one node. */
+data class EditorSelectionRequest(val nodeId: String, val serial: Int)
 
 data class UiBuilderNewDesignTemplate(
   val id: String,
@@ -652,6 +658,22 @@ fun UiBuilderEditor(
     ) -> Unit)? =
     null,
   onHelp: (() -> Unit)? = null,
+  /**
+   * A selection made outside the editor — a host's own layer tree beside this canvas — to apply as
+   * though the layer had been picked here. A new [EditorSelectionRequest] is a new request, so
+   * choosing the same layer twice selects it twice. Null everywhere the editor owns every way in.
+   */
+  selectionRequest: EditorSelectionRequest? = null,
+  /**
+   * Draws the editor's toolbar and rails in the host's own chrome instead of in the page. See
+   * [UiBuilderHostChrome]. Null — everywhere but an IDE webview — keeps the editor's own.
+   */
+  hostChrome: UiBuilderHostChrome? = null,
+  /**
+   * The colours of the editor's own UI. [UiBuilderEditorTheme.Default] everywhere but a host that
+   * themes it to match its own panels.
+   */
+  theme: UiBuilderEditorTheme = UiBuilderEditorTheme.Default,
   /**
    * Copies an OpenCode-ready prompt for working on this live design through MCP.
    *
@@ -1133,6 +1155,11 @@ fun UiBuilderEditor(
     )
   }
   LaunchedEffect(state) { onStateChanged(state) }
+  LaunchedEffect(selectionRequest) {
+    val request = selectionRequest ?: return@LaunchedEffect
+    // A layer the document no longer has — the host's tree lagging an edit — selects nothing.
+    if (request.nodeId in state.document.nodes) selectNodeForEditing(request.nodeId)
+  }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
   LaunchedEffect(canvasDropHovered, draggedPlan, draggingOverBesideGround, dropTargetLabel) {
     onDropTargetChanged(canvasDropHovered || draggingOverBesideGround, dropTargetLabel)
@@ -1566,6 +1593,12 @@ fun UiBuilderEditor(
                     field.error != null
                 },
               modifierFields = reducer.modifierFields(state),
+              sizing = reducer.sizing(state),
+              onResize = { width, height ->
+                state.selectedNodeId?.let {
+                  dispatch(UiBuilderEditorEvent.ResizeNode(it, width, height))
+                }
+              },
               focusTarget = hoverFocusTarget,
               onFocusHandled = { hoverFocusTarget = null },
               onCommitProperty = { name, value ->
@@ -1590,6 +1623,11 @@ fun UiBuilderEditor(
             )
           }
         },
+      sizing = reducer.sizing(state),
+      onResize = { nodeId, width, height ->
+        focusEditor()
+        dispatch(UiBuilderEditorEvent.ResizeNode(nodeId, width, height))
+      },
       zoom = canvasZoom,
       onZoomChanged = {
         focusEditor()
@@ -2028,9 +2066,11 @@ fun UiBuilderEditor(
       },
     )
 
-    MaterialTheme(colorScheme = EditorColors) {
+    EditorTheme(theme) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
-        val compact = maxWidth < 840.dp
+        // A host drawing the toolbar and rails has taken the width they cost, and its panes are
+        // resized by the person rather than by a phone, so it keeps the desktop layout.
+        val compact = maxWidth < 840.dp && hostChrome == null
         // A host may put rendered output in its own view (for example IntelliJ's Preview tool
         // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
         // stay with the visual editor instead of being duplicated around a read-only render.
@@ -2049,7 +2089,27 @@ fun UiBuilderEditor(
               )
             }
         ) {
-          if (!dedicatedOutput) {
+          if (!dedicatedOutput && hostChrome != null) {
+            HostChromeToolbar(
+              chrome = hostChrome,
+              state = state,
+              canUndo = reducer.canUndo(state),
+              canRedo = reducer.canRedo(state),
+              onTidy = {
+                focusEditor()
+                val edits = reducer.tidyPlan(state).changedValues
+                if (edits == 0) {
+                  say("Every dp value is already on the 4dp grid")
+                } else {
+                  dispatch(UiBuilderEditorEvent.Tidy)
+                  say("Tidied $edits values to the 4dp grid")
+                }
+              },
+              onComponentPacks = onComponentPacks,
+              onHelp = onHelp,
+              dispatch = ::dispatch,
+            )
+          } else if (!dedicatedOutput) {
             if (compact) {
               MobileEditorToolbar(
                 state = state,
@@ -2146,9 +2206,12 @@ fun UiBuilderEditor(
                   else -> null
                 }
               Row(Modifier.fillMaxSize()) {
-                EditorRail(
+                HostOrOwnRail(
+                  hostChrome,
+                  "navigator",
                   NavigatorTab.entries.map { entry ->
                     EditorRailItem(
+                      id = "navigator.${entry.name.lowercase()}",
                       label = entry.label,
                       icon = entry.icon(),
                       selected = navigatorTab == entry,
@@ -2157,7 +2220,7 @@ fun UiBuilderEditor(
                         navigatorTab = if (navigatorTab == entry) null else entry
                       },
                     )
-                  }
+                  },
                 )
                 navigatorTab?.let { open ->
                   navigator(Modifier.width(NAVIGATOR_WIDTH).fillMaxHeight(), open, false) {
@@ -2222,7 +2285,7 @@ fun UiBuilderEditor(
                         canvas(
                           Modifier.weight(1f)
                             .fillMaxHeight()
-                            .background(Color(0xff0d0e11))
+                            .background(LocalUiBuilderEditorPalette.current.workspace)
                             .padding(24.dp),
                           Alignment.Center,
                         )
@@ -2293,9 +2356,12 @@ fun UiBuilderEditor(
                       EditorPane.Preview in state.panes,
                     )
                 }
-                EditorRail(
+                HostOrOwnRail(
+                  hostChrome,
+                  "dock",
                   EditorDock.entries.map { entry ->
                     EditorRailItem(
+                      id = "dock.${entry.name.lowercase()}",
                       label = entry.label,
                       icon = entry.icon(),
                       selected = dock == entry,
@@ -2331,13 +2397,13 @@ fun UiBuilderEditor(
                         }
                       },
                     )
-                  }
+                  },
                 )
               }
             } else {
               canvas(
                 Modifier.fillMaxSize()
-                  .background(Color(0xff0d0e11))
+                  .background(LocalUiBuilderEditorPalette.current.workspace)
                   .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 64.dp),
                 Alignment.Center,
               )
@@ -2348,11 +2414,17 @@ fun UiBuilderEditor(
                   else -> null
                 }
               mobileNavigatorTab?.let { open ->
+                // Carrying a component, the sheet steps aside: it covers most of the canvas the
+                // component is being carried to. Faded rather than removed, because the drag lives
+                // in the tile that started it, and taking the tile out of the composition would
+                // cancel the gesture in the finger's hand.
+                val carrying = draggedComponentId != null
                 navigator(
                   Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .fillMaxHeight(0.72f)
-                    .padding(bottom = 56.dp),
+                    .padding(bottom = 56.dp)
+                    .graphicsLayer { alpha = if (carrying) 0f else 1f },
                   open,
                   true,
                 ) {
@@ -2452,6 +2524,12 @@ internal fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Mo
  *
  * [hitTest] is asked about the **press** position, not the current one: the node picked up is the
  * node that was under the finger, however far the design has scrolled since.
+ *
+ * **Except with a mouse, over the selection.** Selecting is already the deliberate act the hold
+ * stands in for, and a mouse has a wheel to scroll with, so a mouse press inside the selected node
+ * is carried as soon as it moves past the slop — the way every desktop design tool moves the thing
+ * you just clicked. A finger still holds first: on a touch screen a swipe over the selection is as
+ * likely to be a scroll as anything else.
  */
 internal fun Modifier.canvasNodeDrag(
   key: Any?,
@@ -2460,6 +2538,8 @@ internal fun Modifier.canvasNodeDrag(
   rootPoint: (Offset) -> Offset,
   /** The deepest node containing a root-space point, or null when the point is over nothing. */
   hitTest: (Offset) -> String?,
+  /** Whether a root-space point is inside the current selection, where a mouse needs no hold. */
+  insideSelection: (Offset) -> Boolean = { false },
   onStarted: (String, Offset) -> Unit,
   onDragged: (Offset) -> Unit,
   onEnded: (Offset?) -> Unit,
@@ -2469,37 +2549,47 @@ internal fun Modifier.canvasNodeDrag(
   } else {
     val currentRootPoint = rememberUpdatedState(rootPoint)
     val currentHitTest = rememberUpdatedState(hitTest)
+    val currentInsideSelection = rememberUpdatedState(insideSelection)
     val currentOnStarted = rememberUpdatedState(onStarted)
     val currentOnDragged = rememberUpdatedState(onDragged)
     val currentOnEnded = rememberUpdatedState(onEnded)
     Modifier.pointerInput(key) {
       awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
+        val immediate =
+          down.type != PointerType.Touch &&
+            currentInsideSelection.value(currentRootPoint.value(down.position))
         // The hold: wait out the long-press timeout with the pointer still and unconsumed. A press
         // that is released, taken by somebody else, or moved past the slop before the timeout ends
         // the gesture here, and whatever is underneath — a tap, the workspace's scroll — gets it.
         val armed =
-          withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-            var outcome: Boolean? = null
-            while (outcome == null) {
-              val event = awaitPointerEvent()
-              // A right-drag belongs to the context menu, which took the press in the initial pass.
-              if (event.buttons.isSecondaryPressed) {
-                outcome = false
-                break
+          if (immediate) {
+            // No wait: the press is armed the moment it moves, and a release before that is the
+            // selection tap underneath.
+            awaitTouchSlopOrCancellation(down.id) { change, _ -> change.consume() } != null
+          } else
+            withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+              var outcome: Boolean? = null
+              while (outcome == null) {
+                val event = awaitPointerEvent()
+                // A right-drag belongs to the context menu, which took the press in the initial
+                // pass.
+                if (event.buttons.isSecondaryPressed) {
+                  outcome = false
+                  break
+                }
+                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                if (!change.pressed || change.isConsumed) {
+                  outcome = false
+                  break
+                }
+                if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                  outcome = false
+                  break
+                }
               }
-              val change = event.changes.firstOrNull { it.id == down.id } ?: break
-              if (!change.pressed || change.isConsumed) {
-                outcome = false
-                break
-              }
-              if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
-                outcome = false
-                break
-              }
-            }
-            outcome ?: false
-          } ?: true
+              outcome ?: false
+            } ?: true
         if (!armed) return@awaitEachGesture
         val node =
           currentHitTest.value(currentRootPoint.value(down.position)) ?: return@awaitEachGesture
@@ -2600,6 +2690,9 @@ private fun SelectionHoverEditor(
   label: String,
   fields: List<EditorPropertyField>,
   modifierFields: List<EditorModifierField>,
+  /** How the node is sized, for the Hug / Fill chips — or null where it cannot be resized. */
+  sizing: EditorNodeSizing? = null,
+  onResize: (EditorSizing?, EditorSizing?) -> Unit = { _, _ -> },
   /**
    * `property:<name>` or `modifier:<type>.<field>`, for the control a just-run action should land
    * in.
@@ -2626,6 +2719,21 @@ private fun SelectionHoverEditor(
         overflow = TextOverflow.Ellipsis,
       )
       Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
+        // First, because it is the one decision every layer has and the one a handle can only
+        // half make: Fill and Hug are a press here, and a number is the handle's, or the field
+        // below it once the handle has written one.
+        sizing?.let { nodeSizing ->
+          listOf(nodeSizing.width, nodeSizing.height)
+            .filter { it.resizable }
+            .forEach { axis ->
+              HoverSizingRow(axis) { chosen ->
+                when (axis.axis) {
+                  EditorAxis.Width -> onResize(chosen, null)
+                  EditorAxis.Height -> onResize(null, chosen)
+                }
+              }
+            }
+        }
         fields.forEach { field ->
           HoverEditorRow(
             label = field.label,
@@ -2664,6 +2772,77 @@ private fun SelectionHoverEditor(
         }
       }
     }
+  }
+}
+
+/**
+ * One axis of the selection's size as two chips — Hug and Fill — with a fixed size shown as a
+ * third, selected, when that is what the node has. The fixed chip is a readout, not a button: the
+ * number it would need comes from the handle or from the width field under it.
+ */
+@Composable
+private fun HoverSizingRow(axis: EditorAxisSizing, onChoose: (EditorSizing) -> Unit) {
+  val name = if (axis.axis == EditorAxis.Width) "Width" else "Height"
+  Row(
+    Modifier.fillMaxWidth().padding(vertical = 3.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
+    Text(
+      name,
+      // The same column the rows below it use, less the 4dp the chips gave back.
+      Modifier.width(82.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 1,
+    )
+    HoverSizingChip("Hug", "$name hugs content", axis.current == EditorSizing.Hug, true) {
+      onChoose(EditorSizing.Hug)
+    }
+    HoverSizingChip("Fill", "$name fills parent", axis.current == EditorSizing.Fill, axis.canFill) {
+      onChoose(EditorSizing.Fill)
+    }
+    (axis.current as? EditorSizing.Fixed)?.let { fixed ->
+      HoverSizingChip(fixed.label(), "$name fixed at ${fixed.label()}", true, false) {}
+    }
+  }
+}
+
+@Composable
+private fun HoverSizingChip(
+  label: String,
+  description: String,
+  selected: Boolean,
+  enabled: Boolean,
+  onClick: () -> Unit,
+) {
+  Surface(
+    onClick = onClick,
+    enabled = enabled && !selected,
+    shape = RoundedCornerShape(8.dp),
+    color =
+      if (selected) MaterialTheme.colorScheme.secondaryContainer
+      else MaterialTheme.colorScheme.surface,
+    contentColor =
+      if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+      else if (enabled) MaterialTheme.colorScheme.onSurface
+      else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+    border =
+      if (selected) null
+      else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    modifier =
+      Modifier.semantics {
+        contentDescription = description
+        this.selected = selected
+      },
+  ) {
+    Text(
+      label,
+      Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 1,
+      softWrap = false,
+    )
   }
 }
 

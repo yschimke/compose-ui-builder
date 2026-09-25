@@ -78,6 +78,9 @@ kotlin {
       // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md` for why the preview pane owes real components.
       implementation(libs.compose.material3.adaptive)
       implementation(libs.compose.material3.adaptive.layout)
+      // `NavigationSuiteScaffold`, drawn for real for the same reason: whether a design's
+      // navigation is a rail or a bar is the library's answer, per frame.
+      implementation(libs.compose.material3.navigation.suite)
       // No Wear Compose here: the Wear and Remote Compose Material 3 canvas is the add-on
       // `:ui-builder-canvas-wear`, which is the only module that links the Wear port.
       implementation(libs.material.icons.extended)
@@ -389,6 +392,11 @@ tasks.register<Sync>("wasmFrontendDist") {
       "confetti-schedule-operations-v1.json",
       "m3-catalog-capabilities-v1.json",
       "jetcaster-discover-operations-v1.json",
+      // Not fetched by the page: host-bridge hosts read these from the unpacked archive and
+      // hand the one a design pins to the editor with the document (see HostBridgeApp.kt), so a
+      // host can open a design in any of the three offline catalogs, not only Material 3.
+      "wear-m3-capabilities-v1.json",
+      "remote-m3-capabilities-v1.json",
     )
   }
   from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {

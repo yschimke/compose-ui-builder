@@ -370,6 +370,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.AppendAction -> appendAction(state, event)
       is UiBuilderEditorEvent.UpdateEnvironment -> updateEnvironment(state, event.settings)
       is UiBuilderEditorEvent.ToggleModifier -> toggleModifier(state, event.nodeId, event.type)
+      is UiBuilderEditorEvent.ResizeNode ->
+        resizeNode(state, event.nodeId, event.width, event.height)
       is UiBuilderEditorEvent.SetModifierValue ->
         setModifierValue(
           state,
@@ -1370,6 +1372,62 @@ class UiBuilderEditorReducer(
           )
           .let(::listOf)
       }
+  }
+
+  /**
+   * How the selected node is sized on each axis, and what each axis may become.
+   *
+   * Single selection, like [modifierToggles]: a handle is drawn on one box. Null where nothing is
+   * selected, or where the component declares none of the size modifiers — a node that cannot be
+   * resized gets no handles rather than handles that refuse.
+   */
+  fun sizing(state: UiBuilderEditorState): EditorNodeSizing? {
+    val nodeId = state.selection.singleOrNull() ?: return null
+    val node = state.document.nodes[nodeId] ?: return null
+    // A root is sized by the frame, not by a modifier anybody can drag.
+    if (state.document.location(nodeId) == null) return null
+    val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty().toSet()
+    return nodeSizing(nodeId, node.modifiers, declared, state.document.scopeOf(nodeId)).takeIf {
+      it.width.resizable || it.height.resizable
+    }
+  }
+
+  /**
+   * Re-size one axis of a node and submit the chain that results.
+   *
+   * Refused with the component's own reason rather than committed where the catalog does not
+   * declare the modifier the sizing needs — the same bargain [toggleModifier] makes.
+   */
+  private fun resizeNode(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    width: EditorSizing?,
+    height: EditorSizing?,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val node = state.document.nodes[nodeId] ?: return state
+    val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty().toSet()
+    val scope = state.document.scopeOf(nodeId)
+    var chain: List<JsonElement> = node.modifiers
+    for ((axis, sizing) in listOf(EditorAxis.Width to width, EditorAxis.Height to height)) {
+      if (sizing == null) continue
+      chain =
+        resizedModifierChain(chain, axis, sizing, declared, scope)
+          ?: return state.rejected(
+            sequence,
+            RejectionCode.INVALID_PROPERTY,
+            "${node.componentId} cannot be sized to ${sizing.label()} on its " +
+              axis.name.lowercase(),
+            nodeId,
+            "modifiers",
+          )
+    }
+    if (chain == node.modifiers.toList()) return state
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.SetModifiers(nodeId, JsonArray(chain))),
+      selectionAfter = nodeId,
+    )
   }
 
   /**

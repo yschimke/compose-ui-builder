@@ -325,7 +325,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -406,7 +408,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -501,7 +505,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -631,7 +637,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -729,7 +737,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -787,6 +797,479 @@
         {
             "code": {
                 "imports": [
+                    "androidx.compose.foundation.layout.ExperimentalLayoutApi",
+                    "androidx.compose.foundation.layout.FlowRow"
+                ],
+                "symbol": "FlowRow"
+            },
+            "componentId": "layout/flow-row",
+            "displayName": "Flow row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "Distribution along a line, exactly as on layout/row, and composing with horizontalSpacingDp the same way.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution of the LINES, not of the children: a flow row's cross axis is the stack of rows it wrapped into, so this is a Column's vocabulary and verticalSpacingDp is the gap between lines.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "maxItemsInEachRow",
+                    "notes": "A ceiling on the children one line may hold, for a design that wants a fixed number per row however much space there is. Absent means as many as fit, which is the reason to reach for this component at all.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this flow row, read off any Box child exactly as on layout/column.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "RemoteFlowRow. Not in the Glance Wear widget profile (LAYOUT_FLOW): the Native / Live render of a widget using it fails while the document is captured.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "layout/fit-box",
+            "displayName": "Fit box",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": "Where the chosen child sits across the box. Centred when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Where the chosen child sits down the box. Centred when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "OverlayContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteFitBox: its children are alternatives, largest first, and it shows the first one that fits.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "layout/collapsible-column",
+            "displayName": "Collapsible column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "RemoteCollapsibleColumn: hides whole children, lowest collapsiblePriority first, when it runs out of height. Not in the Glance Wear widget profile (LAYOUT_COLLAPSIBLE_COLUMN): the Native / Live render of a widget using it fails while the document is captured.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "layout/collapsible-row",
+            "displayName": "Collapsible row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "The Row counterpart of a Column’s verticalArrangement, with the same relationship to horizontalSpacingDp.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalAlignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "RemoteCollapsibleRow: hides whole children, lowest collapsiblePriority first, when it runs out of width. Not in the Glance Wear widget profile (LAYOUT_COLLAPSIBLE_ROW): the Native / Live render of a widget using it fails while the document is captured.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
                     "androidx.compose.material3.Text"
                 ],
                 "symbol": "Text"
@@ -809,7 +1292,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1020,7 +1505,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1106,7 +1593,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1252,7 +1741,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1340,7 +1831,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1495,7 +1988,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [],
             "role": "Container",
@@ -1570,7 +2065,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1672,7 +2169,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1754,7 +2253,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1896,7 +2397,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1992,7 +2495,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2106,7 +2611,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2195,7 +2702,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2291,7 +2800,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2424,7 +2935,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2557,7 +3070,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2690,7 +3205,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2810,7 +3327,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2930,7 +3449,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3050,7 +3571,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3183,7 +3706,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3325,7 +3850,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3418,7 +3945,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3514,7 +4043,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3610,7 +4141,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3772,7 +4305,16 @@
                 "layout/box": {
                     "group": "Layout"
                 },
+                "layout/collapsible-column": {
+                    "group": "Layout"
+                },
+                "layout/collapsible-row": {
+                    "group": "Layout"
+                },
                 "layout/column": {
+                    "group": "Layout"
+                },
+                "layout/fit-box": {
                     "group": "Layout"
                 },
                 "layout/flow-row": {
@@ -3841,6 +4383,15 @@
                 },
                 "m3/list-item": {
                     "group": "Containment"
+                },
+                "m3/navigation-suite-item": {
+                    "group": "Navigation"
+                },
+                "m3/navigation-suite-scaffold": {
+                    "group": "Scaffolds"
+                },
+                "m3/primary-scrollable-tab-row": {
+                    "group": "Navigation"
                 },
                 "m3/primary-tab-row": {
                     "group": "Navigation"

@@ -466,6 +466,22 @@
     "frozen": null
   },
   {
+    "field": "componentMenu.components.m3/navigation-suite-item",
+    "why": "The published capture states no shelf for `m3/navigation-suite-item`: the catalog offers it from the component record but, having no sticker (the kit publishes no node for a navigation suite), derives no shelf for it. yschimke/m3-catalog#499 gives it one (`Navigation bar`, inside this catalog's `Navigation` section) together with its slots, traits and canvas adapter; this entry then fails, as intended, on the re-captured `m3-catalog-generated-published-v1.json` and is re-reviewed against it. The frozen catalog gained the component with #241.",
+    "policy": null,
+    "frozen": {
+      "group": "Navigation"
+    }
+  },
+  {
+    "field": "componentMenu.components.m3/navigation-suite-scaffold",
+    "why": "The published capture states no shelf for `m3/navigation-suite-scaffold`: the catalog offers it from the component record but, having no sticker (the kit publishes no node for a navigation suite), derives no shelf for it. yschimke/m3-catalog#499 gives it one (`Navigation bar`, inside this catalog's `Navigation` section) together with its slots, traits and canvas adapter; this entry then fails, as intended, on the re-captured `m3-catalog-generated-published-v1.json` and is re-reviewed against it. The frozen catalog gained the component with #241.",
+    "policy": null,
+    "frozen": {
+      "group": "Scaffolds"
+    }
+  },
+  {
     "field": "componentMenu.components.m3/outlined-button",
     "why": "m3-catalog publishes `m3/outlined-button` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Buttons`, inside this catalog's `Actions` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
     "policy": {
@@ -523,11 +539,13 @@
   },
   {
     "field": "componentMenu.components.m3/primary-scrollable-tab-row",
-    "why": "m3-catalog publishes `m3/primary-scrollable-tab-row` and the frozen catalog carries no component for it, so there is no shelf to agree with. It is on `Tabs`, inside this catalog's `Navigation` section. That the two catalogs hold different component sets on purpose is argued once, with the contract's own words, in the `componentMenu.groupOrder` entry.",
+    "why": "Same place, finer name: the catalog files `m3/primary-scrollable-tab-row` on `Tabs`, which is a shelf inside its own `Navigation` section, and `Navigation` is the word the frozen catalog uses. The frozen menu groups by section; this one groups by shelf. The frozen catalog gained the component with #241, beside `m3/primary-tab-row`, whose entry says the same.",
     "policy": {
       "group": "Tabs"
     },
-    "frozen": null
+    "frozen": {
+      "group": "Navigation"
+    }
   },
   {
     "field": "componentMenu.components.m3/primary-tab-row",

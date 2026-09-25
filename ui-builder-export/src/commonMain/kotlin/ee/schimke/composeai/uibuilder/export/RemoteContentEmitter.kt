@@ -41,6 +41,7 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
     "background",
     "border",
     "clip",
+    "collapsiblePriority",
     "fillMaxHeight",
     "fillMaxSize",
     "fillMaxWidth",
@@ -51,6 +52,7 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
     "padding",
     "rotate",
     "scale",
+    "sharedElement",
     "size",
     "verticalScroll",
     "weight",
@@ -77,6 +79,10 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     "layout/column",
     "layout/row",
     "layout/for-each",
+    "layout/fit-box",
+    "layout/flow-row",
+    "layout/collapsible-column",
+    "layout/collapsible-row",
     "m3/text",
     "remote-m3/lottie",
     REMOTE_TEXT_COMPONENT_ID,
@@ -419,6 +425,35 @@ internal class RemoteContentEmitter(
       "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node, pad))
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node, pad))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node, pad))
+      // `RemoteFitBox`: its children are alternatives, largest first, and the player shows the
+      // first that fits the host. In the Glance Wear widget profile, unlike its siblings below.
+      "layout/fit-box" -> container(node, depth, "RemoteFitBox", fitBoxArguments(node, pad))
+      // `remote-creation-compose` publishes these three and they are written as what they are, but
+      // a
+      // Wear widget cannot carry any of them: Glance Wear's `GlanceWearProfiles` admits
+      // LAYOUT_FIT_BOX and LAYOUT_STATE and not LAYOUT_FLOW or LAYOUT_COLLAPSIBLE_*, so the Android
+      // writer throws "Operation … is not supported for this version" while capturing the widget.
+      // The source compiles and the native render fails; the comment above the call says why, so
+      // that failure is read as the profile's and not the design's.
+      "layout/flow-row" ->
+        outsideWidgetProfile(depth, "LAYOUT_FLOW") +
+          container(node, depth, "RemoteFlowRow", flowRowArguments(node, pad))
+      "layout/collapsible-column" ->
+        outsideWidgetProfile(depth, "LAYOUT_COLLAPSIBLE_COLUMN") +
+          container(
+            node,
+            depth,
+            "RemoteCollapsibleColumn",
+            collapsibleArguments(node, pad, vertical = true),
+          )
+      "layout/collapsible-row" ->
+        outsideWidgetProfile(depth, "LAYOUT_COLLAPSIBLE_ROW") +
+          container(
+            node,
+            depth,
+            "RemoteCollapsibleRow",
+            collapsibleArguments(node, pad, vertical = false),
+          )
       "layout/for-each" -> repetition(node, depth)
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       "asset/image" -> image(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
@@ -1532,6 +1567,10 @@ internal class RemoteContentEmitter(
       "RemoteBox" -> usesBox = true
       "RemoteColumn" -> usesColumn = true
       "RemoteRow" -> usesRow = true
+      "RemoteFitBox" -> usesFitBox = true
+      "RemoteFlowRow" -> usesFlowRow = true
+      "RemoteCollapsibleColumn" -> usesCollapsibleColumn = true
+      "RemoteCollapsibleRow" -> usesCollapsibleRow = true
     }
     val pad = INDENT.repeat(depth)
     val children = node.slots["children"].orEmpty()
@@ -1559,6 +1598,178 @@ internal class RemoteContentEmitter(
 
   /** The container symbol whose lambda the node being emitted sits in, or null at the top. */
   private var scope: String? = null
+
+  private var usesFitBox = false
+  private var usesFlowRow = false
+  private var usesCollapsibleColumn = false
+  private var usesCollapsibleRow = false
+
+  /**
+   * [scope] as the axis it lays children out on.
+   *
+   * `RemoteCollapsibleColumnScope` and `RemoteCollapsibleRowScope` carry `weight` exactly as the
+   * eager scopes do, and their containers take the same cross-axis alignment argument, so a child
+   * asking for either is answered the same way inside both.
+   */
+  private val axisScope: String?
+    get() =
+      when (scope) {
+        "RemoteCollapsibleColumn" -> "RemoteColumn"
+        "RemoteCollapsibleRow" -> "RemoteRow"
+        else -> scope
+      }
+
+  /** The comment written above a layout a Glance Wear widget document cannot carry. */
+  private fun outsideWidgetProfile(depth: Int, operation: String): List<String> {
+    val pad = INDENT.repeat(depth)
+    return listOf(
+      "$pad// $operation is outside the Glance Wear widget profile.",
+      "$pad// Capturing this widget on Android throws \"Operation … is not supported\".",
+    )
+  }
+
+  /**
+   * `RemoteFlowRow`'s arguments: both axes' arrangements and the per-line ceiling.
+   *
+   * The vertical arrangement distributes the wrapped LINES, not the children, which is why the
+   * catalog describes it with a column's vocabulary.
+   */
+  private fun flowRowArguments(node: UiBuilderNode, pad: String): List<String> {
+    val arguments = mutableListOf<String>()
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    arrangement(node, "horizontalArrangement", "horizontalSpacingDp", horizontal = true)?.let {
+      arguments += "horizontalArrangement = $it"
+    }
+    arrangement(node, "verticalArrangement", "verticalSpacingDp", horizontal = false)?.let {
+      arguments += "verticalArrangement = $it"
+    }
+    node.properties["maxItemsInEachRow"]?.numberOrNull()?.let { max ->
+      if (max < 1f || max % 1f != 0f) {
+        refusals +=
+          "the flow row `${node.id}` allows `$max` items per row; a ceiling is a whole number of " +
+            "at least one, or absent for as many as fit"
+      } else arguments += "maxItemsInEachRow = ${max.toInt()}"
+    }
+    return arguments
+  }
+
+  /**
+   * A collapsible column's or row's arguments: the main-axis arrangement, every word of it, and the
+   * cross-axis alignment its children agree on or the node declares.
+   *
+   * `RemoteCollapsibleRow` defaults to `Top` where the canvas's row centres, so a row that says
+   * nothing writes the centre explicitly — the same reason [rowArguments] does.
+   */
+  private fun collapsibleArguments(
+    node: UiBuilderNode,
+    pad: String,
+    vertical: Boolean,
+  ): List<String> {
+    val arguments = mutableListOf<String>()
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    if (vertical) {
+      arrangement(node, "verticalArrangement", "verticalSpacingDp", horizontal = false)?.let {
+        arguments += "verticalArrangement = $it"
+      }
+      (crossAxisAlignment(node, "alignHorizontal") ?: node.canvasHorizontalAlignment())
+        .takeIf { it != "start" }
+        ?.let {
+          usesAlignment = true
+          arguments += "horizontalAlignment = RemoteAlignment.${it.remoteHorizontal()}"
+        }
+    } else {
+      arrangement(node, "horizontalArrangement", "horizontalSpacingDp", horizontal = true)?.let {
+        arguments += "horizontalArrangement = $it"
+      }
+      (crossAxisAlignment(node, "alignVertical") ?: node.canvasVerticalAlignment())
+        .takeIf { it != "top" }
+        ?.let {
+          usesAlignment = true
+          arguments += "verticalAlignment = RemoteAlignment.${it.remoteVertical()}"
+        }
+    }
+    return arguments
+  }
+
+  /**
+   * One axis's arrangement, from its word and its spacing, or null for the callee's default.
+   *
+   * The aligned words compose with a gap through `spacedBy(space, alignment)`; the three `space*`
+   * words distribute the free space themselves and, as in Compose, take no gap as well.
+   */
+  private fun arrangement(
+    node: UiBuilderNode,
+    wordProperty: String,
+    spacingProperty: String,
+    horizontal: Boolean,
+  ): String? {
+    val word = node.properties[wordProperty]?.stringOrNull().orEmpty()
+    val spacing = node.properties[spacingProperty]?.numberOrNull()?.takeIf { it != 0f }
+    val distributed =
+      when (word) {
+        "spaceBetween" -> "SpaceBetween"
+        "spaceAround" -> "SpaceAround"
+        "spaceEvenly" -> "SpaceEvenly"
+        else -> null
+      }
+    if (distributed != null) {
+      usesArrangement = true
+      return "RemoteArrangement.$distributed"
+    }
+    val alignment =
+      when (word) {
+        "center" -> if (horizontal) "CenterHorizontally" else "CenterVertically"
+        "end" -> if (horizontal) "End" else null
+        "bottom" -> if (horizontal) null else "Bottom"
+        else -> null
+      }
+    if (spacing == null && alignment == null) return null
+    usesArrangement = true
+    return when {
+      spacing == null -> "RemoteArrangement.${if (word == "center") "Center" else alignment}"
+      alignment == null -> "RemoteArrangement.spacedBy(${spacing.dpLiteral()})"
+      else -> {
+        usesAlignment = true
+        "RemoteArrangement.spacedBy(${spacing.dpLiteral()}, RemoteAlignment.$alignment)"
+      }
+    }
+  }
+
+  /**
+   * `RemoteFitBox`'s arguments. Its defaults centre on both axes, the opposite of `RemoteBox`, so
+   * only a design that asks for an edge writes anything.
+   */
+  private fun fitBoxArguments(node: UiBuilderNode, pad: String): List<String> {
+    val arguments = mutableListOf<String>()
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    when (val horizontal = node.properties["horizontalAlignment"]?.stringOrNull()) {
+      null,
+      "",
+      "center" -> Unit
+      else -> {
+        usesAlignment = true
+        arguments += "horizontalAlignment = RemoteAlignment.${horizontal.remoteHorizontal()}"
+      }
+    }
+    when (val vertical = node.properties["verticalArrangement"]?.stringOrNull()) {
+      null,
+      "",
+      "center" -> Unit
+      "top" -> {
+        usesArrangement = true
+        arguments += "verticalArrangement = RemoteArrangement.Top"
+      }
+      "bottom" -> {
+        usesArrangement = true
+        arguments += "verticalArrangement = RemoteArrangement.Bottom"
+      }
+      else ->
+        refusals +=
+          "the fit box `${node.id}` arranges its child `$vertical`; a RemoteFitBox shows ONE " +
+            "child, so it takes top, center or bottom"
+    }
+    return arguments
+  }
 
   private fun boxArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
@@ -2199,6 +2410,12 @@ internal class RemoteContentEmitter(
     if (usesStateLayout)
       imports += "androidx.compose.remote.creation.compose.layout.RemoteStateLayout"
     if (usesColumn) imports += "androidx.compose.remote.creation.compose.layout.RemoteColumn"
+    if (usesCollapsibleColumn)
+      imports += "androidx.compose.remote.creation.compose.layout.RemoteCollapsibleColumn"
+    if (usesCollapsibleRow)
+      imports += "androidx.compose.remote.creation.compose.layout.RemoteCollapsibleRow"
+    if (usesFitBox) imports += "androidx.compose.remote.creation.compose.layout.RemoteFitBox"
+    if (usesFlowRow) imports += "androidx.compose.remote.creation.compose.layout.RemoteFlowRow"
     imports += "androidx.compose.remote.creation.compose.layout.RemoteComposable"
     if (usesCustomComponent) {
       imports += "androidx.compose.remote.creation.compose.layout.RemoteCustomComponent"
@@ -2469,6 +2686,25 @@ internal class RemoteContentEmitter(
         listOf(modifierCall("$type(rememberRemoteScrollState())"))
       }
       "weight" -> weightCall(modifier)
+      "collapsiblePriority" -> collapsiblePriorityCall(modifier)
+      // A shared element is matched across the branches of a state layout by its key, and its
+      // bounds and paint animate between them. Written as `animationSpec(animationId, enabled)`
+      // rather than as `sharedElement(key)`: both lower to the same `AnimationSpec` operation, but
+      // `sharedElement` is newer than `remote-creation-compose` 1.0.0-alpha19, which is what the
+      // native lane compiles against, and this overload exists on both sides of that line with the
+      // same 300ms standard motion `sharedElement`'s default `remoteTween()` has. Positional,
+      // because
+      // a shared element sits two lambdas deeper than its state layout and the named form runs
+      // past the column budget there; `(Int, Boolean)` matches no other overload on either line.
+      "sharedElement" -> {
+        val key = modifier["key"]?.numberValue()
+        if (key == null || key % 1f != 0f || key < 1f) {
+          refusals +=
+            "the `sharedElement` modifier on `$id` needs a whole-number `key` of at least one; " +
+              "the key is what matches this element to its counterpart in the other states"
+          emptyList()
+        } else listOf(modifierCall("animationSpec(${key.toInt()}, true)"))
+      }
       // Everything below is in the catalog's modifier vocabulary and has no `RemoteModifier`
       // counterpart at `remote-creation-compose` 1.0.0-alpha18. Each says which, and what to
       // reach for instead, rather than sharing one "no counterpart" sentence: an author who is
@@ -2523,7 +2759,7 @@ internal class RemoteContentEmitter(
     type: String,
     article: String,
   ): List<String> {
-    if (scope == container) return emptyList()
+    if (axisScope == container) return emptyList()
     refusals +=
       "the `$type` modifier on `$id` aligns a child of $article, and this node is in " +
         "${scope?.let { "a $it" } ?: "the widget's content slot"}; a played document has no " +
@@ -2539,7 +2775,7 @@ internal class RemoteContentEmitter(
    * column is a design mistake worth naming rather than a call worth writing.
    */
   private fun UiBuilderNode.weightCall(modifier: JsonObject): List<String> {
-    if (scope != "RemoteColumn" && scope != "RemoteRow") {
+    if (axisScope != "RemoteColumn" && axisScope != "RemoteRow") {
       refusals +=
         "the `weight` modifier on `$id` divides the space of a row or a column, and this node is " +
           "in ${scope?.let { "a $it" } ?: "the widget's content slot"}; put it in a " +
@@ -2569,6 +2805,27 @@ internal class RemoteContentEmitter(
       return emptyList()
     }
     return listOf("weight(${weight.floatLiteral()})")
+  }
+
+  /**
+   * `collapsiblePriority`, a member of the two collapsible scopes and legal nowhere else.
+   *
+   * The higher the priority, the longer a child stays when the container runs out of room; one that
+   * sets none is kept longest of all. Upstream takes a plain `Float`, not a `RemoteFloat`.
+   */
+  private fun UiBuilderNode.collapsiblePriorityCall(modifier: JsonObject): List<String> {
+    if (scope != "RemoteCollapsibleColumn" && scope != "RemoteCollapsibleRow") {
+      refusals +=
+        "the `collapsiblePriority` modifier on `$id` orders which children a collapsible " +
+          "column or row hides first, and this node is in " +
+          "${scope?.let { "a $it" } ?: "the widget's content slot"}; put it in a " +
+          "`layout/collapsible-column` or `layout/collapsible-row`"
+      return emptyList()
+    }
+    val priority = modifier["priority"]?.numberValue() ?: 0f
+    return listOf(
+      "collapsiblePriority(${if (priority % 1f == 0f) priority.toInt() else priority}f)"
+    )
   }
 
   /**

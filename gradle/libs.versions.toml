@@ -30,6 +30,14 @@ compose-multiplatform = "1.12.0"
 # panes. Its own version line rather than the Compose Multiplatform one, which is why it is a
 # separate ref: the adaptive artifacts ship independently of the CMP bundle.
 compose-material3-adaptive = "1.2.0"
+# `NavigationSuiteScaffold`, the navigation that is a rail on a tablet and a bar on a phone. It ships
+# on the Compose Multiplatform Material 3 line, not the adaptive one, and has to be the Material 3
+# version `compose.material3` resolves — 1.9.0 for Compose Multiplatform 1.12.0. A newer one drags
+# Material 3 up past the `foundation` it was compiled against: 1.11.0-alpha07 did exactly that, and
+# `OutlinedTextField` then failed at runtime with an `AbstractMethodError` on `CustomStyle`. Its
+# adaptive dependency (1.1.2) is below the 1.2.0 pinned above, which wins. Bump it with Compose
+# Multiplatform, not on its own.
+compose-material3-navigation-suite = "1.9.0"
 # Wear Compose Material 3 / Foundation, compiled for Compose Multiplatform. `androidx.wear.compose`
 # publishes an Android AAR and nothing else — its Gradle module metadata carries exactly two
 # variants, both `releaseVariantRelease*Publication` — so the canvas cannot link the real library.
@@ -93,7 +101,14 @@ maven-publish = "0.37.0"
 # 2.18.1 is the first release publishing `compose-ai-tools-bom`, which is why this line stops being
 # named by any coordinate below. (2.18.0 exists as a tag and a GitHub Release and is NOT on Central:
 # its publish job died in configuration. Do not pin it.)
-composeai-tools = "2.18.1"
+#
+# 2.24.0 is the first release whose `ScreenGenerator` writes `ChainLink.member` reads
+# (compose-ai-tools#5569), which is how `SupportingPaneScaffold`'s value reads the directive's
+# `maxHorizontalPartitions` and the Gmail and Calendar samples export. It moves with the daemon and
+# contracts pins below, to the set 2.24.0 itself was built against. 2.25.0 (compose-ai-tools#5575)
+# imports same-named extensions that differ by receiver — Gmail's filled and outlined stars — and
+# writes the generated screen the way Compose is written by hand.
+composeai-tools = "2.25.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -149,7 +164,8 @@ composeai-tools = "2.18.1"
 # history records twice over, from the other side. Construction here moves to
 # `Type.Builder(...).build()` and derivation to `newBuilder()`, exactly as contracts 3.0.0 did in
 # #910; `ServeDesignPageStoreTest`'s unknown-enum case still asserts the drop.
-composeai-preview-daemon = "3.8.1"
+# 3.8.3 is what compose-ai-tools 2.24.0 was built against; the two lines move together.
+composeai-preview-daemon = "3.8.3"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
@@ -160,8 +176,9 @@ composeai-preview-daemon = "3.8.1"
 # catalog-renderer runtime manifest, descriptor, iframe and inspection wire types into their shared
 # home, together with canonical integrity framing. 3.5.0 lets a catalog select Browser Preview's
 # exported-artifact renderer and normalize its authored vocabulary onto a canvas adapter. 3.7.0
-# adds the catalog-owned, versioned Compose source-adapter declaration.
-composeai-contracts = "3.7.0"
+# adds the catalog-owned, versioned Compose source-adapter declaration. 3.10.0 is the first release
+# carrying `ChainLink.member` (compose-preview-contracts#108), which `ScreenDocumentProjection` sets.
+composeai-contracts = "3.10.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"
@@ -290,6 +307,7 @@ graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = 
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }
 compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
+compose-material3-navigation-suite = { module = "org.jetbrains.compose.material3:material3-adaptive-navigation-suite", version.ref = "compose-material3-navigation-suite" }
 androidx-window-core = { module = "org.jetbrains.androidx.window:window-core", version.ref = "androidx-window" }
 wearcmp-compose-material3 = { module = "ee.schimke.wearcmp:wear-compose-material3", version.ref = "wearcmp-port" }
 wearcmp-compose-foundation = { module = "ee.schimke.wearcmp:wear-compose-foundation", version.ref = "wearcmp-port" }

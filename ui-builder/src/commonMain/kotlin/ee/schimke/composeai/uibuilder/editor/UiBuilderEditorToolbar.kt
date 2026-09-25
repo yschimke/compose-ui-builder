@@ -1315,11 +1315,14 @@ internal fun CanvasStatusBar(
         if (outcome is CommandOutcome.Rejected) {
           StatusText("${outcome.code}: ${outcome.message}", color = MaterialTheme.colorScheme.error)
         }
-        Surface(shape = RoundedCornerShape(10.dp), color = Color(0xff214c37)) {
+        Surface(
+          shape = RoundedCornerShape(10.dp),
+          color = LocalUiBuilderEditorPalette.current.sessionBadge,
+        ) {
           Text(
             sessionLabel,
             Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-            color = Color(0xffa8f2c6),
+            color = LocalUiBuilderEditorPalette.current.onSessionBadge,
             style = MaterialTheme.typography.labelSmall,
           )
         }
@@ -1779,3 +1782,95 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
     "Hold a node, then drag" to "Move it into the slot and seam it is dropped at",
     "Click a rung above the canvas" to "Select that layer — the path is a way back up",
   )
+
+/**
+ * [EditorToolbar]'s controls, published to a host that draws them itself.
+ *
+ * The same verbs as the desktop toolbar, less the ones a host editor already owns: the document's
+ * name is the host's tab title, and new, browse, export, reconnect and the AI prompt belong to
+ * hosts with a server. The shortcuts dialog is still drawn here, because it describes this canvas.
+ */
+@Composable
+internal fun HostChromeToolbar(
+  chrome: UiBuilderHostChrome,
+  state: UiBuilderEditorState,
+  canUndo: Boolean,
+  canRedo: Boolean,
+  onTidy: () -> Unit,
+  onComponentPacks: (() -> Unit)?,
+  onHelp: (() -> Unit)?,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var showShortcuts by remember { mutableStateOf(false) }
+  if (showShortcuts) {
+    EditorShortcutsDialog(onDismiss = { showShortcuts = false })
+  }
+  fun entry(action: UiBuilderHostAction, onInvoke: () -> Unit) = HostChromeEntry(action, onInvoke)
+  val entries = buildList {
+    add(
+      entry(
+        UiBuilderHostAction("undo", "Undo", "toolbar", "Undo", canUndo, shortcut = "Ctrl/⌘+Z")
+      ) {
+        dispatch(UiBuilderEditorEvent.Undo)
+      }
+    )
+    add(
+      entry(
+        UiBuilderHostAction(
+          "redo",
+          "Redo",
+          "toolbar",
+          "Redo",
+          canRedo,
+          shortcut = "Ctrl/⌘+Shift+Z",
+        )
+      ) {
+        dispatch(UiBuilderEditorEvent.Redo)
+      }
+    )
+    if (state.reference.hasContent) {
+      val visible = state.reference.settings.visible
+      add(
+        entry(
+          UiBuilderHostAction(
+            "reference",
+            "Reference image",
+            "toolbar",
+            if (visible) "Show" else "Hide",
+            checked = visible,
+          )
+        ) {
+          dispatch(UiBuilderEditorEvent.ToggleReference)
+        }
+      )
+    }
+    add(
+      entry(
+        UiBuilderHostAction(
+          "overflow.tidy",
+          "Tidy to the 4dp grid",
+          "overflow",
+          "Fit",
+        ),
+        onTidy,
+      )
+    )
+    add(
+      entry(UiBuilderHostAction("overflow.shortcuts", "Keyboard shortcuts", "overflow", "More")) {
+        showShortcuts = true
+      }
+    )
+    if (onComponentPacks != null) {
+      add(
+        entry(
+          UiBuilderHostAction("overflow.packs", "Component packs…", "overflow", "Components"),
+          onComponentPacks,
+        )
+      )
+    }
+    if (onHelp != null) {
+      add(entry(UiBuilderHostAction("overflow.help", "Help", "overflow", "More"), onHelp))
+    }
+  }
+  PublishHostChrome(chrome, "toolbar", entries)
+}

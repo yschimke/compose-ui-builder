@@ -52,7 +52,7 @@ internal fun composeFoundationCatalog(
         curation.componentIds(base).mapNotNull { id ->
           val component =
             if (id.startsWith(REMOTE_COMPOSE_NAMESPACE)) seams[id] ?: return@mapNotNull null
-            else declared.getValue(id)
+            else declared[id] ?: remoteOnlyLayout(id, declared) ?: declared.getValue(id)
           curation.curate(component)
         }
       it.statusSemantics =
@@ -144,6 +144,8 @@ private val FOUNDATION_CURATIONS =
             "layout/column",
             "layout/row",
             "layout/for-each",
+            "layout/flow-row",
+            *REMOTE_ONLY_LAYOUT_IDS.toTypedArray(),
             "remote-compose/document",
             REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
             "shape/linear-gradient",
@@ -151,7 +153,7 @@ private val FOUNDATION_CURATIONS =
           ),
         // The narrowing the retired synthesised `remote-m3` applied, from the one place it is
         // written.
-        curate = { component -> component.narrowedForRemoteAuthoring() },
+        curate = { component -> component.narrowedForRemoteAuthoring().withWidgetProfileNote() },
         menu = { base -> remoteM3ComponentMenu(base.statusSemantics) },
       ),
   )

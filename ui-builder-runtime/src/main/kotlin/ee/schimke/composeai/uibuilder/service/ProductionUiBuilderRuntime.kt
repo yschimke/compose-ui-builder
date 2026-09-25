@@ -3,7 +3,6 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
-import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
@@ -59,8 +58,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
 
 private data class Configuration(
   val source: String,
@@ -1270,7 +1267,7 @@ private fun JsonObject.menuGroupOrder(): List<String> =
  *   loop reached it. Appending was how `Layout` and `Scaffolds` — the builder's primary shelves —
  *   ended up below every catalog group. Empty for callers with no opinion, which appends as before.
  */
-private fun JsonObject.withMenuEntry(
+internal fun JsonObject.withMenuEntry(
   componentId: String,
   group: String,
   reference: List<String> = emptyList(),
@@ -1316,205 +1313,6 @@ internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV
       component.traits.any(slot.acceptedTraits::contains)
   return roleAccepted && traitAccepted
 }
-
-/**
- * How the builder's insert panel shelves `wear-m3`, and which property carries a component's
- * variants.
- *
- * Wear's own families rather than Material's: a watch app is a **screen** holding a **list**, so
- * those lead, and `Text inputs` — a whole shelf on the phone catalog — does not exist here at all.
- * `wear-m3/edge-button`'s `size` is a variant rather than a dimension: an edge button comes in four
- * sizes the way a card comes in four kinds, and picking one is choosing which button, not nudging a
- * number.
- *
- * Deliberately absent: `transformation` on the lazy column and `segmented` on the slider are
- * behaviours a design turns on, not kinds of component; `iconKey` is forty-six icons; and
- * `wear-m3/text.style` is fifteen type scales, which is a property of a text rather than a kind of
- * Text. The same three calls the M3 declaration makes, for the same reasons.
- */
-internal fun wearComponentMenu(): JsonObject {
-  val shelves =
-    listOf(
-      "Screens" to listOf("wear-m3/screen-scaffold"),
-      "Layout" to listOf("layout/box", "layout/column", "layout/row"),
-      "Lists" to
-        listOf(
-          "wear-m3/transforming-lazy-column",
-          "wear-m3/list-header",
-          "wear-m3/list-sub-header",
-        ),
-      "Actions" to
-        listOf(
-          "wear-m3/button",
-          "wear-m3/text-button",
-          "wear-m3/icon-button",
-          "wear-m3/edge-button",
-          "wear-m3/button-group",
-        ),
-      "Selection" to
-        listOf(
-          "wear-m3/checkbox-button",
-          "wear-m3/switch-button",
-          "wear-m3/radio-button",
-          "wear-m3/slider",
-          "wear-m3/stepper",
-          "wear-m3/date-picker",
-          "wear-m3/time-picker",
-        ),
-      "Containment" to
-        listOf(
-          "wear-m3/card",
-          "wear-m3/alert-dialog",
-          "wear-m3/confirmation-dialog",
-          "wear-m3/open-on-phone-dialog",
-        ),
-      "Communication" to listOf("wear-m3/progress-indicator"),
-      "Content" to listOf("wear-m3/text", "wear-m3/icon", "asset/image"),
-      // The "Embedded" shelf held the three Remote Compose seams and is gone with them. It comes
-      // back when they do; a shelf with nothing on it is a heading an author opens for nothing.
-    )
-  val variantProperties =
-    mapOf(
-      "wear-m3/card" to "variant",
-      "wear-m3/button" to "variant",
-      "wear-m3/text-button" to "variant",
-      "wear-m3/icon-button" to "variant",
-      "wear-m3/edge-button" to "size",
-      "wear-m3/progress-indicator" to "variant",
-      "wear-m3/confirmation-dialog" to "variant",
-      "wear-m3/date-picker" to "type",
-      "wear-m3/time-picker" to "type",
-    )
-  return buildJsonObject {
-    putJsonArray("groupOrder") { shelves.forEach { (name, _) -> add(JsonPrimitive(name)) } }
-    putJsonObject("components") {
-      shelves.forEach { (name, componentIds) ->
-        componentIds.forEach { componentId ->
-          putJsonObject(componentId) {
-            put("group", JsonPrimitive(name))
-            variantProperties[componentId]?.let { put("variantProperty", JsonPrimitive(it)) }
-          }
-        }
-      }
-    }
-  }
-}
-
-/**
- * The modifiers a `remote-m3` component may advertise: what `RemoteContentEmitter` can write.
- *
- * A copy, and it has to be one. The emitter lives in `:ui-builder-export` and this module's
- * `CheckUiBuilderRuntimeBoundary` keeps that classpath out on purpose, so the list cannot be
- * imported from the one place it is derived. `RemoteContentModifierParityTest` in `:server` — which
- * has both — fails when this set and `REMOTE_CONTENT_MODIFIERS` disagree, so the copy cannot rot
- * quietly the way the last one did.
- */
-internal val REMOTE_M3_MODIFIERS =
-  setOf(
-    "align",
-    "alignHorizontal",
-    "alignVertical",
-    "alpha",
-    "background",
-    "border",
-    "clip",
-    "fillMaxHeight",
-    "fillMaxSize",
-    "fillMaxWidth",
-    "height",
-    "heightIn",
-    "horizontalScroll",
-    "offset",
-    "padding",
-    "rotate",
-    "scale",
-    "size",
-    "verticalScroll",
-    "weight",
-    "width",
-    "widthIn",
-    "wrapContentSize",
-    "zIndex",
-  )
-
-/**
- * A borrowed component, narrowed to what `RemoteContentEmitter` can write into a widget body.
- *
- * Applied by the `remote-compose` curation in [composeFoundationCatalog], and equal to what the
- * retired synthesised `remote-m3` applied — `ComposeFoundationFaithfulnessTest` holds the two equal
- * field for field against that catalog's frozen fixture. Every clause here moves a refusal from
- * export time to the moment the author acts, which is the only moment they can do anything about
- * it.
- */
-internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabilityV1 =
-  newBuilder()
-    .also {
-      // The palette used to offer 28 modifiers on a widget node while the generator wrote three, so
-      // `size`, `background` and `weight` were authorable, drawable, and unexportable
-      // (yschimke/compose-preview-server#508).
-      it.modifierCapabilities =
-        // A brush can only sit in the container's background slot, and `WearWidgetBrush` has no
-        // geometry to hang a modifier on — the generator refuses every one it finds there. So the
-        // gradient offers none, rather than eighteen that each end in a refusal.
-        if (componentId == "shape/linear-gradient") emptyList()
-        else modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
-      // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
-      // from a mobile component. The reviewed vocabulary does have an emitter branch (or
-      // component-record fallback) and may enter a widget body.
-      it.traits =
-        (traits - "RemoteAuthorable").let { traits ->
-          if (componentId !in setOf("remote-compose/document", "shape/linear-gradient")) {
-            traits + "RemoteAuthorable"
-          } else {
-            traits
-          }
-        }
-    }
-    .build()
-
-/**
- * `remote-m3`'s palette shelves: the Lottie element under Content, then each Remote Material 3
- * component under the shelf the published catalog files it on.
- *
- * Folded over the whole status semantics rather than the menu alone, because [withMenuEntry] reads
- * the menu out of the semantics it is given and returns the menu: handed a menu, it finds none and
- * drops every shelf the base catalog already declared.
- *
- * The published-catalog foundation's `remote-compose` curation builds its menu with this too, so a
- * shelf the foundation injects into a published catalog lands where it lands here.
- */
-internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
-  RemoteMaterial3.components
-    .fold(
-      JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
-    ) { semantics, component ->
-      JsonObject(
-        semantics +
-          ("componentMenu" to
-            semantics.withMenuEntry(
-              component.componentId,
-              component.group,
-              REMOTE_MATERIAL_3_SHELVES,
-            ))
-      )
-    }
-    .getValue("componentMenu") as JsonObject
-
-/**
- * The published catalog's shelf order, so the Remote Material 3 shelves land after this catalog's
- * own and in the order wear-m3-catalog files them.
- */
-private val REMOTE_MATERIAL_3_SHELVES =
-  listOf(
-    "Content",
-    "Containment",
-    "Buttons",
-    "Selection buttons",
-    "Edge-hugging buttons",
-    "Sliders",
-    "Steppers",
-    "Communication",
-  )
 
 /** Immutable, renderer-neutral request for one exact saved document revision. */
 public data class UiBuilderRenderRequest(
