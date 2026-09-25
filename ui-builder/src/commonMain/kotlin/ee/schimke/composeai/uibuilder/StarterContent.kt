@@ -130,6 +130,9 @@ internal object StarterContent {
       // Zero is already what the catalog's neutral default writes; it is spelled out because a tab
       // row is required to carry the index and a row with none draws no indicator at all.
       "m3/primary-tab-row" to mapOf("selectedIndex" to starterNumber(0)),
+      // An item has to say whether it is the current destination, and one the author has to set
+      // first is one that inserts looking wrong in a rail or bar where another is selected.
+      "m3/navigation-suite-item" to mapOf("selected" to starterBool(false)),
       // Wear's own, and the reason each needs a seed is the reason its mobile counterpart does —
       // with one difference that matters. These are not drawn on the canvas at all: they show as a
       // named placeholder, and the picture comes from the Android preview. So a seeded `label` is
@@ -301,6 +304,24 @@ internal object StarterContent {
           "mainPane" to listOf(column(text("Main pane", "titleMedium"))),
           "supportingPane" to listOf(column(text("Supporting pane", "titleMedium"))),
         ),
+      // Three destinations with the first selected, over one content pane: a rail or bar with one
+      // item is not navigation, and one where none is selected draws no indicator. The type is the
+      // library's per frame, so the same insert is a rail on a tablet and a bar on a phone.
+      "m3/navigation-suite-scaffold" to
+        mapOf(
+          "navigationItems" to
+            listOf(
+              navigationItem("filled/home", "Home", selected = true),
+              navigationItem("filled/search", "Search"),
+              navigationItem("filled/settings", "Settings"),
+            ),
+          "content" to listOf(column(text("Content", "titleMedium"))),
+        ),
+      "m3/navigation-suite-item" to
+        mapOf(
+          "icon" to listOf(icon("filled/home", "Home")),
+          "label" to listOf(text("Home", "labelMedium")),
+        ),
       // Three is the smallest count that shows a list is a list — spacing, repetition and the
       // scroll direction are all invisible with one item.
       "layout/lazy-column" to
@@ -404,6 +425,21 @@ private fun tab(label: String, selected: Boolean = false): StarterNode =
     componentId = "m3/tab",
     properties = mapOf("selected" to starterBool(selected)),
     slots = mapOf("text" to listOf(text(label, "titleSmall"))),
+  )
+
+private fun navigationItem(
+  iconKey: String,
+  label: String,
+  selected: Boolean = false,
+): StarterNode =
+  StarterNode(
+    componentId = "m3/navigation-suite-item",
+    properties = mapOf("selected" to starterBool(selected)),
+    slots =
+      mapOf(
+        "icon" to listOf(icon(iconKey, label)),
+        "label" to listOf(text(label, "labelMedium")),
+      ),
   )
 
 private fun textButton(label: String): StarterNode =

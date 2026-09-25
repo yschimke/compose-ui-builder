@@ -3842,6 +3842,12 @@
                 "m3/list-item": {
                     "group": "Containment"
                 },
+                "m3/navigation-suite-item": {
+                    "group": "Navigation"
+                },
+                "m3/navigation-suite-scaffold": {
+                    "group": "Scaffolds"
+                },
                 "m3/primary-tab-row": {
                     "group": "Navigation"
                 },

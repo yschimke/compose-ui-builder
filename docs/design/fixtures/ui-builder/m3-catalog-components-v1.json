@@ -1975,6 +1975,206 @@
         ]
       },
       "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteScaffold",
+      "componentIds": [
+        "m3/navigation-suite-scaffold"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt",
+        "callable": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold",
+        "name": "NavigationSuiteScaffold",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "navigationItems",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "navigationSuiteType",
+          "type": "NavigationSuiteType",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType"
+        },
+        {
+          "name": "navigationSuiteColors",
+          "type": "NavigationSuiteColors",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteColors"
+        },
+        {
+          "name": "containerColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "contentColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "state",
+          "type": "NavigationSuiteScaffoldState",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldState"
+        },
+        {
+          "name": "navigationItemVerticalArrangement",
+          "type": "Arrangement.Vertical",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.layout.Arrangement.Vertical"
+        },
+        {
+          "name": "primaryActionContent",
+          "type": "@Composable () -> Unit",
+          "hasDefault": true,
+          "composableSlot": true
+        },
+        {
+          "name": "primaryActionContentHorizontalAlignment",
+          "type": "Alignment.Horizontal",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Alignment.Horizontal"
+        },
+        {
+          "name": "content",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "navigationItems",
+          "required": true
+        },
+        {
+          "name": "primaryActionContent",
+          "required": false
+        },
+        {
+          "name": "content",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "NavigationSuiteScaffold(navigationItems = {}) {}",
+        "imports": [
+          "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold"
+        ]
+      },
+      "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt.NavigationSuiteItem",
+      "componentIds": [
+        "m3/navigation-suite-item"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldKt",
+        "callable": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem",
+        "name": "NavigationSuiteItem",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "selected",
+          "type": "Boolean",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "onClick",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "icon",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        },
+        {
+          "name": "label",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": false,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "navigationSuiteType",
+          "type": "NavigationSuiteType",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType"
+        },
+        {
+          "name": "enabled",
+          "type": "Boolean",
+          "hasDefault": true,
+          "typeFqn": "kotlin.Boolean"
+        },
+        {
+          "name": "badge",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "colors",
+          "type": "NavigationSuiteItemColors?",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItemColors",
+          "nullable": true
+        },
+        {
+          "name": "interactionSource",
+          "type": "MutableInteractionSource?",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.interaction.MutableInteractionSource",
+          "nullable": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "icon",
+          "required": true
+        },
+        {
+          "name": "label",
+          "required": false
+        },
+        {
+          "name": "badge",
+          "required": false
+        }
+      ],
+      "code": {
+        "call": "NavigationSuiteItem(selected = false, onClick = {}, icon = {}, label = null)",
+        "imports": [
+          "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem"
+        ]
+      },
+      "signatureKnown": true
     }
   ]
 }

@@ -455,6 +455,12 @@ private class ComposeEmitter(
     appendLine()
     (GENERATED_IMPORTS +
         adaptiveImports() +
+        (if (emittedNavigationSuite)
+          listOf(
+            "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem",
+            "androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold",
+          )
+        else emptyList()) +
         additionalTextImports() +
         listOfNotNull(assetAdapter?.renderer?.importName))
       .distinct()
@@ -763,6 +769,10 @@ private class ComposeEmitter(
           "text",
           "selected = ${node.boolExpression("selected")}, onClick = ${node.actionLambda("click", stateKotlinTypes)}",
         )
+      "m3/navigation-suite-scaffold" -> emitNavigationSuite(node, bodyLevel)
+      // An item's click is its selection, exactly as a tab's is: the binding the renderer
+      // dispatches is the one the generated item runs.
+      "m3/navigation-suite-item" -> emitNavigationSuiteItem(node, bodyLevel)
       DESIGN_COMPONENT_INSTANCE_ID -> emitPlacement(node, bodyLevel)
       FOR_EACH_COMPONENT_ID -> emitLoop(node, bodyLevel)
       "m3/list-item" -> emitListItem(node, bodyLevel)
@@ -966,6 +976,47 @@ private class ComposeEmitter(
     line(level + 1, "supportingPane = {")
     emitChildren(node.slot("supportingPane"), level + 2)
     line(level + 1, "},")
+    line(level, ")")
+  }
+
+  /**
+   * `NavigationSuiteScaffold` with its default navigation type, so the generated screen is a rail
+   * on a tablet and a bar on a phone by the library's own decision — the one the canvas draws per
+   * frame. The primary action is written only when the design has one.
+   */
+  private fun emitNavigationSuite(node: UiBuilderNode, level: Int) {
+    emittedNavigationSuite = true
+    line(level, "NavigationSuiteScaffold(")
+    line(level + 1, "navigationItems = {")
+    emitChildren(node.slot("navigationItems"), level + 2)
+    line(level + 1, "},")
+    line(level + 1, "modifier = ${node.modifierExpression()},")
+    val primaryAction = node.slot("primaryAction")
+    if (primaryAction.isNotEmpty()) {
+      line(level + 1, "primaryActionContent = {")
+      emitChildren(primaryAction, level + 2)
+      line(level + 1, "},")
+    }
+    line(level, ") {")
+    emitChildren(node.slot("content"), level + 1)
+    line(level, "}")
+  }
+
+  private fun emitNavigationSuiteItem(node: UiBuilderNode, level: Int) {
+    emittedNavigationSuite = true
+    line(level, "NavigationSuiteItem(")
+    line(level + 1, "selected = ${node.boolExpression("selected")},")
+    line(level + 1, "onClick = ${node.actionLambda("click", stateKotlinTypes)},")
+    line(level + 1, "icon = {")
+    emitChildren(node.slot("icon"), level + 2)
+    line(level + 1, "},")
+    val label = node.slot("label")
+    if (label.isNotEmpty()) {
+      line(level + 1, "label = {")
+      emitChildren(label, level + 2)
+      line(level + 1, "},")
+    }
+    line(level + 1, "modifier = ${node.modifierExpression()},")
     line(level, ")")
   }
 
@@ -1231,6 +1282,13 @@ private class ComposeEmitter(
 
   /** Set by [emitSupportingPane], so nothing but an emitted call can turn the adaptive code on. */
   private var emittedSupportingPaneScaffold = false
+
+  /**
+   * Set by the navigation-suite emitters, for the same reason: the navigation suite is its own
+   * artifact, `androidx.compose.material3:material3-adaptive-navigation-suite`, and an unused
+   * import of it stops the file compiling in a project without it.
+   */
+  private var emittedNavigationSuite = false
 
   private fun additionalTextImports(): List<String> {
     val propertyNames = document.nodes.values.flatMap { it.properties.keys }.toSet()
@@ -3283,6 +3341,8 @@ private val EMITTER_IDS =
     "m3/icon",
     "m3/icon-button",
     "m3/list-item",
+    "m3/navigation-suite-item",
+    "m3/navigation-suite-scaffold",
     "m3/primary-tab-row",
     "m3/progress-indicator",
     "m3/radio-button",
@@ -3490,6 +3550,10 @@ private val HANDLED_FIELDS =
       ),
     "m3/list-item" to
       HandledFields(setOf("startAccentColor"), setOf("headline", "supporting", "trailing")),
+    "m3/navigation-suite-item" to
+      HandledFields(setOf("selected"), setOf("icon", "label"), setOf("click")),
+    "m3/navigation-suite-scaffold" to
+      HandledFields(emptySet(), setOf("navigationItems", "primaryAction", "content")),
     "m3/primary-tab-row" to HandledFields(setOf("selectedIndex"), setOf("tabs")),
     "m3/progress-indicator" to HandledFields(setOf("variant", "progress", "indeterminate")),
     "m3/radio-button" to HandledFields(setOf("selected", "enabled"), events = setOf("click")),

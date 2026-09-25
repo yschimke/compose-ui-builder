@@ -275,7 +275,7 @@ class CatalogMenuTest {
         .catalogRows(state)
 
     assertEquals(
-      listOf("Scaffold", "Supporting pane scaffold", "Wear widget · Small"),
+      listOf("Navigation suite", "Scaffold", "Supporting pane scaffold", "Wear widget · Small"),
       componentsUnder(rows, "Scaffolds").map { it.item.displayName },
     )
     assertEquals(

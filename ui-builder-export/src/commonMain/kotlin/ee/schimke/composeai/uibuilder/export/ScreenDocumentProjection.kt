@@ -125,6 +125,8 @@ private val SLOT_PARAMETERS: Map<String, Map<String, String>> =
       ),
     // What shows once the bar expands is `SearchBar`'s trailing `content` lambda.
     "m3/search-bar" to mapOf("expandedContent" to "content"),
+    // The navigation suite's floating action slot. `navigationItems` and `content` already match.
+    "m3/navigation-suite-scaffold" to mapOf("primaryAction" to "primaryActionContent"),
   )
 
 private fun parameterForSlot(componentId: String, slot: String): String =
