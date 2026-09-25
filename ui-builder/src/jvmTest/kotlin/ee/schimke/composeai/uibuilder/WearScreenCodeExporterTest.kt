@@ -51,7 +51,7 @@ class WearScreenCodeExporterTest {
       "minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)" in source,
       source,
     )
-    assertTrue(".transformedHeight(this, spec)" in source, source)
+    assertTrue("Modifier.transformedHeight(this, spec)" in source, source)
     assertTrue("transformation = SurfaceTransformation(spec)" in source, source)
     assertTrue("val spec = rememberTransformationSpec()" in source, source)
     // The stand-in is emitted, not erased — the opposite of the widget container.
@@ -97,10 +97,12 @@ class WearScreenCodeExporterTest {
         )
       )
 
-    assertEquals("ActivityScreenInAppScaffold", emitted.screenName)
+    // The name the lane imports is the design's in both modes; there it is the wrapper.
+    assertEquals("ActivityScreen", emitted.screenName)
+    assertTrue("fun ActivityScreenContent() {" in emitted.source, emitted.source)
     assertTrue(
-      "fun ActivityScreenInAppScaffold() {\n" +
-        "    AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } }) { ActivityScreen() }\n" +
+      "fun ActivityScreen() {\n" +
+        "    AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } }) { ActivityScreenContent() }\n" +
         "}" in emitted.source,
       emitted.source,
     )

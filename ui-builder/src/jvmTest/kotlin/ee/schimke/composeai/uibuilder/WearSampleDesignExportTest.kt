@@ -67,9 +67,8 @@ class WearSampleDesignExportTest {
     )
     // Authored modifiers reach the code, before the list's own treatment and padding.
     assertTrue(
-      "modifier = Modifier.fillMaxWidth()" +
-        ".minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)" +
-        ".transformedHeight(this, spec)," in list,
+      "modifier = Modifier.fillMaxWidth().transformedHeight(this, spec)" +
+        ".minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)," in list,
       list,
     )
     // A card's second line is its body, not a subtitle.
@@ -80,7 +79,7 @@ class WearSampleDesignExportTest {
     assertTrue("ButtonGroupDefaults.minimumVerticalListContentPadding" in list, list)
     // ButtonGroup scales and fades with the rows around it.
     assertTrue(
-      "ButtonGroupDefaults.minimumVerticalListContentPadding).transformedHeight(this, spec),\n" +
+      "ButtonGroupDefaults.minimumVerticalListContentPadding),\n" +
         "                    transformation = SurfaceTransformation(spec)," in list,
       list,
     )
