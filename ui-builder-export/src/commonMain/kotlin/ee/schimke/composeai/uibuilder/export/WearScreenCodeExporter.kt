@@ -1204,6 +1204,10 @@ internal class WearContentEmitter(
         // false, so a default call keeps the short form.
         if (node.boolean("enabled") == false) "enabled = false" else null,
         size?.let { "buttonSize = EdgeButtonSize.$it" },
+        // A `wear-m3/button` here may carry the button's colours, and the canvas draws them.
+        // `EdgeButton` is always the filled shape and takes `ButtonDefaults.buttonColors`, so the
+        // colours are written against that whatever the legacy node's variant said.
+        colorsCall(node, nodeId, "Button")?.let { "colors = $it" },
         modifier?.let { "modifier = $it" },
       )
     val head = "${pad}EdgeButton(${arguments.joinToString(", ")}) {"
@@ -1569,10 +1573,14 @@ internal class WearContentEmitter(
     nodeId: String,
     pad: String,
     symbol: String,
-  ): List<String> {
+  ): List<String> =
+    colorsCall(node, nodeId, symbol)?.let { listOf("${pad}colors = $it,") } ?: emptyList()
+
+  /** The `…Colors(…)` call [colorsArgument] writes, or null when the design recolours nothing. */
+  private fun colorsCall(node: UiBuilderNode, nodeId: String, symbol: String): String? {
     val container = colorExpression(node, "containerColor")
     val content = colorExpression(node, "contentColor")
-    if (container == null && content == null) return emptyList()
+    if (container == null && content == null) return null
     val (defaults, function) =
       when (symbol) {
         "Button" -> "ButtonDefaults" to "buttonColors"
@@ -1586,10 +1594,11 @@ internal class WearContentEmitter(
         else -> "IconButtonDefaults" to "iconButtonColors"
       }
     if (container != null && symbol in NO_CONTAINER_BUTTON_SYMBOLS) {
-      return refused(
+      refused(
         "`${node.componentId}` (node `$nodeId`) sets `containerColor` on `$symbol`, which draws " +
           "no container — Wear's `$defaults.$function` takes only content colours"
       )
+      return null
     }
     listPaddingDefaults += defaults
     val arguments =
@@ -1597,7 +1606,7 @@ internal class WearContentEmitter(
         container?.let { "containerColor = $it" },
         content?.let { "contentColor = $it" },
       )
-    return listOf("${pad}colors = $defaults.$function(${arguments.joinToString(", ")}),")
+    return "$defaults.$function(${arguments.joinToString(", ")})"
   }
 
   private fun refused(reason: String): List<String> {

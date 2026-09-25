@@ -57,6 +57,42 @@ class WearSampleDesignExportTest {
     assertTrue(result.reasons.any { "draws no container" in it }, "${result.reasons}")
   }
 
+  /**
+   * A design from before `wear-m3/edge-button` put an ordinary button in the edge slot, and that
+   * button can carry colours the canvas draws. The generated `EdgeButton` keeps them.
+   */
+  @Test
+  fun `a legacy button in the edge slot keeps its colours`() {
+    val file = File(designsDirectory(), "wear-starter-greeting.json")
+    val document =
+      UiBuilderReducer.replay(Json.parseToJsonElement(file.readText()).jsonObject).document
+    val edge = document.nodes.getValue("show-list")
+    val legacy =
+      document.copy(
+        nodes =
+          document.nodes +
+            ("show-list" to
+              edge.copy(
+                componentId = "wear-m3/button",
+                properties =
+                  JsonObject(
+                    mapOf(
+                      "containerColor" to
+                        Json.parseToJsonElement("{\"type\":\"colorToken\",\"value\":\"tertiary\"}")
+                    )
+                  ),
+              ))
+      )
+    val result = RecordFreeExport.generate(legacy, UiBuilderCatalogPlatform.WEAR)
+    assertTrue(result is RecordFreeExport.Generated.Emitted, "$result")
+    assertTrue(
+      "EdgeButton(onClick = {}, colors = ButtonDefaults.buttonColors(" +
+        "containerColor = MaterialTheme.colorScheme.tertiary)) {" in result.source,
+      result.source,
+    )
+    assertTrue("import androidx.wear.compose.material3.ButtonDefaults" in result.source)
+  }
+
   @Test
   fun `every upstream Wear sample exports as a Wear screen`() {
     val out = File("build/wear-sample-designs").apply { mkdirs() }
