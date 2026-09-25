@@ -483,11 +483,16 @@ private fun updateCatalogRuntimeSurface(
       const render = {
         documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled
       };
-      const compositionKey = documentJson + '|' + widthDp + '|' + heightDp + '|' + density + '|' + mode;
+      // What the frame is BUILT for: its native pixel size and surface mode are fixed when it is
+      // created. The document is not part of it. An edit used to change this key, so every edit
+      // tore the frame down and cold-booted the catalog's whole Wasm runtime again -- a blank pane
+      // for as long as that took -- when a live frame takes the new document in one message.
+      const compositionKey = widthDp + '|' + heightDp + '|' + density + '|' + mode;
       let controller = host.__uiBuilderCatalogRuntime;
       if (controller && !controller.disposed && controller.runtimeId === runtimeId &&
           controller.compositionKey === compositionKey) {
         controller.render = render;
+        controller.renderLatest();
         controller.drawOverlay();
         return;
       }
@@ -512,6 +517,7 @@ private fun updateCatalogRuntimeSurface(
       let initializing = null;
       let manifest = null;
       let lastRenderKey = '';
+      let latestRenderRequestId = null;
       const pending = new Map();
       controller = {
         runtimeId,
@@ -538,6 +544,7 @@ private fun updateCatalogRuntimeSurface(
             type,
             payload: payload || {},
           }), '*');
+          return requestId;
         },
         renderLatest() {
           if (!initialized || this.disposed) return;
@@ -559,7 +566,7 @@ private fun updateCatalogRuntimeSurface(
               surfaceId,
             },
           };
-          this.request('renderDocument', payload);
+          latestRenderRequestId = this.request('renderDocument', payload);
         },
         drawOverlay() {
           overlay.replaceChildren();
@@ -626,6 +633,9 @@ private fun updateCatalogRuntimeSurface(
           if (initializing !== null) clearInterval(initializing);
           controller.renderLatest();
         } else if (message.type === 'rendered') {
+          // Edits now reach one live frame back to back; an answer for a revision already replaced
+          // must not put its selection bounds over the newer drawing.
+          if (message.requestId !== latestRenderRequestId) return;
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
           controller.drawOverlay();
