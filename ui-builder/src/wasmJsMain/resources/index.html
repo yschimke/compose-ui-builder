@@ -41,9 +41,7 @@
         position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
         background: var(--boot-bg); color: var(--boot-fg);
         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        transition: opacity 180ms ease-out;
       }
-      #ui-builder-boot[data-state="leaving"] { opacity: 0; pointer-events: none; }
       #ui-builder-boot .boot-card { width: min(360px, calc(100vw - 48px)); }
       #ui-builder-boot .boot-title { margin: 0 0 16px; font-size: 18px; font-weight: 600; }
       #ui-builder-boot .boot-phase { margin: 0; font-weight: 500; }

@@ -81,11 +81,12 @@ for (const mode of MODES) {
       { timeout: Number(process.env.SMOKE_READY_TIMEOUT_MS ?? 120_000) },
     );
     ready = true;
-    // The boot screen covers the whole page, so one the editor fails to take away is an editor
-    // nobody can see, however ready it says it is.
-    await page.waitForFunction(() => !document.getElementById('ui-builder-boot'), null, {
-      timeout: 5_000,
-    });
+    // The boot screen covers the whole page, so it has to be gone by the time the page says it is
+    // ready — not shortly after. Anything that captures at ready (compose-preview-server's visual
+    // harness does) would otherwise photograph it.
+    if (await page.evaluate(() => document.getElementById('ui-builder-boot') !== null)) {
+      errors.push('the boot screen was still up when the page reported ready');
+    }
   } catch (error) {
     errors.push(`not ready: ${error.message.split('\n')[0]}`);
   }
