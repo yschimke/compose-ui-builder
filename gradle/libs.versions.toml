@@ -107,8 +107,10 @@ maven-publish = "0.37.0"
 # `maxHorizontalPartitions` and the Gmail and Calendar samples export. It moves with the daemon and
 # contracts pins below, to the set 2.24.0 itself was built against. 2.25.0 (compose-ai-tools#5575)
 # imports same-named extensions that differ by receiver — Gmail's filled and outlined stars — and
-# writes the generated screen the way Compose is written by hand.
-composeai-tools = "2.25.0"
+# writes the generated screen the way Compose is written by hand. 2.26.0
+# (compose-ai-tools#5581) names a slot lambda's parameter and reads it, which is how a Scaffold's
+# content is padded by the `contentPadding` it is handed; it is built against contracts 3.11.0.
+composeai-tools = "2.26.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -178,7 +180,9 @@ composeai-preview-daemon = "3.8.3"
 # exported-artifact renderer and normalize its authored vocabulary onto a canvas adapter. 3.7.0
 # adds the catalog-owned, versioned Compose source-adapter declaration. 3.10.0 is the first release
 # carrying `ChainLink.member` (compose-preview-contracts#108), which `ScreenDocumentProjection` sets.
-composeai-contracts = "3.10.0"
+# 3.11.0 adds `ScreenNode.slotParameters` and `ScreenValue.SlotParameterRead`
+# (compose-preview-contracts#115), which the projection uses to pad a Scaffold's content.
+composeai-contracts = "3.11.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"
