@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.51.0](https://github.com/yschimke/compose-ui-builder/compare/v3.50.0...v3.51.0) (2026-09-25)
+
+
+### Features
+
+* **ui-builder:** pinch and Ctrl/Cmd + wheel zoom on the canvas, anchored under the hand ([#268](https://github.com/yschimke/compose-ui-builder/issues/268)) ([f9604a1](https://github.com/yschimke/compose-ui-builder/commit/f9604a1deb31b38860bc2319326612672b117681))
+* **ui-builder:** unframed component palette, touch-aware drags and resize handles ([#264](https://github.com/yschimke/compose-ui-builder/issues/264)) ([1071a84](https://github.com/yschimke/compose-ui-builder/commit/1071a840e72100b1a024f68e75ff9de8f056cea2))
+* **ui-builder:** Wear dialog defaults, button colours and a Wear render lane ([#263](https://github.com/yschimke/compose-ui-builder/issues/263)) ([20e28b0](https://github.com/yschimke/compose-ui-builder/commit/20e28b04cb1a84e0d3bb65ad7f5069d8d2f610a0))
+
+
+### Bug Fixes
+
+* **ui-builder:** read size and scale as Compose applies them, and snap Fill to the content edge ([#266](https://github.com/yschimke/compose-ui-builder/issues/266)) ([debe4d0](https://github.com/yschimke/compose-ui-builder/commit/debe4d028c8cbfad785df10cfe466185e9138900))
+* **ui-builder:** the code pane and problems panel export widget pictures from fetched bytes ([#270](https://github.com/yschimke/compose-ui-builder/issues/270)) ([902870e](https://github.com/yschimke/compose-ui-builder/commit/902870edb26ef19998862429bfc3e8ae31ed433a))
+
 ## [3.50.0](https://github.com/yschimke/compose-ui-builder/compare/v3.49.0...v3.50.0) (2026-09-25)
 
 
