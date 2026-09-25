@@ -997,7 +997,6 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-compose/document",
                 "remote-m3/lottie",
                 "remote-m3/remote-app-card",
                 "remote-m3/remote-button",
@@ -1019,11 +1018,7 @@
                 "remote-m3/remote-stepper",
                 "remote-m3/remote-switch-button",
                 "remote-m3/remote-text-button",
-                "remote-m3/remote-title-card",
-                "remote-m3/widget-container-adaptive",
-                "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small",
-                "shape/linear-gradient"
+                "remote-m3/remote-title-card"
             ],
             "layout/collapsible-row.children": [
                 "asset/image",
@@ -1037,7 +1032,6 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-compose/document",
                 "remote-m3/lottie",
                 "remote-m3/remote-app-card",
                 "remote-m3/remote-button",
@@ -1059,11 +1053,7 @@
                 "remote-m3/remote-stepper",
                 "remote-m3/remote-switch-button",
                 "remote-m3/remote-text-button",
-                "remote-m3/remote-title-card",
-                "remote-m3/widget-container-adaptive",
-                "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small",
-                "shape/linear-gradient"
+                "remote-m3/remote-title-card"
             ],
             "layout/column.children": [
                 "asset/image",
@@ -1117,7 +1107,6 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-compose/document",
                 "remote-m3/lottie",
                 "remote-m3/remote-app-card",
                 "remote-m3/remote-button",
@@ -1139,11 +1128,7 @@
                 "remote-m3/remote-stepper",
                 "remote-m3/remote-switch-button",
                 "remote-m3/remote-text-button",
-                "remote-m3/remote-title-card",
-                "remote-m3/widget-container-adaptive",
-                "remote-m3/widget-container-large",
-                "remote-m3/widget-container-small",
-                "shape/linear-gradient"
+                "remote-m3/remote-title-card"
             ],
             "layout/flow-row.children": [
                 "asset/image",
@@ -1157,7 +1142,6 @@
                 "layout/row",
                 "m3/text",
                 "remote-compose/custom",
-                "remote-compose/document",
                 "remote-m3/lottie",
                 "remote-m3/remote-app-card",
                 "remote-m3/remote-button",
@@ -1179,8 +1163,7 @@
                 "remote-m3/remote-stepper",
                 "remote-m3/remote-switch-button",
                 "remote-m3/remote-text-button",
-                "remote-m3/remote-title-card",
-                "shape/linear-gradient"
+                "remote-m3/remote-title-card"
             ],
             "layout/for-each.template": [
                 "asset/image",

@@ -1531,6 +1531,7 @@ internal fun remoteOnlyLayout(
       .also {
         it.componentId = componentId
         it.displayName = displayName
+        it.slots = donor.slots.map { slot -> slot.acceptingRemoteAuthorable() }
         properties?.let { declaredProperties -> it.properties = declaredProperties }
         it.wasm = donor.wasm.newBuilder().also { wasm -> wasm.notes = notes }.build()
         // Not a Compose call: the regular Compose exporter has no counterpart to write, and the
@@ -1582,6 +1583,16 @@ internal fun remoteOnlyLayout(
   }
 }
 
+/**
+ * A container slot narrowed to what `RemoteContentEmitter` can write inside it.
+ *
+ * The donor slots accept `AnyContent`, which would let a document, a gradient or a nested widget
+ * host into a Remote layout — each refused at export. The widget content slots already accept only
+ * `RemoteAuthorable`; the Remote-only layouts take the same rule.
+ */
+private fun SlotCapabilityV1.acceptingRemoteAuthorable(): SlotCapabilityV1 =
+  newBuilder().also { it.acceptedTraits = listOf("RemoteAuthorable") }.build()
+
 /** The ids [remoteOnlyLayout] answers, in palette order. */
 internal val REMOTE_ONLY_LAYOUT_IDS: List<String> =
   listOf("layout/fit-box", "layout/collapsible-column", "layout/collapsible-row")
@@ -1596,6 +1607,7 @@ internal fun ComponentCapabilityV1.withWidgetProfileNote(): ComponentCapabilityV
   else
     newBuilder()
       .also {
+        it.slots = slots.map { slot -> slot.acceptingRemoteAuthorable() }
         it.wasm =
           wasm
             .newBuilder()
@@ -1738,8 +1750,7 @@ private fun remoteMaterial3Components(
           record.parameters.mapNotNull { parameter ->
             remoteMaterial3Property(record.symbol.name, parameter)
           }
-        it.modifierCapabilities =
-          template.modifierCapabilities.filter { name -> name in REMOTE_M3_MODIFIERS }
+        it.modifierCapabilities = template.modifierCapabilities.remoteAuthorableModifiers()
         it.wasm =
           supportedWasm
             .newBuilder()

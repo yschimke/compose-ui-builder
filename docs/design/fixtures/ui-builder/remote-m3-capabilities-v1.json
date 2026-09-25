@@ -912,7 +912,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": null,
@@ -1007,7 +1007,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": null,
@@ -1134,7 +1134,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": null,
@@ -1237,7 +1237,7 @@
                         "Leaf"
                     ],
                     "acceptedTraits": [
-                        "AnyContent"
+                        "RemoteAuthorable"
                     ],
                     "cardinality": {
                         "max": null,
@@ -1831,7 +1831,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1986,7 +1988,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [],
             "role": "Container",
@@ -2061,7 +2065,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2163,7 +2169,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2245,7 +2253,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2387,7 +2397,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2483,7 +2495,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2597,7 +2611,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2686,7 +2702,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2782,7 +2800,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -2915,7 +2935,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3048,7 +3070,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3181,7 +3205,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3301,7 +3327,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3421,7 +3449,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3541,7 +3571,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3674,7 +3706,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3816,7 +3850,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3909,7 +3945,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -4005,7 +4043,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -4101,7 +4141,9 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
             ],
             "properties": [
                 {
