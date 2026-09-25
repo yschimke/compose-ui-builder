@@ -504,6 +504,17 @@ internal fun WearCanvasIconButton(
       ) {
         content()
       }
+    // The port publishes no `FilledVariantIconButton`; upstream's is a `FilledIconButton` with the
+    // variant palette, which is exactly what this draws.
+    "filled-variant" ->
+      FilledIconButton(
+        onClick = {},
+        modifier = modifier,
+        enabled = enabled,
+        colors = IconButtonDefaults.filledVariantIconButtonColors(containerColor, contentColor),
+      ) {
+        content()
+      }
     "filled-tonal" ->
       FilledTonalIconButton(
         onClick = {},
