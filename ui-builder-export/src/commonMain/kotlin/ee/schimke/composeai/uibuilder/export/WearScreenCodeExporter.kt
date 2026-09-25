@@ -1660,7 +1660,23 @@ private fun String.stateIdentifier(): String {
 /** `8.0` reads as `8` in a `.dp` literal. */
 private fun Float.dp(): String = toString().removeSuffix(".0")
 
-private fun String.quoted(): String = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+/**
+ * A Kotlin `"…"` literal.
+ *
+ * Escapes the line breaks and `$` as well as the quote: a label is authored text, and the upstream
+ * ComposeStarter greeting — `"From the Round world,\nHello, Android!"` — generated a string literal
+ * broken across two lines, which does not compile; a `$` would have become a template. The same set
+ * `RemoteContentEmitter.escaped` has always used.
+ */
+private fun String.quoted(): String =
+  "\"" +
+    replace("\\", "\\\\")
+      .replace("\"", "\\\"")
+      .replace("$", "\\$")
+      .replace("\n", "\\n")
+      .replace("\r", "\\r")
+      .replace("\t", "\\t") +
+    "\""
 
 /** The design's title as a composable name: "Activity list" becomes `ActivityListScreen`. */
 private fun UiBuilderDocument.screenIdentifier(): String {

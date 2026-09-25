@@ -2,11 +2,6 @@ package ee.schimke.composeai.uibuilder.preview
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
-import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 
 /**
  * `google-home-wear` — a Wear design fixture — drawn with the Wear canvas this module adds. It used
@@ -48,28 +43,31 @@ fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear")
  */
 @WearPreviewSmallRoundExtent
 @Composable
-fun GoogleHomeWearSmallExtentPreview() = SizedDesignFixture("google-home-wear")
+fun GoogleHomeWearSmallExtentPreview() = ExtentDesignFixture("google-home-wear")
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun GoogleHomeWearLargeExtentPreview() = SizedDesignFixture("google-home-wear")
+fun GoogleHomeWearLargeExtentPreview() = ExtentDesignFixture("google-home-wear")
+
+/** The Wear samples transcribed from Android's own (see `UI_BUILDER_WEAR_SAMPLES.md`). */
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignWearStarterGreetingPreview() = DesignFixture("wear-starter-greeting")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignWearStarterListPreview() = DesignFixture("wear-starter-list")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignJetcasterWearLibraryPreview() = DesignFixture("jetcaster-wear-library")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignJetcasterWearEpisodePreview() = DesignFixture("jetcaster-wear-episode")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignJetcasterWearQueuePreview() = DesignFixture("jetcaster-wear-queue")
 
 @Composable private fun DesignFixture(designId: String) = SizedDesignFixture(designId)
-
-@Composable
-private fun SizedDesignFixture(designId: String) {
-  UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)
-}
-
-/** The fixture `designs/<designId>.json` from `:ui-builder`'s resources, replayed. */
-private fun designFixtureDocument(designId: String): UiBuilderDocument =
-  UiBuilderReducer.replay(
-      Json.parseToJsonElement(
-          checkNotNull(UiBuilderDocument::class.java.getResource("/designs/$designId.json")) {
-              "missing design fixture $designId"
-            }
-            .readText()
-        )
-        .jsonObject
-    )
-    .document
