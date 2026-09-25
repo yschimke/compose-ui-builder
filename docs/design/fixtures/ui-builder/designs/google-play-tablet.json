@@ -41,17 +41,8 @@
       "parent": null,
       "node": {
         "id": "root",
-        "componentId": "layout/row",
-        "properties": {
-          "horizontalSpacingDp": {
-            "type": "float",
-            "value": 0.0
-          },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
-          }
-        },
+        "componentId": "m3/navigation-suite-scaffold",
+        "properties": {},
         "modifiers": [
           {
             "type": "fillMaxSize"
@@ -60,117 +51,19 @@
       }
     },
     {
-      "operationId": "insert-play-rail",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "root",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 6.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "width",
-            "widthDp": 88
-          },
-          {
-            "type": "fillMaxHeight"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerLow"
-            }
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 12,
-            "endDp": 0,
-            "bottomDp": 0
-          }
-        ]
-      }
-    },
-    {
       "operationId": "insert-play-rail-games",
       "type": "insertNode",
       "parent": {
-        "nodeId": "play-rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "play-rail-games",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      }
-    },
-    {
-      "operationId": "insert-play-rail-games-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-rail-games",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail-games-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerHighest"
-            },
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
+          "selected": {
+            "type": "bool",
+            "value": true
           }
         }
       }
@@ -179,8 +72,8 @@
       "operationId": "insert-play-rail-games-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "play-rail-games-pill",
-        "slot": "children"
+        "nodeId": "play-rail-games",
+        "slot": "icon"
       },
       "node": {
         "id": "play-rail-games-icon",
@@ -193,14 +86,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Games"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
           }
         }
       }
@@ -210,7 +95,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "play-rail-games",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "play-rail-games-label",
@@ -223,85 +108,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
-          }
-        }
-      },
-      "afterNodeId": "play-rail-games-pill"
-    },
-    {
-      "operationId": "insert-play-rail-apps",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail-apps",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "play-rail-games"
-    },
-    {
-      "operationId": "insert-play-rail-apps-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-rail-apps",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail-apps-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-play-rail-apps",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "play-rail-apps",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "play-rail-games"
+    },
+    {
       "operationId": "insert-play-rail-apps-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "play-rail-apps-pill",
-        "slot": "children"
+        "nodeId": "play-rail-apps",
+        "slot": "icon"
       },
       "node": {
         "id": "play-rail-apps-icon",
@@ -314,14 +149,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Apps"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -331,7 +158,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "play-rail-apps",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "play-rail-apps-label",
@@ -344,85 +171,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        }
-      },
-      "afterNodeId": "play-rail-apps-pill"
-    },
-    {
-      "operationId": "insert-play-rail-books",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail-books",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "play-rail-apps"
-    },
-    {
-      "operationId": "insert-play-rail-books-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-rail-books",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail-books-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-play-rail-books",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "play-rail-books",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "play-rail-apps"
+    },
+    {
       "operationId": "insert-play-rail-books-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "play-rail-books-pill",
-        "slot": "children"
+        "nodeId": "play-rail-books",
+        "slot": "icon"
       },
       "node": {
         "id": "play-rail-books-icon",
@@ -435,14 +212,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Books"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -452,7 +221,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "play-rail-books",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "play-rail-books-label",
@@ -465,85 +234,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        }
-      },
-      "afterNodeId": "play-rail-books-pill"
-    },
-    {
-      "operationId": "insert-play-rail-offers",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail-offers",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "play-rail-books"
-    },
-    {
-      "operationId": "insert-play-rail-offers-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "play-rail-offers",
-        "slot": "children"
-      },
-      "node": {
-        "id": "play-rail-offers-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-play-rail-offers",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "play-rail-offers",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "play-rail-books"
+    },
+    {
       "operationId": "insert-play-rail-offers-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "play-rail-offers-pill",
-        "slot": "children"
+        "nodeId": "play-rail-offers",
+        "slot": "icon"
       },
       "node": {
         "id": "play-rail-offers-icon",
@@ -556,14 +275,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Offers"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -573,7 +284,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "play-rail-offers",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "play-rail-offers-label",
@@ -586,21 +297,16 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
-      },
-      "afterNodeId": "play-rail-offers-pill"
+      }
     },
     {
       "operationId": "insert-play-screen",
       "type": "insertNode",
       "parent": {
         "nodeId": "root",
-        "slot": "children"
+        "slot": "content"
       },
       "node": {
         "id": "play-screen",
@@ -608,14 +314,9 @@
         "modifiers": [
           {
             "type": "fillMaxSize"
-          },
-          {
-            "type": "weight",
-            "weight": 1
           }
         ]
-      },
-      "afterNodeId": "play-rail"
+      }
     },
     {
       "operationId": "insert-play-search",
@@ -783,7 +484,7 @@
       },
       "node": {
         "id": "play-tabs",
-        "componentId": "m3/primary-tab-row",
+        "componentId": "m3/primary-scrollable-tab-row",
         "properties": {
           "selectedIndex": {
             "type": "int",
@@ -895,6 +596,104 @@
       }
     },
     {
+      "operationId": "insert-play-tab-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "play-tabs",
+        "slot": "tabs"
+      },
+      "node": {
+        "id": "play-tab-2",
+        "componentId": "m3/tab",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "play-tab-1"
+    },
+    {
+      "operationId": "insert-play-tab-2-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "play-tab-2",
+        "slot": "text"
+      },
+      "node": {
+        "id": "play-tab-2-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Kids"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-play-tab-3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "play-tabs",
+        "slot": "tabs"
+      },
+      "node": {
+        "id": "play-tab-3",
+        "componentId": "m3/tab",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "play-tab-2"
+    },
+    {
+      "operationId": "insert-play-tab-3-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "play-tab-3",
+        "slot": "text"
+      },
+      "node": {
+        "id": "play-tab-3-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Premium"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
       "operationId": "insert-play-tab-4",
       "type": "insertNode",
       "parent": {
@@ -911,7 +710,7 @@
           }
         }
       },
-      "afterNodeId": "play-tab-1"
+      "afterNodeId": "play-tab-3"
     },
     {
       "operationId": "insert-play-tab-4-label",
@@ -926,7 +725,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Kids"
+            "value": "Categories"
           },
           "style": {
             "type": "enum",
@@ -4282,5 +4081,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "9c21c0a6605bed792196437cd51f4e07ddb14ccd51d9b3840d2ac26f4b229943"
+  "expectedDocumentHash": "a5917e375d69ad094ffc898eb7cf1c81a83fb557dd7c1987151153c1736faa0d"
 }

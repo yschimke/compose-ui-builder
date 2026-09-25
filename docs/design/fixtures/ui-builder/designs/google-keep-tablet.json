@@ -41,17 +41,8 @@
       "parent": null,
       "node": {
         "id": "root",
-        "componentId": "layout/row",
-        "properties": {
-          "horizontalSpacingDp": {
-            "type": "float",
-            "value": 0.0
-          },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
-          }
-        },
+        "componentId": "m3/navigation-suite-scaffold",
+        "properties": {},
         "modifiers": [
           {
             "type": "fillMaxSize"
@@ -60,117 +51,19 @@
       }
     },
     {
-      "operationId": "insert-keep-rail",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "root",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 6.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "width",
-            "widthDp": 88
-          },
-          {
-            "type": "fillMaxHeight"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerLow"
-            }
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 12,
-            "endDp": 0,
-            "bottomDp": 0
-          }
-        ]
-      }
-    },
-    {
       "operationId": "insert-keep-rail-notes",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "keep-rail-notes",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      }
-    },
-    {
-      "operationId": "insert-keep-rail-notes-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail-notes",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-notes-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerHighest"
-            },
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
+          "selected": {
+            "type": "bool",
+            "value": true
           }
         }
       }
@@ -179,8 +72,8 @@
       "operationId": "insert-keep-rail-notes-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-rail-notes-pill",
-        "slot": "children"
+        "nodeId": "keep-rail-notes",
+        "slot": "icon"
       },
       "node": {
         "id": "keep-rail-notes-icon",
@@ -193,14 +86,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Notes"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
           }
         }
       }
@@ -210,7 +95,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-rail-notes",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "keep-rail-notes-label",
@@ -223,85 +108,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
-          }
-        }
-      },
-      "afterNodeId": "keep-rail-notes-pill"
-    },
-    {
-      "operationId": "insert-keep-rail-reminders",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-reminders",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "keep-rail-notes"
-    },
-    {
-      "operationId": "insert-keep-rail-reminders-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail-reminders",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-reminders-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-keep-rail-reminders",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "keep-rail-reminders",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-notes"
+    },
+    {
       "operationId": "insert-keep-rail-reminders-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-rail-reminders-pill",
-        "slot": "children"
+        "nodeId": "keep-rail-reminders",
+        "slot": "icon"
       },
       "node": {
         "id": "keep-rail-reminders-icon",
@@ -314,14 +149,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Reminders"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -331,7 +158,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-rail-reminders",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "keep-rail-reminders-label",
@@ -344,85 +171,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        }
-      },
-      "afterNodeId": "keep-rail-reminders-pill"
-    },
-    {
-      "operationId": "insert-keep-rail-labels",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-labels",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "keep-rail-reminders"
-    },
-    {
-      "operationId": "insert-keep-rail-labels-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail-labels",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-labels-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-keep-rail-labels",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "keep-rail-labels",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-reminders"
+    },
+    {
       "operationId": "insert-keep-rail-labels-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-rail-labels-pill",
-        "slot": "children"
+        "nodeId": "keep-rail-labels",
+        "slot": "icon"
       },
       "node": {
         "id": "keep-rail-labels-icon",
@@ -435,14 +212,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Labels"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -452,7 +221,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-rail-labels",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "keep-rail-labels-label",
@@ -465,85 +234,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        }
-      },
-      "afterNodeId": "keep-rail-labels-pill"
-    },
-    {
-      "operationId": "insert-keep-rail-archive",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-archive",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "keep-rail-labels"
-    },
-    {
-      "operationId": "insert-keep-rail-archive-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail-archive",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-archive-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-keep-rail-archive",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "keep-rail-archive",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-labels"
+    },
+    {
       "operationId": "insert-keep-rail-archive-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-rail-archive-pill",
-        "slot": "children"
+        "nodeId": "keep-rail-archive",
+        "slot": "icon"
       },
       "node": {
         "id": "keep-rail-archive-icon",
@@ -556,14 +275,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Archive"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -573,7 +284,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-rail-archive",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "keep-rail-archive-label",
@@ -586,85 +297,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        }
-      },
-      "afterNodeId": "keep-rail-archive-pill"
-    },
-    {
-      "operationId": "insert-keep-rail-bin",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-bin",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "keep-rail-archive"
-    },
-    {
-      "operationId": "insert-keep-rail-bin-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "keep-rail-bin",
-        "slot": "children"
-      },
-      "node": {
-        "id": "keep-rail-bin-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-keep-rail-bin",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "keep-rail-bin",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "keep-rail-archive"
+    },
+    {
       "operationId": "insert-keep-rail-bin-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "keep-rail-bin-pill",
-        "slot": "children"
+        "nodeId": "keep-rail-bin",
+        "slot": "icon"
       },
       "node": {
         "id": "keep-rail-bin-icon",
@@ -677,14 +338,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Bin"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -694,7 +347,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "keep-rail-bin",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "keep-rail-bin-label",
@@ -707,21 +360,16 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
-      },
-      "afterNodeId": "keep-rail-bin-pill"
+      }
     },
     {
       "operationId": "insert-keep-screen",
       "type": "insertNode",
       "parent": {
         "nodeId": "root",
-        "slot": "children"
+        "slot": "content"
       },
       "node": {
         "id": "keep-screen",
@@ -735,14 +383,9 @@
         "modifiers": [
           {
             "type": "fillMaxSize"
-          },
-          {
-            "type": "weight",
-            "weight": 1
           }
         ]
-      },
-      "afterNodeId": "keep-rail"
+      }
     },
     {
       "operationId": "insert-keep-search",
@@ -3845,5 +3488,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "4dc45503fa49640aa3af02e3f453356bf5ffd2d5cb71c1badbd18568bfe308a1"
+  "expectedDocumentHash": "6e8cb86542223fa0064c3599f1b2b3e20fe8ad7d06e42eb36b4a4934fbe326df"
 }
