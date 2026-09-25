@@ -25,7 +25,8 @@ class ScaffoldContentPaddingProjectionTest {
         "revision": 0,
         "catalogPin": {"systemId": "m3-catalog", "catalogRevision": "candidate",
           "capabilityDigest": "candidate", "nativeRuntimeId": "candidate"},
-        "environment": {"widthDp": 360, "heightDp": 640, "density": 1.0, "theme": "light"},
+        "environment": {"widthDp": 360, "heightDp": 640, "density": 1.0, "theme": "light",
+          "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr"},
         "roots": ["screen"],
         "nodes": {
           "screen": {"id": "screen", "componentId": "layout/scaffold", "properties": {},
