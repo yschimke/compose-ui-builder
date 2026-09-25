@@ -474,6 +474,20 @@ object ScreenDocumentProjection {
      */
     private val paneWidths = mutableMapOf<String, ChainLink>()
 
+    /**
+     * `Modifier.padding(contentPadding)` for each child of a `Scaffold`'s `content`, keyed by that
+     * child, and led with rather than appended.
+     *
+     * `Scaffold`'s content lambda receives the padding its bars occupy, and the canvas applies it
+     * to every content child as the first modifier (`child(it, Modifier.padding(padding))`), so a
+     * body sits below the top bar. The export used to write a bare `{ … }` whose `it` nothing read,
+     * and every Scaffold drew its body underneath its bar. Handed across like [paneWidths]: set
+     * when the scaffold's `content` slot is visited, spent when the child's modifier chain is
+     * built. A child that builds no chain of its own (a placement, a repetition, a selection) drops
+     * it unspent, which is the old, unpadded, export rather than a refusal.
+     */
+    private val scaffoldPaddings = mutableMapOf<String, ChainLink>()
+
     private class BoundField(
       val name: String,
       val type: String,
@@ -866,11 +880,19 @@ object ScreenDocumentProjection {
                   children.forEach { paneWidths[it] = link }
                 }
               }
+              val padsContent = node.componentId == SCAFFOLD && slot == SCAFFOLD_CONTENT
+              if (padsContent) children.forEach { scaffoldPaddings[it] = SCAFFOLD_PADDING_LINK }
               parameterForSlot(node.componentId, slot) to
-                if (node.componentId == CARD_CATALOG_ID && slot == CARD_CONTENT_SLOT)
-                  listOf(cardContentBox(node, children))
-                else children.mapNotNull { child -> node(child, childScope) }
+                (if (node.componentId == CARD_CATALOG_ID && slot == CARD_CONTENT_SLOT)
+                    listOf(cardContentBox(node, children))
+                  else children.mapNotNull { child -> node(child, childScope) })
+                  .also { if (padsContent) children.forEach { scaffoldPaddings.remove(it) } }
             },
+          // The parameter those padding links read: `Scaffold(…) { contentPadding -> … }`.
+          slotParameters =
+            if (node.componentId == SCAFFOLD && !node.slots[SCAFFOLD_CONTENT].isNullOrEmpty())
+              mapOf(SCAFFOLD_CONTENT to CONTENT_PADDING)
+            else emptyMap(),
           slotItems =
             node.slots.keys
               .mapNotNull { slot ->
@@ -1168,8 +1190,14 @@ object ScreenDocumentProjection {
         arguments[target.parameter] = retarget(target, value, node, property, variant) ?: continue
       }
       modifierClick(node)?.let { fromProperties += it }
-      if (node.modifiers.isNotEmpty() || fromProperties.isNotEmpty() || tagNodes) {
-        modifiers(node, fromProperties, scope)?.let { arguments["modifier"] = it }
+      val leading = listOfNotNull(scaffoldPaddings.remove(node.id))
+      if (
+        node.modifiers.isNotEmpty() ||
+          fromProperties.isNotEmpty() ||
+          leading.isNotEmpty() ||
+          tagNodes
+      ) {
+        modifiers(node, fromProperties, scope, leading)?.let { arguments["modifier"] = it }
       }
       return arguments
     }
@@ -1849,6 +1877,7 @@ object ScreenDocumentProjection {
       node: DesignNodeV1,
       fromProperties: List<ChainLink>,
       scope: String?,
+      leading: List<ChainLink> = emptyList(),
     ): ScreenValue? {
       // Every modifier is visited even after one fails. A non-local `return` out of the map stopped
       // at the first, which quietly broke this projection's one promise: `Outcome.Refused` carries
@@ -1864,7 +1893,9 @@ object ScreenDocumentProjection {
         receiver = ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER),
         // The authored chain first, then the links a property implied, then the tag. A designer's
         // own order is the one thing here that carries intent, so nothing is interleaved with it.
-        links = links.filterNotNull() + fromProperties + tag,
+        // Only a parent's padding precedes it — [scaffoldPaddings] — because that is the canvas's
+        // order: the scaffold pads its content, and the content's own modifiers apply inside.
+        links = leading + links.filterNotNull() + fromProperties + tag,
         typeFqn = MODIFIER,
       )
     }
@@ -3568,6 +3599,23 @@ object ScreenDocumentProjection {
   private const val DOT_COLOR = "color"
 
   private const val SUPPORTING_PANE_SCAFFOLD = "layout/supporting-pane-scaffold"
+  private const val SCAFFOLD = "layout/scaffold"
+  private const val SCAFFOLD_CONTENT = "content"
+
+  /** The document key a `Scaffold`'s content lambda parameter is read by. */
+  private const val CONTENT_PADDING = "contentPadding"
+
+  private val SCAFFOLD_PADDING_LINK =
+    ChainLink(
+      "androidx.compose.foundation.layout.padding",
+      positional =
+        listOf(
+          ScreenValue.SlotParameterRead(
+            CONTENT_PADDING,
+            "androidx.compose.foundation.layout.PaddingValues",
+          )
+        ),
+    )
   private const val PANE_LAYOUT_MODE = "layoutMode"
   private const val MAIN_PANE_VISIBLE = "mainPaneVisible"
   private const val SUPPORTING_PANE_VISIBLE = "supportingPaneVisible"

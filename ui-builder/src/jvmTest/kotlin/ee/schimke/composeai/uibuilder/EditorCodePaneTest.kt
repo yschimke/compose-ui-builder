@@ -132,7 +132,13 @@ class EditorCodePaneTest {
     // refuses.
     assertTrue(code.kotlin.contains("package ${ScreenExportGate.PACKAGE_NAME}"), code.kotlin)
     assertTrue(code.kotlin.contains("Scaffold("), code.kotlin)
-    assertTrue(code.kotlin.contains("Box {"), code.kotlin)
+    // The body sits below the bars: Scaffold hands its content the padding they occupy, and the
+    // export spends it on the content first, as the canvas does.
+    assertTrue(code.kotlin.contains("{ contentPadding ->"), code.kotlin)
+    assertTrue(
+      code.kotlin.contains("Box(modifier = Modifier.padding(contentPadding)) {"),
+      code.kotlin,
+    )
   }
 
   @Test
@@ -175,7 +181,10 @@ class EditorCodePaneTest {
     // The catalog spells the slot `children`; `Box` names the parameter `content`. The pane reads
     // the export's own projection, so it prints what compiles rather than what the catalog says —
     // and `content` is the one slot written as a trailing lambda.
-    assertTrue(after.kotlin.contains("Box {"), after.kotlin)
+    assertTrue(
+      after.kotlin.contains("Box(modifier = Modifier.padding(contentPadding)) {"),
+      after.kotlin,
+    )
     assertFalse(after.kotlin.contains("children ="), after.kotlin)
   }
 
