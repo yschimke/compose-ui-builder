@@ -687,6 +687,7 @@ internal fun PinnedDesignCanvas(
         dragPosition == null
     ) {
       val pxPerDp = density.density * scale
+      val rtl = document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl"
       // Where Fill actually reaches: the parent's box less its own padding, which is the room it
       // offers its children. Snapping to the outer box made a padded parent's Fill land short of
       // where the handle was let go.
@@ -697,13 +698,16 @@ internal fun PinnedDesignCanvas(
             ?.firstOrNull { it.nodeId == parentId }
             ?.bounds
             ?.let { outer ->
-              val (start, top, end, bottom) =
-                paddingInsets(document.nodes[parentId]?.modifiers.orEmpty()).map { it * pxPerDp }
+              // In the parent's drawn pixels: its ancestors' scales and its own, in chain order.
+              val sx = pxPerDp * document.ancestorScale(parentId, EditorAxis.Width)
+              val sy = pxPerDp * document.ancestorScale(parentId, EditorAxis.Height)
+              val (left, top, right, bottom) =
+                paddingInsets(document.nodes[parentId]?.modifiers.orEmpty(), rtl)
               UiBuilderPixelBounds(
-                x = outer.x + start,
-                y = outer.y + top,
-                width = (outer.width - start - end).coerceAtLeast(0f),
-                height = (outer.height - top - bottom).coerceAtLeast(0f),
+                x = outer.x + left * sx,
+                y = outer.y + top * sy,
+                width = (outer.width - (left + right) * sx).coerceAtLeast(0f),
+                height = (outer.height - (top + bottom) * sy).coerceAtLeast(0f),
               )
             }
         }
@@ -715,9 +719,13 @@ internal fun PinnedDesignCanvas(
         // A design dp is `scale` workspace dp — see [drawScale] — and the root counts in the
         // workspace's pixels.
         pxPerDp = pxPerDp,
+        // Its own scale and every ancestor's: the canvas measured the node after all of them.
         nodeScale =
           document.nodes[sizing.nodeId]?.modifiers.orEmpty().let { chain ->
-            drawnScale(chain, EditorAxis.Width) to drawnScale(chain, EditorAxis.Height)
+            drawnScale(chain, EditorAxis.Width) *
+              document.ancestorScale(sizing.nodeId, EditorAxis.Width) to
+              drawnScale(chain, EditorAxis.Height) *
+                document.ancestorScale(sizing.nodeId, EditorAxis.Height)
           },
         onResizing = { resizing = it },
         onResize = { width, height -> onResize(sizing.nodeId, width, height) },

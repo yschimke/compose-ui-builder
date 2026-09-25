@@ -150,6 +150,25 @@ class NodeSizingTest {
   }
 
   @Test
+  fun `a weight that does not fill decides nothing`() {
+    val chain =
+      chain("""[{"type":"weight","weight":1,"fill":false},{"type":"width","widthDp":64}]""")
+    assertEquals(EditorSizing.Fixed(64f), sizingOf(chain, EditorAxis.Width, EditorLayoutScope.Row))
+  }
+
+  @Test
+  fun `padding insets are physical and drawn - mirrored in rtl, magnified by an earlier scale`() {
+    val chain =
+      chain(
+        """[{"type":"padding","startDp":4,"topDp":0,"endDp":10,"bottomDp":0},
+           {"type":"scale","scaleX":2,"scaleY":1},
+           {"type":"padding","startDp":1,"topDp":3,"endDp":0,"bottomDp":0}]"""
+      )
+    assertEquals(listOf(6f, 3f, 10f, 0f), paddingInsets(chain))
+    assertEquals(listOf(10f, 3f, 6f, 0f), paddingInsets(chain, rtl = true))
+  }
+
+  @Test
   fun `every padding in a chain adds to the insets its children are offered`() {
     assertEquals(
       listOf(10f, 2f, 12f, 4f),
