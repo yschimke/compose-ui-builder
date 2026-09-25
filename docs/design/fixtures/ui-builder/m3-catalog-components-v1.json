@@ -2269,6 +2269,137 @@
       "requiredOptIns": [
         "androidx.compose.material3.ExperimentalMaterial3Api"
       ]
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.AlertDialog_skikoKt.AlertDialog",
+      "componentIds": [
+        "m3/dialog"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.AlertDialog_skikoKt",
+        "callable": "androidx.compose.material3.AlertDialog",
+        "name": "AlertDialog",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "onDismissRequest",
+          "type": "() -> Unit",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Function0"
+        },
+        {
+          "name": "confirmButton",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "dismissButton",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "icon",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "title",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "text",
+          "type": "(@Composable () -> Unit)?",
+          "hasDefault": true,
+          "composableSlot": true,
+          "nullable": true
+        },
+        {
+          "name": "shape",
+          "type": "Shape",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Shape"
+        },
+        {
+          "name": "containerColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "iconContentColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "titleContentColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "textContentColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "tonalElevation",
+          "type": "Dp",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.unit.Dp"
+        },
+        {
+          "name": "properties",
+          "type": "DialogProperties",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.window.DialogProperties"
+        }
+      ],
+      "slots": [
+        {
+          "name": "confirmButton",
+          "required": true
+        },
+        {
+          "name": "dismissButton",
+          "required": false
+        },
+        {
+          "name": "icon",
+          "required": false
+        },
+        {
+          "name": "title",
+          "required": false
+        },
+        {
+          "name": "text",
+          "required": false
+        }
+      ],
+      "code": {
+        "call": "AlertDialog()",
+        "imports": [
+          "androidx.compose.material3.AlertDialog"
+        ]
+      },
+      "signatureKnown": true
     }
   ]
 }

@@ -3125,6 +3125,12 @@ object ScreenDocumentProjection {
           "containerColor" to ParameterTarget("colors", TargetKind.CARD_COLORS),
           "elevationDp" to ParameterTarget("elevation", TargetKind.CARD_ELEVATION),
         ),
+      // `AlertDialog` takes the surface's two, under the surface's names.
+      "m3/dialog" to
+        mapOf(
+          "shapeDp" to ParameterTarget("shape", TargetKind.ROUNDED_CORNER_SHAPE),
+          "tonalElevationDp" to ParameterTarget("tonalElevation", TargetKind.DP),
+        ),
       "m3/filter-chip" to mapOf("shape" to ParameterTarget("shape", TargetKind.SHAPE_TOKEN)),
       "m3/horizontal-divider" to
         mapOf("thicknessDp" to ParameterTarget("thickness", TargetKind.DP)),
