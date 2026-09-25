@@ -185,6 +185,111 @@ class CanvasMoveDragTest {
       assertTrue(!dragEnded, "nothing was carried, so nothing landed")
     }
 
+  /**
+   * Selecting was the deliberate act, and a mouse has a wheel to scroll with: a mouse press on the
+   * selected node moves as soon as it passes the slop, with no hold.
+   */
+  @Test
+  fun `a mouse drag on the selection carries it without a hold`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var startedNode: String? = null
+      var endedAt: Offset? = null
+      var snapshot: UiBuilderInspectionSnapshot? = null
+      setContent {
+        MaterialTheme {
+          CanvasHost(
+            document,
+            zoom = 1f,
+            selectedNodeId = "plan-a",
+            onStarted = { id, _ -> startedNode = id },
+            onEnded = { endedAt = it },
+            onInspection = { snapshot = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      val carried = assertNotNull(nodeBounds(snapshot, "plan-a"))
+      val pressAt = Offset(carried.x + carried.width / 2f, carried.y + carried.height / 2f)
+      onRoot().performMouseInput {
+        moveTo(pressAt)
+        press(MouseButton.Primary)
+        moveTo(Offset(pressAt.x, pressAt.y + 40f))
+        moveTo(Offset(pressAt.x, pressAt.y + 80f))
+        release(MouseButton.Primary)
+      }
+      waitForIdle()
+
+      assertEquals("plan-a", startedNode)
+      assertEquals(pressAt.y + 80f, assertNotNull(endedAt).y, 2f)
+    }
+
+  /** A finger over the selection is as likely to be scrolling as anything: it still holds first. */
+  @Test
+  fun `a quick touch over the selection still picks nothing up`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var dragStarted = false
+      var snapshot: UiBuilderInspectionSnapshot? = null
+      setContent {
+        MaterialTheme {
+          CanvasHost(
+            document,
+            zoom = 1f,
+            selectedNodeId = "plan-a",
+            onStarted = { _, _ -> dragStarted = true },
+            onInspection = { snapshot = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      val target = assertNotNull(nodeBounds(snapshot, "plan-a"))
+      val pressAt = Offset(target.x + target.width / 2f, target.y + target.height / 2f)
+      onRoot().performTouchInput {
+        down(pressAt)
+        moveTo(Offset(pressAt.x, pressAt.y + 120f))
+        up()
+      }
+      waitForIdle()
+
+      assertTrue(!dragStarted, "a touch move without the hold is not a pick-up")
+    }
+
+  /**
+   * Inside a selected container, a drag carries the container — not the text under the pointer,
+   * which used to make a card impossible to move by anything but its padding.
+   */
+  @Test
+  fun `a drag inside a selected container carries the container`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var startedNode: String? = null
+      var snapshot: UiBuilderInspectionSnapshot? = null
+      setContent {
+        MaterialTheme {
+          CanvasHost(
+            document,
+            zoom = 1f,
+            selectedNodeId = "plan-box",
+            onStarted = { id, _ -> startedNode = id },
+            onInspection = { snapshot = it },
+          )
+        }
+      }
+      waitForIdle()
+
+      val inner = assertNotNull(nodeBounds(snapshot, "plan-n1"))
+      val pressAt = Offset(inner.x + inner.width / 2f, inner.y + inner.height / 2f)
+      onRoot().performMouseInput {
+        moveTo(pressAt)
+        press(MouseButton.Primary)
+        moveTo(Offset(pressAt.x, pressAt.y + 60f))
+        release(MouseButton.Primary)
+      }
+      waitForIdle()
+
+      assertEquals("plan-box", startedNode)
+    }
+
   /** The node's measured box, in the frame's own pixels — where the canvas says it drew it. */
   private fun nodeBounds(
     snapshot: UiBuilderInspectionSnapshot?,
@@ -211,6 +316,7 @@ class CanvasMoveDragTest {
   private fun CanvasHost(
     document: UiBuilderDocument,
     zoom: Float,
+    selectedNodeId: String? = null,
     onStarted: (String, Offset) -> Unit = { _, _ -> },
     onDragged: (Offset) -> Unit = {},
     onEnded: (Offset?) -> Unit = {},
@@ -219,7 +325,7 @@ class CanvasMoveDragTest {
   ) {
     PinnedDesignCanvas(
       document = document,
-      selectedNodeId = null,
+      selectedNodeId = selectedNodeId,
       onNodeSelected = onSelected,
       onCanvasMetrics = { _, _, _ -> },
       onCanvasBounds = {},
