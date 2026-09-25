@@ -113,6 +113,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -1257,6 +1258,30 @@ private fun RenderNode(
           // Absent and zero both mean "as many as fit", which is the whole point of the component;
           // a design that wants three per line says three.
           maxItemsInEachRow = node.integer("maxItemsInEachRow").takeIf { it > 0 } ?: Int.MAX_VALUE,
+        ) {
+          slot("children").forEach { child(it, Modifier) }
+        }
+      // `RemoteFitBox`: the children are alternatives, largest first, and the first that fits is
+      // the one drawn. At the extent everything fits, so the first child is what an author sees
+      // while editing, and the device preview is where the choice is made against the real host.
+      "layout/fit-box" ->
+        FitBoxLayout(
+          alignment =
+            BiasAlignment(
+              horizontalBias =
+                when (node.string("horizontalAlignment")) {
+                  "start" -> -1f
+                  "end" -> 1f
+                  else -> 0f
+                },
+              verticalBias =
+                when (node.string("verticalArrangement")) {
+                  "top" -> -1f
+                  "bottom" -> 1f
+                  else -> 0f
+                },
+            ),
+          modifier = measured,
         ) {
           slot("children").forEach { child(it, Modifier) }
         }

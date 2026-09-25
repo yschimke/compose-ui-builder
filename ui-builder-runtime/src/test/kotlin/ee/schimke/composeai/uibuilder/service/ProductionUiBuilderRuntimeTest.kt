@@ -422,6 +422,7 @@ class ProductionUiBuilderRuntimeTest {
         "layout/column",
         "layout/row",
         "layout/for-each",
+        "layout/fit-box",
         "m3/text",
         "remote-compose/document",
         "remote-compose/custom",

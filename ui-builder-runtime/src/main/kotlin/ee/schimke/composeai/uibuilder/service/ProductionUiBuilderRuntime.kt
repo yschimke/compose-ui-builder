@@ -1462,6 +1462,7 @@ internal val REMOTE_M3_MODIFIERS =
     "padding",
     "rotate",
     "scale",
+    "sharedElement",
     "size",
     "verticalScroll",
     "weight",
@@ -1470,6 +1471,84 @@ internal val REMOTE_M3_MODIFIERS =
     "wrapContentSize",
     "zIndex",
   )
+
+/**
+ * The modifier only Remote Compose has, offered on every node a widget body lays out.
+ *
+ * `sharedElement` is not in the borrowed Compose vocabulary, so filtering a borrowed list by
+ * [REMOTE_M3_MODIFIERS] can never produce it: it is appended instead. It matches an element across
+ * the branches of a "Show by state" box, which the export writes as a `RemoteStateLayout`, and
+ * animates its bounds between them — `ANIMATION_SPEC` is in the Glance Wear widget profile.
+ *
+ * `collapsiblePriority` is deliberately not here, and neither are the collapsible layouts it
+ * belongs to or `layout/flow-row`: `remote-creation-compose` publishes all of them, but Glance
+ * Wear's widget profile admits none of their operations, so a design using one could never be
+ * shipped as a widget. The emitter refuses them by name for a stored document that carries one.
+ */
+internal val REMOTE_ONLY_MODIFIERS: List<String> = listOf("sharedElement")
+
+/**
+ * A borrowed modifier list narrowed to what the Remote emitter writes, plus
+ * [REMOTE_ONLY_MODIFIERS].
+ */
+internal fun List<String>.remoteAuthorableModifiers(): List<String> =
+  filter { it in REMOTE_M3_MODIFIERS && it !in REMOTE_ONLY_MODIFIERS } + REMOTE_ONLY_MODIFIERS
+
+/**
+ * `layout/fit-box`: `RemoteFitBox`, the one layout `remote-creation-compose` publishes beyond the
+ * foundation three that a Wear widget can carry (`LAYOUT_FIT_BOX` is in the Glance Wear profile).
+ *
+ * Its children are alternatives, largest first, and it shows the first one that fits — the way a
+ * widget keeps one design across the small and large hosts. Derived from `layout/box`, the
+ * foundation container it most resembles, and differs in id, name and its two alignment properties.
+ */
+internal fun remoteOnlyLayout(
+  componentId: String,
+  declared: Map<String, ComponentCapabilityV1>,
+): ComponentCapabilityV1? {
+  if (componentId != FIT_BOX_COMPONENT_ID) return null
+  val donor = declared.getValue("layout/box")
+  return donor
+    .newBuilder()
+    .also {
+      it.componentId = componentId
+      it.displayName = "Fit box"
+      it.properties =
+        listOf(
+          PropertyCapabilityV1.Builder("horizontalAlignment", JsonPrimitive("string"))
+            .also {
+              it.allowedValues =
+                listOf(JsonPrimitive("start"), JsonPrimitive("center"), JsonPrimitive("end"))
+              it.notes = "Where the chosen child sits across the box. Centred when absent."
+            }
+            .build(),
+          PropertyCapabilityV1.Builder("verticalArrangement", JsonPrimitive("string"))
+            .also {
+              it.allowedValues =
+                listOf(JsonPrimitive("top"), JsonPrimitive("center"), JsonPrimitive("bottom"))
+              it.notes = "Where the chosen child sits down the box. Centred when absent."
+            }
+            .build(),
+        )
+      it.wasm =
+        donor.wasm
+          .newBuilder()
+          .also { wasm ->
+            wasm.notes =
+              "RemoteFitBox: its children are alternatives, largest first, and it shows the first one that fits."
+          }
+          .build()
+      // Not a Compose call: the regular Compose exporter has no counterpart to write, and the
+      // Remote emitter writes it by id.
+      it.code = null
+    }
+    .build()
+}
+
+private const val FIT_BOX_COMPONENT_ID = "layout/fit-box"
+
+/** The ids [remoteOnlyLayout] answers, in palette order. */
+internal val REMOTE_ONLY_LAYOUT_IDS: List<String> = listOf(FIT_BOX_COMPONENT_ID)
 
 /**
  * A borrowed component, narrowed to what `RemoteContentEmitter` can write into a widget body.
@@ -1490,7 +1569,7 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
         // geometry to hang a modifier on — the generator refuses every one it finds there. So the
         // gradient offers none, rather than eighteen that each end in a refusal.
         if (componentId == "shape/linear-gradient") emptyList()
-        else modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+        else modifierCapabilities.remoteAuthorableModifiers()
       // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
       // from a mobile component. The reviewed vocabulary does have an emitter branch (or
       // component-record fallback) and may enter a widget body.
@@ -1519,7 +1598,11 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
 internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
   RemoteMaterial3.components
     .fold(
-      JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+      REMOTE_ONLY_LAYOUT_IDS.fold(
+        JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+      ) { semantics, id ->
+        JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Layout")))
+      }
     ) { semantics, component ->
       JsonObject(
         semantics +
@@ -1782,6 +1865,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "layout/column",
       "layout/row",
       "layout/for-each",
+      *REMOTE_ONLY_LAYOUT_IDS.toTypedArray(),
       "m3/text",
       "remote-compose/document",
       // The way host content gets inside a widget body. A `@RemoteComposable` body cannot call an
@@ -1831,7 +1915,8 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             // Narrowed to what the generator can write; the published-catalog foundation applies
             // the
             // same function.
-            components.getValue(it).narrowedForRemoteAuthoring()
+            (components[it] ?: remoteOnlyLayout(it, components) ?: components.getValue(it))
+              .narrowedForRemoteAuthoring()
           } +
           remoteMaterial3Components(box, contentSlot, supportedWasm, blockedSvg)
     }
@@ -1878,7 +1963,7 @@ private fun lottie(
       it.traits = listOf("RemoteContent", "RemoteAuthorable")
       it.slots = emptyList()
       it.properties = lottieProperties()
-      it.modifierCapabilities = borrowed.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+      it.modifierCapabilities = borrowed.modifierCapabilities.remoteAuthorableModifiers()
       it.wasm =
         supportedWasm
           .newBuilder()

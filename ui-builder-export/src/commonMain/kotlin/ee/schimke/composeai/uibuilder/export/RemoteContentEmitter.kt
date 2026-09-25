@@ -51,6 +51,7 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
     "padding",
     "rotate",
     "scale",
+    "sharedElement",
     "size",
     "verticalScroll",
     "weight",
@@ -77,6 +78,7 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     "layout/column",
     "layout/row",
     "layout/for-each",
+    "layout/fit-box",
     "m3/text",
     "remote-m3/lottie",
     REMOTE_TEXT_COMPONENT_ID,
@@ -419,6 +421,25 @@ internal class RemoteContentEmitter(
       "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node, pad))
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node, pad))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node, pad))
+      // `RemoteFitBox`: its children are alternatives, largest first, and the player shows the
+      // first that fits the host. In the Glance Wear widget profile, unlike its siblings below.
+      "layout/fit-box" -> container(node, depth, "RemoteFitBox", fitBoxArguments(node, pad))
+      // `remote-creation-compose` publishes these three, and a Wear widget cannot carry any of
+      // them: Glance Wear's `GlanceWearProfiles` admits LAYOUT_FIT_BOX and LAYOUT_STATE but not
+      // LAYOUT_FLOW, LAYOUT_COLLAPSIBLE_COLUMN or LAYOUT_COLLAPSIBLE_ROW, and the writer throws
+      // "Operation … is not supported for this version" while the document is captured. So a
+      // stored design carrying one is refused by name rather than generating a widget that fails
+      // to build on the watch.
+      "layout/flow-row",
+      "layout/collapsible-column",
+      "layout/collapsible-row" ->
+        emptyList<String>().also {
+          val kind = if (node.componentId == "layout/flow-row") "flow" else "collapsible"
+          refusals +=
+            "`${node.id}` is a `${node.componentId}`, which a Wear widget document cannot carry: " +
+              "the Glance Wear widget profile has no $kind layout operation. Use a `layout/row` " +
+              "or `layout/column`, or a `layout/fit-box` holding the long and short alternatives"
+        }
       "layout/for-each" -> repetition(node, depth)
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       "asset/image" -> image(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
@@ -1532,6 +1553,7 @@ internal class RemoteContentEmitter(
       "RemoteBox" -> usesBox = true
       "RemoteColumn" -> usesColumn = true
       "RemoteRow" -> usesRow = true
+      "RemoteFitBox" -> usesFitBox = true
     }
     val pad = INDENT.repeat(depth)
     val children = node.slots["children"].orEmpty()
@@ -1559,6 +1581,44 @@ internal class RemoteContentEmitter(
 
   /** The container symbol whose lambda the node being emitted sits in, or null at the top. */
   private var scope: String? = null
+
+  private var usesFitBox = false
+
+  /**
+   * `RemoteFitBox`'s arguments. Its defaults centre on both axes, the opposite of `RemoteBox`, so
+   * only a design that asks for an edge writes anything.
+   */
+  private fun fitBoxArguments(node: UiBuilderNode, pad: String): List<String> {
+    val arguments = mutableListOf<String>()
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    when (val horizontal = node.properties["horizontalAlignment"]?.stringOrNull()) {
+      null,
+      "",
+      "center" -> Unit
+      else -> {
+        usesAlignment = true
+        arguments += "horizontalAlignment = RemoteAlignment.${horizontal.remoteHorizontal()}"
+      }
+    }
+    when (val vertical = node.properties["verticalArrangement"]?.stringOrNull()) {
+      null,
+      "",
+      "center" -> Unit
+      "top" -> {
+        usesArrangement = true
+        arguments += "verticalArrangement = RemoteArrangement.Top"
+      }
+      "bottom" -> {
+        usesArrangement = true
+        arguments += "verticalArrangement = RemoteArrangement.Bottom"
+      }
+      else ->
+        refusals +=
+          "the fit box `${node.id}` arranges its child `$vertical`; a RemoteFitBox shows ONE " +
+            "child, so it takes top, center or bottom"
+    }
+    return arguments
+  }
 
   private fun boxArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
@@ -2199,6 +2259,7 @@ internal class RemoteContentEmitter(
     if (usesStateLayout)
       imports += "androidx.compose.remote.creation.compose.layout.RemoteStateLayout"
     if (usesColumn) imports += "androidx.compose.remote.creation.compose.layout.RemoteColumn"
+    if (usesFitBox) imports += "androidx.compose.remote.creation.compose.layout.RemoteFitBox"
     imports += "androidx.compose.remote.creation.compose.layout.RemoteComposable"
     if (usesCustomComponent) {
       imports += "androidx.compose.remote.creation.compose.layout.RemoteCustomComponent"
@@ -2469,6 +2530,32 @@ internal class RemoteContentEmitter(
         listOf(modifierCall("$type(rememberRemoteScrollState())"))
       }
       "weight" -> weightCall(modifier)
+      // A member of the collapsible scopes, whose layouts a Wear widget cannot carry (see the
+      // refusal for `layout/collapsible-column`), and an operation its profile does not admit.
+      "collapsiblePriority" -> {
+        refusals +=
+          "the `collapsiblePriority` modifier on `$id` orders what a collapsible column or row " +
+            "hides, and neither the layouts nor the modifier are in the Glance Wear widget profile"
+        emptyList()
+      }
+      // A shared element is matched across the branches of a state layout by its key, and its
+      // bounds and paint animate between them. Written as `animationSpec(animationId, enabled)`
+      // rather than as `sharedElement(key)`: both lower to the same `AnimationSpec` operation, but
+      // `sharedElement` is newer than `remote-creation-compose` 1.0.0-alpha19, which is what the
+      // native lane compiles against, and this overload exists on both sides of that line with the
+      // same 300ms standard motion `sharedElement`'s default `remoteTween()` has. Positional,
+      // because
+      // a shared element sits two lambdas deeper than its state layout and the named form runs
+      // past the column budget there; `(Int, Boolean)` matches no other overload on either line.
+      "sharedElement" -> {
+        val key = modifier["key"]?.numberValue()
+        if (key == null || key % 1f != 0f || key < 1f) {
+          refusals +=
+            "the `sharedElement` modifier on `$id` needs a whole-number `key` of at least one; " +
+              "the key is what matches this element to its counterpart in the other states"
+          emptyList()
+        } else listOf(modifierCall("animationSpec(${key.toInt()}, true)"))
+      }
       // Everything below is in the catalog's modifier vocabulary and has no `RemoteModifier`
       // counterpart at `remote-creation-compose` 1.0.0-alpha18. Each says which, and what to
       // reach for instead, rather than sharing one "no counterpart" sentence: an author who is

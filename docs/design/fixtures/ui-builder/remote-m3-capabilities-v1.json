@@ -325,7 +325,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -406,7 +407,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -501,7 +503,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -631,7 +634,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -729,7 +733,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -785,6 +790,100 @@
             }
         },
         {
+            "code": null,
+            "componentId": "layout/fit-box",
+            "displayName": "Fit box",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": "Where the chosen child sits across the box. Centred when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Where the chosen child sits down the box. Centred when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "OverlayContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteFitBox: its children are alternatives, largest first, and it shows the first one that fits.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
             "code": {
                 "imports": [
                     "androidx.compose.material3.Text"
@@ -809,7 +908,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1020,7 +1120,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1106,7 +1207,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -1252,7 +1354,8 @@
                 "align",
                 "alignHorizontal",
                 "alignVertical",
-                "weight"
+                "weight",
+                "sharedElement"
             ],
             "properties": [
                 {
@@ -3773,6 +3876,9 @@
                     "group": "Layout"
                 },
                 "layout/column": {
+                    "group": "Layout"
+                },
+                "layout/fit-box": {
                     "group": "Layout"
                 },
                 "layout/flow-row": {

@@ -128,6 +128,7 @@ class WearWidgetContainerCatalogTest {
         "asset/image",
         "layout/box",
         "layout/column",
+        "layout/fit-box",
         "layout/for-each",
         "layout/row",
         "m3/text",

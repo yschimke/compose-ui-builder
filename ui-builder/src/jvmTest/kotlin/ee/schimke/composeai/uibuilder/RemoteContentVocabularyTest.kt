@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_MODIFIERS
+import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearWidgetCodeExporter
@@ -11,9 +12,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 /**
  * What a widget body may be written in: every modifier `remote-m3` advertises, and the picture.
@@ -246,6 +249,100 @@ class RemoteContentVocabularyTest {
     assertEquals(emptyList(), source.lines().filter { it.length > 100 })
   }
 
+  /**
+   * `RemoteFitBox` and a shared element, written with their own calls.
+   *
+   * A fit box writes only the edge it was asked for, since it centres by default. A shared element
+   * sits in the branches of a "Show by state" box, which is written as a `RemoteStateLayout`, and
+   * is written as the `animationSpec(Int, Boolean)` overload alpha19 and later both publish.
+   */
+  @Test
+  fun `a fit box and a shared element across a state switch are written`() {
+    fun literal(kind: String, value: Any) =
+      JsonObject(mapOf("type" to JsonPrimitive(kind), "value" to JsonPrimitive(value.toString())))
+    val wide = node("wide", "m3/text", text = "A long label")
+    val narrow = node("narrow", "m3/text", text = "Short")
+    val fit =
+      node("fit", "layout/fit-box", children = listOf(wide.id, narrow.id)).let {
+        it.copy(properties = JsonObject(mapOf("verticalArrangement" to literal("enum", "top"))))
+      }
+    val collapsed =
+      node("collapsed", "m3/text", text = "Collapsed").withModifiers(modifier("sharedElement"))
+    val expanded =
+      node("expanded", "m3/text", text = "Expanded").withModifiers(modifier("sharedElement"))
+    // "Show by state" is Remote Compose authoring, which a default build withholds; the flagged
+    // build (`-PuiBuilderRemoteCompose=true`, a CI job of its own) writes it as a state layout.
+    val stateLayout = UiBuilderBuildFeatures.remoteCompose
+    val selection =
+      Json.parseToJsonElement(
+          """{"type":"object","fields":{"selector":{"type":"state","variable":"expanded"},""" +
+            """"cases":{"type":"object","fields":{"collapsed":{"type":"bool","value":false},""" +
+            """"expanded":{"type":"bool","value":true}}}}}"""
+        )
+        .jsonObject
+    val mode =
+      node("mode", "layout/box", children = listOf(collapsed.id, expanded.id)).let {
+        if (stateLayout) it.copy(properties = JsonObject(mapOf("showByState" to selection))) else it
+      }
+    val frame = node("frame", "layout/column", children = listOf(fit.id, mode.id))
+    val document =
+      widget(
+          listOf(wide, narrow, fit, collapsed, expanded, mode, frame).associateBy { it.id },
+          "frame",
+        )
+        .let {
+          it.copy(
+            stateVariables =
+              Json.parseToJsonElement("""{"expanded":{"initialValue":true,"valueType":"bool"}}""")
+                .jsonObject
+          )
+        }
+
+    val source = emitted(document)
+
+    Files.createDirectories(GENERATED)
+    Files.writeString(GENERATED.resolve("FitBoxStateWidget.kt"), source)
+    assertTrue("RemoteFitBox(verticalArrangement = RemoteArrangement.Top)" in source, source)
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.layout.RemoteFitBox" in source,
+      source,
+    )
+    assertEquals(stateLayout, "RemoteStateLayout(" in source, source)
+    assertEquals(
+      2,
+      Regex("animationSpec\\(3, true\\)").findAll(source).count(),
+      source,
+    )
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.modifier.animationSpec" in source,
+      source,
+    )
+    assertEquals(emptyList(), source.lines().filter { it.length > 100 })
+  }
+
+  /**
+   * `remote-creation-compose` publishes a flow row and the collapsibles, and a Wear widget cannot
+   * carry them: Glance Wear's widget profile admits none of their operations. A stored design with
+   * one is refused by name, with the reason, rather than exporting a widget that fails to build.
+   */
+  @Test
+  fun `the layouts outside the Glance Wear widget profile are refused with the reason`() {
+    listOf("layout/flow-row", "layout/collapsible-column", "layout/collapsible-row").forEach { id ->
+      val refused =
+        assertIs<WearWidgetCodeExporter.Result.Refused>(
+          WearWidgetCodeExporter.export(widgetWith(node("layout", id)))
+        )
+      val reason = refused.reasons.single()
+      assertTrue("`$id`" in reason, reason)
+      assertTrue("Glance Wear widget profile" in reason, reason)
+    }
+    val priority =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(widgetWith(modifier("collapsiblePriority")))
+      )
+    assertTrue("Glance Wear widget profile" in priority.reasons.single(), priority.reasons.single())
+  }
+
   private val GENERATED = Path.of("build", "generated-widget-source")
 
   private fun UiBuilderNode.withModifiers(vararg values: JsonObject): UiBuilderNode =
@@ -395,6 +492,7 @@ class RemoteContentVocabularyTest {
           "testTag" -> put("tag", JsonPrimitive("play"))
           "shadow" -> put("elevationDp", JsonPrimitive(4))
           "weight" -> put("weight", JsonPrimitive(1))
+          "sharedElement" -> put("key", JsonPrimitive(3))
           "align" -> put("alignment", JsonPrimitive("bottomEnd"))
           "alignHorizontal" -> put("alignment", JsonPrimitive("centerHorizontally"))
           "alignVertical" -> put("alignment", JsonPrimitive("centerVertically"))

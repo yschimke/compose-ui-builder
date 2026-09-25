@@ -1088,6 +1088,12 @@ internal val MENU_MODIFIERS: List<MenuModifier> =
         put("weight", 1)
       }
     },
+    MenuModifier("sharedElement", "Animate between states") {
+      buildJsonObject {
+        put("type", "sharedElement")
+        put("key", 1)
+      }
+    },
   )
 
 /**
@@ -1173,6 +1179,7 @@ internal val MODIFIER_FIELDS: Map<String, List<ModifierField>> =
     "rotate" to listOf(ModifierField("degrees", "Degrees")),
     "scale" to listOf(ModifierField("scaleX", "Scale X"), ModifierField("scaleY", "Scale Y")),
     "weight" to listOf(ModifierField("weight", "Weight")),
+    "sharedElement" to listOf(ModifierField("key", "Shared key")),
     "align" to listOf(ModifierField("alignment", "Align", BOX_ALIGNMENTS)),
     "alignHorizontal" to listOf(ModifierField("alignment", "Align", COLUMN_ALIGNMENTS)),
     "alignVertical" to listOf(ModifierField("alignment", "Align", ROW_ALIGNMENTS)),
