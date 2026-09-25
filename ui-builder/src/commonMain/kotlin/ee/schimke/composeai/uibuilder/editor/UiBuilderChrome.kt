@@ -3,6 +3,9 @@ package ee.schimke.composeai.uibuilder.editor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -662,100 +665,99 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
     model: UiBuilderCatalogTileModel,
     thumbnail: @Composable () -> Unit,
   ) {
+    // No card. The component is the tile: it sits straight on the panel, with its name under it,
+    // and the only ground it ever gets is a faint one while the pointer is over it — enough to say
+    // "this is the thing you would pick up" without turning the shelf back into a wall of frames.
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val dim = if (model.unexportable) 0.45f else 1f
     Column(
       Modifier.fillMaxWidth()
-        .clip(RoundedCornerShape(if (model.variant) 8.dp else 10.dp))
+        .clip(RoundedCornerShape(12.dp))
+        .hoverable(interaction)
         .background(
-          if (model.variant) MaterialTheme.colorScheme.surfaceContainerHigh
-          else MaterialTheme.colorScheme.surfaceVariant
+          when {
+            hovered -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+            // A variant keeps a trace of ground, so an expanded family reads as one component's
+            // alternatives rather than as more components.
+            model.variant -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)
+            else -> Color.Transparent
+          }
         )
-        .padding(6.dp)
+        .padding(horizontal = 2.dp, vertical = 4.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Box(Modifier.alpha(if (model.unexportable) 0.45f else 1f)) { thumbnail() }
+        Box(Modifier.alpha(dim)) { thumbnail() }
         // On the picture's corner rather than in the title row, where it cost a 28dp column out of
-        // a ~116dp tile and cut "Supporting pane" to "Suppor…". Drawn after the thumbnail so it
-        // wins the hit test over the thumbnail's drag grip.
+        // a ~116dp tile. Drawn after the thumbnail so it wins the hit test over the tile's grip,
+        // and quiet until it is either set or pointed at: a bookmark on every tile is forty
+        // bookmarks.
         model.onTogglePinned?.let { onToggle ->
-          Box(Modifier.align(Alignment.TopEnd)) {
-            MaterialPinnedStar(model.title, model.pinned == true, onToggle)
+          val shown = hovered || model.pinned == true
+          Box(Modifier.align(Alignment.TopEnd).alpha(if (shown) 1f else 0.35f)) {
+            MaterialPinnedStar(model.title, model.pinned == true, onToggle, grounded = shown)
           }
         }
       }
-      Spacer(Modifier.height(4.dp))
-      if (model.variant) {
+      Row(
+        Modifier.fillMaxWidth().padding(start = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
         Text(
           model.title,
-          Modifier.alpha(if (model.unexportable) 0.45f else 1f),
-          style = MaterialTheme.typography.labelMedium,
+          Modifier.weight(1f).alpha(dim),
+          style =
+            if (model.variant) MaterialTheme.typography.labelMedium
+            else MaterialTheme.typography.labelLarge,
+          color = MaterialTheme.colorScheme.onSurface,
+          // Two lines: a component's name is what the tile is for, and "Adaptive lazy vertical
+          // grid" is a real name.
           maxLines = 2,
           overflow = TextOverflow.Ellipsis,
         )
-      } else {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-          Text(
-            model.title,
-            Modifier.weight(1f).alpha(if (model.unexportable) 0.45f else 1f),
-            style = MaterialTheme.typography.labelLarge,
-            // Two lines: a component's name is what the tile is for, and "Adaptive lazy vertical
-            // grid" is a real name.
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-          )
-          if (model.unexportable) MaterialUnexportableBadge(model.title)
-        }
+        if (model.unexportable) MaterialUnexportableBadge(model.title)
+        MaterialCatalogAddButton(model)
       }
-      if (model.variant) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-          if (model.defaultVariant) {
-            Text(
-              "default",
-              Modifier.weight(1f),
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              style = MaterialTheme.typography.labelSmall,
-            )
-          } else {
-            Spacer(Modifier.weight(1f))
-          }
-          MaterialCatalogAddButton(model)
-        }
-      } else {
-        model.supporting?.let {
+      model.supporting?.let {
+        Text(
+          it,
+          Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+          color =
+            if (model.supportingIsError) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+          maxLines = if (model.supportingIsError) 2 else 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
+      if (model.variant && model.defaultVariant) {
+        Text(
+          "default",
+          Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+        )
+      }
+      if (!model.variant && model.variantCount > 0 && model.onToggleVariants != null) {
+        TextButton(
+          onClick = model.onToggleVariants,
+          modifier =
+            Modifier.fillMaxWidth().height(28.dp).semantics {
+              contentDescription =
+                "${if (model.variantsExpanded) "Hide" else "Show"} ${model.title} variants"
+            },
+          contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+        ) {
+          // One line, always: "Hide variants" in a two-column grid wrapped to a column of letters.
+          // The semantics above keep the whole sentence.
           Text(
-            it,
-            color =
-              if (model.supportingIsError) MaterialTheme.colorScheme.error
-              else MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = if (model.supportingIsError) 2 else 1,
+            if (model.variantsExpanded) "Hide variants" else "${model.variantCount} variants",
+            maxLines = 1,
+            softWrap = false,
             overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelSmall,
           )
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-          if (model.variantCount > 0 && model.onToggleVariants != null) {
-            TextButton(
-              onClick = model.onToggleVariants,
-              modifier =
-                Modifier.weight(1f).semantics {
-                  contentDescription =
-                    "${if (model.variantsExpanded) "Hide" else "Show"} ${model.title} variants"
-                },
-              contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-            ) {
-              // One line, always: "Hide variants" beside Add in a two-column grid wrapped to a
-              // column of letters. The semantics above keep the whole sentence.
-              Text(
-                if (model.variantsExpanded) "Hide" else "${model.variantCount} variants",
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelMedium,
-              )
-            }
-          } else {
-            Spacer(Modifier.weight(1f))
-          }
-          MaterialCatalogAddButton(model)
         }
       }
     }
@@ -1265,12 +1267,21 @@ private fun UiBuilderChromeIcon.materialIcon(): ImageVector =
 private val INSPECTOR_ENTER_KEYS = setOf(Key.Enter, Key.NumPadEnter)
 
 @Composable
-private fun MaterialPinnedStar(componentName: String, pinned: Boolean, onToggle: () -> Unit) {
+private fun MaterialPinnedStar(
+  componentName: String,
+  pinned: Boolean,
+  onToggle: () -> Unit,
+  /** Whether it carries its own ground; off while the tile is at rest, so it is only a glyph. */
+  grounded: Boolean = true,
+) {
   Box(
     Modifier.size(28.dp)
       .clip(RoundedCornerShape(6.dp))
       // Sits on the component's picture, so it carries its own ground to stay legible over one.
-      .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f))
+      .background(
+        if (grounded) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)
+        else Color.Transparent
+      )
       .clickable(onClick = onToggle)
       .semantics(mergeDescendants = true) {
         contentDescription = if (pinned) "Unpin $componentName" else "Pin $componentName"
@@ -1297,16 +1308,25 @@ private fun MaterialUnexportableBadge(componentName: String) {
   )
 }
 
+/**
+ * A tile's Add: a small plus beside the name rather than a text button under it, because the
+ * component is what the tile shows and the button is the second way to get it onto the canvas — the
+ * first is to pick it up.
+ */
 @Composable
 private fun MaterialCatalogAddButton(model: UiBuilderCatalogTileModel) {
-  TextButton(
+  IconButton(
     onClick = model.onAdd,
     enabled = model.canAdd,
-    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+    modifier = Modifier.size(28.dp),
   ) {
-    Text(
-      "Add",
-      Modifier.semantics { contentDescription = model.addContentDescription },
+    Icon(
+      Icons.Filled.Add,
+      contentDescription = model.addContentDescription,
+      modifier = Modifier.size(18.dp),
+      tint =
+        if (model.canAdd) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
     )
   }
 }
