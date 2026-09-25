@@ -334,6 +334,56 @@ class PersistentUiBuilderServiceTest {
       )
     assertTrue(replayed.idempotentReplay)
     assertEquals(3, replayed.committedRevision)
+    // The same id for a different revision, or for an ordinary edit, is a reused id — never a
+    // replay that reports a restore nobody made.
+    assertEquals(
+      RejectionCodeV1.OPERATION_ID_REUSED,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.RestoreRevision("design", 0, baseRevision = 3, "restore-1"),
+          )
+        )
+        .code,
+    )
+    assertEquals(
+      RejectionCodeV1.OPERATION_ID_REUSED,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "edit-first"),
+          )
+        )
+        .code,
+    )
+    // A collaborator who may read but not write is refused, never told the restore succeeded.
+    grant(service, owner, viewer, 0, listOf(DesignAccessActionV1.READ))
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            viewer,
+            UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "restore-1"),
+          )
+        )
+        .code,
+    )
+    // And somebody who may not even read is answered as for a design that is not there, rather
+    // than told a restore succeeded.
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(
+          execute(
+            service,
+            outsider,
+            UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "restore-1"),
+          )
+        )
+        .code,
+    )
     val document = currentDocument(service)
     assertEquals(3, document.revision)
     assertTrue("first" in document.nodes)

@@ -11,7 +11,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +29,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
@@ -40,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -197,40 +202,45 @@ internal fun PropertyInspector(
           },
         onClose = onClose,
       )
-      InspectorBody(
-        state = state,
-        node = node,
-        fields = fields,
-        modifierFields = modifierFields,
-        modifierToggles = modifierToggles,
-        stateVariables = stateVariables,
-        comparisonBindingProperties = comparisonBindingProperties,
-        bindableProperties = bindableProperties,
-        problems = problems,
-        operationHistory = operationHistory,
-        themeSettings = themeSettings,
-        devicePresets = devicePresets,
-        variantsDrawn = variantsDrawn,
-        onPickReference = onPickReference,
-        onSnapshotDesign = onSnapshotDesign,
-        onFlatten = onFlatten,
-        catalogItems = catalogItems,
-        onPlaceComponent = onPlaceComponent,
-        onPromotePiece = onPromotePiece,
-        canPromotePiece = canPromotePiece,
-        referenceStatus = referenceStatus,
-        comments = comments,
-        commentStatus = commentStatus,
-        selectedThreadId = selectedThreadId,
-        onSelectThread = onSelectThread,
-        revealThreadId = revealThreadId,
-        onPostComment = onPostComment,
-        onResolveCommentThread = onResolveCommentThread,
-        onCopyThreadLink = onCopyThreadLink,
-        onTextInputFocusChanged = onTextInputFocusChanged,
-        propertyDrafts = propertyDrafts,
-        dispatch = dispatch,
-      )
+      // Swatches in the property controls show the design's colours, not the editor chrome's.
+      CompositionLocalProvider(
+        LocalInspectorColorScheme provides inspectorColorScheme(themeSettings)
+      ) {
+        InspectorBody(
+          state = state,
+          node = node,
+          fields = fields,
+          modifierFields = modifierFields,
+          modifierToggles = modifierToggles,
+          stateVariables = stateVariables,
+          comparisonBindingProperties = comparisonBindingProperties,
+          bindableProperties = bindableProperties,
+          problems = problems,
+          operationHistory = operationHistory,
+          themeSettings = themeSettings,
+          devicePresets = devicePresets,
+          variantsDrawn = variantsDrawn,
+          onPickReference = onPickReference,
+          onSnapshotDesign = onSnapshotDesign,
+          onFlatten = onFlatten,
+          catalogItems = catalogItems,
+          onPlaceComponent = onPlaceComponent,
+          onPromotePiece = onPromotePiece,
+          canPromotePiece = canPromotePiece,
+          referenceStatus = referenceStatus,
+          comments = comments,
+          commentStatus = commentStatus,
+          selectedThreadId = selectedThreadId,
+          onSelectThread = onSelectThread,
+          revealThreadId = revealThreadId,
+          onPostComment = onPostComment,
+          onResolveCommentThread = onResolveCommentThread,
+          onCopyThreadLink = onCopyThreadLink,
+          onTextInputFocusChanged = onTextInputFocusChanged,
+          propertyDrafts = propertyDrafts,
+          dispatch = dispatch,
+        )
+      }
     }
   }
 }
@@ -681,8 +691,18 @@ private fun PropertyControl(
             commit,
             showSteppers = true,
           )
-        EditorPropertyControl.Text,
         EditorPropertyControl.Color ->
+          ColorPropertyControl(field, commit) {
+            DraftPropertyControl(
+              field,
+              onTextInputFocusChanged,
+              draft,
+              onDraftChange,
+              commit,
+              showSteppers = false,
+            )
+          }
+        EditorPropertyControl.Text ->
           DraftPropertyControl(
             field,
             onTextInputFocusChanged,
@@ -1757,6 +1777,11 @@ private fun ExportDevicePicker(
   }
 }
 
+/**
+ * An enum property as a dropdown whose options show what they mean: a typography token in its own
+ * style, a weight in its weight, an alignment or arrangement as a small picture of itself. The
+ * current value is ticked, and the button shows it the same way.
+ */
 @Composable
 private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> Unit) {
   var expanded by remember(field.nodeId, field.name) { mutableStateOf(false) }
@@ -1771,17 +1796,107 @@ private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> 
         onClick = { expanded = true },
       )
     )
-    LocalUiBuilderChrome.current.PopupMenu(
-      expanded = expanded,
-      onDismissRequest = { expanded = false },
-      entries =
-        field.choices.map { choice ->
-          UiBuilderMenuEntry.Action(choice) {
+    TrackEditorOverlay(expanded)
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      field.choices.forEach { choice ->
+        val selected = choice == field.value
+        DropdownMenuItem(
+          text = { EnumOptionLabel(field.name, choice) },
+          leadingIcon =
+            if (hasEnumGlyph(field.name)) {
+              { EnumOptionGlyph(field.name, choice) }
+            } else null,
+          trailingIcon =
+            if (selected) {
+              {
+                Icon(Icons.Filled.Check, contentDescription = "Current value", Modifier.size(18.dp))
+              }
+            } else null,
+          modifier = Modifier.semantics { this.selected = selected },
+          onClick = {
             expanded = false
             commit(choice)
-          }
-        },
+          },
+        )
+      }
+    }
+  }
+}
+
+/** An option's name, drawn in the style it would give the text when the property is a look. */
+@Composable
+private fun EnumOptionLabel(property: String, option: String) {
+  val style = enumOptionTextStyle(property, option)
+  if (style != null) Text(option, style = style, maxLines = 1) else Text(option)
+}
+
+/**
+ * A colour property: a swatch of the current value beside the hex/token field [field] keeps, then
+ * the design's theme roles and a row of literal colours, each one press to apply. The field stays —
+ * it is how an exact colour is typed — and a theme role written here stays a role, so the design
+ * follows its theme.
+ */
+@Composable
+private fun ColorPropertyControl(
+  field: EditorPropertyField,
+  commit: (String) -> Unit,
+  textField: @Composable () -> Unit,
+) {
+  val scheme = LocalInspectorColorScheme.current ?: MaterialTheme.colorScheme
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      ColorSwatch(
+        swatchColor(field.value, scheme),
+        size = 28.dp,
+        selected = false,
+        modifier = Modifier.semantics { contentDescription = "${field.label} swatch" },
+      )
+      Spacer(Modifier.width(8.dp))
+      Box(Modifier.weight(1f)) { textField() }
+    }
+    val tokens = field.choices.filter { swatchColor(it, scheme) != null }
+    if (tokens.isNotEmpty()) {
+      Text(
+        "Theme colours",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      SwatchRow(tokens, field, scheme, commit)
+    }
+    Text(
+      "Colours",
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    SwatchRow(INSPECTOR_PRESET_COLORS, field, scheme, commit)
+  }
+}
+
+@Composable
+private fun SwatchRow(
+  values: List<String>,
+  field: EditorPropertyField,
+  scheme: androidx.compose.material3.ColorScheme,
+  commit: (String) -> Unit,
+) {
+  FlowRow(
+    horizontalArrangement = Arrangement.spacedBy(6.dp),
+    verticalArrangement = Arrangement.spacedBy(6.dp),
+  ) {
+    values.forEach { value ->
+      val selected = value.equals(field.value, ignoreCase = true)
+      ColorSwatch(
+        swatchColor(value, scheme),
+        size = 22.dp,
+        selected = selected,
+        modifier =
+          Modifier.clickable { commit(value) }
+            .semantics {
+              contentDescription = "Use $value for ${field.label.lowercase()}"
+              this.selected = selected
+            },
+      )
+    }
   }
 }
 

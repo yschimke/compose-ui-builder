@@ -25,6 +25,9 @@ import kotlin.concurrent.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 public data class UiBuilderCatalogIssue(
   val code: String,
@@ -1140,8 +1143,25 @@ public class PersistentUiBuilderService(
     // A retry of a restore that already committed: the mutation below is derived from the current
     // document, which that restore changed, so rebuilding it would fingerprint differently and be
     // refused as a reused operation id. Answer with the recorded outcome instead, as [apply] does
-    // for any replayed submission.
+    // for any replayed submission — but only to the actor that may write, and only when what was
+    // recorded under this id is this actor's restore of this revision. Anything else reusing the
+    // id is refused exactly as [apply] refuses it.
     design.operationOutcomes[request.operationId]?.let { prior ->
+      if (!design.allows(actor, DesignAccessActionV1.WRITE)) {
+        return serviceError(forbidden("write", request.designId))
+      }
+      if (!prior.isRestoreOf(request.revision, actor)) {
+        return LockedExecution(
+          UiBuilderServiceResponse.OperationOutcome(
+            rejected(
+              request.operationId,
+              design.document.revision,
+              RejectionCodeV1.OPERATION_ID_REUSED,
+              "operation id was already used by a different submission",
+            )
+          )
+        )
+      }
       val outcome =
         when (val original = prior.outcome) {
           is AcceptedOutcomeV1 -> original.copy(idempotentReplay = true)
@@ -3996,6 +4016,30 @@ private fun conservativeDecodedBase64Bytes(encoded: String): Long {
     }
   return completeGroups.toLong() * 3 + remainderBytes - padding
 }
+
+/**
+ * Whether this recorded submission is [actor]'s restore of [revision] — the only record a
+ * [UiBuilderServiceRequest.RestoreRevision] retry may replay. Read off the fingerprint, which is
+ * the canonical wire command, so it needs nothing beyond what the record already keeps.
+ */
+private fun OperationOutcomeRecordV1.isRestoreOf(
+  revision: Long,
+  actor: AuthenticatedUiBuilderActor,
+): Boolean = runCatching {
+  val command = Json.parseToJsonElement(fingerprint).jsonObject
+  val digest =
+    command["operations"]
+      ?.jsonArray
+      ?.singleOrNull()
+      ?.jsonObject
+      ?.get("previewDigest")
+      ?.jsonPrimitive
+      ?.content
+  command["actorId"]?.jsonPrimitive?.content == actor.actorId &&
+    command["clientId"]?.jsonPrimitive?.content == RESTORE_CLIENT_ID &&
+    digest == RESTORE_DIGEST_PREFIX + revision
+}
+  .getOrDefault(false)
 
 /** The client id a restore is recorded under; nothing else submits as it. */
 private const val RESTORE_CLIENT_ID = "history-restore"
