@@ -124,7 +124,7 @@ that is not a gap somebody could close with more work in this repository. Every 
 the `wear-m3` catalog says so rather than implying parity.
 
 Two things follow. The catalog is *synthesised* from the packaged M3 one
-([`ProductionUiBuilderRuntime.kt`](../../ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/ProductionUiBuilderRuntime.kt)),
+([`WearM3Catalog.kt`](../../ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/WearM3Catalog.kt)),
 because everything except the two Wear containers genuinely is borrowed Material 3. And the
 question "what does this actually look like on a watch" belongs to the **native render lane**, which
 compiles the design against the catalog's own bundle and renders it with real Compose — the lane

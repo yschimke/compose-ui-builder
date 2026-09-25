@@ -56,7 +56,11 @@ const lanes = [
     ],
     [
         "builder",
-        "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt",
+        // The node renderer and the asset image it hands off to, which lives beside it.
+        [
+            "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt",
+            "ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/CanvasScaffolds.kt",
+        ],
         "ProjectOwnedJetcasterArtwork",
     ],
     [
@@ -70,8 +74,8 @@ const lanes = [
         "ProjectOwnedJetcasterArtwork",
     ],
 ];
-for (const [name, path, binding] of lanes) {
-    const source = await read(path);
+for (const [name, paths, binding] of lanes) {
+    const source = (await Promise.all([paths].flat().map(read))).join("\n");
     if (!source.includes(binding)) throw new Error(`${name} lane lost shared artwork binding`);
     if (/https?:\/\/|rss|feed\.xml/i.test(source)) {
         throw new Error(`${name} artwork lane contains a network or mutable-feed source`);

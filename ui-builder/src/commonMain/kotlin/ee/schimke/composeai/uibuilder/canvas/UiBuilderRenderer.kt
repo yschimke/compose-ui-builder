@@ -12,16 +12,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -46,8 +41,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -56,14 +49,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -80,28 +70,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.WindowAdaptiveInfo
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
-import androidx.compose.material3.adaptive.layout.PaneScaffoldScope
-import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
-import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
-import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole
-import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationItem
-import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
-import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
-import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.darkColorScheme
@@ -111,8 +84,6 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ProvidedValue
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
@@ -130,19 +101,16 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
@@ -169,24 +137,10 @@ import androidx.wear.compose.material3.ScreenStage
 import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text as WearText
 import androidx.wear.compose.material3.scrollAway
-import androidx.window.core.layout.WindowSizeClass
-import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
-import ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry
-import ee.schimke.composeai.rcplayer.compose.RcCustomContent
-import ee.schimke.composeai.rcplayer.compose.RcPlayerTheme
-import ee.schimke.composeai.rcplayer.compose.composeSupportReport
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
-import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
-import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
-import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
-import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBitmaps
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
-import ee.schimke.composeai.uibuilder.ResolvedUiBuilderAsset
-import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
-import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
-import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.editor.THEME_BACKGROUND
 import ee.schimke.composeai.uibuilder.editor.THEME_CONTENT
 import ee.schimke.composeai.uibuilder.editor.THEME_CORNER_RADIUS
@@ -203,7 +157,6 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
-import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostSpec
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
@@ -237,11 +190,9 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
 import ee.schimke.composeai.uibuilder.renderer.sdk.isResolvableAlignment
 import ee.schimke.composeai.uibuilder.renderer.sdk.reconcileCanvasState
 import ee.schimke.composeai.uibuilder.renderer.sdk.uiBuilderModifier
-import ee.schimke.composeai.uibuilder.resolveAsset
 import ee.schimke.composeai.uibuilder.withFontFamily
 import ee.schimke.wearcmp.port.LocalWearDeviceConfiguration
 import ee.schimke.wearcmp.port.WearDeviceConfiguration
-import kotlin.io.encoding.Base64
 import kotlin.math.PI
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -2396,1036 +2347,6 @@ internal fun WearWidgetContainerScaffold(
  */
 private val WEAR_WIDGET_DEFAULT_BACKGROUND = Color(red = 39, green = 36, blue = 48)
 
-private const val MAX_REMOTE_COMPOSE_BASE64_CHARS = 8 * 1024 * 1024
-
-@Composable
-private fun RemoteComposeDocument(
-  document: UiBuilderDocument,
-  node: UiBuilderNode,
-  modifier: Modifier,
-  state: Map<String, String?>,
-  onEvent: (RcPlayerEvent) -> Unit,
-  slotContent: @Composable (String, Modifier) -> Unit,
-) {
-  val encoded = node.string("documentBase64")
-  val url = node.string("documentUrl")
-  val resolve = LocalRemoteComposeDocuments.current
-  // Bytes win. A design that carries its own document has already been decided; reaching for the
-  // network as well would make an offline reopen of a saved design depend on a host it does not
-  // need, and would leave two answers to the question of what this node holds.
-  val decoded =
-    when {
-      encoded.isNotBlank() -> remember(encoded) { decodeRemoteComposeDocument(encoded) }
-      url.isNotBlank() -> resolve(url)
-      else ->
-        remember {
-          Result.failure(
-            IllegalArgumentException(
-              "Remote Compose node needs either documentBase64 or documentUrl"
-            )
-          )
-        }
-    }
-  if (decoded == null) {
-    // Waiting, not broken — see [LocalRemoteComposeDocuments]. The URL is shown because it is the
-    // only thing an author can act on while it is unresolved.
-    RemoteComposeDiagnostic(message = "Loading $url", modifier = modifier, error = false)
-    return
-  }
-  val rcDocument = decoded.getOrNull()
-  if (rcDocument == null) {
-    RemoteComposeDiagnostic(
-      message = decoded.exceptionOrNull()?.message ?: "Remote Compose document is invalid",
-      modifier = modifier,
-    )
-    return
-  }
-
-  val namedValues = remember(node.id) { mutableStateMapOf<String, RcNamedValue>() }
-  val desiredNamedValues = node.remoteComposeNamedValues(state)
-  SideEffect {
-    if (namedValues.toMap() != desiredNamedValues) {
-      namedValues.clear()
-      namedValues.putAll(desiredNamedValues)
-    }
-  }
-  val renderers =
-    node.slots.keys.associateWith { slotName ->
-      val content: RcCustomContent = { _, next -> slotContent(slotName, next) }
-      content
-    }
-  val customComponents = RcCustomComponentRegistry(renderers)
-  val missingCustomComponents =
-    remember(rcDocument, customComponents.names) {
-      rcDocument
-        .composeSupportReport(availableCustomComponents = customComponents.names)
-        .issues
-        .filter { it.operation == "Custom" }
-    }
-  if (missingCustomComponents.isNotEmpty()) {
-    RemoteComposeDiagnostic(
-      message = missingCustomComponents.joinToString("\n") { it.detail },
-      modifier = modifier,
-    )
-    return
-  }
-  val inheritedTheme =
-    when (document.environment["theme"]?.jsonPrimitive?.contentOrNull) {
-      "light" -> RcPlayerTheme.Light
-      "dark" -> RcPlayerTheme.Dark
-      else -> RcPlayerTheme.System
-    }
-  val theme =
-    when (node.string("theme")) {
-      "light" -> RcPlayerTheme.Light
-      "dark" -> RcPlayerTheme.Dark
-      "system" -> RcPlayerTheme.System
-      else -> inheritedTheme
-    }
-  RcComposePlayer(
-    document = rcDocument,
-    modifier = modifier,
-    theme = theme,
-    namedValues = namedValues,
-    onEvent = onEvent,
-    customComponents = customComponents,
-  )
-}
-
-/**
- * A captured inline subtree, played rather than described.
- *
- * ## Why the registry is built from the design and not from the document
- *
- * The captured document names its custom components by the string the generated body wrote —
- * `RemoteCustomComponent(name = "field")`, from the node's own `name` property — and the host is
- * what supplies the Compose that fills each one. So the two halves of that contract are the design
- * node and its `content` slot, and they are what this walks: every `remote-compose/custom` under
- * this node registers a renderer under its `name` that draws its own children.
- *
- * That is the same seam an embedded `remote-compose/document` uses through its named slots, reached
- * from the other side — and it is what makes a design nest Compose inside Remote Compose inside
- * Compose with a real player in the middle rather than a frame.
- *
- * ## The walk stops at a custom component
- *
- * What is under one is host content again, so its own descendants are not part of the remote
- * subtree and must not be searched for further custom components: a `remote-compose/custom` nested
- * inside another one's `content` belongs to whatever *that* content is, not to this document. The
- * same rule `RemoteScopes` applies when it decides which vocabulary a node is written in.
- */
-@Composable
-private fun PlayedInlineRemoteContent(
-  document: UiBuilderDocument,
-  node: UiBuilderNode,
-  captured: Result<RcDocument>,
-  modifier: Modifier,
-  slotContent: @Composable (String, Modifier) -> Unit,
-) {
-  val rcDocument = captured.getOrNull()
-  if (rcDocument == null) {
-    RemoteComposeDiagnostic(
-      message =
-        captured.exceptionOrNull()?.message
-          ?: "the captured Remote Compose document could not be read",
-      modifier = modifier,
-    )
-    return
-  }
-  val fills = remember(document, node.id) { document.customComponentFills(node) }
-  val renderers = fills.mapValues { (_, fillIds) ->
-    val content: RcCustomContent = { _, next ->
-      Column(next) { fillIds.forEach { slotContent(it, Modifier.fillMaxWidth()) } }
-    }
-    content
-  }
-  val customComponents = RcCustomComponentRegistry(renderers)
-  // The same preflight the embedded document runs, and it earns its place here for a sharper
-  // reason: these bytes were generated from this design, so an unregistered name is a disagreement
-  // between the emitter and the canvas rather than a document somebody else published. Saying which
-  // name is missing is what turns that into something an author can act on.
-  val missing =
-    remember(rcDocument, customComponents.names) {
-      rcDocument
-        .composeSupportReport(availableCustomComponents = customComponents.names)
-        .issues
-        .filter { it.operation == "Custom" }
-    }
-  if (missing.isNotEmpty()) {
-    RemoteComposeDiagnostic(message = missing.joinToString("\n") { it.detail }, modifier = modifier)
-    return
-  }
-  val inherited =
-    when (document.environment["theme"]?.jsonPrimitive?.contentOrNull) {
-      "light" -> RcPlayerTheme.Light
-      "dark" -> RcPlayerTheme.Dark
-      else -> RcPlayerTheme.System
-    }
-  // The document's own shape, where it declares one, and this is the one place an inline node
-  // differs from an embedded one on purpose. An embedded document is a node an author added and
-  // sized: its modifiers are what they asked for, and overriding them with the bytes' aspect would
-  // ignore the ask. An inline node was never sized *as a document* — the author drew a subtree, and
-  // the only statement about how much room it wants is the one the capture wrote into the header.
-  // Without this the player takes every pixel the column has left and the design's own content
-  // below the remote content stops being drawn at all.
-  val header = rcDocument.header
-  val shaped =
-    if (header.width > 0 && header.height > 0) {
-      modifier.aspectRatio(header.width.toFloat() / header.height.toFloat())
-    } else modifier
-  RcComposePlayer(
-    document = rcDocument,
-    modifier = shaped,
-    theme =
-      when (node.string("theme")) {
-        "light" -> RcPlayerTheme.Light
-        "dark" -> RcPlayerTheme.Dark
-        "system" -> RcPlayerTheme.System
-        else -> inherited
-      },
-    customComponents = customComponents,
-  )
-}
-
-/**
- * Every custom component in [host]'s remote subtree, as `name` to the node ids that fill it.
- *
- * A map rather than a list because that is what a registry is keyed by, and two nodes sharing one
- * name is a design decision rather than an error — the later one wins here, exactly as it would in
- * a registry built by hand.
- */
-private fun UiBuilderDocument.customComponentFills(host: UiBuilderNode): Map<String, List<String>> {
-  val fills = mutableMapOf<String, List<String>>()
-  val seen = mutableSetOf<String>()
-  fun walk(id: String) {
-    if (!seen.add(id)) return
-    val node = nodes[id] ?: return
-    if (node.componentId == REMOTE_COMPOSE_CUSTOM_COMPONENT_ID) {
-      val name = node.string("name")
-      if (name.isNotEmpty()) fills[name] = node.slots["content"].orEmpty()
-      // Deliberately not descended into: see the KDoc above.
-      return
-    }
-    node.slots.values.flatten().forEach(::walk)
-  }
-  host.slots["content"].orEmpty().forEach(::walk)
-  return fills
-}
-
-internal fun decodeRemoteComposeDocument(encoded: String): Result<RcDocument> = runCatching {
-  require(encoded.isNotBlank()) { "Remote Compose documentBase64 is required" }
-  require(encoded.length <= MAX_REMOTE_COMPOSE_BASE64_CHARS) {
-    "Remote Compose documentBase64 exceeds the 8 MiB encoded limit"
-  }
-  RcDocumentCodec.decode(Base64.Default.decode(encoded))
-}
-
-private fun UiBuilderNode.remoteComposeNamedValues(
-  state: Map<String, String?>
-): Map<String, RcNamedValue> {
-  val declarations = obj("namedValues")["value"] as? JsonObject ?: return emptyMap()
-  return declarations
-    .mapNotNull { (name, element) ->
-      val declaration = element as? JsonObject ?: return@mapNotNull null
-      val type = declaration.optionalString("type") ?: return@mapNotNull null
-      val value = declaration["value"]?.jsonPrimitive
-      val resolved =
-        when (type) {
-          "stateText" ->
-            declaration.optionalString("variable")?.let(state::get)?.let(RcNamedValue::Text)
-          "text" -> value?.contentOrNull?.let(RcNamedValue::Text)
-          "float" -> value?.floatOrNull?.let(RcNamedValue::FloatValue)
-          "integer" -> value?.intOrNull?.let(RcNamedValue::Integer)
-          "long" -> value?.contentOrNull?.toLongOrNull()?.let(RcNamedValue::LongValue)
-          "color" ->
-            value?.contentOrNull?.let { color ->
-              runCatching { RcNamedValue.Color(parseArgb(color).toInt()) }.getOrNull()
-            }
-          else -> null
-        }
-      resolved?.let { name to it }
-    }
-    .toMap()
-}
-
-private fun RcPlayerEvent.bindingName(): String? =
-  when (this) {
-    is RcPlayerEvent.HostNamedAction -> name
-    is RcPlayerEvent.HostAction -> "hostAction:$actionId"
-    is RcPlayerEvent.HostActionMetadata -> "hostAction:$actionId"
-    is RcPlayerEvent.DebugMessage -> null
-  }
-
-@Composable
-private fun RemoteComposeDiagnostic(
-  message: String,
-  modifier: Modifier,
-  /** False for a document that is merely not here yet, which is not the same as a broken one. */
-  error: Boolean = true,
-) {
-  val container =
-    if (error) MaterialTheme.colorScheme.errorContainer
-    else MaterialTheme.colorScheme.surfaceVariant
-  val content =
-    if (error) MaterialTheme.colorScheme.onErrorContainer
-    else MaterialTheme.colorScheme.onSurfaceVariant
-  Surface(modifier, color = container) { Text(message, Modifier.padding(8.dp), color = content) }
-}
-
-/**
- * The real `SupportingPaneScaffold`, not an imitation of one.
- *
- * ## Why this is the whole point of the pane it draws in
- *
- * This component used to be a `BoxWithConstraints` here that expanded past a width it computed
- * itself, and the Kotlin export emitted a *second* hand-rolled helper with a different threshold
- * again — so a design could expand at one width on the canvas and another in the app, and the
- * preview pane could not answer the question it exists for. Both are gone: the canvas, the preview
- * pane and the generated source now go through `androidx.compose.material3.adaptive`, so "does it
- * adapt" is answered by the library that will answer it in production.
- *
- * ## How `layoutMode` reaches a component that has no such parameter
- *
- * It does not, and it never could — the scaffold takes a `PaneScaffoldDirective` and derives its
- * panes from the window, which is why the record-driven export gate refuses the property and still
- * does: mapping a mode onto a directive is a computation, and a record can only write a value as an
- * argument to a member. A hand-written emitter can compute, so here and in
- * [CapabilityComposeCodeExporter] the property maps onto the directive:
- *
- * - `adaptive`, `twoPane` and `expandedTwoPane` leave the directive as the window computed it, so
- *   the library decides and a tablet design collapses to one pane on a phone. The two-pane
- *   spellings behaved that way under the old stand-in too — it required the frame to be wide enough
- *   — so nothing observable changes for a design that uses them.
- * - `singlePane` pins `maxHorizontalPartitions` to 1: one pane at every width, on purpose.
- *
- * `adaptive` is the one spelling whose behaviour changes, and it changes to what its name says. The
- * stand-in's expansion test required the mode to be one of the two-pane spellings, so a design
- * asking for `adaptive` was the one design that never adapted.
- *
- * ## The frame is the window, not the browser
- *
- * `currentWindowAdaptiveInfo()` reports the window the *workspace* is in, and in the preview pane
- * that is one browser holding a row of device frames. Asked directly it gives every frame the same
- * answer, so a phone frame and a tablet frame beside it would expand or collapse together — which
- * is the one thing the multi-frame rung exists to disprove.
- *
- * So the size class is computed from this scaffold's **own** constraints
- * ([`WindowSizeClass.compute`]), which inside [ConstrainedFramePane] are the device's width and
- * height in the device's own density. Each frame is its own window, which is what it is standing in
- * for. The posture is still the real one — a hinge is a property of hardware, not of a frame, and
- * on the native lane the window really is the window.
- *
- * ## The visibility flags are the scaffold's value, not its directive
- *
- * `mainPaneVisible` / `supportingPaneVisible` say which panes this design has at all, which is a
- * different question from how many the window can show. They go to the [ThreePaneScaffoldValue];
- * the directive decides the rest, and `calculateThreePaneScaffoldValue` hides the supporting pane
- * when the partitions do not reach it.
- *
- * ## The unrolled editor gets the stand-in; every constrained frame gets this
- *
- * The switch is [LocalUiBuilderUnrolled] — the same one that already turns `layout/lazy-column`
- * into a `Column`, `layout/lazy-grid` into a non-lazy grid and drops a `verticalScroll`. One signal
- * decides all of it, so "unrolled" and "constrained" cannot each answer for a different component:
- * the visual editor gets [UnfoldedSupportingPaneScaffold] and the preview pane gets this.
- *
- * There is a second reason it has to be this way round, and it is not a preference. The real
- * scaffold cannot be measured against an unbounded height — `ThreePaneContentMeasurePolicy` lays
- * out at the height it is given, and `Constraints.Infinity` is not a size: `Size(1280 x 2147483647)
- * is out of range`. The editor's canvas measures exactly that way on purpose, because unrolling a
- * `LazyColumn` so its ninth row can be edited is what [CanvasExtentLayout] is for, and `unrolled =
- * true` is set at the same call site.
- *
- * Reading the incoming constraints here instead would answer differently in that layout's probe
- * pass than in its placement pass, and the extent reported would then belong to a layout nobody
- * drew. A composition local set once by the pane is stable across both.
- *
- * So this is the fidelity ladder meeting a real component, and it resolves the way the ladder says:
- * the editing surface is the one allowed to lie, and it draws every pane the design declares at
- * every canvas width — the full expanded experience, always. Every constrained frame — the preview
- * pane, each device and axis, the native lane — gets the real one, and that is where a design
- * collapses to a phone. A 1-vs-2 disagreement about pane count is therefore expected and is the
- * documented meaning of that row
- * ([`UI_BUILDER_PREVIEW_FIDELITY.md`](../../../../../../docs/design/UI_BUILDER_PREVIEW_FIDELITY.md)).
- */
-/**
- * The navigation suite type the enclosing [AdaptiveNavigationSuiteScaffold] chose for its frame.
- *
- * `NavigationSuiteItem` asks for its type from `currentWindowAdaptiveInfo()` by default, and on the
- * canvas that is the browser window holding every device frame — so a phone frame's items would
- * draw as rail items inside a bar. The scaffold decides once, from its own frame, and its items
- * read that answer here. Outside a scaffold an item draws as a rail item, the widest form.
- */
-private val LocalFrameNavigationSuiteType = compositionLocalOf {
-  NavigationSuiteType.WideNavigationRailCollapsed
-}
-
-/**
- * `m3/navigation-suite-scaffold`: `NavigationSuiteScaffold` itself, deciding rail or bar from the
- * frame it is drawn in — the same rule, and for the same reason, as
- * [AdaptiveSupportingPaneScaffold]: each device frame is its own window, so a phone frame gets a
- * bar and a tablet frame beside it a rail.
- *
- * The unrolled editor gets the rail at every width, with the design's content beside it, which is
- * the full tablet experience the editing surface always draws. The scaffold proper cannot be
- * measured against the unbounded height that surface lays out with, so it is `NavigationSuite` —
- * the library's own navigation component, without the scaffold — in a `Row`.
- */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
-@Composable
-private fun AdaptiveNavigationSuiteScaffold(
-  modifier: Modifier,
-  items: @Composable () -> Unit,
-  primaryAction: @Composable () -> Unit,
-  content: @Composable () -> Unit,
-) {
-  if (LocalUiBuilderUnrolled.current) {
-    val type = NavigationSuiteType.WideNavigationRailCollapsed
-    CompositionLocalProvider(LocalFrameNavigationSuiteType provides type) {
-      Row(modifier) {
-        NavigationSuite(
-          navigationSuiteType = type,
-          primaryActionContent = primaryAction,
-          content = items,
-        )
-        Box(Modifier.weight(1f)) { content() }
-      }
-    }
-    return
-  }
-  val posture = currentWindowAdaptiveInfo().windowPosture
-  BoxWithConstraints(modifier) {
-    val type =
-      NavigationSuiteScaffoldDefaults.navigationSuiteType(
-        WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)
-      )
-    CompositionLocalProvider(LocalFrameNavigationSuiteType provides type) {
-      NavigationSuiteScaffold(
-        navigationItems = items,
-        navigationSuiteType = type,
-        primaryActionContent = primaryAction,
-        content = content,
-      )
-    }
-  }
-}
-
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
-@Composable
-private fun AdaptiveSupportingPaneScaffold(
-  node: UiBuilderNode,
-  modifier: Modifier,
-  mainPane: @Composable (Modifier) -> Unit,
-  supportingPane: @Composable (Modifier) -> Unit,
-) {
-  if (LocalUiBuilderUnrolled.current) {
-    UnfoldedSupportingPaneScaffold(node, modifier, mainPane, supportingPane)
-    return
-  }
-  val mainVisible = node.bool("mainPaneVisible", true)
-  val supportingVisible = node.bool("supportingPaneVisible", true)
-  // The three widths the catalog declares. Absent is not zero: an unstated width means "whatever
-  // the library would have chosen", which is what every design authored before these were read
-  // has been getting.
-  val mainWidth = node.dimension("mainPanePreferredWidthDp")
-  val supportingWidth = node.dimension("supportingPanePreferredWidthDp")
-  val paneSpacing = node.dimension("paneSpacingDp")
-  val posture = currentWindowAdaptiveInfo().windowPosture
-  BoxWithConstraints(modifier) {
-    val frameInfo =
-      WindowAdaptiveInfo(
-        WindowSizeClass.compute(maxWidth.value, maxHeight.value),
-        posture,
-      )
-    val frameDirective = calculatePaneScaffoldDirective(frameInfo)
-    val directive =
-      (if (node.string("layoutMode") == "singlePane")
-          frameDirective.copy(maxHorizontalPartitions = 1)
-        else frameDirective)
-        // The gap BETWEEN partitions is the directive's, not a pane's, which is why it is the one
-        // of the three that is set here rather than on a pane modifier.
-        .let {
-          if (paneSpacing != null) it.copy(horizontalPartitionSpacerSize = paneSpacing) else it
-        }
-    // The library's own computation, so "two panes or one" is its answer rather than ours.
-    //
-    // The destination decides which pane wins a sole partition, and it is the supporting pane
-    // exactly when the design declares no main pane. Masking afterwards is not enough there: the
-    // one partition goes to the primary by default, so hiding the primary for a supporting-only
-    // design would leave a value with everything hidden and draw a blank frame.
-    val computed =
-      calculateThreePaneScaffoldValue(
-        maxHorizontalPartitions = directive.maxHorizontalPartitions,
-        adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
-        currentDestination =
-          if (!mainVisible && supportingVisible)
-            ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting)
-          else null,
-      )
-    val value =
-      ThreePaneScaffoldValue(
-        primary = if (mainVisible) computed.primary else PaneAdaptedValue.Hidden,
-        secondary = if (supportingVisible) computed.secondary else PaneAdaptedValue.Hidden,
-        tertiary = PaneAdaptedValue.Hidden,
-      )
-    SupportingPaneScaffold(
-      directive = directive,
-      value = value,
-      // `preferredWidth` is parent data the scaffold's measure policy reads, not a size modifier,
-      // so it decides the partition and `fillMaxSize` still fills whatever partition it got. This
-      // is how the authored widths reach a REAL scaffold: they were declared, stored, carried on
-      // the wire and echoed into provenance, and then read by nobody, so Gmail's 400-beside-760
-      // drew as roughly 810/360 — close to the opposite of what it asked for, with no diagnostic
-      // saying so (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 2).
-      mainPane = { mainPane(preferredPaneWidth(Modifier, mainWidth).fillMaxSize()) },
-      supportingPane = {
-        supportingPane(preferredPaneWidth(Modifier, supportingWidth).fillMaxSize())
-      },
-      modifier = Modifier.fillMaxSize(),
-    )
-  }
-}
-
-/** [PaneScaffoldScope.preferredWidth] where a width was authored, and nothing where none was. */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private fun PaneScaffoldScope.preferredPaneWidth(modifier: Modifier, width: Dp?): Modifier =
-  if (width == null) modifier else modifier.preferredWidth(width)
-
-/**
- * The unrolled canvas's stand-in for the adaptive scaffold, and only its stand-in.
- *
- * Reached through [LocalUiBuilderUnrolled], which is the visual editor and nothing else — the
- * preview pane, the device and axis frames, the native lane and every export are constrained and
- * get the real component. See [AdaptiveSupportingPaneScaffold] for why the split runs on that one
- * signal rather than on two.
- *
- * **It always draws the expanded experience.** Every pane the design declares is on screen at every
- * canvas width, and `layoutMode` is not consulted at all — that property is now the real scaffold's
- * directive, and the question it answers ("how many panes fits here?") is a device question the
- * preview pane exists to answer. Collapsing here would answer it with the canvas's own width, which
- * is a window nobody ships, and the cost of being wrong is not a mis-drawn picture: a hidden pane
- * is a subtree that cannot be selected, dropped into or edited.
- *
- * That is the same licence as the unrolled column above it. The canvas shows you the thing you are
- * editing, including the parts a device would not show; the preview pane beside it is what says
- * which parts those are.
- *
- * The widths are proportional rather than absolute for that reason too — a tablet's 744 + 512 dp
- * pair at its authored size would overflow a narrow canvas and push the supporting pane off the
- * edge, so they become weights and the pair fills whatever frame it is given in the ratio the
- * design asked for.
- */
-@Composable
-private fun UnfoldedSupportingPaneScaffold(
-  node: UiBuilderNode,
-  modifier: Modifier,
-  mainPane: @Composable (Modifier) -> Unit,
-  supportingPane: @Composable (Modifier) -> Unit,
-) {
-  val mainVisible = node.bool("mainPaneVisible", true)
-  val supportingVisible = node.bool("supportingPaneVisible", true)
-  val mainWidth = node.float("mainPanePreferredWidthDp", 744f).coerceAtLeast(1f)
-  val supportWidth = node.float("supportingPanePreferredWidthDp", 512f).coerceAtLeast(1f)
-  val spacing = node.float("paneSpacingDp").coerceAtLeast(0f)
-  Row(modifier) {
-    if (mainVisible) mainPane(Modifier.weight(mainWidth).fillMaxSize())
-    if (mainVisible && supportingVisible) Spacer(Modifier.width(spacing.dp))
-    if (supportingVisible) supportingPane(Modifier.weight(supportWidth).fillMaxSize())
-    if (!mainVisible && !supportingVisible) Box(Modifier.fillMaxSize())
-  }
-}
-
-/**
- * Material's uncontained carousel is not on the dependency floor; this preserves its data/layout
- * contract.
- */
-@Composable
-private fun CompatibleHorizontalCarousel(
-  node: UiBuilderNode,
-  modifier: Modifier,
-  state: LazyListState,
-  ids: List<String>,
-  child: @Composable (String, Modifier) -> Unit,
-) {
-  LazyRow(
-    modifier = modifier,
-    state = state,
-    contentPadding = PaddingValues(start = node.float("contentPaddingStartDp").dp),
-    horizontalArrangement = Arrangement.spacedBy(node.float("itemSpacingDp").dp),
-  ) {
-    items(ids, key = { it }) { child(it, Modifier.width(node.float("itemWidthDp", 128f).dp)) }
-  }
-}
-
-/** Experimental floating-toolbar identity with deterministic Material surface/row semantics. */
-@Composable
-private fun CompatibleFloatingToolbar(
-  node: UiBuilderNode,
-  modifier: Modifier,
-  content: @Composable () -> Unit,
-) {
-  Surface(
-    modifier,
-    shape = RoundedCornerShape(32.dp),
-    color = node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHighest),
-    tonalElevation = 6.dp,
-    shadowElevation = 8.dp,
-  ) {
-    Row(
-      // The catalog exposes four padding edges for this component and nothing read them. Absent
-      // stays the 6dp this toolbar has always drawn rather than becoming zero.
-      Modifier.padding(
-        (node.properties["contentPadding"] as? JsonObject)?.paddingValues() ?: PaddingValues(6.dp)
-      ),
-      horizontalArrangement = Arrangement.spacedBy(6.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      content()
-    }
-  }
-}
-
-@Composable
-private fun BuilderButton(
-  node: UiBuilderNode,
-  modifier: Modifier,
-  click: () -> Unit,
-  enabled: Boolean,
-  content: @Composable () -> Unit,
-) {
-  when (node.string("style")) {
-    "text" -> TextButton(click, modifier, enabled = enabled) { content() }
-    "filledTonal" -> FilledTonalButton(click, modifier, enabled = enabled) { content() }
-    "fab" ->
-      FloatingActionButton(
-        click,
-        modifier,
-        containerColor = node.color("containerColor", MaterialTheme.colorScheme.primary),
-      ) {
-        Box(Modifier.padding(horizontal = 16.dp)) { content() }
-      }
-    else ->
-      Button(
-        click,
-        modifier,
-        enabled = enabled,
-        colors =
-          ButtonDefaults.buttonColors(
-            node.color("containerColor", MaterialTheme.colorScheme.primary)
-          ),
-      ) {
-        content()
-      }
-  }
-}
-
-@Composable
-private fun LegacyListItem(
-  node: UiBuilderNode,
-  modifier: Modifier,
-  headline: List<String>,
-  supporting: List<String>,
-  trailing: List<String>,
-  child: @Composable (String, Modifier) -> Unit,
-) {
-  val accent = parseArgb(node.string("startAccentColor"))
-  ListItem(
-    headlineContent = { headline.forEach { child(it, Modifier) } },
-    modifier =
-      modifier.drawBehind {
-        if (node.string("startAccentColor").isNotEmpty()) {
-          drawRect(
-            Color(accent),
-            size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height),
-          )
-        }
-      },
-    supportingContent =
-      supporting.takeIf(List<String>::isNotEmpty)?.let {
-        { it.forEach { id -> child(id, Modifier) } }
-      },
-    trailingContent =
-      trailing.takeIf(List<String>::isNotEmpty)?.let {
-        { it.forEach { id -> child(id, Modifier) } }
-      },
-  )
-}
-
-/**
- * An `asset/image` node: the picture its `assetKey` names, or a placeholder that says which key it
- * could not draw.
- *
- * Resolution is [UiBuilderDocument.resolveAsset]'s, shared with the SVG lanes; this composable only
- * decides what each answer looks like. The one rule here is that **no key fails the frame**. This
- * used to `error()` on a key it did not know, and because the design is one composition, a single
- * inserted node took a whole screen down — in the editor, in the daemon render behind
- * `ui_builder_export`, and for every collaborator with the design open. A key with nothing behind
- * it is now an ordinary picture-shaped placeholder carrying the key, which is what a designer needs
- * to see to fix it and what an agent's next render shows it has not.
- */
-@Composable
-private fun AssetImage(document: UiBuilderDocument, node: UiBuilderNode, modifier: Modifier) {
-  val contentDescription = node.string("contentDescription").ifEmpty { null }
-  val contentScale =
-    when (node.string("contentScale")) {
-      "fit" -> ContentScale.Fit
-      "fillBounds" -> ContentScale.FillBounds
-      "inside" -> ContentScale.Inside
-      else -> ContentScale.Crop
-    }
-  val exportRaster = LocalUiBuilderExportRasterAssets.current[node.id]
-  if (exportRaster != null) {
-    Image(
-      bitmap = exportRaster,
-      contentDescription = contentDescription,
-      modifier = modifier,
-      contentScale = contentScale,
-    )
-    return
-  }
-  val key = node.string("assetKey")
-  when (val resolved = document.resolveAsset(key)) {
-    is ResolvedUiBuilderAsset.Embedded -> {
-      // Remembered by digest, not by node: the same bytes under two nodes decode once, and a key
-      // re-pointed at a new picture decodes again because the digest moved.
-      val bitmap = remember(resolved.contentDigest) { decodeUiBuilderAssetBitmap(resolved.bytes) }
-      if (bitmap != null) {
-        Image(
-          bitmap = bitmap,
-          contentDescription = contentDescription,
-          modifier = modifier,
-          contentScale = contentScale,
-        )
-      } else {
-        MissingAssetPlaceholder(key, contentDescription, modifier)
-      }
-    }
-    is ResolvedUiBuilderAsset.Uploaded -> {
-      val bitmap = LocalUiBuilderAssetBitmaps.current(resolved.contentDigest)
-      if (bitmap != null) {
-        Image(
-          bitmap = bitmap,
-          contentDescription = contentDescription,
-          modifier = modifier,
-          contentScale = contentScale,
-        )
-      } else {
-        MissingAssetPlaceholder(key, contentDescription, modifier)
-      }
-    }
-    is ResolvedUiBuilderAsset.ProjectOwned ->
-      ProjectOwnedJetcasterArtwork(
-        assetKey = key,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = contentScale,
-      )
-    ResolvedUiBuilderAsset.Generated -> GeneratedCoverPlaceholder(modifier)
-    is ResolvedUiBuilderAsset.Missing -> MissingAssetPlaceholder(key, contentDescription, modifier)
-  }
-}
-
-/**
- * The frame of a picture nobody can show here: a neutral ground, a picture glyph, and the key.
- *
- * Neutral rather than an error container, because nothing is necessarily wrong — the bytes may be
- * uploading, may live on a host this lane cannot reach, or may simply not have been given yet. What
- * it must be is *visible* and *legible*: a viewer should see at a glance that a picture belongs
- * here, and read which key to fill. Drawn with the theme's own surface-variant pair so it sits in
- * either scheme, and with nothing animated or random so two renders of one design are one image.
- */
-@Composable
-private fun MissingAssetPlaceholder(
-  assetKey: String,
-  contentDescription: String?,
-  modifier: Modifier,
-) {
-  val ground = MaterialTheme.colorScheme.surfaceVariant
-  val ink = MaterialTheme.colorScheme.onSurfaceVariant
-  val semantics =
-    if (contentDescription == null) modifier
-    else modifier.semantics { this.contentDescription = contentDescription }
-  BoxWithConstraints(semantics.background(ground), contentAlignment = Alignment.Center) {
-    Canvas(Modifier.matchParentSize()) {
-      val inset = size.minDimension * 0.18f
-      val frameWidth = size.width - inset * 2
-      val frameHeight = size.height - inset * 2
-      if (frameWidth <= 0f || frameHeight <= 0f) return@Canvas
-      val stroke = Stroke((size.minDimension * 0.035f).coerceAtLeast(1f))
-      drawRect(
-        ink.copy(alpha = 0.55f),
-        Offset(inset, inset),
-        androidx.compose.ui.geometry.Size(frameWidth, frameHeight),
-        style = stroke,
-      )
-      drawCircle(
-        ink.copy(alpha = 0.55f),
-        size.minDimension * 0.07f,
-        Offset(inset + frameWidth * 0.30f, inset + frameHeight * 0.32f),
-      )
-      drawPath(
-        Path().apply {
-          moveTo(inset, inset + frameHeight)
-          lineTo(inset + frameWidth * 0.38f, inset + frameHeight * 0.52f)
-          lineTo(inset + frameWidth * 0.60f, inset + frameHeight * 0.76f)
-          lineTo(inset + frameWidth * 0.76f, inset + frameHeight * 0.60f)
-          lineTo(inset + frameWidth, inset + frameHeight)
-          close()
-        },
-        ink.copy(alpha = 0.35f),
-      )
-    }
-    // The key, on the canvas and in a PNG, where there is room for a word — an avatar-sized frame
-    // shows the glyph alone rather than three clipped letters. Not in a structured SVG: that
-    // recorder fails closed on any text it cannot attribute to an authored text node, which is the
-    // right rule for an export and the wrong place for a label; the SVG keeps the frame and glyph.
-    if (!LocalUiBuilderExportStructuredIcons.current && maxWidth >= 96.dp && maxHeight >= 48.dp) {
-      Text(
-        text = assetKey,
-        modifier =
-          Modifier.align(Alignment.BottomCenter).padding(horizontal = 4.dp, vertical = 2.dp),
-        color = ink,
-        fontSize = 9.sp,
-        lineHeight = 11.sp,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        textAlign = TextAlign.Center,
-      )
-    }
-  }
-}
-
-/** The gate-0 fixture's generated cover: a gradient with a few shapes, no bytes behind it. */
-@Composable
-private fun GeneratedCoverPlaceholder(modifier: Modifier) {
-  val palette = listOf(Color(0xFF6750A4), Color(0xFFB69DF8), Color(0xFF21005D))
-  Canvas(modifier) {
-    drawRect(Brush.linearGradient(palette, Offset.Zero, Offset(size.width, size.height)))
-    drawCircle(
-      Color.White.copy(alpha = 0.18f),
-      size.minDimension * 0.34f,
-      Offset(size.width * 0.76f, size.height * 0.24f),
-    )
-    drawCircle(
-      Color.Black.copy(alpha = 0.18f),
-      size.minDimension * 0.22f,
-      Offset(size.width * 0.22f, size.height * 0.72f),
-    )
-    drawPath(
-      Path().apply {
-        moveTo(size.width * 0.19f, size.height * 0.32f)
-        lineTo(size.width * 0.48f, size.height * 0.18f)
-        lineTo(size.width * 0.82f, size.height * 0.58f)
-        lineTo(size.width * 0.48f, size.height * 0.78f)
-        close()
-      },
-      Color.White.copy(alpha = 0.27f),
-    )
-    listOf(
-        Triple(0.30f, 0.39f, 0.28f),
-        Triple(0.47f, 0.30f, 0.38f),
-        Triple(0.64f, 0.43f, 0.24f),
-      )
-      .forEach { (x, y, height) ->
-        drawRect(
-          Color.White.copy(alpha = 0.72f),
-          Offset(size.width * x, size.height * y),
-          androidx.compose.ui.geometry.Size(size.width * 0.10f, size.height * height),
-        )
-      }
-    drawCircle(
-      Color.White.copy(alpha = 0.72f),
-      size.minDimension * 0.28f,
-      style = Stroke(size.minDimension * 0.035f),
-    )
-  }
-}
-
-/**
- * The Wear components this catalog publishes and the browser cannot draw, as ids.
- *
- * Derived from `WearScreenCodeExporter`'s own constants rather than listed again: the generator and
- * the canvas have to agree about which ids these are, and two lists is two chances not to.
- */
-private val WEAR_NATIVE_ONLY: Set<String> = WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS
-
-/**
- * A Wear component the canvas names instead of drawing.
- *
- * ## Why this is the honest shape, and not a gap
- *
- * `docs/design/UI_BUILDER_WEAR_SCREEN.md` rules out one thing exactly: *do not fabricate a
- * component in the Wasm canvas to stand in for a library the canvas cannot link*. Wear Material 3
- * is an Android AAR; a `CheckboxButton` drawn here would be a Material 3 `Checkbox` in a row at a
- * width, a corner radius and a label baseline read off a screenshot — an impression of upstream
- * with nothing in this build to check it against, and wrong silently.
- *
- * So it is not drawn. What is drawn is the node's *identity and place*: a dashed outline carrying
- * the component's name, sized by whatever the layout gives it, with its children inside. That is
- * enough to author with — you can see the row is there, select it, reorder it, put an icon in it —
- * and it claims nothing about size, colour or shape. The picture comes from the native lane, which
- * compiles this design's own generated Kotlin against real Wear Compose on the Android daemon;
- * `wear-m3` declares that lane authoritative and this canvas approximate, and the editor's render
- * surface menu says so where a renderer is chosen.
- *
- * A dashed outline rather than [UnsupportedComponentDiagnostic]'s error container, because nothing
- * is wrong. The component is in the catalog, it exports, and it renders — just not here.
- */
-@Composable
-private fun NativeOnlyPlaceholder(
-  node: UiBuilderNode,
-  modifier: Modifier,
-  /** Whose component this is, where that is not obvious from the palette — a pack's id. */
-  caption: String? = null,
-  content: @Composable ColumnScope.() -> Unit,
-) {
-  val outline = MaterialTheme.colorScheme.outline
-  Column(
-    modifier
-      .fillMaxWidth()
-      .drawBehind {
-        drawRoundRect(
-          color = outline,
-          cornerRadius = CornerRadius(8.dp.toPx()),
-          style =
-            androidx.compose.ui.graphics.drawscope.Stroke(
-              width = 1.dp.toPx(),
-              pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
-            ),
-        )
-      }
-      .padding(horizontal = 10.dp, vertical = 8.dp),
-    verticalArrangement = Arrangement.spacedBy(4.dp),
-  ) {
-    Text(
-      node.componentId.substringAfter('/').replace('-', ' ') + (caption?.let { " · $it" } ?: ""),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelMedium,
-    )
-    node.string("label").takeIf(String::isNotEmpty)?.let {
-      Text(it, color = MaterialTheme.colorScheme.onSurface)
-    }
-    content()
-  }
-}
-
-/**
- * A labelled frame around content that is not what it appears to be drawn with.
- *
- * [NativeOnlyPlaceholder]'s neighbour and deliberately not the same thing. That one stands in for a
- * component the canvas cannot draw *at all*, so it draws a name and a box. This draws the content
- * for real — the stand-ins are the right shapes and the right text — and marks the boundary the
- * content sits on, because a subtree in a different vocabulary is a fact about the design that a
- * flush render would hide.
- */
-@Composable
-private fun RemoteContentFrame(
-  label: String,
-  detail: String?,
-  modifier: Modifier,
-  content: @Composable ColumnScope.() -> Unit,
-) {
-  val outline = MaterialTheme.colorScheme.tertiary
-  Column(
-    modifier
-      .drawBehind {
-        drawRoundRect(
-          color = outline,
-          cornerRadius = CornerRadius(8.dp.toPx()),
-          style =
-            androidx.compose.ui.graphics.drawscope.Stroke(
-              width = 1.dp.toPx(),
-              pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f)),
-            ),
-        )
-      }
-      .padding(horizontal = 6.dp, vertical = 6.dp),
-    verticalArrangement = Arrangement.spacedBy(4.dp),
-  ) {
-    Text(
-      detail?.let { "$label · $it" } ?: label,
-      color = outline,
-      style = MaterialTheme.typography.labelSmall,
-    )
-    content()
-  }
-}
-
-/**
- * A Lottie element: what animation it holds, where it came from, and whether it will export.
- *
- * The unresolved case is the one worth drawing loudly. `url` and `json` are two halves of one
- * source — the builder fetches the first into the second — and an element carrying only a URL looks
- * finished in the layers panel while [RemoteContentEmitter] refuses it, because a widget is built
- * with no network to fetch from. Saying so here is what turns that into something an author can fix
- * before they press export.
- */
-@Composable
-private fun LottiePlaceholder(node: UiBuilderNode, modifier: Modifier) {
-  val outline = MaterialTheme.colorScheme.outline
-  val json = node.string("json")
-  val url = node.string("url")
-  Column(
-    modifier
-      .fillMaxWidth()
-      .drawBehind {
-        drawRoundRect(
-          color = outline,
-          cornerRadius = CornerRadius(8.dp.toPx()),
-          style =
-            androidx.compose.ui.graphics.drawscope.Stroke(
-              width = 1.dp.toPx(),
-              pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
-            ),
-        )
-      }
-      .padding(horizontal = 10.dp, vertical = 8.dp),
-    verticalArrangement = Arrangement.spacedBy(4.dp),
-  ) {
-    Text(
-      "Lottie animation",
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelMedium,
-    )
-    // The file name rather than the whole URL: a Lottie URL is usually a long CDN path, and the
-    // canvas has a widget's worth of width to say something useful in.
-    url.takeIf(String::isNotEmpty)?.let {
-      Text(
-        it.substringAfterLast('/').ifEmpty { it },
-        color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.bodySmall,
-      )
-    }
-    Text(
-      // Short on purpose: a Small widget is 216×76dp, and a sentence that wraps past the frame is
-      // a sentence the author reads half of.
-      when {
-        json.isNotEmpty() -> "${json.length.animationSize()} · compiled into the document"
-        url.isNotEmpty() -> "Not fetched — the export needs the JSON"
-        else -> "No animation — add a URL or JSON"
-      },
-      color =
-        if (json.isNotEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
-        else MaterialTheme.colorScheme.error,
-      style = MaterialTheme.typography.bodySmall,
-    )
-  }
-}
-
-/** `840 B`, `12 KiB` — the animation's weight, in the unit that reads at that size. */
-private fun Int.animationSize(): String = if (this < 1024) "$this B" else "${this / 1024} KiB"
-
-@Composable
-private fun UnsupportedComponentDiagnostic(componentId: String, modifier: Modifier) {
-  Surface(modifier, color = MaterialTheme.colorScheme.errorContainer) {
-    Text(
-      "Unsupported component: $componentId",
-      Modifier.padding(8.dp),
-      color = MaterialTheme.colorScheme.onErrorContainer,
-    )
-  }
-}
-
 /**
  * Where a `Box` child sits, from its chain and then from the property that used to say it.
  *
@@ -3561,7 +2482,7 @@ internal fun uiBuilderStateEquals(held: String?, operand: JsonElement?): Boolean
   return canvasStateEquals(held, operand)
 }
 
-private fun UiBuilderNode.obj(name: String): JsonObject =
+internal fun UiBuilderNode.obj(name: String): JsonObject =
   properties[name]?.objectOrEmpty() ?: JsonObject(emptyMap())
 
 private fun UiBuilderNode.hasModifier(type: String): Boolean = modifiers.any {
@@ -3580,13 +2501,13 @@ private fun UiBuilderNode.hasModifier(type: String): Boolean = modifiers.any {
 private fun UiBuilderNode.valueScalar(name: String): JsonPrimitive? =
   obj(name)["value"] as? JsonPrimitive
 
-private fun UiBuilderNode.string(name: String): String = valueScalar(name)?.contentOrNull.orEmpty()
+internal fun UiBuilderNode.string(name: String): String = valueScalar(name)?.contentOrNull.orEmpty()
 
-private fun UiBuilderNode.float(name: String, fallback: Float = 0f): Float =
+internal fun UiBuilderNode.float(name: String, fallback: Float = 0f): Float =
   valueScalar(name)?.floatOrNull ?: fallback
 
 /** A dimension the document actually carries, or null — which is not the same as zero. */
-private fun UiBuilderNode.dimension(name: String): Dp? = valueScalar(name)?.floatOrNull?.dp
+internal fun UiBuilderNode.dimension(name: String): Dp? = valueScalar(name)?.floatOrNull?.dp
 
 private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
   valueScalar(name)?.intOrNull ?: fallback
@@ -3600,7 +2521,7 @@ private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
 private fun UiBuilderNode.lineCount(name: String): Int =
   integer(name, Int.MAX_VALUE).coerceAtLeast(1)
 
-private fun UiBuilderNode.bool(name: String, fallback: Boolean = false): Boolean =
+internal fun UiBuilderNode.bool(name: String, fallback: Boolean = false): Boolean =
   valueScalar(name)?.booleanOrNull ?: fallback
 
 @Composable
@@ -3736,7 +2657,7 @@ private fun uiBuilderColor(value: String): Color =
  * default, which is what an unset colour draws anyway.
  */
 @Composable
-private fun UiBuilderNode.color(name: String, fallback: Color): Color {
+internal fun UiBuilderNode.color(name: String, fallback: Color): Color {
   val value = string(name)
   if (value.startsWith("#")) return Color(parseArgb(value))
   if (value.isEmpty()) return fallback
@@ -3921,7 +2842,7 @@ private fun ImageVector.requireSimpleStructuredPaths(): List<StructuredIconPath>
   }
 }
 
-private fun JsonObject.paddingValues() =
+internal fun JsonObject.paddingValues() =
   PaddingValues(
     start = number("startDp").dp,
     top = number("topDp").dp,
@@ -3936,7 +2857,7 @@ private fun JsonObject.numberOrNull(name: String) = this[name]?.jsonPrimitive?.f
 
 private fun JsonElement.objectOrEmpty() = this as? JsonObject ?: JsonObject(emptyMap())
 
-private fun parseArgb(value: String): Long =
+internal fun parseArgb(value: String): Long =
   value.removePrefix("#").toLongOrNull(16)?.let { if (value.length == 7) it or 0xff000000 else it }
     ?: 0xff000000
 
