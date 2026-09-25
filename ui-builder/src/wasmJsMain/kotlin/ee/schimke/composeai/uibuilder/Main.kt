@@ -446,8 +446,8 @@ private fun positionCatalogRuntimeSurface(
       const controller = host.__uiBuilderCatalogRuntime;
       if (controller?.frame) {
         controller.frame.style.transform = 'scale(' +
-          (Math.max(0, width) / controller.nativeWidth) + ',' +
-          (Math.max(0, height) / controller.nativeHeight) + ')';
+          (Math.max(0, width) / controller.frameWidth) + ',' +
+          (Math.max(0, height) / controller.frameHeight) + ')';
       }
     })()"""
   )
@@ -487,7 +487,10 @@ private fun updateCatalogRuntimeSurface(
       // created. The document is not part of it. An edit used to change this key, so every edit
       // tore the frame down and cold-booted the catalog's whole Wasm runtime again -- a blank pane
       // for as long as that took -- when a live frame takes the new document in one message.
-      const compositionKey = widthDp + '|' + heightDp + '|' + density + '|' + mode;
+      // The device pixel ratio too: the frame's CSS size is derived from it, and browser zoom
+      // changes it.
+      const pixelRatio = globalThis.devicePixelRatio || 1;
+      const compositionKey = widthDp + '|' + heightDp + '|' + density + '|' + mode + '|' + pixelRatio;
       let controller = host.__uiBuilderCatalogRuntime;
       if (controller && !controller.disposed && controller.runtimeId === runtimeId &&
           controller.compositionKey === compositionKey) {
@@ -504,10 +507,16 @@ private fun updateCatalogRuntimeSurface(
       frame.sandbox = 'allow-scripts';
       const nativeWidth = Math.max(1, widthDp * density);
       const nativeHeight = Math.max(1, heightDp * density);
-      frame.style.cssText = 'position:absolute;top:0;left:0;width:' + nativeWidth +
-        'px;height:' + nativeHeight + 'px;border:0;background:transparent;transform-origin:top left;' +
-        'transform:scale(' + (host.clientWidth / nativeWidth) + ',' +
-        (host.clientHeight / nativeHeight) + ')';
+      // The runtime lays out in DEVICE pixels, like any Compose canvas: a frame whose CSS size was
+      // the native size drew the design into 1/devicePixelRatio of itself, the top-left 38% on a
+      // 2.625x phone and white beyond. Sized at native / ratio CSS pixels, its device pixels are
+      // the native ones, which is also what its inspection bounds are reported in.
+      const frameWidth = nativeWidth / pixelRatio;
+      const frameHeight = nativeHeight / pixelRatio;
+      frame.style.cssText = 'position:absolute;top:0;left:0;width:' + frameWidth +
+        'px;height:' + frameHeight + 'px;border:0;background:transparent;transform-origin:top left;' +
+        'transform:scale(' + (host.clientWidth / frameWidth) + ',' +
+        (host.clientHeight / frameHeight) + ')';
       const overlay = document.createElement('div');
       overlay.setAttribute('aria-label', 'Editor selection overlay');
       overlay.style.cssText = 'position:absolute;inset:0;z-index:1;overflow:hidden';
@@ -523,8 +532,8 @@ private fun updateCatalogRuntimeSurface(
         runtimeId,
         compositionKey,
         frame,
-        nativeWidth,
-        nativeHeight,
+        frameWidth,
+        frameHeight,
         render,
         disposed: false,
         request(type, payload) {
